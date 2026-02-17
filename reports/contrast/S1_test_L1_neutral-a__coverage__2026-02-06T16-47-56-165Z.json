@@ -1,0 +1,27 @@
+{
+  "page": "S1 test L1 neutral-a",
+  "url": "http://127.0.0.1:8000/ui/session/session_user_bcfd2787d56d_1770389197.113196",
+  "combos": [
+    "test|none|1"
+  ],
+  "completionSeen": [
+    "test|1"
+  ],
+  "missing": [],
+  "log": [
+    {
+      "type": "test",
+      "subtype": null,
+      "difficulty": "1",
+      "taskId": "task_007",
+      "queueIndex": 0,
+      "queueTotal": 5
+    }
+  ],
+  "diagnostics": {
+    "noTaskRetries": 0,
+    "lastPathname": "/ui/session/session_user_bcfd2787d56d_1770389197.113196",
+    "lastSessionId": "session_user_bcfd2787d56d_1770389197.113196",
+    "breakReason": null
+  }
+}

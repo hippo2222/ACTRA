@@ -1,0 +1,267 @@
+@keyframes annotationHighlightPulse {
+    0% {
+        stroke-width: 2.2px;
+        stroke: var(--color-primary);
+        filter: drop-shadow(0 0 0 transparent);
+        opacity: 1;
+    }
+
+    45% {
+        stroke-width: 4px;
+        stroke: var(--color-warning);
+        filter: drop-shadow(0 0 14px var(--color-warning));
+        opacity: 0.6;
+    }
+
+    60% {
+        stroke-width: 3px;
+        stroke: var(--color-error);
+        filter: drop-shadow(0 0 10px var(--color-error));
+        opacity: 0.85;
+    }
+
+    100% {
+        stroke-width: 2.2px;
+        stroke: var(--color-primary);
+        filter: drop-shadow(0 0 0 transparent);
+        opacity: 1;
+    }
+}
+
+@keyframes annotationLabelPulse {
+    0% {
+        transform: translateZ(0) scale(1);
+    }
+
+    50% {
+        transform: translateZ(0) scale(1.02);
+    }
+
+    100% {
+        transform: translateZ(0) scale(1);
+    }
+}
+
+@keyframes annotationListGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+        border-color: var(--color-warning);
+    }
+
+    50% {
+        box-shadow: 0 6px 24px -6px var(--color-warning);
+        border-color: var(--color-warning);
+    }
+}
+
+.canvas-pattern {
+    background-image: radial-gradient(var(--color-border-normal) 1px, transparent 1px);
+    background-size: 20px 20px;
+}
+
+#canvas-container {
+    position: relative;
+    user-select: none;
+    cursor: default;
+}
+
+#annotation-overlay {
+    pointer-events: none;
+}
+
+#annotation-overlay .annotation-shape,
+#annotation-overlay .annotation-label,
+#annotation-overlay .vertex-handle {
+    pointer-events: all;
+}
+
+.annotation-label__bg {
+    fill: var(--color-surface-1);
+    stroke: var(--color-border-subtle);
+    stroke-width: 1.2;
+}
+
+.annotation-label__text {
+    fill: var(--color-text-main);
+}
+
+.annotation-shape.is-highlighted {
+    animation: annotationHighlightPulse 0.85s ease-in-out infinite;
+    stroke-width: 3 !important;
+    opacity: 1;
+}
+
+.annotation-label.is-highlighted {
+    animation: annotationLabelPulse 0.8s ease-in-out infinite;
+}
+
+.annotation-label.is-highlighted .annotation-label__bg {
+    fill: var(--color-warning);
+    stroke: var(--color-warning);
+}
+
+.annotation-label.is-highlighted .annotation-label__text {
+    fill: var(--color-primary-fg);
+}
+
+.annotation-label.is-highlighted .annotation-label__connector {
+    stroke: var(--color-warning);
+}
+
+.annotation-list-item {
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.annotation-list-item--highlighted {
+    animation: annotationListGlow 0.95s ease-in-out infinite;
+    transform: translateZ(0);
+}
+
+.tool-toggle {
+    background: var(--color-surface-2);
+    color: var(--color-text-main);
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    min-width: 140px;
+    justify-content: center;
+    /* border-radius is handled by utility classes (rounded-lg) */
+    border: 1px solid transparent;
+    padding: 0.45rem 1.25rem;
+}
+
+.tool-toggle:hover:not(.active) {
+    background: var(--color-bg-hover);
+    color: var(--color-primary-dark);
+}
+
+.tool-toggle .material-symbols-outlined {
+    color: inherit;
+}
+
+.tool-toggle.active {
+    background: var(--color-primary);
+    color: var(--color-primary-contrast);
+    border-color: var(--color-primary);
+    box-shadow: 0 6px 14px -4px var(--color-primary);
+}
+
+#canvas-container.drawing-crosshair #canvas-stage {
+    cursor: crosshair;
+}
+
+#canvas-container.grabbing,
+#canvas-container.grabbing #canvas-stage {
+    cursor: grabbing !important;
+}
+
+.canvas-stage--zoomed-out {
+    background: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+}
+
+#toolbar-row {
+    overflow: visible;
+}
+
+.icon-action-btn {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--color-surface-1);
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.icon-action-btn:hover:not(:disabled) {
+    background: var(--color-bg-hover);
+}
+
+.icon-action-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.annotation-marker {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    z-index: 20;
+}
+
+.vertex-handle {
+    cursor: pointer;
+}
+
+.annotation-marker:hover .marker-label {
+    opacity: 1;
+}
+
+.marker-label {
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-top: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+}
+
+/* Restored from backup: Inline fallback for Errors mode UI (mimicking MistakesClickUI) */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-surface-2);
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border-normal);
+    border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-border-strong);
+}
+
+details>summary {
+    list-style: none;
+}
+
+details>summary::-webkit-details-marker {
+    display: none;
+}
+
+/* Semi-transparent highlights for overlapping span fix */
+#errors-mode-pane .highlight-error {
+    background-color: var(--color-error-light);
+    border-radius: 2px;
+}
+
+#errors-mode-pane .highlight-reference {
+    background-color: var(--color-success-light);
+    border-radius: 2px;
+}

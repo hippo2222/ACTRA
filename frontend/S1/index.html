@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <script src="../assets/ThemeManager.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Комплексная сессия – S1</title>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    }
+
+    /* UX-17: Smooth task transition */
+    #task-content {
+      transition: opacity 0.25s ease-in-out;
+    }
+
+    #task-content.task-entering {
+      opacity: 0;
+    }
+
+    /* UX-19: Result box slide-in */
+    #result-box {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    #result-box.result-entering {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  </style>
+
+  <link href="/assets/tailwind.css" rel="stylesheet" />
+  <link href="/assets/fonts.css" rel="stylesheet" />
+  <link href="/assets/lightB-variables.css" rel="stylesheet" />
+  <link href="/assets/lightB-components.css" rel="stylesheet" />
+  <link href="/assets/animations.css" rel="stylesheet" />
+</head>
+
+<body class="font-display bg-bg-main text-text-main antialiased selection:bg-primary-light selection:text-primary">
+  <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden group/design-root">
+    <div class="layout-container flex h-full grow flex-col">
+      <div class="flex flex-1 justify-center py-5 sm:px-4 md:px-8 lg:px-12 xl:px-16">
+        <div class="layout-content-container flex w-full flex-1 flex-col">
+          <!-- TopNavBar -->
+          <header
+            class="task-chip mb-4 flex items-center justify-between whitespace-nowrap rounded-xl border border-solid border-border-strong bg-surface-1 px-4 py-2 shadow-sm sm:px-6 lg:px-8">
+            <div class="flex items-center gap-4 text-text-main">
+              <button id="back-to-complexes-btn"
+                class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center gap-1 overflow-hidden rounded-lg bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:bg-bg-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1"
+                type="button">
+                <span aria-hidden="true">←</span>
+                <span>К списку</span>
+              </button>
+              <span class="brand-logo size-6" style="color:var(--color-primary)" aria-hidden="true"></span>
+              <div class="flex flex-col">
+                <h1 id="complex-title" class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-main">
+                  Комплексная сессия – S1
+                </h1>
+                <p id="session-subtitle" class="text-xs font-normal text-text-secondary">
+                  <span class="sr-only">Сессия</span><span id="session-id-label" class="hidden">–</span>
+                </p>
+                <p id="task-header-meta" class="text-xs font-normal text-text-secondary hidden"></p>
+              </div>
+            </div>
+            <div class="flex items-start gap-4">
+              <div class="flex items-center gap-2">
+                <button id="check-answer-btn"
+                  class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100">
+                  <span class="truncate">Проверить ответ</span>
+                </button>
+                <button id="next-task-btn"
+                  class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-4 text-sm font-bold leading-normal tracking-[0.015em] text-text-main disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100">
+                  <span class="truncate">Следующее</span>
+                </button>
+              </div>
+              <div class="flex flex-col items-end">
+                <div class="flex items-center gap-4">
+                  <p id="progress-label" class="text-xs font-medium leading-normal text-text-secondary">
+                    Задание: –
+                  </p>
+                  <p id="difficulty-label" class="hidden text-xs font-normal leading-normal text-text-secondary">
+                    Сложность: –
+                  </p>
+                </div>
+                <div class="task-chip mt-1 h-1.5 w-32 rounded-full bg-bg-secondary">
+                  <div id="progress-bar" class="task-chip h-1.5 rounded-full bg-primary progress-animated"
+                    style="width: 0%"></div>
+                </div>
+              </div>
+              <button id="finish-complex-btn"
+                class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100">
+                <span class="truncate">Завершить комплекс</span>
+              </button>
+            </div>
+          </header>
+          <main class="flex-grow">
+            <!-- Global status / error banner -->
+            <div id="status-banner"
+              class="mb-4 hidden rounded-lg border border-warning bg-warning-lighter px-4 py-3 text-sm text-warning-dark">
+            </div>
+            <!-- Pause confirmation modal -->
+            <div id="pause-confirm-modal"
+              class="fixed inset-0 z-50 hidden items-center justify-center bg-scrim-weak px-4 py-6" role="dialog"
+              aria-modal="true" aria-labelledby="pause-confirm-title">
+              <div class="w-full max-w-md rounded-xl bg-surface-1 p-6 shadow-xl ring-1 ring-border-strong">
+                <div class="mb-4 flex items-start gap-3">
+                  <div
+                    class="flex size-10 items-center justify-center rounded-full border border-border-strong bg-surface-2 text-text-secondary">
+                    <span class="material-symbols-outlined text-xl">pause</span>
+                  </div>
+                  <div class="flex-1">
+                    <h2 id="pause-confirm-title" class="text-lg font-semibold text-text-main">
+                      Поставить на паузу и выйти?
+                    </h2>
+                    <p class="mt-1 text-sm text-text-secondary">
+                      Прогресс будет сохранён. Вы сможете продолжить позже.
+                    </p>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <div id="pause-confirm-spinner"
+                    class="hidden h-10 w-10 animate-spin rounded-full border-2 border-primary-light border-t-primary">
+                  </div>
+                  <button id="pause-confirm-continue" type="button"
+                    class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1">
+                    Продолжить выполнение
+                  </button>
+                  <button id="pause-confirm-submit" type="button"
+                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70">
+                    Поставить на паузу и выйти
+                  </button>
+
+                  <button id="pause-confirm-discard" type="button"
+                    class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-error-dark px-4 py-2 text-sm font-semibold text-error-lighter transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70">
+                    Выйти без сохранения
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Resume prompt modal -->
+            <div id="resume-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-scrim-weak px-4 py-6"
+              role="dialog" aria-modal="true" aria-labelledby="resume-modal-title">
+              <div class="w-full max-w-md rounded-xl bg-surface-1 p-6 shadow-xl ring-1 ring-border-strong">
+                <div class="mb-4 flex items-start gap-3">
+                  <div
+                    class="flex size-10 items-center justify-center rounded-full border border-border-strong bg-surface-2 text-text-secondary">
+                    <span class="material-symbols-outlined text-xl">play_arrow</span>
+                  </div>
+                  <div class="flex-1">
+                    <h2 id="resume-modal-title" class="text-lg font-semibold text-text-main">
+                      Сессия на паузе. Продолжить?
+                    </h2>
+                    <p class="mt-1 text-sm text-text-secondary">
+                      Возобновите выполнение или вернитесь к списку комплексов.
+                    </p>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                  <div id="resume-spinner"
+                    class="hidden h-10 w-10 animate-spin rounded-full border-2 border-primary-light border-t-primary">
+                  </div>
+                  <button id="resume-exit-btn" type="button"
+                    class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1">
+                    Выйти к списку
+                  </button>
+                  <button id="resume-continue-btn" type="button"
+                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70">
+                    Возобновить
+                  </button>
+                </div>
+              </div>
+            </div>
+            <!-- Task header + content (без дополнительной белой карточки) -->
+            <div class="p-4 @container">
+              <div id="task-header-block" class="mb-4 flex flex-col gap-1">
+                <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                  Задание
+                </p>
+                <h2 id="task-title" class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-main">
+                  –
+                </h2>
+                <p id="task-meta" class="text-xs font-medium text-text-secondary">
+                  <span id="task-ref-label"></span>
+                </p>
+                <p id="task-description" class="text-base font-normal leading-relaxed text-text-secondary">
+                </p>
+              </div>
+              <!-- Placeholder for task-specific UI (TestUI grid with question card + sidebar) -->
+              <div id="task-content" class="flex flex-col gap-2">
+                <!-- Task type-specific UI will be injected here -->
+              </div>
+              <!-- Evaluation result -->
+              <div id="result-box" class="mt-4 hidden">
+                <div id="result-inner"
+                  class="flex flex-col rounded-lg border border-border-strong bg-surface-2 overflow-hidden">
+                  <div id="result-header" class="flex items-center gap-3 border-b border-border-strong p-4">
+                    <div id="result-icon-wrap"
+                      class="flex items-center justify-center size-8 rounded-full shrink-0 border border-border-strong bg-surface-1 text-text-main">
+                      <span id="result-icon" class="material-symbols-outlined text-[20px]"
+                        style="font-variation-settings: 'FILL' 1, 'wght' 600;"></span>
+                    </div>
+                    <h3 id="result-title" class="text-sm font-bold leading-tight"></h3>
+                  </div>
+                  <div id="result-body" class="p-5 flex flex-col gap-3">
+                    <p id="result-message" class="text-sm font-medium"></p>
+                    <p id="result-details" class="text-sm text-text-secondary leading-relaxed"></p>
+                    <div id="result-keywords" class="hidden flex flex-col gap-2"></div>
+                    <div id="result-user-answer" class="hidden flex flex-col gap-2"></div>
+                    <div id="result-reference" class="hidden flex flex-col gap-2">
+                      <h4 id="result-reference-title" class="text-xs font-bold uppercase tracking-wider"></h4>
+                      <div id="result-reference-card"
+                        class="rounded-lg border border-border-strong bg-surface-1 p-4 shadow-sm">
+                        <p id="result-reference-text" class="text-sm text-text-main leading-relaxed">
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </main>
+          <footer class="mt-auto pt-4"></footer>
+        </div>
+      </div>
+    </div>
+    <script src="/ui/TestUI/TestUI.web.js"></script>
+    <script src="/ui/TestUI/TestUI.question.js"></script>
+    <script src="/ui/TestUI/TestUI.sidebar.js"></script>
+    <script src="/ui/SequenceUI/SequenceUI.web.js"></script>
+    <script src="/ui/ClickUI/TaskMetadataPanel.js"></script>
+    <script src="/ui/ClickUI/ClickUI.web.js"></script>
+    <script src="/ui/DrawUI/DrawUI.web.js"></script>
+    <script src="/ui/OpenAnswerUI/OpenAnswerUI.web.js"></script>
+    <script src="/ui/MistakesUI/MistakesUI.web.js"></script>
+    <script src="/ui/S1/routes.js"></script>
+    <script src="/ui/S1/api-client.js"></script>
+    <script src="/ui/S1/session-state.js"></script>
+    <script src="/ui/S1/ui-helpers.js"></script>
+    <script src="/ui/S1/session_flow.js"></script>
+    <script src="/ui/S1/task_renderer_selector.js"></script>
+    <script src="/ui/S1/draft-storage.js"></script>
+    <script src="/ui/S1/config.js"></script>
+    <script src="/ui/S1/task-renderer.js"></script>
+    <script src="/ui/S1/session_validation.js"></script>
+    <script src="/ui/S1/session-controls.js"></script>
+    <script src="/ui/S1/main.js"></script>
+    <script>
+      window.addEventListener("DOMContentLoaded", () => {
+        if (typeof Main !== 'undefined') {
+          Main.init();
+          window.loadInitialTask = Main.loadInitialTask;
+        } else {
+          console.error("Main module not loaded");
+        }
+      });
+    </script>
+
+    <script src="../assets/NotificationUI.js"></script>
+    <script src="../assets/ThemeSwitcherUI.js"></script>
+    <script src="../assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

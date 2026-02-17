@@ -1,0 +1,40 @@
+{
+  "id": "xray_test_01",
+  "name": "Chest X-ray Quick Test",
+  "type": "test",
+  "content": {
+    "test_type": "single_choice",
+    "settings": {
+      "shuffle_questions": true,
+      "shuffle_answers": true,
+      "time_limit": null,
+      "passing_score": 70
+    },
+    "questions": [
+      {
+        "id": 0,
+        "text": "Which projection is most common for a routine chest x-ray in ambulatory patients?",
+        "answers": [
+          {
+            "text": "PA projection",
+            "correct": true,
+            "image_path": null
+          },
+          {
+            "text": "AP supine projection",
+            "correct": false,
+            "image_path": null
+          },
+          {
+            "text": "Lateral decubitus only",
+            "correct": false,
+            "image_path": null
+          }
+        ]
+      }
+    ]
+  },
+  "settings": {
+    "difficulty": 1
+  }
+}

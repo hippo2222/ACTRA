@@ -1,0 +1,205 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_app_shell",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": false,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "Welcome (runtime)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (onboarding)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); ['modeOnboarding','modeSelect','modeLogin'].forEach((id)=>{const el=document.getElementById(id); if(el) el.classList.add('hidden');}); const mode=document.getElementById('modeOnboarding'); if(mode) mode.classList.remove('hidden'); return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (select/password/create)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); ['modeOnboarding','modeSelect','modeLogin'].forEach((id)=>{const el=document.getElementById(id); if(el) el.classList.add('hidden');}); const mode=document.getElementById('modeSelect'); if(mode) mode.classList.remove('hidden'); const list=document.getElementById('profilesList'); if(list && !list.children.length){list.innerHTML='<button class=\"profile-card-v3 group flex flex-col items-center p-8 rounded-3xl text-center flex-shrink-0 cursor-pointer outline-none focus:ring-4 focus:ring-primary/20 relative overflow-hidden\"><div class=\"relative mb-5\"><img src=\"/api/assets/avatars/1.png\" class=\"w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-surface-0\"><div class=\"absolute top-2 right-2 bg-text-main/80 rounded-full p-1.5\"><span class=\"material-symbols-outlined text-white text-[14px]\">lock</span></div></div><div class=\"w-full\"><p class=\"text-xl font-bold text-text-main\">Демо профиль</p><p class=\"text-[11px] uppercase tracking-widest font-bold text-text-muted opacity-60\">Требуется пароль</p></div></button><button class=\"profile-card-v3 profile-card-new group flex flex-col items-center justify-center p-8 rounded-3xl text-center flex-shrink-0 cursor-pointer outline-none focus:ring-4 focus:ring-primary/20\"><div class=\"w-24 h-24 rounded-full flex items-center justify-center bg-surface-2 mb-5\"><span class=\"material-symbols-outlined text-text-muted text-4xl\">add</span></div><div class=\"w-full\"><p class=\"text-lg font-bold text-text-muted\">Новый профиль</p></div></button>'; } const pwd=document.getElementById('passwordInline'); if(pwd) pwd.classList.remove('hidden'); const pwdUser=document.getElementById('passwordInlineUser'); if(pwdUser && !pwdUser.innerHTML.trim()){pwdUser.innerHTML='<img src=\"/api/assets/avatars/1.png\" class=\"w-12 h-12 rounded-full bg-surface-2 object-cover ring-2 ring-primary/30 shadow-sm\"><div class=\"flex flex-col\"><span class=\"font-black text-text-main text-lg leading-tight tracking-tight\">Демо профиль</span><span class=\"text-[10px] text-text-muted font-bold uppercase tracking-wider mt-0.5\">Вход по паролю</span></div>';} const create=document.getElementById('createProfileSection'); if(create){create.classList.remove('hidden'); if(!create.innerHTML.trim()){create.innerHTML='<div class=\"bg-surface-1 rounded-3xl border border-primary p-8 shadow-2xl\"><div class=\"flex flex-col items-center gap-6 mb-8\"><input type=\"text\" placeholder=\"Имя профиля\" class=\"w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-2 py-2 text-xl font-bold text-text-main outline-none transition-colors\"></div><div class=\"mb-4 rounded-xl border border-border-subtle bg-surface-2 p-4\"><label class=\"flex items-start gap-3 text-sm text-text-main mb-2 cursor-pointer\"><input type=\"checkbox\" class=\"mt-0.5 rounded text-primary focus:ring-primary\"><span>Я принимаю <button type=\"button\" class=\"text-primary hover:underline font-semibold\">Условия пользования</button></span></label><label class=\"flex items-start gap-3 text-sm text-text-main cursor-pointer\"><input type=\"checkbox\" class=\"mt-0.5 rounded text-primary focus:ring-primary\"><span>Я ознакомился(ась) с <button type=\"button\" class=\"text-primary hover:underline font-semibold\">Политикой приватности</button></span></label></div><button class=\"w-full py-4 rounded-xl font-bold bg-primary text-white hover:bg-primary-hover shadow-lg transition-all text-base tracking-wide flex justify-center items-center gap-2\">Создать профиль</button></div>';}} return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (login)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); ['modeOnboarding','modeSelect','modeLogin'].forEach((id)=>{const el=document.getElementById(id); if(el) el.classList.add('hidden');}); const mode=document.getElementById('modeLogin'); if(mode) mode.classList.remove('hidden'); const avatar=document.getElementById('loginAvatar'); if(avatar && !avatar.getAttribute('src')) avatar.setAttribute('src','/api/assets/avatars/1.png'); const name=document.getElementById('loginName'); if(name && !name.textContent.trim()) name.textContent='Демо профиль'; return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (legal modal)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); const modal=document.getElementById('legalDocModal'); if(modal){modal.classList.remove('hidden'); modal.classList.add('flex');} const title=document.getElementById('legalDocTitle'); if(title) title.textContent='Условия пользования'; const meta=document.getElementById('legalDocMeta'); if(meta) meta.textContent='Версия: 1.0 | Действует с: 2026-01-01'; const content=document.getElementById('legalDocContent'); if(content && !content.textContent.trim()) content.textContent='Демонстрационный текст документа для проверки контраста на модальном окне.'; return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (consent gate modal)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); const modal=document.getElementById('consentGateModal'); if(modal){modal.classList.remove('hidden'); modal.classList.add('flex');} const versions=document.getElementById('consentGateVersions'); if(versions && !versions.textContent.trim()) versions.textContent='Terms: 1.0 | Privacy: 1.0'; return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Main",
+      "url": "/ui/main",
+      "waitFor": "#statsCard",
+      "actionsOnce": [
+        { "type": "wait", "ms": 800 }
+      ]
+    },
+    {
+      "name": "Main (profile modal)",
+      "url": "/ui/main",
+      "waitFor": "#profileModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 800 },
+        {
+          "type": "evaluate",
+          "script": "const modal=document.getElementById('profileModal'); if(modal) modal.classList.add('open'); const list=document.getElementById('profilesList'); if(list && !list.children.length){list.innerHTML='<button class=\"w-full rounded-xl border border-border-subtle bg-surface-1 p-3 text-left\"><span class=\"text-text-main font-semibold\">Демо профиль</span></button>'; } return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Main (feedback modal)",
+      "url": "/ui/main",
+      "waitFor": "#feedbackModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 800 },
+        {
+          "type": "evaluate",
+          "script": "const modal=document.getElementById('feedbackModal'); if(modal) modal.classList.add('open'); return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Main (legal modal)",
+      "url": "/ui/main",
+      "waitFor": "#mainLegalDocModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 800 },
+        {
+          "type": "evaluate",
+          "script": "const modal=document.getElementById('mainLegalDocModal'); if(modal) modal.classList.add('open'); const title=document.getElementById('mainLegalDocTitle'); if(title) title.textContent='Условия пользования'; const meta=document.getElementById('mainLegalDocMeta'); if(meta) meta.textContent='Версия: 1.0 | Действует с: 2026-01-01'; const content=document.getElementById('mainLegalDocContent'); if(content && !content.textContent.trim()) content.textContent='Демонстрационный текст документа для проверки контраста.'; return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Main (consent gate modal)",
+      "url": "/ui/main",
+      "waitFor": "#mainConsentGateModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 800 },
+        {
+          "type": "evaluate",
+          "script": "const modal=document.getElementById('mainConsentGateModal'); if(modal) modal.classList.add('open'); const versions=document.getElementById('mainConsentGateVersions'); if(versions && !versions.textContent.trim()) versions.textContent='Terms: 1.0 | Privacy: 1.0'; return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Complexes",
+      "url": "/ui/complexes",
+      "waitFor": "#complexes-list",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 }
+      ]
+    },
+    {
+      "name": "Complexes (details expanded)",
+      "url": "/ui/complexes",
+      "waitFor": "#complexes-list",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const btn=document.querySelector('button.detail-toggle-btn'); if(btn) btn.click(); return {ok:true};"
+        },
+        { "type": "wait", "ms": 200 }
+      ]
+    },
+    {
+      "name": "Complexes (selection mode)",
+      "url": "/ui/complexes",
+      "waitFor": "#toggle-select-complexes",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1000 },
+        {
+          "type": "evaluate",
+          "script": "const btn=document.getElementById('toggle-select-complexes'); if(btn) btn.click(); const first=document.querySelector('input.complex-select-checkbox'); if(first){first.click();} return {ok:true};"
+        },
+        { "type": "wait", "ms": 200 }
+      ]
+    },
+    {
+      "name": "Complexes Create",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 }
+      ]
+    },
+    {
+      "name": "Calendar",
+      "url": "/ui/calendar",
+      "waitFor": "#app",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1400 }
+      ]
+    },
+    {
+      "name": "Statistics",
+      "url": "/ui/statistics",
+      "waitFor": "#chart-card",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1400 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="../../assets/ThemeManager.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ACTRA — Редактор открытых ответов</title>
+    <link rel="stylesheet" href="open_answer_editor.css">
+    <!-- BaseEditor must be loaded before open_answer_editor.js -->
+    <script src="undo_manager.js"></script>
+    <script src="autosave_manager.js"></script>
+    <script src="base_editor.js"></script>
+    <script src="open_answer_editor.js" defer></script>
+
+    <link href="../../assets/tailwind.css" rel="stylesheet" />
+    <link href="../../assets/fonts.css" rel="stylesheet" />
+    <link href="../../assets/lightB-variables.css" rel="stylesheet" />
+    <link href="../../assets/lightB-components.css" rel="stylesheet" />
+    <link href="../../assets/animations.css" rel="stylesheet" />
+
+</head>
+
+<body class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display antialiased">
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <header
+            class="h-16 flex items-center justify-between px-6 bg-surface-1 border-b border-border-subtle shrink-0 z-10">
+            <div class="flex items-center gap-4">
+                <button id="back-to-dashboard-btn" title="Библиотека заданий"
+                    class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div class="flex flex-col">
+                    <h2 id="editor-title" class="text-lg font-bold text-text-main tracking-tight">Редактирование задания
+                    </h2>
+                    <div id="save-status-container" class="flex items-center gap-2.5 transition-all duration-300">
+                        <div id="save-status-indicator" class="w-1.5 h-1.5 rounded-full bg-success transition-all">
+                        </div>
+                        <div class="flex flex-col">
+                            <span id="save-status-text"
+                                class="text-[10px] font-bold text-text-secondary uppercase tracking-tight leading-none">Изменения
+                                сохранены</span>
+                            <span id="save-status-detail"
+                                class="text-[9px] text-text-disabled leading-none mt-1 hidden"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="save-task-btn" class="btn-primary flex items-center gap-2 text-sm font-semibold shadow-md">
+                    <span class="material-symbols-outlined text-[18px]">Сохранить</span>
+                    Сохранить
+                </button>
+            </div>
+        </header>
+        <div class="flex-1 flex overflow-hidden">
+            <div class="flex-1 overflow-y-auto custom-scrollbar bg-bg-main p-8">
+                <div class="max-w-3xl mx-auto flex flex-col gap-6 pb-20">
+                    <div class="flex flex-col gap-2">
+                        <label class="text-sm font-semibold text-text-main flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-text-disabled">help</span>
+                            Вопрос
+                        </label>
+                        <div
+                            class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                            <textarea id="question-textarea" data-auto-resize="true"
+                                class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[60px] leading-relaxed bg-transparent"
+                                placeholder="Введите формулировку вопроса или описание кейса..."></textarea>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <label class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                <span
+                                    class="material-symbols-outlined text-[18px] text-text-disabled">check_circle</span>
+                                Эталонный ответ
+                            </label>
+                        </div>
+                        <div
+                            class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                            <textarea id="reference-textarea" data-auto-resize="true"
+                                class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[72px] leading-relaxed bg-transparent"
+                                placeholder="Введите текст правильного ответа..."></textarea>
+                            <div
+                                class="border-t border-border-subtle bg-surface-2 p-3 flex items-center justify-between">
+                                <span class="text-xs text-text-muted italic">Выберите слова или фразы, обязательные
+                                    для
+                                    правильного ответа</span>
+                                <button id="split-keywords-btn"
+                                    class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-primary bg-primary-lighter hover:bg-primary-light rounded-md border border-primary-light transition-colors">
+                                    <span class="material-symbols-outlined text-[16px]">cut</span>
+                                    Разбить на ключевые слова
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-3">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-text-secondary uppercase tracking-wider">Ключевые слова
+                            </h3>
+                            <span id="selected-count-badge"
+                                class="text-xs font-medium text-text-secondary bg-surface-2 px-2 py-0.5 rounded-full">Выбрано:
+                                0</span>
+                        </div>
+                        <div id="keywords-container"
+                            class="flex flex-wrap gap-2 p-4 bg-surface-1 rounded-xl border border-dashed border-border-subtle min-h-[80px]">
+                            <!-- Keywords will be rendered here -->
+                        </div>
+                        <div class="flex flex-col gap-2">
+                            <label class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                <span
+                                    class="material-symbols-outlined text-[18px] text-text-disabled">chat_bubble</span>
+                                Подсказка (необязательно)
+                            </label>
+                            <div
+                                class="bg-surface-2 rounded-xl shadow-sm border border-border-subtle overflow-hidden focus-within:border-primary transition-all">
+                                <textarea id="hint-textarea" data-auto-resize="true"
+                                    class="w-full border-0 p-4 text-sm text-text-main placeholder:text-text-disabled focus:ring-0 resize-none min-h-[48px] leading-relaxed bg-transparent"
+                                    placeholder="Добавьте подсказку, которую увидит пользователь при необходимости..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <aside
+                class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 z-10 overflow-y-auto custom-scrollbar"
+                style="width: 320px;">
+                <div class="p-6 flex flex-col gap-8">
+                    <div class="flex flex-col gap-5">
+                        <div class="flex items-center gap-2 pb-2 border-b border-border-subtle">
+                            <span class="material-symbols-outlined text-text-disabled">fact_check</span>
+                            <h3 class="text-sm font-bold text-text-main">Требования к ответу</h3>
+                        </div>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex flex-col gap-1.5">
+                                <label class="text-xs font-semibold text-text-secondary uppercase tracking-wide">Минимум
+                                    ключевых слов</label>
+                                <select id="min-keywords-input"
+                                    class="w-full rounded-md border-border-subtle py-2 pl-3 pr-8 text-sm focus:ring-primary focus:border-primary text-text-main bg-surface-1">
+                                    <option value="-1" selected>Все ключевые слова обязательны</option>
+                                    <option value="1">Минимум 1 ключевое слово</option>
+                                    <option value="2">Минимум 2 ключевых слова</option>
+                                    <option value="3">Минимум 3 ключевых слова</option>
+                                </select>
+                            </div>
+                            <div class="flex items-start gap-3 mt-2">
+                                <div class="flex h-5 items-center">
+                                    <input
+                                        class="h-4 w-4 rounded border-border-subtle text-primary focus:ring-primary bg-surface-1"
+                                        id="sequence-order-check" type="checkbox" />
+                                </div>
+                                <div class="flex flex-col">
+                                    <label class="text-sm font-medium text-text-main" for="sequence">Проверять порядок
+                                        слов</label>
+                                    <p class="text-xs text-text-muted mt-0.5">Ключевые слова должны встречаться в
+                                        эталонном порядке.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-3 pt-2 border-t border-border-subtle">
+                        <div class="flex items-center gap-2 pb-2">
+                            <span class="material-symbols-outlined text-text-disabled">image</span>
+                            <h3 class="text-sm font-bold text-text-main">Изображения</h3>
+                        </div>
+                        <p class="text-xs text-text-muted">
+                            Прикрепите до трех изображений. Они автоматически сохранятся вместе с заданием.
+                        </p>
+                        <div id="images-container" class="grid grid-cols-2 gap-3">
+                            <!-- Images will be rendered here -->
+                            <button id="add-image-btn"
+                                class="aspect-square rounded-lg border-2 border-dashed border-border-subtle hover:border-primary-light hover:bg-primary-lighter flex flex-col items-center justify-center gap-2 transition-all group">
+                                <span
+                                    class="material-symbols-outlined text-text-disabled group-hover:text-primary text-[24px]">add_photo_alternate</span>
+                                <span
+                                    class="text-xs font-medium text-text-muted group-hover:text-primary add-image-label text-center">Добавить
+                                    изображение</span>
+                            </button>
+                            <input type="file" id="image-upload-input" class="hidden" accept="image/*" multiple>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+        </div>
+    </main>
+    <div id="image-preview-overlay" class="fixed inset-0 modal-backdrop hidden items-center justify-center z-50 px-4">
+        <div class="relative w-full max-w-5xl bg-surface-1 rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            style="height: 85vh;">
+            <button id="image-preview-close"
+                class="absolute top-4 right-4 text-text-contrast hover:text-text-on-dark bg-scrim hover:bg-scrim-strong rounded-full p-2 transition-colors z-10">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div id="image-preview-container"
+                class="flex-1 flex items-center justify-center p-6 bg-surface-2 overflow-hidden relative cursor-grab active:cursor-grabbing">
+                <img id="image-preview-img" src="" alt="Просмотр изображения"
+                    class="max-h-full max-w-full object-contain rounded-lg shadow-inner origin-center will-change-transform">
+            </div>
+        </div>
+    </div>
+
+    <script src="../../assets/ThemeSwitcherUI.js"></script>
+    <script src="../../assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

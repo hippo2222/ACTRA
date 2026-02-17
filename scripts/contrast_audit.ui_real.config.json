@@ -1,0 +1,183 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_ui_real",
+  "headless": true,
+  "afterThemeWaitMs": 650,
+  "failOnIssues": false,
+  "failOnCoverageMissing": false,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": false,
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "Welcome",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (select+create)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); ['modeOnboarding','modeSelect','modeLogin'].forEach((id)=>{const el=document.getElementById(id); if(el) el.classList.add('hidden');}); const mode=document.getElementById('modeSelect'); if(mode) mode.classList.remove('hidden'); if(window.welcomeToggleCreate){try{window.welcomeToggleCreate();}catch(_e){}} return {ok:true};"
+        },
+        { "type": "wait", "ms": 250 }
+      ]
+    },
+    {
+      "name": "Welcome (login)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); ['modeOnboarding','modeSelect','modeLogin'].forEach((id)=>{const el=document.getElementById(id); if(el) el.classList.add('hidden');}); const mode=document.getElementById('modeLogin'); if(mode) mode.classList.remove('hidden'); return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (legal modal)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); const modal=document.getElementById('legalDocModal'); if(modal){modal.classList.remove('hidden'); modal.classList.add('flex');} return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Welcome (consent gate modal)",
+      "url": "/ui/welcome",
+      "waitFor": "body",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const overlay=document.getElementById('loadingOverlay'); if(overlay) overlay.remove(); const modal=document.getElementById('consentGateModal'); if(modal){modal.classList.remove('hidden'); modal.classList.add('flex');} return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Main",
+      "url": "/ui/main",
+      "waitFor": "#statsCard",
+      "actionsOnce": [
+        { "type": "wait", "ms": 900 }
+      ]
+    },
+    {
+      "name": "Main (profile modal)",
+      "url": "/ui/main",
+      "waitFor": "#profileModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 900 },
+        {
+          "type": "evaluate",
+          "script": "if(typeof window.openProfileModal==='function'){window.openProfileModal();} else {const modal=document.getElementById('profileModal'); if(modal) modal.classList.add('open');} return {ok:true};"
+        },
+        { "type": "wait", "ms": 200 }
+      ]
+    },
+    {
+      "name": "Main (feedback modal)",
+      "url": "/ui/main",
+      "waitFor": "#feedbackModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 900 },
+        {
+          "type": "evaluate",
+          "script": "if(typeof window.openFeedbackModal==='function'){window.openFeedbackModal();} else {const modal=document.getElementById('feedbackModal'); if(modal) modal.classList.add('open');} return {ok:true};"
+        },
+        { "type": "wait", "ms": 200 }
+      ]
+    },
+    {
+      "name": "Main (legal modal)",
+      "url": "/ui/main",
+      "waitFor": "#mainLegalDocModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 900 },
+        {
+          "type": "evaluate",
+          "script": "const modal=document.getElementById('mainLegalDocModal'); if(modal) modal.classList.add('open'); return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Main (consent gate modal)",
+      "url": "/ui/main",
+      "waitFor": "#mainConsentGateModal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 900 },
+        {
+          "type": "evaluate",
+          "script": "const modal=document.getElementById('mainConsentGateModal'); if(modal) modal.classList.add('open'); return {ok:true};"
+        }
+      ]
+    },
+    {
+      "name": "Complexes",
+      "url": "/ui/complexes",
+      "waitFor": "#complexes-list",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 }
+      ]
+    },
+    {
+      "name": "Complexes (selection mode)",
+      "url": "/ui/complexes",
+      "waitFor": "#toggle-select-complexes",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 },
+        {
+          "type": "evaluate",
+          "script": "const btn=document.getElementById('toggle-select-complexes'); if(btn) btn.click(); const first=document.querySelector('input.complex-select-checkbox'); if(first) first.click(); return {ok:true};"
+        },
+        { "type": "wait", "ms": 200 }
+      ]
+    },
+    {
+      "name": "Complexes Create",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1200 }
+      ]
+    },
+    {
+      "name": "Calendar",
+      "url": "/ui/calendar",
+      "waitFor": "#app",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1400 }
+      ]
+    },
+    {
+      "name": "Statistics",
+      "url": "/ui/statistics",
+      "waitFor": "#chart-card",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1400 }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,812 @@
+/* ============================================================================
+   LIGHT B THEME - Complete Color System
+   Соответствует: ui-color-guide.md (Шаги 1-24)
+   ========================================================================== */
+
+
+
+/* ========== GLOBAL SEMANTIC TOKENS ========== */
+:root {
+   /* Fallbacks for themes that do not override these explicitly */
+   --color-secondary-text: var(--color-text-secondary);
+   --color-border: var(--color-border-normal);
+
+   /* Text on dark overlays */
+   --color-text-on-dark: #FFFFFF;
+
+   /* Neutral deep background for viewers/preview canvases */
+   --color-bg-ink: #0B0B0B;
+
+   /* Overlay scrims */
+   --color-scrim-faint: rgba(0, 0, 0, 0.05);
+   --color-scrim-light: rgba(0, 0, 0, 0.2);
+   --color-scrim-weak: rgba(0, 0, 0, 0.3);
+   --color-scrim: rgba(0, 0, 0, 0.4);
+   --color-scrim-strong: rgba(0, 0, 0, 0.6);
+   --color-scrim-heavy: rgba(0, 0, 0, 0.7);
+   --color-scrim-intense: rgba(0, 0, 0, 0.8);
+
+   /* Light glass on dark surfaces */
+   --color-glass-light: rgba(255, 255, 255, 0.1);
+   --color-glass-strong: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================================================
+   LIGHT A THEME - Indigo/Platinum (v2.0)
+   ========================================================================== */
+:root[data-theme="light-a"],
+[data-theme="light-a"] {
+   /* ========== PRIMARY COLOR SYSTEM ========== */
+   --color-primary: #27187E;
+   /* Indigo Ink - New Primary */
+   --color-primary-light: #758BFD;
+   --color-primary-lighter: #AEB8FE;
+   --color-primary-dark: #1A1054;
+   --color-primary-darker: #0E0830;
+   --color-primary-hover: #1A1054;
+   --color-primary-active: #0E0830;
+   --color-primary-fg: #FFFFFF;
+   --color-primary-contrast: var(--color-primary-fg);
+
+   /* ========== SECONDARY COLOR SYSTEM (Slate / Platinum) ========== */
+   --color-secondary: #64748B;
+   /* Slate 500 */
+   --color-secondary-light: #F1F5F9;
+   /* Slate 100 */
+   --color-secondary-lighter: #F8FAFC;
+   /* Slate 50 */
+   --color-secondary-dark: #334155;
+   /* Slate 700 */
+   --color-secondary-darker: #0F172A;
+   /* Slate 900 */
+   --color-secondary-hover: #475569;
+   /* Slate 600 */
+
+   /* ========== ACCENT COLOR SYSTEM (Orange) ========== */
+   --color-accent: #EA580C;
+   --color-accent-light: #FFEDD5;
+   --color-accent-lighter: #FFF7ED;
+   --color-accent-dark: #C2410C;
+   --color-accent-darker: #7C2D12;
+
+   /* ========== STATE COLORS (Standard) ========== */
+   --color-success: #047857;
+   --color-success-light: #D1FAE5;
+   --color-success-lighter: #ECFDF5;
+   --color-success-dark: #047857;
+   --color-success-darker: #064E3B;
+   --color-success-text: #064E3B;
+
+   --color-status-error: #B91C1C;
+   --color-error: #B91C1C;
+   --color-error-light: #FEE2E2;
+   --color-error-lighter: #FEF2F2;
+   --color-error-dark: #B91C1C;
+   --color-error-darker: #7F1D1D;
+   --color-error-text: #7F1D1D;
+
+   --color-warning: #F59E0B;
+   --color-warning-light: #FEF3C7;
+   --color-warning-lighter: #FFFBEB;
+   --color-warning-dark: #B45309;
+   --color-warning-darker: #78350F;
+   --color-warning-text: #78350F;
+
+   /* ========== INFO STATE (Indigo) ========== */
+   --color-info: #4F46E5;
+   --color-info-light: #E0E7FF;
+   --color-info-lighter: #EEF2FF;
+   --color-info-dark: #3730A3;
+   --color-info-darker: #312E81;
+   --color-info-text: #312E81;
+
+   /* ========== BACKGROUND & SURFACE ========== */
+   --color-bg-main: #EBEDF2;
+   --color-bg-secondary: #E8E9ED;
+   --color-bg-tertiary: #CBD5E1;
+   --color-bg-hover: #E2E8F0;
+   --color-bg-disabled: #94A3B8;
+
+   --color-surface-0: #EBEDF2;
+   --color-surface-1: #FFFFFF;
+   /* Changed to White for better contrast */
+   --color-surface-2: #CACFD8;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: var(--color-surface-2);
+   --color-text-chip: var(--color-text-secondary);
+
+   /* ========== TEXT COLORS ========== */
+   --color-text-main: #0F172A;
+   /* Slate 900 */
+   --color-text-secondary: #475569;
+   /* Slate 600 */
+   --color-text-muted: #475569;
+   /* FIXED: WCAG 4.5:1 Contrast against #E8E9ED */
+   --color-text-disabled: #94A3B8;
+   --color-text-contrast: #FFFFFF;
+
+   /* ========== BORDER COLORS ========== */
+   --color-border: #CBD5E1;
+   /* Slate 300 */
+   --color-border-subtle: #64748B;
+   --color-border-normal: var(--color-border);
+   /* Slate 500 - HIGH CONTRAST for Auditor (3:1) */
+   --color-border-strong: #475569;
+   /* Slate 600 */
+
+   /* ========== SHADOW SYSTEM ========== */
+   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.1);
+   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+   --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   NEUTRAL A THEME - Refined Earth
+   ========================================================================== */
+:root[data-theme="neutral-a"],
+[data-theme="neutral-a"] {
+   /* ========== PRIMARY COLOR SYSTEM (Earth Grey - Deep Brown) ========== */
+   --color-primary: #5D4037;
+   /* Base: Earth Grey */
+   --color-primary-light: #7D665E;
+   /* Lightened */
+   --color-primary-lighter: #9E8C85;
+   /* Lighter */
+   --color-primary-dark: #3E2723;
+   /* Dark Roast */
+   --color-primary-darker: #261614;
+   /* Almost Black */
+   --color-primary-hover: #3E2723;
+   /* Hover action */
+   --color-primary-active: #261614;
+   /* Active action */
+   --color-primary-fg: #EAE0D5;
+   /* Text on Primary */
+   --color-primary-contrast: var(--color-primary-fg);
+
+   /* ========== SECONDARY COLOR SYSTEM (Camel / Pale Oak) ========== */
+   --color-secondary: #5D4037;
+   /* Darker Camel (was #A39171) for icon contrast */
+   --color-secondary-light: #BFB0A0;
+   --color-secondary-lighter: #DCC9B6;
+   --color-secondary-dark: #3E2723;
+   /* Dark Roast */
+   --color-secondary-darker: #261614;
+   --color-secondary-hover: #4A3B2A;
+   --color-secondary-text: #261614;
+
+   /* ========== ACCENT COLOR SYSTEM ========== */
+   --color-accent: #5D4037;
+   --color-accent-light: #EBE5DD;
+   --color-accent-lighter: #DCC9B6;
+   --color-accent-dark: #4A3B2A;
+   --color-accent-darker: #271815;
+
+   /* ========== STATE COLORS (Earthy Tones) ========== */
+   /* SUCCESS: Moss Green */
+   --color-success: #2E4B2E;
+   /* Darkened from #4E7A4E */
+   --color-success-light: #D4E0D4;
+   --color-success-lighter: #E6F0EB;
+   --color-success-dark: #1F2E27;
+   --color-success-darker: #141E19;
+   --color-success-text: #1F2E27;
+
+   /* ERROR: Terra Cotta */
+   --color-error: #803A27;
+   /* Darkened from #E07A5F */
+   --color-error-light: #EFBCAD;
+   --color-error-lighter: #F9E4DE;
+   --color-error-dark: #5A2525;
+   --color-error-darker: #401D14;
+   --color-error-text: #401D14;
+
+   /* WARNING: Dark Mustard */
+   --color-warning: #78350F;
+   /* Darkened from #745C1E */
+   --color-warning-light: #F2E8C9;
+   --color-warning-lighter: #FDF5E3;
+   --color-warning-dark: #451a03;
+   --color-warning-darker: #3E2723;
+   --color-warning-text: #3E2723;
+
+   /* INFO: Muted Blue/Slate */
+   --color-info: #36424A;
+   /* Darkened from #5A6E7C */
+   --color-info-light: #D4DBE0;
+   --color-info-lighter: #E2E4EB;
+   --color-info-dark: #14151F;
+   --color-info-darker: #0D0F16;
+   --color-info-text: #14151F;
+
+   /* ========== BACKGROUND & SURFACE (Refined Earth) ========== */
+   --color-bg-main: #F2EBE5;
+   /* Very Light Almond - Warm but light enough for contrast */
+   --color-bg-secondary: #CEBAA5;
+   /* Deeper Almond - Darkened for >1.3 contrast against main */
+   --color-bg-tertiary: #C9B8A8;
+   --color-bg-hover: #C9B8A8;
+   --color-bg-disabled: #B5A390;
+
+   --color-surface-0: #F2EBE5;
+   --color-surface-1: #F2EBE5;
+   /* Matches Main BG - creates "cutout" or "highlight" effect on cards */
+   --color-surface-2: #D6C4B1;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: #B5A390;
+   --color-text-chip: var(--color-text-main);
+   /* Lightened to match Main BG range for max contrast against cards */
+
+   /* ========== TEXT COLORS (High Contrast) ========== */
+   --color-text-main: #261614;
+   --color-text-secondary: #261614;
+   /* Darkened from #3E2723 to Ensure 4.5+ */
+   --color-text-muted: #5D4037;
+   /* Contrast verified */
+   --color-text-disabled: #5D4037;
+   --color-text-contrast: #F4F1EE;
+
+   /* ========== BORDER COLORS ========== */
+   /* Borders */
+   --color-border: #8C735A;
+   /* Earth Grey Light */
+   --color-border-subtle: #5D4037;
+   /* Darker Camel - Contrast 3.5:1 against Bg */
+   --color-border-normal: #8C735A;
+   /* Camel */
+   --color-border-strong: #3E2723;
+   /* Dark Roast */
+
+   /* ========== SHADOW SYSTEM (Clay Tinted) ========== */
+   --shadow-xs: 0 1px 2px rgba(62, 39, 35, 0.05);
+   --shadow-sm: 0 2px 4px rgba(62, 39, 35, 0.08);
+   --shadow-md: 0 4px 12px rgba(62, 39, 35, 0.1);
+   --shadow-lg: 0 12px 24px rgba(62, 39, 35, 0.12);
+   --shadow-xl: 0 20px 40px rgba(62, 39, 35, 0.15);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms ease;
+   --transition-normal: 250ms ease;
+   --transition-slow: 400ms ease;
+}
+
+/* ============================================================================
+   NEUTRAL B THEME - Tea Green / Dusk Blue (v2.0)
+   ========================================================================== */
+:root[data-theme="neutral-b"],
+[data-theme="neutral-b"] {
+   /* ========== PRIMARY COLOR SYSTEM ========== */
+   /* Balanced primary for softer contrast while staying readable */
+   --color-primary: #23416f;
+   --color-primary-light: #7a92b8;
+   --color-primary-lighter: #bad29f;
+   --color-primary-dark: #1a2f55;
+   --color-primary-darker: #0b1221;
+   --color-primary-hover: #2b4f83;
+   --color-primary-fg: #FFFFFF;
+   --color-primary-contrast: var(--color-primary-fg);
+
+   /* ========== SECONDARY COLOR SYSTEM ========== */
+   --color-secondary: #808a9f;
+   /* Lavender Grey - Base */
+   --color-secondary-light: #c5cdd9;
+   /* Светлый фон для badge */
+   --color-secondary-lighter: #e6e8ed;
+   /* Очень светлый */
+   --color-secondary-dark: #5e6678;
+   /* Темнее базового */
+   --color-secondary-darker: #3d424d;
+   /* Темный текст (контраст 4.5:1+) */
+   --color-secondary-hover: #5e6678;
+   --color-secondary-text: #3d424d;
+   /* Alias для текста на светлом фоне */
+
+   /* ========== BACKGROUND & SURFACE ========== */
+   /* Amethyst Dusk - Restored Authenticity */
+   --color-bg-main: #b0aac0;
+   /* Darkened for 1.3+ panel separation */
+   --color-bg-secondary: #e2dce8;
+   /* Lightened for text contrast > 4.5:1 */
+   --color-bg-tertiary: #9389aa;
+   /* Secondary Amethyst Base */
+   --color-bg-hover: #e5e0ed;
+   /* Light hover */
+   --color-bg-disabled: rgba(128, 138, 159, 0.4);
+
+   --color-surface-0: #e8e4ee;
+   /* Lilac Grey */
+   --color-surface-1: #e2dbe7;
+   /* Lilac White - Original Surface */
+   --color-surface-2: #fdfcff;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: #5a7350;
+   --color-text-chip: #ffffff;
+   /* Titanium White - retained for max card contrast */
+
+   /* ========== TEXT COLORS ========== */
+   --color-text-main: #1a1226;
+   /* Darkened from #2C497F */
+   --color-text-secondary: #261a38;
+   /* Darkened for safety */
+   --color-text-muted: #1d232f;
+   /* FIXED: WCAG 4.5:1 Contrast (was #364156=4.10) */
+   --color-text-disabled: #5f5870;
+   --color-text-contrast: #FFFFFF;
+
+   /* ========== BORDER COLORS (High Contrast) ========== */
+   /* Adjusted for Amethyst Dusk palette */
+   --color-border-subtle: #5f667a;
+   /* Neutral grey for outlines */
+   --color-border-normal: var(--color-border-subtle);
+   --color-border: var(--color-border-subtle);
+   --color-border-strong: #3d2b56;
+   /* Deep amethyst */
+
+   /* ========== SHADOW SYSTEM (Dusk-tinted) ========== */
+   --shadow-xs: 0 1px 2px rgba(44, 73, 127, 0.05);
+   --shadow-sm: 0 2px 4px rgba(44, 73, 127, 0.08);
+   --shadow-md: 0 4px 12px rgba(44, 73, 127, 0.1);
+   --shadow-lg: 0 12px 24px rgba(44, 73, 127, 0.12);
+   --shadow-xl: 0 20px 40px rgba(44, 73, 127, 0.15);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+   /* ========== ACCENT COLOR SYSTEM ========== */
+   --color-accent: #50663c;
+   /* Dark Tea Green - Contrast Safe for Text */
+   --color-accent-light: #bad29f;
+   /* Celadon - Original Accent */
+   --color-accent-lighter: #ccf5ac;
+   /* Tea Green - Original Light Accent */
+   --color-accent-dark: #354228;
+   --color-accent-darker: #1a2214;
+   --color-accent-text: #1a2214;
+
+   /* ========== SUCCESS STATE ========== */
+   --color-success: #0a3008;
+   /* Further darkened to achieve 4.5:1 contrast on #a8a0b8 */
+   --color-success-light: #d2e7ca;
+   --color-success-lighter: #dcefd5;
+   --color-success-dark: #051a04;
+   --color-success-darker: #030d02;
+   --color-success-text: #030d02;
+
+   /* ========== ERROR STATE ========== */
+   --color-status-error: #5A1919;
+   --color-error: #5A1919;
+   /* Darkened from #a63535 */
+   --color-error-light: #efd1d1;
+   --color-error-lighter: #f2dddd;
+   --color-error-dark: #4f1919;
+   --color-error-darker: #290c12;
+   --color-error-text: #4f1919;
+
+   /* ========== WARNING STATE ========== */
+   --color-warning: #806104;
+   /* Darkened from #947105 */
+   --color-warning-light: #fff8e1;
+   --color-warning-lighter: #fffbeb;
+   --color-warning-dark: #4d3a02;
+   --color-warning-darker: #26210b;
+   --color-warning-text: #4d3a02;
+
+   /* ========== INFO STATE ========== */
+   --color-info: #07567a;
+   /* Darkened from #0b7eb3 */
+   --color-info-light: #e0f2fe;
+   --color-info-lighter: #f0f9ff;
+   --color-info-dark: #04364d;
+   --color-info-darker: #02202e;
+   --color-info-text: #04364d;
+}
+
+/* ============================================================================
+   LIGHT B THEME - Warm Paper & Spiced Orange
+   ========================================================================== */
+:root[data-theme="light-b"],
+[data-theme="light-b"] {
+   /* ========== PRIMARY COLOR SYSTEM ========== */
+   --color-primary: #9C4215;
+   --color-primary-light: #E8D4C5;
+   --color-primary-lighter: #F5E8E0;
+   --color-primary-dark: #9C4215;
+   --color-primary-darker: #704F2D;
+   --color-primary-hover: #704F2D;
+   --color-primary-active: #704F2D;
+   --color-primary-fg: #FFFFFF;
+   --color-primary-contrast: var(--color-primary-fg);
+
+   /* ========== SECONDARY COLOR SYSTEM ========== */
+   --color-secondary: #8D7B6F;
+   --color-secondary-light: #C4B5AA;
+   --color-secondary-lighter: #E8E2DC;
+   --color-secondary-dark: #6B5F54;
+   --color-secondary-darker: #524438;
+   --color-secondary-hover: #6B5F54;
+
+   /* ========== ACCENT COLOR SYSTEM ========== */
+   --color-accent: #D97706;
+   --color-accent-light: #FDDA6D;
+   --color-accent-lighter: #FEF3C7;
+   --color-accent-dark: #A85D04;
+   --color-accent-darker: #7C4407;
+
+   /* ========== SUCCESS STATE ========== */
+   --color-success: #15803D;
+   --color-success-light: #D1F3EB;
+   --color-success-lighter: #D8EFE9;
+   --color-success-dark: #107D65;
+   --color-success-darker: #0B4F3D;
+   --color-success-text: #0B4F3D;
+
+   /* ========== ERROR STATE ========== */
+   --color-status-error: #A24519;
+   --color-error: #A24519;
+   --color-error-light: #F5E8E0;
+   --color-error-lighter: #F2E1D6;
+   --color-error-dark: #704F2D;
+   --color-error-darker: #4A3420;
+   --color-error-text: #704F2D;
+
+   /* ========== WARNING STATE ========== */
+   --color-warning: #C2410C;
+   --color-warning-light: #FDDA6D;
+   --color-warning-lighter: #FEF3C7;
+   --color-warning-dark: #A85D04;
+   --color-warning-darker: #7C4407;
+   --color-warning-text: #7C4407;
+
+   /* ========== INFO STATE ========== */
+   --color-info: #3B82F6;
+   --color-info-light: #DBEAFE;
+   --color-info-lighter: #EFF6FF;
+   --color-info-dark: #1E40AF;
+   --color-info-darker: #1E3A8A;
+   --color-info-text: #1E40AF;
+
+   /* ========== BACKGROUND COLORS ========== */
+   --color-bg-main: #FAF7EF;
+   /* Основной фон страницы - Refined for elevation */
+   --color-bg-secondary: #F2EFE9;
+   /* Карточки, панели */
+   --color-bg-tertiary: #E6E0D4;
+   /* Альтернативные фоны */
+   --color-bg-hover: #F5E8E0;
+   /* Hover состояние */
+   --color-bg-disabled: #E6E0D4;
+   /* Disabled состояние */
+
+   /* ========== SURFACE LAYERS ========== */
+   --color-surface-0: #FAF7EF;
+   /* Base */
+   --color-surface-1: #FFFFFF;
+   /* Приподнятая (карточки) */
+   /* Приподнятая (карточки) */
+   --color-surface-2: #E6D3C8;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: var(--color-surface-2);
+   --color-text-chip: var(--color-text-secondary);
+   /* Более приподнятая */
+
+   /* ========== BORDER COLORS ========== */
+   --color-border: #E6E0D4;
+   --color-border-subtle: #6B5F54;
+   --color-border-normal: var(--color-border);
+   --color-border-strong: #C05621;
+
+   /* ========== TEXT COLORS ========== */
+   --color-text-main: #2D241E;
+   --color-text-secondary: #524438;
+   /* Darkened from #8D7B6F (3.79:1) to #524438 (>6:1) */
+   --color-text-muted: #6B5F54;
+   /* FIXED: WCAG AA for Light B */
+   --color-text-disabled: #AFA399;
+   --color-text-contrast: #FFFFFF;
+
+   /* ========== SHADOW SYSTEM (Warm Paper) ========== */
+   --shadow-xs: 0 1px 2px rgba(45, 36, 30, 0.05);
+   --shadow-sm: 0 1px 3px rgba(45, 36, 30, 0.1);
+   --shadow-md: 0 4px 6px -1px rgba(45, 36, 30, 0.1);
+   --shadow-lg: 0 10px 15px -3px rgba(45, 36, 30, 0.1);
+   --shadow-xl: 0 20px 25px -5px rgba(45, 36, 30, 0.1);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================================================
+   DARK A THEME - Almond / Pitch Black
+   ========================================================================== */
+:root[data-theme="dark-a"],
+[data-theme="dark-a"] {
+   /* ========== PRIMARY COLOR SYSTEM (Warm Cinnamon/Khaki) ========== */
+   /* Base: Toasted Almond/Cinnamon Wood mix for richness */
+   --color-primary: #e8985e;
+   --color-primary-light: #f0b58e;
+   --color-primary-lighter: #3D2E1A;
+   /* FIXED: Was #fce4d6 (light pastel) — wrong for dark theme. Now dark warm tint for bg highlights */
+   --color-primary-dark: #cc7a3d;
+   --color-primary-darker: #a9714b;
+   --color-primary-hover: #d68b55;
+   /* Contrast: Pitch Black text on Orange primary is high contrast */
+   --color-primary-fg: #141204;
+   --color-primary-contrast: var(--color-primary-fg);
+   --color-status-error: var(--color-error);
+
+   /* ========== SECONDARY COLOR SYSTEM (Olive/Khaki) ========== */
+   --color-secondary: #3E3220;
+   /* Dark Khaki/Brown for Text/Icons */
+   --color-secondary-light: #2A2418;
+   /* FIXED: Was #D4C4A8 (L=74.5%) — too light for dark theme */
+   --color-secondary-lighter: #211D14;
+   /* FIXED: Was #EAE0D5 (L=87.6%) — too light for dark theme */
+   --color-secondary-dark: #262115;
+   /* Changed from #1f1d0a for better badge-to-card contrast */
+   --color-secondary-darker: #141204;
+   --color-secondary-hover: #54442b;
+
+   /* ========== ACCENT COLOR SYSTEM ========== */
+   --color-accent: #a9714b;
+   --color-accent-light: #2E2218;
+   /* FIXED: Was #DCC9B6 (L=78.8%) — too light for dark theme */
+   --color-accent-lighter: #3A2A1E;
+   /* FIXED: Was #deab8b (L=70.8%) — too light for dark theme */
+   --color-accent-dark: #3E2723;
+   /* Darkened from #8c5d3d for better text contrast (>7:1) */
+   --color-accent-darker: #271815;
+
+   /* ========== BACKGROUND & SURFACE (Pitch Black -> Khaki) ========== */
+   /* 
+      Strategy: 
+      - Main BG: Dark Khaki (#1a1810) - slightly lighter than pure black for comfort
+      - Secondary BG (Cards/Panels): Dark Khaki (#262A10) - subtle separation
+      - Tertiary BG: Dark Khaki 2 (#54442B) - highlighted areas
+   */
+   --color-bg-main: #1a1810;
+   /* Lightened from #141204 to reduce excessive contrast */
+   --color-bg-secondary: #363324;
+   /* Lightened from #2D2B1E for >1.3 contrast against bg-main */
+   --color-bg-tertiary: #4F4A35;
+   --color-bg-hover: #2E3315;
+   --color-bg-disabled: rgba(38, 42, 16, 0.4);
+
+   --color-surface-0: #1a1810;
+   /* Lightened from #141204 */
+   --color-surface-1: #363324;
+   /* Matched to bg-secondary for cards */
+   --color-surface-2: #4C4532;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: var(--color-surface-2);
+   --color-text-chip: var(--color-text-secondary);
+   /* Lightened from #383525 for elevated contrast */
+
+   /* ========== TEXT COLORS (Improved Readability) ========== */
+   /* 
+      Optimized for comfort: Reduced excessive contrast from 17.5:1 to ~12:1
+      Softer colors reduce eye strain during extended use
+   */
+   --color-text-main: #E8DDD0;
+   /* Softened from #FCEFE3 - reduces halation effect, contrast ~12:1 */
+   --color-text-secondary: #F0D5B5;
+   /* Lightened from #E0B588 (>6:1) to exceed 4.5:1 against new lighter surfaces */
+   --color-text-muted: #D4C4A8;
+   /* Lightened to match secondary-light for better contrast */
+   --color-text-disabled: #5a4a32;
+   /* Lightened from #54442b for visibility */
+   --color-text-contrast: #1a1810;
+   /* Text on light backgrounds - updated to match new bg-main */
+
+   /* ========== BORDER COLORS ========== */
+   --color-border-subtle: #a9714b;
+   /* Cinnamon - Passes 3:1 against #1F1E10 */
+   --color-border: #a9714b;
+   --color-border-normal: #a9714b;
+   --color-border-strong: #d4a574;
+
+   /* ========== STATE COLORS (Semantic) ========== */
+   /* SUCCESS: Sage/Olive Green */
+   --color-success: #69f0ae;
+   --color-success-light: #1A2E1A;
+   /* FIXED: Was #C4DFC4 (L=82.2%) — light pastel, wrong for dark theme */
+   --color-success-lighter: #12201A;
+   /* FIXED: Was #E6F2E6 (L=92.5%) — light pastel, wrong for dark theme */
+   --color-success-dark: #557F55;
+   --color-success-darker: #3B593B;
+   --color-success-text: #141204;
+
+   /* ERROR: Terra Cotta / Rust */
+   --color-error: #D66853;
+   --color-error-light: #2E1610;
+   /* FIXED: Was #F2Ccc6 (L=86.3%) — light pastel, wrong for dark theme */
+   --color-error-lighter: #201210;
+   /* FIXED: Was #FAEfec (L=95.3%) — light pastel, wrong for dark theme */
+   --color-error-dark: #C85A42;
+   --color-error-darker: #803020;
+   --color-error-text: #FAEfec;
+
+   /* WARNING: Mustard/Gold */
+   --color-warning: #D4AF37;
+   --color-warning-light: #2A2210;
+   /* FIXED: Was #F0DE99 (L=77.1%) — light pastel, wrong for dark theme */
+   --color-warning-lighter: #1E1A0D;
+   /* FIXED: Was #FAF5DB (L=92.0%) — light pastel, wrong for dark theme */
+   --color-warning-dark: #AA8C2C;
+   --color-warning-darker: #806921;
+   --color-warning-text: #141204;
+
+   /* INFO: Muted Slate/Teal */
+   --color-info: #6A8D92;
+   --color-info-light: #152528;
+   /* FIXED: Was #B4D1D4 (L=76.9%) — light pastel, wrong for dark theme */
+   --color-info-lighter: #101E20;
+   /* FIXED: Was #E6F2F3 (L=92.7%) — light pastel, wrong for dark theme */
+   --color-info-dark: #4A6366;
+   --color-info-darker: #2F3F41;
+   --color-info-text: #E6F2F3;
+
+   /* ========== SHADOW SYSTEM (Subtle Warm Glow) ========== */
+   --shadow-xs: 0 1px 2px rgba(232, 152, 94, 0.1);
+   --shadow-sm: 0 2px 4px rgba(232, 152, 94, 0.1);
+   --shadow-md: 0 4px 12px rgba(232, 152, 94, 0.1), 0 0 4px rgba(232, 152, 94, 0.05);
+   --shadow-lg: 0 12px 24px rgba(232, 152, 94, 0.1), 0 0 8px rgba(232, 152, 94, 0.08);
+   --shadow-xl: 0 20px 40px rgba(232, 152, 94, 0.15), 0 0 12px rgba(232, 152, 94, 0.1);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms ease;
+   --transition-normal: 250ms ease;
+   --transition-slow: 400ms ease;
+
+   --color-secondary-text: #FCEFE3;
+
+   /* ========== BADGE SYSTEM (Dark Theme Optimized) ========== */
+   --badge-secondary-bg: var(--color-secondary-dark);
+   --badge-secondary-text: var(--color-secondary-lighter);
+   --badge-secondary-ring: var(--color-secondary-lighter);
+
+   --badge-success-bg: var(--color-success-dark);
+   --badge-success-text: var(--color-success-lighter);
+   --badge-success-ring: var(--color-success-lighter);
+
+   --badge-warning-bg: var(--color-warning-dark);
+   --badge-warning-text: var(--color-warning-lighter);
+   --badge-warning-ring: var(--color-warning-lighter);
+
+   --badge-primary-bg: var(--color-primary-dark);
+   --badge-primary-text: var(--color-primary-lighter);
+   --badge-primary-ring: var(--color-primary-lighter);
+
+   --badge-error-bg: var(--color-error-dark);
+   --badge-error-text: var(--color-error-lighter);
+   --badge-error-ring: var(--color-error-lighter);
+
+   --badge-info-bg: var(--color-info-dark);
+   --badge-info-text: var(--color-info-lighter);
+   --badge-info-ring: var(--color-info-lighter);
+}
+
+/* ============================================================================
+   DARK B THEME - Amethyst / Space Indigo
+   ========================================================================== */
+:root[data-theme="dark-b"],
+[data-theme="dark-b"] {
+   /* ========== PRIMARY COLOR SYSTEM ========== */
+   --color-primary: #b98ea7;
+   --color-primary-light: #f0d3f7;
+   --color-primary-lighter: #1E1535;
+   /* FIXED: Was #f0d3f7 (L=89.8%) — too light for dark theme. Now dark amethyst tint */
+   --color-primary-dark: #24161f;
+   --color-primary-darker: #4e2e38;
+   --color-primary-hover: #d1a6bf;
+   --color-primary-fg: #120d31;
+   --color-primary-contrast: var(--color-primary-fg);
+
+   /* ========== SECONDARY COLOR SYSTEM ========== */
+   --color-secondary: #302f4d;
+   --color-secondary-light: #1E1D30;
+   /* FIXED: Was #e0e0ff (L=93.9%) — too light for dark theme */
+   --color-secondary-lighter: #18172A;
+   /* FIXED: Was #e0e0ff (L=93.9%) — too light for dark theme */
+   --color-secondary-dark: #0d0924;
+   --color-secondary-darker: #0a0818;
+   --color-secondary-hover: #45436a;
+   --color-secondary-text: #e0e0ff;
+
+   /* ========== BACKGROUND & SURFACE ========== */
+   --color-bg-main: #0b081e;
+   --color-bg-secondary: #262244;
+   /* Lightened from #1A1635 for >1.3 contrast against bg-main */
+   --color-bg-tertiary: #4A4875;
+   --color-bg-hover: #1e1940;
+   --color-bg-disabled: #706ca0;
+
+   --color-surface-0: #0b081e;
+   --color-surface-1: #262244;
+   /* Matched to bg-secondary */
+   --color-surface-2: #454370;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: var(--color-surface-2);
+   --color-text-chip: var(--color-text-secondary);
+   /* Raised elevation */
+
+   /* ========== TEXT COLORS ========== */
+   --color-text-main: #f0d3f7;
+   --color-text-secondary: #FCEAF5;
+   /* Lightened from #E0B0D0 for >4.5 contrast */
+   --color-text-muted: #CDCBD9;
+   --color-text-disabled: #d8d3ec;
+   --color-text-contrast: #120d31;
+
+   /* ========== BORDER COLORS ========== */
+   --color-border-subtle: #9F9CD0;
+   /* Lightened from #646299 to pass 3:1 definitively */
+   --color-border: #9F9CD0;
+   --color-border-normal: #9F9CD0;
+   --color-border-strong: #B0AECE;
+   /* FIXED: Was #CDCBD9 (L=82.4%) — slightly too bright, toned down */
+
+   /* ========== ACCENT & STATES ========== */
+   --color-accent: #f0d3f7;
+   --color-accent-light: #2A1F30;
+   /* FIXED: Was #f0d3f7 (L=89.8%) — too light for dark theme */
+   --color-accent-lighter: #1A1530;
+   /* FIXED: Was #ffffff (L=100%) — wrong for dark theme. Now dark indigo tint */
+   --color-accent-dark: #633e4b;
+   --color-accent-darker: #4a2e38;
+
+   --color-success: #4ecdc4;
+   --color-success-light: #1a3a38;
+   --color-success-lighter: #0F2A24;
+   /* FIXED: Was #d1f3eb (L=88.6%) — light pastel, wrong for dark theme */
+   --color-success-dark: #051f1c;
+   --color-success-darker: #102523;
+   --color-success-text: #d1f3eb;
+
+   --color-error: #ff6b8b;
+   --color-error-light: #3d121b;
+   --color-error-lighter: #2A1015;
+   /* FIXED: Was #f5e8e0 (L=92.0%) — light pastel, wrong for dark theme */
+   --color-error-dark: #260a0f;
+   --color-error-darker: #290c12;
+   --color-error-text: #f5e8e0;
+
+   --color-warning: #ffe66d;
+   --color-warning-light: #3d3512;
+   --color-warning-lighter: #2A2510;
+   /* FIXED: Was #ffe66d (L=71.4%) — too bright for dark theme */
+   --color-warning-dark: #292408;
+   --color-warning-darker: #26210b;
+   --color-warning-text: #ffe66d;
+
+   --color-info: #a29bfe;
+   --color-info-light: #7E7CB2;
+   /* Lightened from #646299 to fix text contrast on info-dark */
+   --color-info-lighter: #15162A;
+   /* FIXED: Was #dbeafe (L=92.7%) — light pastel, wrong for dark theme */
+   --color-info-dark: #1f1d40;
+   --color-info-darker: #15132b;
+   --color-info-text: #E0E0FF;
+
+   /* ========== SHADOW SYSTEM (Amethyst Glow) ========== */
+   --shadow-xs: 0 1px 2px rgba(185, 142, 167, 0.1);
+   --shadow-sm: 0 2px 4px rgba(185, 142, 167, 0.15);
+   --shadow-md: 0 4px 12px rgba(185, 142, 167, 0.18);
+   --shadow-lg: 0 12px 24px rgba(185, 142, 167, 0.2);
+   --shadow-xl: 0 20px 40px rgba(185, 142, 167, 0.25);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms ease;
+   --transition-normal: 250ms ease;
+   --transition-slow: 400ms ease;
+}

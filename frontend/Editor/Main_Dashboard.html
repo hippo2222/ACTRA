@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="../../assets/ThemeManager.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ACTRA — Редактор</title>
+    <base href="/ui/editor/">
+    <link rel="stylesheet" href="styles.css">
+    <script>
+        (function () {
+            const state = JSON.parse(localStorage.getItem('editorDashboardState') || '{}');
+            const params = new URLSearchParams(window.location.search);
+            if (typeof state.pendingNavigation === 'object') {
+                const pending = state.pendingNavigation;
+                delete state.pendingNavigation;
+                localStorage.setItem('editorDashboardState', JSON.stringify(state));
+                if (pending.module && !params.get('module')) {
+                    params.set('module', pending.module);
+                }
+                if (pending.topic && !params.get('topic')) {
+                    params.set('topic', pending.topic);
+                }
+            }
+            if (params.has('module') || params.has('topic') || params.has('sort')) {
+                const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+                history.replaceState(null, '', url);
+            }
+            window.__EDITOR_ROUTE_STATE__ = {
+                module: params.get('module'),
+                topic: params.get('topic'),
+                sort: params.get('sort'),
+            };
+        })();
+    </script>
+    <script src="import_manager.js?v=1" defer></script>
+    <script src="dashboard.js?v=8" defer></script>
+
+    <link href="../../assets/tailwind.css" rel="stylesheet" />
+    <link href="../../assets/fonts.css" rel="stylesheet" />
+    <link href="../../assets/lightB-variables.css" rel="stylesheet" />
+    <link href="../../assets/lightB-components.css" rel="stylesheet" />
+    <link href="../../assets/animations.css" rel="stylesheet" />
+
+</head>
+
+<body
+    class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display antialiased selection:bg-primary-lighter selection:text-primary-dark">
+    <aside class="w-[250px] bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full">
+        <div class="h-16 flex items-center px-6 border-b border-border-subtle gap-3">
+            <span class="brand-logo w-8 h-8" style="color:var(--color-primary)" aria-hidden="true"></span>
+            <h1 class="text-text-main font-bold text-lg tracking-tight">ACTRA</h1>
+            <button data-role="return-main"
+                class="ml-auto h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors shadow-sm"
+                title="Вернуться на главный экран">
+                <span class="material-symbols-outlined text-[20px]">arrow_back</span>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto pt-4 no-scrollbar">
+            <div class="px-4 mb-4">
+                <button onclick="dashboard.showModuleModal()"
+                    class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
+                    <span
+                        class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">add_circle</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">Новый модуль</span>
+                </button>
+            </div>
+            <div class="px-4 mb-4">
+                <button onclick="dashboard.showImportModal()"
+                    class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
+                    <span
+                        class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">upload_file</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">Импорт заданий</span>
+                </button>
+            </div>
+            <!-- Dynamic Module List Container -->
+            <div class="flex flex-col gap-1 px-3">
+                <!-- Modules will be injected here by dashboard.js -->
+            </div>
+        </div>
+        <div class="p-4 border-t border-border-subtle">
+            <button
+                class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left">
+                <span class="material-symbols-outlined text-[20px]">settings</span>
+                <span class="text-sm font-medium">Настройки</span>
+            </button>
+        </div>
+    </aside>
+    <!-- Sidebar Blur Overlay (Initially hidden) -->
+    <div id="sidebar-blur-overlay"
+        class="absolute top-0 left-0 w-[250px] h-full modal-backdrop z-30 hidden transition-opacity duration-200">
+    </div>
+    <!-- Sidebar Confirmation Modal (Initially hidden) -->
+    <div id="sidebar-delete-modal"
+        class="absolute top-0 left-0 w-[250px] h-full z-40 hidden flex items-center justify-center pointer-events-none">
+        <div class="bg-surface-1 w-[220px] rounded-xl shadow-xl p-4 border border-border-subtle transform transition-all scale-95 opacity-0 pointer-events-auto"
+            id="sidebar-delete-modal-content">
+            <div class="flex flex-col gap-3 text-center">
+                <div
+                    class="w-10 h-10 rounded-full bg-error-light text-error-dark flex items-center justify-center mx-auto">
+                    <span class="material-symbols-outlined text-[20px]">delete</span>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-text-main">Удалить?</h3>
+                    <p class="text-xs text-text-secondary mt-1 line-clamp-2" id="sidebar-delete-target-name">Module Name
+                    </p>
+                </div>
+                <div class="flex gap-2 mt-1">
+                    <button onclick="dashboard.cancelDeleteConfirmation()"
+                        class="flex-1 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 hover:bg-bg-hover rounded-lg transition-colors">
+                        Отмена
+                    </button>
+                    <button id="sidebar-delete-confirm-btn"
+                        class="flex-1 py-1.5 text-xs font-bold text-primary-contrast bg-error hover:bg-error-dark rounded-lg transition-colors shadow-sm">
+                        Удалить
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative">
+        <header
+            class="h-20 flex items-center justify-between px-8 bg-surface-1 border-b border-border-subtle shrink-0 sticky top-0 z-10 transition-colors">
+            <h2 class="text-2xl font-bold text-text-main tracking-tight">Библиотека контента</h2>
+            <div class="flex items-center gap-4 flex-1 justify-end max-w-2xl">
+                <div class="relative w-full max-w-md">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="material-symbols-outlined text-text-disabled">search</span>
+                    </div>
+                    <input id="editor-search-input"
+                        class="block w-full rounded-lg border-0 bg-surface-2 py-2.5 pl-10 pr-4 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm sm:leading-6"
+                        placeholder="Поиск заданий, модулей или файлов..." type="text" />
+                </div>
+                <div class="relative" data-role="sort-controller">
+                    <button data-role="sort-toggle"
+                        class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors shadow-sm">
+                        <span class="material-symbols-outlined text-[20px] text-text-secondary">sort</span>
+                        <span data-role="sort-label">По дате изменения</span>
+                        <span class="material-symbols-outlined text-[18px] text-text-disabled">expand_more</span>
+                    </button>
+                    <div data-role="sort-menu"
+                        class="hidden absolute right-0 mt-2 w-60 rounded-xl border border-border-subtle bg-surface-1 shadow-xl z-30 py-2">
+                        <p class="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-text-disabled">
+                            Сортировка</p>
+                        <button data-sort-option="date"
+                            class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
+                            <span class="material-symbols-outlined text-[18px] text-text-disabled mr-2">schedule</span>
+                            <span class="flex-1 text-left">По дате изменения</span>
+                            <span
+                                class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
+                                data-role="sort-check">check</span>
+                        </button>
+                        <button data-sort-option="alphabet"
+                            class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
+                            <span
+                                class="material-symbols-outlined text-[18px] text-text-disabled mr-2">sort_by_alpha</span>
+                            <span class="flex-1 text-left">По алфавиту</span>
+                            <span
+                                class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
+                                data-role="sort-check">check</span>
+                        </button>
+                        <button data-sort-option="type"
+                            class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
+                            <span class="material-symbols-outlined text-[18px] text-text-disabled mr-2">category</span>
+                            <span class="flex-1 text-left">По типу задания</span>
+                            <span
+                                class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
+                                data-role="sort-check">check</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto p-8">
+            <!-- Dynamic Grid Container -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 max-w-7xl mx-auto pb-10">
+                <!-- Tasks will be injected here by dashboard.js -->
+                <button data-role="create-task-card"
+                    class="group h-[200px] rounded-xl border-2 border-dashed border-border-strong hover:border-primary bg-transparent flex flex-col items-center justify-center gap-3 transition-all hover:bg-bg-hover cursor-pointer">
+                    <div
+                        class="h-12 w-12 rounded-full bg-surface-2 group-hover:bg-primary-lighter flex items-center justify-center transition-colors">
+                        <span
+                            class="material-symbols-outlined text-text-disabled group-hover:text-primary text-[28px]">add</span>
+                    </div>
+                    <span class="text-text-secondary font-medium group-hover:text-primary transition-colors">Новое
+                        задание</span>
+                </button>
+            </div>
+        </div>
+    </main>
+    <!-- Create Task Modal -->
+    <div id="create-task-modal"
+        class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop items-center justify-center p-4">
+        <div
+            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-surface-1 px-6 pt-6 pb-4">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-text-main">Создать новое задание</h3>
+                    <button onclick="dashboard.closeModals()"
+                        class="text-text-disabled hover:text-text-secondary transition-colors">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <form id="create-task-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">Модуль</label>
+                        <div class="flex gap-2">
+                            <select id="task-module-select"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                <option value="">Выберите модуль...</option>
+                            </select>
+                            <button type="button" onclick="dashboard.showModuleModal()"
+                                class="p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
+                                title="Add Module">
+                                <span class="material-symbols-outlined text-[20px]">add</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">Тема</label>
+                        <div class="flex gap-2">
+                            <select id="task-topic-select"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                <option value="">Выберите тему...</option>
+                            </select>
+                            <button type="button" onclick="dashboard.showTopicModal()"
+                                class="p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
+                                title="Add Topic">
+                                <span class="material-symbols-outlined text-[20px]">add</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">Название задания</label>
+                        <input type="text" id="task-name-input"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
+                            placeholder="Введите понятное название" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">Тип задания</label>
+                        <select id="task-type-select"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                            <option value="click">Клик (Аннотация)</option>
+                            <option value="draw">Рисование</option>
+                            <option value="test">Тест (Выбор ответа)</option>
+                            <option value="sequence_assembly">Сборка последовательности</option>
+                            <option value="open_answer">Открытый ответ</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
+                <button type="button" onclick="dashboard.closeModals()"
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    Отмена
+                </button>
+                <button type="button" onclick="dashboard.submitTaskForm()"
+                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all shadow-md">
+                    Создать задание
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+    <!-- Create Module Modal -->
+    <div id="create-module-modal"
+        class="hidden fixed inset-0 z-[60] overflow-y-auto modal-backdrop items-center justify-center p-4">
+        <div
+            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="bg-surface-1 px-6 pt-6 pb-4">
+                <h3 class="text-xl font-bold text-text-main mb-4">Создать новый модуль</h3>
+                <div>
+                    <label class="block text-sm font-semibold text-text-secondary mb-1">Название модуля</label>
+                    <input type="text" id="module-name-input"
+                        class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
+                        placeholder="например, Анатомия грудной клетки" required>
+                </div>
+            </div>
+            <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
+                <button type="button" onclick="dashboard.closeModuleModal()"
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    Отмена
+                </button>
+                <button type="button" onclick="dashboard.submitModuleForm()"
+                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                    Создать модуль
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+    <!-- Create Topic Modal -->
+    <div id="create-topic-modal"
+        class="hidden fixed inset-0 z-[60] overflow-y-auto modal-backdrop items-center justify-center p-4">
+        <div
+            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
+            <div class="bg-surface-1 px-6 pt-6 pb-4">
+                <h3 class="text-xl font-bold text-text-main mb-4">Создать новую тему</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">Целевой модуль</label>
+                        <select id="topic-module-select" disabled
+                            class="block w-full rounded-lg border-border-subtle bg-bg-hover py-2.5 text-text-disabled sm:text-sm">
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">Название темы</label>
+                        <input type="text" id="topic-name-input"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
+                            placeholder="например, Патология" required>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
+                <button type="button" onclick="dashboard.closeTopicModal()"
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    Отмена
+                </button>
+                <button type="button" onclick="dashboard.submitTopicForm()"
+                    class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                    Создать тему
+                </button>
+            </div>
+        </div>
+    </div>
+    </div>
+    <!-- Import Tasks Modal -->
+    <div id="import-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
+        <div
+            class="bg-surface-1 rounded-2xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between shrink-0">
+                <h2 class="text-xl font-bold text-text-main">Импорт заданий</h2>
+                <button onclick="dashboard.closeImportModal()"
+                    class="text-text-disabled hover:text-text-secondary transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <!-- Progress Steps -->
+            <div class="px-6 py-4 border-b border-border-subtle shrink-0">
+                <div class="flex items-center justify-between" data-role="import-steps">
+                    <!-- Step 1 -->
+                    <div class="flex flex-col items-center gap-2 flex-1" data-step="1">
+                        <div
+                            class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-semibold text-sm">
+                            1
+                        </div>
+                        <span class="text-xs font-medium text-text-secondary">Модуль/Тема</span>
+                    </div>
+                    <!-- Divider -->
+                    <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
+                    <!-- Step 2 -->
+                    <div class="flex flex-col items-center gap-2 flex-1" data-step="2">
+                        <div
+                            class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
+                            2
+                        </div>
+                        <span class="text-xs font-medium text-text-disabled">Текст</span>
+                    </div>
+                    <!-- Divider -->
+                    <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
+                    <!-- Step 3 -->
+                    <div class="flex flex-col items-center gap-2 flex-1" data-step="3">
+                        <div
+                            class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
+                            3
+                        </div>
+                        <span class="text-xs font-medium text-text-disabled">Превью</span>
+                    </div>
+                    <!-- Divider -->
+                    <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
+                    <!-- Step 4 -->
+                    <div class="flex flex-col items-center gap-2 flex-1" data-step="4">
+                        <div
+                            class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
+                            4
+                        </div>
+                        <span class="text-xs font-medium text-text-disabled">Подтверждение</span>
+                    </div>
+                </div>
+            </div>
+            <!-- Content Area -->
+            <div class="flex-1 overflow-y-auto p-6" data-role="import-content">
+                <!-- Content will be rendered by JavaScript -->
+                <div class="text-center text-text-disabled">Загрузка...</div>
+            </div>
+            <!-- Footer -->
+            <div class="px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0">
+                <button onclick="dashboard.importPrevStep()" data-role="import-prev"
+                    class="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                    Назад
+                </button>
+                <button onclick="dashboard.importNextStep()" data-role="import-next"
+                    class="px-6 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                    Далее
+                </button>
+            </div>
+        </div>
+    </div>
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
+
+    <script src="../../assets/NotificationUI.js"></script>
+    <script src="../../assets/ThemeSwitcherUI.js"></script>
+    <script src="../../assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,156 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  backend-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [ "3.10", "3.11" ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Python syntax check
+        run: |
+          python - <<'PY'
+          import pathlib
+          import py_compile
+          import sys
+
+          skipped = {"node_modules", ".venv", "dist", "build", ".git", "__pycache__"}
+          root = pathlib.Path(".").resolve()
+          errors = []
+          for path in root.rglob("*.py"):
+              if any(part in skipped for part in path.parts):
+                  continue
+              try:
+                  py_compile.compile(str(path), doraise=True)
+              except py_compile.PyCompileError as exc:
+                  errors.append(f"{path}: {exc.msg}")
+
+          if errors:
+              print("Python syntax check failed:")
+              for item in errors:
+                  print(item)
+              sys.exit(1)
+          print("Python syntax check passed.")
+          PY
+
+      - name: Mojibake guard (critical UI)
+        run: |
+          python scripts/check_mojibake.py
+
+      - name: Release catalog gate (non-demo baseline)
+        run: |
+          python scripts/validate_release_catalog.py --data-dir data --require-non-demo
+
+      - name: Black (runtime baseline)
+        run: |
+          black --check .
+
+      - name: Mypy (baseline configured files)
+        run: |
+          mypy .
+
+      - name: Flake8 (critical baseline)
+        run: |
+          flake8 .
+
+      - name: Run tests with coverage
+        run: |
+          pytest
+
+      - name: Upload coverage to artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  frontend-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          npm ci
+
+      - name: Frontend lint
+        run: |
+          npm run lint:frontend
+
+      - name: Run unit tests
+        run: |
+          npm test
+
+      - name: Validate themes
+        run: |
+          npm run validate:themes
+
+      - name: Build CSS
+        run: |
+          npm run build:css
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

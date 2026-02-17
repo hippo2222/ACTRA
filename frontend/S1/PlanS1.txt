@@ -1,0 +1,216 @@
+Сформулирую детальный, поэтапный план по S1: какие файлы трогаем, какие блоки переносим из HUD вниз, как связать это с текущей логикой контроллера и TaskScreen. План сделаем сначала на уровне шагов, потом сможем реализовывать их по очереди.
+
+Сейчас распишу подробный поэтапный план имплементации S1 с учётом макета [code.html](cci:7://file:///d:/Ai%20Ai/radioproject/Plan%20UI%20and%20Smth/S1/code.html:0:0-0:0) и идеи “кнопки внизу”, а затем пометим задачу планирования в TODO как выполненную.
+
+### Общая цель S1
+
+На S1 хотим:
+
+- верхняя панель (шапка) + прогресс по комплексу, как в [code.html](cci:7://file:///d:/Ai%20Ai/radioproject/Plan%20UI%20and%20Smth/S1/code.html:0:0-0:0);
+- большая область задания (то, что сейчас рисует [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37)/renderers);
+- **кнопки управления внизу** (“Проверить”, “Следующее”, “Пропустить”), вместо HUD‑кнопок сверху.
+
+При этом:
+
+- логика [ComplexSessionController](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/logic/complex_session_controller.py:25:0-1035:61), AdaptiveSessionManager, сохранения сессий и т.п. **не меняется**;
+- меняем только слой UI: [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38), [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37), немного рендереров.
+
+---
+
+## План имплементации S1 (по шагам)
+
+### Шаг 1. Определить ответственность экранов
+
+- **[AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38)**:
+  - отвечает за:
+    - шапку/рамку комплекса (header + прогресс по очереди/сложности);
+    - общий layout: сверху шапка, в середине [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37), внизу панель кнопок комплекса;
+    - связывает кнопки “Проверить/Следующее/Пропустить” с методами [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37).
+- **[TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37)**:
+  - становится более “универсальным”:
+    - хранит текущую задачу, рендерит её в `renderer_container`;
+    - **больше не рисует свои “нижние” кнопки** для режима комплекса;
+    - предоставляет публичные методы [on_submit_answer()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:2443:4-2910:36), [on_next_task()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:3308:4-3382:137), [on_skip_task()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:3156:4-3180:119), которыми будет управлять [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38).
+- HUD вверху (`hud_frame`) можно:
+  - либо упростить до чисто “прогресс‑панели” (без кнопок),
+  - либо объединить его с новой шапкой в один `Frame`.
+
+---
+
+### Шаг 2. Перестроить layout [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38) под макет S1
+
+В [AdaptiveSessionScreen.setup_ui()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:27:4-396:126):
+
+1. **Шапка (header по мотивам [code.html](cci:7://file:///d:/Ai%20Ai/radioproject/Plan%20UI%20and%20Smth/S1/code.html:0:0-0:0))**:
+   - Создать верхний `Frame`:
+     - слева: иконка + `Label` с названием модуля/комплекса:
+       - название брать из `ComplexService` или из summary (когда будет доступно);
+       - пока можно выводить placeholder “Комплекс заданий” + `complex_id`.
+     - справа: `Button "Завершить комплекс"`:
+       - по нажатию:
+         - спрашивать подтверждение (`messagebox.askyesno`);
+         - звать метод контроллера, завершающий сессию ([_handle_session_completion](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/logic/complex_session_controller.py:670:4-692:46) или публичный wrap);
+         - переходить к экрану результатов или списку комплексов.
+
+2. **Блок прогресса под шапкой (по мотивам `Task: 3 of 10`, `Difficulty: 2 of 3`, progress bar)**:
+   - `Frame` с двумя `Label`:
+     - `self.progress_task_label`: `"Задание X из Y"`;
+     - `self.progress_difficulty_label`: `"Сложность: L из 3"` или `"Итерация N из M"`.
+   - Под ними — `Frame`‑полоса прогресса:
+     - внешний `Frame` (серый фон);
+     - вложенный `Frame` с цветом “primary”, ширина задаётся пропорцией `index/total`.
+   - Обновление этих элементов:
+     - в [_on_task_changed(task_info)](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:1575:4-2500:117):
+       - `index = task_info["index"] + 1`, `total = task_info["total"]`;
+       - `difficulty = task_info["difficulty"]` или `iteration = task_info["iteration"]`;
+       - рассчитать процент: `index / total * 100`.
+   - HUD доп. элементы (для тестов: вопрос/таймер) можно оставить внутри `hud_extra_container` или перенести в эту же область.
+
+3. **Центральная область для задания**:
+   - Оставить `task_container` как сейчас:
+     - [TaskScreen(self.task_container, self.app)](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37) + `pack(fill=BOTH, expand=True)`.
+   - Никакой дополнительной логики тут не трогаем: рендеринг задания остается задачей [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37) и его рендереров.
+
+4. **Нижняя панель кнопок комплекса (аналог footer из HTML)**:
+   - Создать `bottom_panel` в [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38):
+     - `Frame` для основной группы кнопок (Check/Next) — горизонтальный flex:
+       - `self.btn_check` (основная, синяя): вызывает [self.task_screen.on_submit_answer()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:2443:4-2910:36);
+       - `self.btn_next` (вторичная): вызывает [self._on_next_task_click()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:2519:4-2591:120) (который уже проксирует в контроллер);
+     - ниже — `self.btn_skip` (“Пропустить задание”): вызывает [self.task_screen.on_skip_task()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:3156:4-3180:119).
+   - Состояния:
+     - при загрузке нового задания:
+       - `btn_check` активна/неактивна — можно начальное состояние брать из логики [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37) (по флагу `_task_already_checked` и доступности ответа);
+       - `btn_next` по умолчанию `DISABLED`, пока задание не проверено;
+       - `btn_skip` всегда `NORMAL`, пока контроллер не скажет иное.
+
+---
+
+### Шаг 3. Убрать зависимость от HUD‑кнопок в [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37)
+
+В [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37):
+
+1. **Перестать использовать HUD для кнопок в режиме комплекса**:
+   - [_sync_hud_actions()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:426:4-486:42):
+     - постепенно выведем из употребления для **комплексного режима** (оставим только, если нужно для старых сценариев/отладочных HUD).
+     - В рамках S1: можно:
+       - либо оставить пустую реализацию в комплекс‑режиме (ничего не добавлять в HUD [set_hud_action_buttons](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:429:4-461:135)),
+       - либо вызывать [_sync_hud_actions()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:426:4-486:42) только в не‑комплексном режиме.
+
+2. **Пересмотреть [_create_action_buttons](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:510:4-660:32)**:
+   - В комплексном режиме:
+     - `action_panel` нам больше не нужна как визуальный элемент, но:
+       - она всё ещё используется для обычного (не‑комплексного) режима.
+   - План:
+     - оставить текущую реализацию для **не‑комплексного** режима;
+     - для `is_complex_mode=True`:
+       - либо не создавать `action_panel` вообще;
+       - либо создавать, но не `pack`’ать (чтобы логику кнопок можно было переиспользовать, если нужно).
+
+3. **Обеспечить чистый API для кнопок снизу**:
+   - Убедиться, что в [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37) есть публичные методы:
+     - [on_submit_answer(self)](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:2443:4-2910:36) — уже есть;
+     - [on_next_task(self)](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:3308:4-3382:137) — уже есть;
+     - [on_skip_task(self)](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:3156:4-3180:119) — уже есть;
+   - При вызове этих методов:
+     - они должны сами управлять внутренним состоянием:
+       - выставлять `_task_already_checked`,
+       - сохранять `_last_evaluation_result`,
+       - переключать доступность `next`/`check` (логика уже есть, но сейчас завязана на внутренние `submit_btn`/`next_btn`).
+   - Нам важно, чтобы изменения состояний отдавались наружу через:
+     - флаг `self._task_already_checked`;
+     - возможно, новый callback или метод, который [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38) сможет дергать, чтобы обновить свои нижние кнопки.
+
+4. **Добавить минимальный контракт для управления кнопками из [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38)**:
+   - Например:
+     - метод `get_action_state()` в [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37), который возвращает:
+       - `can_submit`, `can_next`, `can_skip`;
+     - вызывать его из [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38):
+       - после [_on_task_changed()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:1575:4-2500:117) или после завершения проверки, чтобы обновить `btn_check`, `btn_next`, `btn_skip`.
+
+---
+
+### Шаг 4. Подружить контроллер и новый низ кнопок
+
+Сейчас:
+
+- [AdaptiveSessionScreen.on_show](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:1236:4-1505:38):
+  - подписывает контроллер:
+    - [on_task_changed = self._on_task_changed](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:1575:4-2500:117);
+    - [on_session_completed = self._on_session_completed](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:2593:4-2653:38);
+    - [on_iteration_completed = self._show_iteration_results](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:2731:4-2768:13);
+    - [on_complex_completed = self._show_final_results](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:2942:4-2964:38);
+  - устанавливает TaskScreen‑callbacks:
+    - [task_screen.set_on_submit(self._on_submit_answer_proxy)](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:78:4-87:83);
+    - [task_screen.set_on_next(self._on_next_task_click)](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:89:4-98:81).
+
+Адаптация под “кнопки внизу”:
+
+1. **Кнопка “Проверить”**:
+   - `btn_check.command`:
+     - либо напрямую [self._on_submit_answer_proxy()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:2502:4-2517:21);
+     - либо [self.task_screen.on_submit_answer()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:2443:4-2910:36), который внутри вызовет `_on_submit_callback`.
+   - После успешной проверки:
+     - [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37) обновляет `_task_already_checked`, `_last_evaluation_result`;
+     - [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38) может:
+       - по событию (если оно есть) или по опросу собрать новое состояние и:
+         - включить `btn_next`,
+         - при желании менять текст “Check Answer” → “Check Again” и т.п.
+
+2. **Кнопка “Next Task”**:
+   - `btn_next.command`:
+     - [self._on_next_task_click()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:2519:4-2591:120), который уже дергает [ComplexSessionController._load_next_task()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/logic/complex_session_controller.py:269:4-555:114).
+   - Важно:
+     - по умолчанию `btn_next` `DISABLED`;
+     - включается **только после проверки** задания.
+
+3. **Кнопка “Skip task”**:
+   - `btn_skip.command`:
+     - [self.task_screen.on_skip_task()](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:3156:4-3180:119), который уже должен дернуть контроллер на пропуск (через callback/TaskController).
+
+---
+
+### Шаг 5. Адаптировать рендереры под новую карточку (по необходимости)
+
+Это уже “косметический” слой, но в плане стоит упомянуть:
+
+- Для ключевых рендереров (`ClickTaskRendererV2`, `DrawTaskRendererV2`, `TestTaskRendererAdapter`):
+  - привести layout ближе к карточке из HTML:
+    - двухколоночный вид с “визуалом” слева и контентом справа;
+    - фон, отступы, тени по возможности имитировать через `Frame`/`relief`.
+- Жёстко не трогаем логику, только компоновку.
+
+---
+
+### Шаг 6. Убрать/упростить лишнюю HUD‑логику
+
+Когда всё заработает с нижними кнопками:
+
+- в [AdaptiveSessionScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:22:0-2988:38):
+  - оставить HUD только как **информер** (прогресс, номера, возможно таймер),
+  - удалить/закомментировать использование `hud_action_container` в комплекс‑режиме.
+- в [TaskScreen](cci:2://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:28:0-3408:37):
+  - [_sync_hud_actions](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/task_screen.py:426:4-486:42) для `is_complex_mode` можно:
+    - либо удалить,
+    - либо оставить пустым/для других сценариев.
+
+---
+
+### Шаг 7. Проверка сценариев
+
+Прогнать:
+
+- старт новой сессии из `ComplexListScreen` (`_on_start_complex`);
+- восстановление сессии (`_on_continue_complex` / [AdaptiveSessionScreen.on_show](cci:1://file:///d:/Ai%20Ai/radioproject/desktop-app/ui/screens/adaptive_session_screen.py:1236:4-1505:38) в режиме `ui_state`);
+- прохождение:
+  - “правильный ответ → Next Task”;
+  - “ошибка → доп. попытки → Next Task”;
+  - “Skip task”;
+- переходы на итерационный экран S2 и обратно.
+
+---
+
+Если такой план тебе заходит, дальше можем идти шаг за шагом:
+
+- сначала реализуем **Шаг 2 (header + прогресс + нижняя панель)** без удаления HUD‑кнопок,
+- затем сделаем **Шаг 3–4**: переведём управление с HUD‑кнопок на кнопки внизу,
+- и уже потом будем чистить старую HUD‑логику.

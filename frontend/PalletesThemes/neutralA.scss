@@ -1,0 +1,36 @@
+/* Neutral A - Refined Earth (High Contrast) */
+/* Concept: Light Almond background with Dark Roast text for AAA accessibility. */
+
+/* CSS HEX */
+:root {
+    --light-almond: #EAE0D5;
+    /* BG Main: Lightened for contrast */
+    --pale-oak: #DCC9B6;
+    /* BG Secondary: Original smooth color */
+    --white-smoke: #F4F1EE;
+    /* Surface 1 */
+    --camel: #A39171;
+    /* Surface 2 / Accents */
+    --earth-grey-light: #BFB0A0;
+    /* Borders */
+    --dark-roast: #3E2723;
+    /* Text Main: Deep brown */
+    --earth-grey: #5D4037;
+    /* Text Muted / Primary */
+    --clay-brown: #5D4037;
+    /* Primary Hover */
+}
+
+/* SCSS HEX */
+$light-almond: #EAE0D5;
+$pale-oak: #DCC9B6;
+$white-smoke: #F4F1EE;
+$camel: #A39171;
+$earth-grey-light: #BFB0A0;
+$dark-roast: #3E2723;
+$earth-grey: #5D4037;
+$clay-brown: #5D4037;
+
+/* SCSS Gradient */
+$gradient-top: linear-gradient(0deg, #EAE0D5, #A39171, #3E2723);
+$gradient-right: linear-gradient(90deg, #EAE0D5, #A39171, #3E2723);

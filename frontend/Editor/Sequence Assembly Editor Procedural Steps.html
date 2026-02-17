@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="../../assets/ThemeManager.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ACTRA — Редактор последовательностей</title>
+    <link rel="stylesheet" href="sequence_editor.css">
+    <!-- BaseEditor dependencies -->
+    <script src="undo_manager.js"></script>
+    <script src="autosave_manager.js"></script>
+    <script src="base_editor.js"></script>
+    <script src="sequence_editor.js" defer></script>
+
+    <link href="../../assets/tailwind.css" rel="stylesheet" />
+    <link href="../../assets/fonts.css" rel="stylesheet" />
+    <link href="../../assets/lightB-variables.css" rel="stylesheet" />
+    <link href="../../assets/lightB-components.css" rel="stylesheet" />
+    <link href="../../assets/animations.css" rel="stylesheet" />
+
+</head>
+
+<body
+    class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display selection:bg-primary-light selection:text-primary antialiased">
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
+        <header
+            class="h-16 flex items-center justify-between px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-10 sticky top-0">
+            <div class="flex items-center gap-4 text-text-main">
+                <button id="back-to-dashboard" title="Библиотека заданий"
+                    class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div>
+                    <h2 class="text-lg font-bold text-text-main tracking-tight flex items-center gap-2">
+                        <span>Редактирование:</span>
+                        <span id="task-title-display" class="text-text-main">Загрузка...</span>
+                    </h2>
+                    <div id="save-status-container"
+                        class="flex items-center gap-2.5 mt-0.5 transition-all duration-300">
+                        <div id="save-status-indicator" class="w-1.5 h-1.5 rounded-full bg-success transition-all">
+                        </div>
+                        <div class="flex flex-col">
+                            <span id="save-status-text"
+                                class="text-[10px] font-bold text-text-secondary uppercase tracking-tight leading-none">Изменения
+                                сохранены</span>
+                            <span id="save-status-detail"
+                                class="text-[9px] text-text-disabled leading-none mt-1 hidden"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Undo/Redo buttons -->
+                <div class="flex items-center gap-1 border-r border-border-subtle pr-3">
+                    <button id="undo-btn" disabled title="\u041e\u0442\u043c\u0435\u043d\u0438\u0442\u044c (Ctrl+Z)"
+                        class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled">
+                        <span class="material-symbols-outlined text-[20px]">undo</span>
+                    </button>
+                    <button id="redo-btn" disabled
+                        title="\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c (Ctrl+Y)"
+                        class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled">
+                        <span class="material-symbols-outlined text-[20px]">redo</span>
+                    </button>
+                </div>
+                <button id="save-task-btn"
+                    class="flex items-center justify-center gap-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg px-5 py-2 transition-colors shadow-md text-sm">
+                    Сохранить
+                </button>
+            </div>
+        </header>
+        <div class="flex-1 overflow-y-auto">
+            <div class="max-w-5xl mx-auto p-8 pb-32">
+                <div class="mb-8">
+                    <label class="block text-xs font-semibold text-text-disabled uppercase tracking-wider mb-2">Текст
+                        задания</label>
+                    <textarea id="prompt-textarea"
+                        class="block w-full rounded-lg border-border-subtle bg-surface-2 shadow-sm focus:border-primary focus:ring-0 sm:text-sm text-text-main leading-relaxed"
+                        placeholder="Опишите процедуру или инструкцию для обучающегося..." rows="3"></textarea>
+                </div>
+                <div id="levels-container" class="space-y-6">
+                    <!-- Levels will be rendered here -->
+                </div>
+                <div class="flex items-center justify-between pt-4">
+                    <button id="clear-all-btn"
+                        class="flex items-center gap-2 bg-surface-1 border border-border-subtle text-text-secondary hover:bg-bg-hover hover:text-error font-medium px-4 py-2 rounded-lg text-sm transition-colors shadow-sm">
+                        <span class="material-symbols-outlined text-[18px]">delete_sweep</span>
+                        Очистить всё
+                    </button>
+                    <button id="add-level-btn"
+                        class="flex items-center gap-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold px-6 py-2.5 rounded-lg shadow-md transition-transform active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                        Добавить уровень
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+    <aside
+        class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 z-20 h-full overflow-y-auto"
+        style="width: 320px;">
+        <div class="h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 sticky top-0 z-10">
+            <h3 class="text-text-main font-bold text-base tracking-tight flex items-center gap-2">
+                <span class="material-symbols-outlined text-text-disabled">tune</span>
+                Настройки задания
+            </h3>
+        </div>
+        <div class="p-6 space-y-8">
+            <div>
+                <label
+                    class="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2 flex items-center gap-1">
+                    Логика проверки
+                    <span class="material-symbols-outlined text-[14px] text-icon-secondary cursor-help"
+                        title="Как проверяются ответы пользователя">info</span>
+                </label>
+                <div class="bg-surface-2 rounded-lg p-3 border border-border-subtle">
+                    <p class="text-[11px] text-text-secondary leading-normal">
+                        Пользователи должны распределить элементы по уровням и упорядочить их.
+                    </p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Настройки
+                    последовательности</label>
+                <label class="inline-flex items-start gap-2 cursor-pointer">
+                    <input id="order-inside-matters" checked=""
+                        class="mt-0.5 rounded border-border-subtle text-primary focus:ring-primary h-4 w-4"
+                        type="checkbox" />
+                    <span class="text-sm text-text-secondary leading-tight">Важна последовательность элементов внутри
+                        уровней</span>
+                </label>
+                <label class="inline-flex items-start gap-2 cursor-pointer">
+                    <input id="level-order-matters"
+                        class="mt-0.5 rounded border-border-subtle text-primary focus:ring-primary h-4 w-4"
+                        type="checkbox" />
+                    <span class="text-sm text-text-secondary leading-tight">Важна последовательность уровней</span>
+                </label>
+                <div class="bg-surface-2 rounded-lg p-3 border border-border-subtle mt-2">
+                    <p id="settings-help-text" class="text-[11px] text-text-muted leading-normal">
+                        <!-- Dynamic content will be loaded here -->
+                    </p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <script src="../../assets/ThemeSwitcherUI.js"></script>
+    <script src="../../assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

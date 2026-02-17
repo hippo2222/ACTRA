@@ -1,0 +1,226 @@
+{
+  "timestamp": "2026-02-09T07-54-52-648Z",
+  "configPath": "D:\\Ai Ai\\radioproject\\scripts\\contrast_audit.s1_state_matrix.config.json",
+  "outputDir": "D:\\Ai Ai\\radioproject\\reports\\contrast",
+  "baseUrl": "http://127.0.0.1:8000",
+  "totals": {
+    "rows": 30,
+    "issueRows": 0,
+    "issues": 0,
+    "coverageRows": 0,
+    "missingCoverageRows": 0,
+    "missingCoverage": 0
+  },
+  "rows": [
+    {
+      "page": "S1 state matrix - answering",
+      "theme": "light-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_answering__light-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - answering",
+      "theme": "light-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_answering__light-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - answering",
+      "theme": "neutral-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_answering__neutral-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - answering",
+      "theme": "neutral-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_answering__neutral-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - answering",
+      "theme": "dark-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_answering__dark-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - answering",
+      "theme": "dark-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_answering__dark-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review success",
+      "theme": "light-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_success__light-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review success",
+      "theme": "light-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_success__light-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review success",
+      "theme": "neutral-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_success__neutral-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review success",
+      "theme": "neutral-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_success__neutral-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review success",
+      "theme": "dark-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_success__dark-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review success",
+      "theme": "dark-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_success__dark-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review failure",
+      "theme": "light-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_failure__light-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review failure",
+      "theme": "light-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_failure__light-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review failure",
+      "theme": "neutral-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_failure__neutral-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review failure",
+      "theme": "neutral-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_failure__neutral-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review failure",
+      "theme": "dark-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_failure__dark-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - review failure",
+      "theme": "dark-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_review_failure__dark-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - pause modal",
+      "theme": "light-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_pause_modal__light-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - pause modal",
+      "theme": "light-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_pause_modal__light-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - pause modal",
+      "theme": "neutral-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_pause_modal__neutral-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - pause modal",
+      "theme": "neutral-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_pause_modal__neutral-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - pause modal",
+      "theme": "dark-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_pause_modal__dark-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - pause modal",
+      "theme": "dark-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_pause_modal__dark-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - resume modal",
+      "theme": "light-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_resume_modal__light-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - resume modal",
+      "theme": "light-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_resume_modal__light-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - resume modal",
+      "theme": "neutral-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_resume_modal__neutral-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - resume modal",
+      "theme": "neutral-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_resume_modal__neutral-b__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - resume modal",
+      "theme": "dark-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_resume_modal__dark-a__2026-02-09T07-54-52-648Z.md"
+    },
+    {
+      "page": "S1 state matrix - resume modal",
+      "theme": "dark-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_state_matrix_-_resume_modal__dark-b__2026-02-09T07-54-52-648Z.md"
+    }
+  ]
+}

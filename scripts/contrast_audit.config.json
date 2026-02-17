@@ -1,0 +1,88 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": true,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "S1 coverage",
+      "url": "/ui/session/{sessionId}",
+      "waitFor": "#task-content",
+      "actionsOnce": [
+        { "type": "wait", "ms": 300 }
+      ],
+      "s1Coverage": {
+        "auditOptions": {
+          "includeHidden": false
+        },
+        "autoSession": {
+          "preferredIteration": 1,
+          "requireNotPaused": true,
+          "minTotalTasks": 1,
+          "autoCreateWhenEmpty": true,
+          "preferConfiguredUrlSession": false,
+          "usePreviousSession": true
+        },
+        "maxTasks": 200,
+        "targetTaskTypes": ["click", "draw", "test", "sequence_assembly", "open_answer"],
+        "targetDifficulties": [1, 2, 3],
+        "includeSubtypes": true,
+        "completionMode": "type",
+        "stopWhenComplete": true,
+        "afterTaskWaitMs": 250,
+        "afterThemeWaitMs": 150
+      }
+    },
+    {
+      "name": "S2",
+      "url": "/ui/session/{sessionId}/iteration/1",
+      "autoSession": {
+        "preferredIteration": 1,
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "preferConfiguredUrlSession": false,
+        "usePreviousSession": true
+      },
+      "waitFor": "#iteration-title",
+      "actionsOnce": [
+        { "type": "wait", "ms": 300 }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#continue-btn", "waitMs": 120 },
+        { "type": "focus", "selector": "#continue-btn", "waitMs": 120 }
+      ]
+    },
+    {
+      "name": "S3",
+      "url": "/ui/session/{sessionId}/results",
+      "autoSession": {
+        "preferredIteration": 1,
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "preferConfiguredUrlSession": false,
+        "usePreviousSession": true
+      },
+      "waitFor": "#results-title",
+      "actionsOnce": [
+        { "type": "wait", "ms": 300 }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#close-btn", "waitMs": 120 },
+        { "type": "focus", "selector": "#close-btn", "waitMs": 120 }
+      ]
+    }
+  ]
+}

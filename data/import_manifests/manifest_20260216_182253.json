@@ -1,0 +1,25 @@
+{
+  "spec": "actra.package/2",
+  "export_type": "complexes",
+  "created_at": "2026-02-16T16:22:53.438422Z",
+  "app_version": "1.0.0",
+  "hash_algo": "sha256",
+  "entities": {
+    "complexes": [
+      "cx_ie_4074e35a"
+    ],
+    "tasks": [
+      "mod_ie_4074e35a/topic_ie_4074e35a/task_ie_4074e35a"
+    ],
+    "theories": [
+      "th_ie_4074e35a"
+    ]
+  },
+  "missing": {
+    "complexes": [],
+    "tasks": [],
+    "theories": []
+  },
+  "import_date": "2026-02-16T18:22:53.759973",
+  "imported_count": 1
+}

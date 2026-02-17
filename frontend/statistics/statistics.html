@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="../assets/ThemeManager.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Статистика — ACTRA</title>
+    <link rel="stylesheet" href="/ui/statistics/statistics.css">
+    <link href="/assets/tailwind.css" rel="stylesheet" />
+    <link href="/assets/fonts.css" rel="stylesheet" />
+    <link href="/assets/lightB-variables.css" rel="stylesheet" />
+    <link href="/assets/lightB-components.css" rel="stylesheet" />
+    <link href="/assets/animations.css" rel="stylesheet" />
+</head>
+
+<body
+    class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
+    <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/ui/main"
+                    class="flex items-center justify-center size-8 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
+                    title="На главную">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="brand-logo size-8" style="color:var(--color-primary)" aria-hidden="true"></span>
+                    <div class="flex flex-col">
+                        <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main">
+                            Статистика</h1>
+                        <p class="text-xs text-text-secondary">Ваш прогресс обучения</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Streak Badge -->
+                <div id="streak-badge"
+                    class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-full border border-border-subtle transition-all">
+                </div>
+                <!-- User Avatar (same as Main/Calendar page) -->
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
+                    onclick="openProfileModal()">
+                    <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
+                    <span class="text-text-main text-sm font-medium hidden sm:inline" id="headerUserName">Гость</span>
+                </div>
+            </div>
+        </div>
+    </header>
+    <main class="flex-1 min-h-0 w-full max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <section class="lg:col-span-8 flex flex-col gap-6 min-h-0">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 shrink-0">
+                <div id="metric-tasks"
+                    class="metric-card relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div id="metric-tasks-icon"
+                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
+                            <span class="material-symbols-outlined">school</span>
+                        </div>
+                        <span id="metric-tasks-badge" class="hidden text-xs px-2 py-1 rounded-full font-medium"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
+                            <span id="tasks-mastered">—</span>
+                            <span id="tasks-total" class="text-text-muted text-lg font-semibold tracking-tight">/
+                                0</span>
+                        </div>
+                        <p class="text-text-secondary text-sm font-semibold mt-1">Освоено задач</p>
+                    </div>
+                    <button type="button" class="tooltip-dot tooltip-parent"
+                        data-tooltip="Количество уникальных заданий с успешной попыткой"
+                        aria-label="Что означает &quot;Освоено задач&quot;">
+                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
+                    </button>
+                </div>
+                <div id="metric-time"
+                    class="metric-card relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div id="metric-time-icon"
+                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
+                            <span class="material-symbols-outlined">schedule</span>
+                        </div>
+                        <span id="metric-time-badge" class="hidden text-xs px-2 py-1 rounded-full font-medium"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2 tracking-tight">
+                            <span id="time-hours">0</span>
+                            <span class="text-lg text-text-muted font-semibold">ч</span>
+                            <span id="time-minutes">00</span>
+                            <span class="text-lg text-text-muted font-semibold">м</span>
+                        </div>
+                        <p class="text-text-secondary text-sm font-semibold mt-1">Время обучения</p>
+                    </div>
+                    <button type="button" class="tooltip-dot tooltip-parent"
+                        data-tooltip="Суммарное время обучения в часах и минутах"
+                        aria-label="Что означает &quot;Время обучения&quot;">
+                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
+                    </button>
+                </div>
+                <div id="metric-streak"
+                    class="metric-card relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div id="metric-streak-icon"
+                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
+                            <span class="material-symbols-outlined">local_fire_department</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div
+                                class="flex items-center gap-1 text-[10px] font-bold text-text-secondary px-2.5 py-1 rounded-lg bg-bg-secondary border border-border-subtle leading-none">
+                                <span class="text-text-main tracking-tighter">MAX:</span>
+                                <span id="streak-best" class="text-text-main">0</span>
+                            </div>
+                            <a href="/ui/calendar"
+                                class="size-8 flex items-center justify-center rounded-lg bg-bg-secondary text-text-muted hover:text-primary transition-all border border-border-subtle hover:border-primary-light"
+                                title="Показать в календаре">
+                                <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+                            </a>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
+                            <span id="streak-days">0</span>
+                            <span class="text-lg font-semibold text-text-muted">дней</span>
+                        </div>
+                        <p class="text-text-secondary text-sm font-semibold mt-1">Серия</p>
+                    </div>
+                    <button type="button" class="tooltip-dot tooltip-parent"
+                        data-tooltip="Количество последовательных дней с обучением"
+                        aria-label="Что означает &quot;Серия&quot;">
+                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
+                    </button>
+                </div>
+            </div>
+
+            <div id="chart-card"
+                class="statistics-panel card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex-1 min-h-0 flex flex-col gap-3 relative overflow-hidden hover:shadow-md transition-shadow">
+                <div id="chart-header" class="chart-top flex items-center justify-between gap-3">
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-base font-bold text-text-main leading-tight" id="chart-title">
+                            Активность</h3>
+                        <div id="chart-period-delta" class="text-xs mt-0.5 font-semibold text-text-secondary">—</div>
+                    </div>
+                    <div class="chart-controls flex items-center gap-2">
+                        <div class="chart-toggle" id="chart-metric-selector" role="tablist" aria-label="Метрика">
+                            <button class="chart-toggle-btn active" data-metric="study" role="tab" aria-selected="true">
+                                <span>⏱️</span>
+                                <span class="text-xs">Время</span>
+                            </button>
+                            <button class="chart-toggle-btn" data-metric="attempts" role="tab" aria-selected="false">
+                                <span>✓</span>
+                                <span class="text-xs">Попытки</span>
+                            </button>
+                        </div>
+                        <div class="chart-period-switch flex bg-bg-secondary p-0.5 rounded-lg">
+                            <button data-period="7"
+                                class="period-btn px-2 py-1 rounded text-xs font-semibold bg-surface-1 text-text-main shadow-sm border border-border-subtle transition-all">7
+                                дней</button>
+                            <button data-period="30"
+                                class="period-btn px-2 py-1 rounded text-xs font-medium text-text-secondary hover:text-text-main transition-all">30</button>
+                            <button data-period="90"
+                                class="period-btn px-2 py-1 rounded text-xs font-medium text-text-secondary hover:text-text-main transition-all">90</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-body flex flex-col gap-2 min-h-0">
+                    <div class="chart-viewport flex-1 min-h-[220px] relative">
+                        <div id="chart-skeleton" class="chart-skeleton hidden">
+                            <div class="chart-skeleton-bars">
+                                <div class="chart-skeleton-bar"></div>
+                                <div class="chart-skeleton-bar"></div>
+                                <div class="chart-skeleton-bar"></div>
+                                <div class="chart-skeleton-bar"></div>
+                                <div class="chart-skeleton-bar"></div>
+                                <div class="chart-skeleton-bar"></div>
+                                <div class="chart-skeleton-bar"></div>
+                            </div>
+                        </div>
+                        <div id="chart-content" class="chart-canvas w-full h-full"></div>
+                        <div id="empty-chart"
+                            class="hidden absolute inset-0 flex flex-col items-center justify-center text-center px-4">
+                            <span class="material-symbols-outlined text-text-muted text-5xl mb-2">insights</span>
+                            <h3 class="text-sm font-bold text-text-main mb-1">Нет данных</h3>
+                            <p class="text-text-secondary text-xs">Начни тренировку, чтобы увидеть
+                                прогресс</p>
+                        </div>
+                    </div>
+                    <div id="chart-summary"
+                        class="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-bg-secondary text-xs">
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-2 h-2 rounded-full bg-info"></div>
+                            <span id="legend-primary-label" class="text-text-secondary">Минуты</span>
+                        </div>
+                        <div class="flex items-center gap-1.5">
+                            <div class="w-3 h-0.5 bg-primary rounded-full"></div>
+                            <span class="text-text-secondary">Тренд</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section id="right-column" class="lg:col-span-4 flex flex-col gap-6 min-h-0">
+            <div id="performance-card"
+                class="card-with-tooltip bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-text-secondary text-sm">pie_chart</span>
+                    <h3 class="text-base font-bold text-text-main">Производительность</h3>
+                </div>
+                <div id="performance-bars" class="space-y-3"></div>
+                <button type="button" class="tooltip-dot tooltip-dot--static tooltip-parent static-tooltip"
+                    data-tooltip="Распределение успешности по типам задач"
+                    aria-label="Что означает блок &quot;Производительность&quot;">
+                    <span class="material-symbols-outlined text-[16px] leading-none">help</span>
+                </button>
+            </div>
+            <div id="complexes-grid" class="grid grid-cols-2 gap-4 shrink-0 h-[110px] min-h-[110px]"></div>
+        </section>
+    </main>
+    <!-- Profile Modal (injected by SharedProfileModal.js) -->
+    <script src="/ui/statistics/statistics.js"></script>
+    <script src="../assets/SharedProfileModal.js"></script>
+    <script src="../assets/ThemeSwitcherUI.js"></script>
+    <script src="../assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

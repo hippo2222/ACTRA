@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "default_levels": {
+    "click": [
+      1,
+      2,
+      3
+    ],
+    "draw": [
+      1,
+      2
+    ],
+    "test": [
+      1,
+      2
+    ],
+    "sequence_assembly": [
+      1,
+      2,
+      3
+    ],
+    "open_answer": [
+      1
+    ]
+  },
+  "evaluation_defaults": {
+    "click": {
+      "tolerance_px": 25,
+      "freehand_tolerance_px": 15,
+      "success_threshold_percent": 100,
+      "comment": "tolerance_px - радиус попадания, threshold - процент для зачета"
+    },
+    "draw": {
+      "success_threshold_percent": 75,
+      "brush_radius_px": 8,
+      "iou_threshold": 0.5,
+      "comment": "success_threshold_percent - минимальный процент покрытия для успеха"
+    },
+    "open_answer": {
+      "min_keyword_match_percent": 50,
+      "comment": "минимальный процент совпадения ключевых слов"
+    },
+    "sequence_assembly": {
+      "level_order_matters": true,
+      "sequence_within_level_matters": false,
+      "comment": "настройки проверки порядка элементов"
+    },
+    "test": {
+      "partial_credit_enabled": false,
+      "comment": "включить частичные баллы (будет реализовано в Phase 2)"
+    }
+  },
+  "validation": {
+    "strict_mode": false,
+    "log_fallbacks": true,
+    "fail_on_missing_shape": false,
+    "comment": "strict_mode - строгая валидация, log_fallbacks - логировать fallback значения"
+  },
+  "task_overrides": {},
+  "type_overrides": {},
+  "test_level_2_settings": {
+    "typo_tolerance": {
+      "max_typos_per_word": 2,
+      "use_levenshtein": true
+    },
+    "ending_tolerance": {
+      "use_morphology": true,
+      "fallback_to_stemming": true,
+      "stemming_chars": 3
+    },
+    "normalize_yo": true,
+    "normalize_layout": true,
+    "normalize_y_i": true
+  }
+}

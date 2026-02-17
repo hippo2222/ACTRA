@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="../../assets/ThemeManager.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ACTRA — Редактор аннотаций</title>
+    <link rel="stylesheet" href="click_editor.css">
+    <script src="click_editor_helpers.js"></script>
+    <script src="undo_manager.js"></script>
+    <!-- BaseEditor must be loaded before click_editor.js -->
+    <script src="autosave_manager.js"></script>
+    <script src="base_editor.js"></script>
+    <script src="click_editor.js" defer></script>
+
+    <link href="../../assets/tailwind.css" rel="stylesheet" />
+    <link href="../../assets/fonts.css" rel="stylesheet" />
+    <link href="../../assets/lightB-variables.css" rel="stylesheet" />
+    <link href="../../assets/lightB-components.css" rel="stylesheet" />
+    <link href="../../assets/animations.css" rel="stylesheet" />
+
+</head>
+
+<body
+    class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
+    <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
+        <header
+            class="h-16 flex items-center justify-between px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
+            <div class="flex items-center gap-4">
+                <button id="back-btn" class="p-2 hover:bg-bg-hover rounded-full text-text-secondary transition-colors"
+                    onclick="window.navigateWithTransition('/ui/editor')" title="Библиотека заданий">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </button>
+                <div>
+                    <h2 class="text-lg font-bold text-text-main tracking-tight"></h2>
+                    <p class="text-xs text-text-secondary">Последнее изменение: 2 минуты назад</p>
+                </div>
+                <div id="click-mode-switch" class="flex items-center gap-3 ml-4">
+                    <div class="flex bg-surface-2 border border-border-subtle p-1 rounded-lg shadow-sm">
+                        <button id="mode-text-btn"
+                            class="mode-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all border border-transparent text-text-secondary hover:text-primary hover:bg-bg-hover"
+                            type="button" data-mode="text">
+                            <span class="material-symbols-outlined text-[14px]">touch_app</span>
+                            Клик
+                        </button>
+                        <button id="mode-errors-btn"
+                            class="mode-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md transition-all border border-transparent text-text-secondary hover:text-primary hover:bg-bg-hover"
+                            type="button" data-mode="errors">
+                            <span class="material-symbols-outlined text-[14px]">error</span>
+                            Ошибки
+                        </button>
+                    </div>
+                </div>
+                <div class="w-px h-5 bg-border-subtle"></div>
+                <div id="subtask-toggle" class="hidden flex bg-surface-2 p-1 rounded-lg">
+                    <button data-subtask-mode="text"
+                        class="subtask-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md shadow-sm bg-surface-1 text-text-main transition-all">
+                        <span class="material-symbols-outlined text-[14px]">text_fields</span>
+                        Слова
+                    </button>
+                    <button data-subtask-mode="errors"
+                        class="subtask-toggle-btn flex items-center gap-1.5 px-3 py-1 text-xs font-semibold rounded-md text-text-secondary hover:text-text-main transition-all">
+                        <span class="material-symbols-outlined text-[14px]">error</span>
+                        Тексты
+                    </button>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="save-status-container"
+                    class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-border-subtle transition-all duration-300">
+                    <div id="save-status-indicator" class="w-2 h-2 rounded-full bg-success transition-all">
+                    </div>
+                    <div class="flex flex-col">
+                        <span id="save-status-text"
+                            class="text-xs font-bold text-text-secondary leading-none">Сохранено</span>
+                        <span id="save-status-detail"
+                            class="text-xs text-text-disabled leading-none mt-1 hidden"></span>
+                    </div>
+                </div>
+                <button id="save-task-btn"
+                    class="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark active:bg-primary-darker text-primary-contrast font-semibold rounded-xl shadow-md text-sm tracking-tight transition focus:outline-none focus:border-primary">
+                    <span class="material-symbols-outlined text-[18px]">save</span>
+                    <span>Сохранить</span>
+                </button>
+            </div>
+        </header>
+        <div id="mode-pane-container" class="flex-1 flex overflow-hidden">
+            <div id="click-mode-pane" class="flex-1 flex overflow-hidden">
+                <div class="flex-1 flex flex-col relative bg-canvas-bg canvas-pattern">
+                    <div
+                        class="h-auto bg-surface-1 border-b border-border-color flex flex-col gap-2 px-4 py-3 shadow-sm z-10">
+                        <div class="flex items-center gap-2 w-full overflow-x-auto flex-nowrap" id="toolbar-row">
+                            <div class="flex items-center gap-2 flex-none">
+                                <button id="lasso-tool-btn" data-tool="polygon" aria-pressed="true"
+                                    class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
+                                    <span class="material-symbols-outlined text-[18px]">gesture</span>
+                                    Прямолинейное лассо
+                                </button>
+                                <button id="freehand-tool-btn" data-tool="freehand" aria-pressed="false"
+                                    class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
+                                    <span class="material-symbols-outlined text-[18px]">draw</span>
+                                    Свободное рисование
+                                </button>
+                            </div>
+                            <div class="flex items-center gap-2 text-sm flex-1 min-w-[200px] whitespace-nowrap">
+                                <button id="finish-polygon-btn" title="Завершить контур"
+                                    class="icon-action-btn border border-primary text-primary transition disabled:opacity-50 disabled:pointer-events-none"
+                                    aria-label="Завершить контур" disabled>
+                                    <span class="material-symbols-outlined text-[18px]">done</span>
+                                    <span class="sr-only">Завершить контур</span>
+                                </button>
+                                <button id="delete-last-point-btn" title="Удалить точку"
+                                    class="icon-action-btn border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
+                                    aria-label="Удалить точку" disabled>
+                                    <span class="material-symbols-outlined text-[18px]">undo</span>
+                                    <span class="sr-only">Удалить точку</span>
+                                </button>
+                                <button id="cancel-polygon-btn" title="Отменить рисование"
+                                    class="icon-action-btn border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
+                                    aria-label="Отменить рисование" disabled>
+                                    <span class="material-symbols-outlined text-[18px]">close</span>
+                                    <span class="sr-only">Отменить рисование</span>
+                                </button>
+                            </div>
+                            <div
+                                class="flex items-center gap-3 text-xs text-text-secondary ml-auto justify-end text-right min-w-[320px]">
+                                <span
+                                    class="inline-flex items-center gap-1 px-3 py-1 bg-surface-2 rounded-full whitespace-nowrap text-xs tracking-tight max-w-[360px] text-right justify-end"
+                                    data-drawing-status>Режим ожидания</span>
+                                <button id="toggle-label-visibility-btn"
+                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover transition text-xs font-semibold"
+                                    title="Переключить отображение названий">
+                                    <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                    <span id="label-visibility-mode-text" class="tracking-tight">Смарт</span>
+                                </button>
+                                <button id="clear-annotations-btn"
+                                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-error hover:bg-error-lighter transition-colors text-sm font-medium">
+                                    <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+                                    Очистить всё
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-1 relative overflow-hidden flex items-center justify-center p-8">
+                        <div id="canvas-container" class="relative w-full h-full">
+                            <div id="canvas-stage"
+                                class="relative inline-block bg-surface-1 shadow-2xl rounded-xl border border-border-subtle transform-gpu origin-top-left will-change-transform select-none">
+                                <img id="main-image" alt="Medical Scan"
+                                    class="block opacity-95 pointer-events-none select-none" src="" />
+                                <div id="image-placeholder"
+                                    class="hidden absolute inset-0 flex flex-col items-center justify-center text-text-disabled bg-surface-2">
+                                    <span class="material-symbols-outlined text-6xl mb-4">image_search</span>
+                                    <p class="text-sm font-medium">Изображение не выбрано</p>
+                                </div>
+                                <div id="canvas-layer" class="absolute inset-0">
+                                    <svg id="annotation-overlay" class="w-full h-full"></svg>
+                                </div>
+                            </div>
+                            <div class="absolute top-4 right-4 z-20">
+                                <button id="change-image-btn"
+                                    class="bg-surface-1 hover:bg-surface-1 text-primary p-2 rounded-full shadow-lg border border-border-subtle flex items-center gap-2 px-3">
+                                    <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
+                                    <span class="text-xs font-bold">Сменить изображение</span>
+                                </button>
+                                <input type="file" id="main-image-upload" class="hidden" accept="image/*">
+                            </div>
+                        </div>
+                        <div
+                            class="absolute bottom-6 right-6 bg-surface-1 rounded-lg shadow-lg border border-border-subtle p-1 flex items-center gap-1">
+                            <button id="zoom-out-btn"
+                                class="p-1.5 hover:bg-bg-hover rounded text-text-secondary focus:outline-none">
+                                <span class="material-symbols-outlined text-[20px]">remove</span>
+                            </button>
+                            <span id="zoom-level-display"
+                                class="text-xs font-semibold text-text-main w-12 text-center select-none">100%</span>
+                            <button id="zoom-in-btn"
+                                class="p-1.5 hover:bg-bg-hover rounded text-text-secondary focus:outline-none">
+                                <span class="material-symbols-outlined text-[20px]">add</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <aside
+                    class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 overflow-y-auto"
+                    style="width: 320px;">
+                    <div class="p-5 flex flex-col gap-4">
+                        <div class="flex flex-col gap-1 pb-1">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">Инструкция
+                                к заданию</label>
+                            <div class="relative">
+                                <label class="block text-sm font-medium text-text-main mb-1">Формулировка
+                                    задания</label>
+                                <textarea id="prompt-textarea"
+                                    class="w-full rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-0 sm:text-sm text-text-main p-3 shadow-sm min-h-[100px]"
+                                    placeholder="Введите инструкцию для исполнителя..."></textarea>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1 pt-1 -mt-2">
+                            <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">Критерии
+                                успеха</label>
+                            <div>
+                                <label class="block text-sm font-medium text-text-main mb-1">Необходимое количество
+                                    правильных ответов</label>
+                                <div class="flex items-center gap-2">
+                                    <input id="required-correct-input"
+                                        class="w-20 rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-0 sm:text-sm text-text-main shadow-sm p-2"
+                                        min="1" type="number" value="1" />
+                                    <span class="text-sm text-text-secondary">правильных аннотаций требуется</span>
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="border-border-subtle" />
+                        <div class="flex flex-col gap-2 group">
+                            <div class="flex items-center justify-between w-full text-left">
+                                <label
+                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary cursor-default">Дополнительные
+                                    материалы</label>
+                                <span
+                                    class="material-symbols-outlined text-text-disabled text-[18px]">expand_less</span>
+                            </div>
+                            <div class="flex flex-col gap-3 mt-1">
+                                <div>
+                                    <label class="block text-xs font-medium text-text-secondary mb-1">Тип</label>
+                                    <select id="additional-type-select"
+                                        class="w-full rounded-lg border-border-subtle bg-surface-2 py-2 px-3 text-sm focus:border-primary focus:ring-primary shadow-sm text-text-main">
+                                        <option value="none">Нет</option>
+                                        <option value="text">Текст</option>
+                                        <option value="image">Изображение</option>
+                                        <option value="combined">Текст + изображение</option>
+                                    </select>
+                                </div>
+                                <div id="additional-text-group" class="flex flex-col gap-1 hidden">
+                                    <label class="block text-xs font-medium text-text-secondary mb-1">Текст</label>
+                                    <textarea id="additional-textarea"
+                                        class="w-full rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-primary sm:text-sm text-text-main shadow-sm p-2 min-h-[80px]"
+                                        placeholder="Добавьте пояснение или комментарий"></textarea>
+                                </div>
+                                <div id="additional-images-group" class="hidden flex flex-col gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-xs font-medium text-text-secondary">Изображения</label>
+                                        <button id="additional-add-image-btn" type="button"
+                                            class="text-xs font-semibold text-primary hover:text-primary-dark flex items-center gap-1">
+                                            <span
+                                                class="material-symbols-outlined text-[16px]">add_photo_alternate</span>
+                                            Добавить
+                                        </button>
+                                    </div>
+                                    <div class="grid grid-cols-3 gap-2" id="additional-images-grid"></div>
+                                    <div id="additional-images-empty"
+                                        class="text-xs text-text-disabled bg-surface-2 border border-dashed border-border-subtle rounded-lg px-3 py-2 text-center">
+                                        Нет изображений
+                                    </div>
+                                    <input id="additional-image-input" class="hidden" type="file" accept="image/*">
+                                </div>
+                            </div>
+                        </div>
+                        <hr class="border-border-subtle" />
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-center justify-between">
+                                <label
+                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Аннотации</label>
+                                <span data-annotations-count
+                                    class="bg-info-lighter text-info-text text-xs font-bold px-2 py-0.5 rounded-full">0
+                                    контуров</span>
+                            </div>
+                            <ul id="annotation-list" class="flex flex-col gap-2">
+                                <!-- Points will be rendered here -->
+                            </ul>
+                        </div>
+                    </div>
+                </aside>
+            </div>
+            <div id="errors-mode-pane" class="flex-1 hidden overflow-auto bg-surface-1">
+                <!-- Error detection UI will be injected here when enabled -->
+            </div>
+        </div>
+    </main>
+    <div id="image-preview-modal"
+        class="hidden fixed inset-0 z-50 bg-scrim backdrop-blur-sm flex items-center justify-center p-6">
+        <div class="relative bg-surface-1 rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] flex flex-col">
+            <button id="image-preview-close"
+                class="absolute top-4 right-4 p-2 rounded-full bg-surface-1 hover:bg-surface-2 text-text-main transition shadow-sm border border-border-subtle">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+            <div class="p-4">
+                <img id="image-preview-img" alt="Предпросмотр изображения"
+                    class="w-full max-h-[80vh] object-contain rounded-xl bg-surface-2">
+            </div>
+        </div>
+    </div>
+    <!-- Inline fallback for Errors mode UI (from MistakesClickUI/Main.html) -->
+
+    <template id="errors-mode-template">
+        <main class="flex-1 px-4 py-6 sm:px-6 bg-bg-main">
+            <div class="max-w-5xl mx-auto flex flex-col gap-3">
+                <div data-errors-subpane="text" class="flex flex-col gap-3">
+                    <section data-pane-container
+                        class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+                        <div class="px-5 pb-5 pt-6 flex flex-col gap-4">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button data-pane-toggle="primary"
+                                    class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg shadow-sm bg-primary text-primary-contrast active:scale-[0.99] transition">
+                                    <span class="material-symbols-outlined text-[16px]">edit</span>
+                                    Основной текст
+                                </button>
+                                <button data-pane-toggle="reference"
+                                    class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary bg-surface-1 hover:bg-bg-hover transition">
+                                    <span class="material-symbols-outlined text-[16px]">menu_book</span>
+                                    Референс
+                                </button>
+                            </div>
+                            <div class="flex flex-col gap-4">
+                                <div data-pane="primary" class="flex flex-col gap-4">
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <button data-errors-add-span-btn type="button"
+                                            class="inline-flex items-center gap-2 bg-primary text-primary-contrast px-4 py-2 rounded-lg shadow-md text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+                                            <span class="material-symbols-outlined text-[16px]">add_circle</span>
+                                            Отметить как ошибку
+                                        </button>
+                                        <div data-errors-selection-hint
+                                            class="text-xs text-text-muted flex items-center gap-1">
+                                            <span
+                                                class="material-symbols-outlined text-[14px] text-text-disabled">info</span>
+                                            Выделите отрезок текста, чтобы активировать кнопку.
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col gap-4 xl:flex-row">
+                                        <div class="flex-1 flex flex-col gap-3">
+                                            <label class="flex flex-col">
+                                                <div
+                                                    class="relative rounded-lg border border-border-subtle bg-surface-1 font-mono">
+                                                    <div data-errors-highlight-layer
+                                                        class="pointer-events-none absolute inset-0 px-4 py-4 text-sm leading-relaxed text-transparent whitespace-pre-wrap custom-scrollbar rounded-lg">
+                                                    </div>
+                                                    <textarea data-errors-text-editor
+                                                        class="relative w-full min-h-[220px] rounded-lg bg-transparent text-sm leading-relaxed text-text-main custom-scrollbar p-4 font-mono resize-none focus:border-primary focus:ring-0 placeholder:text-text-disabled"
+                                                        spellcheck="false"></textarea>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <div class="xl:w-[360px] flex flex-col gap-4">
+                                            <div
+                                                class="bg-surface-2 rounded-xl border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
+                                                <div
+                                                    class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+                                                    <h4
+                                                        class="text-sm font-bold text-text-main flex items-center gap-2">
+                                                        <span
+                                                            class="material-symbols-outlined text-primary text-[18px]">bug_report</span>
+                                                        Найденные ошибки
+                                                    </h4>
+                                                    <button data-errors-clear-all type="button"
+                                                        class="text-xs text-error hover:text-error-dark font-semibold flex items-center gap-1">
+                                                        <span
+                                                            class="material-symbols-outlined text-[14px]">delete</span>
+                                                        Очистить
+                                                    </button>
+                                                </div>
+                                                <div class="flex-1 flex flex-col">
+                                                    <div data-errors-spans-empty
+                                                        class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3 m-4">
+                                                        Пока нет отмеченных ошибок.
+                                                    </div>
+                                                    <div class="flex-1 overflow-x-auto">
+                                                        <table class="min-w-full text-left text-sm text-text-main">
+                                                            <tbody data-errors-span-list
+                                                                class="divide-y divide-border-subtle bg-surface-1">
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex flex-col gap-3">
+                                        <div class="flex flex-wrap items-center gap-3">
+                                            <span class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                                <span
+                                                    class="material-symbols-outlined text-primary text-[18px]">flag</span>
+                                                Для прохождения необходимо найти
+                                            </span>
+                                            <div class="flex items-center gap-2">
+                                                <input type="number" min="0" value="0" data-errors-required-correct
+                                                    class="w-20 rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 text-sm font-semibold text-text-main focus:border-primary focus:ring-0" />
+                                                <span class="text-sm text-text-muted">ошибок</span>
+                                            </div>
+                                            <div class="text-sm text-text-muted">
+                                                Сейчас требуется <span class="font-semibold text-text-main"
+                                                    data-errors-required-current>0</span>
+                                                из <span class="font-semibold text-text-main"
+                                                    data-errors-total-count>0</span> доступных
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center gap-2 text-xs text-text-secondary">
+                                            <span
+                                                class="material-symbols-outlined text-[16px] text-text-disabled">info</span>
+                                            Значение по умолчанию совпадает с количеством отмеченных ошибок (0, если ни
+                                            одной), но можно указать меньшее число — не меньше 0 и не больше M.
+                                        </div>
+                                    </div>
+                                    <section
+                                        class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+                                        <div class="px-5 py-5 flex flex-col gap-4">
+                                            <div class="flex items-center justify-between">
+                                                <h3
+                                                    class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                                    <span
+                                                        class="material-symbols-outlined text-primary text-[18px]">wysiwyg</span>
+                                                    Инструкция (опционально)
+                                                </h3>
+                                                <button type="button" data-prompt-toggle
+                                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main bg-surface-1 hover:bg-bg-hover transition">
+                                                    <span class="material-symbols-outlined text-[16px]"
+                                                        data-prompt-icon>expand_more</span>
+                                                    <span data-prompt-label>Показать</span>
+                                                </button>
+                                            </div>
+                                            <div data-prompt-area class="hidden flex flex-col gap-2">
+                                                <label class="text-xs font-medium text-text-secondary">Формулировка
+                                                    задания
+                                                    (если оставить пустым, возьмём стандартное «Выберите правильный
+                                                    вариант текста»)</label>
+                                                <textarea id="prompt-textarea"
+                                                    class="w-full rounded-lg border border-border-subtle bg-surface-1 text-sm leading-relaxed text-text-main p-3 shadow-sm focus:border-primary focus:ring-primary min-h-[100px]"
+                                                    placeholder="Введите инструкцию, если нужно что-то особенное..."></textarea>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                                <div data-pane="reference" class="flex flex-col gap-4 hidden">
+                                    <div
+                                        class="bg-surface-2 p-4 rounded-lg border border-border-subtle shadow-sm flex flex-col gap-4">
+                                        <div data-reference-section
+                                            class="flex flex-col gap-4 bg-surface-1 border border-border-subtle rounded-xl p-4 shadow-sm">
+                                            <div class="flex flex-wrap items-center gap-3 justify-between">
+                                                <h4 class="text-sm font-bold text-text-main flex items-center gap-2">
+                                                    <span
+                                                        class="material-symbols-outlined text-primary text-[18px]">menu_book</span>
+                                                    Референсный текст
+                                                </h4>
+                                                <button data-reference-copy-btn type="button"
+                                                    class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main hover:bg-bg-hover transition">
+                                                    <span
+                                                        class="material-symbols-outlined text-[16px]">content_copy</span>
+                                                    Скопировать из основного текста
+                                                </button>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-3">
+                                                <button data-reference-add-span-btn type="button"
+                                                    class="inline-flex items-center gap-2 bg-success text-primary-contrast px-4 py-2 rounded-lg shadow-md text-xs font-semibold disabled:opacity-40 disabled:cursor-not-allowed">
+                                                    <span
+                                                        class="material-symbols-outlined text-[16px]">bookmark_add</span>
+                                                    Отметить как референс
+                                                </button>
+                                                <div class="ml-auto text-xs text-text-secondary">
+                                                    Символов: <span data-reference-char-counter>0</span>/4000
+                                                </div>
+                                            </div>
+                                            <div class="flex flex-col gap-4 xl:flex-row">
+                                                <div class="flex-1 flex flex-col gap-3">
+                                                    <label class="flex flex-col gap-2">
+                                                        <div
+                                                            class="relative rounded-lg border border-border-subtle bg-surface-1">
+                                                            <div data-reference-highlight-layer
+                                                                class="pointer-events-none absolute inset-0 px-4 py-4 text-sm leading-relaxed text-transparent whitespace-pre-wrap custom-scrollbar rounded-lg font-mono">
+                                                            </div>
+                                                            <textarea data-reference-text-editor maxlength="4000"
+                                                                class="relative w-full min-h-[220px] rounded-lg bg-transparent text-sm leading-relaxed text-text-main custom-scrollbar p-4 font-mono resize-none focus:border-primary focus:ring-0 placeholder:text-text-disabled"
+                                                                spellcheck="false"
+                                                                placeholder="Добавьте ориентир или эталонную формулировку."></textarea>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                                <div class="xl:w-[360px] flex flex-col gap-4">
+                                                    <div
+                                                        class="bg-surface-2 rounded-xl border border-border-subtle shadow-sm flex flex-col h-full overflow-hidden">
+                                                        <div
+                                                            class="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+                                                            <h4
+                                                                class="text-sm font-bold text-text-main flex items-center gap-2">
+                                                                <span
+                                                                    class="material-symbols-outlined text-success-dark text-[18px]">label</span>
+                                                                Референсные фрагменты
+                                                            </h4>
+                                                            <button data-reference-clear-all type="button"
+                                                                class="text-xs text-error hover:text-error-dark font-semibold flex items-center gap-1">
+                                                                <span
+                                                                    class="material-symbols-outlined text-[14px]">delete</span>
+                                                                Очистить
+                                                            </button>
+                                                        </div>
+                                                        <div class="flex-1 flex flex-col">
+                                                            <div data-reference-spans-empty
+                                                                class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3 m-4">
+                                                                Пока нет сохранённых фрагментов.
+                                                            </div>
+                                                            <div class="flex-1 overflow-x-auto">
+                                                                <table
+                                                                    class="min-w-full text-left text-sm text-text-main">
+                                                                    <tbody data-reference-span-list
+                                                                        class="divide-y divide-border-subtle"></tbody>
+                                                                </table>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+                <div data-errors-subpane="errors" class="hidden flex flex-col gap-3">
+                    <section class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+                        <div
+                            class="flex items-center justify-between px-5 py-3 bg-surface-2 border-b border-border-subtle">
+                            <h3 class="text-base font-semibold text-text-main">Список вариантов</h3>
+                        </div>
+                        <div class="px-5 pb-5 pt-4 flex flex-col gap-5">
+                            <div class="flex items-center justify-between text-xs text-text-secondary">
+                                <div class="flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[16px] text-primary">wysiwyg</span>
+                                    <span>Инструкция</span>
+                                </div>
+                                <div class="font-semibold text-text-main" data-choice-prompt-preview>—</div>
+                            </div>
+                            <div data-choice-options-empty
+                                class="text-xs text-text-secondary bg-surface-1 border border-dashed border-border-subtle rounded-lg px-4 py-3">
+                                Варианты не созданы.
+                            </div>
+                            <div data-choice-options-list class="flex flex-col gap-4"></div>
+                            <button type="button" data-choice-add-option
+                                class="flex items-center justify-center gap-2 w-full py-3 border-2 border-dashed border-border-subtle rounded-xl text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-all font-medium text-sm">
+                                <span class="material-symbols-outlined">add_circle</span>
+                                Добавить вариант
+                            </button>
+                            <div data-choice-warning
+                                class="flex items-center gap-2 text-xs font-medium text-warning-text bg-warning-lighter px-3 py-2 rounded-lg border border-warning-light hidden">
+                                <span class="material-symbols-outlined text-[16px]">info</span>
+                                Должен быть ровно один правильный вариант
+                            </div>
+                        </div>
+                    </section>
+                    <section class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
+                        <div class="px-5 py-5 flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-sm font-semibold text-text-main flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-primary text-[18px]">wysiwyg</span>
+                                    Инструкция (опционально)
+                                </h3>
+                                <button type="button" data-choice-prompt-toggle
+                                    class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-main bg-surface-1 hover:bg-bg-hover transition">
+                                    <span class="material-symbols-outlined text-[16px]"
+                                        data-choice-prompt-icon>expand_more</span>
+                                    <span data-choice-prompt-label>Показать</span>
+                                </button>
+                            </div>
+                            <div data-choice-prompt-area class="hidden flex flex-col gap-2">
+                                <label class="text-xs font-medium text-text-secondary">Формулировка задания (если
+                                    оставить
+                                    пустым, возьмём стандартное «Выберите правильный вариант текста»)</label>
+                                <textarea id="choice-prompt-textarea"
+                                    class="w-full rounded-lg border border-border-subtle bg-surface-1 text-sm leading-relaxed text-text-main p-3 shadow-sm focus:border-primary focus:ring-primary min-h-[100px]"
+                                    placeholder="Введите инструкцию, если нужно что-то особенное..."></textarea>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </template>
+
+    <script src="../../assets/ThemeSwitcherUI.js"></script>
+    <script src="../../assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

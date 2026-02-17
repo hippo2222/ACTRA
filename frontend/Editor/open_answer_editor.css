@@ -1,0 +1,24 @@
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: var(--color-border-subtle);
+    border-radius: 3px;
+}
+
+.keyword-tag {
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.keyword-tag.active {
+    background-color: var(--color-primary);
+    color: var(--color-primary-fg);
+    box-shadow: 0 4px 12px var(--color-primary-light);
+    border-color: transparent;
+}

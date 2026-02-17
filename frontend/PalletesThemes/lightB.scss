@@ -1,0 +1,86 @@
+/* Light B - Warm Paper & Spiced Orange */
+/* Concept: Sophisticated, cozy, readable. "Latte/Bookstore" aesthetic. */
+
+/* CSS HEX */
+:root {
+    /* Raw Palette */
+    --warm-paper: #FEFCF5;
+    --isabelline: #F2EFE9;
+    --white: #FFFFFF;
+    --peach-fuzz: #FAE3CF;
+    --warm-grey-light: #E6E0D4;
+    --spiced-orange: #C05621;
+    --coffee-bean: #2D241E;
+    --warm-grey: #8D7B6F;
+    --amber: #D97706;
+
+    /* Semantic Color System (1.3) */
+
+    /* PRIMARY: Spiced Orange (#C05621) */
+    --color-primary-very-light: #F5E8E0;
+    --color-primary-light: #E8D4C5;
+    --color-primary: #C05621;
+    --color-primary-dark: #9C4215;
+    --color-primary-very-dark: #704F2D;
+
+    /* SECONDARY: Warm Grey (#8D7B6F) */
+    --color-secondary-very-light: #E8E2DC;
+    --color-secondary-light: #C4B5AA;
+    --color-secondary: #8D7B6F;
+    --color-secondary-dark: #6B5F54;
+    --color-secondary-very-dark: #524438;
+
+    /* ACCENT: Amber (#D97706) */
+    --color-accent-very-light: #FEF3C7;
+    --color-accent-light: #FDDA6D;
+    --color-accent: #D97706;
+    --color-accent-dark: #A85D04;
+    --color-accent-very-dark: #7C4407;
+
+    /* NEUTRAL: Backgrounds, Text & Borders */
+    --color-bg-primary: #FEFCF5;
+    --color-bg-secondary: #F2EFE9;
+    --color-bg-tertiary: #E6E0D4;
+    --color-surface: #FFFFFF;
+
+    --color-text-primary: #2D241E;
+    --color-text-secondary: #8D7B6F;
+    --color-text-muted: #AFA399;
+    --color-text-disabled: #D4C7B8;
+
+    --color-border-light: #E6E0D4;
+    --color-border-normal: #D4C7B8;
+    --color-border-strong: #C05621;
+
+    /* STATES: Success, Error, Warning, Info */
+    --color-success-light: #D1F3EB;
+    --color-success: #22B08D;
+    --color-success-dark: #107D65;
+
+    --color-error-light: var(--color-primary-very-light);
+    --color-error: var(--color-primary);
+    --color-error-dark: var(--color-primary-very-dark);
+
+    --color-warning-light: var(--color-accent-very-light);
+    --color-warning: var(--color-accent);
+    --color-warning-dark: var(--color-accent-very-dark);
+
+    --color-info-light: #DBEAFE;
+    --color-info: #3B82F6;
+    --color-info-dark: #1E40AF;
+}
+
+/* SCSS HEX */
+$warm-paper: #FEFCF5;
+$isabelline: #F2EFE9;
+$white: #FFFFFF;
+$peach-fuzz: #FAE3CF;
+$warm-grey-light: #E6E0D4;
+$spiced-orange: #C05621;
+$coffee-bean: #2D241E;
+$warm-grey: #8D7B6F;
+$amber: #D97706;
+
+/* SCSS Gradient */
+$gradient-top: linear-gradient(0deg, #FEFCF5, #C05621, #2D241E);
+$gradient-right: linear-gradient(90deg, #FEFCF5, #C05621, #2D241E);

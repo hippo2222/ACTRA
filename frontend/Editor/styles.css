@@ -1,0 +1,511 @@
+:root {
+    --primary: var(--color-primary);
+    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    --easing-out: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes pulseSoft {
+    0% {
+        box-shadow: 0 0 0 0 var(--color-success-light);
+    }
+
+    70% {
+        box-shadow: 0 0 0 6px transparent;
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 transparent;
+    }
+}
+
+.animate-pulse-soft {
+    animation: pulseSoft 2s infinite;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Animations */
+@keyframes slideUp {
+    from {
+        transform: translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes popIn {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    70% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes modalBackdrop {
+    from {
+        backdrop-filter: blur(0px);
+        background: transparent;
+    }
+
+    to {
+        backdrop-filter: blur(4px);
+        background: rgba(0, 0, 0, 0.4);
+    }
+}
+
+.animate-slide-up {
+    animation: slideUp var(--transition-normal);
+}
+
+.animate-scale-in {
+    animation: scaleIn var(--transition-normal);
+}
+
+.animate-pop-in {
+    animation: popIn var(--transition-normal) var(--easing-out);
+}
+
+/* Transitions */
+.transition-standard {
+    transition: all var(--transition-normal);
+}
+
+.hover-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.1);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* Custom scrollbar for sidebar if needed */
+.sidebar-scrollbar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--color-border-normal);
+    border-radius: 10px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-secondary);
+}
+
+/* ========================================================================= */
+/* Import Modal Styles */
+/* ========================================================================= */
+
+/* Import modal backdrop animation */
+#import-modal {
+    animation: fadeIn 200ms ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Import modal content slide-in */
+#import-modal>div {
+    animation: modalSlideUp 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalSlideUp {
+    from {
+        transform: translateY(20px) scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+/* Step indicator transitions */
+[data-role="import-steps"] [data-step] {
+    transition: all 300ms ease-out;
+}
+
+[data-role="import-steps"] [data-step]>div:first-child {
+    transition: all 250ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-role="import-steps"] [data-step].completed>div:first-child {
+    animation: stepComplete 400ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes stepComplete {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.2);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ========================================================================= */
+/* Task Preview Cards */
+/* ========================================================================= */
+
+/* Card entrance animation */
+[data-role="import-content"]>div>.space-y-3>div {
+    animation: cardSlideIn 300ms ease-out backwards;
+}
+
+[data-role="import-content"]>div>.space-y-3>div:nth-child(1) {
+    animation-delay: 50ms;
+}
+
+[data-role="import-content"]>div>.space-y-3>div:nth-child(2) {
+    animation-delay: 100ms;
+}
+
+[data-role="import-content"]>div>.space-y-3>div:nth-child(3) {
+    animation-delay: 150ms;
+}
+
+[data-role="import-content"]>div>.space-y-3>div:nth-child(4) {
+    animation-delay: 200ms;
+}
+
+[data-role="import-content"]>div>.space-y-3>div:nth-child(n+5) {
+    animation-delay: 250ms;
+}
+
+@keyframes cardSlideIn {
+    from {
+        transform: translateX(-20px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Line clamp utility (for preview text) */
+.line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Task card hover effects */
+.border-success-subtle:hover {
+    box-shadow: 0 4px 12px var(--color-success-light);
+}
+
+.border-warning-subtle:hover {
+    box-shadow: 0 4px 12px var(--color-warning-light);
+}
+
+.border-error-subtle:hover {
+    box-shadow: 0 4px 12px var(--color-error-light);
+}
+
+/* ========================================================================= */
+/* Status Indicators */
+/* ========================================================================= */
+
+/* Status badge pulse for errors */
+/* Animations removed: errorPulse and warningGlow were incorrectly attached to color utility classes */
+
+/* ========================================================================= */
+/* Button Animations */
+/* ========================================================================= */
+
+/* Import action buttons */
+[data-role="import-next"],
+[data-role="import-prev"] {
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+[data-role="import-next"]:not(:disabled):hover {
+    transform: translateX(2px);
+    box-shadow: 0 4px 12px var(--color-primary-light);
+}
+
+[data-role="import-prev"]:not(:disabled):hover {
+    transform: translateX(-2px);
+}
+
+[data-role="import-next"]:active,
+[data-role="import-prev"]:active {
+    transform: scale(0.98);
+}
+
+/* Task action buttons */
+[data-task-exclude-btn] {
+    transition: all 200ms ease-out;
+}
+
+/* ========================================================================= */
+/* Loading States */
+/* ========================================================================= */
+
+/* Spinner animation */
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}
+
+/* ========================================================================= */
+/* Summary Stats */
+/* ========================================================================= */
+
+/* Stats counter animation */
+.text-2xl.font-bold {
+    animation: countUp 500ms ease-out;
+}
+
+@keyframes countUp {
+    from {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ========================================================================= */
+/* Responsive Adjustments */
+/* ========================================================================= */
+
+@media (max-width: 768px) {
+
+    /* Stack import modal content on mobile */
+    #import-modal>div {
+        max-width: 95%;
+        margin: 1rem;
+    }
+
+    /* Reduce card spacing */
+    [data-role="import-content"]>div>.space-y-3 {
+        gap: 0.5rem;
+    }
+
+    /* Single column for metadata */
+    .grid.grid-cols-2 {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ========================================================================= */
+/* Accessibility Enhancements */
+/* ========================================================================= */
+
+/* Focus states for import modal */
+#import-modal button:focus-visible,
+#import-modal select:focus-visible,
+#import-modal textarea:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ========================================================================= */
+/* Error Feedback Animations */
+/* ========================================================================= */
+
+/* Shake animation for error blocks */
+@keyframes shake {
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+        transform: translateX(-4px);
+    }
+
+    20%,
+    40%,
+    60%,
+    80% {
+        transform: translateX(4px);
+    }
+}
+
+.bg-error-light.border-error-light {
+    animation: shake 0.5s ease-in-out;
+}
+
+/* Error text highlighting */
+.border-error-light:focus-visible {
+    box-shadow: 0 0 0 3px var(--color-error-light);
+}
+
+/* ========================================================================= */
+/* Save Status Indicator */
+/* ========================================================================= */
+
+#save-status-container {
+    background-color: transparent;
+}
+
+#save-status-indicator {
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+#save-status-indicator.bg-emerald-500 {
+    background-color: var(--color-success) !important;
+    box-shadow: 0 0 8px var(--color-success-light);
+}
+
+#save-status-indicator.bg-amber-500 {
+    background-color: var(--color-warning) !important;
+    box-shadow: 0 0 8px var(--color-warning-light);
+}
+
+#save-status-indicator.bg-blue-500 {
+    background-color: var(--color-info) !important;
+    box-shadow: 0 0 8px var(--color-info-light);
+}
+
+/* Semantic Utilities for JS Dynamic Templates */
+.bg-info-light {
+    background-color: var(--color-info-light) !important;
+}
+
+.text-info-dark {
+    color: var(--color-info-dark) !important;
+}
+
+.bg-success-light {
+    background-color: var(--color-success-light) !important;
+}
+
+.text-success-dark {
+    color: var(--color-success-dark) !important;
+}
+
+.bg-warning-light {
+    background-color: var(--color-warning-light) !important;
+}
+
+.text-warning-dark {
+    color: var(--color-warning-dark) !important;
+}
+
+.bg-error-light {
+    background-color: var(--color-error-light) !important;
+}
+
+.text-error-dark {
+    color: var(--color-error-dark) !important;
+}
+
+.bg-accent-light {
+    background-color: var(--color-accent-light) !important;
+}
+
+.text-accent-dark {
+    color: var(--color-accent-dark) !important;
+}
+
+.bg-secondary-light {
+    background-color: var(--color-secondary-light) !important;
+}
+
+.text-secondary-dark {
+    color: var(--color-secondary-dark) !important;
+}
+
+/* Status Indicator - Published */
+.status-indicator-published {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 9999px;
+    background-color: var(--color-success);
+    box-shadow: 0 0 8px var(--color-success-light);
+    animation: pulseSoft 2s ease-in-out infinite;
+}

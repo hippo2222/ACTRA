@@ -1,0 +1,16 @@
+{
+  "id": "chest_xray_signs",
+  "name": "Chest X-ray Signs",
+  "tasks": [
+    {
+      "id": "xray_test_02",
+      "type": "test",
+      "path": "modules/radiology_basics/topics/chest_xray_signs/tasks/xray_test_02/task.json"
+    },
+    {
+      "id": "xray_open_02",
+      "type": "open_answer",
+      "path": "modules/radiology_basics/topics/chest_xray_signs/tasks/xray_open_02/task.json"
+    }
+  ]
+}

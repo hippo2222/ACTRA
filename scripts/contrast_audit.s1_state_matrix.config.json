@@ -1,0 +1,197 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": true,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "S1 state matrix - answering",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "const s = window.SessionState || {}; const t = s.currentTask || (s.state && s.state.currentTask); return !!t && !s.isLoading;",
+          "timeout": 30000
+        },
+        {
+          "type": "s1_seek_task",
+          "taskTypes": ["test"],
+          "maxSteps": 100,
+          "autoSubmitMode": "force_success",
+          "afterStepWaitMs": 220,
+          "failOnError": false
+        },
+        { "type": "s1_modal", "modal": "close", "waitMs": 80 }
+      ],
+      "actions": [
+        { "type": "s1_modal", "modal": "close", "waitMs": 50 },
+        { "type": "hover", "selector": "#check-answer-btn", "waitMs": 120 },
+        { "type": "focus", "selector": "#check-answer-btn", "waitMs": 120 }
+      ]
+    },
+    {
+      "name": "S1 state matrix - review success",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "const s = window.SessionState || {}; const t = s.currentTask || (s.state && s.state.currentTask); return !!t && !s.isLoading;",
+          "timeout": 30000
+        },
+        {
+          "type": "s1_seek_task",
+          "taskTypes": ["test"],
+          "maxSteps": 100,
+          "autoSubmitMode": "force_success",
+          "afterStepWaitMs": 220,
+          "failOnError": false
+        }
+      ],
+      "actions": [
+        { "type": "s1_modal", "modal": "close", "waitMs": 80 },
+        { "type": "s1_review", "mode": "success", "waitMs": 180, "failOnError": false },
+        { "type": "hover", "selector": "#next-task-btn", "waitMs": 120 },
+        { "type": "focus", "selector": "#next-task-btn", "waitMs": 120 }
+      ]
+    },
+    {
+      "name": "S1 state matrix - review failure",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "const s = window.SessionState || {}; const t = s.currentTask || (s.state && s.state.currentTask); return !!t && !s.isLoading;",
+          "timeout": 30000
+        },
+        {
+          "type": "s1_seek_task",
+          "taskTypes": ["test"],
+          "maxSteps": 100,
+          "autoSubmitMode": "force_success",
+          "afterStepWaitMs": 220,
+          "failOnError": false
+        }
+      ],
+      "actions": [
+        { "type": "s1_modal", "modal": "close", "waitMs": 80 },
+        { "type": "s1_review", "mode": "failure", "waitMs": 180, "failOnError": false },
+        { "type": "hover", "selector": "#check-answer-btn", "waitMs": 120 },
+        { "type": "focus", "selector": "#check-answer-btn", "waitMs": 120 }
+      ]
+    },
+    {
+      "name": "S1 state matrix - pause modal",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "const s = window.SessionState || {}; const t = s.currentTask || (s.state && s.state.currentTask); return !!t && !s.isLoading;",
+          "timeout": 30000
+        },
+        {
+          "type": "s1_seek_task",
+          "taskTypes": ["test"],
+          "maxSteps": 100,
+          "autoSubmitMode": "force_success",
+          "afterStepWaitMs": 220,
+          "failOnError": false
+        }
+      ],
+      "actions": [
+        { "type": "s1_modal", "modal": "pause", "waitMs": 120 },
+        { "type": "hover", "selector": "#pause-confirm-submit", "waitMs": 120 },
+        { "type": "focus", "selector": "#pause-confirm-submit", "waitMs": 120 }
+      ]
+    },
+    {
+      "name": "S1 state matrix - resume modal",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "const s = window.SessionState || {}; const t = s.currentTask || (s.state && s.state.currentTask); return !!t && !s.isLoading;",
+          "timeout": 30000
+        },
+        {
+          "type": "s1_seek_task",
+          "taskTypes": ["test"],
+          "maxSteps": 100,
+          "autoSubmitMode": "force_success",
+          "afterStepWaitMs": 220,
+          "failOnError": false
+        }
+      ],
+      "actions": [
+        { "type": "s1_modal", "modal": "resume", "waitMs": 120 },
+        { "type": "hover", "selector": "#resume-continue-btn", "waitMs": 120 },
+        { "type": "focus", "selector": "#resume-continue-btn", "waitMs": 120 }
+      ]
+    }
+  ]
+}

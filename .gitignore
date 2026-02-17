@@ -1,0 +1,103 @@
+# Backup directories
+*.backup/
+*.backup
+*.backup_abs_paths
+data.backup/
+desktop-app/data.backup/
+editor-app/data.backup/
+
+# Migration reports
+migration_report_*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Node
+node_modules/
+package-lock.json
+
+# Build artifacts
+dist/
+build/
+
+# Coverage & test artifacts
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+.pytest_tmp/
+test_output.txt
+
+# Logs
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+.cascade/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,417 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global semantic fallbacks */
+:root {
+    --color-secondary-text: var(--color-text-secondary);
+    --color-border: var(--color-border-normal);
+    --color-success-text: var(--color-success-dark);
+    --color-info-text: var(--color-info-dark);
+    --color-text-on-dark: #FFFFFF;
+    --color-bg-ink: #0B0B0B;
+    --color-scrim-faint: rgba(0, 0, 0, 0.05);
+    --color-scrim-light: rgba(0, 0, 0, 0.2);
+    --color-scrim-weak: rgba(0, 0, 0, 0.3);
+    --color-scrim: rgba(0, 0, 0, 0.4);
+    --color-scrim-strong: rgba(0, 0, 0, 0.6);
+    --color-scrim-heavy: rgba(0, 0, 0, 0.7);
+    --color-scrim-intense: rgba(0, 0, 0, 0.8);
+    --color-glass-light: rgba(255, 255, 255, 0.1);
+    --color-glass-strong: rgba(255, 255, 255, 0.2);
+}
+
+/* Base Theme (Light A) - Indigo/Platinum (v2.0) */
+:root,
+[data-theme="light-a"] {
+    --color-bg-main: #EBEDF2;
+    --color-bg-secondary: #E8E9ED;
+    --color-surface-1: #FFFFFF;
+    --color-surface-2: #CACFD8;
+    --color-surface-panel: var(--color-surface-2);
+    --color-surface-chip: var(--color-surface-2);
+    --color-text-chip: var(--color-text-secondary);
+    --color-border-subtle: #64748B;
+    --color-border-normal: var(--color-border-subtle);
+    --color-border-strong: #4F46E5;
+    /* Was #758BFD (2.5 ratio). Now #4F46E5 (4.5 ratio) */
+    --color-bg-tertiary: #CBD5E1;
+    --color-text-main: #1A1A2E;
+    --color-text-muted: #475569;
+    /* Was #4338CA. Updated for consistency with variables file */
+    --color-primary: #4F46E5;
+    --color-primary-hover: #4338CA;
+    --color-primary-fg: #FFFFFF;
+    --color-accent: #C2410C;
+    /* Was #EA580C. Darkened for contrast */
+    --color-status-error: #B91C1C;
+    --color-status-error-dark: #B91C1C;
+    --color-success: #047857;
+    --color-success-dark: #047857;
+    --color-warning: #C2410C;
+    /* Was #EA580C (2.9 ratio). Now #C2410C (>3.0) */
+    --color-info: #4F46E5;
+
+    /* Extended Palette for Statistics/UI (High Contrast) */
+    --color-text-secondary: #475569;
+    --color-text-disabled: #94A3B8;
+    --color-text-contrast: var(--color-primary-fg);
+
+    /* Secondary (Slate) */
+    --color-secondary: #64748B;
+    --color-secondary-light: #F1F5F9;
+    --color-secondary-dark: #334155;
+
+    /* Accent (Orange) */
+    --color-accent-light: #FFEDD5;
+    --color-accent-dark: #9A3412;
+
+    /* Info (Indigo - same as Primary) */
+    --color-info-light: #E0E7FF;
+    --color-info-dark: #312E81;
+
+    /* Success (Emerald) */
+    --color-success-light: #D1FAE5;
+    --color-success-dark: #065F46;
+
+    /* Warning (Orange/Amber) */
+    --color-warning-light: #FEF3C7;
+    --color-warning-dark: #92400E;
+
+    /* Error (Red) */
+    --color-error: #EF4444;
+    --color-error-light: #FEE2E2;
+    --color-error-dark: #B91C1C;
+}
+
+/* Light B - Warm Paper & Spiced Orange (Strict Palette: #FEFCF5, #C05621, #2D241E, #F2EFE9) */
+[data-theme="light-b"] {
+    /* Backgrounds */
+    --color-bg-main: #FAF7EF;
+    /* Warm Paper */
+    --color-bg-secondary: #F2EFE9;
+    /* Isabelline */
+    --color-bg-tertiary: #E6E0D4;
+    /* Warm Grey Light */
+
+    /* Surfaces */
+    --color-surface-1: #FFFFFF;
+    /* White */
+    --color-surface-2: #E6D3C8;
+    --color-surface-panel: var(--color-surface-2);
+    --color-surface-chip: var(--color-surface-2);
+    --color-text-chip: var(--color-text-secondary);
+    /* Peach Fuzz */
+
+    /* Borders */
+    --color-border: #E6E0D4;
+    --color-border-subtle: #8D7B6F;
+    --color-border-normal: var(--color-border-subtle);
+    /* Added for visible outlines */
+    --color-border-strong: #C05621;
+
+    /* Text */
+    --color-text-main: #2D241E;
+    /* Coffee Bean */
+    --color-text-secondary: #8D7B6F;
+    /* Warm Grey */
+    --color-text-muted: #6B5F54;
+    /* Muted */
+    --color-text-disabled: #AFA399;
+    --color-text-contrast: var(--color-primary-fg);
+
+    /* Primary - Spiced Orange */
+    --color-primary: #9C4215;
+    --color-primary-light: #E8D4C5;
+    --color-primary-dark: #9C4215;
+    --color-primary-darkest: #704F2D;
+    --color-primary-hover: #704F2D;
+    --color-primary-fg: #FFFFFF;
+
+    /* Secondary - Warm Grey */
+    --color-secondary: #8D7B6F;
+    --color-secondary-light: #C4B5AA;
+    --color-secondary-dark: #6B5F54;
+
+    /* Accent - Amber */
+    --color-accent: #D97706;
+
+    /* States */
+    /* Success */
+    --color-success: #15803D;
+    --color-success-light: #D1F3EB;
+    --color-success-dark: #107D65;
+
+    /* Error (mapped to Primary vars in original scss) */
+    --color-error: #A24519;
+    --color-error-light: #F5E8E0;
+    --color-error-dark: #704F2D;
+    --color-status-error: #A24519;
+
+    /* Warning (mapped to Accent vars in original scss) */
+    --color-warning: #C2410C;
+    --color-warning-light: #FEF3C7;
+    --color-warning-dark: #7C4407;
+
+    /* Info */
+    --color-info: #3B82F6;
+    --color-info-light: #DBEAFE;
+    --color-info-dark: #1E40AF;
+}
+
+/* Neutral A - Refined Earth (Strict Palette: #EAE0D5, #3E2723, #DCC9B6, #A39171) */
+/* Neutral A - Refined Earth (Strict Palette: #EAE0D5, #3E2723, #DCC9B6, #A39171) */
+[data-theme="neutral-a"] {
+    /* Backgrounds */
+    --color-bg-main: #EAE0D5;
+    /* Light Almond */
+    --color-bg-secondary: #DCC9B6;
+    /* Pale Oak */
+    --color-bg-tertiary: #C9B8A8;
+    /* Darker Pale Oak for inputs */
+
+    /* Surfaces */
+    --color-surface-1: #F4F1EE;
+    /* White Smoke */
+    --color-surface-2: #D6C4B1;
+    /* Lighter Almond (adjusted for panel separation) */
+    --color-surface-panel: var(--color-surface-2);
+    --color-surface-chip: #B5A390;
+    --color-text-chip: var(--color-text-main);
+
+    /* Borders */
+    --color-border: #BFB0A0;
+    /* Earth Grey Light */
+    --color-border-subtle: #8C735A;
+    --color-border-normal: var(--color-border-subtle);
+    --color-border-strong: #5D4037;
+    /* Darker Camel */
+
+    /* Text */
+    --color-text-main: #3E2723;
+    /* Dark Roast */
+    --color-text-secondary: #5D4037;
+    /* Earth Grey */
+    --color-text-muted: #5D4037;
+    /* Was #786455 (3.5:1). Now #5D4037 (5.6:1 against #DCC9B6) */
+    --color-text-disabled: #AFA399;
+    --color-text-contrast: var(--color-primary-fg);
+
+    /* Primary - Clay Brown */
+    --color-primary: #5D4037;
+    --color-primary-light: #8C735A;
+    --color-primary-dark: #3E2723;
+    --color-primary-darkest: #271815;
+    --color-primary-hover: #3E2723;
+    --color-primary-fg: #EAE0D5;
+
+    /* Secondary - Darker Camel */
+    --color-secondary: #8C735A;
+    --color-secondary-light: #BFB0A0;
+    --color-secondary-dark: #5D4037;
+
+    /* Accent - Darker Camel for Contrast (>3:1 against F4F1EE) */
+    /* Old: #A39171 (2.73:1) -> New: #8C735A (3.8:1) */
+    --color-accent: #8C735A;
+
+    /* States - Earthy Tones */
+    /* Success - Moss Green */
+    --color-success: #4E7A4E;
+    --color-success-light: #D4E0D4;
+    --color-success-dark: #2E4B2E;
+
+    /* Error - Red Brown */
+    --color-status-error: #8B3A3A;
+    --color-error: #8B3A3A;
+    --color-error-light: #EBD4D4;
+    --color-error-dark: #5A2525;
+
+    /* Warning - Dark Mustard */
+    --color-warning: #745C1E;
+    /* Was #B08D30. Now #745C1E */
+    --color-warning-light: #F2E8C9;
+    --color-warning-dark: #5D4037;
+
+    /* Info - Muted Blue/Slate */
+    --color-info: #5A6E7C;
+    --color-info-light: #D4DBE0;
+    --color-info-dark: #36424A;
+}
+
+/* Neutral B - Tea Green / Dusk Blue (v2.0) */
+/* Neutral B - Amethyst Dusk (Fixed for Contrast) */
+[data-theme="neutral-b"] {
+    /* Backgrounds - Amethyst Dusk (Adjusted for 1.3+ Contrast) */
+    --color-bg-main: #b0aac0;
+    /* Darkened from #b8b3c5 */
+    --color-bg-secondary: #e2dce8;
+    /* Lightened from #dcd6e5 */
+    --color-bg-tertiary: #a8a0b8;
+
+    /* Surfaces */
+    --color-surface-0: #e8e4ee;
+    --color-surface-1: #e2dbe7;
+    --color-surface-2: #fdfcff;
+    /* Titanium White for cards */
+    --color-surface-panel: var(--color-surface-2);
+    --color-surface-chip: #5a7350;
+    --color-text-chip: #ffffff;
+
+    /* Borders */
+    --color-border-subtle: #808a9f;
+    --color-border-normal: var(--color-border-subtle);
+    --color-border-strong: #3d2b56;
+
+    /* Text */
+    --color-text-main: #1a1226;
+    --color-text-secondary: #261a38;
+    /* Darkened from #2e2042 for safety */
+    --color-text-muted: #1d232f;
+    --color-text-disabled: #808a9f;
+    --color-text-contrast: var(--color-primary-fg);
+
+    /* Primary */
+    --color-primary: #1f3a66;
+    --color-primary-hover: #162645;
+    --color-primary-fg: #dbe4f0;
+
+    /* Secondary */
+    --color-secondary: #808a9f;
+    --color-secondary-light: #aab2c2;
+    --color-secondary-dark: #5e6678;
+
+    /* Accent - Tea Green System */
+    --color-accent: #50663c;
+    /* Dark Tea Green - Text Safe */
+    --color-accent-light: #bad29f;
+    /* Celadon */
+    --color-accent-lighter: #ccf5ac;
+    /* Tea Green */
+
+    /* States */
+    --color-status-error: #5A1919;
+    --color-error: #5A1919;
+    --color-success: #4d7a43;
+    --color-warning: #947105;
+    --color-info: #0284c7;
+}
+
+/* Dark A - Almond (Strict: #141204, #262a10, #54442b, #a9714b, #e8985e) */
+[data-theme="dark-a"] {
+    --color-bg-main: #141204;
+    /* Pitch Black */
+    --color-bg-secondary: #1f1d0a;
+    /* Slightly lighter pitch */
+    --color-bg-tertiary: #262a10;
+    --color-surface-1: #262a10;
+    /* Dark Khaki */
+    --color-surface-2: #5c4a30;
+    /* Dark Khaki 2 */
+    --color-surface-panel: var(--color-surface-2);
+    --color-surface-chip: var(--color-surface-2);
+    --color-text-chip: var(--color-text-secondary);
+    --color-border-subtle: #a9714b;
+    --color-border-normal: var(--color-border-subtle);
+    --color-border-strong: #e8985e;
+    /* Cinnamon Wood */
+    --color-text-main: #f1f1f1;
+    /* Soft White (Avoids excessive contrast) */
+    --color-text-muted: #ffdab9;
+    /* Peach Puff */
+    --color-primary: #ffdab9;
+    /* Peach Puff */
+    --color-primary-hover: #d68b55;
+    --color-primary-fg: #141204;
+    --color-accent: #a9714b;
+    --color-status-error: #ffcc80;
+    --color-success: #69f0ae;
+    --color-warning: #ffb74d;
+    --color-info: #4fc3f7;
+    --color-secondary: #ffdab9;
+    --color-primary-lighter: #3D2E1A;
+    --color-text-secondary: #F0D5B5;
+}
+
+/* Dark B - Amethyst (Strict: #f0d3f7, #b98ea7, #a57982, #302f4d, #120d31) */
+[data-theme="dark-b"] {
+    /* Backgrounds */
+    --color-bg-main: #120d31;
+    /* Dark Amethyst */
+    --color-bg-secondary: #0d0924;
+    /* Darker Space */
+    --color-bg-tertiary: #302f4d;
+    /* Space Indigo */
+
+    /* Surfaces */
+    --color-surface-1: #1e1940;
+    /* Lighter Amethyst */
+    --color-surface-2: #302f4d;
+    /* Space Indigo */
+    --color-surface-panel: var(--color-surface-2);
+    --color-surface-chip: var(--color-surface-2);
+    --color-text-chip: var(--color-text-secondary);
+
+    /* Borders */
+    --color-border: #302f4d;
+    /* Space Indigo */
+    --color-border-subtle: #a57982;
+    --color-border-normal: var(--color-border-subtle);
+    --color-border-strong: #b98ea7;
+    /* Dusty Mauve */
+
+    /* Text */
+    --color-text-main: #f0d3f7;
+    /* Thistle */
+    --color-text-secondary: #b98ea7;
+    /* Old Rose */
+    --color-text-muted: #adaabf;
+    --color-text-disabled: #45436a;
+    --color-text-contrast: var(--color-primary-fg);
+
+    /* Primary - Old Rose */
+    --color-primary: #b98ea7;
+    --color-primary-light: #f0d3f7;
+    --color-primary-dark: #a57982;
+    --color-primary-darkest: #764e5d;
+    --color-primary-hover: #d1a6bf;
+    --color-primary-fg: #120d31;
+
+    /* Secondary - Space Indigo based */
+    --color-secondary: #302f4d;
+    --color-secondary-light: #5d5b84;
+    --color-secondary-dark: #120d31;
+
+    /* Accent - Thistle */
+    --color-accent: #f0d3f7;
+
+    /* States */
+    /* Success - Teal/Mint */
+    --color-success: #4ECDC4;
+    --color-success-light: #1A3A38;
+    /* Dark background tint */
+    --color-success-dark: #3AAFA9;
+
+    /* Error - Pink/Red */
+    --color-error: #FF6B8B;
+    --color-error-light: #3D121B;
+    /* Dark background tint */
+    --color-error-dark: #D94565;
+    --color-status-error: #FF6B8B;
+
+    /* Warning - Yellow/Gold */
+    --color-warning: #FFE66D;
+    --color-warning-light: #3D3512;
+    /* Dark background tint */
+    --color-warning-dark: #D9B826;
+
+    /* Info - Blue/Lavender */
+    --color-info: #A29BFE;
+    --color-info-light: #1F1D40;
+    /* Dark background tint */
+    --color-info-dark: #6C5CE7;
+}
+
+/* Utility to ensure .dark class works */
+.dark {
+    color-scheme: dark;
+}

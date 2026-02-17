@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+
+<html lang="ru">
+
+<head>
+
+  <script src="../assets/ThemeManager.js"></script>
+
+  <meta charset="utf-8" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Результаты итерации</title>
+
+  <style>
+    .material-symbols-outlined {
+
+      font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+
+    }
+
+    /* Page entrance */
+    .s2-page-enter {
+      animation: a-slide-up 0.45s ease-out both;
+    }
+
+    /* Stat cards stagger */
+    .s2-stat {
+      animation: a-slide-up 0.4s ease-out both;
+    }
+
+    .s2-stat:nth-child(1) {
+      animation-delay: 0.05s;
+    }
+
+    .s2-stat:nth-child(2) {
+      animation-delay: 0.10s;
+    }
+
+    .s2-stat:nth-child(3) {
+      animation-delay: 0.15s;
+    }
+
+    /* Breakdown bar grow */
+    .s2-bar-grow {
+      animation: a-grow-width 0.8s ease-out 0.3s both;
+    }
+
+    /* Section entrance */
+    .s2-section-enter {
+      animation: a-slide-up 0.4s ease-out 0.2s both;
+    }
+
+    /* Interactive buttons */
+    .s2-btn {
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+
+    .s2-btn:active {
+      transform: scale(0.97);
+    }
+
+    .s2-btn:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Problem task items */
+    .s2-task-item {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .s2-task-item:hover {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+  </style>
+
+  <link href="/assets/tailwind.css" rel="stylesheet" />
+
+  <link href="/assets/fonts.css" rel="stylesheet" />
+
+  <link href="/assets/lightB-variables.css" rel="stylesheet" />
+
+  <link href="/assets/lightB-components.css" rel="stylesheet" />
+  <link href="/assets/animations.css" rel="stylesheet" />
+
+</head>
+
+<body class="font-display bg-bg-main text-text-main antialiased selection:bg-primary-light">
+
+  <div class="relative flex h-auto min-h-screen w-full flex-col overflow-x-hidden group/design-root">
+
+    <div class="layout-container flex h-full grow flex-col">
+
+      <div class="flex flex-1 justify-center py-3 sm:px-4 md:px-8 lg:px-20">
+
+        <div class="layout-content-container flex w-full max-w-[960px] flex-1 flex-col">
+
+          <header
+            class="mb-4 flex items-center justify-between whitespace-nowrap rounded-xl border-2 border-solid border-border-strong bg-surface-2 px-5 py-2 shadow-sm sm:px-7 lg:px-8">
+
+            <div class="flex items-center gap-4 text-text-main">
+
+              <span class="brand-logo size-6" style="color:var(--color-primary)" aria-hidden="true"></span>
+
+              <div>
+
+                <h1 class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-main">
+
+                  <span id="complex-name">Комплекс</span>
+
+                </h1>
+
+                <p id="iteration-subtitle" class="text-xs text-text-secondary">
+
+                  Итерация
+
+                  <span id="iteration-number-label">?</span>
+
+                </p>
+
+              </div>
+
+            </div>
+
+            <button id="finish-complex-btn"
+              class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg">
+
+              <span class="truncate">Завершить комплекс</span>
+
+            </button>
+
+          </header>
+
+          <main class="flex-grow">
+
+            <div class="px-4 py-3 md:px-6 lg:px-8">
+
+              <div class="mx-auto flex max-w-4xl flex-col gap-5 s2-page-enter">
+
+                <div class="text-center">
+
+                  <h2 id="iteration-title" class="text-3xl font-bold text-text-main sm:text-4xl">
+
+                    Результаты итерации
+
+                  </h2>
+
+                  <p id="complex-subtitle" class="mt-2 text-lg text-text-secondary">
+
+                    Комплекс: —
+
+                  </p>
+
+                </div>
+
+                <div class="rounded-xl bg-surface-2 p-5 shadow-lg">
+
+                  <div class="grid grid-cols-1 gap-6 text-center sm:grid-cols-3">
+
+                    <div class="hidden flex flex-col gap-1 rounded-lg bg-surface-2 p-4 s2-stat">
+
+                      <p class="text-sm font-medium text-text-secondary">
+
+                        Сложность
+
+                      </p>
+
+                      <p id="stat-difficulty" class="text-4xl font-bold text-text-main">
+
+                        2
+
+                      </p>
+
+                    </div>
+
+                    <div class="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 s2-stat">
+
+                      <p class="text-sm font-medium text-text-secondary">
+
+                        Всего заданий
+
+                      </p>
+
+                      <p class="text-4xl font-bold text-text-main flex items-baseline justify-center gap-2">
+
+                        <span id="stat-total-tasks-main">—</span>
+
+                        <span id="stat-total-tasks-extra" class="text-sm font-semibold text-error hidden">
+
+                          —
+
+                        </span>
+
+                      </p>
+
+                    </div>
+
+                    <div class="flex flex-col gap-1 rounded-lg border-2 border-border-strong bg-surface-1 p-3 s2-stat">
+
+                      <p class="text-sm font-medium text-text-main">
+
+                        Неправильных
+
+                      </p>
+
+                      <p id="stat-failed-tasks" class="text-4xl font-bold text-text-main">
+
+                        —
+
+                      </p>
+
+                    </div>
+
+                    <div class="flex flex-col gap-1 rounded-lg border-2 border-border-strong bg-surface-1 p-3 s2-stat">
+
+                      <p class="text-sm font-medium text-text-main">
+
+                        Успех
+
+                      </p>
+
+                      <p id="stat-success-rate" class="text-4xl font-bold text-text-main">
+                        —
+                      </p>
+                    </div>
+
+                    <div class="flex flex-col gap-1 rounded-lg border-2 border-border-strong bg-surface-1 p-3 s2-stat">
+                      <p class="text-sm font-medium text-text-main">Время</p>
+                      <p id="stat-iteration-time" class="text-4xl font-bold text-text-main">—</p>
+                    </div>
+
+                  </div>
+                </div>
+
+                <div class="rounded-xl bg-surface-2 p-6 shadow-lg s2-section-enter">
+
+                  <h3 class="text-xl font-bold text-text-main">
+
+                    Дополнительная статистика
+
+                  </h3>
+
+                  <div class="mt-6 grid items-start gap-8 md:grid-cols-2">
+
+                    <div>
+
+                      <h4 class="font-semibold text-text-secondary">
+
+                        Разбивка по заданиям
+
+                      </h4>
+
+                      <div class="mt-4 flex items-center gap-4">
+
+                        <div class="h-8 w-full rounded-full bg-surface-2">
+
+                          <div id="breakdown-success-bar"
+                            class="task-chip flex h-8 items-center justify-center rounded-full bg-success-light text-text-main font-bold"
+                            style="width: 0%">
+
+                            <span id="breakdown-success-count">—</span>
+
+                          </div>
+
+                        </div>
+
+                        <div class="flex flex-shrink-0 flex-col gap-2 text-sm text-text-secondary">
+
+                          <div class="flex items-center gap-2">
+
+                            <span class="h-2.5 w-2.5 rounded-full bg-success-light task-chip"></span>
+
+                            <span>Верно (<span id="legend-success-count">—</span>)</span>
+
+                          </div>
+
+                          <div class="flex items-center gap-2">
+
+                            <span class="h-2.5 w-2.5 rounded-full bg-error-light task-chip"></span>
+
+                            <span>Ошибки (<span id="legend-failed-count">—</span>)</span>
+
+                          </div>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    <div>
+
+                      <h4 class="font-semibold text-text-secondary">
+
+                        Проблемные задания
+
+                      </h4>
+
+                      <p class="mt-2 text-sm text-text-secondary">
+
+                        Задания, в которых был получен неверный ответ.
+
+                      </p>
+
+                      <ul id="trigger-tasks-list" class="mt-3 space-y-2"></ul>
+
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </main>
+
+          <footer class="mt-auto pt-3">
+
+            <div class="flex justify-center">
+
+              <div class="flex w-full max-w-lg flex-col flex-wrap justify-center gap-2 px-4 py-2 sm:flex-row">
+
+                <button id="continue-btn"
+                  class="flex h-12 min-w-[84px] max-w-[480px] grow cursor-pointer items-center justify-center overflow-hidden rounded-lg bg-primary px-5 text-base font-bold leading-normal tracking-[0.015em] text-primary-fg s2-btn">
+
+                  <span class="truncate">Продолжить</span>
+
+                </button>
+
+              </div>
+
+            </div>
+
+            <div class="flex justify-center px-4 py-2">
+
+              <button id="to-complex-list-btn"
+                class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border border-border-strong bg-surface-1 px-4 text-sm font-bold leading-normal tracking-[0.015em] text-text-secondary transition-colors hover:bg-bg-hover s2-btn">
+
+                <span class="truncate">К списку комплексов</span>
+
+              </button>
+
+            </div>
+
+          </footer>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+
+    const api = {
+
+      async getIterationResults(sessionId) {
+
+        const res = await fetch(
+
+          `/api/session/${encodeURIComponent(sessionId)}/iteration-results`
+
+        );
+
+        return res.json();
+
+      },
+
+    };
+
+    const state = {
+
+      sessionId: null,
+
+      iteration: null,
+
+      hasNextIteration: true,
+
+    };
+
+    function getSessionAndIterationFromLocation() {
+
+      const url = new URL(window.location.href);
+
+      const segments = url.pathname.split("/").filter(Boolean);
+
+      // Ожидаемый путь: /ui/session/{session_id}/iteration/{iteration_id}
+
+      const len = segments.length;
+
+      let sessionId = null;
+
+      let iteration = null;
+
+      if (len >= 5 && segments[len - 4] === "session" && segments[len - 2] === "iteration") {
+
+        sessionId = segments[len - 3];
+
+        iteration = segments[len - 1];
+
+      }
+
+      return { sessionId, iteration };
+
+    }
+
+    function renderIterationResults(data) {
+
+      if (!data) return;
+
+      const iteration = data.iteration ?? state.iteration ?? "?";
+
+      document.getElementById("iteration-number-label").textContent = iteration;
+
+      document.getElementById(
+
+        "iteration-title"
+
+      ).textContent = `Результаты итерации ${iteration}`;
+
+      // Название комплекса: предпочитаем human-readable complex_name, fallback на complex_id
+
+      const complexSubtitle = document.getElementById("complex-subtitle");
+
+      const complexDisplayName = data.complex_name || data.complex_id || "—";
+
+      complexSubtitle.textContent = complexSubtitle.textContent.replace(
+
+        /Комплекс:.*/,
+
+        `Комплекс: ${complexDisplayName}`
+
+      );
+
+      const tasks = data.tasks || data.task_results || data.iteration_results || [];
+
+      // Бэкенд обычно отдаёт агрегаты (total_tasks/successful_tasks/failed_tasks),
+
+      // но при ошибках сохранения/сериализации они могут оказаться 0.
+
+      // В этом случае пересчитываем из массива iteration_results.
+
+      const providedTotal = data.total_tasks ?? 0;
+
+      const providedSuccess = data.successful_tasks ?? 0;
+
+      const providedFailed = data.failed_tasks ?? 0;
+
+      const computedTotal = Array.isArray(tasks) ? tasks.length : 0;
+
+      const computedFailed = Array.isArray(tasks)
+
+        ? tasks.filter((t) => t && t.success === false).length
+
+        : 0;
+
+      const computedSuccess = Array.isArray(tasks)
+
+        ? tasks.filter((t) => t && t.success === true).length
+
+        : 0;
+
+      const shouldUseComputed =
+
+        computedTotal > 0 && (providedTotal === 0 && providedSuccess === 0 && providedFailed === 0);
+
+      const total = shouldUseComputed ? computedTotal : providedTotal;
+
+      const success = shouldUseComputed ? computedSuccess : providedSuccess;
+
+      const failed = shouldUseComputed ? computedFailed : providedFailed;
+
+      const rate =
+
+        data.success_rate != null
+
+          ? `${Math.round(data.success_rate * 100)}%`
+
+          : total > 0
+
+            ? `${Math.round((success / total) * 100)}%`
+
+            : "0%";
+
+      // Считаем количество "оригинальных" заданий как число уникальных task_ref
+
+      // в результатах итерации. Разница между total_tasks и этим числом считаем
+
+      // добавленными копиями (ретраями).
+
+      const allTasks = tasks;
+
+      let originalCount = total;
+
+      let extraCount = 0;
+
+      if (Array.isArray(allTasks) && allTasks.length > 0) {
+
+        const seen = new Set();
+
+        allTasks.forEach((t) => {
+
+          if (!t) return;
+
+          const ref =
+
+            t.task_ref ||
+
+            (t.module_id && t.topic_id && t.task_id
+
+              ? `${t.module_id}/${t.topic_id}/${t.task_id}`
+
+              : t.task_id);
+
+          if (!ref) return;
+
+          seen.add(ref);
+
+        });
+
+        originalCount = seen.size || 0;
+
+        if (total && originalCount) {
+
+          extraCount = Math.max(0, total - originalCount);
+
+        }
+
+      }
+
+      const totalMainEl = document.getElementById("stat-total-tasks-main");
+
+      const totalExtraEl = document.getElementById("stat-total-tasks-extra");
+
+      if (totalMainEl) totalMainEl.textContent = String(originalCount);
+
+      if (totalExtraEl) {
+
+        if (extraCount > 0) {
+
+          totalExtraEl.textContent = `+${extraCount}`;
+
+          totalExtraEl.classList.remove("hidden");
+
+        } else {
+
+          totalExtraEl.textContent = "+0";
+
+          totalExtraEl.classList.add("hidden");
+
+        }
+
+      }
+
+      document.getElementById("stat-failed-tasks").textContent = failed;
+
+      document.getElementById("stat-success-rate").textContent = rate;
+
+      // UX-21: Show iteration time
+      const timeEl = document.getElementById("stat-iteration-time");
+      if (timeEl) {
+        const dur = data.duration_seconds ?? data.duration ?? data.time_seconds ?? null;
+        if (dur != null && dur > 0) {
+          const mins = Math.floor(dur / 60);
+          const secs = Math.round(dur % 60);
+          timeEl.textContent = mins > 0 ? `${mins}м ${secs}с` : `${secs}с`;
+        } else {
+          timeEl.textContent = "—";
+        }
+      }
+
+      document.getElementById("breakdown-success-count").textContent = success;
+
+      document.getElementById("legend-success-count").textContent = success;
+
+      document.getElementById("legend-failed-count").textContent = failed;
+
+      const successPercent = total > 0 ? Math.min(100, (success / total) * 100) : 0;
+
+      const breakdownBar = document.getElementById("breakdown-success-bar");
+
+      // Базовый случай: зелёный бар по доле успешных заданий
+
+      let widthValue = successPercent || 0;
+
+      let barClass = "task-chip flex h-8 items-center justify-center rounded-full font-bold ";
+
+      if (success === 0 && failed > 0 && total > 0) {
+
+        // Особый случай: все задания с ошибками – показываем полный красный бар,
+
+        // чтобы он визуально не выглядел как пустой (серый фон)
+
+        widthValue = 100;
+
+        barClass += "bg-error-light text-error-text";
+
+        // Для такого кейса логичнее отобразить количество ошибок внутри бара
+
+        document.getElementById("breakdown-success-count").textContent = failed;
+
+      } else {
+
+        barClass += "bg-success-light text-text-main";
+
+      }
+
+      breakdownBar.style.width = `${widthValue}%`;
+
+      breakdownBar.className = barClass.trim();
+
+      const triggerList = document.getElementById("trigger-tasks-list");
+
+      triggerList.innerHTML = "";
+
+      // Бэкенд (IterationSummary) отдаёт массив результатов в iteration_results,
+
+      // но на будущее поддерживаем и другие возможные поля.
+
+      const failedTasks = Array.isArray(tasks) ? tasks.filter((t) => t && t.success === false) : [];
+
+      if (failedTasks.length === 0) {
+
+        const li = document.createElement("li");
+
+        li.className =
+
+          "rounded-lg border-2 border-border-strong bg-surface-1 py-2 text-sm text-text-main";
+
+        li.textContent = "Проблемных заданий нет — вы отлично справились с этой итерацией.";
+
+        triggerList.appendChild(li);
+
+      } else {
+
+        failedTasks.forEach((t) => {
+
+          const li = document.createElement("li");
+
+          li.className =
+
+            "flex items-center gap-3 rounded-lg border border-border-strong bg-surface-2 py-2";
+
+          // Предпочитаем человекочитаемое название задания, если оно есть.
+
+          const displayName =
+
+            t.task_name ||
+
+            (t.meta && (t.meta.name || t.meta.title)) ||
+
+            t.task_ref ||
+
+            t.task_id ||
+
+            "Task";
+
+          // Main row
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-3 w-full";
+          const icon = document.createElement("span");
+          icon.className = "material-symbols-outlined text-error";
+          icon.textContent = "error";
+          const nameSpan = document.createElement("span");
+          nameSpan.className = "text-text-main flex-1";
+          nameSpan.textContent = displayName;
+          row.appendChild(icon);
+          row.appendChild(nameSpan);
+
+          // UX-22: Show answer toggle if we have answer data
+          const hasAnswerData = t.user_answer || t.correct_answer || t.message || (t.details && (t.details.user_answer || t.details.reference_answer));
+          if (hasAnswerData) {
+            const toggleBtn = document.createElement("button");
+            toggleBtn.className = "text-xs text-text-secondary hover:text-primary transition-colors flex items-center gap-1 shrink-0";
+            toggleBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">visibility</span><span>Ответ</span>';
+            const detailDiv = document.createElement("div");
+            detailDiv.className = "hidden mt-2 pt-2 border-t border-border-subtle text-sm space-y-1.5";
+
+            const userAns = t.user_answer || (t.details && t.details.user_answer) || null;
+            const correctAns = t.correct_answer || (t.details && t.details.reference_answer) || null;
+            const msg = t.message || (t.details && t.details.explanation) || null;
+
+            if (userAns) {
+              const p = document.createElement("p");
+              p.innerHTML = `<span class="font-semibold text-text-secondary">Ваш ответ:</span> <span class="text-text-main">${userAns}</span>`;
+              detailDiv.appendChild(p);
+            }
+            if (correctAns) {
+              const p = document.createElement("p");
+              p.innerHTML = `<span class="font-semibold text-text-secondary">Правильный:</span> <span class="text-success-dark">${correctAns}</span>`;
+              detailDiv.appendChild(p);
+            }
+            if (msg) {
+              const p = document.createElement("p");
+              p.className = "text-text-secondary text-xs";
+              p.textContent = msg;
+              detailDiv.appendChild(p);
+            }
+
+            toggleBtn.addEventListener("click", () => {
+              const hidden = detailDiv.classList.contains("hidden");
+              detailDiv.classList.toggle("hidden", !hidden);
+              toggleBtn.querySelector(".material-symbols-outlined").textContent = hidden ? "visibility_off" : "visibility";
+            });
+            row.appendChild(toggleBtn);
+            li.appendChild(row);
+            li.appendChild(detailDiv);
+          } else {
+            li.appendChild(row);
+          }
+
+          triggerList.appendChild(li);
+
+        });
+
+      }
+
+    }
+
+    async function loadIterationResults() {
+
+      const { sessionId, iteration } = getSessionAndIterationFromLocation();
+
+      state.sessionId = sessionId;
+
+      state.iteration = iteration;
+
+      if (!sessionId) {
+
+        NotificationUI.toast('В URL отсутствует sessionId', 'error');
+
+        return;
+
+      }
+
+      try {
+
+        const response = await api.getIterationResults(sessionId);
+
+        if (!response.ok) {
+
+          console.error("Ошибка получения результатов итерации", response);
+
+          NotificationUI.toast('Не удалось загрузить результаты итерации', 'error');
+
+          return;
+
+        }
+
+        if (response.results && response.results.has_next_iteration !== undefined) {
+          state.hasNextIteration = !!response.results.has_next_iteration;
+        }
+
+        renderIterationResults(response.results);
+
+      } catch (e) {
+
+        console.error("Неожиданная ошибка при загрузке результатов итерации", e);
+
+      }
+
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+
+      document
+
+        .getElementById("continue-btn")
+
+        .addEventListener("click", () => {
+
+          // Запускаем следующую итерацию: возвращаемся на экран S1 для той же сессии.
+
+          if (state.sessionId) {
+
+            if (state.hasNextIteration === false) {
+              window.navigateWithTransition(`/ui/session/${encodeURIComponent(state.sessionId)}/results`);
+            } else {
+              window.navigateWithTransition(`/ui/session/${encodeURIComponent(state.sessionId)}`);
+            }
+
+          } else {
+
+            window.navigateWithTransition('/ui/complexes');
+
+          }
+
+        });
+
+      document
+
+        .getElementById("to-complex-list-btn")
+
+        .addEventListener("click", () => {
+
+          window.navigateWithTransition('/ui/complexes');
+
+        });
+
+      document
+
+        .getElementById("finish-complex-btn")
+
+        .addEventListener("click", async () => {
+
+          const confirmed = await NotificationUI.confirm({
+            title: 'Завершить комплекс?',
+            message: 'Вы уверены, что хотите завершить комплекс и вернуться к списку?',
+            confirmText: 'Завершить',
+            cancelText: 'Отмена',
+            variant: 'error'
+          });
+
+          if (confirmed) {
+
+            window.navigateWithTransition('/ui/complexes');
+
+          }
+
+        });
+
+      loadIterationResults();
+
+    });
+
+  </script>
+
+  <script src="../assets/NotificationUI.js"></script>
+  <script src="../assets/ThemeSwitcherUI.js"></script>
+  <script src="../assets/ConnectionMonitor.js"></script>
+
+</body>
+
+</html>

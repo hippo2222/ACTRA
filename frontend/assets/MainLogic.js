@@ -1,0 +1,1507 @@
+(function () {
+    let currentUser = null;
+
+    // --- Abort Controllers for Race Condition Prevention (7.4) ---
+    let statsLoadAbortController = null; // Отмена старого запроса статистики при смене периода
+    let sessionStartAbortController = null; // Защита от дублирования запросов создания сессии
+    let legalDocuments = null;
+    let feedbackOptionsCache = null;
+    let mainConsentGateResolver = null;
+    let mainConsentGateUserId = null;
+    let updateInfoToastShown = false;
+
+    // --- Core API Helpers ---
+    async function apiFetch(url, options = {}) {
+        try {
+            const resp = await fetch(url, options);
+
+            // Handle abort: если запрос был отменен, не пытаемся парсить
+            if (!resp.ok && resp.status === 0) {
+                console.log(`API Request cancelled: ${url}`);
+                return { ok: false, error: 'Cancelled', cancelled: true };
+            }
+
+            const data = await resp.json();
+            return { ok: data.ok, data };
+        } catch (e) {
+            // AbortError срабатывает при abort()
+            if (e.name === 'AbortError') {
+                console.log(`API Request aborted: ${url}`);
+                return { ok: false, error: e, cancelled: true };
+            }
+            console.error(`API Error (${url}):`, e);
+            return { ok: false, error: e };
+        }
+    }
+
+    function openModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.add('open');
+    }
+
+    function closeModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) modal.classList.remove('open');
+    }
+
+    function showFeedbackError(message) {
+        const el = document.getElementById('feedbackError');
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.classList.add('hidden');
+            return;
+        }
+        el.textContent = message;
+        el.classList.remove('hidden');
+    }
+
+    function showFeedbackNetworkStatus(message, tone = 'neutral') {
+        const el = document.getElementById('feedbackNetworkStatus');
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.className = 'hidden text-xs rounded-lg px-3 py-2 border border-border-strong bg-surface-2 text-text-secondary';
+            return;
+        }
+
+        const toneClassMap = {
+            warning: 'text-xs rounded-lg px-3 py-2 border border-border-strong bg-surface-2 text-text-main',
+            success: 'text-xs rounded-lg px-3 py-2 border border-border-strong bg-surface-2 text-text-main',
+            neutral: 'text-xs rounded-lg px-3 py-2 border border-border-strong bg-surface-2 text-text-secondary',
+        };
+        el.className = toneClassMap[tone] || toneClassMap.neutral;
+        el.textContent = message;
+    }
+
+    async function fetchNetworkStatus() {
+        const { ok, data } = await apiFetch('/api/network/status');
+        if (!ok || !data) return null;
+        return data;
+    }
+
+    async function retryPendingFeedbackDelivery() {
+        // Best-effort background retry for tickets queued while offline.
+        await apiFetch('/api/feedback/retry-pending', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ limit: 5 }),
+        });
+    }
+
+    function showAppUpdateNotice(text, downloadUrl) {
+        const wrapEl = document.getElementById('appUpdateNotice');
+        const textEl = document.getElementById('appUpdateNoticeText');
+        const linkEl = document.getElementById('appUpdateNoticeLink');
+        if (!wrapEl || !textEl || !linkEl) return;
+
+        if (!text) {
+            textEl.textContent = '';
+            linkEl.classList.add('hidden');
+            linkEl.removeAttribute('href');
+            wrapEl.classList.add('hidden');
+            return;
+        }
+
+        textEl.textContent = text;
+        if (downloadUrl) {
+            linkEl.href = downloadUrl;
+            linkEl.classList.remove('hidden');
+        } else {
+            linkEl.classList.add('hidden');
+            linkEl.removeAttribute('href');
+        }
+        wrapEl.classList.remove('hidden');
+    }
+
+    window.checkForAppUpdates = async function (force = false) {
+        const query = force ? '?force=1' : '';
+        const { ok, data } = await apiFetch(`/api/update/check${query}`);
+        if (!ok || !data) {
+            if (force) NotificationUI.toast('Не удалось проверить обновления', 'error');
+            return;
+        }
+
+        const currentVersion = data.current_version || '-';
+        const latestVersion = data.latest_version || null;
+        const downloadUrl = data.download_url || '';
+
+        if (data.update_available) {
+            const msg = latestVersion
+                ? `Доступна новая версия ${latestVersion} (у вас ${currentVersion}).`
+                : `Доступна новая версия (у вас ${currentVersion}).`;
+            showAppUpdateNotice(msg, downloadUrl);
+            if (!updateInfoToastShown || force) {
+                NotificationUI.toast(msg, 'warning');
+                updateInfoToastShown = true;
+            }
+            return;
+        }
+
+        showAppUpdateNotice(null, null);
+        if (!force) return;
+
+        if (data.reason === 'not_configured') {
+            NotificationUI.toast('Проверка обновлений не настроена', 'warning');
+            return;
+        }
+        if (data.reason === 'offline' || data.reason === 'offline_cached') {
+            NotificationUI.toast('Нет интернета: проверить обновления сейчас нельзя', 'warning');
+            return;
+        }
+        if (data.reason === 'up_to_date') {
+            NotificationUI.toast(`Установлена актуальная версия (${currentVersion})`, 'success');
+            return;
+        }
+        NotificationUI.toast('Проверка обновлений выполнена', 'success');
+    };
+
+    function showMainConsentGateError(message) {
+        const el = document.getElementById('mainConsentGateError');
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.classList.add('hidden');
+            return;
+        }
+        el.textContent = message;
+        el.classList.remove('hidden');
+    }
+
+    async function ensureLegalDocumentsLoaded() {
+        if (legalDocuments) return true;
+        const { ok, data } = await apiFetch('/api/legal/current');
+        if (!ok || !data?.documents) return false;
+        legalDocuments = data.documents;
+        return true;
+    }
+
+    function getRequiredConsentVersions() {
+        if (!legalDocuments) return { terms_version: '', privacy_version: '' };
+        return {
+            terms_version: legalDocuments.terms?.version || '',
+            privacy_version: legalDocuments.privacy?.version || '',
+        };
+    }
+
+    function collectConsent(termsCheckboxId, privacyCheckboxId) {
+        const termsEl = document.getElementById(termsCheckboxId);
+        const privacyEl = document.getElementById(privacyCheckboxId);
+        const versions = getRequiredConsentVersions();
+        return {
+            accepted: !!(termsEl && termsEl.checked && privacyEl && privacyEl.checked),
+            terms_version: versions.terms_version,
+            privacy_version: versions.privacy_version,
+        };
+    }
+
+    window.openMainLegalDocument = async function (docType) {
+        const loaded = await ensureLegalDocumentsLoaded();
+        if (!loaded) {
+            NotificationUI.toast('Не удалось загрузить юридические документы', 'error');
+            return;
+        }
+
+        const { ok, data } = await apiFetch(`/api/legal/document/${docType}`);
+        if (!ok || !data?.document) {
+            NotificationUI.toast('Не удалось открыть документ', 'error');
+            return;
+        }
+
+        const doc = data.document;
+        const titleEl = document.getElementById('mainLegalDocTitle');
+        const metaEl = document.getElementById('mainLegalDocMeta');
+        const contentEl = document.getElementById('mainLegalDocContent');
+        if (titleEl) titleEl.textContent = doc.title || 'Документ';
+        if (metaEl) metaEl.textContent = `Версия: ${doc.version || '-'} | Действует с: ${doc.effective_at || '-'}`;
+        if (contentEl) contentEl.textContent = doc.content || '';
+        openModal('mainLegalDocModal');
+    };
+
+    window.closeMainLegalDocument = function () {
+        closeModal('mainLegalDocModal');
+    };
+
+    window.updateNewProfileConsentState = function () {
+        const terms = document.getElementById('newProfileAcceptTerms');
+        const privacy = document.getElementById('newProfileAcceptPrivacy');
+        const btn = document.getElementById('createProfileBtn');
+        if (btn) btn.disabled = !(terms?.checked && privacy?.checked);
+    };
+
+    window.updateMainConsentGateState = function () {
+        const terms = document.getElementById('mainConsentGateAcceptTerms');
+        const privacy = document.getElementById('mainConsentGateAcceptPrivacy');
+        const btn = document.getElementById('mainConsentGateSubmitBtn');
+        if (btn) btn.disabled = !(terms?.checked && privacy?.checked);
+    };
+
+    function openMainConsentGate(userId, required) {
+        mainConsentGateUserId = userId;
+        const versionsEl = document.getElementById('mainConsentGateVersions');
+        const termsEl = document.getElementById('mainConsentGateAcceptTerms');
+        const privacyEl = document.getElementById('mainConsentGateAcceptPrivacy');
+
+        if (versionsEl) {
+            versionsEl.textContent = `Terms: ${required.terms_version || '-'} | Privacy: ${required.privacy_version || '-'}`;
+        }
+        if (termsEl) termsEl.checked = false;
+        if (privacyEl) privacyEl.checked = false;
+        showMainConsentGateError(null);
+        window.updateMainConsentGateState();
+        openModal('mainConsentGateModal');
+
+        return new Promise(resolve => {
+            mainConsentGateResolver = resolve;
+        });
+    }
+
+    window.cancelMainConsentGate = function () {
+        closeModal('mainConsentGateModal');
+        showMainConsentGateError(null);
+        mainConsentGateUserId = null;
+        if (mainConsentGateResolver) {
+            mainConsentGateResolver(false);
+            mainConsentGateResolver = null;
+        }
+    };
+
+    window.submitMainConsentGate = async function () {
+        if (!mainConsentGateUserId) {
+            showMainConsentGateError('Не выбран профиль');
+            return;
+        }
+
+        const consent = collectConsent('mainConsentGateAcceptTerms', 'mainConsentGateAcceptPrivacy');
+        if (!consent.accepted) {
+            showMainConsentGateError('Подтвердите оба документа');
+            return;
+        }
+
+        const { ok, data } = await apiFetch('/api/consent/accept', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: mainConsentGateUserId,
+                source: 'main_gate',
+                consent,
+            }),
+        });
+
+        if (!ok) {
+            showMainConsentGateError((data && (data.message || data.error)) || 'Не удалось сохранить согласие');
+            return;
+        }
+
+        closeModal('mainConsentGateModal');
+        showMainConsentGateError(null);
+        mainConsentGateUserId = null;
+        if (mainConsentGateResolver) {
+            mainConsentGateResolver(true);
+            mainConsentGateResolver = null;
+        }
+    };
+
+    async function ensureUserConsent(userId) {
+        const loaded = await ensureLegalDocumentsLoaded();
+        if (!loaded) {
+            NotificationUI.toast('Не удалось загрузить юридические документы', 'error');
+            return false;
+        }
+
+        const { ok, data } = await apiFetch(`/api/consent/status?user_id=${encodeURIComponent(userId)}`);
+        if (!ok || !data) {
+            NotificationUI.toast('Не удалось проверить согласие с условиями', 'error');
+            return false;
+        }
+        if (data.status === 'up_to_date') return true;
+
+        const required = data.required || getRequiredConsentVersions();
+        return openMainConsentGate(userId, required);
+    }
+
+    function buildFeedbackTechnicalPayload() {
+        const rootTheme = document.documentElement.getAttribute('data-theme');
+        let localTheme = null;
+        try {
+            localTheme = localStorage.getItem('theme');
+        } catch (_) {
+            localTheme = null;
+        }
+
+        return {
+            app_route: window.location.pathname,
+            href: window.location.href,
+            user_agent: navigator.userAgent,
+            language: navigator.language,
+            platform: navigator.platform,
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || null,
+            theme: rootTheme || localTheme || null,
+            submitted_at: new Date().toISOString(),
+        };
+    }
+
+    function renderFeedbackSelectOptions(selectId, values, labelsMap, defaultValue) {
+        const select = document.getElementById(selectId);
+        if (!select || !Array.isArray(values) || values.length === 0) return;
+        select.innerHTML = values.map(v => {
+            const safe = String(v);
+            const label = labelsMap[safe] || safe;
+            return `<option value="${safe}">${label}</option>`;
+        }).join('');
+        if (defaultValue && values.includes(defaultValue)) {
+            select.value = defaultValue;
+        }
+    }
+
+    async function ensureFeedbackOptionsLoaded() {
+        if (feedbackOptionsCache) return feedbackOptionsCache;
+        const { ok, data } = await apiFetch('/api/feedback/options');
+        if (!ok || !data) return null;
+        feedbackOptionsCache = data;
+        return feedbackOptionsCache;
+    }
+
+    window.openFeedbackModal = async function () {
+        showFeedbackError(null);
+        showFeedbackNetworkStatus(null);
+        const titleEl = document.getElementById('feedbackTitle');
+        const descEl = document.getElementById('feedbackDescription');
+        const includeTechEl = document.getElementById('feedbackIncludeTechnical');
+        const includeLogsEl = document.getElementById('feedbackIncludeLogs');
+        if (titleEl) titleEl.value = '';
+        if (descEl) descEl.value = '';
+        if (includeTechEl) includeTechEl.checked = false;
+        if (includeLogsEl) includeLogsEl.checked = false;
+
+        const options = await ensureFeedbackOptionsLoaded();
+        if (options) {
+            renderFeedbackSelectOptions('feedbackType', options.types || [], {
+                bug: 'Баг',
+                idea: 'Идея',
+                improvement: 'Улучшение',
+                question: 'Вопрос',
+            }, 'bug');
+            renderFeedbackSelectOptions('feedbackSeverity', options.severity || [], {
+                low: 'Низкая',
+                medium: 'Средняя',
+                high: 'Высокая',
+                critical: 'Критичная',
+            }, 'medium');
+        }
+
+        const network = await fetchNetworkStatus();
+        if (network && network.internet_online === false) {
+            showFeedbackNetworkStatus('Интернет недоступен. Обращение сохранится локально и будет отправлено при следующей попытке.', 'warning');
+        } else if (network?.feedback_delivery && network.feedback_delivery.configured === false) {
+            showFeedbackNetworkStatus('Канал отправки сообщений разработчику пока не настроен. Обращение сохранится локально.', 'neutral');
+        } else if (network?.internet_online === true) {
+            showFeedbackNetworkStatus('Соединение с интернетом есть. Обращение будет отправлено разработчику по email.', 'success');
+            retryPendingFeedbackDelivery();
+        }
+
+        openModal('feedbackModal');
+    };
+
+    window.closeFeedbackModal = function () {
+        closeModal('feedbackModal');
+        showFeedbackError(null);
+        showFeedbackNetworkStatus(null);
+    };
+
+    window.submitFeedback = async function () {
+        const typeEl = document.getElementById('feedbackType');
+        const severityEl = document.getElementById('feedbackSeverity');
+        const titleEl = document.getElementById('feedbackTitle');
+        const descEl = document.getElementById('feedbackDescription');
+        const includeTechEl = document.getElementById('feedbackIncludeTechnical');
+        const includeLogsEl = document.getElementById('feedbackIncludeLogs');
+        const submitBtn = document.getElementById('feedbackSubmitBtn');
+
+        const title = (titleEl?.value || '').trim();
+        const description = (descEl?.value || '').trim();
+
+        if (title.length < 3 || title.length > 180) {
+            showFeedbackError('Тема должна содержать от 3 до 180 символов');
+            titleEl?.focus();
+            return;
+        }
+        if (description.length < 5 || description.length > 10000) {
+            showFeedbackError('Описание должно содержать от 5 до 10000 символов');
+            descEl?.focus();
+            return;
+        }
+        if (!currentUser?.user_id) {
+            showFeedbackError('Не удалось определить текущий профиль');
+            return;
+        }
+
+        showFeedbackError(null);
+        if (submitBtn) submitBtn.disabled = true;
+
+        const includeTechnicalData = !!includeTechEl?.checked;
+        const payload = {
+            user_id: currentUser.user_id,
+            type: typeEl?.value || 'bug',
+            severity: severityEl?.value || 'medium',
+            title,
+            description,
+            include_technical_data: includeTechnicalData,
+            include_logs: !!includeLogsEl?.checked,
+        };
+        if (includeTechnicalData) {
+            payload.technical = buildFeedbackTechnicalPayload();
+        }
+
+        const { ok, data } = await apiFetch('/api/feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+        });
+
+        if (submitBtn) submitBtn.disabled = false;
+
+        if (!ok) {
+            const message = (data && (data.message || data.error)) || 'Не удалось отправить обращение';
+            showFeedbackError(message);
+            return;
+        }
+
+        const ticketId = data?.ticket_id ? ` (${data.ticket_id})` : '';
+        const emailSent = !!data?.email_notification?.sent;
+        if (emailSent) {
+            NotificationUI.toast(`Обращение отправлено${ticketId}`, 'success');
+        } else {
+            NotificationUI.toast(`Обращение сохранено локально${ticketId}. Отправим при следующей возможности`, 'warning');
+        }
+        window.closeFeedbackModal();
+    };
+
+    // --- Initialization ---
+    async function initialize() {
+        // 1. Update UI baseline
+        updateDateTime();
+
+        if (!window.updateDateTimeInterval) {
+            window.updateDateTimeInterval = setInterval(updateDateTime, 30000);
+        }
+
+        // 2. Load User
+        await loadCurrentUser();
+
+        // 3. Load Dynamic Content
+        if (currentUser) {
+            retryPendingFeedbackDelivery();
+            const consentOk = await ensureUserConsent(currentUser.user_id);
+            if (!consentOk) {
+                window.navigateWithTransition('/ui/welcome');
+                return;
+            }
+
+            initEscKeyHandler(); // WEAK-5 fix: ESC closes modals
+            window.updateNewProfileConsentState();
+            await Promise.all([
+                loadQuickAccess(),
+                loadStatistics(),
+                loadCalendarWidget()
+            ]);
+            window.checkForAppUpdates(false);
+        }
+    }
+
+    async function loadCurrentUser() {
+        const { ok, data } = await apiFetch('/api/users/current');
+
+        if (ok && data.user) {
+            currentUser = data.user;
+            updateHeaderUser(currentUser);
+        } else {
+            // No active user — redirect to Welcome Screen
+            window.navigateWithTransition('/ui/welcome');
+        }
+    }
+
+    function getAvatarUrl(avatarSeed, userId) {
+        // Если нет avatarSeed, используем дефолтный аватар
+        if (!avatarSeed) {
+            avatarSeed = '1.png';
+        }
+        // Если это имя файла (содержит точку), используем его
+        if (avatarSeed.includes('.')) {
+            return `/api/assets/avatars/${avatarSeed}`;
+        }
+        // Если это не файл (старые данные или user_id), используем дефолтный
+        return `/api/assets/avatars/1.png`;
+    }
+
+    function updateHeaderUser(user) {
+        const nameEl = document.getElementById('headerUserName');
+        const avatarEl = document.getElementById('headerAvatar');
+        if (nameEl) nameEl.textContent = user.name;
+        if (avatarEl) avatarEl.src = getAvatarUrl(user.avatar_seed, user.user_id);
+    }
+
+    // --- User Management ---
+    window.openProfileModal = async function () {
+        const termsEl = document.getElementById('newProfileAcceptTerms');
+        const privacyEl = document.getElementById('newProfileAcceptPrivacy');
+        const nameEl = document.getElementById('newUserName');
+        if (termsEl) termsEl.checked = false;
+        if (privacyEl) privacyEl.checked = false;
+        if (nameEl) nameEl.value = '';
+        window.updateNewProfileConsentState();
+        document.getElementById('profileModal').classList.add('open');
+        await loadProfilesList();
+    }
+
+    async function loadProfilesList() {
+        const listEl = document.getElementById('profilesList');
+        listEl.innerHTML = '<div class="text-center py-8 text-text-muted">Загрузка...</div>';
+
+        const { ok, data } = await apiFetch('/api/users');
+
+        if (ok) {
+            listEl.innerHTML = data.items.map(user => `
+                <div class="group flex items-center justify-between p-4 rounded-2xl border ${currentUser?.user_id === user.user_id ? 'border-primary bg-primary-lighter' : 'border-border-subtle hover:border-border-strong'} hover:border-primary cursor-pointer transition-all">
+                    <div class="flex items-center gap-4 flex-1" onclick="selectProfile('${user.user_id}')">
+                        <img src="${getAvatarUrl(user.avatar_seed, user.user_id)}" class="w-10 h-10 rounded-full bg-surface-2 object-cover">
+                        <div>
+                            <div class="font-bold text-text-main flex items-center gap-2">
+                                ${user.name}
+                                ${user.has_password ? '<span class="material-symbols-outlined text-[14px] text-text-muted">lock</span>' : ''}
+                            </div>
+                            <div class="text-[10px] text-text-main font-medium uppercase">Нажмите для выбора</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openEditProfile('${user.user_id}')" class="size-8 flex items-center justify-center rounded-xl bg-transparent border border-transparent text-text-muted hover:bg-surface-2 hover:text-text-main transition-all" title="Редактировать">
+                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                        </button>
+                        ${currentUser?.user_id === user.user_id ? '<span class="text-primary material-symbols-outlined">check_circle</span>' : ''}
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            listEl.innerHTML = '<div class="text-center py-8 text-error">Ошибка загрузки</div>';
+        }
+    }
+
+    window.createNewProfile = async function () {
+        const input = document.getElementById('newUserName');
+        const name = input.value?.trim();
+
+        // Валидация на пустоту
+        if (!name) {
+            NotificationUI.toast('Введите имя профиля', 'warning');
+            input.focus();
+            return;
+        }
+
+        // Проверка минимальной длины
+        if (name.length < 2) {
+            NotificationUI.toast('Имя должно содержать минимум 2 символа', 'warning');
+            input.focus();
+            return;
+        }
+
+        // Проверка максимальной длины
+        if (name.length > 50) {
+            NotificationUI.toast('Имя не может быть длиннее 50 символов', 'warning');
+            input.focus();
+            return;
+        }
+
+        // Проверка запрещенных символов
+        const forbiddenChars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
+        const hasForbidden = forbiddenChars.some(char => name.includes(char));
+
+        if (hasForbidden) {
+            NotificationUI.toast(`Имя не может содержать символы: ${forbiddenChars.join(', ')}`, 'warning');
+            input.focus();
+            return;
+        }
+
+        const legalLoaded = await ensureLegalDocumentsLoaded();
+        if (!legalLoaded) {
+            NotificationUI.toast('Не удалось загрузить документы для согласия', 'error');
+            return;
+        }
+
+        const consent = collectConsent('newProfileAcceptTerms', 'newProfileAcceptPrivacy');
+        if (!consent.accepted) {
+            NotificationUI.toast('Подтвердите согласие с условиями и политикой приватности', 'warning');
+            return;
+        }
+
+        const { ok, data } = await apiFetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, consent })
+        });
+
+        if (ok) {
+            input.value = '';
+            await selectProfile(data.user.user_id);
+        } else {
+            // Показать ошибку пользователю
+            const errorMessage = data.message || data.error || 'Не удалось создать профиль';
+            NotificationUI.toast(errorMessage, 'error');
+            input.focus();
+        }
+    }
+
+    window.selectProfile = async function (userId) {
+        const consentOk = await ensureUserConsent(userId);
+        if (!consentOk) return;
+
+        // Logic handled in wrapper below, this is raw call
+        const { ok, data } = await apiFetch('/api/users/select', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: userId })
+        });
+
+        if (ok) {
+            document.getElementById('profileModal').classList.remove('open');
+            if (typeof NotificationUI !== 'undefined') {
+                NotificationUI.toast('Профиль переключён', 'success', 1500);
+            }
+            setTimeout(() => window.location.reload(), 400);
+            return;
+        }
+
+        const errorMessage = data?.message || data?.error || 'Не удалось переключить профиль';
+        NotificationUI.toast(errorMessage, 'error');
+    }
+
+    // --- Profile Editing & Passwords ---
+    let passwordPromptResolve = null;
+    let editingUserId = null;
+    let isAvatarManualMode = false; // legacy flag, manual mode disabled
+
+    window.selectGalleryAvatar = function (filename) {
+        document.getElementById('editAvatarSeed').value = filename;
+        updateEditAvatarPreview();
+        updateGallerySelection(filename);
+    }
+
+    function updateGallerySelection(filename) {
+        document.querySelectorAll('.avatar-gallery-item').forEach(item => {
+            const isSelected = item.getAttribute('data-filename') === filename;
+            item.classList.toggle('ring-4', isSelected);
+            item.classList.toggle('ring-primary', isSelected);
+            item.classList.toggle('scale-90', isSelected);
+        });
+    }
+
+    window.openEditProfile = async function (userId) {
+        const { ok, data } = await apiFetch(`/api/users/current`);
+
+        const { data: usersData } = await apiFetch('/api/users');
+        const user = usersData.items.find(u => u.user_id === userId);
+        if (!user) return;
+
+        // Check if edit is protected
+        if (user.has_password && user.security_settings?.require_password_on_edit) {
+            const verified = await showPasswordPrompt(`Защита настроек: ${user.name}`);
+            if (!verified) return;
+        }
+
+        editingUserId = userId;
+        document.getElementById('editName').value = user.name;
+        document.getElementById('editAvatarSeed').value = user.avatar_seed || user.user_id;
+        document.getElementById('editPassword').value = '';
+        document.getElementById('requirePassLogin').checked = !!user.security_settings?.require_password_on_login;
+        document.getElementById('requirePassEdit').checked = !!user.security_settings?.require_password_on_edit;
+        // Force gallery mode (manual seed disabled)
+        isAvatarManualMode = false;
+        document.getElementById('avatarGallery').classList.remove('hidden');
+        await loadAvatarGallery();
+        updateEditAvatarPreview();
+        document.getElementById('editProfileModal').classList.add('open');
+    }
+
+    async function loadAvatarGallery() {
+        const gallery = document.getElementById('avatarGallery');
+        const { ok, data } = await apiFetch('/api/assets/avatars');
+        const files = data ? data.files : [];
+        const currentSeed = document.getElementById('editAvatarSeed').value;
+        let html = '';
+
+        if (ok && files) {
+            // Filter out manual-seed avatars if any (filename startswith 'manual_' for safety)
+            const safeFiles = files.filter(f => !f.startsWith('manual_'));
+            html += safeFiles.map(file => `
+                <div class="avatar-gallery-item aspect-square rounded-xl bg-surface-2 cursor-pointer overflow-hidden border border-transparent hover:border-primary transition-all"
+                onclick="selectGalleryAvatar('${file}')" data-filename="${file}">
+                    <img src="/api/assets/avatars/${file}" class="w-full h-full object-cover">
+                </div>
+            `).join('');
+        }
+
+        if (!html) {
+            html = `<div class="col-span-4 text-center text-[11px] text-text-muted py-4">Нет загруженных аватаров</div>`;
+        }
+
+        gallery.innerHTML = html;
+        updateGallerySelection(currentSeed);
+    }
+
+    window.updateEditAvatarPreview = function () {
+        const seed = document.getElementById('editAvatarSeed').value || editingUserId;
+        document.getElementById('editAvatarPreview').src = getAvatarUrl(seed, editingUserId);
+    }
+
+    window.confirmDeleteProfile = async function () {
+        if (!editingUserId) return;
+        const firstCheck = await NotificationUI.confirm({
+            title: 'Удалить профиль?',
+            message: 'Вся статистика и прогресс будут безвозвратно удалены.',
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
+            variant: 'error'
+        });
+        if (!firstCheck) return;
+        const secondCheck = await NotificationUI.confirm({
+            title: 'Последнее предупреждение',
+            message: 'Это действие нельзя отменить. Профиль будет удалён навсегда.',
+            confirmText: 'Да, удалить',
+            cancelText: 'Отмена',
+            variant: 'error'
+        });
+        if (!secondCheck) return;
+
+        // Final check: if user has password, require it
+        const { data: usersData } = await apiFetch('/api/users');
+        const user = usersData.items.find(u => u.user_id === editingUserId);
+        let verificationPassword = null;
+
+        if (user && user.has_password) {
+            const verified = await showPasswordPrompt(`Подтверждение удаления: ${user.name}`);
+            if (!verified) return;
+            verificationPassword = verified;
+        }
+
+        const { ok } = await apiFetch('/api/users/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: editingUserId, verification_password: verificationPassword })
+        });
+
+        if (ok) {
+            NotificationUI.toast('Профиль успешно удалён', 'success');
+            document.getElementById('editProfileModal').classList.remove('open');
+            window.location.reload();
+        }
+    }
+
+    window.saveProfileChanges = async function () {
+        const payload = {
+            user_id: editingUserId,
+            name: document.getElementById('editName').value,
+            avatar_seed: document.getElementById('editAvatarSeed').value,
+            password: document.getElementById('editPassword').value,
+            security_settings: {
+                require_password_on_login: document.getElementById('requirePassLogin').checked,
+                require_password_on_edit: document.getElementById('requirePassEdit').checked
+            }
+        };
+
+        const { ok, data } = await apiFetch('/api/users/update', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (ok) {
+            document.getElementById('editProfileModal').classList.remove('open');
+            if (editingUserId === currentUser.user_id) window.location.reload();
+            else await loadProfilesList();
+        } else {
+            // Error handling with user-friendly messages
+            let errorMsg = 'Ошибка сохранения профиля';
+            if (data.error === 'invalid_name_length') {
+                errorMsg = 'Имя должно содержать от 2 до 50 символов';
+            } else if (data.error === 'invalid_name_chars') {
+                errorMsg = 'Имя содержит недопустимые символы (/, \\, <, >, :, ", |, ?, *)';
+            } else if (data.message) {
+                errorMsg = data.message;
+            }
+            NotificationUI.toast(errorMsg, 'error');
+        }
+    }
+
+    async function showPasswordPrompt(title = "Вход в профиль") {
+        document.getElementById('passPromptTitle').textContent = title;
+        document.getElementById('promptPasswordInput').value = '';
+        document.getElementById('passwordPromptModal').classList.add('open');
+        document.getElementById('promptPasswordInput').focus();
+
+        return new Promise(resolve => {
+            passwordPromptResolve = resolve;
+        });
+    }
+
+    window.submitPasswordPrompt = async function () {
+        const password = document.getElementById('promptPasswordInput').value;
+
+        // We need to verify this password.
+        if (passwordPromptResolve) {
+            const { ok, data } = await apiFetch('/api/users/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ user_id: editingUserId || pendingSelectUserId, password })
+            });
+
+            if (ok && data?.verified) {
+                cleanupPrompt();
+                passwordPromptResolve(password);
+            } else {
+                NotificationUI.toast('Неверный пароль', 'error');
+                document.getElementById('promptPasswordInput').value = '';
+            }
+        }
+    }
+
+    let pendingSelectUserId = null;
+    const originalSelectProfile = window.selectProfile;
+
+    window.selectProfile = async function (userId) {
+        const usersResp = await apiFetch('/api/users');
+        const users = Array.isArray(usersResp.data?.items) ? usersResp.data.items : null;
+        if (!usersResp.ok || !users) {
+            NotificationUI.toast('Не удалось загрузить список профилей', 'error');
+            return;
+        }
+        const user = users.find(u => u.user_id === userId);
+
+        if (user && user.has_password && user.security_settings?.require_password_on_login) {
+            pendingSelectUserId = userId;
+            const verified = await showPasswordPrompt(`Вход в профиль: ${user.name}`);
+            if (verified) return originalSelectProfile(userId);
+            return;
+        }
+
+        return originalSelectProfile(userId);
+    }
+
+    window.closePasswordPrompt = function () {
+        cleanupPrompt();
+        if (passwordPromptResolve) passwordPromptResolve(false);
+    }
+
+    function cleanupPrompt() {
+        document.getElementById('passwordPromptModal').classList.remove('open');
+        passwordPromptResolve = null;
+    }
+
+    // --- Statistics & Calendar ---
+    let currentStatsPeriod = 30; // Default
+    let statsSettingsLoaded = false;
+
+    async function loadStatsSettings() {
+        try {
+            const { ok, data } = await apiFetch('/api/ui/settings');
+            if (ok && data.settings?.stats_period) {
+                currentStatsPeriod = parseInt(data.settings.stats_period);
+            }
+        } catch (e) {
+            console.error("Failed to load settings", e);
+        }
+        statsSettingsLoaded = true;
+        updatePeriodButtons();
+    }
+
+    function updatePeriodButtons() {
+        [1, 7, 30, 0].forEach(d => {
+            const btn = document.getElementById(`btnPeriod${d}`);
+            if (btn) {
+                btn.className = "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer";
+                // Using strict semantics for active/inactive states
+                if (currentStatsPeriod === d) {
+                    btn.classList.add('bg-surface-1', 'shadow-sm', 'text-text-main', 'border', 'border-border-strong');
+                } else {
+                    btn.classList.add('text-text-muted', 'hover:text-text-main', 'border', 'border-transparent');
+                }
+            }
+        });
+    }
+
+    window.selectStatsPeriod = async function (days, btn) {
+        if (days === currentStatsPeriod) return;
+        currentStatsPeriod = days;
+        updatePeriodButtons();
+
+        // RACE CONDITION FIX (7.4): Отменяем предыдущий запрос перед новым
+        if (statsLoadAbortController) {
+            statsLoadAbortController.abort();
+        }
+
+        // Animate OUT
+        const content = document.getElementById('statsContent');
+        if (content) {
+            content.classList.add('opacity-50', 'blur-[2px]', 'scale-[0.98]');
+        }
+
+        // Save preference
+        apiFetch('/api/ui/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ settings: { stats_period: days } })
+        });
+        // Small delay to make animation visible
+        await new Promise(r => setTimeout(r, 150));
+        await loadStatistics();
+
+        // Animate IN
+        if (content) {
+            content.classList.remove('opacity-50', 'blur-[2px]', 'scale-[0.98]');
+        }
+    }
+
+    async function loadStatistics() {
+        const statsContent = document.getElementById('statsContent');
+        const statSolvedTasks = document.getElementById('statSolvedTasks');
+        // Determine if this is first load (no data yet)
+        const isFirstLoad = !statSolvedTasks || !statSolvedTasks.textContent || statSolvedTasks.textContent === '0';
+
+        if (isFirstLoad) {
+            showStatsSkeleton();
+        } else {
+            // For subsequent loads, use blur effect
+            if (statsContent) {
+                statsContent.classList.add('opacity-50', 'blur-[2px]');
+            }
+        }
+
+        if (!statsSettingsLoaded) {
+            await loadStatsSettings();
+        } else {
+            updatePeriodButtons();
+        }
+
+        // RACE CONDITION FIX (7.4): Создаем новый AbortController для отслеживания этого запроса
+        statsLoadAbortController = new AbortController();
+
+        const { ok, data, cancelled } = await apiFetch(`/api/statistics/overall?days=${currentStatsPeriod}`, {
+            signal: statsLoadAbortController.signal
+        });
+
+        // Если запрос был отменен, выходим без обновления
+        if (cancelled) {
+            if (statsContent) statsContent.classList.remove('opacity-50', 'blur-[2px]');
+            return;
+        }
+
+        if (ok) {
+            const s = data.stats;
+            // Update values
+            document.getElementById('statSolvedTasks').textContent = s.tasks_mastered || 0;
+            document.getElementById('statTotalAvailable').textContent = s.total_tasks_available || 0;
+            document.getElementById('statSuccessRate').textContent = `${Math.round((s.success_rate || 0) * 100)}%`;
+            document.getElementById('statTodayCount').textContent = s.completed_complexes_today || 0;
+
+            const mins = Math.round((s.total_time_spent || 0) / 60);
+            const h = Math.floor(mins / 60);
+            const m = mins % 60;
+            document.getElementById('statTimeSpent').textContent = `${h}ч ${m}м`;
+
+            // UX-30: Show welcome message if all stats are zero
+            const isEmpty = !(s.tasks_mastered || s.success_rate || s.total_time_spent || s.completed_complexes_today);
+            let welcomeEl = document.getElementById('statsWelcomeMessage');
+            if (isEmpty) {
+                if (!welcomeEl && statsContent) {
+                    welcomeEl = document.createElement('div');
+                    welcomeEl.id = 'statsWelcomeMessage';
+                    welcomeEl.className = 'p-3 bg-primary-lighter/40 border border-primary-light rounded-lg text-center mb-2';
+                    welcomeEl.innerHTML = '<p class="text-sm font-medium text-primary-dark">Добро пожаловать! Запустите первый комплекс, чтобы здесь появилась статистика.</p>';
+                    statsContent.parentElement.insertBefore(welcomeEl, statsContent);
+                }
+            } else if (welcomeEl) {
+                welcomeEl.remove();
+            }
+
+            // Hide skeleton and error, show content
+            hideStatsSkeleton();
+            hideStatsError();
+
+            // Remove blur effect
+            if (statsContent) {
+                statsContent.classList.remove('opacity-50', 'blur-[2px]');
+            }
+        } else {
+            console.error('Failed to load statistics:', data);
+            hideStatsSkeleton();
+            showStatsError();
+            if (statsContent) {
+                statsContent.classList.remove('opacity-50', 'blur-[2px]');
+            }
+        }
+    }
+
+    // --- Statistics Helper Functions ---
+    function showStatsSkeleton() {
+        const skeleton = document.getElementById('statsSkeleton');
+        const content = document.getElementById('statsContent');
+        if (skeleton) skeleton.classList.remove('hidden');
+        if (content) content.classList.add('hidden');
+    }
+
+    function hideStatsSkeleton() {
+        const skeleton = document.getElementById('statsSkeleton');
+        const content = document.getElementById('statsContent');
+        if (skeleton) skeleton.classList.add('hidden');
+        if (content) content.classList.remove('hidden');
+    }
+
+    function showStatsError() {
+        const statsContent = document.getElementById('statsContent');
+        if (!statsContent) return;
+        // Check if error message already exists
+        let errorEl = document.getElementById('statsErrorMessage');
+
+        if (!errorEl) {
+            errorEl = document.createElement('div');
+            errorEl.id = 'statsErrorMessage';
+            errorEl.className = 'p-3 bg-error-lighter border border-error-light rounded-lg text-center';
+            errorEl.innerHTML = `<div class="flex flex-col gap-2"><span class="material-symbols-outlined text-status-error text-[24px]">error</span><p class="text-sm font-semibold text-text-main">Не удалось загрузить статистику</p><button onclick="retryLoadStatistics()" class="text-xs font-medium text-status-error hover:text-text-main underline">Попробовать снова</button></div>`;
+            statsContent.parentElement.insertBefore(errorEl, statsContent);
+        }
+
+        // Hide content, show error
+        statsContent.classList.add('hidden');
+        errorEl.classList.remove('hidden');
+    }
+
+    function hideStatsError() {
+        const errorEl = document.getElementById('statsErrorMessage');
+        const statsContent = document.getElementById('statsContent');
+        if (errorEl) errorEl.classList.add('hidden');
+        if (statsContent) statsContent.classList.remove('hidden');
+    }
+
+    window.retryLoadStatistics = async function () {
+        await loadStatistics();
+    }
+
+    function initEscKeyHandler() {
+        document.addEventListener('keydown', function (e) {
+            if (e.key !== 'Escape') return;
+            const modals = [
+                'mainConsentGateModal',
+                'mainLegalDocModal',
+                'feedbackModal',
+                'passwordPromptModal',
+                'editProfileModal',
+                'profileModal',
+                'devModal'
+            ];
+            for (const id of modals) {
+                const el = document.getElementById(id);
+                if (el && el.classList.contains('open')) {
+                    if (id === 'mainConsentGateModal' && typeof window.cancelMainConsentGate === 'function') {
+                        window.cancelMainConsentGate();
+                    } else if (id === 'mainLegalDocModal' && typeof window.closeMainLegalDocument === 'function') {
+                        window.closeMainLegalDocument();
+                    } else if (id === 'feedbackModal' && typeof window.closeFeedbackModal === 'function') {
+                        window.closeFeedbackModal();
+                    } else if (id === 'passwordPromptModal' && typeof closePasswordPrompt === 'function') {
+                        closePasswordPrompt();
+                    } else {
+                        el.classList.remove('open');
+                    }
+                    break;
+                }
+            }
+        });
+    }
+
+    // --- Calendar Widget (enhanced) ---
+    async function loadCalendarWidget() {
+        const loadingState = document.getElementById('calendarLoadingState');
+        const emptyState = document.getElementById('calendarEmptyState');
+        const contentState = document.getElementById('calendarContentState');
+        const streakEl = document.getElementById('calendarStreakDays');
+
+        const { ok, data } = await apiFetch('/api/calendar/today');
+        if (loadingState) loadingState.classList.add('hidden');
+        let hasData = false;
+        let streakDays = 0;
+        let mixCount = 0;
+        let mixMinutes = 0;
+
+        if (ok && data) {
+            streakDays = data.streak_info?.days || 0;
+            const dailyPlan = data.daily_plan || {};
+            mixCount = dailyPlan.daily_mix_count || dailyPlan.daily_mix?.length || 0;
+            mixMinutes = dailyPlan.daily_mix_estimated_minutes || dailyPlan.daily_mix_minutes || 0;
+            hasData = mixCount > 0 || streakDays > 0;
+        }
+
+        // WEAK-1 fix: only fetch time-dynamics for heatmap (removed duplicate /api/statistics/overall)
+        const { ok: statsOk, data: statsData } = await apiFetch('/api/statistics/time-dynamics?days=14');
+        const hasActivity = statsOk && statsData?.dynamics?.some(d => d.tasks_attempted > 0);
+        const criticalHealth = (data?.health_summary?.complexes || []).filter(c => c.health_percent < 80).length > 0;
+        hasData = hasData || hasActivity || criticalHealth;
+
+        // Update streak badge
+        if (streakEl) {
+            streakEl.textContent = streakDays > 0 ? streakDays : '0';
+        }
+
+        if (!hasData) {
+            if (emptyState) emptyState.classList.remove('hidden');
+            if (contentState) contentState.classList.add('hidden');
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+        if (contentState) {
+            contentState.classList.remove('hidden');
+            contentState.classList.add('flex');
+        }
+
+        // Update Daily Mix
+        const countEl = document.getElementById('calendarDailyMixCount');
+        const timeEl = document.getElementById('calendarDailyMixTime');
+
+        if (mixCount === 0) {
+            if (countEl) countEl.innerHTML = '<span class="text-lg">Нет задач</span>';
+            if (timeEl) timeEl.parentElement.classList.add('hidden');
+        } else {
+            if (countEl) countEl.innerHTML = `<span class="text-3xl font-black text-text-main">${mixCount}</span><span class="text-sm font-bold text-text-muted ml-1">задач</span>`;
+            if (timeEl) {
+                timeEl.parentElement.classList.remove('hidden');
+                timeEl.textContent = `~${mixMinutes} мин`;
+            }
+        }
+
+        // Render mini heatmap
+        if (statsOk && statsData?.dynamics) {
+            renderMiniHeatmap(statsData.dynamics);
+        }
+
+        // Render health summary
+        if (ok && data?.health_summary) {
+            renderHealthSummary(data.health_summary);
+        }
+    }
+
+    function renderMiniHeatmap(dynamics) {
+        const container = document.getElementById('calendar-mini-heatmap');
+        if (!container) return;
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0];
+        const activityMap = new Map();
+        (dynamics || []).forEach(d => activityMap.set(d.date, d));
+        const days = [];
+
+        for (let i = 13; i >= 0; i--) {
+            const d = new Date(today);
+            d.setDate(d.getDate() - i);
+            const dateStr = d.toISOString().split('T')[0];
+            const data = activityMap.get(dateStr);
+            days.push({
+                date: dateStr,
+                completion_percent: data ? (data.success_rate || 0) * 100 : 0,
+                has_activity: data?.tasks_attempted > 0,
+                is_today: dateStr === todayStr
+            });
+        }
+
+        container.innerHTML = days.map(day => {
+            let bgClass = 'bg-transparent border border-secondary';
+            let style = '';
+            if (day.is_today) {
+                bgClass = 'ring-1 ring-accent';
+                style = 'background-color: color-mix(in srgb, var(--color-accent), transparent 70%);';
+            } else if (day.has_activity) {
+                if (day.completion_percent >= 80) bgClass = 'bg-primary';
+                else if (day.completion_percent >= 50) bgClass = 'bg-primary-dark';
+                else if (day.completion_percent > 0) bgClass = 'bg-primary-light';
+                else bgClass = 'bg-primary-light';
+            }
+            const statusText = day.is_today ? 'Сегодня' : (day.has_activity ? `Активность: ${Math.round(day.completion_percent)}%` : 'Нет активности');
+            const tooltip = `${day.date}\n${statusText}`;
+            return `<div class="w-3 h-3 rounded-[2px] ${bgClass}" style="${style}" title="${tooltip}"></div>`;
+        }).join('');
+    }
+
+    function renderHealthSummary(healthSummary) {
+        const container = document.getElementById('calendarHealthList');
+        if (!container) return;
+        if (!healthSummary) {
+            container.innerHTML = '';
+            return;
+        }
+        const complexes = healthSummary.complexes || [];
+        const toShow = complexes.filter(c => c.health_percent < 80).slice(0, 2);
+
+        if (toShow.length === 0) {
+            container.innerHTML = '<p class="text-[10px] text-text-muted text-center py-1">Все комплексы в норме</p>';
+            return;
+        }
+
+        container.innerHTML = toShow.map(c => {
+            const tooltip = c.message ? `${c.hint_title || ''}\n${c.message}`.trim() : `Здоровье: ${c.health_percent}%`;
+            return `
+                <div class="flex items-center justify-between py-1.5 px-2 bg-surface-2 rounded text-[11px]" title="${tooltip}">
+                    <div class="flex items-center gap-1.5">
+                        <div class="w-1.5 h-1.5 rounded-full ${c.is_critical ? 'bg-status-error' : 'bg-accent'}"></div>
+                        <span class="font-medium text-text-muted truncate max-w-[100px]">${c.name}</span>
+                    </div>
+                    <span class="font-bold ${c.is_critical ? 'text-status-error' : 'text-accent'}">${c.health_percent}%</span>
+                </div>`;
+        }).join('');
+    }
+
+    // --- Navigation & Quick Access ---
+    async function loadQuickAccess() {
+        const container = document.getElementById("quick-access-list");
+        const emptyEl = document.getElementById("quick-access-empty");
+        if (!container) return;
+
+        const [{ ok, data }, sessionsResp] = await Promise.all([
+            apiFetch(`/api/ui/quick-access?user_id=${encodeURIComponent(currentUser.user_id)}`),
+            apiFetch(`/api/sessions/active`)
+        ]);
+        const sessions = (sessionsResp && sessionsResp.ok && Array.isArray(sessionsResp.data?.items)) ? sessionsResp.data.items : [];
+        const parseSessionTime = (value) => {
+            if (!value) return 0;
+            const parsed = Date.parse(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        };
+        const pickPreferredSession = (existing, incoming) => {
+            if (!incoming) return existing || null;
+            if (!existing) return incoming;
+            if (!!incoming.paused !== !!existing.paused) {
+                return incoming.paused ? incoming : existing;
+            }
+            const incomingTs = Math.max(
+                parseSessionTime(incoming.paused_at),
+                parseSessionTime(incoming.updated_at),
+                parseSessionTime(incoming.start_time)
+            );
+            const existingTs = Math.max(
+                parseSessionTime(existing.paused_at),
+                parseSessionTime(existing.updated_at),
+                parseSessionTime(existing.start_time)
+            );
+            return incomingTs >= existingTs ? incoming : existing;
+        };
+        const formatPausedAt = (value) => {
+            if (!value) return "";
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return "";
+            return date.toLocaleString("ru-RU", {
+                day: "2-digit",
+                month: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+        };
+        const pausedMap = new Map();
+        sessions.forEach(s => {
+            if (s && s.complex_id) {
+                const existing = pausedMap.get(s.complex_id);
+                pausedMap.set(s.complex_id, pickPreferredSession(existing, s));
+            }
+        });
+
+        if (!ok) {
+            container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-muted">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="text-xs text-primary hover:underline mt-1">Попробовать снова</button></div>`;
+            if (emptyEl) emptyEl.hidden = true;
+            return;
+        }
+        if (!data.items?.length) {
+            container.innerHTML = "";
+            if (emptyEl) emptyEl.hidden = false;
+            return;
+        }
+
+        if (emptyEl) emptyEl.hidden = true;
+
+        container.innerHTML = data.items.map(item => {
+            const complex = item.complex;
+            const pausedSession = pausedMap.get(complex.id) || item.paused_session || null;
+            const isPaused = !!(pausedSession && pausedSession.paused);
+            const stats = item.stats || {};
+            const health = item.health || {};
+            const ctaIcon = isPaused ? 'restart_alt' : 'play_arrow';
+            const onClickHandler = isPaused ? `window.handleStartSession('${complex.id}', '${pausedSession.session_id}')` : `window.handleStartSession('${complex.id}')`;
+            const pausedAtLabel = formatPausedAt(pausedSession && pausedSession.paused_at);
+            const pausedProgress = pausedSession && typeof pausedSession.current_task_index === "number"
+                ? pausedSession.current_task_index + 1
+                : null;
+            const pausedTotal = pausedSession && typeof pausedSession.total_tasks === "number"
+                ? pausedSession.total_tasks
+                : null;
+
+            let healthBadge = '';
+            if (health.is_critical) {
+                healthBadge = `<div class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-status-error"></span></div>`;
+            } else if (health.status === 'frozen') {
+                healthBadge = `<div class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-border-strong border-2 border-text-on-dark dark:border-border-strong"></div>`;
+            }
+
+            const progress = Math.round(stats.progress || 0);
+            const isMastered = progress >= 100;
+            let iconContent = '';
+            if (isMastered) {
+                iconContent = `<div class="w-10 h-10 rounded-full bg-primary-lighter text-primary flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">check</span></div>`;
+            } else if (progress > 0) {
+                iconContent = `<div class="relative w-10 h-10 flex items-center justify-center"><svg class="w-full h-full transform -rotate-90"><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"/><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - progress}" stroke-linecap="round" class="text-primary transition-all duration-500 ease-out"/></svg><span class="absolute text-[9px] font-bold text-text-secondary dark:text-text-on-dark">${progress}%</span></div>`;
+            } else {
+                iconContent = `<div class="w-10 h-10 rounded-lg bg-surface-2 flex items-center justify-center text-text-muted font-bold text-xs uppercase border border-border-subtle">${complex.name.slice(0, 2)}</div>`;
+            }
+
+            let statusLine = '';
+            if (isPaused) {
+                const pauseText = pausedAtLabel
+                    ? `На паузе с ${pausedAtLabel}`
+                    : "На паузе";
+                const progressText = (pausedProgress && pausedTotal) ? ` В· ${pausedProgress}/${pausedTotal}` : "";
+                statusLine = `<span class="text-accent text-[10px] font-bold uppercase tracking-wider">${pauseText}${progressText}</span>`;
+            } else if (item.is_pinned) {
+                statusLine = `<span class="text-text-muted text-[10px] flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">push_pin</span> Закреплено</span>`;
+            } else {
+                if (health.days_since_last !== null && health.days_since_last !== undefined) {
+                    const dayText = health.days_since_last === 0 ? 'Сегодня' : `${health.days_since_last}дн. назад`;
+                    statusLine = `<span class="text-text-muted text-[10px]">Активность: ${dayText}</span>`;
+                } else {
+                    statusLine = `<span class="text-text-muted text-[10px] uppercase tracking-wider max-w-[120px] truncate">${complex.description || 'Нет описания'}</span>`;
+                }
+            }
+
+            return `
+                <div class="group relative bg-surface-1 rounded-xl p-3 border border-border-subtle hover:border-primary-light hover:shadow-lg transition-all cursor-pointer flex items-center justify-between gap-3"
+                onclick="${onClickHandler}">
+                    <div class="flex items-center gap-3">
+                        <div class="relative">${iconContent}${healthBadge}</div>
+                        <div class="flex flex-col">
+                            <h4 class="font-bold text-sm text-text-main group-hover:text-primary transition-colors line-clamp-1">${complex.name}</h4>
+                            <div class="flex items-center gap-2 mt-0.5">${statusLine}</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1">
+                        <button class="h-7 w-7 rounded-full flex items-center justify-center text-text-muted hover:text-status-error hover:bg-surface-2 transition-all opacity-0 group-hover:opacity-100" onclick="event.stopPropagation();window._removeFromQuickAccess('${complex.id}')" title="Убрать"><span class="material-symbols-outlined text-[14px]">close</span></button>
+                        <button class="h-8 w-8 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted group-hover:bg-primary group-hover:text-primary-fg transition-all shadow-sm">
+                            <span class="material-symbols-outlined text-[18px]">${ctaIcon}</span>
+                        </button>
+                    </div>
+                </div>`;
+        }).join('');
+    }
+
+    window._retryQuickAccess = async function () {
+        await loadQuickAccess();
+    };
+
+    window._unpinComplex = async function (complexId) {
+        await apiFetch('/api/ui/quick-access/unpin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ complex_id: complexId, user_id: currentUser.user_id })
+        });
+        await loadQuickAccess();
+    };
+
+    window._removeFromQuickAccess = async function (complexId) {
+        await apiFetch('/api/ui/quick-access/remove', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ complex_id: complexId, user_id: currentUser.user_id })
+        });
+        await loadQuickAccess();
+    };
+
+    async function markRecentComplex(complexId) {
+        if (!complexId || !currentUser?.user_id) return;
+        try {
+            await apiFetch(`/api/ui/quick-access/recent`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ complex_id: complexId, user_id: currentUser.user_id })
+            });
+        } catch (err) {
+            // best-effort
+        }
+    }
+
+    window.handleStartSession = async function (complexId, pausedSessionId = null) {
+        try {
+            if (sessionStartAbortController && !sessionStartAbortController.signal.aborted) {
+                return;
+            }
+            if (pausedSessionId) {
+                await markRecentComplex(complexId);
+                window.navigateWithTransition(`/ui/session/${pausedSessionId}`);
+                return;
+            }
+            sessionStartAbortController = new AbortController();
+            const response = await apiFetch(`/api/session/${encodeURIComponent(complexId)}/start`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ user_id: currentUser.user_id }),
+                signal: sessionStartAbortController.signal
+            });
+
+            const { ok, data, cancelled } = response;
+            if (cancelled) return;
+
+            // MISSING-3: сервер нашёл паузированную сессию — предлагаем выбор
+            if (!ok && data?.error === "paused_session_exists" && data?.session_id) {
+                const resume = await NotificationUI.confirm({
+                    title: 'Найдена сессия на паузе',
+                    message: 'Для этого комплекса уже есть сессия на паузе.\nПродолжить её или начать заново?',
+                    confirmText: 'Продолжить',
+                    cancelText: 'Начать заново',
+                    variant: 'primary'
+                });
+                if (resume) {
+                    await markRecentComplex(complexId);
+                    window.navigateWithTransition(`/ui/session/${data.session_id}`);
+                } else {
+                    sessionStartAbortController = new AbortController();
+                    const resp2 = await apiFetch(`/api/session/${encodeURIComponent(complexId)}/start`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ user_id: currentUser.user_id, force: true }),
+                        signal: sessionStartAbortController.signal
+                    });
+                    if (resp2.ok && resp2.data?.session_id) {
+                        await markRecentComplex(complexId);
+                        window.navigateWithTransition(`/ui/session/${resp2.data.session_id}`);
+                    } else {
+                        NotificationUI.toast(`Ошибка при запуске: ${resp2.data?.error || 'Неизвестная ошибка'}`, 'error');
+                    }
+                }
+                return;
+            }
+
+            if (ok && data?.session_id) {
+                await markRecentComplex(complexId);
+                window.navigateWithTransition(`/ui/session/${data.session_id}`);
+            } else {
+                const errorMsg = data?.error || data?.message || "Неизвестная ошибка";
+                NotificationUI.toast(`Ошибка при запуске: ${errorMsg}`, 'error');
+            }
+        } catch (error) {
+            console.error("Session start exception:", error);
+            NotificationUI.toast('Ошибка подключения. Проверьте интернет', 'error');
+        }
+    }
+
+    function updateDateTime() {
+        const now = new Date();
+        const options = { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' };
+        const el = document.getElementById('datetime-text');
+        if (el) el.innerHTML = `<span class="font-bold text-text-main">${now.toLocaleDateString('ru-RU', options)}</span>`;
+    }
+
+    document.addEventListener("click", e => {
+        const el = e.target?.closest("[data-nav]");
+        if (el) window.navigateWithTransition(el.getAttribute("data-nav"));
+    });
+    document.addEventListener("DOMContentLoaded", initialize);
+})();

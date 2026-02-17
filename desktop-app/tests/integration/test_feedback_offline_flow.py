@@ -1,0 +1,142 @@
+import json
+import sys
+from pathlib import Path
+
+import pytest
+
+DESKTOP_APP_PATH = Path(__file__).resolve().parents[2]
+if not (DESKTOP_APP_PATH / "server.py").exists():
+    DESKTOP_APP_PATH = DESKTOP_APP_PATH / "desktop-app"
+if str(DESKTOP_APP_PATH) not in sys.path:
+    sys.path.insert(0, str(DESKTOP_APP_PATH))
+
+import server  # type: ignore
+
+
+@pytest.fixture
+def client():
+    server.app.config["TESTING"] = True
+    with server.app.test_client() as test_client:
+        yield test_client
+
+
+def _get_current_user_id(client) -> str:
+    resp = client.get("/api/users/current")
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is True
+    user = payload.get("user") or {}
+    user_id = user.get("user_id")
+    assert isinstance(user_id, str) and user_id
+    return user_id
+
+
+def test_network_status_endpoint_returns_expected_shape(client):
+    resp = client.get("/api/network/status")
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is True
+    assert isinstance(payload.get("internet_online"), bool)
+    assert isinstance(payload.get("feedback_delivery"), dict)
+    assert isinstance(payload.get("updates"), dict)
+
+
+def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monkeypatch, tmp_path):
+    user_id = _get_current_user_id(client)
+    monkeypatch.setattr(server, "_feedback_dir", lambda: tmp_path)
+    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: True)
+    monkeypatch.setattr(server, "_notify_feedback_via_email", lambda *_args, **_kwargs: {"sent": False, "reason": "send_failed"})
+
+    resp = client.post(
+        "/api/feedback",
+        json={
+            "user_id": user_id,
+            "type": "bug",
+            "severity": "high",
+            "title": "Offline send failure",
+            "description": "Email relay is unavailable in this test.",
+            "include_technical_data": False,
+            "include_logs": False,
+        },
+    )
+    assert resp.status_code == 201
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is True
+    assert payload.get("email_notification", {}).get("sent") is False
+
+    ticket_id = payload.get("ticket_id")
+    assert isinstance(ticket_id, str) and ticket_id
+    ticket_path = tmp_path / f"{ticket_id}.json"
+    assert ticket_path.exists()
+
+    ticket = json.loads(ticket_path.read_text(encoding="utf-8"))
+    assert ticket.get("status") == "queued"
+    delivery = ticket.get("delivery") or {}
+    assert delivery.get("email_sent") is False
+    assert delivery.get("email_reason") == "send_failed"
+
+
+def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_path):
+    user_id = _get_current_user_id(client)
+    monkeypatch.setattr(server, "_feedback_dir", lambda: tmp_path)
+    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: True)
+
+    ticket = server._build_feedback_ticket(  # type: ignore[attr-defined]
+        {
+            "type": "bug",
+            "severity": "medium",
+            "title": "Queued ticket",
+            "description": "Will be retried later.",
+            "include_technical_data": False,
+            "include_logs": False,
+        },
+        user_id=user_id,
+    )
+    server._save_feedback_ticket(ticket)  # type: ignore[attr-defined]
+
+    monkeypatch.setattr(server, "_notify_feedback_via_email", lambda *_args, **_kwargs: {"sent": True})
+
+    resp = client.post("/api/feedback/retry-pending", json={"limit": 10})
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is True
+    assert payload.get("attempted", 0) >= 1
+    assert payload.get("sent", 0) >= 1
+
+    ticket_path = tmp_path / f"{ticket['ticket_id']}.json"
+    saved = json.loads(ticket_path.read_text(encoding="utf-8"))
+    assert saved.get("status") == "delivered"
+    delivery = saved.get("delivery") or {}
+    assert delivery.get("email_sent") is True
+
+
+def test_feedback_submit_short_circuits_when_offline(client, monkeypatch, tmp_path):
+    user_id = _get_current_user_id(client)
+    monkeypatch.setattr(server, "_feedback_dir", lambda: tmp_path)
+    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: False)
+
+    called = {"value": False}
+
+    def _fake_notify(*_args, **_kwargs):
+        called["value"] = True
+        return {"sent": True}
+
+    monkeypatch.setattr(server, "_notify_feedback_via_email", _fake_notify)
+
+    resp = client.post(
+        "/api/feedback",
+        json={
+            "user_id": user_id,
+            "type": "bug",
+            "severity": "low",
+            "title": "Offline fast path",
+            "description": "SMTP should not be called when internet is offline.",
+            "include_technical_data": False,
+            "include_logs": False,
+        },
+    )
+    assert resp.status_code == 201
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is True
+    assert payload.get("email_notification", {}).get("reason") == "offline"
+    assert called["value"] is False

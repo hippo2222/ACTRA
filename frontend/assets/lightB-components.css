@@ -1,0 +1,343 @@
+/* ============================================================================
+   LIGHT B THEME - UI Components
+   Соответствует: LIGHTB_MODERNIZATION_PLAN.MD (ФАЗА 3)
+   ========================================================================== */
+
+/* 3.1 Кнопки и интерактивные элементы */
+.btn-primary {
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
+  border: 1px solid var(--color-primary);
+  padding: 10px 20px;
+  border-radius: 6px;
+  transition: all var(--transition-normal);
+}
+
+.btn-primary:hover {
+  background: var(--color-primary-dark);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-primary:active {
+  background: var(--color-primary-darker);
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-disabled);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.btn-secondary {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-main);
+  border: 1px solid var(--color-border-normal);
+  padding: 10px 20px;
+  border-radius: 6px;
+}
+
+.btn-secondary:hover {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-primary);
+}
+
+.btn-secondary:active {
+  background: var(--color-primary-lighter);
+}
+
+/* 3.2 Input-поля и формы */
+.input-field,
+.form-input {
+  background: var(--color-surface-1);
+  border: 1px solid var(--color-border-normal);
+  color: var(--color-text-main);
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: all var(--transition-fast);
+}
+
+.input-field:focus,
+.form-input:focus {
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+.input-field.error,
+.form-input.error {
+  border-color: var(--color-error);
+  background: var(--color-error-lighter);
+}
+
+.input-field:disabled {
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-disabled);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.form-label {
+  color: var(--color-text-main);
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+/* 3.3 Уведомления и Alerts */
+.alert {
+  padding: 12px 16px;
+  border-radius: 6px;
+  border-left: 4px solid;
+  transition: all var(--transition-normal);
+}
+
+.alert.success {
+  background: var(--color-success-light);
+  border-left-color: var(--color-success);
+  color: var(--color-success-dark);
+}
+
+.alert.error {
+  background: var(--color-error-light);
+  border-left-color: var(--color-error);
+  color: var(--color-error-dark);
+}
+
+.alert.warning {
+  background: var(--color-warning-lighter);
+  border-left-color: var(--color-warning);
+  color: var(--color-warning-dark);
+}
+
+.alert.info {
+  background: var(--color-info-light);
+  border-left-color: var(--color-info);
+  color: var(--color-info-dark);
+}
+
+.alert.pending {
+  background: var(--color-primary-lighter);
+  border-left-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
+
+/* 3.4 Badges и Tags */
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge.primary {
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
+}
+
+.badge.success {
+  background: var(--color-success);
+  color: var(--color-success-text);
+}
+
+.badge.error {
+  background: var(--color-error);
+  color: var(--color-error-text);
+}
+
+.badge.warning {
+  background: var(--color-warning);
+  color: var(--color-warning-text);
+}
+
+.badge.outline {
+  background: transparent;
+  border: 1px solid var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* 3.5 Навигация и Tabs */
+.nav-item {
+  color: var(--color-text-secondary);
+  padding: 8px 16px;
+  border-radius: 4px;
+  transition: all var(--transition-normal);
+  cursor: pointer;
+}
+
+.nav-item:hover {
+  background: var(--color-bg-hover);
+  color: var(--color-text-main);
+}
+
+.nav-item.active {
+  background: var(--color-primary);
+  color: var(--color-primary-fg);
+  font-weight: 600;
+}
+
+.tab-button {
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  padding: 8px 16px;
+  transition: all var(--transition-normal);
+}
+
+.tab-button:hover {
+  color: var(--color-text-main);
+}
+
+.tab-button.active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+/* 3.6 Модальные окна и Overlay */
+.modal-backdrop {
+  background: var(--color-scrim);
+  backdrop-filter: blur(4px);
+  transition: opacity var(--transition-normal);
+}
+
+/* ============================================================================
+   Brand Logo Utility (theme-adaptive via currentColor)
+   ========================================================================== */
+.brand-logo {
+  display: inline-block;
+  mask: url('/assets/logo.svg') center/contain no-repeat;
+  -webkit-mask: url('/assets/logo.svg') center/contain no-repeat;
+  background-color: currentColor;
+}
+
+.modal {
+  background: var(--color-surface-1);
+  border-radius: 8px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-border-subtle);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--color-border-subtle);
+  color: var(--color-text-main);
+}
+
+.modal-footer {
+  border-bottom: 0;
+  /* reset */
+  border-top: 1px solid var(--color-border-subtle);
+  background: var(--color-bg-secondary);
+}
+
+/* 3.7 Спецэлементы (Spinners, Loaders) */
+.spinner {
+  border: 3px solid var(--color-border-subtle);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.loading-bar {
+  background: linear-gradient(90deg,
+      var(--color-primary),
+      var(--color-accent));
+  height: 3px;
+  border-radius: 2px;
+}
+
+.skeleton {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 3.8 Таблицы */
+.table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.table thead {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-main);
+}
+
+.table tbody tr:nth-child(even) {
+  background: var(--color-bg-tertiary);
+}
+
+.table tbody tr:hover {
+  background: var(--color-bg-hover);
+}
+
+.table td,
+.table th {
+  border: 1px solid var(--color-border-subtle);
+  padding: 8px 12px;
+}
+
+/* 3.9 Прогресс-бары */
+.progress {
+  background: var(--color-bg-tertiary);
+  border-radius: 4px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  background: linear-gradient(90deg,
+      var(--color-primary),
+      var(--color-primary-light));
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.progress-bar.success {
+  background: var(--color-success);
+}
+
+.progress-bar.error {
+  background: var(--color-error);
+}
+
+.progress-bar.warning {
+  background: var(--color-warning);
+}
+
+/* 5.3 Поддержка prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
