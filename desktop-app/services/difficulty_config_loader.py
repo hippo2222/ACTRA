@@ -68,7 +68,14 @@ class DifficultyConfigLoader:
         
         # Если файл не существует - создать с дефолтными значениями
         if not config_path.exists():
-            DifficultyConfigLoader._create_default_config(config_path)
+            try:
+                DifficultyConfigLoader._create_default_config(config_path)
+            except Exception as e:
+                logger.warning(
+                    f"Не удалось создать difficulty_config.json по пути {config_path}: {e}. "
+                    "Используем дефолтные значения в памяти."
+                )
+                return DEFAULT_CONFIG.copy()
         
         # Загрузить конфигурацию
         try:
