@@ -94,6 +94,20 @@ console.log(JSON.stringify(payload));
 
 
 class TestMistakesUIEvaluatorContract(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        check = subprocess.run(
+            ["node", "-e", "require.resolve('jsdom')"],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if check.returncode != 0:
+            raise unittest.SkipTest(
+                "jsdom is not available for MistakesUI contract tests. Install frontend deps (npm ci)."
+            )
+
     def setUp(self):
         self.service = TaskEvaluatorService()
 
@@ -165,4 +179,3 @@ class TestMistakesUIEvaluatorContract(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
