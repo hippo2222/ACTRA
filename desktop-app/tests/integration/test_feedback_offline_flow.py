@@ -22,12 +22,34 @@ def client():
 
 def _get_current_user_id(client) -> str:
     resp = client.get("/api/users/current")
-    assert resp.status_code == 200
-    payload = resp.get_json()
-    assert payload and payload.get("ok") is True
-    user = payload.get("user") or {}
-    user_id = user.get("user_id")
+    if resp.status_code == 200:
+        payload = resp.get_json()
+        if payload and payload.get("ok") is True:
+            user = payload.get("user") or {}
+            user_id = user.get("user_id")
+            if isinstance(user_id, str) and user_id:
+                return user_id
+
+    list_resp = client.get("/api/users")
+    assert list_resp.status_code == 200
+    list_payload = list_resp.get_json() or {}
+    items = list_payload.get("items") or []
+    if items:
+        first = items[0] or {}
+        user_id = first.get("user_id")
+        assert isinstance(user_id, str) and user_id
+        select_resp = client.post("/api/users/select", json={"user_id": user_id})
+        assert select_resp.status_code == 200
+        return user_id
+
+    create_resp = client.post("/api/users", json={"name": "Feedback Test User"})
+    assert create_resp.status_code == 200
+    create_payload = create_resp.get_json() or {}
+    created_user = create_payload.get("user") or {}
+    user_id = created_user.get("user_id")
     assert isinstance(user_id, str) and user_id
+    select_resp = client.post("/api/users/select", json={"user_id": user_id})
+    assert select_resp.status_code == 200
     return user_id
 
 
@@ -45,7 +67,11 @@ def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monke
     user_id = _get_current_user_id(client)
     monkeypatch.setattr(server, "_feedback_dir", lambda: tmp_path)
     monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: True)
-    monkeypatch.setattr(server, "_notify_feedback_via_email", lambda *_args, **_kwargs: {"sent": False, "reason": "send_failed"})
+    monkeypatch.setattr(
+        server,
+        "_notify_feedback_via_email",
+        lambda *_args, **_kwargs: {"sent": False, "reason": "send_failed"},
+    )
 
     resp = client.post(
         "/api/feedback",
@@ -94,7 +120,9 @@ def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_pat
     )
     server._save_feedback_ticket(ticket)  # type: ignore[attr-defined]
 
-    monkeypatch.setattr(server, "_notify_feedback_via_email", lambda *_args, **_kwargs: {"sent": True})
+    monkeypatch.setattr(
+        server, "_notify_feedback_via_email", lambda *_args, **_kwargs: {"sent": True}
+    )
 
     resp = client.post("/api/feedback/retry-pending", json={"limit": 10})
     assert resp.status_code == 200
