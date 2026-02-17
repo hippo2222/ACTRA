@@ -38,7 +38,7 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "mypy>=1.6.0",
-    "black>=23.7.0",
+    "black==26.1.0",
     "flake8>=6.1.0",
 ]
 
@@ -115,6 +115,7 @@ module = "task_system.*"
 strict = true
 
 [tool.black]
+required-version = "26.1.0"
 line-length = 100
 target-version = ["py310"]
 include = "(desktop-app/api/complexes_api\\.py|scripts/build_release\\.py|scripts/validate_release_catalog\\.py|scripts/check_mojibake\\.py)$"
