@@ -6,8 +6,28 @@ Integration tests for Complex History API endpoints.
 import pytest
 import json
 import time
+from pathlib import Path
 
 TEST_COMPLEX_PREFIX = "history-api-test"
+
+
+def _get_existing_task_id() -> str:
+    """Return any existing task id from current non-demo catalog."""
+    data_modules = Path(__file__).resolve().parents[3] / "data" / "modules"
+    for module_dir in data_modules.iterdir():
+        if not module_dir.is_dir():
+            continue
+        topics_dir = module_dir / "topics"
+        if not topics_dir.exists():
+            continue
+        for topic_dir in topics_dir.iterdir():
+            tasks_dir = topic_dir / "tasks"
+            if not tasks_dir.exists():
+                continue
+            for task_dir in tasks_dir.iterdir():
+                if (task_dir / "task.json").exists():
+                    return f"{module_dir.name}/{topic_dir.name}/{task_dir.name}"
+    raise RuntimeError("No task.json found in data/modules catalog")
 
 
 @pytest.fixture
@@ -86,13 +106,14 @@ def clean_context():
 def test_history_workflow(client, clean_context):
     """Test full history workflow via API."""
     complex_id = f"{TEST_COMPLEX_PREFIX}-{int(time.time() * 1000)}"
+    task_id = _get_existing_task_id()
     
     # 1. Create Complex
     create_payload = {
         "id": complex_id,
         "name": "Version 1",
         "description": "Desc 1",
-        "tasks": ["module_01/topic_01/task_001"],
+        "tasks": [task_id],
         "chains": []
     }
     resp = client.post("/api/complexes", json=create_payload)
@@ -102,7 +123,7 @@ def test_history_workflow(client, clean_context):
     update_payload_1 = {
         "name": "Version 2",
         "description": "Desc 2",
-        "tasks": ["module_01/topic_01/task_001"]
+        "tasks": [task_id]
     }
     # Need to get current version for optimistic locking if enabled, 
     # but here we can just update if we don't send expected_version (force update)
@@ -122,7 +143,7 @@ def test_history_workflow(client, clean_context):
     v2_timestamp = resp.json["item"]["updated_at"]
     update_payload_2 = {
         "name": "Version 3",
-        "tasks": ["module_01/topic_01/task_001"]
+        "tasks": [task_id]
     }
     update_payload_2["expected_version"] = v2_timestamp
     
