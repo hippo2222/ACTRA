@@ -63,7 +63,7 @@ jobs:
 
       - name: Black (runtime baseline)
         run: |
-          black --check .
+          python -m black --check .
 
       - name: Mypy (baseline configured files)
         run: |
