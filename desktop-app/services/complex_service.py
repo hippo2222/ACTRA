@@ -184,6 +184,10 @@ class ComplexService:
             # Имя файла с timestamp (включая микросекунды для избежания коллизий)
             timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
             history_file = history_dir / f"{timestamp}.json"
+            suffix = 1
+            while history_file.exists():
+                history_file = history_dir / f"{timestamp}_{suffix:03d}.json"
+                suffix += 1
 
             # Prepare data for JSON serialization (convert datetimes)
             snapshot_data = complex_data.copy()
