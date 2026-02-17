@@ -1,0 +1,34 @@
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.question-item {
+    transition: all 0.2s;
+}
+
+.option-row {
+    transition: all 0.2s;
+}
+
+.option-row:hover {
+    /* Background removed per user feedback */
+}
+
+.option-letter {
+    background-color: var(--color-surface-1);
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border-subtle);
+    transition: all 0.2s;
+}
+
+.option-letter.correct {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-primary-contrast);
+    box-shadow: 0 6px 12px var(--color-primary-light);
+}

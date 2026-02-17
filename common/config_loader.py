@@ -1,0 +1,142 @@
+"""
+Configuration loader for the project.
+Loads configuration from config.json and provides default values.
+"""
+
+import json
+import logging
+from pathlib import Path
+from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Загружает конфигурацию из config.json.
+    
+    Если config.json не найден, возвращает значения по умолчанию.
+    Пути нормализуются относительно корня проекта.
+    
+    Args:
+        config_path: Путь к config.json (если None, ищет в корне проекта)
+    
+    Returns:
+        Dict с конфигурацией:
+        - data_root: путь к папке данных (абсолютный путь)
+        - task_system_root: путь к task_system (абсолютный путь)
+    
+    Example:
+        >>> config = load_config()
+        >>> data_dir = Path(config['data_root'])
+    """
+    # Определяем корневую директорию проекта
+    # common/config_loader.py -> common/ -> project_root/
+    current_file = Path(__file__)
+    project_root = current_file.parent.parent
+    
+    # Определяем путь к config.json и базовую директорию для относительных путей
+    if config_path is None:
+        config_file = project_root / "config.json"
+        base_dir = project_root
+    else:
+        config_file = Path(config_path)
+        if not config_file.is_absolute():
+            config_file = (project_root / config_file).resolve()
+        base_dir = config_file.parent
+    
+    # Значения по умолчанию
+    default_config = {
+        "data_root": str((base_dir / "data").resolve()),
+        "task_system_root": str((base_dir / "task_system").resolve())
+    }
+    
+    # Пытаемся загрузить config.json
+    if not config_file.exists():
+        logger.warning(f"config.json не найден в {config_file}. Использую значения по умолчанию.")
+        return default_config
+    
+    try:
+        with open(config_file, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        
+        # Нормализуем пути относительно корня проекта
+        if "data_root" in config:
+            data_root = Path(config["data_root"])
+            if not data_root.is_absolute():
+                data_root = base_dir / data_root
+            config["data_root"] = str(data_root.resolve())
+        else:
+            config["data_root"] = default_config["data_root"]
+        
+        if "task_system_root" in config:
+            task_system_root = Path(config["task_system_root"])
+            if not task_system_root.is_absolute():
+                task_system_root = base_dir / task_system_root
+            config["task_system_root"] = str(task_system_root.resolve())
+        else:
+            config["task_system_root"] = default_config["task_system_root"]
+        
+        # Валидация конфигурации
+        validate_config(config)
+        
+        logger.info(f"Конфигурация загружена из {config_file}")
+        return config
+    
+    except json.JSONDecodeError as e:
+        logger.error(f"Ошибка парсинга config.json: {e}. Использую значения по умолчанию.")
+        return default_config
+    except Exception as e:
+        logger.error(f"Ошибка загрузки config.json: {e}. Использую значения по умолчанию.")
+        return default_config
+
+
+def validate_config(config: Dict[str, Any]) -> None:
+    """
+    Валидирует загруженную конфигурацию.
+    
+    Проверяет существование директорий и выдает предупреждения,
+    если они не найдены.
+    
+    Args:
+        config: Словарь с конфигурацией
+    
+    Raises:
+        None, но логирует предупреждения
+    """
+    # Проверяем data_root
+    data_root = Path(config.get("data_root", ""))
+    if not data_root.exists():
+        logger.warning(f"Директория data_root не существует: {data_root}")
+    elif not data_root.is_dir():
+        logger.warning(f"data_root не является директорией: {data_root}")
+    
+    # Проверяем task_system_root
+    task_system_root = Path(config.get("task_system_root", ""))
+    if not task_system_root.exists():
+        logger.warning(f"Директория task_system_root не существует: {task_system_root}")
+    elif not task_system_root.is_dir():
+        logger.warning(f"task_system_root не является директорией: {task_system_root}")
+
+
+def get_data_root() -> Path:
+    """
+    Удобная функция для получения пути к data_root.
+    
+    Returns:
+        Path к директории данных
+    """
+    config = load_config()
+    return Path(config["data_root"])
+
+
+def get_task_system_root() -> Path:
+    """
+    Удобная функция для получения пути к task_system_root.
+    
+    Returns:
+        Path к директории task_system
+    """
+    config = load_config()
+    return Path(config["task_system_root"])
+

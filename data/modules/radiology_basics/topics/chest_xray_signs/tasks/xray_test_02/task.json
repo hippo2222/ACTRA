@@ -1,0 +1,40 @@
+{
+  "id": "xray_test_02",
+  "name": "Pleura and Lung Signs Test",
+  "type": "test",
+  "content": {
+    "test_type": "single_choice",
+    "settings": {
+      "shuffle_questions": true,
+      "shuffle_answers": true,
+      "time_limit": null,
+      "passing_score": 70
+    },
+    "questions": [
+      {
+        "id": 0,
+        "text": "A visible pleural line without peripheral vascular markings most likely indicates:",
+        "answers": [
+          {
+            "text": "Pneumothorax",
+            "correct": true,
+            "image_path": null
+          },
+          {
+            "text": "Pleural effusion",
+            "correct": false,
+            "image_path": null
+          },
+          {
+            "text": "Cardiomegaly",
+            "correct": false,
+            "image_path": null
+          }
+        ]
+      }
+    ]
+  },
+  "settings": {
+    "difficulty": 1
+  }
+}

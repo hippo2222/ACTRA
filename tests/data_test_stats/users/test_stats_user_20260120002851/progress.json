@@ -1,0 +1,62 @@
+{
+  "version": "3.0",
+  "updated_at": "2026-01-20T00:28:51.638610",
+  "user_id": "test_stats_user_20260120002851",
+  "global_stats": {
+    "total_attempts": 3,
+    "total_time_seconds": 210
+  },
+  "task_history": {
+    "mod1/top1/task1": {
+      "meta": {
+        "total_attempts": 2,
+        "last_attempt_at": "2026-01-20T00:28:51.637982",
+        "success_rate": 0.5
+      },
+      "attempts": [
+        {
+          "timestamp": "2026-01-20T00:28:51.623604",
+          "difficulty": 1,
+          "success": true,
+          "time_spent": 60,
+          "complex_id": null,
+          "iteration": null,
+          "score": 100.0
+        },
+        {
+          "timestamp": "2026-01-20T00:28:51.637982",
+          "difficulty": 2,
+          "success": false,
+          "time_spent": 30,
+          "complex_id": null,
+          "iteration": null,
+          "score": 20.0
+        }
+      ],
+      "current_difficulty": 1,
+      "mastery_level": "beginner"
+    },
+    "mod1/top1/task2": {
+      "meta": {
+        "total_attempts": 1,
+        "last_attempt_at": "2026-01-20T00:28:51.638610",
+        "success_rate": 1.0
+      },
+      "attempts": [
+        {
+          "timestamp": "2026-01-20T00:28:51.638610",
+          "difficulty": 1,
+          "success": true,
+          "time_spent": 120,
+          "complex_id": null,
+          "iteration": null,
+          "score": 90.0
+        }
+      ],
+      "current_difficulty": 1,
+      "mastery_level": "beginner"
+    }
+  },
+  "mistake_bank": [],
+  "complex_completions": []
+}

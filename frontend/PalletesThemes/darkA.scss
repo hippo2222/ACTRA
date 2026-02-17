@@ -1,0 +1,47 @@
+/* Dark1 - https://coolors.co/141204-262a10-54442b-a9714b-e8985e */
+
+/* CSS HEX */
+--pitch-black: #141204ff;
+--dark-khaki: #262a10ff;
+--dark-khaki-2: #54442bff;
+--cinnamon-wood: #a9714bff;
+--toasted-almond: #e8985eff;
+
+/* CSS HSL */
+--pitch-black: hsla(53, 67%, 5%, 1);
+--dark-khaki: hsla(69, 45%, 11%, 1);
+--dark-khaki-2: hsla(37, 32%, 25%, 1);
+--cinnamon-wood: hsla(24, 39%, 48%, 1);
+--toasted-almond: hsla(25, 75%, 64%, 1);
+
+/* SCSS HEX */
+$pitch-black: #141204ff;
+$dark-khaki: #262a10ff;
+$dark-khaki-2: #54442bff;
+$cinnamon-wood: #a9714bff;
+$toasted-almond: #e8985eff;
+
+/* SCSS HSL */
+$pitch-black: hsla(53, 67%, 5%, 1);
+$dark-khaki: hsla(69, 45%, 11%, 1);
+$dark-khaki-2: hsla(37, 32%, 25%, 1);
+$cinnamon-wood: hsla(24, 39%, 48%, 1);
+$toasted-almond: hsla(25, 75%, 64%, 1);
+
+/* SCSS RGB */
+$pitch-black: rgba(20, 18, 4, 1);
+$dark-khaki: rgba(38, 42, 16, 1);
+$dark-khaki-2: rgba(84, 68, 43, 1);
+$cinnamon-wood: rgba(169, 113, 75, 1);
+$toasted-almond: rgba(232, 152, 94, 1);
+
+/* SCSS Gradient */
+$gradient-top: linear-gradient(0deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-right: linear-gradient(90deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-bottom: linear-gradient(180deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-left: linear-gradient(270deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-top-right: linear-gradient(45deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-bottom-right: linear-gradient(135deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-top-left: linear-gradient(225deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-bottom-left: linear-gradient(315deg, #141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);
+$gradient-radial: radial-gradient(#141204ff, #262a10ff, #54442bff, #a9714bff, #e8985eff);

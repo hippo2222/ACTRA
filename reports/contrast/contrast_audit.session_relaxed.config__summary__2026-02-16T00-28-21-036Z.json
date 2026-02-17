@@ -1,0 +1,972 @@
+{
+  "timestamp": "2026-02-16T00-28-21-036Z",
+  "configPath": "D:\\Ai Ai\\radioproject\\scripts\\contrast_audit.session_relaxed.config.json",
+  "outputDir": "D:\\Ai Ai\\radioproject\\reports\\contrast",
+  "baseUrl": "http://127.0.0.1:8000",
+  "totals": {
+    "rows": 121,
+    "issueRows": 0,
+    "issues": 0,
+    "coverageRows": 1,
+    "missingCoverageRows": 0,
+    "missingCoverage": 0
+  },
+  "rows": [
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "click (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d1__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "click (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d1__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "click (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d1__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "click (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d1__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "click (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d1__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "click (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d1__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "test/single_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d1__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "test/single_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d1__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "test/single_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d1__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "test/single_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d1__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "test/single_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d1__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "test/single_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d1__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "open_answer (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d1__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "open_answer (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d1__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "open_answer (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d1__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "open_answer (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d1__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "open_answer (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d1__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "open_answer (d=1)",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d1__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "sequence_assembly (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d2__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "sequence_assembly (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d2__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "sequence_assembly (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d2__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "sequence_assembly (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d2__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "sequence_assembly (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d2__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "sequence_assembly (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d2__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "draw (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d2__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "draw (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d2__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "draw (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d2__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "draw (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d2__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "draw (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d2__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "draw (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d2__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "click (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d2__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "click (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d2__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "click (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d2__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "click (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d2__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "click (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d2__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "click (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d2__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "test/multiple_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d2__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "test/multiple_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d2__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "test/multiple_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d2__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "test/multiple_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d2__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "test/multiple_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d2__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "test/multiple_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d2__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "test/single_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d2__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "test/single_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d2__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "test/single_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d2__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "test/single_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d2__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "test/single_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d2__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "test/single_choice (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d2__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "open_answer (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d2__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "open_answer (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d2__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "open_answer (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d2__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "open_answer (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d2__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "open_answer (d=2)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d2__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "open_answer (d=2)",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d2__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "test/multiple_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d3__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "test/multiple_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d3__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "test/multiple_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d3__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "test/multiple_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d3__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "test/multiple_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d3__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "test/multiple_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d3__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "click (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d3__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "click (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d3__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "click (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d3__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "click (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d3__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "click (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d3__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "click (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__click-d3__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "draw (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d3__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "draw (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d3__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "draw (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d3__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "draw (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d3__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "draw (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d3__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "draw (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d3__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "test/single_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d3__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "test/single_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d3__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "test/single_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d3__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "test/single_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d3__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "test/single_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d3__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "test/single_choice (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-single_choice-d3__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "open_answer (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d3__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "open_answer (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d3__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "open_answer (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d3__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "open_answer (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d3__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "open_answer (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d3__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "open_answer (d=3)",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__open_answer-d3__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "sequence_assembly (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d1__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "sequence_assembly (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d1__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "sequence_assembly (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d1__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "sequence_assembly (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d1__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "sequence_assembly (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d1__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "sequence_assembly (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d1__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "test/multiple_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d1__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "test/multiple_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d1__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "test/multiple_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d1__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "test/multiple_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d1__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "test/multiple_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d1__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "test/multiple_choice (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__test-multiple_choice-d1__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "draw (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d1__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "draw (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d1__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "draw (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d1__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "draw (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d1__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "draw (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d1__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "draw (d=1)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__draw-d1__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-a",
+      "combo": "sequence_assembly (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d3__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "light-b",
+      "combo": "sequence_assembly (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d3__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-a",
+      "combo": "sequence_assembly (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d3__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "neutral-b",
+      "combo": "sequence_assembly (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d3__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-a",
+      "combo": "sequence_assembly (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d3__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "theme": "dark-b",
+      "combo": "sequence_assembly (d=3)",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__sequence_assembly-d3__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S1 coverage",
+      "coverage": true,
+      "combos": 18,
+      "completed": 15,
+      "missing": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S1_coverage__coverage__2026-02-16T00-28-21-036Z.json"
+    },
+    {
+      "page": "S2",
+      "theme": "light-a",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S2__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S2",
+      "theme": "light-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S2__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S2",
+      "theme": "neutral-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S2__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S2",
+      "theme": "neutral-b",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S2__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S2",
+      "theme": "dark-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S2__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S2",
+      "theme": "dark-b",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S2__dark-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S3",
+      "theme": "light-a",
+      "issues": 0,
+      "warnings": 2,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S3__light-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S3",
+      "theme": "light-b",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S3__light-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S3",
+      "theme": "neutral-a",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S3__neutral-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S3",
+      "theme": "neutral-b",
+      "issues": 0,
+      "warnings": 3,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S3__neutral-b__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S3",
+      "theme": "dark-a",
+      "issues": 0,
+      "warnings": 0,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S3__dark-a__2026-02-16T00-28-21-036Z.md"
+    },
+    {
+      "page": "S3",
+      "theme": "dark-b",
+      "issues": 0,
+      "warnings": 1,
+      "report": "D:\\Ai Ai\\radioproject\\reports\\contrast\\S3__dark-b__2026-02-16T00-28-21-036Z.md"
+    }
+  ]
+}

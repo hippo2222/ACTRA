@@ -1,0 +1,4765 @@
+<!DOCTYPE html>
+
+
+<html class="light" lang="ru">
+
+
+
+
+
+<head>
+
+
+  <script src="../assets/ThemeManager.js"></script>
+
+
+  <meta charset="utf-8" />
+
+
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+
+
+  <title>Создание комплекса</title>
+
+
+  <style>
+
+
+    ::-webkit-scrollbar {
+
+
+      width: 6px;
+
+
+      height: 6px;
+
+
+    }
+
+
+
+
+
+    ::-webkit-scrollbar-track {
+
+
+      background: transparent;
+
+
+    }
+
+
+
+
+
+    ::-webkit-scrollbar-thumb {
+
+
+      background: #cbd5e1;
+
+
+      border-radius: 3px;
+
+
+    }
+
+
+
+
+
+    ::-webkit-scrollbar-thumb:hover {
+
+
+      background: #94a3b8;
+
+
+    }
+
+
+
+
+
+    .tree-line {
+
+
+      position: relative;
+
+
+    }
+
+
+
+
+
+    .tree-line::before {
+
+
+      content: '';
+
+
+      position: absolute;
+
+
+      left: 26px;
+
+
+      top: 0;
+
+
+      bottom: 0;
+
+
+      width: 1px;
+
+
+      background-color: #e2e8f0;
+
+
+      z-index: 0;
+
+
+    }
+
+
+
+
+
+    @keyframes pulse-animation {
+
+
+      0% {
+
+
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7);
+
+
+      }
+
+
+
+
+
+      70% {
+
+
+        box-shadow: 0 0 0 10px rgba(37, 99, 235, 0);
+
+
+      }
+
+
+
+
+
+      100% {
+
+
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0);
+
+
+      }
+
+
+    }
+
+
+
+
+
+    .pulse {
+
+
+      animation: pulse-animation 2s infinite;
+
+
+    }
+
+
+  </style>
+
+
+
+
+
+  <link href="/assets/tailwind.css" rel="stylesheet" />
+
+
+  <link href="/assets/fonts.css" rel="stylesheet" />
+
+
+  <link href="/assets/lightB-variables.css" rel="stylesheet" />
+
+
+  <link href="/assets/lightB-components.css" rel="stylesheet" />
+
+
+</head>
+
+
+
+
+
+<body
+
+
+  class="font-display bg-bg-main text-text-main h-screen flex flex-col overflow-hidden selection:bg-primary/20 selection:text-primary antialiased">
+
+
+  <header class="bg-surface-1 border-b border-border-subtle px-6 py-4 shrink-0 flex items-center justify-between z-20">
+
+
+    <div class="flex items-center gap-4">
+
+
+      <a href="/ui/complexes" class="text-slate-500 hover:text-slate-800 transition-colors">
+
+
+        <span class="material-symbols-outlined">arrow_back</span>
+
+
+      </a>
+
+
+      <h1 class="text-xl font-bold text-slate-900">Создание комплекса</h1>
+
+
+    </div>
+
+
+    <div class="flex items-center gap-3">
+
+
+      <button id="history-btn"
+
+
+        class="hidden h-8 w-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 transition-colors"
+
+
+        title="Рстория изменений">
+
+
+        <span class="material-symbols-outlined">history</span>
+
+
+      </button>
+
+
+      <div class="flex items-center gap-2">
+
+
+        <span class="text-sm text-slate-500">Черновик</span>
+
+
+        <div class="w-2 h-2 rounded-full bg-slate-300"></div>
+
+
+      </div>
+
+
+    </div>
+
+
+  </header>
+
+
+  <main class="flex-1 flex overflow-hidden">
+
+
+    <div class="w-full h-full max-w-[1600px] mx-auto p-4 md:p-6 flex gap-6">
+
+
+      <div class="flex-1 flex flex-col gap-6 overflow-y-auto pb-24 pr-2 custom-scrollbar">
+
+
+        <div id="global-alert" hidden>
+
+
+          <div class="rounded-xl border border-red-200 bg-red-50 text-red-800 p-4">
+
+
+            <div class="flex items-start gap-2">
+
+
+              <span class="material-symbols-outlined">error</span>
+
+
+              <div class="flex-1">
+
+
+                <p class="font-bold">Не удалось сохранить</p>
+
+
+                <p id="global-alert-text" class="text-sm mt-1">Ошибка</p>
+
+
+              </div>
+
+
+              <button id="global-alert-close" class="text-red-800/70 hover:text-red-900">вњ•</button>
+
+
+            </div>
+
+
+          </div>
+
+
+        </div>
+
+
+        <section class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col gap-5">
+
+
+          <div class="flex items-center gap-2 border-b border-slate-100 pb-3 mb-1">
+
+
+            <span class="material-symbols-outlined text-primary">info</span>
+
+
+            <h2 class="text-lg font-bold text-slate-900">Рнформация</h2>
+
+
+          </div>
+
+
+          <div class="flex flex-col gap-2">
+
+
+            <label class="text-sm font-medium text-slate-700">Название комплекса <span
+
+
+                class="text-red-500">*</span></label>
+
+
+            <input id="name"
+
+
+              class="form-input w-full rounded-lg border-slate-300 focus:border-primary focus:ring-primary h-12 px-4 placeholder:text-slate-400 text-sm"
+
+
+              placeholder="Введите название" type="text" />
+
+
+            <p id="name-error" class="text-sm text-red-600 mt-1" hidden></p>
+
+
+          </div>
+
+
+          <div class="flex flex-col gap-2">
+
+
+            <label class="text-sm font-medium text-slate-700">Описание</label>
+
+
+            <textarea id="description"
+
+
+              class="form-textarea w-full rounded-lg border-slate-300 focus:border-primary focus:ring-primary min-h-[100px] p-4 placeholder:text-slate-400 text-sm resize-none"
+
+
+              placeholder="Опишите цели и задачи..."></textarea>
+
+
+          </div>
+
+
+        </section>
+
+
+        <section class="flex flex-col gap-4">
+
+
+          <div class="flex items-center justify-between">
+
+
+            <h3 class="text-lg font-bold text-slate-900">Задания в комплексе вЂ” <span
+
+
+                id="selected-count">0</span></h3>
+
+
+          </div>
+
+
+          <div class="flex gap-2">
+
+
+            <button id="move-up"
+
+
+              class="h-10 px-3 rounded-lg text-slate-700 font-semibold text-sm hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all">в–І</button>
+
+
+            <button id="move-down"
+
+
+              class="h-10 px-3 rounded-lg text-slate-700 font-semibold text-sm hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all">в–ј</button>
+
+
+            <button id="remove-selected"
+
+
+              class="h-10 px-4 bg-red-50 text-red-700 rounded-lg font-semibold text-sm hover:bg-red-100 transition-colors">Удалить</button>
+
+
+          </div>
+
+
+          <div id="selected-empty"
+
+
+            class="bg-white rounded-xl border-2 border-dashed border-slate-300 p-10 flex flex-col items-center justify-center gap-4 text-center">
+
+
+            <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-2">
+
+
+              <span class="material-symbols-outlined text-slate-400 text-3xl">playlist_add</span>
+
+
+            </div>
+
+
+            <div class="max-w-xs">
+
+
+              <p class="text-slate-900 font-semibold text-base mb-1">Комплекс пуст</p>
+
+
+              <p class="text-slate-500 text-sm">Выберите задания из каталога справа и
+
+
+                добавьте их в комплекс</p>
+
+
+            </div>
+
+
+          </div>
+
+
+          <div id="selected-cards" class="hidden flex flex-col gap-2 p-1"></div>
+
+
+          <select id="selected-list" size="10" class="hidden" multiple></select>
+
+
+          <p id="tasks-error" class="text-sm text-red-600 mt-1" hidden></p>
+
+
+        </section>
+
+
+        <section class="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+
+
+          <div class="w-full flex items-center justify-between p-4 bg-slate-50 text-left">
+
+
+            <div class="flex items-center gap-3">
+
+
+              <div
+
+
+                class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500">
+
+
+                <span class="material-symbols-outlined text-[20px]">link</span>
+
+
+              </div>
+
+
+              <div>
+
+
+                <h3 class="text-sm font-bold text-slate-900">Сцепки (необязательно)</h3>
+
+
+                <p class="text-xs text-slate-500">Чтобы создать или изменить сцепку:
+
+
+                  выделите 2+ заданий и кликните ПКМ
+
+
+                  по одному из них</p>
+
+
+              </div>
+
+
+            </div>
+
+
+          </div>
+
+
+          <div class="p-4 bg-white">
+
+
+            <div id="chains-container" class="space-y-2"></div>
+
+
+            <p id="chains-error" class="text-sm text-red-600 mt-1" hidden></p>
+
+
+          </div>
+
+
+        </section>
+
+
+      </div>
+
+
+      <aside
+
+
+        class="w-[480px] shrink-0 flex flex-col bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden h-full">
+
+
+        <div class="p-4 border-b border-slate-100 bg-white z-10 space-y-3">
+
+
+          <div class="flex items-center justify-between">
+
+
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+
+
+              <span class="material-symbols-outlined text-primary">library_books</span>
+
+
+              Каталог заданий
+
+
+            </h2>
+
+
+            <div class="flex items-center gap-2">
+
+
+              <span class="text-xs font-medium px-2 py-1 bg-slate-100 text-slate-600 rounded-md"
+
+
+                id="catalog-total">Всего: вЂ”</span>
+
+
+              <span class="text-xs font-semibold px-2 py-1 bg-blue-50 text-primary rounded-md"
+
+
+                id="catalog-selected">Выбрано: 0</span>
+
+
+            </div>
+
+
+          </div>
+
+
+          <div class="relative">
+
+
+            <span
+
+
+              class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[20px]">search</span>
+
+
+            <input id="catalog-search"
+
+
+              class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
+
+
+              placeholder="Поиск по названию, ID или тегу..." type="text" />
+
+
+          </div>
+
+
+        </div>
+
+
+        <div class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-1">
+
+
+          <select id="catalog-list" size="18" class="hidden" multiple></select>
+
+
+          <div id="catalog-tree" class="space-y-1"></div>
+
+
+          <div id="catalog-state" class="mt-3 text-sm" hidden></div>
+
+
+        </div>
+
+
+        <div class="p-4 bg-white border-t border-slate-200 shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10">
+
+
+          <button id="add-from-catalog"
+
+
+            class="w-full h-10 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm shadow-md shadow-primary/20 transition-all flex items-center justify-center gap-2">
+
+
+            <span class="material-symbols-outlined text-[20px]">add_circle</span>
+
+
+            Добавить выбранные
+
+
+          </button>
+
+
+          <button id="reload-catalog"
+
+
+            class="mt-3 w-full h-10 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-semibold text-sm transition-all">Обновить</button>
+
+
+        </div>
+
+
+      </aside>
+
+
+    </div>
+
+
+  </main>
+
+
+  <footer
+
+
+    class="bg-white border-t border-slate-200 px-8 py-4 shrink-0 flex justify-between items-center z-50 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+
+
+    <div class="text-sm text-slate-500">Последнее сохранение: <span
+
+
+        class="text-slate-800 font-medium">вЂ”</span></div>
+
+
+    <div class="flex items-center gap-3">
+
+
+      <a href="/ui/complexes"
+
+
+        class="h-10 px-6 rounded-lg text-slate-700 font-semibold text-sm hover:bg-slate-50 border border-transparent hover:border-slate-200 transition-all flex items-center">Отмена
+
+
+        / к списку</a>
+
+
+      <button id="save-btn"
+
+
+        class="h-10 px-6 bg-primary hover:bg-primary-hover text-white rounded-lg font-semibold text-sm shadow-lg shadow-primary/25 transition-all flex items-center gap-2">
+
+
+        <span class="material-symbols-outlined text-[20px]">save</span>
+
+
+        Сохранить комплекс
+
+
+      </button>
+
+
+    </div>
+
+
+  </footer>
+
+
+  <div id="task-context-menu"
+
+
+    class="fixed z-[200] hidden min-w-[280px] rounded-xl border border-slate-200 bg-white shadow-xl overflow-hidden">
+
+
+    <div class="px-4 py-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Сцепки</div>
+
+
+    <button id="ctx-chain"
+
+
+      class="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 flex items-center justify-between">
+
+
+      <span>Создать новую из выделенных</span>
+
+
+      <span class="text-xs text-slate-400" id="ctx-chain-hint"></span>
+
+
+    </button>
+
+
+    <div class="px-4 pt-2 pb-1 text-[11px] font-semibold text-slate-400 uppercase tracking-wide">Добавить в
+
+
+      сцепку</div>
+
+
+    <div id="ctx-add-to-chain" class="pb-2"></div>
+
+
+    <div class="border-t border-slate-100"></div>
+
+
+    <button id="ctx-unlink"
+
+
+      class="w-full px-4 py-3 text-left text-sm hover:bg-slate-50 flex items-center justify-between">
+
+
+      <span>Рзъять из сцепки</span>
+
+
+      <span class="text-xs text-slate-400" id="ctx-unlink-hint"></span>
+
+
+    </button>
+
+
+  </div>
+
+
+  <script>
+
+
+    const state = {
+
+
+      catalog: [],
+
+
+      selectedTasks: [], // [{ref, label}]
+
+
+      chains: [], // array of arrays of refs
+
+
+      editingId: null,
+
+
+      currentVersion: null, // ISO timestamp for optimistic locking
+
+
+      isDirty: false,
+
+
+    };
+
+
+    const ERROR_DETECTION_TOOLTIP = 'Задание на поиск ошибок';
+
+
+    const ERROR_DETECTION_BADGE_CLASS = 'inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full border border-amber-200 bg-amber-50 text-amber-700';
+
+
+    const ERROR_DETECTION_BADGE_ICON = '<span class="material-symbols-outlined text-[14px] leading-none">search</span>';
+
+
+    function isErrorDetectionEntry(entry) {
+
+
+      if (!entry) return false;
+
+
+      const subtype = entry.subtype || entry.taskSubtype || (entry.task_data && entry.task_data.subtype);
+
+
+      const taskType = entry.task_type || entry.taskType || (entry.task_data && entry.task_data.type);
+
+
+      return taskType === 'click' && subtype === 'error_detection';
+
+
+    }
+
+
+    function appendErrorDetectionBadge(target) {
+
+
+      if (!target) return null;
+
+
+      const badge = document.createElement('span');
+
+
+      badge.className = ERROR_DETECTION_BADGE_CLASS;
+
+
+      badge.title = ERROR_DETECTION_TOOLTIP;
+
+
+      badge.innerHTML = `${ERROR_DETECTION_BADGE_ICON} Ошибки`;
+
+
+      target.appendChild(badge);
+
+
+      return badge;
+
+
+    }
+
+
+    function errorDetectionBadgeHtml() {
+
+
+      return `<span class="${ERROR_DETECTION_BADGE_CLASS}" title="${ERROR_DETECTION_TOOLTIP}">${ERROR_DETECTION_BADGE_ICON} Ошибки</span>`;
+
+
+    }
+
+
+    function showGlobalError(message) {
+
+
+      const alertEl = document.getElementById('global-alert');
+
+
+      const textEl = document.getElementById('global-alert-text');
+
+
+      if (!alertEl || !textEl) return;
+
+
+      textEl.textContent = message || 'Ошибка';
+
+
+      alertEl.hidden = false;
+
+
+    }
+
+
+    function hideGlobalError() {
+
+
+      const alertEl = document.getElementById('global-alert');
+
+
+      if (alertEl) alertEl.hidden = true;
+
+
+    }
+
+
+    function translateTaskType(type) {
+
+
+      const translations = {
+
+
+        'open_answer': 'Открытый ответ',
+
+
+        'click': 'Клик',
+
+
+        'test': 'Тест',
+
+
+        'draw': 'Рисование',
+
+
+        'sequence_assembly': 'Последовательность'
+
+
+      };
+
+
+      return translations[type] || type || 'Задание';
+
+
+    }
+
+
+    function taskRefLabel(item) {
+
+
+      if (!item) return '';
+
+
+      const name = item.task_name || item.task_name === '' ? item.task_name : '';
+
+
+      const type = translateTaskType(item.task_type);
+
+
+      const suffix = isErrorDetectionEntry(item) ? ' · Ошибки' : '';
+
+
+      if (name) return `${name} (${type}${suffix})`;
+
+
+      return `${name || 'Задание'}${suffix}`;
+
+
+    }
+
+
+    function chainIndexForTaskRef(ref) {
+
+
+      for (let i = 0; i < state.chains.length; i++) {
+
+
+        if (state.chains[i].includes(ref)) return i;
+
+
+      }
+
+
+      return -1;
+
+
+    }
+
+
+    function chainColor(idx) {
+
+
+      const palette = ['#a855f7', '#22c55e', '#f97316', '#0ea5e9', '#e11d48', '#facc15', '#64748b'];
+
+
+      return palette[idx % palette.length];
+
+
+    }
+
+
+    function getSelectedTasksOrderIndex() {
+
+
+      const map = new Map();
+
+
+      state.selectedTasks.forEach((t, i) => map.set(t.ref, i));
+
+
+      return map;
+
+
+    }
+
+
+    function orderedUnique(refs) {
+
+
+      const idx = getSelectedTasksOrderIndex();
+
+
+      const uniq = Array.from(new Set(refs));
+
+
+      uniq.sort((a, b) => (idx.get(a) ?? 1e9) - (idx.get(b) ?? 1e9));
+
+
+      return uniq;
+
+
+    }
+
+
+    function refsAlreadyInSomeChain(refs) {
+
+
+      const inChains = new Set(state.chains.flat());
+
+
+      return refs.filter((r) => inChains.has(r));
+
+
+    }
+
+
+    function syncHiddenSelectedListSelectionFromCards() {
+
+
+      const list = document.getElementById('selected-list');
+
+
+      if (!list) return;
+
+
+      const selectedRefs = new Set();
+
+
+      document.querySelectorAll('[data-selected-task-ref][data-selected="1"]').forEach((el) => {
+
+
+        selectedRefs.add(el.getAttribute('data-selected-task-ref'));
+
+
+      });
+
+
+      for (const opt of Array.from(list.options)) {
+
+
+        opt.selected = selectedRefs.has(opt.value);
+
+
+      }
+
+
+    }
+
+
+    function syncCardsSelectionFromHiddenSelectedList() {
+
+
+      const list = document.getElementById('selected-list');
+
+
+      if (!list) return;
+
+
+      const selectedRefs = new Set(Array.from(list.selectedOptions).map((o) => o.value));
+
+
+      document.querySelectorAll('[data-selected-task-ref]').forEach((el) => {
+
+
+        const ref = el.getAttribute('data-selected-task-ref');
+
+
+        const isSelected = !!ref && selectedRefs.has(ref);
+
+
+        el.setAttribute('data-selected', isSelected ? '1' : '0');
+
+
+        el.classList.toggle('ring-2', isSelected);
+
+
+        el.classList.toggle('ring-primary/30', isSelected);
+
+
+        el.classList.toggle('bg-blue-50/30', isSelected);
+
+
+      });
+
+
+    }
+
+
+    function toggleCardSelection(cardEl) {
+
+
+      const curr = cardEl.getAttribute('data-selected') === '1';
+
+
+      cardEl.setAttribute('data-selected', curr ? '0' : '1');
+
+
+      cardEl.classList.toggle('ring-2', !curr);
+
+
+      cardEl.classList.toggle('ring-primary/30', !curr);
+
+
+      cardEl.classList.toggle('bg-blue-50/30', !curr);
+
+
+      syncHiddenSelectedListSelectionFromCards();
+
+
+    }
+
+
+    function getSelectedRefsFromCards() {
+
+
+      const refs = [];
+
+
+      document.querySelectorAll('[data-selected-task-ref][data-selected="1"]').forEach((el) => {
+
+
+        const ref = el.getAttribute('data-selected-task-ref');
+
+
+        if (ref) refs.push(ref);
+
+
+      });
+
+
+      return refs;
+
+
+    }
+
+
+    function hideContextMenu() {
+
+
+      const menu = document.getElementById('task-context-menu');
+
+
+      if (menu) menu.classList.add('hidden');
+
+
+    }
+
+
+    function showContextMenu(x, y, clickedRef) {
+
+
+      const menu = document.getElementById('task-context-menu');
+
+
+      const chainBtn = document.getElementById('ctx-chain');
+
+
+      const unlinkBtn = document.getElementById('ctx-unlink');
+
+
+      const chainHint = document.getElementById('ctx-chain-hint');
+
+
+      const unlinkHint = document.getElementById('ctx-unlink-hint');
+
+
+      const addToChainRoot = document.getElementById('ctx-add-to-chain');
+
+
+      if (!menu || !chainBtn || !unlinkBtn || !chainHint || !unlinkHint) return;
+
+
+      if (!addToChainRoot) return;
+
+
+      const selectedRefs = getSelectedRefsFromCards();
+
+
+      const canChain = selectedRefs.length >= 2;
+
+
+      chainHint.textContent = canChain ? `(${selectedRefs.length})` : '(нужно 2+)';
+
+
+      chainBtn.disabled = !canChain;
+
+
+      chainBtn.classList.toggle('opacity-50', !canChain);
+
+
+      chainBtn.classList.toggle('cursor-not-allowed', !canChain);
+
+
+      // add-to-chain submenu
+
+
+      addToChainRoot.innerHTML = '';
+
+
+      const refsToAdd = selectedRefs.length ? selectedRefs : [clickedRef];
+
+
+      const refsToAddOrdered = orderedUnique(refsToAdd);
+
+
+      const alreadyRefs = refsAlreadyInSomeChain(refsToAddOrdered);
+
+
+      if (!state.chains.length) {
+
+
+        const stub = document.createElement('div');
+
+
+        stub.className = 'px-4 py-2 text-sm text-slate-400';
+
+
+        stub.textContent = 'Сцепок пока нет';
+
+
+        addToChainRoot.appendChild(stub);
+
+
+      } else {
+
+
+        state.chains.forEach((ch, idx) => {
+
+
+          const btn = document.createElement('button');
+
+
+          btn.className = 'w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 flex items-center justify-between';
+
+
+          const left = document.createElement('div');
+
+
+          left.className = 'flex items-center gap-2 min-w-0';
+
+
+          const dot = document.createElement('span');
+
+
+          dot.className = 'inline-block w-2.5 h-2.5 rounded-full';
+
+
+          dot.style.backgroundColor = chainColor(idx);
+
+
+          const label = document.createElement('span');
+
+
+          label.className = 'truncate';
+
+
+          label.textContent = `Сцепка #${idx + 1}`;
+
+
+          left.appendChild(dot);
+
+
+          left.appendChild(label);
+
+
+          const right = document.createElement('span');
+
+
+          right.className = 'text-xs text-slate-400';
+
+
+          right.textContent = `${ch.length}`;
+
+
+          btn.appendChild(left);
+
+
+          btn.appendChild(right);
+
+
+          btn.addEventListener('click', () => {
+
+
+            hideContextMenu();
+
+
+            if (alreadyRefs.length) {
+
+
+              showGlobalError(`Нельзя добавить: задание уже находится в другой сцепке (${alreadyRefs[0]}).`);
+
+
+              return;
+
+
+            }
+
+
+            const merged = orderedUnique(ch.concat(refsToAddOrdered));
+
+
+            state.chains[idx] = merged;
+
+
+            renderSelectedList();
+
+
+            renderChains();
+
+
+            applyCatalogFilter();
+
+
+          });
+
+
+          addToChainRoot.appendChild(btn);
+
+
+        });
+
+
+      }
+
+
+      const chainIdx = chainIndexForTaskRef(clickedRef);
+
+
+      const canUnlink = chainIdx >= 0;
+
+
+      unlinkHint.textContent = canUnlink ? `(#${chainIdx + 1})` : '(нет сцепки)';
+
+
+      unlinkBtn.disabled = !canUnlink;
+
+
+      unlinkBtn.classList.toggle('opacity-50', !canUnlink);
+
+
+      unlinkBtn.classList.toggle('cursor-not-allowed', !canUnlink);
+
+
+      // Position with viewport clamping
+
+
+      const pad = 8;
+
+
+      const vw = window.innerWidth;
+
+
+      const vh = window.innerHeight;
+
+
+      menu.style.left = '0px';
+
+
+      menu.style.top = '0px';
+
+
+      menu.classList.remove('hidden');
+
+
+      const rect = menu.getBoundingClientRect();
+
+
+      const left = Math.min(Math.max(pad, x), vw - rect.width - pad);
+
+
+      const top = Math.min(Math.max(pad, y), vh - rect.height - pad);
+
+
+      menu.style.left = `${left}px`;
+
+
+      menu.style.top = `${top}px`;
+
+
+      chainBtn.onclick = () => {
+
+
+        hideContextMenu();
+
+
+        const refs = orderedUnique(selectedRefs);
+
+
+        const conflict = refsAlreadyInSomeChain(refs);
+
+
+        if (conflict.length) {
+
+
+          showGlobalError(`Нельзя создать сцепку: задание уже находится в другой сцепке (${conflict[0]}).`);
+
+
+          return;
+
+
+        }
+
+
+        state.chains.push(refs);
+
+
+        renderSelectedList();
+
+
+        renderChains();
+
+
+        applyCatalogFilter();
+
+
+      };
+
+
+      unlinkBtn.onclick = () => {
+
+
+        hideContextMenu();
+
+
+        const idx = chainIndexForTaskRef(clickedRef);
+
+
+        if (idx < 0) return;
+
+
+        const updated = state.chains[idx].filter((x) => x !== clickedRef);
+
+
+        state.chains.splice(idx, 1);
+
+
+        if (updated.length >= 2) {
+
+
+          state.chains.splice(idx, 0, updated);
+
+
+        }
+
+
+        renderSelectedList();
+
+
+        renderChains();
+
+
+        applyCatalogFilter();
+
+
+      };
+
+
+    }
+
+
+    function renderSelectedList() {
+
+
+      const list = document.getElementById('selected-list');
+
+
+      const cnt = document.getElementById('selected-count');
+
+
+      const cards = document.getElementById('selected-cards');
+
+
+      const empty = document.getElementById('selected-empty');
+
+
+      if (!list || !cnt || !cards || !empty) return;
+
+
+      const prevSelected = new Set(Array.from(list.selectedOptions).map((o) => o.value));
+
+
+      list.innerHTML = '';
+
+
+      for (const t of state.selectedTasks) {
+
+
+        const opt = document.createElement('option');
+
+
+        opt.value = t.ref;
+
+
+        opt.textContent = t.label;
+
+
+        opt.selected = prevSelected.has(t.ref);
+
+
+        list.appendChild(opt);
+
+
+      }
+
+
+      cnt.textContent = String(state.selectedTasks.length);
+
+
+      if (state.selectedTasks.length === 0) {
+
+
+        empty.classList.remove('hidden');
+
+
+        cards.classList.add('hidden');
+
+
+        cards.innerHTML = '';
+
+
+        return;
+
+
+      }
+
+
+      empty.classList.add('hidden');
+
+
+      cards.classList.remove('hidden');
+
+
+      cards.innerHTML = '';
+
+
+      for (const t of state.selectedTasks) {
+
+
+        const chainIdx = chainIndexForTaskRef(t.ref);
+
+
+        const inChain = chainIdx >= 0;
+
+
+        const isSelected = prevSelected.has(t.ref);
+
+
+        const card = document.createElement('div');
+
+
+        card.setAttribute('data-selected-task-ref', t.ref);
+
+
+        card.setAttribute('data-selected', isSelected ? '1' : '0');
+
+
+        card.className = 'group flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-primary/50 transition-colors relative overflow-hidden cursor-pointer select-none';
+
+
+        if (isSelected) {
+
+
+          card.classList.add('ring-2', 'ring-primary/30', 'bg-blue-50/30');
+
+
+        }
+
+
+        if (inChain) {
+
+
+          const bar = document.createElement('div');
+
+
+          bar.className = 'absolute left-0 top-0 bottom-0 w-1';
+
+
+          bar.style.backgroundColor = chainColor(chainIdx);
+
+
+          card.appendChild(bar);
+
+
+        }
+
+
+        const drag = document.createElement('span');
+
+
+        drag.className = 'material-symbols-outlined text-slate-300 cursor-move pl-1';
+
+
+        drag.textContent = 'drag_indicator';
+
+
+        card.appendChild(drag);
+
+
+        // Drag and Drop
+
+
+        card.setAttribute('draggable', 'true');
+
+
+        card.addEventListener('dragstart', (e) => {
+
+
+          e.dataTransfer.setData('text/plain', t.ref);
+
+
+          card.classList.add('opacity-50', 'scale-[0.98]');
+
+
+        });
+
+
+        card.addEventListener('dragend', () => {
+
+
+          card.classList.remove('opacity-50', 'scale-[0.98]');
+
+
+        });
+
+
+        card.addEventListener('dragover', (e) => {
+
+
+          e.preventDefault();
+
+
+          card.classList.add('border-primary');
+
+
+        });
+
+
+        card.addEventListener('dragleave', () => {
+
+
+          card.classList.remove('border-primary');
+
+
+        });
+
+
+        card.addEventListener('drop', (e) => {
+
+
+          e.preventDefault();
+
+
+          card.classList.remove('border-primary');
+
+
+          const draggedRef = e.dataTransfer.getData('text/plain');
+
+
+          if (draggedRef === t.ref) return;
+
+
+          const draggedIdx = state.selectedTasks.findIndex(x => x.ref === draggedRef);
+
+
+          const targetIdx = state.selectedTasks.findIndex(x => x.ref === t.ref);
+
+
+          if (draggedIdx !== -1 && targetIdx !== -1) {
+
+
+            const [item] = state.selectedTasks.splice(draggedIdx, 1);
+
+
+            state.selectedTasks.splice(targetIdx, 0, item);
+
+
+            renderSelectedList();
+
+
+            markDirty();
+
+
+            triggerAutosave();
+
+
+          }
+
+
+        });
+
+
+        const content = document.createElement('div');
+
+
+        content.className = 'flex-1 min-w-0 ml-1';
+
+
+        const titleRow = document.createElement('div');
+
+
+        titleRow.className = 'flex items-center gap-2 mb-1';
+
+
+        if (inChain) {
+
+
+          const badge = document.createElement('span');
+
+
+          badge.className = 'inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded border uppercase tracking-wide';
+
+
+          badge.style.backgroundColor = `${chainColor(chainIdx)}15`;
+
+
+          badge.style.borderColor = `${chainColor(chainIdx)}22`;
+
+
+          badge.style.color = chainColor(chainIdx);
+
+
+          badge.innerHTML = `<span class="material-symbols-outlined text-[12px]">link</span> Сцепка #${chainIdx + 1}`;
+
+
+          titleRow.appendChild(badge);
+
+
+        }
+
+
+        const title = document.createElement('span');
+
+
+        title.className = 'text-sm font-semibold text-slate-900 truncate';
+
+
+        title.textContent = t.label;
+
+
+        titleRow.appendChild(title);
+
+
+        content.appendChild(titleRow);
+
+
+        card.appendChild(content);
+
+
+        const right = document.createElement('div');
+
+
+        right.className = 'flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity';
+
+
+        const delBtn = document.createElement('button');
+
+
+        delBtn.className = 'p-1.5 text-slate-400 hover:text-red-600 rounded hover:bg-red-50';
+
+
+        delBtn.innerHTML = '<span class="material-symbols-outlined text-[20px]">delete</span>';
+
+
+        delBtn.title = 'Удалить задание';
+
+
+        delBtn.addEventListener('click', (e) => {
+
+
+          e.preventDefault();
+
+
+          e.stopPropagation();
+
+
+          state.selectedTasks = state.selectedTasks.filter((x) => x.ref !== t.ref);
+
+
+          removeTaskFromChains(t.ref);
+
+
+          renderSelectedList();
+
+
+          renderChains();
+
+
+          applyCatalogFilter();
+
+
+        });
+
+
+        right.appendChild(delBtn);
+
+
+        card.appendChild(right);
+
+
+        card.addEventListener('click', (e) => {
+
+
+          if (e.ctrlKey || e.metaKey) {
+
+
+            toggleCardSelection(card);
+
+
+            return;
+
+
+          }
+
+
+          // single-select behaviour: clear others
+
+
+          document.querySelectorAll('[data-selected-task-ref]').forEach((el) => {
+
+
+            el.setAttribute('data-selected', '0');
+
+
+            el.classList.remove('ring-2', 'ring-primary/30', 'bg-blue-50/30');
+
+
+          });
+
+
+          card.setAttribute('data-selected', '1');
+
+
+          card.classList.add('ring-2', 'ring-primary/30', 'bg-blue-50/30');
+
+
+          syncHiddenSelectedListSelectionFromCards();
+
+
+        });
+
+
+        card.addEventListener('contextmenu', (e) => {
+
+
+          e.preventDefault();
+
+
+          // If right-clicked on unselected, select it (single)
+
+
+          if (card.getAttribute('data-selected') !== '1') {
+
+
+            document.querySelectorAll('[data-selected-task-ref]').forEach((el) => {
+
+
+              el.setAttribute('data-selected', '0');
+
+
+              el.classList.remove('ring-2', 'ring-primary/30', 'bg-blue-50/30');
+
+
+            });
+
+
+            card.setAttribute('data-selected', '1');
+
+
+            card.classList.add('ring-2', 'ring-primary/30', 'bg-blue-50/30');
+
+
+            syncHiddenSelectedListSelectionFromCards();
+
+
+          }
+
+
+          showContextMenu(e.clientX, e.clientY, t.ref);
+
+
+        });
+
+
+        cards.appendChild(card);
+
+
+      }
+
+
+    }
+
+
+    function removeTaskFromChains(taskRef) {
+
+
+      // автоудаление из сцепок
+
+
+      const newChains = [];
+
+
+      for (const ch of state.chains) {
+
+
+        const filtered = ch.filter((x) => x !== taskRef);
+
+
+        if (filtered.length >= 2) newChains.push(filtered);
+
+
+      }
+
+
+      state.chains = newChains;
+
+
+    }
+
+
+    function renderChains() {
+
+
+      const root = document.getElementById('chains-container');
+
+
+      if (!root) return;
+
+
+      root.innerHTML = '';
+
+
+      if (!state.chains.length) {
+
+
+        const empty = document.createElement('div');
+
+
+        empty.className = 'text-sm text-[#616b89] dark:text-gray-400';
+
+
+        empty.textContent = 'Сцепок пока нет.';
+
+
+        root.appendChild(empty);
+
+
+        return;
+
+
+      }
+
+
+      state.chains.forEach((ch, idx) => {
+
+
+        const card = document.createElement('div');
+
+
+        card.className = 'rounded-lg border border-gray-200 dark:border-gray-700 p-3';
+
+
+        const header = document.createElement('div');
+
+
+        header.className = 'flex items-center justify-between gap-2';
+
+
+        const title = document.createElement('div');
+
+
+        title.className = 'text-sm font-bold';
+
+
+        title.textContent = `Сцепка ${idx + 1}`;
+
+
+        const actions = document.createElement('div');
+
+
+        actions.className = 'flex gap-2';
+
+
+        const delBtn = document.createElement('button');
+
+
+        delBtn.className = 'text-sm text-red-700 hover:underline';
+
+
+        delBtn.textContent = 'Удалить';
+
+
+        delBtn.addEventListener('click', () => {
+
+
+          state.chains.splice(idx, 1);
+
+
+          renderSelectedList();
+
+
+          renderChains();
+
+
+          applyCatalogFilter();
+
+
+        });
+
+
+        actions.appendChild(delBtn);
+
+
+        header.appendChild(title);
+
+
+        header.appendChild(actions);
+
+
+        const body = document.createElement('div');
+
+
+        body.className = 'mt-2 flex flex-wrap items-center gap-2';
+
+
+        ch.forEach((ref, i) => {
+
+
+          const pill = document.createElement('span');
+
+
+          pill.className = 'inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-3 py-1 text-xs';
+
+
+          pill.textContent = ref;
+
+
+          body.appendChild(pill);
+
+
+          if (i < ch.length - 1) {
+
+
+            const arrow = document.createElement('span');
+
+
+            arrow.className = 'material-symbols-outlined text-gray-400';
+
+
+            arrow.textContent = 'arrow_forward';
+
+
+            body.appendChild(arrow);
+
+
+          }
+
+
+        });
+
+
+        card.appendChild(header);
+
+
+        card.appendChild(body);
+
+
+        root.appendChild(card);
+
+
+      });
+
+
+    }
+
+
+    function validateTaskRefFormat(ref) {
+
+
+      if (typeof ref !== 'string') return false;
+
+
+      const trimmed = ref.trim();
+
+
+      if (!trimmed) return false;
+
+
+      if (/\s/.test(trimmed)) return false;
+
+
+      const parts = trimmed.split('/');
+
+
+      if (parts.length < 3) return false;
+
+
+      if (!parts[0] || !parts[1] || !parts[parts.length - 1]) return false;
+
+
+      return true;
+
+
+    }
+
+
+    function getSelectedTaskRefsFromLeftList() {
+
+
+      const list = document.getElementById('selected-list');
+
+
+      if (!list) return [];
+
+
+      const refs = [];
+
+
+      for (const opt of Array.from(list.selectedOptions)) {
+
+
+        refs.push(opt.value);
+
+
+      }
+
+
+      return refs;
+
+
+    }
+
+
+    function clearFieldErrors() {
+
+
+      const ids = ['name-error', 'tasks-error', 'chains-error'];
+
+
+      ids.forEach((id) => {
+
+
+        const el = document.getElementById(id);
+
+
+        if (el) { el.hidden = true; el.textContent = ''; }
+
+
+      });
+
+
+    }
+
+
+    function setFieldError(id, message) {
+
+
+      const el = document.getElementById(id);
+
+
+      if (!el) return;
+
+
+      el.textContent = message;
+
+
+      el.hidden = false;
+
+
+    }
+
+
+    async function loadCatalog() {
+
+
+      const stateEl = document.getElementById('catalog-state');
+
+
+      const list = document.getElementById('catalog-list');
+
+
+      const totalEl = document.getElementById('catalog-total');
+
+
+      if (!list) return;
+
+
+      if (stateEl) {
+
+
+        stateEl.hidden = false;
+
+
+        stateEl.className = 'mt-3 text-sm text-[#616b89] dark:text-gray-400';
+
+
+        stateEl.textContent = 'Загрузка каталогавЂ¦';
+
+
+      }
+
+
+      try {
+
+
+        const resp = await fetch('/api/task-catalog');
+
+
+        const data = await resp.json();
+
+
+        if (!data.ok) {
+
+
+          throw new Error(data.error || 'task_catalog_failed');
+
+
+        }
+
+
+        state.catalog = Array.isArray(data.items) ? data.items : [];
+
+
+        if (totalEl) {
+
+
+          totalEl.textContent = `Всего: ${state.catalog.length}`;
+
+
+        }
+
+
+        applyCatalogFilter();
+
+
+        syncCatalogTreeSelectionFromSelect();
+
+
+        if (stateEl) stateEl.hidden = true;
+
+
+      } catch (e) {
+
+
+        console.error('Failed to load catalog', e);
+
+
+        if (stateEl) {
+
+
+          stateEl.hidden = false;
+
+
+          stateEl.className = 'mt-3 text-sm text-red-600';
+
+
+          stateEl.textContent = 'Не удалось загрузить каталог заданий.';
+
+
+        }
+
+
+      }
+
+
+    }
+
+
+    function applyCatalogFilter() {
+
+
+      const qEl = document.getElementById('catalog-search');
+
+
+      const list = document.getElementById('catalog-list');
+
+
+      if (!list) return;
+
+
+      const q = (qEl && qEl.value ? qEl.value : '').toLowerCase();
+
+
+      const filtered = state.catalog.filter((x) => {
+
+
+        if (!q) return true;
+
+
+        const hay = `${x.ref} ${x.module_name} ${x.topic_name} ${x.task_name} ${x.task_type}`.toLowerCase();
+
+
+        return hay.includes(q);
+
+
+      });
+
+
+      list.innerHTML = '';
+
+
+      for (const item of filtered) {
+
+
+        const opt = document.createElement('option');
+
+
+        opt.value = item.ref;
+
+
+        opt.textContent = taskRefLabel(item);
+
+
+        list.appendChild(opt);
+
+
+      }
+
+
+      renderCatalogTree(filtered);
+
+
+    }
+
+
+    function groupCatalog(items) {
+
+
+      const modules = new Map();
+
+
+      for (const it of items) {
+
+
+        const moduleId = it.module_id || (String(it.ref || '').split('/')[0] || 'module');
+
+
+        const moduleName = it.module_name || moduleId;
+
+
+        const topicId = it.topic_id || (String(it.ref || '').split('/')[1] || 'topic');
+
+
+        const topicName = it.topic_name || topicId;
+
+
+        if (!modules.has(moduleId)) {
+
+
+          modules.set(moduleId, {
+
+
+            id: moduleId,
+
+
+            name: moduleName,
+
+
+            topics: new Map(),
+
+
+          });
+
+
+        }
+
+
+        const mod = modules.get(moduleId);
+
+
+        if (!mod.topics.has(topicId)) {
+
+
+          mod.topics.set(topicId, {
+
+
+            id: topicId,
+
+
+            name: topicName,
+
+
+            tasks: [],
+
+
+          });
+
+
+        }
+
+
+        mod.topics.get(topicId).tasks.push(it);
+
+
+      }
+
+
+      const moduleArr = Array.from(modules.values());
+
+
+      moduleArr.sort((a, b) => String(a.name).localeCompare(String(b.name), 'ru'));
+
+
+      for (const m of moduleArr) {
+
+
+        const topicsArr = Array.from(m.topics.values());
+
+
+        topicsArr.sort((a, b) => String(a.name).localeCompare(String(b.name), 'ru'));
+
+
+        m.topicsArr = topicsArr;
+
+
+        delete m.topics;
+
+
+        for (const t of topicsArr) {
+
+
+          t.tasks.sort((a, b) => String(a.task_name || a.ref).localeCompare(String(b.task_name || b.ref), 'ru'));
+
+
+        }
+
+
+      }
+
+
+      return moduleArr;
+
+
+    }
+
+
+    function syncCatalogTreeSelectionFromSelect() {
+
+
+      const list = document.getElementById('catalog-list');
+
+
+      if (!list) return;
+
+
+      const selected = new Set(Array.from(list.selectedOptions).map((o) => o.value));
+
+
+      document.querySelectorAll('[data-catalog-task-ref]').forEach((el) => {
+
+
+        const ref = el.getAttribute('data-catalog-task-ref');
+
+
+        if (!ref) return;
+
+
+        const isSelected = selected.has(ref);
+
+
+        const alreadyAdded = el.classList.contains('grayscale');
+
+
+        el.setAttribute('data-selected', isSelected ? '1' : '0');
+
+
+        el.classList.toggle('bg-blue-50/60', isSelected);
+
+
+        el.classList.toggle('border-primary/30', isSelected);
+
+
+        const icon = el.querySelector('.material-symbols-outlined');
+
+
+        if (icon) {
+
+
+          if (alreadyAdded) {
+
+
+            icon.textContent = 'check_circle';
+
+
+            icon.className = 'material-symbols-outlined text-primary mt-[1px]';
+
+
+          } else if (isSelected) {
+
+
+            icon.textContent = 'check_box';
+
+
+            icon.className = 'material-symbols-outlined text-primary mt-[1px]';
+
+
+          } else {
+
+
+            icon.textContent = 'task_alt';
+
+
+            icon.className = 'material-symbols-outlined text-slate-300 mt-[1px]';
+
+
+          }
+
+
+        }
+
+
+      });
+
+
+      const selectedEl = document.getElementById('catalog-selected');
+
+
+      if (selectedEl) {
+
+
+        selectedEl.textContent = `Выбрано: ${selected.size}`;
+
+
+      }
+
+
+      const addBtn = document.getElementById('add-from-catalog');
+
+
+      if (addBtn) {
+
+
+        const disabled = selected.size === 0;
+
+
+        addBtn.toggleAttribute('disabled', disabled);
+
+
+        addBtn.classList.toggle('opacity-50', disabled);
+
+
+        addBtn.classList.toggle('cursor-not-allowed', disabled);
+
+
+      }
+
+
+    }
+
+
+    function clearCatalogSelection() {
+
+
+      const list = document.getElementById('catalog-list');
+
+
+      if (!list) return;
+
+
+      for (const opt of Array.from(list.options)) {
+
+
+        opt.selected = false;
+
+
+      }
+
+
+      syncCatalogTreeSelectionFromSelect();
+
+
+    }
+
+
+    function renderCatalogTree(filteredItems) {
+
+
+      const root = document.getElementById('catalog-tree');
+
+
+      const list = document.getElementById('catalog-list');
+
+
+      if (!root || !list) return;
+
+
+      const groups = groupCatalog(filteredItems || []);
+
+
+      const selectedInComplex = new Set(state.selectedTasks.map((t) => t.ref));
+
+
+      const optByRef = new Map(Array.from(list.options).map((o) => [o.value, o]));
+
+
+      function setCatalogSelectionForRefs(refs, shouldSelect) {
+
+
+        for (const ref of refs) {
+
+
+          if (selectedInComplex.has(ref)) continue;
+
+
+          const opt = optByRef.get(ref);
+
+
+          if (!opt) continue;
+
+
+          opt.selected = shouldSelect;
+
+
+        }
+
+
+        syncCatalogTreeSelectionFromSelect();
+
+
+      }
+
+
+      root.innerHTML = '';
+
+
+      if (!groups.length) {
+
+
+        const empty = document.createElement('div');
+
+
+        empty.className = 'p-4 text-sm text-slate-500';
+
+
+        empty.textContent = 'Ничего не найдено.';
+
+
+        root.appendChild(empty);
+
+
+        return;
+
+
+      }
+
+
+      for (const m of groups) {
+
+
+        const modWrap = document.createElement('div');
+
+
+        modWrap.className = 'rounded-lg border border-slate-200 bg-white overflow-hidden';
+
+
+        const modHeader = document.createElement('div');
+
+
+        modHeader.className = 'w-full px-3 py-2.5 text-left flex items-center justify-between hover:bg-slate-50 bg-white relative z-10';
+
+
+        modHeader.innerHTML = `
+
+
+        <div class="min-w-0 flex-1 flex items-center gap-2 py-2" data-toggle-area>
+
+
+          <div class="text-sm font-bold text-slate-800 truncate">${m.name}</div>
+
+
+        </div>
+
+
+        <div class="flex items-center gap-2">
+
+
+          <button type="button" class="px-3 py-1.5 rounded-md text-xs font-bold bg-primary/10 text-primary hover:bg-primary/20 transition-colors" data-action="toggle-all">Выбрать всё</button>
+
+
+          <button type="button" class="p-1 rounded-md hover:bg-slate-100" aria-label="Свернуть/развернуть" data-action="toggle">
+
+
+            <span class="material-symbols-outlined text-slate-400" data-chevron>expand_more</span>
+
+
+          </button>
+
+
+        </div>
+
+
+      `;
+
+
+        const modBody = document.createElement('div');
+
+
+        modBody.className = 'border-t border-slate-100 bg-slate-50/30';
+
+
+        function toggleModule() {
+
+
+          const hidden = modBody.classList.toggle('hidden');
+
+
+          const chev = modHeader.querySelector('[data-chevron]');
+
+
+          if (chev) chev.textContent = hidden ? 'chevron_right' : 'expand_more';
+
+
+        }
+
+
+        modHeader.querySelector('[data-action="toggle"]')?.addEventListener('click', (e) => {
+
+
+          e.preventDefault();
+
+
+          e.stopPropagation();
+
+
+          toggleModule();
+
+
+        });
+
+
+        modHeader.querySelector('[data-toggle-area]')?.addEventListener('click', toggleModule);
+
+
+        modHeader.classList.add('cursor-pointer'); // make header clickable
+
+
+        const moduleRefs = (m.topicsArr || []).flatMap((t) => (t.tasks || []).map((x) => x.ref));
+
+
+        const modAllSelected = () => moduleRefs.every(r => selectedInComplex.has(r) || Array.from(list.options).find(o => o.value === r)?.selected);
+
+
+        const modToggleBtn = modHeader.querySelector('[data-action="toggle-all"]');
+
+
+        if (modToggleBtn) {
+
+
+          const isAll = modAllSelected();
+
+
+          modToggleBtn.textContent = isAll ? 'Снять всё' : 'Выбрать всё';
+
+
+          modToggleBtn.addEventListener('click', (e) => {
+
+
+            e.preventDefault();
+
+
+            e.stopPropagation();
+
+
+            const shouldSelect = modToggleBtn.textContent === 'Выбрать всё';
+
+
+            setCatalogSelectionForRefs(moduleRefs, shouldSelect);
+
+
+            renderCatalogTree(filteredItems); // re-render to update button text
+
+
+          });
+
+
+        }
+
+
+        for (const t of m.topicsArr || []) {
+
+
+          const topicWrap = document.createElement('div');
+
+
+          topicWrap.className = 'tree-line';
+
+
+          const topicHeader = document.createElement('div');
+
+
+          topicHeader.className = 'w-full px-3 py-2 text-left flex items-center justify-between hover:bg-slate-50 bg-white relative z-10 border-y border-slate-100/50 cursor-pointer';
+
+
+          topicHeader.style.paddingLeft = '18px';
+
+
+          topicHeader.innerHTML = `
+
+
+          <div class="min-w-0 flex-1 flex items-center gap-2 py-1.5" data-toggle-area>
+
+
+            <div class="text-xs font-bold text-slate-600 truncate uppercase tracking-wider">${t.name}</div>
+
+
+          </div>
+
+
+          <div class="flex items-center gap-2">
+
+
+            <button type="button" class="px-2 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors" data-action="toggle-all">Выбрать всё</button>
+
+
+            <button type="button" class="p-1 rounded-md hover:bg-slate-100" aria-label="Свернуть/развернуть" data-action="toggle">
+
+
+              <span class="material-symbols-outlined text-[18px] text-slate-400" data-chevron>expand_more</span>
+
+
+            </button>
+
+
+          </div>
+
+
+        `;
+
+
+          const topicBody = document.createElement('div');
+
+
+          topicBody.className = 'pb-1 bg-white';
+
+
+          function toggleTopic() {
+
+
+            const hidden = topicBody.classList.toggle('hidden');
+
+
+            const c = topicHeader.querySelector('[data-chevron]');
+
+
+            if (c) c.textContent = hidden ? 'chevron_right' : 'expand_more';
+
+
+          }
+
+
+          topicHeader.querySelector('[data-action="toggle"]')?.addEventListener('click', (e) => {
+
+
+            e.preventDefault();
+
+
+            e.stopPropagation();
+
+
+            toggleTopic();
+
+
+          });
+
+
+          topicHeader.querySelector('[data-toggle-area]')?.addEventListener('click', toggleTopic);
+
+
+          const topicRefs = (t.tasks || []).map((x) => x.ref);
+
+
+          const topicAllSelected = () => topicRefs.every(r => selectedInComplex.has(r) || Array.from(list.options).find(o => o.value === r)?.selected);
+
+
+          const topicToggleBtn = topicHeader.querySelector('[data-action="toggle-all"]');
+
+
+          if (topicToggleBtn) {
+
+
+            const isAll = topicAllSelected();
+
+
+            topicToggleBtn.textContent = isAll ? 'Снять всё' : 'Выбрать всё';
+
+
+            topicToggleBtn.addEventListener('click', (e) => {
+
+
+              e.preventDefault();
+
+
+              e.stopPropagation();
+
+
+              const shouldSelect = topicToggleBtn.textContent === 'Выбрать всё';
+
+
+              setCatalogSelectionForRefs(topicRefs, shouldSelect);
+
+
+              renderCatalogTree(filteredItems);
+
+
+            });
+
+
+          }
+
+
+          for (const task of t.tasks || []) {
+
+
+            const ref = task.ref;
+
+
+            const alreadyAdded = selectedInComplex.has(ref);
+
+
+            const row = document.createElement('div');
+
+
+            row.className = 'mx-2 mb-1 rounded-lg border border-slate-200 px-3 py-2 hover:border-primary/30 hover:bg-slate-50 transition-colors cursor-pointer';
+
+
+            row.style.marginLeft = '26px';
+
+
+            row.setAttribute('data-catalog-task-ref', ref);
+
+
+            row.setAttribute('data-selected', '0');
+
+
+            const isChecked = Array.from(list.options).find(o => o.value === ref)?.selected;
+
+
+            const typeLabel = translateTaskType(task.task_type);
+
+
+            const isErrorDetection = isErrorDetectionEntry(task);
+
+
+            row.innerHTML = `
+
+
+            <div class="flex items-start gap-2">
+
+
+              <span class="material-symbols-outlined ${isChecked || alreadyAdded ? 'text-primary' : 'text-slate-300'} mt-[1px]">
+
+
+                ${alreadyAdded ? 'check_circle' : (isChecked ? 'check_box' : 'task_alt')}
+
+
+              </span>
+
+
+              <div class="min-w-0 flex-1">
+
+
+                <div class="text-sm font-semibold text-slate-900 truncate flex items-center gap-2">
+
+
+                  <span>${task.task_name || ref}</span>
+
+
+                  ${isErrorDetection ? errorDetectionBadgeHtml() : ''}
+
+
+                </div>
+
+
+              </div>
+
+
+              <span class="text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-600">${typeLabel}</span>
+
+
+            </div>
+
+
+          `;
+
+
+            if (alreadyAdded) {
+
+
+              row.classList.add('opacity-40', 'cursor-not-allowed', 'bg-slate-50', 'grayscale');
+
+
+              row.title = 'Уже добавлено в комплекс';
+
+
+            } else {
+
+
+              if (isChecked) {
+
+
+                row.classList.add('bg-blue-50/50', 'border-primary/20');
+
+
+              }
+
+
+              row.addEventListener('click', () => {
+
+
+                const opt = Array.from(list.options).find((o) => o.value === ref);
+
+
+                if (!opt) return;
+
+
+                opt.selected = !opt.selected;
+
+
+                syncCatalogTreeSelectionFromSelect();
+
+
+              });
+
+
+            }
+
+
+            topicBody.appendChild(row);
+
+
+          }
+
+
+          topicWrap.appendChild(topicHeader);
+
+
+          topicWrap.appendChild(topicBody);
+
+
+          modBody.appendChild(topicWrap);
+
+
+        }
+
+
+        modWrap.appendChild(modHeader);
+
+
+        modWrap.appendChild(modBody);
+
+
+        root.appendChild(modWrap);
+
+
+      }
+
+
+      syncCatalogTreeSelectionFromSelect();
+
+
+    }
+
+
+    function addTaskRef(ref) {
+
+
+      const normalized = String(ref || '').trim();
+
+
+      if (!validateTaskRefFormat(normalized)) return { ok: false, reason: 'bad_format' };
+
+
+      if (state.selectedTasks.some((t) => t.ref === normalized)) {
+
+
+        return { ok: false, reason: 'duplicate' };
+
+
+      }
+
+
+      // label: if in catalog, take name/type
+
+
+      const found = state.catalog.find((x) => x.ref === normalized);
+
+
+      const label = found ? taskRefLabel(found) : normalized;
+
+
+      state.selectedTasks.push({ ref: normalized, label });
+
+
+      return { ok: true };
+
+
+    }
+
+
+    function onRemoveSelectedTasks() {
+
+
+      syncHiddenSelectedListSelectionFromCards();
+
+
+      const refs = getSelectedTaskRefsFromLeftList();
+
+
+      if (!refs.length) return;
+
+
+      state.selectedTasks = state.selectedTasks.filter((t) => !refs.includes(t.ref));
+
+
+      refs.forEach(removeTaskFromChains);
+
+
+      renderSelectedList();
+
+
+      renderChains();
+
+
+      applyCatalogFilter();
+
+
+      markClean();
+
+
+    }
+
+
+    function moveSelected(delta) {
+
+
+      syncHiddenSelectedListSelectionFromCards();
+
+
+      const list = document.getElementById('selected-list');
+
+
+      if (!list) return;
+
+
+      const selectedIdx = Array.from(list.selectedOptions).map((o) => o.index);
+
+
+      if (!selectedIdx.length) return;
+
+
+      // only support moving a contiguous block: use min/max
+
+
+      const min = Math.min(...selectedIdx);
+
+
+      const max = Math.max(...selectedIdx);
+
+
+      const newMin = min + delta;
+
+
+      const newMax = max + delta;
+
+
+      if (newMin < 0 || newMax >= state.selectedTasks.length) return;
+
+
+      const block = state.selectedTasks.slice(min, max + 1);
+
+
+      const rest = state.selectedTasks.slice(0, min).concat(state.selectedTasks.slice(max + 1));
+
+
+      const insertAt = newMin;
+
+
+      state.selectedTasks = rest.slice(0, insertAt).concat(block).concat(rest.slice(insertAt));
+
+
+      renderSelectedList();
+
+
+      // restore selection
+
+
+      for (let i = newMin; i <= newMax; i++) {
+
+
+        list.options[i].selected = true;
+
+
+      }
+
+
+      syncCardsSelectionFromHiddenSelectedList();
+
+
+      applyCatalogFilter();
+
+
+    }
+
+
+    function onCreateChain() {
+
+
+      const refs = getSelectedTaskRefsFromLeftList();
+
+
+      if (refs.length < 2) {
+
+
+        showGlobalError('Для сцепки выберите минимум 2 задания в списке слева.');
+
+
+        return;
+
+
+      }
+
+
+      // Ensure each ref is not already in a chain
+
+
+      const already = new Set(state.chains.flat());
+
+
+      const conflict = refs.filter((r) => already.has(r));
+
+
+      if (conflict.length) {
+
+
+        showGlobalError(`Некоторые задания уже в сцепках: ${conflict.join(', ')}`);
+
+
+        return;
+
+
+      }
+
+
+      state.chains.push(refs);
+
+
+      markDirty();
+
+
+      renderChains();
+
+
+    }
+
+
+    function onBreakChainsForSelection() {
+
+
+      const refs = getSelectedTaskRefsFromLeftList();
+
+
+      if (!refs.length) return;
+
+
+      const refSet = new Set(refs);
+
+
+      state.chains = state.chains
+
+
+        .map((ch) => ch.filter((x) => !refSet.has(x)))
+
+
+        .filter((ch) => ch.length >= 2);
+
+
+      renderChains();
+
+
+      markDirty();
+
+
+    }
+
+
+    function buildPayload() {
+
+
+      const name = document.getElementById('name')?.value || '';
+
+
+      const description = document.getElementById('description')?.value || '';
+
+
+      return {
+
+
+        name,
+
+
+        description,
+
+
+        tasks: state.selectedTasks.map((t) => t.ref),
+
+
+        chains: state.chains,
+
+
+      };
+
+
+    }
+
+
+    function clientValidate(payload) {
+
+
+      clearFieldErrors();
+
+
+      let ok = true;
+
+
+      if (!payload.name || !payload.name.trim()) {
+
+
+        setFieldError('name-error', 'Название обязательно');
+
+
+        ok = false;
+
+
+      }
+
+
+      if (!Array.isArray(payload.tasks) || payload.tasks.length === 0) {
+
+
+        setFieldError('tasks-error', 'Добавьте хотя бы одно задание');
+
+
+        ok = false;
+
+
+      }
+
+
+      // validate formats + duplicates
+
+
+      const seen = new Set();
+
+
+      for (const ref of payload.tasks) {
+
+
+        if (!validateTaskRefFormat(ref)) {
+
+
+          setFieldError('tasks-error', `Неверный формат task_ref: ${ref}`);
+
+
+          ok = false;
+
+
+          break;
+
+
+        }
+
+
+        if (seen.has(ref)) {
+
+
+          setFieldError('tasks-error', `Дубликат task_ref: ${ref}`);
+
+
+          ok = false;
+
+
+          break;
+
+
+        }
+
+
+        seen.add(ref);
+
+
+      }
+
+
+      // chains: ensure all in tasks and no multi-chain duplicates
+
+
+      const inChains = new Set();
+
+
+      for (const ch of payload.chains || []) {
+
+
+        if (!Array.isArray(ch) || ch.length < 2) {
+
+
+          setFieldError('chains-error', 'Сцепка должна содержать минимум 2 задания');
+
+
+          ok = false;
+
+
+          break;
+
+
+        }
+
+
+        for (const ref of ch) {
+
+
+          if (!seen.has(ref)) {
+
+
+            setFieldError('chains-error', `Задание в сцепке отсутствует в tasks: ${ref}`);
+
+
+            ok = false;
+
+
+            break;
+
+
+          }
+
+
+          if (inChains.has(ref)) {
+
+
+            setFieldError('chains-error', `Задание встречается в нескольких сцепках: ${ref}`);
+
+
+            ok = false;
+
+
+            break;
+
+
+          }
+
+
+          inChains.add(ref);
+
+
+        }
+
+
+        if (!ok) break;
+
+
+      }
+
+
+      return ok;
+
+
+    }
+
+
+    async function handleVersionConflict(conflictData) {
+
+
+      const details = conflictData.details || {};
+
+
+      // Create modal overlay
+
+
+      const modal = document.createElement('div');
+
+
+      modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]';
+
+
+      modal.innerHTML = `
+
+
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+
+
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">
+
+
+            вљ пёЏ Конфликт версий
+
+
+          </h2>
+
+
+          <p class="text-gray-700 dark:text-gray-300 mb-4">
+
+
+            Этот комплекс был изменён другим пользователем или в другой вкладке.
+
+
+          </p>
+
+
+          <div class="bg-gray-100 dark:bg-gray-700 rounded p-3 mb-4 text-sm">
+
+
+            <p><strong>Ваша версия:</strong> ${formatVersion(details.expected_version)}</p>
+
+
+            <p><strong>Текущая версия:</strong> ${formatVersion(details.current_version)}</p>
+
+
+          </div>
+
+
+          <div class="space-y-2">
+
+
+            <button id="conflict-reload" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+
+
+              рџ”„ Перезагрузить данные (потеряю свои изменения)
+
+
+            </button>
+
+
+            <button id="conflict-force" class="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
+
+
+              рџ’Є Перезаписать (потеряются чужие изменения)
+
+
+            </button>
+
+
+            <button id="conflict-cancel" class="w-full px-4 py-2 bg-gray-300 text-gray-700 rounded hover:bg-gray-400 transition-colors">
+
+
+              вќЊ Отмена
+
+
+            </button>
+
+
+          </div>
+
+
+        </div>
+
+
+      `;
+
+
+      document.body.appendChild(modal);
+
+
+      // Handle reload button
+
+
+      document.getElementById('conflict-reload').addEventListener('click', async () => {
+
+
+        await loadComplexData(state.editingId);
+
+
+        modal.remove();
+
+
+        showGlobalError('Данные перезагружены. Ваши изменения потеряны.');
+
+
+      });
+
+
+      // Handle force save button
+
+
+      document.getElementById('conflict-force').addEventListener('click', async () => {
+
+
+        // Force save without version check
+
+
+        const payload = buildPayload();
+
+
+        delete payload.expected_version;
+
+
+        const resp = await fetch(`/api/complexes/${state.editingId}`, {
+
+
+          method: 'PUT',
+
+
+          headers: { 'Content-Type': 'application/json' },
+
+
+          body: JSON.stringify(payload),
+
+
+        });
+
+
+        modal.remove();
+
+
+        if (resp.ok) {
+
+
+          const data = await resp.json();
+
+
+          if (data.ok && data.item && data.item.updated_at) {
+
+
+            state.currentVersion = data.item.updated_at;
+
+
+          }
+
+
+          showGlobalError('Комплекс сохранён (перезаписаны чужие изменения)');
+
+
+          setTimeout(() => window.location.href = '/ui/complexes', 1500);
+
+
+        } else {
+
+
+          showGlobalError('Ошибка при принудительном сохранении');
+
+
+        }
+
+
+      });
+
+
+      // Handle cancel button
+
+
+      document.getElementById('conflict-cancel').addEventListener('click', () => {
+
+
+        modal.remove();
+
+
+      });
+
+
+    }
+
+
+    function formatVersion(isoString) {
+
+
+      if (!isoString) return 'неизвестно';
+
+
+      try {
+
+
+        const date = new Date(isoString);
+
+
+        return date.toLocaleString('ru-RU');
+
+
+      } catch {
+
+
+        return isoString;
+
+
+      }
+
+
+    }
+
+
+    async function onSave() {
+
+
+      hideGlobalError();
+
+
+      const btn = document.getElementById('save-btn');
+
+
+      if (btn) btn.setAttribute('disabled', 'true');
+
+
+      try {
+
+
+        const payload = buildPayload();
+
+
+        const valid = clientValidate(payload);
+
+
+        if (!valid) {
+
+
+          if (btn) btn.removeAttribute('disabled');
+
+
+          return;
+
+
+        }
+
+
+        // Add expected_version for edit mode
+
+
+        if (state.editingId && state.currentVersion) {
+
+
+          payload.expected_version = state.currentVersion;
+
+
+        }
+
+
+        const method = state.editingId ? 'PUT' : 'POST';
+
+
+        const url = state.editingId ? `/api/complexes/${state.editingId}` : '/api/complexes';
+
+
+        const resp = await fetch(url, {
+
+
+          method: method,
+
+
+          headers: { 'Content-Type': 'application/json' },
+
+
+          body: JSON.stringify(payload),
+
+
+        });
+
+
+        const data = await resp.json();
+
+
+        // Handle version conflict
+
+
+        if (resp.status === 409) {
+
+
+          await handleVersionConflict(data);
+
+
+          if (btn) btn.removeAttribute('disabled');
+
+
+          return;
+
+
+        }
+
+
+        if (!data.ok) {
+
+
+          const details = data.details && data.details.errors ? data.details.errors : null;
+
+
+          if (Array.isArray(details) && details.length) {
+
+
+            // Try to map server validation errors to field-level UI
+
+
+            clearFieldErrors();
+
+
+            const mapFieldToUi = (field) => {
+
+
+              if (field === 'name') return 'name-error';
+
+
+              if (field === 'tasks') return 'tasks-error';
+
+
+              if (field === 'chains') return 'chains-error';
+
+
+              return null;
+
+
+            };
+
+
+            for (const err of details) {
+
+
+              const target = mapFieldToUi(err.field);
+
+
+              if (!target) continue;
+
+
+              if (target === 'tasks-error' && err.path) {
+
+
+                setFieldError(target, `${err.reason}: ${err.path}`);
+
+
+              } else {
+
+
+                setFieldError(target, err.reason || 'Ошибка валидации');
+
+
+              }
+
+
+            }
+
+
+            const first = details[0];
+
+
+            showGlobalError(`Ошибка валидации: ${first.field}: ${first.reason}`);
+
+
+          } else {
+
+
+            showGlobalError(`Ошибка: ${data.error || 'save_failed'}`);
+
+
+          }
+
+
+          if (btn) btn.removeAttribute('disabled');
+
+
+          return;
+
+
+        }
+
+
+        // Update currentVersion after successful save
+
+
+        if (data.item && data.item.updated_at) {
+
+
+          state.currentVersion = data.item.updated_at;
+
+
+        }
+
+
+        markClean();
+
+
+        if (state.editingId) {
+
+
+          await fetch(`/api/complexes/${state.editingId}/autosave`, { method: 'DELETE' });
+
+
+        }
+
+
+        window.location.href = '/ui/complexes';
+
+
+      } catch (e) {
+
+
+        console.error('Save failed', e);
+
+
+        showGlobalError('Не удалось сохранить комплекс.');
+
+
+        if (btn) btn.removeAttribute('disabled');
+
+
+      }
+
+
+    }
+
+
+    async function triggerAutosave() {
+
+
+      if (!state.editingId) return;
+
+
+      try {
+
+
+        const payload = buildPayload();
+
+
+        const resp = await fetch(`/api/complexes/${state.editingId}/autosave`, {
+
+
+          method: 'POST',
+
+
+          headers: { 'Content-Type': 'application/json' },
+
+
+          body: JSON.stringify(payload)
+
+
+        });
+
+
+        if (resp.ok) {
+
+
+          updateLastSaveTimestamp();
+
+
+          showAutosaveIndicator();
+
+
+        }
+
+
+      } catch (e) {
+
+
+        console.error('Autosave failed', e);
+
+
+      }
+
+
+    }
+
+
+    function updateLastSaveTimestamp() {
+
+
+      const el = document.querySelector('footer span.text-slate-800');
+
+
+      if (el) {
+
+
+        const now = new Date();
+
+
+        const hh = String(now.getHours()).padStart(2, '0');
+
+
+        const mm = String(now.getMinutes()).padStart(2, '0');
+
+
+        el.textContent = `${hh}:${mm}`;
+
+
+      }
+
+
+    }
+
+
+    function showAutosaveIndicator() {
+
+
+      const indicator = document.getElementById('autosave-indicator');
+
+
+      if (!indicator) return;
+
+
+      indicator.textContent = 'рџ’ѕ Автосохранено';
+
+
+      indicator.style.opacity = '1';
+
+
+      setTimeout(() => {
+
+
+        indicator.style.opacity = '0';
+
+
+      }, 2000);
+
+
+    }
+
+
+    function markDirty() {
+
+
+      if (state.isDirty) return;
+
+
+      state.isDirty = true;
+
+
+      const saveBtn = document.getElementById('save-btn');
+
+
+      if (saveBtn) {
+
+
+        saveBtn.classList.add('pulse');
+
+
+        if (!saveBtn.textContent.includes('*')) {
+
+
+          saveBtn.innerHTML = saveBtn.innerHTML + ' *';
+
+
+        }
+
+
+      }
+
+
+    }
+
+
+    function markClean() {
+
+
+      state.isDirty = false;
+
+
+      const saveBtn = document.getElementById('save-btn');
+
+
+      if (saveBtn) {
+
+
+        saveBtn.classList.remove('pulse');
+
+
+        saveBtn.textContent = saveBtn.textContent.replace(' *', '');
+
+
+      }
+
+
+    }
+
+
+    document.addEventListener('DOMContentLoaded', async () => {
+
+
+      document.getElementById('name')?.addEventListener('input', markDirty);
+
+
+      document.getElementById('description')?.addEventListener('input', markDirty);
+
+
+      document.getElementById('global-alert-close')?.addEventListener('click', hideGlobalError);
+
+
+      document.getElementById('save-btn')?.addEventListener('click', onSave);
+
+
+      document.getElementById('history-btn')?.addEventListener('click', () => showHistoryModal(state.editingId));
+
+
+      window.addEventListener('beforeunload', (e) => {
+
+
+        if (state.isDirty) {
+
+
+          e.preventDefault();
+
+
+          e.returnValue = '';
+
+
+        }
+
+
+      });
+
+
+      document.addEventListener('click', (e) => {
+
+
+        const menu = document.getElementById('task-context-menu');
+
+
+        if (!menu || menu.classList.contains('hidden')) return;
+
+
+        if (e.target && menu.contains(e.target)) return;
+
+
+        hideContextMenu();
+
+
+      });
+
+
+      document.addEventListener('keydown', (e) => {
+
+
+        if (e.key === 'Escape') hideContextMenu();
+
+
+      });
+
+
+      document.getElementById('reload-catalog')?.addEventListener('click', loadCatalog);
+
+
+      document.getElementById('catalog-search')?.addEventListener('input', applyCatalogFilter);
+
+
+      document.getElementById('add-from-catalog')?.addEventListener('click', () => {
+
+
+        const list = document.getElementById('catalog-list');
+
+
+        if (!list) return;
+
+
+        const refs = Array.from(list.selectedOptions).map((o) => o.value);
+
+
+        let bad = 0;
+
+
+        let dup = 0;
+
+
+        let ok = 0;
+
+
+        for (const ref of refs) {
+
+
+          const r = addTaskRef(ref);
+
+
+          if (!r.ok && r.reason === 'bad_format') bad += 1;
+
+
+          else if (!r.ok && r.reason === 'duplicate') dup += 1;
+
+
+          else ok += 1;
+
+
+        }
+
+
+        if (ok > 0) markDirty();
+
+
+        renderSelectedList();
+
+
+        renderChains();
+
+
+        applyCatalogFilter();
+
+
+        clearCatalogSelection();
+
+
+        if (bad || dup) {
+
+
+          showGlobalError(`Добавление завершено: добавлено ${ok}, дубликатов ${dup}, неверный формат ${bad}.`);
+
+
+        }
+
+
+      });
+
+
+      document.getElementById('remove-selected')?.addEventListener('click', (e) => { onRemoveSelectedTasks(e); markDirty(); });
+
+
+      document.getElementById('ctx-chain')?.addEventListener('click', markDirty);
+
+
+      document.getElementById('ctx-unlink')?.addEventListener('click', markDirty);
+
+
+      document.getElementById('ctx-add-to-chain')?.addEventListener('click', (e) => {
+
+
+        if (e.target.closest('button')) markDirty();
+
+
+      });
+
+
+      document.getElementById('move-up')?.addEventListener('click', () => { moveSelected(-1); markDirty(); });
+
+
+      document.getElementById('move-down')?.addEventListener('click', () => { moveSelected(1); markDirty(); });
+
+
+      const params = new URLSearchParams(window.location.search);
+
+
+      const editId = params.get('id');
+
+
+      await loadCatalog();
+
+
+      if (editId) {
+
+
+        // Check for autosave
+
+
+        try {
+
+
+          const autoResp = await fetch(`/api/complexes/${editId}/autosave`);
+
+
+          if (autoResp.ok) {
+
+
+            const autoData = await autoResp.json();
+
+
+            if (autoData.ok && autoData.item && confirm('Найдено автосохранение. Восстановить последние несохраненные изменения? (При отмене автосохранение будет удалено)')) {
+
+
+              await applyDataToEditor(autoData.item);
+
+
+              state.editingId = editId; // ensure ID is set
+
+
+              updateLastSaveTimestamp();
+
+
+            } else {
+
+
+              if (autoData.ok) {
+
+
+                await fetch(`/api/complexes/${editId}/autosave`, { method: 'DELETE' });
+
+
+              }
+
+
+              await loadComplexData(editId);
+
+
+            }
+
+
+          } else {
+
+
+            await loadComplexData(editId);
+
+
+          }
+
+
+        } catch (e) {
+
+
+          await loadComplexData(editId);
+
+
+        }
+
+
+        // Start autosave timer
+
+
+        setInterval(triggerAutosave, 5 * 60 * 1000); // 5 min
+
+
+      } else {
+
+
+        renderSelectedList();
+
+
+        renderChains();
+
+
+      }
+
+
+      syncCatalogTreeSelectionFromSelect();
+
+
+    });
+
+
+    async function applyDataToEditor(complex) {
+
+
+      state.editingId = complex.id;
+
+
+      document.getElementById('history-btn')?.classList.remove('hidden');
+
+
+      // Save current version for optimistic locking
+
+
+      state.currentVersion = complex.updated_at;
+
+
+      // Update UI
+
+
+      document.getElementById('name').value = complex.name || '';
+
+
+      document.getElementById('description').value = complex.description || '';
+
+
+      // Update header
+
+
+      const h1 = document.querySelector('header h1');
+
+
+      if (h1) h1.textContent = 'Редактирование комплекса';
+
+
+      document.title = 'Редактирование комплекса';
+
+
+      // Load tasks
+
+
+      const tasksByRef = new Map(state.catalog.map(t => [t.ref, t]));
+
+
+      state.selectedTasks = (complex.tasks || []).map(ref => {
+
+
+        const catItem = tasksByRef.get(ref);
+
+
+        return {
+
+
+          ref: ref,
+
+
+          label: taskRefLabel(catItem || { ref, task_name: ref.split('/').pop() })
+
+
+        };
+
+
+      });
+
+
+      state.chains = complex.chains || [];
+
+
+      renderSelectedList();
+
+
+      renderChains();
+
+
+      applyCatalogFilter();
+
+
+      markClean();
+
+
+    }
+
+
+    async function loadComplexData(id) {
+
+
+      try {
+
+
+        const resp = await fetch(`/api/complexes/${id}`);
+
+
+        const data = await resp.json();
+
+
+        if (!data.ok) {
+
+
+          showGlobalError(`Не удалось загрузить данные комплекса: ${data.error}`);
+
+
+          return;
+
+
+        }
+
+
+        await applyDataToEditor(data.item);
+
+
+      } catch (e) {
+
+
+        console.error('Failed to load complex data', e);
+
+
+        showGlobalError('Ошибка при загрузке данных комплекса.');
+
+
+      }
+
+
+    }
+
+
+    async function showHistoryModal(complexId) {
+
+
+      if (!complexId) return;
+
+
+      try {
+
+
+        const resp = await fetch(`/api/complexes/${complexId}/history`);
+
+
+        const data = await resp.json();
+
+
+        if (!data.ok) {
+
+
+          showGlobalError('Не удалось загрузить историю изменений');
+
+
+          return;
+
+
+        }
+
+
+        const history = data.history || [];
+
+
+        if (history.length === 0) {
+
+
+          alert('Рстория изменений пуста');
+
+
+          return;
+
+
+        }
+
+
+        // Create modal
+
+
+        const modal = document.createElement('div');
+
+
+        modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-50';
+
+
+        modal.id = 'history-modal';
+
+
+        modal.innerHTML = `
+
+
+          <div class="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 flex flex-col max-h-[80vh]">
+
+
+            <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+
+
+              <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+
+
+                <span class="material-symbols-outlined text-slate-400">history</span>
+
+
+                Рстория изменений
+
+
+              </h2>
+
+
+              <button class="text-slate-400 hover:text-slate-600 transition-colors" onclick="document.getElementById('history-modal').remove()">
+
+
+                <span class="material-symbols-outlined">close</span>
+
+
+              </button>
+
+
+            </div>
+
+
+            <div class="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
+
+
+              ${history.map(snapshot => {
+
+
+          const date = new Date(
+
+
+            snapshot._snapshot_timestamp.replace(/(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})(_\d+)?/, '$1-$2-$3T$4:$5:$6')
+
+
+          );
+
+
+          const dateStr = date.toLocaleDateString('ru-RU');
+
+
+          const timeStr = date.toLocaleTimeString('ru-RU');
+
+
+          const taskCount = (snapshot.tasks || []).length;
+
+
+          const chainCount = (snapshot.chains || []).length;
+
+
+          const name = snapshot.name || 'Без названия';
+
+
+          return `
+
+
+                  <div class="flex items-center justify-between p-4 bg-slate-50 rounded-lg border border-slate-200 hover:border-primary/30 transition-colors">
+
+
+                    <div class="flex flex-col gap-1">
+
+
+                      <div class="flex items-center gap-2">
+
+
+                        <span class="font-bold text-slate-800">${timeStr}</span>
+
+
+                        <span class="text-xs text-slate-400">${dateStr}</span>
+
+
+                      </div>
+
+
+                      <div class="text-sm text-slate-600 font-medium">${name}</div>
+
+
+                      <div class="text-xs text-slate-500 flex gap-3">
+
+
+                        <span>Заданий: ${taskCount}</span>
+
+
+                        <span>Сцепок: ${chainCount}</span>
+
+
+                      </div>
+
+
+                    </div>
+
+
+                    <button 
+
+
+                      class="px-3 py-1.5 bg-white border border-slate-200 text-primary hover:bg-primary hover:text-white rounded-lg text-sm font-semibold transition-all shadow-sm"
+
+
+                      onclick="restoreVersion('${complexId}', '${snapshot._snapshot_timestamp}')"
+
+
+                    >
+
+
+                      Восстановить
+
+
+                    </button>
+
+
+                  </div>
+
+
+                `;
+
+
+        }).join('')}
+
+
+            </div>
+
+
+            <div class="p-4 border-t border-slate-100 bg-slate-50 rounded-b-xl text-center text-xs text-slate-400">
+
+
+              Показаны последние 10 версий
+
+
+            </div>
+
+
+          </div>
+
+
+        `;
+
+
+        document.body.appendChild(modal);
+
+
+      } catch (e) {
+
+
+        console.error('History fetch failed', e);
+
+
+        showGlobalError('Ошибка при загрузке истории');
+
+
+      }
+
+
+    }
+
+
+    window.restoreVersion = async function (complexId, timestamp) {
+
+
+      if (!confirm('Вы уверены? Текущие несохраненные изменения будут потеряны. Текущее состояние будет сохранено в новой версии истории.')) {
+
+
+        return;
+
+
+      }
+
+
+      try {
+
+
+        const resp = await fetch(`/api/complexes/${complexId}/restore/${timestamp}`, {
+
+
+          method: 'POST'
+
+
+        });
+
+
+        const data = await resp.json();
+
+
+        if (data.ok && data.item) {
+
+
+          document.getElementById('history-modal')?.remove();
+
+
+          await applyDataToEditor(data.item);
+
+
+          document.getElementById('save-btn').classList.remove('pulse'); // Clear dirty visual
+
+
+          state.isDirty = false; // Reset dirty state
+
+
+          alert('Версия успешно восстановлена!');
+
+
+        } else {
+
+
+          showGlobalError(`Ошибка восстановления: ${data.error}`);
+
+
+        }
+
+
+      } catch (e) {
+
+
+        console.error('Restore failed', e);
+
+
+        showGlobalError('Ошибка при восстановлении версии');
+
+
+      }
+
+
+    };
+
+
+  </script>
+
+
+  <div id="autosave-indicator" style="
+
+
+    position: fixed;
+
+
+    top: 20px;
+
+
+    right: 20px;
+
+
+    padding: 10px 20px;
+
+
+    background: rgba(0, 200, 100, 0.9);
+
+
+    color: white;
+
+
+    border-radius: 8px;
+
+
+    opacity: 0;
+
+
+    transition: opacity 0.3s;
+
+
+    z-index: 1000;
+
+
+    pointer-events: none;
+
+
+  ">
+
+
+    рџ’ѕ Автосохранено
+
+
+  </div>
+
+
+
+
+
+  <script src="../assets/ThemeSwitcherUI.js"></script>
+
+
+</body>
+
+
+
+
+
+</html>

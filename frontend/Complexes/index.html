@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <script src="../assets/ThemeManager.js"></script>
+  <script src="/assets/AppConfig.js"></script>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>ACTRA — Комплексы заданий</title>
+  <style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    /* Page entrance */
+    .cx-page-enter {
+      animation: a-slide-up 0.45s ease-out both;
+    }
+
+    /* Complex cards entrance stagger (applied via JS) */
+    .cx-card {
+      animation: a-slide-up 0.4s ease-out both;
+    }
+
+    /* Card hover lift */
+    .cx-card-inner {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .cx-card-inner:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+
+    /* Detail panel expand */
+    .detail-panel {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease, opacity 0.25s ease;
+    }
+    .detail-panel.expanded {
+      max-height: 400px;
+      opacity: 1;
+    }
+
+    /* Button interactions */
+    .cx-btn {
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+    .cx-btn:active {
+      transform: scale(0.97);
+    }
+
+  </style>
+
+  <link href="/assets/tailwind.css" rel="stylesheet" />
+  <link href="/assets/fonts.css" rel="stylesheet" />
+  <link href="/assets/lightB-variables.css" rel="stylesheet" />
+  <link href="/assets/lightB-components.css" rel="stylesheet" />
+  <link href="/assets/animations.css" rel="stylesheet" />
+</head>
+
+<body class="bg-bg-main font-display text-text-main antialiased selection:bg-primary-light selection:text-primary">
+  <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+    <div class="layout-container flex h-full grow flex-col">
+      <div class="px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40 flex flex-1 justify-center py-5">
+        <div class="layout-content-container flex flex-col max-w-5xl flex-1 cx-page-enter">
+          <div class="flex items-center gap-3 px-4 pb-4">
+            <button id="back-button"
+              class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-tertiary transition-colors cursor-pointer"
+              title="Назад на главную">
+              <span class="material-symbols-outlined text-text-secondary">arrow_back</span>
+            </button>
+            <div class="flex flex-wrap gap-2">
+              <a id="breadcrumb-home"
+                class="text-text-secondary text-base font-medium leading-normal hover:text-primary cursor-pointer transition-colors">Главное
+                меню</a>
+              <span class="text-text-secondary text-base font-medium leading-normal">/</span>
+              <span class="text-text-main text-base font-medium leading-normal">Комплексы заданий</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap justify-between items-center gap-4 p-4 mb-4">
+            <p class="text-text-main text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
+              Комплексы заданий</p>
+            <div class="flex items-center gap-2">
+              <button id="toggle-select-complexes"
+                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2"
+                title="Выбрать несколько комплексов">
+                <span class="material-symbols-outlined text-lg">checklist</span>
+                <span class="truncate">Выбрать</span>
+              </button>
+              <button id="import-complexes"
+                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2">
+                <span class="material-symbols-outlined text-lg">upload_file</span>
+                <span class="truncate">Импорт</span>
+              </button>
+              <button id="create-complex"
+                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors">
+                <span class="truncate">+ Создать комплекс</span>
+              </button>
+            </div>
+          </div>
+          <div id="complex-selection-action-bar"
+            class="fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 p-2 shadow-2xl">
+            <div id="complex-selection-counter" class="border-r border-border-subtle px-3 font-semibold text-text-secondary">0 выбрано</div>
+            <button id="complex-select-all"
+              class="flex items-center gap-2 rounded-lg bg-surface-2 px-4 py-2 font-medium text-text-secondary transition-colors hover:bg-bg-hover">
+              <span class="material-symbols-outlined">select_all</span>
+              Все
+            </button>
+            <button id="complex-export-selected"
+              class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-medium text-primary-fg transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50">
+              <span class="material-symbols-outlined">archive</span>
+              Экспорт
+            </button>
+            <button id="complex-selection-cancel"
+              class="rounded-lg p-2 text-text-disabled transition-colors hover:bg-bg-hover hover:text-text-muted" title="Отмена выбора">
+              <span class="material-symbols-outlined">close</span>
+            </button>
+          </div>
+          <div class="px-4">
+            <div id="complexes-list" class="space-y-4">
+              <!-- Cards will be rendered here via JavaScript. -->
+            </div>
+            <div class="p-4 mt-8" id="empty-state" hidden>
+              <div
+                class="flex flex-col items-center justify-center text-center gap-4 py-16 px-8 bg-surface-1 rounded-lg border border-dashed border-border-subtle">
+                <div class="flex items-center justify-center w-16 h-16 rounded-full bg-bg-tertiary">
+                  <span class="material-symbols-outlined text-3xl text-text-disabled">add_task</span>
+                </div>
+                <h3 class="text-xl font-bold text-text-main">Комплексы еще не созданы</h3>
+                <p class="text-text-secondary max-w-sm">Нажмите кнопку ниже, чтобы создать свой
+                  первый
+                  комплекс заданий.</p>
+                <button
+                  class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors mt-2">
+                  <span class="truncate">+ Создать комплекс</span>
+                </button>
+              </div>
+            </div>
+            <div class="p-4 mt-8" id="error-state" hidden>
+              <div
+                class="flex flex-col items-center justify-center text-center gap-4 py-16 px-8 bg-error-lighter rounded-lg border border-dashed border-error-light">
+                <div class="flex items-center justify-center w-16 h-16 rounded-full bg-error-light">
+                  <span class="material-symbols-outlined text-3xl text-status-error">error</span>
+                </div>
+                <h3 class="text-xl font-bold text-status-error-dark">Ошибка загрузки</h3>
+                <p class="text-status-error max-w-sm">Не удалось загрузить список комплексов. Пожалуйста,
+                  проверьте соединение и попробуйте снова.</p>
+                <button id="retry-load"
+                  class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-status-error text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-status-error-dark transition-colors mt-2">
+                  <span class="truncate">Повторить</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <script>
+          function parseSessionTime(value) {
+            if (!value) return 0;
+            const parsed = Date.parse(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+          }
+
+          function pickPreferredSession(existing, incoming) {
+            if (!incoming) return existing || null;
+            if (!existing) return incoming;
+
+            if (!!incoming.paused !== !!existing.paused) {
+              return incoming.paused ? incoming : existing;
+            }
+
+            const incomingTs = Math.max(
+              parseSessionTime(incoming.paused_at),
+              parseSessionTime(incoming.updated_at),
+              parseSessionTime(incoming.start_time)
+            );
+            const existingTs = Math.max(
+              parseSessionTime(existing.paused_at),
+              parseSessionTime(existing.updated_at),
+              parseSessionTime(existing.start_time)
+            );
+            return incomingTs >= existingTs ? incoming : existing;
+          }
+
+          function formatPausedAt(value) {
+            if (!value) return "";
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) return "";
+            return date.toLocaleString("ru-RU", {
+              day: "2-digit",
+              month: "2-digit",
+              hour: "2-digit",
+              minute: "2-digit",
+            });
+          }
+
+          function escapeHtml(value) {
+            return String(value || "")
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#39;");
+          }
+
+          function localImageSrc(path) {
+            if (!path) return "";
+            return `/api/local-image?path=${encodeURIComponent(path)}`;
+          }
+
+          const selectedComplexes = new Set();
+          let selectionMode = false;
+          let renderedComplexIds = [];
+          let hasLoadedComplexesOnce = false;
+          let isComplexesLoading = false;
+          let complexesSkeletonTimer = null;
+          const loadingRevealDelayMs = window.ACTRA_CONFIG?.ui?.loadingRevealDelayMs ?? 280;
+
+          function normalizeComplexId(value) {
+            if (value === null || value === undefined) return "";
+            return String(value);
+          }
+
+          function syncComplexSelectionUi() {
+            const toggleBtn = document.getElementById("toggle-select-complexes");
+            const actionBar = document.getElementById("complex-selection-action-bar");
+            const counter = document.getElementById("complex-selection-counter");
+            const exportBtn = document.getElementById("complex-export-selected");
+            const shouldShowBar = selectionMode || selectedComplexes.size > 0;
+
+            if (toggleBtn) {
+              toggleBtn.classList.toggle("text-primary", selectionMode);
+              toggleBtn.classList.toggle("bg-primary-lighter", selectionMode);
+            }
+
+            if (actionBar) {
+              actionBar.classList.toggle("hidden", !shouldShowBar);
+              actionBar.classList.toggle("flex", shouldShowBar);
+            }
+            if (counter) {
+              counter.textContent = `${selectedComplexes.size} выбрано`;
+            }
+            if (exportBtn) {
+              exportBtn.disabled = selectedComplexes.size === 0;
+            }
+
+            const selectBoxes = document.querySelectorAll("[data-complex-select-box]");
+            selectBoxes.forEach((el) => {
+              el.classList.toggle("hidden", !selectionMode);
+            });
+          }
+
+          function updateComplexCardSelectionState(complexId) {
+            const normalizedId = normalizeComplexId(complexId);
+            if (!normalizedId) return;
+            const card = document.querySelector(`[data-complex-card-id="${normalizedId}"]`);
+            if (!card) return;
+
+            const shell = card.querySelector("[data-complex-card-shell]");
+            const checkbox = card.querySelector("input.complex-select-checkbox");
+            const isSelected = selectedComplexes.has(normalizedId);
+
+            if (shell) {
+              shell.classList.toggle("border-primary", isSelected);
+              shell.classList.toggle("ring-2", isSelected);
+              shell.classList.toggle("ring-primary-lighter", isSelected);
+              shell.classList.toggle("border-border-subtle", !isSelected);
+            }
+            if (checkbox) {
+              checkbox.checked = isSelected;
+            }
+          }
+
+          function updateAllComplexCardSelectionStates() {
+            const cards = document.querySelectorAll("[data-complex-card-id]");
+            cards.forEach((card) => {
+              const complexId = normalizeComplexId(card.getAttribute("data-complex-card-id"));
+              updateComplexCardSelectionState(complexId);
+            });
+          }
+
+          function setComplexSelectionMode(enabled) {
+            selectionMode = !!enabled;
+            if (!selectionMode) {
+              selectedComplexes.clear();
+            }
+            updateAllComplexCardSelectionStates();
+            syncComplexSelectionUi();
+          }
+
+          function toggleComplexSelectionMode() {
+            setComplexSelectionMode(!selectionMode);
+          }
+
+          function cancelComplexSelection() {
+            setComplexSelectionMode(false);
+          }
+
+          function handleComplexSelection(complexId, isSelected) {
+            const normalizedId = normalizeComplexId(complexId);
+            if (!normalizedId) return;
+
+            if (!selectionMode) selectionMode = true;
+            if (isSelected) {
+              selectedComplexes.add(normalizedId);
+            } else {
+              selectedComplexes.delete(normalizedId);
+            }
+            updateComplexCardSelectionState(normalizedId);
+            syncComplexSelectionUi();
+          }
+
+          function selectAllVisibleComplexes() {
+            if (!selectionMode) {
+              selectionMode = true;
+            }
+            renderedComplexIds.forEach((complexId) => {
+              selectedComplexes.add(complexId);
+            });
+            updateAllComplexCardSelectionStates();
+            syncComplexSelectionUi();
+          }
+
+          async function exportSelectedComplexes() {
+            if (selectedComplexes.size === 0) return;
+            const exportBtn = document.getElementById("complex-export-selected");
+            const originalHtml = exportBtn ? exportBtn.innerHTML : "";
+            if (exportBtn) {
+              exportBtn.disabled = true;
+              exportBtn.innerHTML = '<div class="h-5 w-5 animate-spin rounded-full border-2 border-primary-fg border-b-transparent"></div>';
+            }
+            try {
+              await exportComplexArchive(Array.from(selectedComplexes));
+              NotificationUI.toast("Экспорт готов", "success");
+            } catch (err) {
+              console.error("Bulk complex export failed", err);
+              NotificationUI.toast(`Ошибка экспорта: ${err?.message || err}`, "error");
+            } finally {
+              if (exportBtn) {
+                exportBtn.innerHTML = originalHtml;
+                exportBtn.disabled = selectedComplexes.size === 0;
+              }
+            }
+          }
+
+          function renderInlineDeltaText(text, attributes) {
+            const escaped = escapeHtml(text).replace(/\u00A0/g, "&nbsp;");
+            if (!attributes || typeof attributes !== "object") return escaped;
+            const styles = [];
+            if (attributes.color) styles.push(`color:${escapeHtml(attributes.color)}`);
+            if (attributes.background) styles.push(`background:${escapeHtml(attributes.background)}`);
+            if (attributes.size) styles.push(`font-size:${escapeHtml(attributes.size)}`);
+            let content = escaped;
+            if (attributes.bold) content = `<strong>${content}</strong>`;
+            if (attributes.italic) content = `<em>${content}</em>`;
+            if (attributes.underline) content = `<u>${content}</u>`;
+            if (attributes.strike) content = `<s>${content}</s>`;
+            if (styles.length) content = `<span style="${styles.join(";")}">${content}</span>`;
+            return content;
+          }
+
+          function getDeltaLineAttrs(rawAttrs) {
+            const attrs = rawAttrs && typeof rawAttrs === "object" ? rawAttrs : {};
+            const lineAttrs = {};
+            if (attrs.list === "ordered" || attrs.list === "bullet" || attrs.list === "check") {
+              lineAttrs.list = attrs.list;
+            }
+            if (attrs.blockquote) {
+              lineAttrs.blockquote = true;
+            }
+            const header = Number(attrs.header);
+            if (Number.isInteger(header) && header >= 1 && header <= 6) {
+              lineAttrs.header = header;
+            }
+            return lineAttrs;
+          }
+
+          function deltaToLines(delta) {
+            const ops = delta && Array.isArray(delta.ops) ? delta.ops : [];
+            const lines = [];
+            let segments = [];
+
+            const pushLine = (attrs) => {
+              lines.push({
+                segments: segments.slice(),
+                attrs: getDeltaLineAttrs(attrs),
+              });
+              segments = [];
+            };
+
+            for (const op of ops) {
+              if (!op || typeof op !== "object" || !("insert" in op)) continue;
+              const attrs = op.attributes || {};
+              const insert = op.insert;
+              if (typeof insert === "string") {
+                const chunks = insert.split("\n");
+                for (let i = 0; i < chunks.length; i += 1) {
+                  if (chunks[i]) {
+                    segments.push({ kind: "text", value: chunks[i], attrs });
+                  }
+                  if (i < chunks.length - 1) {
+                    pushLine(attrs);
+                  }
+                }
+                continue;
+              }
+              if (insert && typeof insert === "object" && typeof insert.image === "string") {
+                segments.push({ kind: "image", value: insert.image });
+              }
+            }
+
+            if (segments.length || !lines.length) {
+              lines.push({ segments: segments.slice(), attrs: {} });
+            }
+            return lines;
+          }
+
+          function renderDeltaLineSegments(segments) {
+            if (!Array.isArray(segments) || !segments.length) return "<br>";
+            let html = "";
+            for (const segment of segments) {
+              if (!segment || typeof segment !== "object") continue;
+              if (segment.kind === "text") {
+                html += renderInlineDeltaText(segment.value || "", segment.attrs || {});
+                continue;
+              }
+              if (segment.kind === "image" && typeof segment.value === "string") {
+                const src = localImageSrc(segment.value);
+                html += `<img src="${src}" alt="" class="max-w-full rounded border border-border-subtle my-2" />`;
+              }
+            }
+            return html || "<br>";
+          }
+
+          function deltaToHtml(delta) {
+            const blocks = [];
+            const lines = deltaToLines(delta);
+            let activeListType = null;
+            let listItems = [];
+
+            const flushList = () => {
+              if (!activeListType || !listItems.length) {
+                activeListType = null;
+                listItems = [];
+                return;
+              }
+              if (activeListType === "ordered") {
+                blocks.push(`<ol class="list-decimal pl-6">${listItems.join("")}</ol>`);
+              } else {
+                blocks.push(`<ul class="list-disc pl-6">${listItems.join("")}</ul>`);
+              }
+              activeListType = null;
+              listItems = [];
+            };
+
+            for (const line of lines) {
+              const attrs = line && typeof line === "object" ? line.attrs || {} : {};
+              const lineHtml = renderDeltaLineSegments(line && line.segments);
+              const listType =
+                attrs.list === "ordered"
+                  ? "ordered"
+                  : attrs.list === "bullet" || attrs.list === "check"
+                    ? "bullet"
+                    : null;
+
+              if (listType) {
+                if (activeListType && activeListType !== listType) flushList();
+                activeListType = listType;
+                listItems.push(`<li>${lineHtml}</li>`);
+                continue;
+              }
+
+              flushList();
+              const header = Number(attrs.header);
+              if (Number.isInteger(header) && header >= 1 && header <= 6) {
+                const headerClasses = {
+                  1: "text-xl font-bold mt-3 mb-2",
+                  2: "text-lg font-semibold mt-3 mb-2",
+                  3: "text-base font-semibold mt-2 mb-2",
+                };
+                const cls = headerClasses[header] || "text-base font-semibold mt-2 mb-2";
+                blocks.push(`<h${header} class="${cls}">${lineHtml}</h${header}>`);
+              } else if (attrs.blockquote) {
+                blocks.push(`<blockquote class="border-l-4 border-border-subtle pl-3 italic">${lineHtml}</blockquote>`);
+              } else {
+                blocks.push(`<p class="mb-2">${lineHtml}</p>`);
+              }
+            }
+
+            flushList();
+            return blocks.length ? blocks.join("") : '<p class="text-text-muted">Теория пуста.</p>';
+          }
+          async function openTheoryModal(complexName, theoryId) {
+            if (!theoryId) return;
+            try {
+              const resp = await fetch(`/api/theories/${encodeURIComponent(theoryId)}`);
+              const data = await resp.json();
+              if (!resp.ok || !data.ok || !data.item) {
+                NotificationUI.toast("Не удалось загрузить теорию", "error");
+                return;
+              }
+              const item = data.item;
+              const html = deltaToHtml(item.delta);
+              const updatedAt = item.updated_at ? new Date(item.updated_at).toLocaleString("ru-RU") : "—";
+              const modal = document.createElement("div");
+              modal.className = "fixed inset-0 z-[1000] bg-scrim flex items-center justify-center p-4";
+              modal.innerHTML = `
+                <div class="bg-surface-1 w-full max-w-3xl rounded-xl shadow-xl border border-border-subtle max-h-[85vh] overflow-hidden flex flex-col">
+                  <div class="px-5 py-4 border-b border-border-subtle flex items-center justify-between">
+                    <div>
+                      <p class="text-lg font-bold text-text-main">${escapeHtml(item.title || "Теория")}</p>
+                      <p class="text-sm text-text-secondary">Комплекс: ${escapeHtml(complexName || "—")} · Обновлено: ${escapeHtml(updatedAt)}</p>
+                    </div>
+                    <button type="button" class="theory-modal-close rounded-lg p-2 hover:bg-bg-tertiary text-text-secondary">
+                      <span class="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                  <div class="p-5 overflow-y-auto custom-scrollbar text-text-main">${html}</div>
+                </div>
+              `;
+              modal.addEventListener("click", (e) => {
+                if (e.target === modal) modal.remove();
+              });
+              const closeBtn = modal.querySelector(".theory-modal-close");
+              if (closeBtn) closeBtn.addEventListener("click", () => modal.remove());
+              document.body.appendChild(modal);
+            } catch (err) {
+              console.error("Failed to open theory modal", err);
+              NotificationUI.toast("Ошибка при открытии теории", "error");
+            }
+          }
+
+          function downloadBlob(blob, filename) {
+            const objectUrl = URL.createObjectURL(blob);
+            const anchor = document.createElement("a");
+            anchor.href = objectUrl;
+            anchor.download = filename || "complexes_export.zip";
+            document.body.appendChild(anchor);
+            anchor.click();
+            anchor.remove();
+            URL.revokeObjectURL(objectUrl);
+          }
+
+          async function exportComplexArchive(complexIdsOrOne) {
+            const complexIds = Array.isArray(complexIdsOrOne)
+              ? complexIdsOrOne.map((id) => normalizeComplexId(id)).filter(Boolean)
+              : [normalizeComplexId(complexIdsOrOne)].filter(Boolean);
+            if (!complexIds.length) return;
+
+            const resp = await fetch("/api/complexes/export", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                complex_ids: complexIds,
+                include_tasks: true,
+                include_theories: true,
+              }),
+            });
+            if (!resp.ok) {
+              let errorText = "complex_export_failed";
+              try {
+                const data = await resp.json();
+                errorText = data.error || errorText;
+              } catch (_) {
+                // ignore parse error
+              }
+              throw new Error(errorText);
+            }
+            const blob = await resp.blob();
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "_");
+            const filename = complexIds.length === 1
+              ? `complex_${complexIds[0]}_${timestamp}.zip`
+              : `complexes_${complexIds.length}_${timestamp}.zip`;
+            downloadBlob(blob, filename);
+          }
+
+          function openComplexImportSettingsDialog(defaults = {}) {
+            const initial = {
+              complex_conflict_resolution: defaults.complex_conflict_resolution || "new_id",
+              task_conflict_resolution: defaults.task_conflict_resolution || "skip",
+              theory_conflict_resolution: defaults.theory_conflict_resolution || "reuse_if_same_hash",
+              atomic_mode: defaults.atomic_mode || "bundle",
+              skip_errors: !!defaults.skip_errors,
+            };
+
+            return new Promise((resolve) => {
+              const overlay = document.createElement("div");
+              overlay.className =
+                "fixed inset-0 z-[1200] bg-scrim flex items-center justify-center p-4";
+              overlay.innerHTML = `
+                <div class="bg-surface-1 w-full max-w-2xl rounded-xl shadow-xl border border-border-subtle max-h-[90vh] overflow-hidden flex flex-col" data-role="dialog">
+                  <div class="px-5 py-4 border-b border-border-subtle flex items-center justify-between">
+                    <div>
+                      <p class="text-lg font-bold text-text-main">Параметры импорта комплексов</p>
+                      <p class="text-sm text-text-secondary">Выберите политики конфликтов перед импортом.</p>
+                    </div>
+                    <button type="button" class="rounded-lg p-2 hover:bg-bg-tertiary text-text-secondary" data-role="close">
+                      <span class="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                  <div class="p-5 overflow-y-auto custom-scrollbar space-y-4">
+                    <label class="flex flex-col gap-1">
+                      <span class="text-sm text-text-secondary">Комплексы</span>
+                      <select class="form-field form-field-input" data-field="complex_conflict_resolution">
+                        <option value="new_id">Конфликт: создать копию (new_id)</option>
+                        <option value="overwrite">Конфликт: перезаписать</option>
+                        <option value="skip">Конфликт: пропустить</option>
+                      </select>
+                    </label>
+                    <label class="flex flex-col gap-1">
+                      <span class="text-sm text-text-secondary">Задания (зависимости)</span>
+                      <select class="form-field form-field-input" data-field="task_conflict_resolution">
+                        <option value="skip">Конфликт: пропустить</option>
+                        <option value="overwrite">Конфликт: перезаписать</option>
+                      </select>
+                    </label>
+                    <label class="flex flex-col gap-1">
+                      <span class="text-sm text-text-secondary">Теория</span>
+                      <select class="form-field form-field-input" data-field="theory_conflict_resolution">
+                        <option value="reuse_if_same_hash">reuse_if_same_hash (рекомендуется)</option>
+                        <option value="new_id_if_diff">new_id_if_diff</option>
+                        <option value="overwrite">overwrite</option>
+                      </select>
+                    </label>
+                    <label class="flex flex-col gap-1">
+                      <span class="text-sm text-text-secondary">Режим атомарности</span>
+                      <select class="form-field form-field-input" data-field="atomic_mode">
+                        <option value="bundle">bundle (all-or-nothing)</option>
+                        <option value="best_effort">best_effort</option>
+                      </select>
+                    </label>
+                    <label class="flex items-center gap-2 text-sm text-text-main">
+                      <input type="checkbox" data-field="skip_errors" />
+                      <span>Пропускать ошибки во время импорта</span>
+                    </label>
+                  </div>
+                  <div class="px-5 py-4 border-t border-border-subtle flex justify-end gap-3">
+                    <button type="button" class="btn-secondary h-10 px-4" data-role="cancel">Отмена</button>
+                    <button type="button" class="btn-primary h-10 px-4" data-role="confirm">Продолжить</button>
+                  </div>
+                </div>
+              `;
+
+              const collect = () => {
+                const options = { ...initial };
+                overlay.querySelectorAll("[data-field]").forEach((node) => {
+                  const key = node.getAttribute("data-field");
+                  if (!key) return;
+                  if (node instanceof HTMLInputElement && node.type === "checkbox") {
+                    options[key] = !!node.checked;
+                  } else if (node instanceof HTMLSelectElement) {
+                    options[key] = node.value || options[key];
+                  }
+                });
+                return options;
+              };
+
+              overlay.querySelectorAll("select[data-field]").forEach((select) => {
+                const key = select.getAttribute("data-field");
+                if (!key) return;
+                if (initial[key]) select.value = initial[key];
+              });
+              const skipEl = overlay.querySelector("input[data-field='skip_errors']");
+              if (skipEl instanceof HTMLInputElement) {
+                skipEl.checked = !!initial.skip_errors;
+              }
+
+              const close = (result) => {
+                overlay.remove();
+                resolve(result);
+              };
+
+              overlay.querySelector("[data-role='close']")?.addEventListener("click", () => close(null));
+              overlay.querySelector("[data-role='cancel']")?.addEventListener("click", () => close(null));
+              overlay.querySelector("[data-role='confirm']")?.addEventListener("click", () => close(collect()));
+              overlay.addEventListener("click", (event) => {
+                if (event.target === overlay) close(null);
+              });
+              document.body.appendChild(overlay);
+            });
+          }
+
+          function createComplexImportProgressDialog() {
+            const overlay = document.createElement("div");
+            overlay.className = "fixed inset-0 z-[1250] bg-scrim flex items-center justify-center p-4";
+            overlay.innerHTML = `
+              <div class="bg-surface-1 w-full max-w-md rounded-xl shadow-xl border border-border-subtle p-5 flex flex-col gap-3">
+                <p class="text-lg font-bold text-text-main">Импорт комплексов</p>
+                <p class="text-sm text-text-secondary" data-role="status">Подготовка...</p>
+                <div class="h-2 rounded-full bg-bg-tertiary overflow-hidden">
+                  <div data-role="bar" class="h-2 bg-primary transition-all" style="width:0%"></div>
+                </div>
+              </div>
+            `;
+            document.body.appendChild(overlay);
+            const statusEl = overlay.querySelector("[data-role='status']");
+            const barEl = overlay.querySelector("[data-role='bar']");
+            return {
+              update(progressMsg) {
+                if (!progressMsg || typeof progressMsg !== "object") return;
+                const text = progressMsg.status || "Выполняется...";
+                if (statusEl) statusEl.textContent = text;
+                const total = Number(progressMsg.total || 0);
+                const current = Number(progressMsg.current || 0);
+                if (barEl && total > 0) {
+                  const pct = Math.max(0, Math.min(100, Math.round((current / total) * 100)));
+                  barEl.style.width = `${pct}%`;
+                }
+              },
+              close() {
+                overlay.remove();
+              },
+            };
+          }
+
+          async function readComplexImportNdjson(confirmResp, onProgress) {
+            const decoder = new TextDecoder();
+            let buffer = "";
+            let finalResult = null;
+
+            const handleLine = (line) => {
+              if (!line) return;
+              let msg = null;
+              try {
+                msg = JSON.parse(line);
+              } catch (_) {
+                return;
+              }
+              if (!msg || typeof msg !== "object") return;
+              if (msg.type === "progress") {
+                onProgress(msg);
+                return;
+              }
+              if (msg.type === "error") {
+                throw new Error(msg.error || "complex_import_failed");
+              }
+              if (msg.type === "result") {
+                finalResult = msg.data || null;
+              }
+            };
+
+            if (confirmResp.body && typeof confirmResp.body.getReader === "function") {
+              const reader = confirmResp.body.getReader();
+              while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const lines = buffer.split("\n");
+                buffer = lines.pop() || "";
+                for (const line of lines) handleLine(line.trim());
+              }
+              const tail = buffer.trim();
+              if (tail) handleLine(tail);
+            } else {
+              const text = await confirmResp.text();
+              text
+                .split("\n")
+                .map((line) => line.trim())
+                .filter((line) => line.length > 0)
+                .forEach(handleLine);
+            }
+            return finalResult;
+          }
+
+          async function importComplexArchiveFile(file, options) {
+            if (!file) return;
+
+            const checkForm = new FormData();
+            checkForm.append("file", file);
+            const checkResp = await fetch("/api/complexes/import/check", {
+              method: "POST",
+              body: checkForm,
+            });
+            const checkData = await checkResp.json();
+            if (!checkResp.ok || !checkData.ok) {
+              throw new Error(checkData.error || "complex_import_check_failed");
+            }
+
+            const summary = checkData.summary || {};
+            const proceed = await NotificationUI.confirm({
+              title: "Импорт комплексов",
+              message:
+                `Найдено комплексов: ${summary.total || 0}\n` +
+                `Конфликтов: ${summary.conflicts || 0}\n` +
+                `Ошибок: ${summary.errors || 0}\n\n` +
+                "Продолжить импорт?",
+              confirmText: "Импортировать",
+              cancelText: "Отмена",
+              variant: "primary",
+            });
+            if (!proceed) return;
+
+            const confirmForm = new FormData();
+            confirmForm.append("cache_id", checkData.cache_id || "");
+            confirmForm.append("complex_conflict_resolution", options.complex_conflict_resolution || "new_id");
+            confirmForm.append("task_conflict_resolution", options.task_conflict_resolution || "skip");
+            confirmForm.append(
+              "theory_conflict_resolution",
+              options.theory_conflict_resolution || "reuse_if_same_hash"
+            );
+            confirmForm.append("atomic_mode", options.atomic_mode || "bundle");
+            confirmForm.append("skip_errors", options.skip_errors ? "true" : "false");
+
+            const confirmResp = await fetch("/api/complexes/import/confirm", {
+              method: "POST",
+              body: confirmForm,
+            });
+            if (!confirmResp.ok) {
+              throw new Error("complex_import_confirm_failed");
+            }
+
+            const progressDialog = createComplexImportProgressDialog();
+            let resultData = null;
+            try {
+              resultData = await readComplexImportNdjson(confirmResp, (msg) => {
+                progressDialog.update(msg);
+              });
+            } finally {
+              progressDialog.close();
+            }
+            if (!resultData || !resultData.ok) {
+              throw new Error((resultData && (resultData.error_message || resultData.error)) || "complex_import_failed");
+            }
+            return resultData;
+          }
+
+          function chooseComplexImportFile() {
+            openComplexImportSettingsDialog({
+              complex_conflict_resolution: "new_id",
+              task_conflict_resolution: "skip",
+              theory_conflict_resolution: "reuse_if_same_hash",
+              atomic_mode: "bundle",
+              skip_errors: false,
+            }).then((options) => {
+              if (!options) return;
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = ".zip";
+              input.style.display = "none";
+              input.addEventListener("change", async () => {
+                const file = input.files && input.files[0] ? input.files[0] : null;
+                if (!file) {
+                  input.remove();
+                  return;
+                }
+                try {
+                  await importComplexArchiveFile(file, options);
+                  NotificationUI.toast("Импорт завершен", "success");
+                  fetchComplexes();
+                } catch (err) {
+                  console.error("Complex import failed", err);
+                  NotificationUI.toast(`Ошибка импорта: ${err?.message || err}`, "error");
+                } finally {
+                  input.remove();
+                }
+              });
+              document.body.appendChild(input);
+              input.click();
+            });
+          }
+
+          function renderComplexesSkeleton(listEl, count = 4) {
+            const cards = Array.from({ length: count }, (_, index) => `
+              <div class="p-4 @container">
+                <div class="rounded-lg border border-border-subtle bg-surface-1 p-4 animate-pulse" style="animation-delay:${index * 0.04}s">
+                  <div class="h-6 w-1/3 rounded bg-bg-tertiary mb-2"></div>
+                  <div class="h-4 w-2/3 rounded bg-bg-tertiary mb-4"></div>
+                  <div class="h-4 w-1/2 rounded bg-bg-tertiary mb-6"></div>
+                  <div class="flex gap-2">
+                    <div class="h-10 w-24 rounded bg-bg-tertiary"></div>
+                    <div class="h-10 w-24 rounded bg-bg-tertiary"></div>
+                    <div class="h-10 w-24 rounded bg-bg-tertiary"></div>
+                  </div>
+                </div>
+              </div>
+            `);
+            listEl.innerHTML = cards.join("");
+          }
+
+          function scheduleComplexesSkeleton(listEl) {
+            if (complexesSkeletonTimer) {
+              clearTimeout(complexesSkeletonTimer);
+            }
+            complexesSkeletonTimer = setTimeout(() => {
+              if (!isComplexesLoading || hasLoadedComplexesOnce) return;
+              renderComplexesSkeleton(listEl);
+              complexesSkeletonTimer = null;
+            }, loadingRevealDelayMs);
+          }
+
+          function clearComplexesSkeletonTimer() {
+            if (!complexesSkeletonTimer) return;
+            clearTimeout(complexesSkeletonTimer);
+            complexesSkeletonTimer = null;
+          }
+
+          async function fetchComplexes() {
+            const listEl = document.getElementById("complexes-list");
+            const emptyEl = document.getElementById("empty-state");
+            const errorEl = document.getElementById("error-state");
+            if (!listEl) return;
+            isComplexesLoading = true;
+            if (!hasLoadedComplexesOnce) {
+              scheduleComplexesSkeleton(listEl);
+            }
+            if (emptyEl) emptyEl.hidden = true;
+            if (errorEl) errorEl.hidden = true;
+            try {
+              const [complexesResp, sessionsResp] = await Promise.all([
+                fetch("/api/complexes"),
+                fetch("/api/sessions/active"),
+              ]);
+              const data = await complexesResp.json();
+              let sessions = [];
+              try {
+                const s = await sessionsResp.json();
+                if (s && s.ok && Array.isArray(s.items)) sessions = s.items;
+              } catch (e) {
+                sessions = [];
+              }
+              if (!data.ok) {
+                listEl.innerHTML = "";
+                setComplexSelectionMode(false);
+                if (errorEl) errorEl.hidden = false;
+                return;
+              }
+              const items = Array.isArray(data.items) ? data.items : [];
+              renderedComplexIds = items
+                .map((complex) => normalizeComplexId(complex && complex.id))
+                .filter(Boolean);
+              const renderedIdSet = new Set(renderedComplexIds);
+              for (const selectedId of Array.from(selectedComplexes)) {
+                if (!renderedIdSet.has(selectedId)) {
+                  selectedComplexes.delete(selectedId);
+                }
+              }
+              // Calendar progress statuses (in_progress/frozen)
+              const statusByComplexId = new Map();
+              try {
+                const healthResp = await fetch("/api/calendar/health");
+                const healthData = await healthResp.json();
+                const ok = healthData && (healthData.success || healthData.ok);
+                if (ok && Array.isArray(healthData.complexes)) {
+                  for (const c of healthData.complexes) {
+                    if (c) {
+                      const id = normalizeComplexId(c.complex_id || c.id);
+                      if (id) {
+                        statusByComplexId.set(id, c.status);
+                      }
+                    }
+                  }
+                }
+              } catch (e) {
+                // If calendar is not available, statuses will not be shown
+              }
+              const pausedMap = new Map();
+              sessions.forEach((s) => {
+                const complexId = normalizeComplexId(s && s.complex_id);
+                if (complexId) {
+                  const existing = pausedMap.get(complexId);
+                  pausedMap.set(complexId, pickPreferredSession(existing, s));
+                }
+              });
+              if (items.length === 0) {
+                listEl.innerHTML = "";
+                setComplexSelectionMode(false);
+                if (emptyEl) emptyEl.hidden = false;
+                return;
+              }
+              listEl.innerHTML = "";
+              let renderIndex = 0;
+              for (const complex of items) {
+                const complexId = normalizeComplexId(complex.id);
+                const isSelected = selectedComplexes.has(complexId);
+                const card = document.createElement("div");
+                card.className = "p-4 @container cx-card";
+                card.style.animationDelay = `${renderIndex * 0.06}s`;
+                card.setAttribute("data-complex-card-id", complexId);
+                renderIndex += 1;
+                const adaptiveOn = complex.settings && complex.settings.adaptive_difficulty;
+                const tasksCount = Array.isArray(complex.tasks) ? complex.tasks.length : 0;
+                const pausedSession = pausedMap.get(complexId);
+                const isPaused = !!(pausedSession && pausedSession.paused);
+                const pausedAtLabel = formatPausedAt(pausedSession && pausedSession.paused_at);
+                const pausedProgress = pausedSession && typeof pausedSession.current_task_index === "number"
+                  ? pausedSession.current_task_index + 1
+                  : null;
+                const pausedTotal = pausedSession && typeof pausedSession.total_tasks === "number"
+                  ? pausedSession.total_tasks
+                  : null;
+                const pausedBadge = isPaused
+                  ? `<span class="inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
+                      <span class="material-symbols-outlined text-sm">pause</span> На паузе
+                    </span>`
+                  : "";
+                const pausedPercent = (isPaused && pausedProgress && pausedTotal && pausedTotal > 0)
+                  ? Math.round((pausedProgress / pausedTotal) * 100)
+                  : 0;
+                const pausedProgressBar = (isPaused && pausedProgress && pausedTotal)
+                  ? `<div class="mt-1 h-1.5 w-full max-w-[160px] rounded-full bg-bg-secondary">
+                       <div class="h-1.5 rounded-full bg-warning transition-all" style="width: ${pausedPercent}%"></div>
+                     </div>`
+                  : "";
+                const pausedInfo = isPaused
+                  ? `<p class="text-text-secondary text-sm font-medium leading-normal">
+                      ${pausedAtLabel ? `Пауза: ${pausedAtLabel}` : "Попытка на паузе"}
+                      ${(pausedProgress && pausedTotal) ? ` · Прогресс: ${pausedProgress}/${pausedTotal}` : ""}
+                    </p>
+                    ${pausedProgressBar}`
+                  : "";
+                const calendarStatus = statusByComplexId.get(complexId) || "new";
+                let statusBadge = "";
+                if (calendarStatus === "frozen") {
+                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
+                      <span class="material-symbols-outlined text-sm">ac_unit</span> Заморожен
+                    </span>`;
+                } else if (calendarStatus === "in_progress") {
+                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-success-lighter text-success-darker border border-success-light px-2 py-1 text-xs font-semibold">
+                        <span class="material-symbols-outlined text-sm">play_arrow</span> Активен
+                      </span>`;
+                } else if (calendarStatus === "mastered") {
+                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+                        <span class="material-symbols-outlined text-sm">school</span> Освоен
+                      </span>`;
+                } else {
+                  // New / Not Started
+                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-muted border border-border-subtle px-2 py-1 text-xs font-semibold">
+                        <span class="material-symbols-outlined text-sm">check_box_outline_blank</span> Не начат
+                      </span>`;
+                }
+                const canToggleFreeze = calendarStatus === "in_progress" || calendarStatus === "frozen";
+                const freezeBtnText = calendarStatus === "frozen" ? "Разморозить" : "Заморозить";
+                const freezeBtnIcon = calendarStatus === "frozen" ? "water_drop" : "ac_unit";
+                const freezeBtnClass = calendarStatus === "frozen"
+                  ? "freeze-toggle-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-success text-sm font-medium leading-normal hover:bg-success-light transition-colors gap-2"
+                  : "freeze-toggle-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2";
+                const freezeBtnHtml = canToggleFreeze
+                  ? `<button class="${freezeBtnClass}" data-complex-id="${complexId}" data-status="${calendarStatus}">
+                      <span class="material-symbols-outlined text-lg">${freezeBtnIcon}</span>
+                      <span class="truncate">${freezeBtnText}</span>
+                    </button>`
+                  : "";
+                const theoryLink = (complex && typeof complex.theory_link === "object") ? complex.theory_link : null;
+                const theoryId = theoryLink && typeof theoryLink.theory_id === "string" ? theoryLink.theory_id : "";
+                const hasTheory = !!(complex.has_theory || theoryId);
+                const theoryBadge = hasTheory
+                  ? `<span class="inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+                      <span class="material-symbols-outlined text-sm">menu_book</span> Теория
+                    </span>`
+                  : "";
+                const theoryButton = hasTheory
+                  ? `<button class="theory-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-2" data-theory-id="${theoryId}" data-complex-name="${escapeHtml(complex.name || "")}">
+                      <span class="material-symbols-outlined text-lg">visibility</span>
+                      <span class="truncate">Теория</span>
+                    </button>`
+                  : "";
+                const tasksList = Array.isArray(complex.tasks) ? complex.tasks : [];
+                const taskTypeLabels = { test: 'Тест', click: 'Клик', draw: 'Рисование', sequence_assembly: 'Последовательность', open_answer: 'Открытый ответ' };
+                const detailRows = tasksList.map((t, i) => {
+                  const ref = typeof t === 'string' ? t : (t.task_ref || t.task_id || '');
+                  const parts = ref.split('/');
+                  const taskName = parts.length >= 3 ? parts[2] : ref;
+                  const typeBadge = t.type ? (taskTypeLabels[t.type] || t.type) : '';
+                  return `<div class="flex items-center justify-between py-1.5 px-2 text-sm ${i % 2 === 0 ? 'bg-surface-2' : ''} rounded">
+                    <span class="text-text-main truncate flex-1">${i + 1}. ${taskName}</span>
+                    ${typeBadge ? `<span class="text-xs text-text-muted ml-2">${typeBadge}</span>` : ''}
+                  </div>`;
+                }).join('');
+                card.innerHTML = `
+            <div data-complex-card-shell class="relative flex flex-col items-stretch justify-start rounded-lg shadow-sm bg-surface-1 border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : "border-border-subtle"} cx-card-inner">
+              <div data-complex-select-box class="absolute right-3 top-3 z-10 ${selectionMode ? "" : "hidden"}">
+                <input
+                  type="checkbox"
+                  class="complex-select-checkbox h-5 w-5 rounded border-border-strong text-primary focus:ring-primary"
+                  data-complex-id="${complexId}"
+                  ${isSelected ? "checked" : ""}
+                  aria-label="Выбрать комплекс"
+                >
+              </div>
+              <div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-4 p-4">
+                <div class="flex flex-col gap-1">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <p class="text-text-main text-lg font-bold leading-tight tracking-[-0.015em]">${complex.name || "Без названия"}</p>
+                    ${pausedBadge}
+                    ${statusBadge}
+                    ${theoryBadge}
+                  </div>
+                  <p class="text-text-secondary text-base font-normal leading-normal">${complex.description || "Нет описания"}</p>
+                  ${pausedInfo}
+                  <p class="text-text-secondary text-base font-normal leading-normal">Всего заданий: ${tasksCount} · Адаптивность: ${adaptiveOn ? "Вкл" : "Выкл"}</p>
+                </div>
+                <div class="flex justify-stretch border-t border-border-subtle pt-4">
+                  <div class="flex flex-1 gap-3 flex-wrap items-center">
+                    <button class="start-btn cx-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors" data-complex-id="${complexId}" ${isPaused ? `data-session-id="${pausedSession.session_id}"` : ""}>
+                      <span class="truncate">${isPaused ? "Продолжить" : "Запустить"}</span>
+                    </button>
+                    <button class="detail-toggle-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1" data-complex-id="${complexId}" title="Подробнее">
+                      <span class="material-symbols-outlined text-lg">expand_more</span>
+                      <span class="truncate">Подробнее</span>
+                    </button>
+                    ${theoryButton}
+                    <div class="flex-grow"></div>
+                    <button class="pin-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1" data-complex-id="${complexId}" title="Закрепить в быстром доступе">
+                      <span class="material-symbols-outlined text-lg">push_pin</span>
+                    </button>
+                    ${freezeBtnHtml}
+                    <button class="export-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${complexId}">
+                      <span class="material-symbols-outlined text-lg">download</span>
+                      <span class="truncate">Экспорт</span>
+                    </button>
+                    <button class="edit-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${complexId}">
+                      <span class="material-symbols-outlined text-lg">edit</span>
+                      <span class="truncate">Редактировать</span>
+                    </button>
+                    <button class="delete-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-error-text text-sm font-medium leading-normal hover:bg-error-lighter transition-colors gap-2" data-complex-id="${complexId}">
+                      <span class="material-symbols-outlined text-lg">delete</span>
+                      <span class="truncate">Удалить</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="detail-panel border-t border-border-subtle" data-detail-for="${complexId}">
+                <div class="p-4 max-h-[300px] overflow-y-auto">
+                  <p class="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Задания в комплексе (${tasksCount})</p>
+                  ${tasksCount > 0 ? `<div class="flex flex-col gap-0.5">${detailRows}</div>` : '<p class="text-sm text-text-muted">Нет заданий</p>'}
+                </div>
+              </div>
+            </div>
+          `;
+                listEl.appendChild(card);
+              }
+              attachActionHandlers();
+            } catch (err) {
+              console.error("Failed to load complexes", err);
+              listEl.innerHTML = "";
+              setComplexSelectionMode(false);
+              if (errorEl) errorEl.hidden = false;
+            } finally {
+              isComplexesLoading = false;
+              clearComplexesSkeletonTimer();
+              hasLoadedComplexesOnce = true;
+            }
+          }
+          function attachActionHandlers() {
+            const selectCheckboxes = document.querySelectorAll("input.complex-select-checkbox[data-complex-id]");
+            selectCheckboxes.forEach((checkbox) => {
+              checkbox.addEventListener("click", (event) => {
+                event.stopPropagation();
+                const complexId = checkbox.getAttribute("data-complex-id");
+                handleComplexSelection(complexId, checkbox.checked);
+              });
+            });
+
+            const selectableCards = document.querySelectorAll("[data-complex-card-id]");
+            selectableCards.forEach((card) => {
+              card.addEventListener("click", (event) => {
+                if (!selectionMode) return;
+                if (event.target.closest("button, a, input, label, [role='button']")) return;
+                const complexId = card.getAttribute("data-complex-card-id");
+                const checkbox = card.querySelector("input.complex-select-checkbox");
+                const nextChecked = checkbox ? !checkbox.checked : !selectedComplexes.has(normalizeComplexId(complexId));
+                handleComplexSelection(complexId, nextChecked);
+              });
+            });
+
+            const markRecent = async (complexId) => {
+              if (!complexId) return;
+              try {
+                await fetch("/api/ui/quick-access/recent", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ complex_id: complexId }),
+                });
+              } catch (e) {
+                // best-effort only
+              }
+            };
+
+            const startButtons = document.querySelectorAll("button.start-btn[data-complex-id]");
+            startButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                const sessionId = btn.getAttribute("data-session-id");
+                if (!complexId) return;
+                btn.setAttribute("disabled", "true");
+                try {
+                  if (sessionId) {
+                    await markRecent(complexId);
+                    window.navigateWithTransition(`/ui/session/${sessionId}`);
+                  } else {
+                    const resp = await fetch(`/api/session/${complexId}/start`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({}),
+                    });
+                    const data = await resp.json();
+
+                    if (resp.status === 409 && data.error === "paused_session_exists" && data.session_id) {
+                      const resume = await NotificationUI.confirm({
+                        title: 'Найдена сессия на паузе',
+                        message: 'Для этого комплекса уже есть сессия на паузе.\nПродолжить её или начать заново?',
+                        confirmText: 'Продолжить',
+                        cancelText: 'Начать заново',
+                        variant: 'primary'
+                      });
+                      if (resume) {
+                        await markRecent(complexId);
+                        window.navigateWithTransition(`/ui/session/${data.session_id}`);
+                      } else {
+                        const resp2 = await fetch(`/api/session/${complexId}/start`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ force: true }),
+                        });
+                        const data2 = await resp2.json();
+                        if (!data2.ok || !data2.session_id) {
+                          console.error("Failed to force-start session", data2);
+                          btn.removeAttribute("disabled");
+                          return;
+                        }
+                        await markRecent(complexId);
+                        window.navigateWithTransition(`/ui/session/${data2.session_id}`);
+                      }
+                      return;
+                    }
+
+                    if (!data.ok || !data.session_id) {
+                      console.error("Failed to start session", data);
+                      btn.removeAttribute("disabled");
+                      return;
+                    }
+                    const newSessionId = data.session_id;
+                    await markRecent(complexId);
+                    window.navigateWithTransition(`/ui/session/${newSessionId}`);
+                  }
+                } catch (err) {
+                  console.error("Error starting session", err);
+                  btn.removeAttribute("disabled");
+                }
+              });
+            });
+            const freezeToggleButtons = document.querySelectorAll("button.freeze-toggle-btn[data-complex-id]");
+            freezeToggleButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                const status = btn.getAttribute("data-status") || "new";
+                if (!complexId) return;
+                btn.setAttribute("disabled", "true");
+                try {
+                  if (status === "frozen") {
+                    const resp = await fetch(`/api/calendar/complex/${complexId}/unfreeze`, {
+                      method: "POST",
+                    });
+                    const data = await resp.json();
+                    if (!(data && (data.success || data.ok))) {
+                      console.error("Failed to unfreeze", data);
+                      btn.removeAttribute("disabled");
+                      return;
+                    }
+                  } else {
+                    const resp = await fetch(`/api/calendar/complex/${complexId}/freeze`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ days: 30 }),
+                    });
+                    const data = await resp.json();
+                    if (!(data && (data.success || data.ok))) {
+                      console.error("Failed to freeze", data);
+                      btn.removeAttribute("disabled");
+                      return;
+                    }
+                  }
+                  fetchComplexes();
+                } catch (err) {
+                  console.error("Error toggling freeze", err);
+                  btn.removeAttribute("disabled");
+                }
+              });
+            });
+            const exportButtons = document.querySelectorAll("button.export-btn[data-complex-id]");
+            exportButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                if (!complexId) return;
+                btn.setAttribute("disabled", "true");
+                try {
+                  await exportComplexArchive(complexId);
+                  NotificationUI.toast("Экспорт готов", "success");
+                } catch (err) {
+                  console.error("Complex export failed", err);
+                  NotificationUI.toast(`Ошибка экспорта: ${err?.message || err}`, "error");
+                } finally {
+                  btn.removeAttribute("disabled");
+                }
+              });
+            });
+            const editButtons = document.querySelectorAll("button.edit-btn[data-complex-id]");
+            editButtons.forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                if (complexId) {
+                  window.navigateWithTransition(`/ui/complexes/create?id=${complexId}`);
+                }
+              });
+            });
+            const deleteButtons = document.querySelectorAll("button.delete-btn[data-complex-id]");
+            deleteButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                if (!complexId) return;
+                const delConfirmed = await NotificationUI.confirm({
+                  title: 'Удалить комплекс?',
+                  message: 'Это действие нельзя отменить.',
+                  confirmText: 'Удалить',
+                  cancelText: 'Отмена',
+                  variant: 'error'
+                });
+                if (!delConfirmed) return;
+                btn.setAttribute("disabled", "true");
+                try {
+                  const resp = await fetch(`/api/complexes/${complexId}`, {
+                    method: "DELETE",
+                  });
+                  const data = await resp.json();
+                  if (!data.ok) {
+                    NotificationUI.toast(`Ошибка при удалении: ${data.error}`, 'error');
+                    btn.removeAttribute("disabled");
+                    return;
+                  }
+                  // Refresh list
+                  fetchComplexes();
+                } catch (err) {
+                  console.error("Error deleting complex", err);
+                  NotificationUI.toast('Не удалось удалить комплекс', 'error');
+                  btn.removeAttribute("disabled");
+                }
+              });
+            });
+            // Pin to quick access
+            const pinButtons = document.querySelectorAll("button.pin-btn[data-complex-id]");
+            pinButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                if (!complexId) return;
+                btn.setAttribute("disabled", "true");
+                try {
+                  const resp = await fetch("/api/ui/quick-access/pin", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ complex_id: complexId }),
+                  });
+                  const data = await resp.json();
+                  if (data.ok) {
+                    NotificationUI.toast('Комплекс закреплён в быстром доступе', 'success');
+                  } else {
+                    NotificationUI.toast('Не удалось закрепить', 'error');
+                  }
+                } catch (err) {
+                  NotificationUI.toast('Ошибка сети', 'error');
+                } finally {
+                  btn.removeAttribute("disabled");
+                }
+              });
+            });
+            // Detail toggle
+            const detailButtons = document.querySelectorAll("button.detail-toggle-btn[data-complex-id]");
+            detailButtons.forEach((btn) => {
+              btn.addEventListener("click", () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                const panel = document.querySelector(`[data-detail-for="${complexId}"]`);
+                if (!panel) return;
+                const isExpanded = panel.classList.contains("expanded");
+                panel.classList.toggle("expanded", !isExpanded);
+                const icon = btn.querySelector(".material-symbols-outlined");
+                if (icon) icon.textContent = !isExpanded ? "expand_less" : "expand_more";
+                const label = btn.querySelector(".truncate");
+                if (label) label.textContent = !isExpanded ? "Свернуть" : "Подробнее";
+              });
+            });
+
+            const theoryButtons = document.querySelectorAll("button.theory-btn[data-theory-id]");
+            theoryButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const theoryId = btn.getAttribute("data-theory-id");
+                const complexName = btn.getAttribute("data-complex-name") || "";
+                await openTheoryModal(complexName, theoryId);
+              });
+            });
+
+            syncComplexSelectionUi();
+          }
+          document.addEventListener("DOMContentLoaded", () => {
+            fetchComplexes();
+            const toggleSelectBtn = document.getElementById("toggle-select-complexes");
+            if (toggleSelectBtn) {
+              toggleSelectBtn.addEventListener("click", () => {
+                toggleComplexSelectionMode();
+              });
+            }
+            const selectAllBtn = document.getElementById("complex-select-all");
+            if (selectAllBtn) {
+              selectAllBtn.addEventListener("click", () => {
+                selectAllVisibleComplexes();
+              });
+            }
+            const exportSelectedBtn = document.getElementById("complex-export-selected");
+            if (exportSelectedBtn) {
+              exportSelectedBtn.addEventListener("click", async () => {
+                await exportSelectedComplexes();
+              });
+            }
+            const cancelSelectionBtn = document.getElementById("complex-selection-cancel");
+            if (cancelSelectionBtn) {
+              cancelSelectionBtn.addEventListener("click", () => {
+                cancelComplexSelection();
+              });
+            }
+            const createBtn = document.getElementById("create-complex");
+            if (createBtn) {
+              createBtn.addEventListener("click", () => {
+                window.navigateWithTransition("/ui/complexes/create");
+              });
+            }
+            const importBtn = document.getElementById("import-complexes");
+            if (importBtn) {
+              importBtn.addEventListener("click", () => {
+                chooseComplexImportFile();
+              });
+            }
+            const emptyCreateBtns = document.querySelectorAll("#empty-state button");
+            emptyCreateBtns.forEach((btn) => {
+              btn.addEventListener("click", () => {
+                window.navigateWithTransition("/ui/complexes/create");
+              });
+            });
+            const retryButton = document.getElementById("retry-load");
+            if (retryButton) {
+              retryButton.addEventListener("click", () => {
+                fetchComplexes();
+              });
+            }
+            // Back button navigation
+            const backButton = document.getElementById("back-button");
+            if (backButton) {
+              backButton.addEventListener("click", () => {
+                window.navigateWithTransition("/ui/main");
+              });
+            }
+            // Breadcrumb home navigation
+            const breadcrumbHome = document.getElementById("breadcrumb-home");
+            if (breadcrumbHome) {
+              breadcrumbHome.addEventListener("click", () => {
+                window.navigateWithTransition("/ui/main");
+              });
+            }
+            syncComplexSelectionUi();
+          });
+        </script>
+
+        <script src="../assets/NotificationUI.js"></script>
+<script src="../assets/ThemeSwitcherUI.js"></script>
+<script src="../assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

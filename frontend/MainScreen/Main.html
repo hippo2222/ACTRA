@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="../assets/ThemeManager.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>ACTRA — Главная</title>
+    <style>
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-border-normal);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-border-strong);
+        }
+
+        .modal {
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease-in-out;
+        }
+
+        .modal.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .interactive-card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .interactive-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .interactive-card:active {
+            transform: translateY(0) scale(0.99);
+        }
+
+        /* Page content entrance */
+        .main-page-enter {
+            animation: a-slide-up 0.45s ease-out both;
+        }
+
+        /* Stagger for sidebar cards */
+        .main-side-enter {
+            animation: a-slide-up 0.4s ease-out both;
+        }
+        .main-side-enter:nth-child(1) { animation-delay: 0.08s; }
+        .main-side-enter:nth-child(2) { animation-delay: 0.16s; }
+    </style>
+
+    <link href="/assets/fonts.css" rel="stylesheet" />
+    <link href="/assets/tailwind.css" rel="stylesheet" />
+    <link href="/assets/lightB-variables.css" rel="stylesheet" />
+    <link href="/assets/lightB-components.css" rel="stylesheet" />
+    <link href="/assets/animations.css" rel="stylesheet" />
+</head>
+
+<body class="bg-bg-main font-display text-text-main antialiased selection:bg-primary selection:text-primary-fg">
+    <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+        <header
+            class="sticky top-0 flex flex-none items-center justify-between whitespace-nowrap border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-3 z-50">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-4 text-text-main">
+                    <span class="brand-logo w-12 h-12" style="color:var(--color-primary)" aria-hidden="true"></span>
+                    <h2 class="text-text-main text-2xl font-black leading-tight tracking-wide uppercase">
+                        ACTRA</h2>
+                </div>
+                <div class="hidden md:block h-6 w-px bg-border-subtle"></div>
+                <a href="/ui/editor"
+                    class="hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">edit_document</span>
+                    Редактор заданий
+                </a>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="hidden md:flex items-center gap-2 text-sm text-text-muted" id="datetime-display">
+                    <span class="material-symbols-outlined text-lg">schedule</span>
+                    <span id="datetime-text">Загрузка...</span>
+                </div>
+                <button onclick="checkForAppUpdates(true)"
+                    class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95"
+                    title="Проверить обновления">
+                    <span class="material-symbols-outlined text-[20px]">system_update</span>
+                    <span class="hidden lg:inline">Обновления</span>
+                </button>
+                <button onclick="openFeedbackModal()"
+                    class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">feedback</span>
+                    <span class="hidden lg:inline">Обратная связь</span>
+                </button>
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
+                    onclick="openProfileModal()">
+                    <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
+                    <span class="text-text-main text-sm font-medium hidden sm:inline" id="headerUserName">Загрузка...</span>
+                </div>
+            </div>
+        </header>
+        <div id="appUpdateNotice"
+            class="hidden border-b border-border-strong bg-surface-2 px-4 py-2 md:px-6">
+            <div class="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-3">
+                <p id="appUpdateNoticeText" class="text-sm text-text-main"></p>
+                <a id="appUpdateNoticeLink" class="hidden text-sm font-semibold text-primary hover:underline" target="_blank" rel="noopener">Скачать</a>
+            </div>
+        </div>
+
+        <main class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-5 flex justify-center">
+            <div class="w-full max-w-[1280px] flex flex-col gap-4 main-page-enter"
+                style="transform-origin: top center;">
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+                    <div class="lg:col-span-8 flex flex-col gap-6">
+                        <div class="flex flex-col gap-5">
+                            <div class="interactive-card relative overflow-hidden rounded-2xl bg-surface-1 border border-border-strong shadow-md group cursor-pointer h-64 flex flex-col md:flex-row"
+                                role="link" tabindex="0" data-nav="/ui/complexes">
+                                <div class="w-full md:w-5/12 h-48 md:h-full bg-cover bg-center relative"
+                                    style="background-image: url('/assets/images/dashboard/main_training_bg.jpg');">
+                                    <div
+                                        class="absolute inset-0 bg-scrim-light transition-all duration-300 group-hover:bg-transparent">
+                                    </div>
+                                </div>
+                                <div class="p-6 md:p-8 flex flex-col justify-center flex-1 relative bg-surface-1">
+                                    <div class="mb-4">
+                                        <span
+                                            class="inline-flex items-center rounded-md bg-bg-secondary px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-inset ring-primary-light mb-3 tracking-wide uppercase">Основное
+                                            обучение</span>
+                                        <h3
+                                            class="text-2xl font-extrabold text-text-main mb-2 group-hover:text-primary transition-colors">
+                                            Проходить комплексы</h3>
+                                        <p class="text-text-secondary text-base leading-normal">Начните
+                                            тренировку с готовыми комплексами. Анализируйте снимки и ставьте диагнозы в
+                                            реальном времени.</p>
+                                    </div>
+                                    <button
+                                        class="flex w-fit items-center gap-2.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-fg shadow-lg shadow-primary-light hover:bg-primary-hover hover:shadow-primary-light hover:-translate-y-0.5 transition-all duration-200"
+                                        data-nav="/ui/complexes">
+                                        <span class="material-symbols-outlined text-[20px]">play_arrow</span>
+                                        Начать тренировку
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="interactive-card rounded-xl bg-surface-2 border border-border-strong p-6 md:p-7 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 cursor-pointer group hover:bg-surface-1 transition-colors"
+                                role="link" tabindex="0" data-nav="/ui/complexes/create">
+                                <div class="flex items-start gap-5">
+                                    <div
+                                        class="flex h-14 w-14 flex-none items-center justify-center rounded-xl bg-surface-1 text-primary shadow-sm group-hover:scale-110 transition-transform duration-200">
+                                        <span class="material-symbols-outlined text-[28px]">edit_document</span>
+                                    </div>
+                                    <div>
+                                        <h3
+                                            class="text-xl font-bold text-text-main group-hover:text-primary transition-colors">
+                                            Редактор комплексов</h3>
+                                        <p class="text-text-secondary mt-1">Создавайте и управляйте
+                                            собственными учебными материалами.</p>
+                                    </div>
+                                </div><button
+                                    class="flex items-center gap-2 whitespace-nowrap rounded-lg border border-border-strong bg-surface-1 px-5 py-2.5 text-sm font-semibold text-text-main hover:bg-surface-2 hover:text-primary transition-all"
+                                    data-nav="/ui/complexes/create">Открыть редактор <span
+                                        class="material-symbols-outlined text-[18px]">arrow_forward</span></button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-4">
+                            <div class="flex items-center justify-between">
+                                <h3 class="text-lg font-bold text-text-main flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-text-muted">history</span>Быстрый доступ
+                                </h3><button
+                                    class="text-sm font-medium text-text-main hover:text-primary-hover hover:underline transition-colors"
+                                    onclick="window.navigateWithTransition('/ui/complexes')">Показать
+                                    все</button>
+                            </div>
+                            <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm divide-y divide-border-subtle overflow-hidden"
+                                id="quick-access-list"></div>
+                            <div class="bg-surface-1 rounded-xl border border-dashed border-border-subtle p-6 text-center"
+                                id="quick-access-empty" hidden>
+                                <div class="flex flex-col items-center gap-2"><span
+                                        class="material-symbols-outlined text-text-muted">bookmark</span>
+                                    <div class="text-sm font-semibold text-text-main">Пока нет
+                                        быстрых комплексов</div>
+                                    <div class="text-xs text-text-secondary">Закрепляйте комплексы или
+                                        откройте любой комплекс — он появится здесь.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-4 flex flex-col gap-4">
+                        <div class="bg-surface-1 rounded-xl shadow-sm border border-border-strong p-4 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
+                            id="calendarCard" role="link" tabindex="0" data-nav="/ui/calendar">
+                            <!-- Header with Streak -->
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-bold text-text-main flex items-center gap-2"><span
+                                        class="material-symbols-outlined text-primary text-[20px]">calendar_month</span>Календарь
+                                </h3>
+                                <div class="flex items-center gap-1 px-2 py-0.5 bg-primary-lighter rounded-full"
+                                    id="calendarStreak"><span
+                                        class="material-symbols-outlined text-primary text-[14px]">local_fire_department</span><span
+                                        class="text-[11px] font-bold text-text-main" id="calendarStreakDays">0</span>
+                                </div>
+                            </div>
+                            <!-- Loading State -->
+                            <div id="calendarLoadingState"
+                                class="flex-1 flex flex-col items-center justify-center py-4 gap-2">
+                                <div class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary"></div>
+                                <p class="text-[10px] text-text-muted">Загрузка...</p>
+                            </div>
+                            <!-- Empty State (shown when no data) -->
+                            <div id="calendarEmptyState"
+                                class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center"><span
+                                    class="material-symbols-outlined text-border-strong text-[32px] mb-2">event_available</span>
+                                <p class="text-sm font-medium text-text-muted">Начните
+                                    обучение</p>
+                                <p class="text-[10px] text-text-muted mt-1">Здесь появится
+                                    ваш план на день</p>
+                            </div>
+                            <!-- Content State (shown when has data) -->
+                            <div id="calendarContentState" class="hidden flex-col gap-2">
+                                <!-- Today's Recipe Summary -->
+                                <div
+                                    class="bg-gradient-to-r from-primary-lighter to-accent-lighter rounded-lg p-2.5 border border-primary-light">
+                                    <div class="flex items-center justify-between" id="calendarDailyMixContainer">
+                                        <div class="flex items-center gap-2"><span
+                                                class="material-symbols-outlined text-primary text-[16px]">cached</span><span
+                                                class="text-[11px] font-bold text-primary uppercase tracking-wider">Daily
+                                                Mix</span></div>
+                                        <div class="flex items-center gap-2">
+                                            <div id="calendarDailyMixCount" class="flex items-center gap-1">
+                                                <span class="text-sm font-black text-text-main">0</span><span
+                                                    class="text-[10px] text-text-muted">задач</span>
+                                            </div><span class="text-[10px] text-border-strong">•</span><span
+                                                class="text-[10px] text-text-muted" id="calendarDailyMixTime">~0
+                                                мин</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Mini Heatmap (14 days) - using inline grid style -->
+                                <div class="flex gap-[3px] justify-center" id="calendar-mini-heatmap">
+                                    <!-- Mini heatmap squares rendered by JS -->
+                                </div>
+                                <!-- Health Summary (Critical Complexes) -->
+                                <div class="flex flex-col gap-1" id="calendarHealthList">
+                                    <!-- Health items rendered by JS -->
+                                </div>
+                            </div>
+                            <!-- CTA Footer -->
+                            <div class="mt-auto pt-2 border-t border-border-subtle">
+                                <button
+                                    class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-primary-fg text-xs font-bold py-2 px-3 rounded-lg transition-all shadow-sm shadow-primary-light"
+                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/calendar');"><span
+                                        class="material-symbols-outlined text-[16px]">arrow_forward</span>Открыть
+                                    календарь </button>
+                            </div>
+                        </div><a href="/ui/statistics"
+                            class="block bg-surface-1 rounded-xl shadow-sm border border-border-strong p-4 interactive-card cursor-pointer hover:border-primary hover:shadow-md transition-all main-side-enter"
+                            id="statsCard">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="font-bold text-text-main flex items-center gap-2"><span
+                                        class="material-symbols-outlined text-accent text-[20px]">bar_chart</span>Статистика
+                                </h3>
+                                <div class="flex bg-bg-secondary rounded-lg p-0.5" onclick="event.preventDefault()">
+                                    <button
+                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
+                                        onclick="selectStatsPeriod(1, this)" id="btnPeriod1">1д</button><button
+                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
+                                        onclick="selectStatsPeriod(7, this)" id="btnPeriod7">7д</button><button
+                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
+                                        onclick="selectStatsPeriod(30, this)" id="btnPeriod30">30д</button><button
+                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
+                                        onclick="selectStatsPeriod(0, this)" id="btnPeriod0">Все</button>
+                                </div>
+                            </div>
+                            <div class="space-y-2 transition-all duration-300 ease-in-out" id="statsContent">
+                                <div class="flex items-center justify-between p-2 bg-surface-2 rounded-lg">
+                                    <div class="flex flex-col"><span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Пройдено
+                                            заданий</span><span class="text-lg font-black text-text-main"
+                                            id="statSolvedTasks">0</span></div>
+                                    <div class="text-xs text-text-secondary">из <span id="statTotalAvailable">0</span></div>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-surface-2 rounded-lg">
+                                    <div class="flex flex-col"><span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Успешность</span><span
+                                            class="text-lg font-black text-text-main" id="statSuccessRate">0%</span>
+                                    </div><span
+                                        class="material-symbols-outlined text-success text-[24px]">verified</span>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-surface-2 rounded-lg">
+                                    <div class="flex flex-col"><span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Время</span><span
+                                            class="text-lg font-black text-text-main" id="statTimeSpent">0ч 0м</span>
+                                    </div><span class="material-symbols-outlined text-info text-[24px]">schedule</span>
+                                </div>
+                                <div class="flex items-center justify-between p-2 bg-surface-2 rounded-lg">
+                                    <div class="flex flex-col"><span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Комплексов
+                                            сегодня</span><span class="text-lg font-black text-text-main"
+                                            id="statTodayCount">0</span></div><span
+                                        class="material-symbols-outlined text-warning text-[24px]">task_alt</span>
+                                </div>
+                            </div>
+                            <!-- Loading Skeleton -->
+                            <div id="statsSkeleton" class="space-y-2 hidden">
+                                <div
+                                    class="flex items-center justify-between p-2 bg-surface-2 rounded-lg animate-pulse">
+                                    <div class="flex flex-col gap-1.5 flex-1">
+                                        <div class="h-2 bg-border-subtle rounded w-20"></div>
+                                        <div class="h-4 bg-border-strong rounded w-12"></div>
+                                    </div>
+                                    <div class="h-4 w-4 bg-border-subtle rounded"></div>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between p-2 bg-surface-2 rounded-lg animate-pulse">
+                                    <div class="flex flex-col gap-1.5 flex-1">
+                                        <div class="h-2 bg-border-subtle rounded w-16"></div>
+                                        <div class="h-4 bg-border-strong rounded w-10"></div>
+                                    </div>
+                                    <div class="h-6 w-6 bg-border-subtle rounded-full"></div>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between p-2 bg-surface-2 rounded-lg animate-pulse">
+                                    <div class="flex flex-col gap-1.5 flex-1">
+                                        <div class="h-2 bg-border-subtle rounded w-12"></div>
+                                        <div class="h-4 bg-border-subtle rounded w-14"></div>
+                                    </div>
+                                    <div class="h-6 w-6 bg-border-subtle rounded-full"></div>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between p-2 bg-surface-2 rounded-lg animate-pulse">
+                                    <div class="flex flex-col gap-1.5 flex-1">
+                                        <div class="h-2 bg-border-subtle rounded w-24"></div>
+                                        <div class="h-4 bg-border-subtle rounded w-8"></div>
+                                    </div>
+                                    <div class="h-6 w-6 bg-border-subtle rounded-full"></div>
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-2 border-t border-border-subtle text-center"><span
+                                    class="text-sm font-semibold text-primary flex items-center justify-center gap-1 w-full">Подробная
+                                    статистика <span
+                                        class="material-symbols-outlined text-[16px]">arrow_forward</span></span>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <!-- Profile Management Modal -->
+    <div class="modal fixed inset-0 z-[60] flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4"
+        id="profileModal">
+        <div
+            class="w-full max-w-lg transform rounded-3xl bg-surface-1 p-0 shadow-2xl transition-all border border-border-subtle overflow-hidden">
+            <div class="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-2">
+                <div class="flex items-center gap-3">
+                    <h3 class="text-xl font-black text-text-main">Профили</h3>
+                </div><button onclick="document.getElementById('profileModal').classList.remove('open')"
+                    class="size-8 flex items-center justify-center rounded-full hover:bg-surface-2 transition-colors"><span
+                        class="material-symbols-outlined text-text-muted">close</span></button>
+            </div>
+            <div class="p-6 max-h-[400px] overflow-y-auto space-y-3" id="profilesList">
+                <!-- User cards -->
+            </div>
+            <div class="p-6 border-t border-border-subtle bg-surface-2">
+                <p class="text-[10px] font-bold text-text-secondary uppercase tracking-widest mb-3">Создать новый профиль
+                </p>
+                <div class="space-y-3">
+                    <div class="flex gap-2">
+                        <input type="text" id="newUserName" placeholder="Введите имя..."
+                            class="flex-1 bg-surface-1 border border-border-strong rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-text-secondary"
+                            onkeydown="if(event.key==='Enter'){event.preventDefault();createNewProfile()}">
+                        <button id="createProfileBtn"
+                            onclick="createNewProfile()"
+                            class="bg-primary hover:bg-primary-hover text-primary-fg px-5 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            disabled>
+                            <span class="material-symbols-outlined text-[18px]">person_add</span>Создать
+                        </button>
+                    </div>
+
+                    <div class="rounded-xl border border-border-subtle bg-surface-1 p-3">
+                        <p class="text-[11px] font-semibold text-text-secondary mb-2">
+                            Для создания профиля подтвердите согласие:
+                        </p>
+                        <label class="flex items-start gap-2 text-xs text-text-main mb-2 cursor-pointer">
+                            <input type="checkbox" id="newProfileAcceptTerms"
+                                class="mt-0.5 rounded text-primary focus:ring-primary"
+                                onchange="updateNewProfileConsentState()">
+                            <span>
+                                Я принимаю
+                                <button type="button" class="text-primary hover:underline font-semibold"
+                                    onclick="openMainLegalDocument('terms'); return false;">Условия пользования</button>
+                            </span>
+                        </label>
+                        <label class="flex items-start gap-2 text-xs text-text-main cursor-pointer">
+                            <input type="checkbox" id="newProfileAcceptPrivacy"
+                                class="mt-0.5 rounded text-primary focus:ring-primary"
+                                onchange="updateNewProfileConsentState()">
+                            <span>
+                                Я ознакомился(ась) с
+                                <button type="button" class="text-primary hover:underline font-semibold"
+                                    onclick="openMainLegalDocument('privacy'); return false;">Политикой приватности</button>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Profile Edit Modal -->
+    <div class="modal fixed inset-0 z-[70] flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4"
+        id="editProfileModal">
+        <div
+            class="w-full max-w-lg transform rounded-3xl bg-surface-1 p-0 shadow-2xl transition-all border border-border-subtle overflow-hidden">
+            <div class="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-2">
+                <h3 class="text-xl font-black text-text-main">Редактировать профиль</h3><button
+                    onclick="document.getElementById('editProfileModal').classList.remove('open')"
+                    class="size-8 flex items-center justify-center rounded-full hover:bg-surface-2 transition-colors"><span
+                        class="material-symbols-outlined text-text-muted">close</span></button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="flex items-center gap-6 mb-2"><img id="editAvatarPreview" src=""
+                        class="w-20 h-20 rounded-2xl bg-surface-2 object-cover shadow-inner border-2 border-primary">
+                    <div class="flex-1 space-y-2"><label
+                            class="block text-[10px] font-black text-text-muted uppercase tracking-widest">Имя
+                            профиля</label><input type="text" id="editName"
+                            class="w-full bg-surface-2 border border-border-strong rounded-xl px-4 py-2.5 text-sm font-bold focus:ring-2 focus:ring-primary outline-none transition-all">
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between"><label
+                            class="block text-[10px] font-black text-text-muted uppercase tracking-widest">Выбор
+                            аватара</label></div>
+                    <div id="avatarGallery"
+                        class="grid grid-cols-4 sm:grid-cols-5 gap-2 max-h-[160px] overflow-y-auto p-2 bg-surface-2 rounded-2xl border border-border-subtle">
+                        <!-- Avatars loaded via JS -->
+                    </div><input type="hidden" id="editAvatarSeed">
+                </div>
+                <div class="pt-2"><label
+                        class="block text-[10px] font-black text-text-muted uppercase tracking-widest mb-2">Безопасность</label>
+                    <div class="bg-surface-2 rounded-2xl p-4 border border-border-subtle space-y-3">
+                        <form onsubmit="return false;"><input type="password" id="editPassword"
+                                placeholder="Новый пароль..."
+                                class="w-full bg-surface-1 border border-border-strong rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary outline-none mb-3">
+                        </form>
+                        <div class="space-y-2"><label class="flex items-center gap-3 cursor-pointer group"><input
+                                    type="checkbox" id="requirePassLogin"
+                                    class="rounded text-primary focus:ring-primary"><span
+                                    class="text-xs font-medium text-text-secondary">Пароль при
+                                    входе</span></label><label
+                                class="flex items-center gap-3 cursor-pointer group"><input type="checkbox"
+                                    id="requirePassEdit" class="rounded text-primary focus:ring-primary"><span
+                                    class="text-xs font-medium text-text-secondary">Пароль при
+                                    редактировании</span></label></div>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6 border-t border-border-subtle flex justify-between gap-3 bg-surface-1">
+                <button onclick="confirmDeleteProfile()"
+                    class="px-6 py-2.5 rounded-xl text-sm font-bold text-status-error hover:bg-surface-2 transition-all flex items-center gap-2"><span
+                        class="material-symbols-outlined text-[18px]">delete</span>Удалить </button>
+                <div class="flex gap-3"><button
+                        onclick="document.getElementById('editProfileModal').classList.remove('open')"
+                        class="px-6 py-2.5 rounded-xl text-sm font-bold text-text-muted hover:bg-surface-2 transition-all">Отмена
+                    </button><button onclick="saveProfileChanges()"
+                        class="bg-primary hover:bg-primary-hover text-primary-fg px-8 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-primary-light transition-all">Сохранить
+                    </button></div>
+            </div>
+        </div>
+    </div>
+    <!-- Password Prompt Modal -->
+    <div class="modal fixed inset-0 z-[80] flex items-center justify-center bg-scrim-intense backdrop-blur-lg p-4"
+        id="passwordPromptModal">
+        <div class="w-full max-w-sm transform rounded-3xl bg-surface-1 p-8 shadow-2xl border border-border-subtle">
+            <div class="text-center mb-6">
+                <div class="size-16 bg-primary-lighter rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span class="material-symbols-outlined text-primary text-3xl">lock</span>
+                </div>
+                <h3 class="text-xl font-bold text-text-main" id="passPromptTitle">Вход в
+                    профиль</h3>
+                <p class="text-xs text-text-muted mt-2">Введите пароль для продолжения</p>
+            </div>
+            <form onsubmit="event.preventDefault();submitPasswordPrompt()"><input type="password" id="promptPasswordInput" placeholder="Ваш пароль..."
+                    class="w-full bg-surface-2 border border-border-strong rounded-xl px-5 py-3 text-center text-lg focus:ring-2 focus:ring-primary outline-none mb-4">
+            </form>
+            <div class="flex flex-col gap-2"><button onclick="submitPasswordPrompt()"
+                    class="w-full bg-primary hover:bg-primary-hover text-primary-fg py-3 rounded-xl font-bold shadow-lg transition-all">Подтвердить</button><button
+                    onclick="closePasswordPrompt()"
+                    class="w-full py-2 text-text-muted text-sm hover:text-text-main transition-all">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Feedback Modal -->
+    <div class="modal fixed inset-0 z-[85] flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4"
+        id="feedbackModal">
+        <div
+            class="w-full max-w-xl transform rounded-3xl bg-surface-1 p-0 shadow-2xl border border-border-subtle overflow-hidden">
+            <div class="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-2">
+                <div>
+                    <h3 class="text-xl font-black text-text-main">Обратная связь</h3>
+                    <p class="text-xs text-text-secondary mt-1">Сообщение разработчику: баг, идея или предложение.</p>
+                </div>
+                <button onclick="closeFeedbackModal()"
+                    class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
+                    <span class="material-symbols-outlined text-text-muted">close</span>
+                </button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Тип</span>
+                        <select id="feedbackType"
+                            class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
+                            <option value="bug">Баг</option>
+                            <option value="idea">Идея</option>
+                            <option value="improvement">Улучшение</option>
+                            <option value="question">Вопрос</option>
+                        </select>
+                    </label>
+                    <label class="flex flex-col gap-1.5">
+                        <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Критичность</span>
+                        <select id="feedbackSeverity"
+                            class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
+                            <option value="medium">Средняя</option>
+                            <option value="low">Низкая</option>
+                            <option value="high">Высокая</option>
+                            <option value="critical">Критичная</option>
+                        </select>
+                    </label>
+                </div>
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Тема</span>
+                    <input id="feedbackTitle" type="text" maxlength="180" placeholder="Кратко опишите суть"
+                        class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
+                </label>
+                <label class="flex flex-col gap-1.5">
+                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Описание</span>
+                    <textarea id="feedbackDescription" rows="6" maxlength="10000"
+                        placeholder="Что произошло, как воспроизвести, что ожидали получить..."
+                        class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none resize-y placeholder:text-text-secondary"></textarea>
+                </label>
+                <label class="flex items-start gap-2 text-sm text-text-main cursor-pointer">
+                    <input type="checkbox" id="feedbackIncludeTechnical"
+                        class="mt-0.5 rounded text-primary focus:ring-primary">
+                    <span>Приложить технические данные (версия, платформа, user agent)</span>
+                </label>
+                <label class="flex items-start gap-2 text-sm text-text-main cursor-pointer">
+                    <input type="checkbox" id="feedbackIncludeLogs"
+                        class="mt-0.5 rounded text-primary focus:ring-primary">
+                    <span>Приложить фрагменты логов из папки <code>logs</code> (для разбора бага)</span>
+                </label>
+                <p id="feedbackNetworkStatus"
+                    class="hidden text-xs rounded-lg px-3 py-2 border border-border-strong bg-surface-2 text-text-secondary"></p>
+                <p id="feedbackError"
+                    class="hidden text-xs text-error bg-error/10 border border-error/20 rounded-lg px-3 py-2"></p>
+            </div>
+            <div class="p-6 border-t border-border-subtle bg-surface-2 flex justify-end gap-2">
+                <button onclick="closeFeedbackModal()"
+                    class="px-4 py-2 rounded-lg border border-border-strong text-text-secondary hover:bg-surface-1 transition-colors text-sm font-semibold">
+                    Отмена
+                </button>
+                <button id="feedbackSubmitBtn" onclick="submitFeedback()"
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                    Отправить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legal Document Modal -->
+    <div class="modal fixed inset-0 z-[95] flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4"
+        id="mainLegalDocModal">
+        <div class="w-full max-w-3xl rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
+                <div>
+                    <h3 id="mainLegalDocTitle" class="text-lg font-bold text-text-main">Документ</h3>
+                    <p id="mainLegalDocMeta" class="text-xs text-text-secondary mt-1"></p>
+                </div>
+                <button type="button" onclick="closeMainLegalDocument()"
+                    class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
+                    <span class="material-symbols-outlined text-text-muted">close</span>
+                </button>
+            </div>
+            <div class="p-5 max-h-[60vh] overflow-y-auto">
+                <pre id="mainLegalDocContent"
+                    class="whitespace-pre-wrap text-sm text-text-main leading-relaxed font-display"></pre>
+            </div>
+            <div class="px-5 py-3 border-t border-border-subtle bg-surface-2 flex justify-end">
+                <button type="button" onclick="closeMainLegalDocument()"
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                    Закрыть
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Consent Gate Modal -->
+    <div class="modal fixed inset-0 z-[90] flex items-center justify-center bg-scrim-strong backdrop-blur-md p-4"
+        id="mainConsentGateModal">
+        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-border-subtle bg-surface-2">
+                <h3 class="text-lg font-bold text-text-main">Требуется согласие с условиями</h3>
+                <p class="text-xs text-text-secondary mt-1">Перед продолжением подтвердите актуальные документы.</p>
+            </div>
+            <div class="p-5">
+                <div class="rounded-xl border border-border-subtle bg-surface-2 p-4 mb-4">
+                    <p class="text-xs text-text-secondary mb-2">Текущие версии:</p>
+                    <p id="mainConsentGateVersions" class="text-sm font-medium text-text-main"></p>
+                </div>
+                <label class="flex items-start gap-3 text-sm text-text-main mb-3 cursor-pointer">
+                    <input type="checkbox" id="mainConsentGateAcceptTerms"
+                        class="mt-0.5 rounded text-primary focus:ring-primary"
+                        onchange="updateMainConsentGateState()">
+                    <span>Я принимаю
+                        <button type="button" class="text-primary hover:underline font-semibold"
+                            onclick="openMainLegalDocument('terms'); return false;">Условия пользования</button>
+                    </span>
+                </label>
+                <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
+                    <input type="checkbox" id="mainConsentGateAcceptPrivacy"
+                        class="mt-0.5 rounded text-primary focus:ring-primary"
+                        onchange="updateMainConsentGateState()">
+                    <span>Я ознакомился(ась) с
+                        <button type="button" class="text-primary hover:underline font-semibold"
+                            onclick="openMainLegalDocument('privacy'); return false;">Политикой приватности</button>
+                    </span>
+                </label>
+                <p id="mainConsentGateError"
+                    class="hidden mt-3 text-xs text-error bg-error/10 border border-error/20 rounded-lg px-3 py-2"></p>
+            </div>
+            <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end gap-2">
+                <button type="button" onclick="cancelMainConsentGate()"
+                    class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold">
+                    Отмена
+                </button>
+                <button type="button" id="mainConsentGateSubmitBtn" onclick="submitMainConsentGate()"
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled>
+                    Подтвердить и продолжить
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/assets/NotificationUI.js"></script>
+    <script src="/assets/MainLogic.js"></script>
+    <script src="/assets/ThemeSwitcherUI.js"></script>
+    <script src="/assets/ConnectionMonitor.js"></script>
+</body>
+
+</html>

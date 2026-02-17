@@ -1,0 +1,30 @@
+{
+  "page": "S1 coverage",
+  "url": "http://127.0.0.1:8000/ui/session/session_user_bcfd2787d56d_1770387868.955934",
+  "combos": [],
+  "completionSeen": [],
+  "missing": [
+    "click|1",
+    "click|2",
+    "click|3",
+    "draw|1",
+    "draw|2",
+    "draw|3",
+    "test|1",
+    "test|2",
+    "test|3",
+    "sequence_assembly|1",
+    "sequence_assembly|2",
+    "sequence_assembly|3",
+    "open_answer|1",
+    "open_answer|2",
+    "open_answer|3"
+  ],
+  "log": [],
+  "diagnostics": {
+    "noTaskRetries": 6,
+    "lastPathname": "/ui/main",
+    "lastSessionId": null,
+    "breakReason": "task_not_available"
+  }
+}

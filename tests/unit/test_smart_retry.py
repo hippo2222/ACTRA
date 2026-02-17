@@ -1,0 +1,233 @@
+import pytest
+import unittest
+from unittest.mock import MagicMock, patch
+import json
+import logging
+import sys
+import os
+
+# Ensure desktop-app is in path (it should be via conftest logic, but let's be safe for direct run)
+# Ensure desktop-app is in path (it should be via conftest logic, but let's be safe for direct run)
+sys.path.append(os.path.join(os.getcwd(), 'desktop-app'))
+# Ensure root is in path for task_system
+sys.path.append(os.getcwd())
+
+from services.adaptive_session_manager import AdaptiveSessionManager
+from services.difficulty_manager import DifficultyManager
+from services.complex_service import ComplexService
+from services.user_progress_manager import UserProgressManager
+from task_system.core.models.complex_models import ComplexSession, SessionTaskResult, QueuedTask
+
+# Config for testing
+TEST_CONFIG = {
+    "version": "1.0",
+    "smart_retry_defaults": {
+        "near_offset": 3,
+        "near_jitter_max": 0,
+        "max_copies": 2,
+        "training_control_enabled": True
+    },
+    "default_levels": {
+        "test": [1, 2]
+    }
+}
+
+class TestSmartRetry(unittest.TestCase):
+    def setUp(self):
+        # Mock dependencies
+        self.complex_service = MagicMock(spec=ComplexService)
+        self.user_progress_manager = MagicMock(spec=UserProgressManager)
+        self.difficulty_manager = MagicMock(spec=DifficultyManager)
+        
+        # Setup DifficultyManager mock to return our test config
+        self.difficulty_manager.config = TEST_CONFIG
+        self.difficulty_manager.get_smart_retry_config.return_value = TEST_CONFIG["smart_retry_defaults"]
+        self.difficulty_manager.get_available_levels.return_value = [1, 2]
+        
+        # Initialize Manager
+        self.manager = AdaptiveSessionManager(
+            complex_service=self.complex_service,
+            user_progress_manager=self.user_progress_manager,
+            difficulty_manager=self.difficulty_manager
+        )
+        
+        # Create a dummy session
+        self.session = MagicMock(spec=ComplexSession)
+        self.session.id = "test_session"
+        self.session.user_id = "test_user"
+        self.session.complex_id = "test_complex"
+        self.session.iteration = 1
+        self.session.queue = []
+        self.session.current_task_index = 0
+        self.session.test_failed_subtests = {}
+
+    def test_smart_retry_config_usage(self):
+        """Test that _add_failed_task_to_current_queue uses values from difficulty_manager."""
+        
+        # Mock methods to avoid external calls
+        self.manager._get_task_type = MagicMock(return_value="click")
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        
+        # Add 10 dummy tasks to queue so we have space to insert
+        self.session.queue = [
+            QueuedTask(task_ref=f"task_{i}", difficulty=1) for i in range(10)
+        ]
+        self.session.current_task_index = 0
+        
+        # Execute retry
+        # Config has near_offset=3, max_copies=2
+        task_ref = "failed_task"
+        self.manager._add_failed_task_to_current_queue(self.session, task_ref, difficulty=2)
+        
+        # Verify get_smart_retry_config was called
+        self.difficulty_manager.get_smart_retry_config.assert_called_once()
+        
+        # Check that tasks were added
+        # Since difficulty=2 and training_enabled=True, we expect 2 tasks:
+        # 1. lvl-1 (offset 3)
+        # 2. lvl-2 (end of phase)
+        
+        # Find added tasks
+        added_tasks = [t for t in self.session.queue if t.task_ref == task_ref and t.is_retry]
+        self.assertEqual(len(added_tasks), 2)
+        
+        # Verify Lvl-1 is inserted near (index 0 + 3 = around 3)
+        # Note: jitter is 0 in test config, so index should be exactly 3 (if no shift) or close.
+        # queue was 10. +2 tasks. index 3 must be the retry task?
+        # Let's check the task at index 3
+        task_at_3 = self.session.queue[3]
+        self.assertEqual(task_at_3.task_ref, task_ref)
+        self.assertEqual(task_at_3.difficulty, 1) # Training level (2-1)
+
+    def test_max_copies_limit(self):
+        """Test that max_copies limit from config is respected."""
+        
+        self.manager._get_task_type = MagicMock(return_value="click")
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        
+        task_ref = "spam_task"
+        
+        # Simulate queue with already 2 retry copies (limit is 2)
+        self.session.queue = [
+            QueuedTask(task_ref="other", difficulty=1),
+            QueuedTask(task_ref=task_ref, difficulty=1, is_retry=True),
+            QueuedTask(task_ref=task_ref, difficulty=1, is_retry=True)
+        ]
+        
+        initial_len = len(self.session.queue)
+        
+        # Try to add again
+        self.manager._add_failed_task_to_current_queue(self.session, task_ref, difficulty=1)
+        
+        # Should not change queue length
+        self.assertEqual(len(self.session.queue), initial_len)
+
+    def test_process_test_partial_retry_success(self):
+        """Test _process_test_partial_retry logic: successful partial retry."""
+        
+        task_ref = "test/task/1"
+        
+        # Scenario: User failed indices [0, 2] previously
+        self.session.test_failed_subtests = {
+            task_ref: [0, 2]
+        }
+        
+        # Current result: User answered corrected [0, 2] correctly, so failed_subtests is empty in details
+        # But wait, input to function is failed_subtests_raw. 
+        # If user answered everything correctly in this attempt, failed_subtests_raw is empty.
+        
+        result = SessionTaskResult(
+            task_ref=task_ref,
+            success=True,
+            difficulty=1,
+            iteration_index=1,
+            time_spent=10
+        )
+        
+        failed_subtests_raw = [] # No failures this time
+        
+        returned_success = self.manager._process_test_partial_retry(
+            self.session, task_ref, result, failed_subtests_raw
+        )
+        
+        # Expectation:
+        # normalized list is empty.
+        # original indices exist.
+        # -> All previously failed subtests are now correct.
+        # -> success becomes True.
+        
+        self.assertTrue(returned_success)
+        self.assertTrue(result.success)
+        self.assertEqual(result.details["failed_subtests"], [])
+
+    def test_process_test_partial_retry_still_failing(self):
+        """Test _process_test_partial_retry logic: partial failure persists."""
+        
+        task_ref = "test/task/1"
+        
+        # Scenario: User failed [0, 2] previously.
+        self.session.test_failed_subtests = {
+            task_ref: [0, 2]
+        }
+        
+        # This time, user fixed 0 but still failed 2.
+        failed_subtests_raw = [{"index": 2}] 
+        
+        result = SessionTaskResult(
+            task_ref=task_ref,
+            success=False,
+            difficulty=1,
+            iteration_index=1,
+            time_spent=10
+        )
+        
+        returned_success = self.manager._process_test_partial_retry(
+            self.session, task_ref, result, failed_subtests_raw
+        )
+        
+        # Expectation:
+        # Normalized list contains [2].
+        # success remains False (or whatever passed in).
+        
+        self.assertFalse(returned_success)
+        self.assertEqual(len(result.details["failed_subtests"]), 1)
+        self.assertEqual(result.details["failed_subtests"][0]["index"], 2)
+
+    def test_process_test_partial_retry_new_errors_ignored_in_normalization(self):
+        """Test that errors NOT in original list are ignored during normalization for partial retry."""
+        
+        task_ref = "test/task/1"
+        
+        # Scenario: User failed [0] previously.
+        self.session.test_failed_subtests = {
+            task_ref: [0]
+        }
+        
+        # This time, user fixed 0 but accidentally broke 5 (which was correct before).
+        # Smart retry typically only asks to fix specifically failed ones. 
+        # But if the UI shows all, user might break others.
+        # Logic says: "normalized... - учитываем только индексы из исходного списка".
+        
+        failed_subtests_raw = [{"index": 5}]
+        
+        result = SessionTaskResult(
+            task_ref=task_ref,
+            success=False,
+            difficulty=1,
+            iteration_index=1,
+            time_spent=10
+        )
+        
+        returned_success = self.manager._process_test_partial_retry(
+            self.session, task_ref, result, failed_subtests_raw
+        )
+        
+        # Expectation:
+        # Normalized list is empty (5 is not in [0]).
+        # success becomes True (because original [0] is fixed, i.e. not in current failed).
+        
+        self.assertTrue(returned_success)
+        self.assertEqual(result.details["failed_subtests"], [])
+
+if __name__ == '__main__':
+    unittest.main()

@@ -1,0 +1,9 @@
+{
+  "id": "th_demo_xray",
+  "title": "Chest X-ray Reading Basics (Demo)",
+  "created_at": "2026-02-16T22:26:52.4430163Z",
+  "updated_at": "2026-02-16T22:26:52.4430163Z",
+  "version": "2026-02-16T22:26:52.4430163Z",
+  "delta_path": "body.delta.json",
+  "images": []
+}

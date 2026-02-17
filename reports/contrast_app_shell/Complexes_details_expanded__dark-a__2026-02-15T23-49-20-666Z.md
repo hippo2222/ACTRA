@@ -1,0 +1,21 @@
+
+# Contrast Audit Report - 16.02.2026, 01:49:56
+
+**Total Issues Found: 11**
+
+## Text Contrast (LOW) (11 issues)
+
+| Ratio | Required | Element | Text |
+|---|---|---|---|
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+| **3.48** | 4.5 min | `span.truncate` | "РЈРґР°Р»РёС‚СЊ" |
+

@@ -1,0 +1,24 @@
+[flake8]
+max-line-length = 100
+extend-ignore = E203,W503
+select = E9,F63,F7,F82
+exclude =
+    .git,
+    __pycache__,
+    build,
+    dist,
+    node_modules,
+    .venv,
+    frontend,
+    reports,
+    data,
+    docs,
+    task_system,
+    common,
+    tests,
+    desktop-app/tests
+filename =
+    desktop-app/api/complexes_api.py,
+    scripts/build_release.py,
+    scripts/validate_release_catalog.py,
+    scripts/check_mojibake.py

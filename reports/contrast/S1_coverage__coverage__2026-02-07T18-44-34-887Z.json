@@ -1,0 +1,381 @@
+{
+  "page": "S1 coverage",
+  "url": "http://127.0.0.1:8000/ui/session/session_user_bcfd2787d56d_1770482674.980287",
+  "combos": [
+    "test|single_choice|1",
+    "open_answer|none|1",
+    "click|none|1",
+    "click|none|2",
+    "test|single_choice|2",
+    "draw|none|2",
+    "test|multiple_choice|2",
+    "open_answer|none|2",
+    "sequence_assembly|none|2",
+    "test|multiple_choice|3",
+    "draw|none|3",
+    "click|none|3",
+    "test|single_choice|3",
+    "sequence_assembly|none|3",
+    "open_answer|none|3",
+    "test|multiple_choice|1",
+    "sequence_assembly|none|1",
+    "draw|none|1"
+  ],
+  "completionSeen": [
+    "test|1",
+    "open_answer|1",
+    "click|1",
+    "click|2",
+    "test|2",
+    "draw|2",
+    "open_answer|2",
+    "sequence_assembly|2",
+    "test|3",
+    "draw|3",
+    "click|3",
+    "sequence_assembly|3",
+    "open_answer|3",
+    "sequence_assembly|1",
+    "draw|1"
+  ],
+  "missing": [],
+  "log": [
+    {
+      "type": "test",
+      "rawType": "test",
+      "effectiveType": "test",
+      "subtype": "single_choice",
+      "difficulty": "1",
+      "taskId": "task_005",
+      "queueIndex": 0,
+      "queueTotal": 4,
+      "sweep": {
+        "source": "initial_page"
+      }
+    },
+    {
+      "type": "open_answer",
+      "rawType": "open_answer",
+      "effectiveType": "open_answer",
+      "subtype": null,
+      "difficulty": "1",
+      "taskId": "task_003",
+      "queueIndex": 1,
+      "queueTotal": 4,
+      "sweep": {
+        "source": "initial_page"
+      }
+    },
+    {
+      "type": "click",
+      "rawType": "click",
+      "effectiveType": "click",
+      "subtype": null,
+      "difficulty": "1",
+      "taskId": "task_008",
+      "queueIndex": 2,
+      "queueTotal": 4,
+      "sweep": {
+        "source": "initial_page"
+      }
+    },
+    {
+      "type": "click",
+      "rawType": "click",
+      "effectiveType": "click",
+      "subtype": null,
+      "difficulty": "2",
+      "taskId": "task_008",
+      "queueIndex": 0,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 2,
+        "sessionId": "session_user_bcfd2787d56d_1770482681.77517"
+      }
+    },
+    {
+      "type": "test",
+      "rawType": "test",
+      "effectiveType": "test",
+      "subtype": "single_choice",
+      "difficulty": "2",
+      "taskId": "task_005",
+      "queueIndex": 2,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 2,
+        "sessionId": "session_user_bcfd2787d56d_1770482681.77517"
+      }
+    },
+    {
+      "type": "draw",
+      "rawType": "draw",
+      "effectiveType": "click",
+      "subtype": null,
+      "difficulty": "2",
+      "taskId": "task_006",
+      "queueIndex": 3,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 2,
+        "sessionId": "session_user_bcfd2787d56d_1770482681.77517"
+      }
+    },
+    {
+      "type": "test",
+      "rawType": "test",
+      "effectiveType": "test",
+      "subtype": "multiple_choice",
+      "difficulty": "2",
+      "taskId": "task_002",
+      "queueIndex": 5,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 2,
+        "sessionId": "session_user_bcfd2787d56d_1770482681.77517"
+      }
+    },
+    {
+      "type": "open_answer",
+      "rawType": "open_answer",
+      "effectiveType": "open_answer",
+      "subtype": null,
+      "difficulty": "2",
+      "taskId": "task_001",
+      "queueIndex": 6,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 2,
+        "sessionId": "session_user_bcfd2787d56d_1770482681.77517"
+      }
+    },
+    {
+      "type": "sequence_assembly",
+      "rawType": "sequence_assembly",
+      "effectiveType": "sequence_assembly",
+      "subtype": null,
+      "difficulty": "2",
+      "taskId": "task_004",
+      "queueIndex": 7,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 2,
+        "sessionId": "session_user_bcfd2787d56d_1770482681.77517"
+      }
+    },
+    {
+      "type": "test",
+      "rawType": "test",
+      "effectiveType": "test",
+      "subtype": "multiple_choice",
+      "difficulty": "3",
+      "taskId": "task_002",
+      "queueIndex": 0,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 3,
+        "sessionId": "session_user_bcfd2787d56d_1770482696.214313"
+      }
+    },
+    {
+      "type": "draw",
+      "rawType": "draw",
+      "effectiveType": "click",
+      "subtype": null,
+      "difficulty": "3",
+      "taskId": "task_002",
+      "queueIndex": 1,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 3,
+        "sessionId": "session_user_bcfd2787d56d_1770482696.214313"
+      }
+    },
+    {
+      "type": "click",
+      "rawType": "click",
+      "effectiveType": "click",
+      "subtype": null,
+      "difficulty": "3",
+      "taskId": "task_001",
+      "queueIndex": 2,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 3,
+        "sessionId": "session_user_bcfd2787d56d_1770482696.214313"
+      }
+    },
+    {
+      "type": "test",
+      "rawType": "test",
+      "effectiveType": "test",
+      "subtype": "single_choice",
+      "difficulty": "3",
+      "taskId": "task_005",
+      "queueIndex": 3,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 3,
+        "sessionId": "session_user_bcfd2787d56d_1770482696.214313"
+      }
+    },
+    {
+      "type": "sequence_assembly",
+      "rawType": "sequence_assembly",
+      "effectiveType": "sequence_assembly",
+      "subtype": null,
+      "difficulty": "3",
+      "taskId": "task_004",
+      "queueIndex": 6,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 3,
+        "sessionId": "session_user_bcfd2787d56d_1770482696.214313"
+      }
+    },
+    {
+      "type": "open_answer",
+      "rawType": "open_answer",
+      "effectiveType": "open_answer",
+      "subtype": null,
+      "difficulty": "3",
+      "taskId": "task_001",
+      "queueIndex": 7,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 3,
+        "sessionId": "session_user_bcfd2787d56d_1770482696.214313"
+      }
+    },
+    {
+      "type": "test",
+      "rawType": "test",
+      "effectiveType": "test",
+      "subtype": "multiple_choice",
+      "difficulty": "1",
+      "taskId": "task_002",
+      "queueIndex": 0,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 1,
+        "sessionId": "session_user_bcfd2787d56d_1770482710.653194"
+      }
+    },
+    {
+      "type": "sequence_assembly",
+      "rawType": "sequence_assembly",
+      "effectiveType": "sequence_assembly",
+      "subtype": null,
+      "difficulty": "1",
+      "taskId": "task_004",
+      "queueIndex": 1,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 1,
+        "sessionId": "session_user_bcfd2787d56d_1770482710.653194"
+      }
+    },
+    {
+      "type": "draw",
+      "rawType": "draw",
+      "effectiveType": "click",
+      "subtype": null,
+      "difficulty": "1",
+      "taskId": "task_006",
+      "queueIndex": 5,
+      "queueTotal": 9,
+      "sweep": {
+        "source": "auto_session",
+        "complexId": "contrast_cov_1770489881734_533",
+        "iteration": 1,
+        "sessionId": "session_user_bcfd2787d56d_1770482710.653194"
+      }
+    }
+  ],
+  "diagnostics": {
+    "noTaskRetries": 0,
+    "lastPathname": "/ui/session/session_user_bcfd2787d56d_1770482710.653194",
+    "lastSessionId": "session_user_bcfd2787d56d_1770482710.653194",
+    "breakReason": "target_complete",
+    "sweepCount": 4,
+    "sweeps": [
+      {
+        "sweep": {
+          "source": "initial_page"
+        },
+        "noTaskRetries": 0,
+        "lastPathname": "/ui/session/session_user_bcfd2787d56d_1770482674.980287",
+        "lastSessionId": "session_user_bcfd2787d56d_1770482674.980287",
+        "breakReason": "navigated_outside_s1",
+        "completedDelta": 3
+      },
+      {
+        "sweep": {
+          "source": "auto_session",
+          "complexId": "contrast_cov_1770489881734_533",
+          "iteration": 2,
+          "sessionId": "session_user_bcfd2787d56d_1770482681.77517"
+        },
+        "noTaskRetries": 0,
+        "lastPathname": "/ui/session/session_user_bcfd2787d56d_1770482681.77517",
+        "lastSessionId": "session_user_bcfd2787d56d_1770482681.77517",
+        "breakReason": "navigated_outside_s1",
+        "completedDelta": 5
+      },
+      {
+        "sweep": {
+          "source": "auto_session",
+          "complexId": "contrast_cov_1770489881734_533",
+          "iteration": 3,
+          "sessionId": "session_user_bcfd2787d56d_1770482696.214313"
+        },
+        "noTaskRetries": 0,
+        "lastPathname": "/ui/session/session_user_bcfd2787d56d_1770482696.214313",
+        "lastSessionId": "session_user_bcfd2787d56d_1770482696.214313",
+        "breakReason": "navigated_outside_s1",
+        "completedDelta": 5
+      },
+      {
+        "sweep": {
+          "source": "auto_session",
+          "complexId": "contrast_cov_1770489881734_533",
+          "iteration": 1,
+          "sessionId": "session_user_bcfd2787d56d_1770482710.653194"
+        },
+        "noTaskRetries": 0,
+        "lastPathname": "/ui/session/session_user_bcfd2787d56d_1770482710.653194",
+        "lastSessionId": "session_user_bcfd2787d56d_1770482710.653194",
+        "breakReason": "target_complete",
+        "completedDelta": 2
+      }
+    ]
+  }
+}

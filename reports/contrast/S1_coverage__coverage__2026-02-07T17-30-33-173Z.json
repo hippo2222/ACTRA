@@ -1,0 +1,60 @@
+{
+  "page": "S1 coverage",
+  "url": "http://127.0.0.1:8000/ui/session/session_user_bcfd2787d56d_1770478233.228056",
+  "combos": [
+    "click|none|1",
+    "test|single_choice|1",
+    "open_answer|none|1"
+  ],
+  "completionSeen": [
+    "click|1",
+    "test|1",
+    "open_answer|1"
+  ],
+  "missing": [
+    "click|2",
+    "click|3",
+    "draw|1",
+    "draw|2",
+    "draw|3",
+    "test|2",
+    "test|3",
+    "sequence_assembly|1",
+    "sequence_assembly|2",
+    "sequence_assembly|3",
+    "open_answer|2",
+    "open_answer|3"
+  ],
+  "log": [
+    {
+      "type": "click",
+      "subtype": null,
+      "difficulty": "1",
+      "taskId": "task_002",
+      "queueIndex": 0,
+      "queueTotal": 4
+    },
+    {
+      "type": "test",
+      "subtype": "single_choice",
+      "difficulty": "1",
+      "taskId": "task_005",
+      "queueIndex": 1,
+      "queueTotal": 4
+    },
+    {
+      "type": "open_answer",
+      "subtype": null,
+      "difficulty": "1",
+      "taskId": "task_003",
+      "queueIndex": 2,
+      "queueTotal": 4
+    }
+  ],
+  "diagnostics": {
+    "noTaskRetries": 0,
+    "lastPathname": "/ui/session/session_user_bcfd2787d56d_1770478233.228056",
+    "lastSessionId": "session_user_bcfd2787d56d_1770478233.228056",
+    "breakReason": "navigated_outside_s1"
+  }
+}

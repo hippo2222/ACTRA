@@ -1,0 +1,89 @@
+{
+  "version": "3.0",
+  "updated_at": "2026-01-20T00:33:20.270393",
+  "user_id": "test_stats_deep_20260120003320",
+  "global_stats": {
+    "total_attempts": 2,
+    "total_time_seconds": 20
+  },
+  "task_history": {
+    "mod/top/task_now": {
+      "meta": {
+        "total_attempts": 1,
+        "last_attempt_at": "2026-01-20T00:33:20.266347",
+        "success_rate": 1.0
+      },
+      "attempts": [
+        {
+          "timestamp": "2026-01-20T00:33:20.266347",
+          "difficulty": 1,
+          "success": true,
+          "time_spent": 10,
+          "complex_id": null,
+          "iteration": null,
+          "score": 100
+        }
+      ],
+      "current_difficulty": 1,
+      "mastery_level": "beginner"
+    },
+    "mod/top/task_2_days": {
+      "meta": {
+        "total_attempts": 1,
+        "last_attempt_at": "2026-01-18T00:33:20.267868",
+        "success_rate": 1.0
+      },
+      "current_difficulty": 1,
+      "attempts": [
+        {
+          "timestamp": "2026-01-18T00:33:20.267868",
+          "difficulty": 1,
+          "success": true,
+          "score": 100,
+          "time_spent": 60,
+          "completed": true
+        }
+      ]
+    },
+    "mod/top/task_8_days": {
+      "meta": {
+        "total_attempts": 1,
+        "last_attempt_at": "2026-01-12T00:33:20.267868",
+        "success_rate": 1.0
+      },
+      "current_difficulty": 1,
+      "attempts": [
+        {
+          "timestamp": "2026-01-12T00:33:20.267868",
+          "difficulty": 1,
+          "success": true,
+          "score": 100,
+          "time_spent": 60,
+          "completed": true
+        }
+      ]
+    },
+    "mod/top/task_new": {
+      "meta": {
+        "total_attempts": 1,
+        "last_attempt_at": "2026-01-20T00:33:20.270393",
+        "success_rate": 1.0
+      },
+      "attempts": [
+        {
+          "timestamp": "2026-01-20T00:33:20.270393",
+          "difficulty": 1,
+          "success": true,
+          "time_spent": 10,
+          "complex_id": null,
+          "iteration": null,
+          "score": 100
+        }
+      ],
+      "current_difficulty": 1,
+      "mastery_level": "beginner"
+    }
+  },
+  "mistake_bank": [],
+  "complex_completions": []
+}

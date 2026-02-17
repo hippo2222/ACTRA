@@ -1,0 +1,482 @@
+/**
+ * Calendar Styles - Стили для календаря обучения.
+ * 
+ * Дополняет Tailwind CSS кастомными стилями для:
+ * - Анимаций
+ * - Drag scroll
+ * - Tooltips
+ * - Responsive адаптации
+ */
+
+/* =============================================================================
+   SCROLLBAR HIDING
+   ============================================================================= */
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+/* =============================================================================
+   ANIMATIONS
+   ============================================================================= */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+@keyframes pulse-once {
+
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.02);
+    }
+}
+
+@keyframes ripple {
+    0% {
+        transform: scale(0.8);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(2);
+        opacity: 0;
+    }
+}
+
+@keyframes glow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 5px var(--color-primary);
+        opacity: 0.8;
+    }
+
+    50% {
+        box-shadow: 0 0 20px var(--color-primary);
+        opacity: 1;
+    }
+}
+
+.animate-slide-in {
+    animation: slideIn 0.3s ease-out;
+}
+
+.animate-slide-out {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+
+.animate-fade-out {
+    animation: fadeOut 0.3s ease-out forwards;
+}
+
+.animate-pulse-once {
+    animation: pulse-once 0.3s ease-out;
+}
+
+.animate-glow {
+    animation: glow 2s ease-in-out infinite;
+}
+
+/* =============================================================================
+   DRAG SCROLL
+   ============================================================================= */
+.drag-scroll {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.drag-scroll:active,
+.drag-scroll.dragging {
+    cursor: grabbing;
+    scroll-behavior: auto;
+}
+
+.drag-scroll.dragging * {
+    pointer-events: none;
+}
+
+/* =============================================================================
+   TOOLTIPS
+   ============================================================================= */
+.tooltip {
+    position: relative;
+}
+
+.tooltip::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-text-main);
+    color: var(--color-text-contrast);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    margin-bottom: 4px;
+    z-index: 50;
+}
+
+.tooltip:hover::after {
+    opacity: 1;
+}
+
+/* Tooltip variants */
+.tooltip-right::after {
+    left: 100%;
+    bottom: 50%;
+    transform: translateY(50%);
+    margin-left: 4px;
+    margin-bottom: 0;
+}
+
+.tooltip-left::after {
+    right: 100%;
+    left: auto;
+    bottom: 50%;
+    transform: translateY(50%);
+    margin-right: 4px;
+    margin-bottom: 0;
+}
+
+/* =============================================================================
+   CARD INTERACTIONS
+   ============================================================================= */
+.recipe-card {
+    transition: all 0.3s ease;
+}
+
+.recipe-card:hover {
+    transform: translateY(-2px);
+}
+
+.recipe-card:active {
+    transform: translateY(0);
+}
+
+/* Expanded state for task list */
+.recipe-card.expanded .task-list {
+    max-height: 200px;
+    opacity: 1;
+}
+
+.recipe-card .task-list {
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.2s ease;
+}
+
+/* =============================================================================
+   HEALTH CHART
+   ============================================================================= */
+.health-ring {
+    transition: background 0.5s ease;
+}
+
+.health-ring:hover {
+    transform: scale(1.02);
+}
+
+/* Animated conic gradient */
+@property --health-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.health-ring-animated {
+    --health-angle: 0deg;
+    background: conic-gradient(from var(--health-angle),
+            var(--color-info) 0% 70%,
+            var(--color-border-subtle) 70% 85%,
+            var(--color-error) 85% 100%);
+    animation: health-rotate 1s ease-out forwards;
+}
+
+@keyframes health-rotate {
+    from {
+        --health-angle: 0deg;
+    }
+
+    to {
+        --health-angle: 360deg;
+    }
+}
+
+/* =============================================================================
+   HEATMAP
+   ============================================================================= */
+.heatmap-cell {
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+/* =============================================================================
+   SCHEDULE STRIP
+   ============================================================================= */
+.schedule-card {
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+    scroll-snap-align: start;
+}
+
+.schedule-strip {
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 16px;
+}
+
+/* Today indicator pulse */
+.today-indicator {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+    }
+}
+
+/* =============================================================================
+   TIME CONTROLLER
+   ============================================================================= */
+.time-btn {
+    transition: all 0.2s ease;
+}
+
+.time-btn.active {
+    transform: scale(1.05);
+}
+
+.time-btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+/* =============================================================================
+   NOTIFICATION CARDS
+   ============================================================================= */
+.notification-card {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.notification-card.dismissing {
+    animation: fadeOut 0.3s ease forwards;
+}
+
+.notification-card:hover {
+    transform: translateX(2px);
+}
+
+/* =============================================================================
+   RESPONSIVE ADAPTATIONS
+   ============================================================================= */
+
+/* Mobile: Vertical schedule */
+@media (max-width: 768px) {
+    .schedule-strip {
+        flex-direction: column;
+        overflow-x: visible;
+        overflow-y: auto;
+    }
+
+    .schedule-card {
+        min-width: 100% !important;
+        flex: none;
+    }
+
+    .drag-scroll {
+        cursor: default;
+    }
+
+    /* Stack recipe cards */
+    .recipe-cards {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Health indicator layout */
+    .health-section {
+        flex-direction: column;
+    }
+
+    .health-ring-container {
+        margin: 0 auto;
+    }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .schedule-card {
+        min-width: 140px;
+    }
+}
+
+/* Large screens */
+@media (min-width: 1200px) {
+    .schedule-card {
+        min-width: 180px;
+    }
+}
+
+/* =============================================================================
+   DARK MODE (Future support)
+   ============================================================================= */
+.dark .tooltip::after {
+    background: var(--color-text-contrast);
+    color: var(--color-text-main);
+}
+
+/* =============================================================================
+   ACCESSIBILITY
+   ============================================================================= */
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+}
+
+/* Skip link */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--color-primary);
+    color: var(--color-text-contrast);
+    padding: 8px 16px;
+    z-index: 100;
+    transition: top 0.2s;
+}
+
+.skip-link:focus {
+    top: 0;
+}
+
+/* Semantic Utilities for JS Dynamic Templates */
+.bg-info-light {
+    background-color: var(--color-info-light) !important;
+}
+
+.text-info-dark {
+    color: var(--color-info-dark) !important;
+}
+
+.bg-success-light {
+    background-color: var(--color-success-light) !important;
+}
+
+.text-success-dark {
+    color: var(--color-success-dark) !important;
+}
+
+.bg-warning-light {
+    background-color: var(--color-warning-light) !important;
+}
+
+.text-warning-dark {
+    color: var(--color-warning-dark) !important;
+}
+
+.bg-error-light {
+    background-color: var(--color-error-light) !important;
+}
+
+.text-error-dark {
+    color: var(--color-error-dark) !important;
+}
+
+.bg-accent-light {
+    background-color: var(--color-accent-light) !important;
+}
+
+.text-accent-dark {
+    color: var(--color-accent-dark) !important;
+}
+
+.bg-secondary-light {
+    background-color: var(--color-secondary-light) !important;
+}
+
+.text-secondary-dark {
+    color: var(--color-secondary-dark) !important;
+}

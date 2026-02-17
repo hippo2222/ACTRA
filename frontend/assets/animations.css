@@ -1,0 +1,248 @@
+/* ============================================================================
+   SHARED ANIMATION UTILITIES
+   Стандартизированные анимации для всего проекта.
+   Подключается на всех страницах через <link href="/assets/animations.css">.
+   Уважает prefers-reduced-motion (см. lightB-components.css).
+   ============================================================================ */
+
+/* =============================================================================
+   KEYFRAMES — Единый набор для проекта
+   ============================================================================= */
+
+/* --- Fade --- */
+@keyframes a-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes a-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* --- Slide + Fade --- */
+@keyframes a-slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes a-slide-down {
+  from { opacity: 0; transform: translateY(-12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes a-slide-in-right {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* --- Scale --- */
+@keyframes a-scale-in {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+/* --- Emphasis --- */
+@keyframes a-shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}
+
+@keyframes a-pulse-once {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.03); }
+}
+
+/* --- Progress / bars --- */
+@keyframes a-grow-width {
+  from { width: 0%; }
+}
+
+@keyframes a-count-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* --- Shimmer (skeleton loader) --- */
+@keyframes a-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* =============================================================================
+   UTILITY CLASSES — Apply via class attribute
+   ============================================================================= */
+
+/* Entrance animations */
+.anim-fade-in {
+  animation: a-fade-in 0.3s ease-out both;
+}
+
+.anim-slide-up {
+  animation: a-slide-up 0.4s ease-out both;
+}
+
+.anim-slide-down {
+  animation: a-slide-down 0.35s ease-out both;
+}
+
+.anim-slide-in-right {
+  animation: a-slide-in-right 0.35s ease-out both;
+}
+
+.anim-scale-in {
+  animation: a-scale-in 0.3s ease-out both;
+}
+
+/* Emphasis */
+.anim-shake {
+  animation: a-shake 0.4s ease;
+}
+
+.anim-pulse-once {
+  animation: a-pulse-once 0.3s ease-out;
+}
+
+/* Stagger delays (for lists/grids — add to children) */
+.anim-delay-1 { animation-delay: 0.05s; }
+.anim-delay-2 { animation-delay: 0.10s; }
+.anim-delay-3 { animation-delay: 0.15s; }
+.anim-delay-4 { animation-delay: 0.20s; }
+.anim-delay-5 { animation-delay: 0.25s; }
+.anim-delay-6 { animation-delay: 0.30s; }
+
+/* =============================================================================
+   INTERACTION PATTERNS — Reusable hover/active/focus
+   ============================================================================= */
+
+/* Card lift on hover (subtle) */
+.interact-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.interact-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+.interact-lift:active {
+  transform: translateY(0) scale(0.98);
+}
+
+/* Button press feedback */
+.interact-press {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.interact-press:active {
+  transform: scale(0.97);
+}
+
+/* Smooth color transition (links, nav items, badges) */
+.interact-color {
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+}
+
+/* Smooth all (general-purpose) */
+.interact-all {
+  transition: all var(--transition-normal);
+}
+
+/* =============================================================================
+   PROGRESS BAR — Smooth width transitions
+   ============================================================================= */
+.progress-animated {
+  transition: width 0.6s ease-out;
+}
+
+.progress-grow {
+  animation: a-grow-width 0.8s ease-out both;
+}
+
+/* =============================================================================
+   STAT COUNTER — Entrance for numeric stats
+   ============================================================================= */
+.stat-enter {
+  animation: a-count-up 0.4s ease-out both;
+}
+
+/* =============================================================================
+   DETAIL / ACCORDION PANEL — Smooth expand/collapse
+   ============================================================================= */
+.panel-expand {
+  overflow: hidden;
+  transition: max-height 0.3s ease, opacity 0.25s ease, padding 0.3s ease;
+}
+
+.panel-expand.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* =============================================================================
+   PAGE ENTRANCE — Whole-page fade+slide for first render
+   ============================================================================= */
+.page-enter {
+  animation: a-slide-up 0.45s ease-out both;
+}
+
+/* =============================================================================
+   MODAL — Standard open/close
+   ============================================================================= */
+.modal-animated {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+
+.modal-animated.open {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal-animated .modal-content {
+  transform: scale(0.96) translateY(8px);
+  transition: transform 0.25s ease;
+}
+
+.modal-animated.open .modal-content {
+  transform: scale(1) translateY(0);
+}
+
+/* =============================================================================
+   PAGE TRANSITION - Shared navigation enter/leave
+   Theme-safe: only opacity/transform (no color overlay).
+   ============================================================================= */
+.app-page-transition {
+  transition: opacity 170ms ease, transform 170ms ease;
+  will-change: opacity, transform;
+}
+
+.app-page-enter {
+  opacity: 0;
+  transform: translateY(4px);
+}
+
+.app-page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.app-page-leave {
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-page-transition {
+    transition: none !important;
+  }
+
+  .app-page-enter,
+  .app-page-enter-active,
+  .app-page-leave {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}

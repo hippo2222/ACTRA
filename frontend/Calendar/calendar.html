@@ -1,0 +1,2786 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+
+    <script src="../assets/ThemeManager.js"></script>
+    <script src="/assets/AppConfig.js"></script>
+
+    <meta charset="utf-8" />
+
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+
+    <title>Календарь — ACTRA</title>
+
+    <style>
+        .hide-scrollbar::-webkit-scrollbar {
+
+            display: none;
+
+        }
+
+        .hide-scrollbar {
+
+            -ms-overflow-style: none;
+
+            scrollbar-width: none;
+
+        }
+
+        /* Animations */
+
+        @keyframes slideIn {
+
+            from {
+
+                opacity: 0;
+
+                transform: translateY(-10px);
+
+            }
+
+            to {
+
+                opacity: 1;
+
+                transform: translateY(0);
+
+            }
+
+        }
+
+        @keyframes fadeOut {
+
+            from {
+
+                opacity: 1;
+
+            }
+
+            to {
+
+                opacity: 0;
+
+                transform: translateX(20px);
+
+            }
+
+        }
+
+        @keyframes pulse-once {
+
+            0%,
+
+            100% {
+
+                transform: scale(1);
+
+            }
+
+            50% {
+
+                transform: scale(1.02);
+
+            }
+
+        }
+
+        .animate-slide-in {
+
+            animation: slideIn 0.3s ease-out;
+
+        }
+
+        .animate-fade-out {
+
+            animation: fadeOut 0.3s ease-out forwards;
+
+        }
+
+        .animate-pulse-once {
+
+            animation: pulse-once 0.3s ease-out;
+
+        }
+
+        /* Drag scroll */
+
+        .drag-scroll {
+
+            cursor: grab;
+
+            user-select: none;
+
+            touch-action: pan-y;
+
+        }
+
+        .drag-scroll:active {
+
+            cursor: grabbing;
+
+        }
+
+        .drag-scroll.dragging {
+
+            cursor: grabbing;
+
+            scroll-behavior: auto;
+
+        }
+
+        /* Tooltip */
+
+        .tooltip {
+
+            position: relative;
+
+        }
+
+        .tooltip::after {
+
+            content: attr(data-tooltip);
+
+            position: absolute;
+
+            bottom: 100%;
+
+            left: 50%;
+
+            transform: translateX(-50%);
+
+            background: rgba(30, 30, 47, 0.95);
+
+            color: white;
+
+            padding: 8px 12px;
+
+            border-radius: 6px;
+
+            font-size: 11px;
+
+            line-height: 1.4;
+
+            white-space: pre-wrap;
+
+            opacity: 0;
+
+            pointer-events: none;
+
+            transition: opacity 0.2s;
+
+            margin-bottom: 4px;
+
+            min-width: 160px;
+
+            text-align: center;
+
+            z-index: 50;
+
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+        }
+
+        .tooltip:hover::after {
+
+            opacity: 1;
+
+        }
+
+        #calendarInitialLoading .loading-logo {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            display: block;
+        }
+
+        #calendarLoadingLogoStatic {
+            display: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            #calendarLoadingLogoAnimated {
+                display: none;
+            }
+
+            #calendarLoadingLogoStatic {
+                display: block;
+            }
+        }
+    </style>
+
+    <link href="/assets/tailwind.css" rel="stylesheet" />
+
+    <link href="/assets/lightB-variables.css" rel="stylesheet" />
+
+    <link href="/assets/fonts.css" rel="stylesheet" />
+
+    <link href="/assets/lightB-components.css" rel="stylesheet" />
+
+    <link href="/assets/animations.css" rel="stylesheet" />
+
+    <link href="calendar.css" rel="stylesheet" />
+
+</head>
+
+<body class="bg-bg-main text-text-main font-display antialiased selection:bg-primary-light"
+    data-calendar-build="variantA-debug-20260117">
+
+    <div id="app" class="relative flex min-h-screen flex-col overflow-x-hidden">
+        <div id="calendarInitialLoading"
+            class="absolute inset-0 z-[60] hidden flex flex-col items-center justify-center gap-5 bg-bg-main/95 backdrop-blur-sm">
+            <div class="rounded-2xl border border-border-subtle bg-surface-1/90 p-5 shadow-sm">
+                <img id="calendarLoadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="loading-logo">
+                <img id="calendarLoadingLogoStatic" src="/assets/logo.svg" alt="" aria-hidden="true" class="loading-logo">
+            </div>
+            <p class="text-xs font-semibold uppercase tracking-widest text-text-muted">Загрузка календаря...</p>
+            <div class="w-full max-w-[560px] space-y-3 px-4 animate-pulse" aria-hidden="true">
+                <div class="h-24 rounded-xl bg-surface-1 border border-border-subtle"></div>
+                <div class="h-16 rounded-xl bg-surface-1 border border-border-subtle"></div>
+                <div class="h-40 rounded-xl bg-surface-1 border border-border-subtle"></div>
+            </div>
+        </div>
+
+        <!-- Header -->
+
+        <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-3">
+
+            <div class="flex items-center justify-between">
+
+                <div class="flex items-center gap-3">
+
+                    <a href="/ui/main"
+                        class="flex items-center justify-center size-8 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
+                        title="На главную">
+
+                        <span class="material-symbols-outlined">arrow_back</span>
+
+                    </a>
+
+                    <div class="flex items-center gap-3">
+
+                        <span class="brand-logo size-8" style="color:var(--color-primary)" aria-hidden="true"></span>
+
+                        <div class="flex flex-col">
+
+                            <div class="flex items-center gap-2">
+
+                                <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main">
+
+                                    Сегодняшний
+
+                                    план</h1>
+
+                            </div>
+
+                            <p id="subtitle" class="text-xs text-text-secondary">Оптимальный план
+
+                                обучения,
+
+                                адаптированный под вас</p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <div class="flex items-center gap-3">
+
+                    <!-- Streak Badge -->
+
+                    <div id="streak-badge"
+                        class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-full border border-border-subtle transition-all">
+
+                    </div>
+
+                    <!-- User Avatar (same as Main page) -->
+
+                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
+                        onclick="openProfileModal()">
+
+                        <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
+
+                        <span class="text-text-main text-sm font-medium hidden sm:inline"
+                            id="headerUserName">Гость</span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </header>
+
+        <main class="flex-1 w-full max-w-[1200px] mx-auto p-3 md:p-4 lg:p-4 flex flex-col gap-3"
+            style="transform: scale(0.9); transform-origin: top center;">
+
+            <!-- Recipe Cards with Time Controller -->
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+
+                <!-- Cards Container -->
+
+                <div class="lg:col-span-10 grid grid-cols-1 md:grid-cols-2 gap-3">
+
+                    <!-- Daily Mix Card -->
+
+                    <div id="daily-mix-card"
+                        class="group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-primary transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
+                        onclick="startSession('daily_mix')">
+
+                        <div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
+
+                        <div class="flex-1 p-4 flex flex-col justify-between gap-3 z-10">
+
+                            <div>
+
+                                <div class="flex items-center gap-2 mb-2">
+
+                                    <span class="material-symbols-outlined text-primary text-[20px]">cached</span>
+
+                                    <span id="daily-mix-badge"
+                                        class="text-xs font-bold text-primary uppercase tracking-wider">Повторение</span>
+
+                                </div>
+
+                                <h3 class="text-lg font-bold text-text-main mb-1">Daily Mix</h3>
+
+                                <p id="daily-mix-desc" class="text-text-secondary text-sm">
+
+                                    Персонализированная
+
+                                    подборка для закрепления материала.</p>
+
+                            </div>
+
+                            <div class="flex items-end justify-between">
+
+                                <div class="flex flex-col">
+
+                                    <span id="daily-mix-count" class="text-xl font-bold text-text-main">0</span>
+
+                                    <span id="daily-mix-time" class="text-xs text-text-secondary">задач (~0
+
+                                        мин)</span>
+
+                                </div>
+
+                                <button
+                                    class="flex items-center gap-2 bg-bg-hover hover:bg-primary-light text-primary px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+
+                                    <span class="material-symbols-outlined text-[18px]">play_circle</span>
+
+                                    <span id="daily-mix-btn-text">Начать</span>
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    <!-- Main Focus Card -->
+
+                    <div id="main-focus-card"
+                        class="group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-accent transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
+                        onclick="startSession('new_material')">
+
+                        <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
+
+                        <div class="flex-1 p-4 flex flex-col justify-between gap-3 z-10">
+
+                            <div>
+
+                                <div class="flex items-center gap-2 mb-2">
+
+                                    <span class="material-symbols-outlined text-accent text-[20px]">school</span>
+
+                                    <span id="main-focus-badge"
+                                        class="text-xs font-bold text-accent uppercase tracking-wider">Изучение</span>
+
+                                </div>
+
+                                <h3 id="main-focus-title" class="text-lg font-bold text-text-main mb-1">Новый
+
+                                    комплекс
+
+                                </h3>
+
+                                <p id="main-focus-desc" class="text-text-secondary text-sm">Сегодняшние
+
+                                    задачи
+
+                                    вашего комплекса.</p>
+
+                            </div>
+
+                            <div class="flex items-end justify-between">
+
+                                <div class="flex flex-col">
+
+                                    <span id="main-focus-count" class="text-xl font-bold text-text-main">0</span>
+
+                                    <span id="main-focus-time" class="text-xs text-text-secondary">задач (~0
+
+                                        мин)</span>
+
+                                </div>
+
+                                <button
+                                    class="flex items-center gap-2 bg-bg-hover hover:bg-accent-light text-accent px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+
+                                    <span class="material-symbols-outlined text-[18px]">play_circle</span>
+
+                                    Начать
+
+                                </button>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- Time Controller (vertical, right side) -->
+
+                <div class="lg:col-span-2 flex flex-col">
+
+                    <div
+                        class="bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm h-full flex flex-col items-center justify-center">
+
+                        <span
+                            class="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-3 text-center">Времени
+
+                            сегодня</span>
+
+                        <div id="time-controller" class="flex flex-col gap-2 w-full">
+
+                            <button onclick="setTimeLimit(20)" data-time="20"
+                                class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">20
+
+                                мин</button>
+
+                            <button onclick="setTimeLimit(30)" data-time="30"
+                                class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">30
+
+                                мин</button>
+
+                            <button onclick="setTimeLimit(45)" data-time="45"
+                                class="time-btn py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center">45
+
+                                мин</button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Schedule Strip -->
+
+            <div class="flex flex-col gap-2">
+
+                <div class="flex justify-between items-center px-1">
+
+                    <h3 class="text-text-main text-base font-bold">Расписание</h3>
+
+                    <div class="flex gap-2">
+
+                        <button onclick="scrollSchedule(-1)"
+                            class="text-text-secondary hover:text-primary transition-colors">
+
+                            <span class="material-symbols-outlined">chevron_left</span>
+
+                        </button>
+
+                        <button onclick="scrollSchedule(1)"
+                            class="text-text-secondary hover:text-primary transition-colors">
+
+                            <span class="material-symbols-outlined">chevron_right</span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div id="schedule-strip" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar drag-scroll"></div>
+
+            </div>
+
+            <!-- Bottom Grid: Activity & Health -->
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+
+                <!-- Activity Section -->
+
+                <div class="lg:col-span-7 flex flex-col gap-4">
+
+                    <div class="bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm">
+
+                        <div class="flex justify-between items-center mb-3">
+
+                            <h3 class="text-text-main font-bold text-base">Активность</h3>
+
+                            <div class="flex items-center gap-2 text-text-secondary text-sm">
+
+                                <span>Меньше</span>
+
+                                <div class="flex gap-1">
+
+                                    <div class="size-3 rounded-sm bg-bg-secondary"></div>
+
+                                    <div class="size-3 rounded-sm bg-primary-light"></div>
+
+                                    <div class="size-3 rounded-sm bg-primary"></div>
+
+                                    <div class="size-3 rounded-sm bg-primary"></div>
+
+                                </div>
+
+                                <span>Больше</span>
+
+                            </div>
+
+                        </div>
+
+                        <div id="heatmap" class="grid grid-cols-10 gap-1.5 w-full mb-4"></div>
+
+                        <!-- Contextual Banner -->
+
+                        <div id="activity-banner" class="hidden"></div>
+
+                    </div>
+
+                </div>
+
+                <!-- Health & Notifications -->
+
+                <div class="lg:col-span-5 flex flex-col gap-3">
+
+                    <!-- Notification Card -->
+
+                    <div id="notification-card" class="hidden"></div>
+
+                    <!-- Health Indicator -->
+
+                    <div class="bg-surface-1 border border-border-subtle rounded-xl p-3 flex flex-col flex-1 shadow-sm">
+
+                        <div class="flex justify-between items-center mb-3">
+
+                            <h3 class="text-text-main font-bold text-base">Здоровье памяти</h3>
+
+                        </div>
+
+                        <div id="health-content" class="flex items-center justify-center gap-4 flex-1">
+
+                            <div id="health-chart" class="relative size-20 flex-shrink-0 cursor-pointer"
+                                onclick="openHealthDetails()">
+
+                                <div id="health-ring" class="absolute inset-0 rounded-full"></div>
+
+                                <div
+                                    class="absolute inset-2 bg-surface-1 rounded-full flex flex-col items-center justify-center">
+
+                                    <span id="health-percent" class="text-lg font-black text-text-main">—</span>
+
+                                    <span
+                                        class="text-[8px] text-text-light-secondary uppercase font-bold tracking-wide">Общее</span>
+
+                                </div>
+
+                            </div>
+
+                            <div id="health-list" class="flex flex-col gap-2 w-full"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </main>
+
+        <!-- Footer removed per latest requirements -->
+
+        <!-- Profile Modal (injected by SharedProfileModal.js) -->
+
+    </div>
+
+    <script>
+
+        // =============================================================================
+
+        // STATE (initialized empty - will be populated from API)
+
+        // =============================================================================
+
+        const state = {
+
+            loaded: false,
+
+            hasData: false,
+
+            settings: {
+
+                daily_time_limit_minutes: 45,
+
+                schedule_mode: 'daily',
+
+                streak_days: 0,
+
+            },
+
+            daily_plan: {
+
+                daily_mix_count: 0,
+
+                daily_mix_minutes: 0,
+
+                main_focus_name: null,
+
+                main_focus_count: 0,
+
+                main_focus_minutes: 0,
+
+                is_adapted: false,
+
+            },
+
+            health_summary: {
+
+                overall_health: 0,
+
+                complexes: [],
+
+                critical_count: 0,
+
+            },
+
+            schedule: [],
+
+            activity: [],
+
+            notifications: [],
+
+            complexes: [], // Available complexes from API
+
+            restDays: {}, // Rest days marked by user
+
+            ui: {
+
+                isDragging: false,
+
+                startX: 0,
+
+                startY: 0,
+
+                scrollLeft: 0,
+
+                expandedDays: {}, // Track which days are expanded
+
+                dragScrollInitialized: false,
+
+            }
+
+        };
+
+        // =============================================================================
+
+        // API CALLS
+
+        // =============================================================================
+
+        const API_BASE = '/api';
+        const CALENDAR_INITIAL_LOADING_DELAY_MS = window.ACTRA_CONFIG?.ui?.loadingRevealDelayMs ?? 280;
+        let calendarInitialLoadingTimer = null;
+
+        function setupCalendarLoadingLogo() {
+
+            const animatedLogo = document.getElementById('calendarLoadingLogoAnimated');
+
+            const staticLogo = document.getElementById('calendarLoadingLogoStatic');
+
+            if (!animatedLogo || !staticLogo) return;
+
+            const prefersReducedMotion = window.matchMedia
+
+                && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+            if (prefersReducedMotion) {
+
+                animatedLogo.classList.add('hidden');
+
+                staticLogo.classList.remove('hidden');
+
+                return;
+
+            }
+
+            animatedLogo.addEventListener('error', () => {
+
+                animatedLogo.classList.add('hidden');
+
+                staticLogo.classList.remove('hidden');
+
+            }, { once: true });
+
+        }
+
+        function setCalendarInitialLoading(show) {
+
+            const overlay = document.getElementById('calendarInitialLoading');
+
+            if (!overlay) return;
+
+            overlay.classList.toggle('hidden', !show);
+
+        }
+
+        function scheduleCalendarInitialLoading() {
+
+            if (calendarInitialLoadingTimer) {
+
+                clearTimeout(calendarInitialLoadingTimer);
+
+            }
+
+            calendarInitialLoadingTimer = setTimeout(() => {
+
+                setCalendarInitialLoading(true);
+
+                calendarInitialLoadingTimer = null;
+
+            }, CALENDAR_INITIAL_LOADING_DELAY_MS);
+
+        }
+
+        function clearCalendarInitialLoadingTimer() {
+
+            if (!calendarInitialLoadingTimer) return;
+
+            clearTimeout(calendarInitialLoadingTimer);
+
+            calendarInitialLoadingTimer = null;
+
+        }
+
+        async function fetchTodayPlan() {
+
+            const isInitialLoad = !state.loaded;
+
+            if (isInitialLoad) {
+
+                scheduleCalendarInitialLoading();
+
+            }
+
+            try {
+
+                // Fetch calendar data
+
+                const calendarRes = await fetch(`${API_BASE}/calendar/today`);
+
+                if (!calendarRes.ok) {
+
+                    console.error('Calendar API returned error:', calendarRes.status);
+
+                    showScheduleError('Не удалось загрузить данные календаря');
+
+                    return;
+
+                }
+
+                const calendarData = await calendarRes.json();
+
+                const calendarOk = calendarData.ok ?? calendarData.success;
+
+                if (calendarOk) {
+
+                    // Update state from calendar API
+
+                    if (calendarData.settings) {
+
+                        Object.assign(state.settings, calendarData.settings);
+
+                    }
+
+                    if (calendarData.daily_plan) {
+
+                        Object.assign(state.daily_plan, calendarData.daily_plan);
+
+                    }
+
+                    if (calendarData.health_summary) {
+
+                        state.health_summary = calendarData.health_summary;
+
+                    }
+
+                    if (calendarData.schedule_strip) {
+
+                        state.schedule = calendarData.schedule_strip;
+
+                        console.debug('[calendar] schedule_strip from API', state.schedule.length);
+
+                    }
+
+                    if (calendarData.notifications) {
+
+                        state.notifications = calendarData.notifications;
+
+                    }
+
+                    if (calendarData.streak_info) {
+
+                        state.settings.streak_days = calendarData.streak_info.days || 0;
+
+                    }
+
+                    if (calendarData.rest_days) {
+
+                        state.restDays = calendarData.rest_days;
+
+                    }
+
+                    state.hasData = true;
+
+                } else {
+
+                    console.error('Calendar API returned error:', calendarData.error);
+
+                    showScheduleError(calendarData.error || 'Ошибка загрузки данных');
+
+                }
+
+                // Also fetch activity for heatmap
+
+                const activityRes = await fetch(`${API_BASE}/calendar/activity?days=30`);
+
+                const activityData = await activityRes.json();
+
+                const activityOk = activityData.ok ?? activityData.success;
+
+                if (activityOk && activityData.activity) {
+
+                    state.activity = activityData.activity;
+
+                }
+
+                // Fetch available complexes
+
+                const complexesRes = await fetch(`${API_BASE}/complexes`);
+
+                const complexesData = await complexesRes.json();
+
+                if (complexesData.ok && complexesData.items) {
+
+                    state.complexes = complexesData.items;
+
+                    state.hasData = state.hasData || complexesData.items.length > 0;
+
+                    // If no daily plan but have complexes, use first complex as main focus
+
+                    if (!state.daily_plan.main_focus_name && complexesData.items.length > 0) {
+
+                        state.daily_plan.main_focus_name = complexesData.items[0].name;
+
+                        state.daily_plan.main_focus_count = complexesData.items[0].tasks?.length || 0;
+
+                    }
+
+                }
+
+                // Fetch statistics for additional data
+
+                const statsRes = await fetch(`${API_BASE}/statistics/time-dynamics?days=30`);
+
+                const statsData = await statsRes.json();
+
+                if (statsData.ok && statsData.dynamics) {
+
+                    // Мержим статистику в активность, чтобы не показывать 0% при наличии данных из /statistics/time-dynamics
+
+                    const statsMap = new Map();
+
+                    statsData.dynamics.forEach(d => {
+
+                        statsMap.set(d.date, {
+
+                            date: d.date,
+
+                            completion_percent: Math.round((d.success_rate || 0) * 100),
+
+                            tasks_count: d.tasks_attempted || 0,
+
+                            is_missed: d.tasks_attempted === 0,
+
+                            is_today: d.date === new Date().toISOString().split('T')[0],
+
+                            is_future: false,
+
+                        });
+
+                    });
+
+                    // Если activity пустая — берём статистику целиком
+
+                    if (state.activity.length === 0) {
+
+                        state.activity = Array.from(statsMap.values());
+
+                    } else {
+
+                        // Иначе дополняем/обновляем по датам, берём максимум completion_percent
+
+                        state.activity = state.activity.map(day => {
+
+                            const stat = statsMap.get(day.date);
+
+                            if (!stat) return day;
+
+                            const completion = Math.max(day.completion_percent || 0, stat.completion_percent || 0);
+
+                            return {
+
+                                ...day,
+
+                                completion_percent: completion,
+
+                                is_missed: (stat.tasks_count || 0) === 0 ? day.is_missed : false,
+
+                                tasks_count: stat.tasks_count ?? day.tasks_count,
+
+                            };
+
+                        });
+
+                    }
+
+                    // Check if user has any activity
+
+                    state.hasData = state.hasData || statsData.dynamics.some(d => d.tasks_attempted > 0);
+
+                }
+
+                // Fetch overall stats to sync streak (series) with other pages
+
+                const overallRes = await fetch(`${API_BASE}/statistics/overall`);
+
+                const overallData = await overallRes.json();
+
+                if (overallData.ok && overallData.stats) {
+
+                    const overallStreak = overallData.stats.streak_days || 0;
+
+                    const calendarStreak = state.settings.streak_days || 0;
+
+                    state.settings.streak_days = Math.max(calendarStreak, overallStreak);
+
+                }
+
+            } catch (e) {
+
+                console.error('Failed to fetch data:', e);
+
+                showScheduleError('Не удалось подключиться к серверу');
+
+            } finally {
+
+                state.loaded = true;
+
+                generateScheduleIfEmpty();
+
+                loadUserAvatar();
+
+                renderAll();
+
+                if (isInitialLoad) {
+
+                    clearCalendarInitialLoadingTimer();
+
+                    setCalendarInitialLoading(false);
+
+                }
+
+            }
+
+        }
+
+        function showScheduleError(message) {
+
+            // Show error banner above schedule strip
+
+            const scheduleSection = document.querySelector('#schedule-strip').parentElement;
+
+            const existingError = scheduleSection.querySelector('.schedule-error-banner');
+
+            if (existingError) {
+
+                existingError.remove();
+
+            }
+
+            const errorBanner = document.createElement('div');
+
+            errorBanner.className = 'schedule-error-banner bg-error-light border border-error-light rounded-lg p-3 mb-3 flex items-center gap-3';
+
+            errorBanner.innerHTML = `
+
+        <span class="material-symbols-outlined text-error">error</span>
+
+        <div class="flex-1">
+
+            <p class="text-sm font-medium text-error-text">Ошибка загрузки расписания</p>
+
+            <p class="text-xs text-error-text opacity-80">${message}</p>
+
+        </div>
+
+        <button onclick="this.parentElement.remove()" class="text-error-text opacity-60 hover:text-error-text">
+
+            <span class="material-symbols-outlined text-[18px]">close</span>
+
+        </button>
+
+    `;
+
+            scheduleSection.insertBefore(errorBanner, scheduleSection.querySelector('#schedule-strip'));
+
+        }
+
+        async function loadUserAvatar() {
+
+            // Load user avatar like on main page
+
+            try {
+
+                const res = await fetch(`${API_BASE}/users/current`);
+
+                const data = await res.json();
+
+                if (data.ok && data.user) {
+
+                    currentUser = data.user; // Store for profile modal
+
+                    const avatarEl = document.getElementById('headerAvatar');
+
+                    const nameEl = document.getElementById('headerUserName');
+
+                    if (nameEl) nameEl.textContent = data.user.name || 'Гость';
+
+                    if (avatarEl) avatarEl.src = getAvatarUrl(data.user.avatar_seed, data.user.user_id);
+
+                }
+
+            } catch (e) {
+
+                console.log('Could not load user avatar');
+
+            }
+
+        }
+
+        function getAvatarUrl(avatarSeed, userId) {
+
+            if (!avatarSeed) avatarSeed = userId;
+
+            // Check if it looks like a filename (contains a dot)
+
+            if (avatarSeed && avatarSeed.includes && avatarSeed.includes('.')) {
+
+                return `/api/assets/avatars/${avatarSeed}`;
+
+            }
+
+            return '/api/assets/avatars/1.png';
+
+        }
+
+        // =============================================================================
+
+        // PROFILE MODAL
+
+        // =============================================================================
+
+        let currentUser = null;
+
+        // Profile modal functions provided by SharedProfileModal.js
+
+        function generateScheduleIfEmpty() {
+
+            // Generate schedule strip if API didn't provide one
+
+            if (state.schedule.length === 0) {
+
+                console.warn('Schedule data is empty, generating fallback');
+
+                const today = new Date();
+
+                const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+                for (let i = -1; i < 7; i++) {
+
+                    const d = new Date(today);
+
+                    d.setDate(d.getDate() + i);
+
+                    let dayName;
+
+                    if (i === -1) dayName = 'Вчера';
+
+                    else if (i === 0) dayName = 'Сегодня';
+
+                    else if (i === 1) dayName = 'Завтра';
+
+                    else dayName = dayNames[d.getDay()];
+
+                    state.schedule.push({
+
+                        date: d.toISOString().split('T')[0],
+
+                        day_name: dayName,
+
+                        day_num: d.getDate(),
+
+                        month: d.toLocaleDateString('ru', { month: 'short' }),
+
+                        status: i < 0 ? 'missed' : (i === 0 ? 'planned' : 'planned'),
+
+                        tasks: [],
+
+                        badges: ['Нет данных'],
+
+                        is_today: i === 0,
+
+                        is_future: i > 0,
+
+                    });
+
+                }
+
+            }
+
+            // Generate activity heatmap if empty
+
+            if (state.activity.length === 0) {
+
+                const today = new Date();
+
+                for (let i = 29; i >= 0; i--) {
+
+                    const d = new Date(today);
+
+                    d.setDate(d.getDate() - i);
+
+                    state.activity.push({
+
+                        date: d.toISOString().split('T')[0],
+
+                        completion_percent: 0,
+
+                        is_missed: false,
+
+                        is_today: i === 0,
+
+                        is_future: false,
+
+                    });
+
+                }
+
+            }
+
+        }
+
+        async function updateSettings(settings) {
+
+            try {
+
+                await fetch(`${API_BASE}/calendar/settings`, {
+
+                    method: 'POST',
+
+                    headers: { 'Content-Type': 'application/json' },
+
+                    body: JSON.stringify(settings),
+
+                });
+
+            } catch (e) {
+
+                console.error('Settings update failed:', e);
+
+            }
+
+        }
+
+        async function startSession(type) {
+
+            if (type === 'daily_mix') {
+
+                // Start Daily Mix via Calendar API
+
+                try {
+
+                    const res = await fetch(`${API_BASE}/calendar/session/start`, {
+
+                        method: 'POST',
+
+                        headers: { 'Content-Type': 'application/json' },
+
+                        body: JSON.stringify({ session_type: 'daily_mix' })
+
+                    });
+
+                    const data = await res.json();
+
+                    const ok = data.ok ?? data.success;
+
+                    if (ok && data.session_id) {
+
+                        window.navigateWithTransition(`/ui/session/${data.session_id}`);
+
+                        return;
+
+                    }
+
+                } catch (e) {
+
+                    console.error('Failed to start Daily Mix:', e);
+
+                }
+
+            } else if (type === 'new_material' && state.complexes.length > 0) {
+
+                // Start first available complex
+
+                const complex = state.complexes[0];
+
+                try {
+
+                    const res = await fetch(`${API_BASE}/session/${complex.id}/start`, {
+
+                        method: 'POST',
+
+                        headers: { 'Content-Type': 'application/json' },
+
+                        body: JSON.stringify({})
+
+                    });
+
+                    const data = await res.json();
+
+                    const ok = data.ok ?? data.success;
+
+                    if (ok && data.session_id) {
+
+                        window.navigateWithTransition(`/ui/session/${data.session_id}`);
+
+                        return;
+
+                    }
+
+                } catch (e) {
+
+                    console.error('Failed to start session:', e);
+
+                }
+
+            }
+
+            // Fallback: show message
+
+            if (!state.hasData) {
+
+                alert('Для начала обучения создайте или откройте комплекс.');
+
+                window.navigateWithTransition('/ui/complexes');
+
+            } else {
+
+                alert('Не удалось запустить сессию. Попробуйте позже.');
+
+            }
+
+        }
+
+        // =============================================================================
+
+        // RENDER FUNCTIONS
+
+        // =============================================================================
+
+        function renderAll() {
+
+            // Update subtitle based on data availability
+
+            const subtitle = document.getElementById('subtitle');
+
+            if (!state.hasData) {
+
+                subtitle.textContent = 'Начните проходить комплексы, чтобы увидеть персональный план';
+
+            } else if (state.daily_plan.is_adapted) {
+
+                subtitle.textContent = 'План обучения обновлен с учетом пропуска';
+
+            } else {
+
+                subtitle.textContent = 'Оптимальный план обучения, адаптированный под вас';
+
+            }
+
+            renderStreakBadge();
+
+            renderTimeController();
+
+            renderRecipeCards();
+
+            renderScheduleStrip();
+
+            renderHeatmap();
+
+            renderActivityBanner();
+
+            renderNotificationCard();
+
+            renderHealthIndicator();
+
+        }
+
+        function renderStreakBadge() {
+
+            const badge = document.getElementById('streak-badge');
+
+            const streak = state.settings.streak_days || 0;
+
+            const isHot = streak >= 7;
+
+            if (streak === 0) {
+
+                badge.className = 'flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-full border border-border-subtle transition-all';
+
+                badge.innerHTML = `
+
+            <span class="material-symbols-outlined text-text-secondary text-[18px]">local_fire_department</span>
+
+            <span class="text-xs font-medium text-text-secondary">Начните серию</span>
+
+        `;
+
+            } else {
+
+                badge.className = `flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-full border transition-all ${isHot ? 'border-primary-light' : 'border-border-subtle'
+
+                    }`;
+
+                badge.innerHTML = `
+
+            <span class="material-symbols-outlined text-secondary text-[18px]">local_fire_department</span>
+
+            <span class="text-xs font-bold ${isHot ? 'text-primary' : 'text-text-secondary'}">${streak} ${getDaysWord(streak)}</span>
+
+        `;
+
+            }
+
+        }
+
+        function renderTimeController() {
+
+            const buttons = document.querySelectorAll('.time-btn');
+
+            buttons.forEach(btn => {
+
+                const time = parseInt(btn.dataset.time);
+
+                const isActive = time === state.settings.daily_time_limit_minutes;
+
+                btn.className = `time-btn px-4 py-1.5 rounded text-sm font-medium transition-all ${isActive
+
+                    ? 'bg-primary text-primary-fg shadow-lg shadow-primary-light font-bold transform scale-105'
+
+                    : 'text-text-secondary hover:bg-bg-hover hover:text-primary'
+
+                    }`;
+
+            });
+
+        }
+
+        function renderRecipeCards() {
+
+            const plan = state.daily_plan;
+
+            const activeComplexes = (state.health_summary?.complexes || []).filter(c => {
+
+                const status = (c?.status || '').toLowerCase();
+
+                const id = (c?.complex_id || '').toLowerCase();
+
+                const name = (c?.name || '').toLowerCase();
+
+                const isSynthetic = id === 'daily_mix' || name === 'daily_mix' || id === 'study' || name === 'study';
+
+                return !isSynthetic && (status === 'in_progress' || status === 'mastered');
+
+            });
+
+            const hasActiveComplexes = activeComplexes.length > 0;
+
+            const hasComplexes = state.complexes.length > 0;
+
+            const hasDailyMix = hasActiveComplexes && plan.daily_mix_count > 0;
+
+            const hasMainFocus = hasActiveComplexes && !!plan.main_focus_name;
+
+            console.debug('[calendar] renderRecipeCards', {
+
+                plan,
+
+                healthSummary: state.health_summary,
+
+                activeComplexes,
+
+                hasActiveComplexes,
+
+                hasDailyMix,
+
+                hasMainFocus,
+
+                hasData: state.hasData,
+
+            });
+
+            const dailyMixCard = document.getElementById('daily-mix-card');
+
+            const mainFocusCard = document.getElementById('main-focus-card');
+
+            // Daily Mix Card
+
+            if (!hasActiveComplexes || (!hasDailyMix && !state.hasData)) {
+
+                // Strict empty state for Daily Mix: нет активных комплексов
+
+                dailyMixCard.innerHTML = `
+
+            <div class="absolute top-0 left-0 w-1 h-full bg-border-subtle"></div>
+
+            <div class="flex-1 p-6 flex flex-col items-start justify-center gap-3 z-10 min-h-[180px]">
+
+                <div class="flex items-center gap-2 text-text-secondary">
+
+                    <span class="material-symbols-outlined text-[20px]">cached</span>
+
+                    <span class="text-sm font-medium">Нет активных комплексов</span>
+
+                </div>
+
+                <p class="text-text-secondary text-sm">Запустите любой комплекс, чтобы появилась подборка повторения.</p>
+
+                <button onclick="window.navigateWithTransition('/ui/complexes')" class="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary transition-colors">
+
+                    Перейти к комплексам
+
+                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+
+                </button>
+
+            </div>
+
+        `;
+
+                dailyMixCard.onclick = null;
+
+                dailyMixCard.classList.add('cursor-default');
+
+                dailyMixCard.classList.remove('cursor-pointer');
+
+            } else {
+
+                // Normal Daily Mix
+
+                document.getElementById('daily-mix-count').textContent = plan.daily_mix_count || 0;
+
+                document.getElementById('daily-mix-time').textContent = `задач (~${plan.daily_mix_minutes || 0} мин)`;
+
+                if (plan.is_adapted) {
+
+                    document.getElementById('daily-mix-badge').textContent = 'Адаптация очереди';
+
+                    document.getElementById('daily-mix-desc').textContent = 'Очередь адаптирована, но эта подборка остается обязательной для прогресса.';
+
+                    document.getElementById('daily-mix-btn-text').textContent = 'Возобновить';
+
+                    document.getElementById('subtitle').textContent = 'План обучения обновлен с учетом пропуска.';
+
+                }
+
+                if (!hasDailyMix) {
+
+                    document.getElementById('daily-mix-desc').textContent = 'Пока нет задач на повторение. Начните проходить комплексы!';
+
+                }
+
+            }
+
+            // Main Focus Card
+
+            if (!hasActiveComplexes || !hasMainFocus) {
+
+                // Strict empty state for Main Focus
+
+                mainFocusCard.innerHTML = `
+
+            <div class="absolute top-0 left-0 w-1 h-full bg-border-subtle"></div>
+
+            <div class="flex-1 p-6 flex flex-col items-start justify-center gap-3 z-10 min-h-[180px]">
+
+                <div class="flex items-center gap-2 text-text-secondary">
+
+                    <span class="material-symbols-outlined text-[20px]">school</span>
+
+                    <span class="text-sm font-medium">Нет активных комплексов</span>
+
+                </div>
+
+                <p class="text-text-secondary text-sm">Запустите комплекс, чтобы появилась подборка "Изучение".</p>
+
+                <button onclick="window.navigateWithTransition('/ui/complexes')" class="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary transition-colors">
+
+                    Перейти к комплексам
+
+                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+
+                </button>
+
+            </div>
+
+        `;
+
+                mainFocusCard.onclick = null;
+
+                mainFocusCard.classList.add('cursor-default');
+
+                mainFocusCard.classList.remove('cursor-pointer');
+
+            } else {
+
+                // Normal Main Focus
+
+                const focusName = plan.main_focus_name || (state.complexes[0]?.name || 'Новый комплекс');
+
+                const focusCount = plan.main_focus_count || (state.complexes[0]?.tasks?.length || 0);
+
+                const focusMinutes = plan.main_focus_minutes || Math.round(focusCount * 3);
+
+                document.getElementById('main-focus-title').textContent = focusName;
+
+                document.getElementById('main-focus-count').textContent = focusCount;
+
+                document.getElementById('main-focus-time').textContent = `${focusCount > 0 ? 'задач' : 'новых кейса'} (~${focusMinutes} мин)`;
+
+            }
+
+        }
+
+        function renderScheduleStrip() {
+
+            const container = document.getElementById('schedule-strip');
+
+            if (state.schedule.length === 0) {
+
+                container.innerHTML = `
+
+            <div class="flex-1 bg-surface-1 border border-border-subtle rounded-xl p-6 flex flex-col items-center justify-center text-center gap-3">
+
+                <span class="material-symbols-outlined text-text-secondary text-[32px]">event_busy</span>
+
+                <p class="text-sm text-text-secondary">Расписание недоступно</p>
+
+            </div>
+
+        `;
+
+                return;
+
+            }
+
+            const normalizeTasks = (tasks) => {
+
+                return (tasks || []).map(t => {
+
+                    if (typeof t === 'string') {
+
+                        return { name: t, is_completed: false, is_synthetic: false };
+
+                    }
+
+                    return {
+
+                        name: t?.name || t?.complex_name || t?.task_id || '',
+
+                        is_completed: Boolean(t?.is_completed),
+
+                        is_synthetic: Boolean(t?.is_synthetic),
+
+                        complex_id: t?.complex_id || '',
+
+                    };
+
+                });
+
+            };
+
+            const filterSyntheticTasks = (tasks) => {
+
+                if (!tasks) return [];  // Безопасность: проверка на null/undefined
+
+                return tasks.filter(t => {
+
+                    if (!t || !t.name) return false;
+
+                    // Фильтруем синтетические задачи по флагу, а не по имени
+
+                    if (t.is_synthetic) return false;
+
+                    // убираем чисто временные строки типа (~12 мин)
+
+                    if (/^\(~\d+\s*мин\)/i.test((t.name || '').toLowerCase())) return false;
+
+                    return true;
+
+                });
+
+            };
+
+            const isScheduleEmpty = state.schedule.every(d => {
+
+                const tasks = Array.isArray(d.tasks) ? d.tasks : [];
+
+                const allTasks = Array.isArray(d.all_tasks) ? d.all_tasks : [];
+
+                return tasks.length === 0 && allTasks.length === 0;
+
+            });
+
+            if (isScheduleEmpty) {
+
+                container.innerHTML = `
+
+            <div class="w-full bg-surface-1 border border-border-subtle rounded-xl px-4 py-3 flex items-center justify-between gap-3 opacity-90 shadow-sm">
+
+                <div class="flex items-center gap-2 min-w-0">
+
+                    <span class="material-symbols-outlined text-text-secondary text-[18px]">info</span>
+
+                    <span class="text-xs text-text-secondary font-medium truncate">План появится после старта комплекса</span>
+
+                </div>
+
+                <button onclick="window.navigateWithTransition('/ui/complexes')" class="text-xs font-semibold text-primary hover:text-primary transition-colors whitespace-nowrap">
+
+                    Перейти к комплексам
+
+                </button>
+
+            </div>
+
+        `;
+
+                setupDragScroll();
+
+                return;
+
+            }
+
+            container.innerHTML = state.schedule.map((day, dayIndex) => {
+
+                const isToday = day.is_today;
+
+                const isMissed = day.status === 'missed';
+
+                const isCompleted = day.status === 'completed';
+
+                const isRestDay = day.status === 'rest_day' || state.restDays[day.date];
+
+                const isExpanded = state.ui.expandedDays && state.ui.expandedDays[day.date];
+
+                const canToggleRest = isToday || day.is_future;
+
+                let borderClass = 'border-border-subtle';
+
+                let opacityClass = 'opacity-80 hover:opacity-100';
+
+                let bgClass = isMissed ? 'bg-bg-secondary' : 'bg-surface-1';
+
+                let extraContent = '';
+
+                if (isRestDay) {
+
+                    bgClass = 'bg-surface-1';
+
+                    opacityClass = 'opacity-70';
+
+                    borderClass = 'border-border-subtle';
+
+                } else if (isToday) {
+
+                    borderClass = 'border-primary';
+
+                    opacityClass = '';
+
+                    extraContent = '<div class="absolute top-2 right-2 size-2 rounded-full bg-primary animate-pulse"></div>';
+
+                } else if (isMissed) {
+
+                    opacityClass = 'opacity-60';
+
+                }
+
+                // Определяем, какие задачи показывать
+
+                const allTasksNorm = normalizeTasks(day.all_tasks || []);
+
+                const allTasks = filterSyntheticTasks(allTasksNorm);
+
+                const visibleTasksRaw = normalizeTasks(isExpanded ? day.tasks : (day.tasks || []).slice(0, 3));
+
+                const visibleTaskNames = filterSyntheticTasks(visibleTasksRaw);
+
+                const displayTasks = isExpanded ? allTasks : allTasks.slice(0, 3);
+
+                // Формируем HTML задач с галочками выполнения
+
+                const tasksHtml = displayTasks.length > 0
+
+                    ? displayTasks.map((taskInfo, idx) => {
+
+                        const isCompleted = taskInfo.is_completed || false;
+
+                        const taskName = (visibleTaskNames[idx] && visibleTaskNames[idx].name) || taskInfo.name;
+
+                        const checkIcon = isCompleted
+
+                            ? '<span class="material-symbols-outlined text-success text-[16px]">check_circle</span>'
+
+                            : '<span class="material-symbols-outlined text-text-secondary text-[16px]">radio_button_unchecked</span>';
+
+                        return `
+
+                    <div class="flex items-center gap-2">
+
+                        ${checkIcon}
+
+                        <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'} ${isCompleted ? 'line-through opacity-70' : ''}">${taskName}</span>
+
+                    </div>
+
+                `;
+
+                    }).join('')
+
+                    : normalizeTasks(day.tasks || []).filter(t => t && t.name).map(task => `
+
+                <div class="flex items-center gap-2">
+
+                    <div class="size-1.5 rounded-full ${isToday ? 'bg-text-main' : 'bg-text-secondary'}"></div>
+
+                    <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'}">${task.name}</span>
+
+                </div>
+
+            `).join('');
+
+                // Индикатор переполнения
+
+                const overflowHtml = day.has_overflow && !isExpanded
+
+                    ? `<button onclick="toggleDayExpand('${day.date}')" class="flex items-center gap-1 text-xs text-primary hover:text-primary font-medium transition-colors">
+
+                <span class="material-symbols-outlined text-[14px]">expand_more</span>
+
+                <span>+${day.overflow_count} ещё</span>
+
+            </button>`
+
+                    : '';
+
+                // Кнопка сворачивания
+
+                const collapseHtml = isExpanded
+
+                    ? `<button onclick="toggleDayExpand('${day.date}')" class="flex items-center gap-1 text-xs text-text-secondary hover:text-primary font-medium transition-colors">
+
+                <span class="material-symbols-outlined text-[14px]">expand_less</span>
+
+                <span>Свернуть</span>
+
+            </button>`
+
+                    : '';
+
+                const badgesHtml = (() => {
+
+                    const list = [...(day.badges || [])];
+
+                    return list.map(badge => {
+
+                        let badgeClass = 'bg-bg-hover text-text-secondary';
+
+                        if (badge === 'Пропущено') badgeClass = 'bg-error-lighter text-error';
+
+                        if (badge === 'Пересчитано') badgeClass = 'bg-primary-light border border-primary text-primary';
+
+                        if (badge === 'Нет данных') badgeClass = 'bg-warning-light text-warning-dark border border-warning-lighter';
+
+                        return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${badge}</span></div>`;
+
+                    }).join('');
+
+                })();
+
+                // Кнопка переключения выходного
+
+                const restToggleHtml = canToggleRest ? `
+
+            <button onclick="event.stopPropagation(); toggleRestDay('${day.date}')" 
+
+                    class="rest-day-toggle ${isRestDay ? 'active' : ''} p-1 rounded hover:bg-bg-hover transition-colors"
+
+                    title="${isRestDay ? 'Снять отметку выходного' : 'Отметить как выходной'}">
+
+                <span class="material-symbols-outlined text-[16px] ${isRestDay ? 'text-text-main' : 'text-text-secondary'}">
+
+                    ${isRestDay ? 'event_busy' : 'event_available'}
+
+                </span>
+
+            </button>
+
+        ` : '';
+
+                return `
+
+            <div class="w-[180px] ${isExpanded ? 'w-[240px]' : ''} flex-none ${bgClass} border ${borderClass} rounded-xl p-4 flex flex-col gap-3 ${opacityClass} transition-all shadow-sm relative">
+
+                ${extraContent}
+
+                <div class="flex justify-between items-start">
+
+                    <span class="${isToday ? 'text-primary font-bold' : isRestDay ? 'text-text-secondary font-medium' : 'text-text-secondary font-medium'}">${day.day_name}</span>
+
+                    <div class="flex items-center gap-1">
+
+                        ${restToggleHtml}
+
+                        ${day.is_future ? `<span class="material-symbols-outlined text-[16px] text-info" title="Прогноз: план может обновиться после новых прохождений">visibility</span>` : ''}
+
+                        <span class="text-xs text-text-secondary whitespace-nowrap">${day.day_num || ''} ${day.month || ''}</span>
+
+                    </div>
+
+                </div>
+
+                <div class="h-px w-full bg-border-subtle"></div>
+
+                <div class="flex flex-col gap-2">
+
+                    ${tasksHtml}
+
+                    ${overflowHtml}
+
+                    ${collapseHtml}
+
+                    ${badgesHtml}
+
+                </div>
+
+            </div>
+
+        `;
+
+            }).join('');
+
+            setupDragScroll();
+
+        }
+
+        function renderHeatmap() {
+
+            const container = document.getElementById('heatmap');
+
+            // Сортируем активность по дате
+
+            let days = [...state.activity].sort((a, b) => {
+
+                try {
+
+                    return new Date(a.date) - new Date(b.date);
+
+                } catch {
+
+                    return 0;
+
+                }
+
+            });
+
+            // Нам нужно отобразить ровно 30 ячеек (например, 29 прошедших дней + Сегодня)
+
+            // Создадим массив из 30 дат, от (Сегодня - 29) до (Сегодня)
+
+            const today = new Date();
+
+            const gridDays = [];
+
+            const activityMap = new Map();
+
+            // Заполняем карту активности для быстрого поиска
+
+            days.forEach(d => {
+
+                activityMap.set(d.date.split('T')[0], d);
+
+            });
+
+            for (let i = 29; i >= 0; i--) {
+
+                const d = new Date(today);
+
+                d.setDate(today.getDate() - i);
+
+                const dateStr = d.toISOString().split('T')[0];
+
+                // Ищем данные в истории или создаем пустую запись
+
+                const existing = activityMap.get(dateStr);
+
+                if (existing) {
+
+                    gridDays.push(existing);
+
+                } else {
+
+                    gridDays.push({
+
+                        date: dateStr,
+
+                        completion_percent: 0,
+
+                        is_missed: false,
+
+                        is_today: i === 0,
+
+                        is_future: false,
+
+                        tasks_solved: 0,
+
+                        tasks_attempted: 0,
+
+                        seconds_spent: 0
+
+                    });
+
+                }
+
+            }
+
+            // Рендерим 30 ячеек (3 строки по 10 столбцов)
+
+            container.innerHTML = gridDays.map(day => {
+
+                let bgClass = 'bg-bg-secondary';
+
+                let extraClass = '';
+
+                // Данные могут быть undefined, если пришли пустыми
+
+                const tasksSolved = day.tasks_solved || 0;
+
+                const tasksAttempted = day.tasks_attempted || 0;
+
+                const secondsSpent = day.seconds_spent || 0;
+
+                const minutesSpent = Math.round(secondsSpent / 60);
+
+                if (day.is_future) {
+
+                    bgClass = 'bg-surface-1 border border-dashed border-text-secondary';
+
+                } else if (day.is_today) {
+
+                    bgClass = 'bg-primary animate-pulse shadow-lg shadow-primary-light border-2 border-border-strong';
+
+                } else if (day.is_rest_day) {
+
+                    bgClass = 'bg-bg-secondary';
+
+                    extraClass = 'border border-border-subtle';
+
+                } else if (day.is_missed) {
+
+                    bgClass = 'bg-error-lighter';
+
+                    extraClass = 'border border-dashed border-error-light';
+
+                } else if (tasksSolved >= 5) {
+
+                    bgClass = 'bg-primary-dark ring-1 ring-primary';
+
+                } else if (tasksSolved >= 4) {
+
+                    bgClass = 'bg-primary';
+
+                } else if (tasksSolved >= 2) {
+
+                    bgClass = 'bg-primary-light';
+
+                } else if (tasksSolved > 0) {
+
+                    bgClass = 'bg-primary-lighter';
+
+                }
+
+                const dateLabel = (() => {
+
+                    try { return new Date(day.date).toLocaleDateString('ru-RU'); }
+
+                    catch { return day.date; }
+
+                })();
+
+                // Улучшенный tooltip с деталями
+
+                let tooltip = '';
+
+                if (day.is_today) {
+
+                    tooltip = `Сегодня: ${tasksSolved} задач${minutesSpent > 0 ? `, ${minutesSpent} мин` : ''} (${dateLabel})`;
+
+                } else if (day.is_future) {
+
+                    tooltip = `Будущее (${dateLabel})`;
+
+                } else if (day.is_rest_day) {
+
+                    tooltip = `Выходной (${dateLabel})`;
+
+                } else if (day.is_missed) {
+
+                    tooltip = `Пропуск: 0 задач (${dateLabel})`;
+
+                } else if (tasksSolved > 0) {
+
+                    const accuracy = tasksAttempted > 0 ? Math.round((tasksSolved / tasksAttempted) * 100) : 0;
+
+                    tooltip = `${tasksSolved} задач${minutesSpent > 0 ? `, ${minutesSpent} мин` : ''}${accuracy > 0 ? `, ${accuracy}%` : ''} (${dateLabel})`;
+
+                } else {
+
+                    tooltip = `0 задач (${dateLabel})`;
+
+                }
+
+                return `<div class="aspect-square rounded ${bgClass} ${extraClass} tooltip" data-tooltip="${tooltip}"></div>`;
+
+            }).join('');
+
+        }
+
+        function renderActivityBanner() {
+
+            const container = document.getElementById('activity-banner');
+
+            const streak = state.settings.streak_days;
+
+            const hasActivity = state.activity.some(d => d.completion_percent > 0 || d.tasks_count > 0);
+
+            const hasMissed = state.activity.some(d => d.is_missed);
+
+            // If no activity at all, show welcome message
+
+            if (!hasActivity && !state.hasData) {
+
+                container.innerHTML = `
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-bg-secondary border border-border-subtle shadow-sm animate-slide-in">
+
+                <div class="flex items-center justify-center size-10 rounded-full bg-primary-lighter text-primary shrink-0">
+
+                    <span class="material-symbols-outlined">waving_hand</span>
+
+                </div>
+
+                <div class="flex flex-col gap-1">
+
+                    <p class="text-sm text-text-main font-bold">Добро пожаловать в Календарь!</p>
+
+                    <p class="text-xs text-text-secondary leading-relaxed">
+
+                        Здесь будет отображаться ваша активность. Начните проходить комплексы, чтобы отслеживать прогресс.
+
+                    </p>
+
+                </div>
+
+            </div>
+
+        `;
+
+                container.classList.remove('hidden');
+
+                return;
+
+            }
+
+            if (hasMissed && state.daily_plan.is_adapted) {
+
+                // Missed day message
+
+                container.innerHTML = `
+
+            <div class="flex items-start gap-4 p-4 rounded-xl bg-bg-secondary border border-border-subtle shadow-sm animate-slide-in">
+
+                <div class="flex items-center justify-center size-10 rounded-full bg-secondary-lighter text-secondary shrink-0">
+
+                    <span class="material-symbols-outlined">event_busy</span>
+
+                </div>
+
+                <div class="flex flex-col gap-1">
+
+                    <p class="text-sm text-text-main font-bold">Пропустили день? Это нормально!</p>
+
+                    <p class="text-xs text-text-secondary leading-relaxed"></p>
+
+                </div>
+
+            </div>
+
+        `;
+
+                container.classList.remove('hidden');
+
+                return;
+
+            } else {
+
+                container.classList.add('hidden');
+
+            }
+
+        }
+
+        function renderNotificationCard() {
+
+            const container = document.getElementById('notification-card');
+
+            if (state.notifications.length === 0) {
+
+                container.classList.add('hidden');
+
+                return;
+
+            }
+
+            const notif = state.notifications[0];
+
+            container.innerHTML = `
+
+        <div class="flex items-center justify-between p-4 bg-warning-light border border-warning-light rounded-xl shadow-sm animate-slide-in">
+
+            <div class="flex items-center gap-3">
+
+                <div class="bg-warning-lighter text-warning-dark rounded-full p-1.5">
+
+                    <span class="material-symbols-outlined text-[18px]">warning</span>
+
+                </div>
+
+                <div>
+
+                    <p class="text-warning-dark text-sm font-medium">${notif.title}</p>
+
+                    <p class="text-warning-dark text-xs">${notif.message}</p>
+
+                </div>
+
+            </div>
+
+            <button onclick="handleNotificationAction('${notif.action_type}')" class="text-xs bg-warning-lighter hover:bg-warning-light text-warning-dark px-3 py-1.5 rounded-md font-bold transition-colors">
+
+                ${notif.action_type === 'fix' ? 'Исправить' : 'Обновить'}
+
+            </button>
+
+        </div>
+
+    `;
+
+            container.classList.remove('hidden');
+
+        }
+
+        function renderHealthIndicator() {
+
+            const health = state.health_summary;
+
+            const hasComplexes = health.complexes && health.complexes.length > 0;
+
+            const ring = document.getElementById('health-ring');
+
+            const list = document.getElementById('health-list');
+
+            const percentEl = document.getElementById('health-percent');
+
+            const chartEl = document.getElementById('health-chart');
+
+            if (!hasComplexes) {
+
+                // Empty state - hide chart, show centered message
+
+                if (chartEl) chartEl.classList.add('hidden');
+
+                percentEl.textContent = '—';
+
+                ring.style.background = 'var(--color-bg-tertiary)';
+
+                list.innerHTML = `
+
+            <div class="flex flex-col items-center justify-center text-center py-2 w-full">
+
+                <span class="material-symbols-outlined text-text-secondary text-[28px] mb-2">psychology</span>
+
+                <p class="text-sm font-medium text-text-secondary">Нет данных о прогрессе</p>
+
+                <p class="text-xs text-text-secondary mt-1">Пройдите комплекс, чтобы увидеть здоровье памяти</p>
+
+            </div>
+
+        `;
+
+                return;
+
+            }
+
+            // (Previous block handles the empty state and rendering)
+
+            // This block was redundant and caused redeclaration errors. 
+
+            // The logic above already sets percent, gradient, and renders the list.
+
+            // Ensure we don't have leftover code here.
+
+            // Helper to get frequency label
+
+            const getFrequencyLabel = (healthPercent) => {
+
+                if (healthPercent < 50) return 'Каждый день';
+
+                if (healthPercent < 70) return 'Через 1-2 дня';
+
+                if (healthPercent < 85) return '2 раза/неделю';
+
+                if (healthPercent < 95) return 'Раз в неделю';
+
+                return 'Раз в 2 недели';
+
+            };
+
+            // Complex list
+
+            // Filter out complexes that are frozen in the future
+
+            const now = new Date();
+
+            const visibleComplexes = health.complexes.filter(c => {
+
+                if (c.status === 'frozen' && c.frozen_until) {
+
+                    return new Date(c.frozen_until) <= now;
+
+                }
+
+                return true;
+
+            });
+
+            if (visibleComplexes.length === 0) {
+
+                if (chartEl) chartEl.classList.add('hidden');
+
+                percentEl.textContent = '—';
+
+                ring.style.background = 'var(--color-bg-tertiary)';
+
+                list.innerHTML = `
+
+                <div class="flex flex-col items-center justify-center text-center py-4 w-full h-[200px] border-2 border-dashed border-border-subtle rounded-xl">
+
+                    <span class="material-symbols-outlined text-text-secondary text-[32px] mb-2 opacity-50">psychology_alt</span>
+
+                    <p class="text-sm font-bold text-text-secondary">Нет активных данных</p>
+
+                    <p class="text-[11px] text-text-secondary mt-1 max-w-[180px]">Начните обучение, чтобы увидеть статистику здоровья памяти</p>
+
+                </div>
+
+            `;
+
+                return;
+
+            }
+
+            // Show chart when we have data
+
+            if (chartEl) chartEl.classList.remove('hidden');
+
+            const percent = Math.round((health.overall_health || 0) * 100);
+
+            percentEl.textContent = `${percent}%`;
+
+            // Conic gradient for ring (only for visible complexes)
+
+            // Recalculate based on visible only
+
+            let gradient = 'conic-gradient(';
+
+            let pos = 0;
+
+            const size = 100 / visibleComplexes.length;
+
+            visibleComplexes.forEach((c, i) => {
+
+                const color = c.is_critical ? 'var(--color-error)' : (c.health_percent >= 80 ? 'var(--color-success)' : 'var(--color-bg-tertiary)');
+
+                gradient += `${color} ${pos}% ${pos + size}%`;
+
+                if (i < visibleComplexes.length - 1) gradient += ', ';
+
+                pos += size;
+
+            });
+
+            gradient += ')';
+
+            ring.style.background = gradient;
+
+            list.innerHTML = visibleComplexes.map(c => {
+
+                // Determine badge for status
+
+                let badge = '';
+
+                if (c.status === 'mastered') {
+
+                    badge = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-success-light text-success-dark font-bold ml-2">Освоен</span>';
+
+                } else if (c.status === 'frozen') {
+
+                    badge = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-info-light text-info-dark font-bold ml-2">Заморожен</span>';
+
+                }
+
+                // Формируем текст рекомендации по повторению (используется в тултипе и в подстроке)
+
+                const frequencyText = c.message || getFrequencyLabel(c.health_percent);
+
+                const subTooltip = c.recovery_time ? ` (${c.recovery_time})` : '';
+
+                const fullTooltip = c.hint_title ? `${c.hint_title}\n${frequencyText}${subTooltip}` : frequencyText;
+
+                return `
+
+        <div class="flex flex-col gap-0.5 group cursor-pointer py-1 tooltip" data-tooltip="${fullTooltip}" onclick="startUnplannedReview('${c.name}')">
+
+            <div class="flex items-center justify-between">
+
+                <div class="flex items-center gap-2">
+
+                    <div class="size-2 rounded-full ${c.is_critical ? 'bg-warning-text' : (c.health_percent >= 80 ? 'bg-primary' : 'bg-primary')}"></div>
+
+                    <span class="text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors truncate max-w-[120px]">${c.name}</span>
+
+                    ${badge}
+
+                </div>
+
+                <span class="text-xs ${c.is_critical ? 'text-warning-dark' : (c.health_percent >= 80 ? 'text-primary' : 'text-text-secondary')} font-bold">${c.health_percent}%</span>
+
+            </div>
+
+            <div class="flex items-center gap-2 ml-4">
+
+                <span class="text-[10px] text-text-secondary truncate">${frequencyText}</span>
+
+            </div>
+
+        </div>
+
+    `}).join('');
+
+        }
+
+        // =============================================================================
+
+        // INTERACTIONS
+
+        // =============================================================================
+
+        async function setTimeLimit(minutes) {
+
+            state.settings.daily_time_limit_minutes = minutes;
+
+            // Анимация карточек
+
+            document.querySelectorAll('#daily-mix-card, #main-focus-card').forEach(card => {
+
+                card.classList.add('animate-pulse-once');
+
+                setTimeout(() => card.classList.remove('animate-pulse-once'), 300);
+
+            });
+
+            // Сохраняем настройку и запрашиваем актуальный план с бэкенда
+
+            try {
+
+                await updateSettings({ daily_time_limit_minutes: minutes });
+
+                await fetchTodayPlan();
+
+            } catch (e) {
+
+                console.error('Failed to refresh plan after time change:', e);
+
+            }
+
+            renderTimeController();
+
+        }
+
+        function switchMode(mode) {
+
+            // schedule_mode removed
+
+        }
+
+        function handleNotificationAction(action) {
+
+            if (action === 'fix') {
+
+                const critical = state.health_summary.complexes.find(c => c.is_critical);
+
+                if (critical) {
+
+                    startUnplannedReview(critical.name);
+
+                }
+
+            }
+
+        }
+
+        function startUnplannedReview(complexName) {
+
+            alert(`Запуск внепланового повторения: ${complexName}`);
+
+        }
+
+        function openHealthDetails() {
+
+            alert('Открытие детальной панели здоровья памяти');
+
+        }
+
+        function scrollSchedule(direction) {
+
+            const container = document.getElementById('schedule-strip');
+
+            if (!container) return;
+
+            // Scroll by ~80% of container width (more robust than hardcoded px)
+
+            const scrollAmount = direction * Math.max(200, Math.floor(container.clientWidth * 0.8));
+
+            container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+
+        }
+
+        function toggleDayExpand(dateStr) {
+
+            // Toggle expanded state for a specific day
+
+            if (!state.ui.expandedDays[dateStr]) {
+
+                state.ui.expandedDays[dateStr] = true;
+
+            } else {
+
+                delete state.ui.expandedDays[dateStr];
+
+            }
+
+            // Re-render schedule strip
+
+            renderScheduleStrip();
+
+        }
+
+        async function toggleRestDay(dateStr) {
+
+            const isCurrentlyRest = state.restDays[dateStr];
+
+            try {
+
+                let response;
+
+                if (isCurrentlyRest) {
+
+                    // Снять отметку
+
+                    response = await fetch(`${API_BASE}/calendar/rest-days/${dateStr}`, {
+
+                        method: 'DELETE'
+
+                    });
+
+                } else {
+
+                    // Отметить как выходной
+
+                    response = await fetch(`${API_BASE}/calendar/rest-days/${dateStr}`, {
+
+                        method: 'POST',
+
+                        headers: { 'Content-Type': 'application/json' },
+
+                        body: JSON.stringify({ reason: 'manual' })
+
+                    });
+
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+
+                    // Обновляем локальное состояние
+
+                    if (isCurrentlyRest) {
+
+                        delete state.restDays[dateStr];
+
+                    } else {
+
+                        state.restDays[dateStr] = { marked_by_user: true };
+
+                    }
+
+                    // Перезагружаем план
+
+                    await fetchTodayPlan();
+
+                    // Показываем уведомление
+
+                    showNotification(
+
+                        isCurrentlyRest
+
+                            ? 'Отметка выходного снята'
+
+                            : 'День отмечен как выходной'
+
+                    );
+
+                }
+
+            } catch (e) {
+
+                console.error('Failed to toggle rest day:', e);
+
+                showNotification('Ошибка при изменении статуса дня', 'error');
+
+            }
+
+        }
+
+        function showNotification(message, type = 'success') {
+
+            // Простое toast-уведомление
+
+            const toast = document.createElement('div');
+
+            toast.className = `fixed top-20 right-6 z-[200] px-4 py-3 rounded-lg shadow-lg transition-all ${type === 'error'
+
+                ? 'bg-error text-text-contrast'
+
+                : 'bg-primary text-primary-fg'
+
+                }`;
+
+            toast.textContent = message;
+
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+
+                toast.style.opacity = '0';
+
+                toast.style.transform = 'translateX(20px)';
+
+                setTimeout(() => toast.remove(), 300);
+
+            }, 2000);
+
+        }
+
+        // Drag scroll for schedule strip
+
+        function setupDragScroll() {
+
+            const container = document.getElementById('schedule-strip');
+
+            if (!container) return;
+
+            if (state.ui.dragScrollInitialized) return;
+
+            state.ui.dragScrollInitialized = true;
+
+            // Use pointer events for better cross-device support (mouse/touch/pen)
+
+            container.addEventListener('pointerdown', (e) => {
+
+                // If user interacts with a control inside the strip, don't hijack the event
+
+                const interactive = e.target && e.target.closest
+
+                    ? e.target.closest('button, a, input, select, textarea, label')
+
+                    : null;
+
+                if (interactive) {
+
+                    return;
+
+                }
+
+                // Only left click for mouse
+
+                if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+                state.ui.isDragging = true;
+
+                container.classList.add('dragging');
+
+                state.ui.startX = e.clientX;
+
+                state.ui.startY = e.clientY;
+
+                state.ui.scrollLeft = container.scrollLeft;
+
+                try {
+
+                    container.setPointerCapture(e.pointerId);
+
+                } catch (err) {
+
+                    // Ignore if not supported
+
+                }
+
+                e.preventDefault();
+
+            });
+
+            container.addEventListener('pointermove', (e) => {
+
+                if (!state.ui.isDragging) return;
+
+                const dx = e.clientX - state.ui.startX;
+
+                const dy = e.clientY - state.ui.startY;
+
+                if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+
+                container.scrollLeft = state.ui.scrollLeft - dx;
+
+                e.preventDefault();
+
+            });
+
+            const endDrag = () => {
+
+                if (!state.ui.isDragging) return;
+
+                state.ui.isDragging = false;
+
+                container.classList.remove('dragging');
+
+            };
+
+            container.addEventListener('pointerup', endDrag);
+
+            container.addEventListener('pointercancel', endDrag);
+
+            // If capture fails or pointer leaves, still stop dragging
+
+            window.addEventListener('pointerup', endDrag);
+
+        }
+
+        // =============================================================================
+
+        // UTILS
+
+        // =============================================================================
+
+        function getDaysWord(n) {
+
+            const abs = Math.abs(n) % 100;
+
+            const n1 = abs % 10;
+
+            if (abs > 10 && abs < 20) return 'дней';
+
+            if (n1 > 1 && n1 < 5) return 'дня';
+
+            if (n1 === 1) return 'день';
+
+            return 'дней';
+
+        }
+
+        // =============================================================================
+
+        // INIT
+
+        // =============================================================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+
+            setupCalendarLoadingLogo();
+
+            fetchTodayPlan();
+
+        });
+
+    </script>
+
+    <script src="../assets/SharedProfileModal.js"></script>
+    <script src="../assets/ThemeSwitcherUI.js"></script>
+    <script src="../assets/ConnectionMonitor.js"></script>
+
+</body>
+
+</html>

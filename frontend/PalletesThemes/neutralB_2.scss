@@ -1,0 +1,118 @@
+/* Neutral B - Amethyst Dusk */
+/* Concept: A twilight garden with muted amethyst tones. Reduced white for a cohesive, neutral aesthetic. */
+
+/* CSS HEX */
+:root {
+    /* Raw Palette */
+    --tea-green: #ccf5ac;
+    --celadon: #bad29f;
+    --lavender-grey: #808a9f;
+    --dusk-blue: #2c497f;
+    --dark-amethyst: #3d2b56;
+
+    /* Semantic Color System */
+
+    /* PRIMARY: Dusk Blue (#2c497f) - Darkened for AAA/AA */
+    --color-primary-very-light: #dbe4f0;
+    /* Very light tint of blue */
+    --color-primary-light: #7a92b8;
+    /* Light tint */
+    --color-primary: #1f3a66;
+    /* Darkened from #2c497f to pass 4.5 ratio on #b8b3c5 */
+    --color-primary-dark: #162645;
+    /* Darker shade */
+    --color-primary-very-dark: #0b1221;
+    /* Deepest shade */
+
+    /* SECONDARY: Lavender Grey (#808a9f) */
+    --color-secondary-very-light: #e6e8ed;
+    --color-secondary-light: #aab2c2;
+    --color-secondary: #808a9f;
+    --color-secondary-dark: #5e6678;
+    --color-secondary-very-dark: #3d424d;
+
+    /* ACCENT: Celadon (#bad29f) & Tea Green - Darkened for contrast */
+    --color-accent-very-light: #f2fae6;
+    /* Tea green very light */
+    --color-accent-light: #bad29f;
+    /* Old main as light */
+    --color-accent: #6d8c52;
+    /* Darkened from #bad29f to pass 3.0 ratio locally */
+    --color-accent-dark: #50663c;
+    --color-accent-very-dark: #354228;
+
+    /* NEUTRAL: Backgrounds, Text & Borders */
+    /* Amethyst Dusk - 72% lightness (true Neutral with character) */
+    --color-bg-primary: #b8b3c5;
+    /* 72% lightness - приглушенный лавандовый */
+    --color-bg-secondary: #a8a0b8;
+    /* 68% lightness - более насыщенный */
+    --color-bg-tertiary: #9890a8;
+    /* 64% lightness - темнее */
+    --color-surface: #f5f3f8;
+    /* Очень светлый лавандовый вместо белого */
+
+    /* Text - High Contrast */
+    --color-text-primary: #1a1226;
+    /* Very Dark Amethyst */
+    --color-text-secondary: #2e2042;
+    /* Dark Amethyst */
+    --color-text-muted: #364156;
+    /* Dark Blue-Grey to pass 4.5 on bg-secondary (#a8a0b8) */
+    --color-text-disabled: #808a9f;
+
+    /* Borders */
+    --color-border-light: #a8a0b8;
+    /* Мягкая граница, близкая к bg-secondary */
+    --color-border-normal: #808a9f;
+    /* Стандартная граница - Lavender Grey */
+    --color-border-strong: #3d2b56;
+    /* Сильная граница - Dark Amethyst */
+
+    /* STATES - Darkened for icon visibility */
+    --color-success-light: #e6f7e0;
+    --color-success: #4d7a43;
+    /* Darkened from #70b362 */
+    --color-success-dark: #36572f;
+
+    /* Error - using a reddish tone that fits the purple/blue vibe, maybe a berry color */
+    --color-error-light: #fce8e8;
+    --color-error: #c94040;
+    --color-error-dark: #8f2a2a;
+
+    /* Warning - muted gold */
+    --color-warning-light: #fff8e1;
+    --color-warning: #b48605;
+    /* Darkened from #eab308 */
+    --color-warning-dark: #7a5c04;
+
+    /* Info - standard blue but tuned */
+    --color-info-light: #e0f2fe;
+    --color-info: #0284c7;
+    /* Darkened from #0ea5e9 */
+    --color-info-dark: #025a88;
+}
+
+/* SCSS Variables (for backward compatibility/preprocessing) */
+$tea-green: #ccf5ac;
+$celadon: #bad29f;
+$lavender-grey: #808a9f;
+$dusk-blue: #2c497f;
+$dark-amethyst: #3d2b56;
+
+/* Semantic SCSS map if needed by other files */
+$color-primary: $dusk-blue;
+$color-secondary: $lavender-grey;
+$color-accent: $celadon;
+
+/* SCSS Gradients */
+/* Updated to use Amethyst Dusk palette */
+$gradient-top: linear-gradient(0deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-right: linear-gradient(90deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-bottom: linear-gradient(180deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-left: linear-gradient(270deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-top-right: linear-gradient(45deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-bottom-right: linear-gradient(135deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-top-left: linear-gradient(225deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-bottom-left: linear-gradient(315deg, #b8b3c5, #bad29f, #3d2b56);
+$gradient-radial: radial-gradient(circle, #b8b3c5, #bad29f, #3d2b56);

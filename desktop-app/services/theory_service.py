@@ -1,0 +1,636 @@
+"""
+Theory Service - CRUD and filesystem storage for rich-text theory notes.
+
+Storage layout:
+  data/complexes/theories/<theory_id>/
+    theory.json
+    body.delta.json
+    images/
+    history/
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import shutil
+import tempfile
+import uuid
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+from urllib.parse import parse_qs, urlparse, unquote
+
+from werkzeug.datastructures import FileStorage
+from werkzeug.utils import secure_filename
+
+logger = logging.getLogger(__name__)
+
+
+class TheoryConflictError(Exception):
+    """Raised when optimistic-lock version mismatch is detected."""
+
+    def __init__(self, message: str, current_version: str, expected_version: str):
+        super().__init__(message)
+        self.current_version = current_version
+        self.expected_version = expected_version
+
+
+class TheoryValidationError(Exception):
+    """Raised when theory payload is invalid."""
+
+
+class TheoryNotFoundError(Exception):
+    """Raised when requested theory does not exist."""
+
+
+class TheoryService:
+    """Filesystem-backed service for storing theory notes in Delta format."""
+
+    ALLOWED_IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"}
+    ALLOWED_DELTA_ATTRIBUTES = {
+        "bold",
+        "italic",
+        "underline",
+        "strike",
+        "color",
+        "background",
+        "font",
+        "size",
+        "align",
+        "header",
+        "list",
+        "link",
+        "blockquote",
+        "code",
+    }
+    MAX_DELTA_OPS = 20000
+    MAX_TOTAL_TEXT = 250000
+
+    def __init__(self, data_dir: str):
+        self.data_dir = Path(data_dir)
+        self.complexes_dir = self.data_dir / "complexes"
+        self.theories_dir = self.complexes_dir / "theories"
+        self.theories_dir.mkdir(parents=True, exist_ok=True)
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def list_theories(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
+        q = (query or "").strip().lower()
+        items: List[Dict[str, Any]] = []
+        for theory_dir in self.theories_dir.iterdir():
+            if not theory_dir.is_dir():
+                continue
+            meta_path = theory_dir / "theory.json"
+            if not meta_path.exists():
+                continue
+            try:
+                meta = self._read_json(meta_path)
+            except Exception as exc:  # pragma: no cover - defensive path
+                logger.warning("Failed to read theory metadata %s: %s", meta_path, exc)
+                continue
+
+            title = str(meta.get("title") or "")
+            theory_id = str(meta.get("id") or theory_dir.name)
+            if q and q not in title.lower() and q not in theory_id.lower():
+                continue
+
+            items.append(
+                {
+                    "id": theory_id,
+                    "title": title,
+                    "created_at": meta.get("created_at"),
+                    "updated_at": meta.get("updated_at"),
+                    "version": meta.get("version"),
+                    "image_count": len(meta.get("images") or []),
+                }
+            )
+
+        items.sort(key=lambda x: str(x.get("updated_at") or ""), reverse=True)
+        return items
+
+    def create_theory(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise TheoryValidationError("payload_must_be_object")
+
+        theory_id = self._normalize_theory_id(payload.get("id")) or self._generate_theory_id()
+        theory_dir = self.theories_dir / theory_id
+        if theory_dir.exists():
+            raise TheoryValidationError("theory_id_already_exists")
+
+        title = self._normalize_title(payload.get("title"))
+        delta = self._sanitize_delta(payload.get("delta"))
+        images = self._sanitize_images_list(payload.get("images"))
+
+        theory_dir.mkdir(parents=True, exist_ok=False)
+        (theory_dir / "images").mkdir(parents=True, exist_ok=True)
+        (theory_dir / "history").mkdir(parents=True, exist_ok=True)
+
+        now = datetime.utcnow().isoformat()
+        meta = {
+            "id": theory_id,
+            "title": title,
+            "created_at": now,
+            "updated_at": now,
+            "version": now,
+            "delta_path": "body.delta.json",
+            "images": images,
+        }
+
+        self._write_json_atomic(theory_dir / "theory.json", meta)
+        self._write_json_atomic(theory_dir / "body.delta.json", delta)
+        return self.get_theory(theory_id)
+
+    def get_theory(self, theory_id: str, include_delta: bool = True) -> Dict[str, Any]:
+        theory_dir = self._resolve_theory_dir(theory_id)
+        meta_path = theory_dir / "theory.json"
+        if not meta_path.exists():
+            raise TheoryNotFoundError("theory_not_found")
+
+        meta = self._read_json(meta_path)
+        item = {
+            "id": meta.get("id", theory_id),
+            "title": meta.get("title") or "",
+            "created_at": meta.get("created_at"),
+            "updated_at": meta.get("updated_at"),
+            "version": meta.get("version"),
+            "images": meta.get("images") or [],
+        }
+        if include_delta:
+            delta_path = theory_dir / str(meta.get("delta_path") or "body.delta.json")
+            if delta_path.exists():
+                item["delta"] = self._sanitize_delta(self._read_json(delta_path))
+            else:
+                item["delta"] = {"ops": [{"insert": "\n"}]}
+        return item
+
+    def update_theory(
+        self,
+        theory_id: str,
+        updates: Dict[str, Any],
+        expected_version: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        if not isinstance(updates, dict):
+            raise TheoryValidationError("payload_must_be_object")
+
+        theory_dir = self._resolve_theory_dir(theory_id)
+        meta_path = theory_dir / "theory.json"
+        delta_path = theory_dir / "body.delta.json"
+        if not meta_path.exists():
+            raise TheoryNotFoundError("theory_not_found")
+
+        meta = self._read_json(meta_path)
+        current_delta = (
+            self._read_json(delta_path) if delta_path.exists() else {"ops": [{"insert": "\n"}]}
+        )
+        current_version = str(meta.get("version") or "")
+
+        if expected_version is not None and current_version != expected_version:
+            raise TheoryConflictError(
+                "Theory has been modified by another user",
+                current_version=current_version,
+                expected_version=expected_version,
+            )
+
+        self._save_history_snapshot(theory_id, meta, current_delta)
+
+        if "title" in updates:
+            meta["title"] = self._normalize_title(updates.get("title"))
+        if "images" in updates:
+            meta["images"] = self._sanitize_images_list(updates.get("images"))
+        if "delta" in updates:
+            current_delta = self._sanitize_delta(updates.get("delta"))
+
+        now = datetime.utcnow().isoformat()
+        meta["updated_at"] = now
+        meta["version"] = now
+        meta["id"] = meta.get("id") or theory_id
+        meta["delta_path"] = "body.delta.json"
+
+        self._write_json_atomic(meta_path, meta)
+        self._write_json_atomic(delta_path, current_delta)
+        return self.get_theory(theory_id)
+
+    def clone_theory(self, source_theory_id: str, title: Optional[str] = None) -> Dict[str, Any]:
+        source_dir = self._resolve_theory_dir(source_theory_id)
+        source_meta_path = source_dir / "theory.json"
+        source_delta_path = source_dir / "body.delta.json"
+        if not source_meta_path.exists():
+            raise TheoryNotFoundError("theory_not_found")
+
+        source_meta = self._read_json(source_meta_path)
+        source_delta_raw = (
+            self._read_json(source_delta_path)
+            if source_delta_path.exists()
+            else {"ops": [{"insert": "\n"}]}
+        )
+        source_delta = self._sanitize_delta(source_delta_raw)
+
+        if title is None:
+            base_title = str(source_meta.get("title") or "").strip() or source_theory_id
+            clone_title = self._normalize_title(f"{base_title} (copy)")
+        else:
+            clone_title = self._normalize_title(title)
+
+        theory_id = self._generate_theory_id()
+        theory_dir = self.theories_dir / theory_id
+        while theory_dir.exists():
+            theory_id = self._generate_theory_id()
+            theory_dir = self.theories_dir / theory_id
+
+        theory_dir.mkdir(parents=True, exist_ok=False)
+        images_dir = theory_dir / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+        (theory_dir / "history").mkdir(parents=True, exist_ok=True)
+
+        image_refs = self._collect_delta_image_refs(source_delta)
+        for ref in self._sanitize_images_list(source_meta.get("images")):
+            if ref not in image_refs:
+                image_refs.append(ref)
+
+        image_remap = self._clone_image_refs(image_refs, images_dir)
+        cloned_delta = self._remap_delta_images(source_delta, image_remap)
+
+        cloned_images: List[str] = []
+        for ref in self._sanitize_images_list(source_meta.get("images")):
+            mapped = image_remap.get(ref)
+            if mapped and mapped not in cloned_images:
+                cloned_images.append(mapped)
+        for ref in self._collect_delta_image_refs(cloned_delta):
+            if ref not in cloned_images:
+                cloned_images.append(ref)
+
+        now = datetime.utcnow().isoformat()
+        cloned_meta = {
+            "id": theory_id,
+            "title": clone_title,
+            "created_at": now,
+            "updated_at": now,
+            "version": now,
+            "delta_path": "body.delta.json",
+            "images": cloned_images,
+        }
+
+        self._write_json_atomic(theory_dir / "theory.json", cloned_meta)
+        self._write_json_atomic(theory_dir / "body.delta.json", cloned_delta)
+        return self.get_theory(theory_id)
+
+    def add_image(self, theory_id: str, upload: FileStorage) -> Dict[str, Any]:
+        if upload is None:
+            raise TheoryValidationError("file_required")
+        if not upload.filename:
+            raise TheoryValidationError("file_name_required")
+
+        theory_dir = self._resolve_theory_dir(theory_id)
+        meta_path = theory_dir / "theory.json"
+        if not meta_path.exists():
+            raise TheoryNotFoundError("theory_not_found")
+
+        filename = secure_filename(upload.filename)
+        if not filename:
+            raise TheoryValidationError("invalid_file_name")
+        ext = Path(filename).suffix.lower()
+        if ext not in self.ALLOWED_IMAGE_EXTENSIONS:
+            raise TheoryValidationError("unsupported_image_format")
+
+        images_dir = theory_dir / "images"
+        images_dir.mkdir(parents=True, exist_ok=True)
+
+        target = images_dir / filename
+        counter = 1
+        while target.exists():
+            stem = Path(filename).stem
+            target = images_dir / f"{stem}_{counter:02d}{ext}"
+            counter += 1
+
+        upload.save(str(target))
+        rel_path = target.relative_to(self.data_dir).as_posix()
+
+        meta = self._read_json(meta_path)
+        images = list(meta.get("images") or [])
+        if rel_path not in images:
+            images.append(rel_path)
+        now = datetime.utcnow().isoformat()
+        meta["images"] = images
+        meta["updated_at"] = now
+        meta["version"] = now
+        self._write_json_atomic(meta_path, meta)
+
+        return {"path": rel_path, "version": now}
+
+    def get_history(self, theory_id: str) -> List[Dict[str, Any]]:
+        theory_dir = self._resolve_theory_dir(theory_id)
+        history_dir = theory_dir / "history"
+        if not history_dir.exists():
+            return []
+
+        snapshots: List[Dict[str, Any]] = []
+        for path in sorted(history_dir.glob("*.json"), reverse=True):
+            try:
+                data = self._read_json(path)
+            except Exception as exc:  # pragma: no cover - defensive path
+                logger.warning("Failed to read theory snapshot %s: %s", path, exc)
+                continue
+
+            meta = data.get("meta") if isinstance(data, dict) else {}
+            snapshots.append(
+                {
+                    "_snapshot_timestamp": path.stem,
+                    "id": meta.get("id", theory_id),
+                    "title": meta.get("title", ""),
+                    "version": meta.get("version"),
+                    "updated_at": meta.get("updated_at"),
+                }
+            )
+        return snapshots
+
+    def restore_from_history(self, theory_id: str, snapshot_timestamp: str) -> Dict[str, Any]:
+        theory_dir = self._resolve_theory_dir(theory_id)
+        history_file = theory_dir / "history" / f"{snapshot_timestamp}.json"
+        if not history_file.exists():
+            raise TheoryNotFoundError("snapshot_not_found")
+
+        meta_path = theory_dir / "theory.json"
+        delta_path = theory_dir / "body.delta.json"
+        if not meta_path.exists():
+            raise TheoryNotFoundError("theory_not_found")
+
+        current_meta = self._read_json(meta_path)
+        current_delta = (
+            self._read_json(delta_path) if delta_path.exists() else {"ops": [{"insert": "\n"}]}
+        )
+        self._save_history_snapshot(theory_id, current_meta, current_delta)
+
+        snapshot = self._read_json(history_file)
+        snapshot_meta = snapshot.get("meta") if isinstance(snapshot, dict) else None
+        snapshot_delta = snapshot.get("delta") if isinstance(snapshot, dict) else None
+        if not isinstance(snapshot_meta, dict) or snapshot_delta is None:
+            raise TheoryValidationError("invalid_snapshot_format")
+
+        restored_meta = dict(snapshot_meta)
+        restored_meta["id"] = theory_id
+        restored_meta["delta_path"] = "body.delta.json"
+        now = datetime.utcnow().isoformat()
+        restored_meta["updated_at"] = now
+        restored_meta["version"] = now
+
+        restored_delta = self._sanitize_delta(snapshot_delta)
+        self._write_json_atomic(meta_path, restored_meta)
+        self._write_json_atomic(delta_path, restored_delta)
+        return self.get_theory(theory_id)
+
+    # ------------------------------------------------------------------
+    # Internals
+    # ------------------------------------------------------------------
+
+    def _generate_theory_id(self) -> str:
+        return f"th_{uuid.uuid4().hex[:12]}"
+
+    def _normalize_theory_id(self, value: Any) -> Optional[str]:
+        if not isinstance(value, str):
+            return None
+        candidate = value.strip()
+        if not candidate:
+            return None
+        if "/" in candidate or "\\" in candidate or ".." in candidate:
+            raise TheoryValidationError("invalid_theory_id")
+        return candidate
+
+    def _normalize_title(self, value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            raise TheoryValidationError("title_must_be_string")
+        return value.strip()
+
+    def _resolve_theory_dir(self, theory_id: str) -> Path:
+        normalized = self._normalize_theory_id(theory_id)
+        if not normalized:
+            raise TheoryValidationError("theory_id_required")
+        theory_dir = (self.theories_dir / normalized).resolve()
+        try:
+            theory_dir.relative_to(self.theories_dir.resolve())
+        except ValueError as exc:
+            raise TheoryValidationError("invalid_theory_id") from exc
+        return theory_dir
+
+    def _sanitize_delta(self, raw_delta: Any) -> Dict[str, Any]:
+        if raw_delta is None:
+            return {"ops": [{"insert": "\n"}]}
+        if not isinstance(raw_delta, dict):
+            raise TheoryValidationError("delta_must_be_object")
+        ops = raw_delta.get("ops")
+        if not isinstance(ops, list):
+            raise TheoryValidationError("delta_ops_must_be_array")
+        if len(ops) > self.MAX_DELTA_OPS:
+            raise TheoryValidationError("delta_too_large")
+
+        clean_ops: List[Dict[str, Any]] = []
+        total_text = 0
+
+        for op in ops:
+            if not isinstance(op, dict) or "insert" not in op:
+                continue
+            insert = op.get("insert")
+            clean_insert: Any
+
+            if isinstance(insert, str):
+                clean_insert = insert.replace("\r\n", "\n").replace("\r", "\n")
+                total_text += len(clean_insert)
+            elif isinstance(insert, dict):
+                image_ref = insert.get("image")
+                if not isinstance(image_ref, str):
+                    continue
+                sanitized_image = self._sanitize_image_ref(image_ref)
+                if not sanitized_image:
+                    continue
+                clean_insert = {"image": sanitized_image}
+            else:
+                continue
+
+            attributes = op.get("attributes")
+            clean_op: Dict[str, Any] = {"insert": clean_insert}
+            if isinstance(attributes, dict):
+                clean_attrs = self._sanitize_attributes(attributes)
+                if clean_attrs:
+                    clean_op["attributes"] = clean_attrs
+            clean_ops.append(clean_op)
+
+        if total_text > self.MAX_TOTAL_TEXT:
+            raise TheoryValidationError("delta_text_too_large")
+
+        if not clean_ops:
+            clean_ops = [{"insert": "\n"}]
+        return {"ops": clean_ops}
+
+    def _sanitize_attributes(self, attrs: Dict[str, Any]) -> Dict[str, Any]:
+        clean: Dict[str, Any] = {}
+        for key, value in attrs.items():
+            if key not in self.ALLOWED_DELTA_ATTRIBUTES:
+                continue
+            if isinstance(value, (bool, int, float, str)):
+                if key == "link" and isinstance(value, str):
+                    vv = value.strip()
+                    lower = vv.lower()
+                    if lower.startswith("javascript:") or lower.startswith("data:"):
+                        continue
+                    clean[key] = vv
+                elif key in {"list"} and isinstance(value, str):
+                    if value in {"ordered", "bullet", "check"}:
+                        clean[key] = value
+                elif key in {"align"} and isinstance(value, str):
+                    if value in {"left", "center", "right", "justify"}:
+                        clean[key] = value
+                else:
+                    clean[key] = value
+        return clean
+
+    def _sanitize_image_ref(self, raw_value: str) -> Optional[str]:
+        value = raw_value.strip()
+        if not value:
+            return None
+
+        lower = value.lower()
+        if lower.startswith("javascript:") or lower.startswith("data:"):
+            return None
+
+        # Quill image URLs can arrive as /api/local-image?path=<relative>; convert to relative.
+        if value.startswith("/api/local-image?"):
+            parsed = urlparse(value)
+            params = parse_qs(parsed.query)
+            path_values = params.get("path") or []
+            if not path_values:
+                return None
+            value = unquote(path_values[0]).strip()
+
+        # Store only relative paths under data dir.
+        value = value.replace("\\", "/")
+        if value.startswith("/"):
+            value = value.lstrip("/")
+        if not value or ".." in value.split("/"):
+            return None
+        return value
+
+    def _sanitize_images_list(self, raw_images: Any) -> List[str]:
+        if raw_images is None:
+            return []
+        if not isinstance(raw_images, list):
+            raise TheoryValidationError("images_must_be_array")
+        clean: List[str] = []
+        for item in raw_images:
+            if not isinstance(item, str):
+                continue
+            sanitized = self._sanitize_image_ref(item)
+            if sanitized and sanitized not in clean:
+                clean.append(sanitized)
+        return clean
+
+    def _save_history_snapshot(
+        self, theory_id: str, meta: Dict[str, Any], delta: Dict[str, Any]
+    ) -> None:
+        theory_dir = self._resolve_theory_dir(theory_id)
+        history_dir = theory_dir / "history"
+        history_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+        snapshot_path = history_dir / f"{timestamp}.json"
+        payload = {"meta": meta, "delta": delta}
+        self._write_json_atomic(snapshot_path, payload)
+
+        snapshots = sorted(history_dir.glob("*.json"))
+        if len(snapshots) > 25:
+            for old in snapshots[:-25]:
+                try:
+                    old.unlink()
+                except Exception:
+                    logger.debug("Failed to prune old theory snapshot: %s", old, exc_info=True)
+
+    def _collect_delta_image_refs(self, delta: Dict[str, Any]) -> List[str]:
+        refs: List[str] = []
+        for op in delta.get("ops", []):
+            if not isinstance(op, dict):
+                continue
+            insert = op.get("insert")
+            if not isinstance(insert, dict):
+                continue
+            image_ref = insert.get("image")
+            if not isinstance(image_ref, str):
+                continue
+            sanitized = self._sanitize_image_ref(image_ref)
+            if sanitized and sanitized not in refs:
+                refs.append(sanitized)
+        return refs
+
+    def _clone_image_refs(self, image_refs: List[str], target_images_dir: Path) -> Dict[str, str]:
+        mapping: Dict[str, str] = {}
+        data_root = self.data_dir.resolve()
+        for raw_ref in image_refs:
+            sanitized = self._sanitize_image_ref(raw_ref)
+            if not sanitized or sanitized in mapping:
+                continue
+
+            source = (self.data_dir / sanitized).resolve()
+            try:
+                source.relative_to(data_root)
+            except ValueError:
+                continue
+            if not source.exists() or not source.is_file():
+                continue
+
+            safe_name = secure_filename(source.name) or f"image_{uuid.uuid4().hex[:8]}"
+            stem = Path(safe_name).stem or "image"
+            suffix = Path(safe_name).suffix
+            target = target_images_dir / safe_name
+            counter = 1
+            while target.exists():
+                target = target_images_dir / f"{stem}_{counter:02d}{suffix}"
+                counter += 1
+
+            shutil.copy2(source, target)
+            mapping[sanitized] = target.relative_to(self.data_dir).as_posix()
+        return mapping
+
+    def _remap_delta_images(
+        self, delta: Dict[str, Any], image_remap: Dict[str, str]
+    ) -> Dict[str, Any]:
+        remapped_ops: List[Dict[str, Any]] = []
+        for op in delta.get("ops", []):
+            if not isinstance(op, dict) or "insert" not in op:
+                continue
+            cloned_op = dict(op)
+            insert = op.get("insert")
+            if isinstance(insert, dict):
+                image_ref = insert.get("image")
+                if isinstance(image_ref, str):
+                    sanitized = self._sanitize_image_ref(image_ref)
+                    if sanitized:
+                        cloned_op["insert"] = {"image": image_remap.get(sanitized, sanitized)}
+            remapped_ops.append(cloned_op)
+        return self._sanitize_delta({"ops": remapped_ops})
+
+    def _read_json(self, path: Path) -> Dict[str, Any]:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
+    def _write_json_atomic(self, path: Path, payload: Dict[str, Any]) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        temp_name = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                dir=str(path.parent),
+                encoding="utf-8",
+                delete=False,
+                suffix=".tmp",
+            ) as tf:
+                json.dump(payload, tf, ensure_ascii=False, indent=2)
+                temp_name = tf.name
+            os.replace(temp_name, path)
+        finally:
+            if temp_name and os.path.exists(temp_name):
+                try:
+                    os.remove(temp_name)
+                except Exception:
+                    pass

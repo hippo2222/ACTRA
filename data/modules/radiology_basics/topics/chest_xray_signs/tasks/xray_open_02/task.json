@@ -1,0 +1,21 @@
+{
+  "id": "xray_open_02",
+  "name": "Interpret an Opacity",
+  "type": "open_answer",
+  "content": {
+    "question": "Name one basic descriptor for a lung opacity on chest x-ray.",
+    "prompt": "Name one basic descriptor for a lung opacity on chest x-ray.",
+    "keywords": [
+      "location",
+      "size",
+      "density"
+    ],
+    "reference_answer": "A basic description includes location, approximate size, and density/pattern.",
+    "min_keywords": 1,
+    "require_all_keywords": false,
+    "sequence_matters": false
+  },
+  "settings": {
+    "difficulty": 1
+  }
+}
