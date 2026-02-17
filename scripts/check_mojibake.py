@@ -10,7 +10,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Sequence, Tuple
 
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 DEFAULT_TARGETS: Tuple[Path, ...] = (
@@ -25,9 +24,9 @@ DEFAULT_TARGETS: Tuple[Path, ...] = (
 # - "вЂ" fragment seen in broken em-dash/ellipsis decoding
 # - "â€" fragment from UTF-8 text decoded as Latin-1/Windows-1252
 SUSPICIOUS_SUBSTRINGS: Tuple[Tuple[str, str], ...] = (
-    ("\uFFFD", "replacement_char"),
+    ("\ufffd", "replacement_char"),
     ("\u0432\u0402", "cp1251_fragment"),
-    ("\u00E2\u20AC", "latin1_utf8_fragment"),
+    ("\u00e2\u20ac", "latin1_utf8_fragment"),
 )
 
 # Repeating "РxСy..." sequence is a strong sign of UTF-8 Russian text
