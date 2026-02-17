@@ -11,6 +11,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field, validator, root_validator
 import warnings
 import logging
+import re
 
 from task_system.migrations import CURRENT_SCHEMA_VERSION
 from .path_resolver import PathResolver
@@ -27,9 +28,12 @@ def validate_image_path_format(v: Optional[str]) -> Optional[str]:
     if v == "":
         return v
     
-    # Check if absolute path (using stringent check for portability)
+    # Check if absolute path (using stringent check for portability).
+    # On Linux, Path("C:/...").is_absolute() is False, so we also detect
+    # Windows drive-letter absolute paths explicitly.
     path = Path(v)
-    if path.is_absolute() or v.startswith('/') or v.startswith('\\'):
+    has_windows_drive_abs = bool(re.match(r"^[a-zA-Z]:[\\/]", v))
+    if path.is_absolute() or v.startswith('/') or v.startswith('\\') or has_windows_drive_abs:
         raise ValueError(f"Image path must be relative: {v}")
     
     # Check extension
@@ -1025,4 +1029,3 @@ class ValidatedTask(BaseModel):
     
     class Config:
         extra = "allow"  # Allow extra fields for backward compatibility
-
