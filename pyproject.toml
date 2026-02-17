@@ -42,6 +42,11 @@ dev = [
     "flake8>=6.1.0",
 ]
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["common*", "task_system*"]
+exclude = ["tests*", "desktop-app*", "frontend*", "data*", "reports*", "docs*", "scripts*"]
+
 
 [tool.pytest.ini_options]
 minversion = "7.0"
