@@ -15,18 +15,20 @@ import logging
 from typing import List, Tuple, Dict, Any, Optional
 
 try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except ImportError:
-    NUMPY_AVAILABLE = False
-
-try:
-    from PIL import Image, ImageDraw
+    from PIL import Image, ImageChops, ImageDraw
     PIL_AVAILABLE = True
 except ImportError:
     PIL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+
+def _count_nonzero_pixels(mask: "Image.Image") -> int:
+    """Return number of non-zero pixels in a single-channel mask image."""
+    hist = mask.histogram()
+    if not hist:
+        return 0
+    return int(sum(hist) - hist[0])
 
 
 def point_in_polygon(x, y, polygon):
@@ -442,7 +444,7 @@ def calculate_polygon_coverage_rasterized(
        - Создает полигон из точек (проверяет замкнутость контура)
        - Заполняет полигон (для сравнения с reference заполненной областью)
        - Fallback: рисует линии если полигон нельзя создать
-    4. Вычисление IoU через numpy bitwise операции
+    4. Вычисление IoU через бинарные маски PIL (ImageChops)
     
     Логика: Сравнивает заполненные полигоны (reference и user), что соответствует
     цели задания "распознать и обвести объект", где важно распознать объект,
@@ -461,10 +463,8 @@ def calculate_polygon_coverage_rasterized(
         float: IoU в процентах (0-100)
     
     Raises:
-        ImportError: если numpy или PIL недоступны
+        ImportError: если PIL недоступны
     """
-    if not NUMPY_AVAILABLE:
-        raise ImportError("numpy is required for rasterized evaluation")
     if not PIL_AVAILABLE:
         raise ImportError("PIL/Pillow is required for rasterized evaluation")
     
@@ -530,8 +530,7 @@ def calculate_polygon_coverage_rasterized(
             logger.warning(f"Failed to draw reference polygon: {e}")
             return 0.0
     
-    ref_mask_array = np.array(ref_mask, dtype=np.uint8)
-    ref_area = np.sum(ref_mask_array > 0)
+    ref_area = _count_nonzero_pixels(ref_mask)
     logger.debug(f"Reference polygon mask area: {ref_area} pixels")
     
     # Шаг 3: Создание маски для user штрихов
@@ -677,25 +676,27 @@ def calculate_polygon_coverage_rasterized(
                         fill=255
                     )
     
-    stroke_mask_array = np.array(stroke_mask, dtype=np.uint8)
-    stroke_area = np.sum(stroke_mask_array > 0)
+    stroke_area = _count_nonzero_pixels(stroke_mask)
     logger.debug(f"User stroke mask area: {stroke_area} pixels")
     
     # Логируем границы user штрихов для диагностики
     if stroke_area > 0:
-        # Находим индексы всех ненулевых пикселей
-        nonzero_indices = np.nonzero(stroke_mask_array)
-        if len(nonzero_indices[0]) > 0:
-            stroke_y_min, stroke_y_max = int(nonzero_indices[0].min()), int(nonzero_indices[0].max())
-            stroke_x_min, stroke_x_max = int(nonzero_indices[1].min()), int(nonzero_indices[1].max())
-            logger.debug(f"User stroke bounds: X=[{stroke_x_min}, {stroke_x_max}], Y=[{stroke_y_min}, {stroke_y_max}]")
-    
-    # Шаг 4: Вычисление IoU через numpy
-    # Пересечение: ref_mask & stroke_mask
-    intersection = np.sum((ref_mask_array & stroke_mask_array) > 0)
-    
-    # Объединение: ref_mask | stroke_mask
-    union = np.sum((ref_mask_array | stroke_mask_array) > 0)
+        bbox = stroke_mask.getbbox()
+        if bbox:
+            stroke_x_min, stroke_y_min, stroke_x_max_excl, stroke_y_max_excl = bbox
+            logger.debug(
+                "User stroke bounds: X=[%s, %s], Y=[%s, %s]",
+                stroke_x_min,
+                stroke_x_max_excl - 1,
+                stroke_y_min,
+                stroke_y_max_excl - 1,
+            )
+
+    # Шаг 4: Вычисление IoU через PIL ImageChops
+    intersection_mask = ImageChops.darker(ref_mask, stroke_mask)
+    union_mask = ImageChops.lighter(ref_mask, stroke_mask)
+    intersection = _count_nonzero_pixels(intersection_mask)
+    union = _count_nonzero_pixels(union_mask)
     
     # Edge case 4: Нулевая площадь
     if union == 0:

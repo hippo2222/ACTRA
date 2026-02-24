@@ -1,0 +1,206 @@
+{
+  "run_id": "bench_Nephr_20260223T133912Z",
+  "created_at": "2026-02-23T13:40:58Z",
+  "provider_used": "openrouter:3",
+  "provider_model": "arcee-ai/trinity-large-preview:free",
+  "provider_chain_attempts": [
+    {
+      "provider": "openrouter:1",
+      "model": "z-ai/glm-4.5-air:free",
+      "attempt": 1,
+      "status": "error",
+      "error": "HTTP Error 429: Too Many Requests",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:1",
+      "model": "z-ai/glm-4.5-air:free",
+      "attempt": 2,
+      "status": "error",
+      "error": "HTTP Error 429: Too Many Requests",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:2",
+      "model": "stepfun/step-3.5-flash:free",
+      "attempt": 1,
+      "status": "success",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:3",
+      "model": "arcee-ai/trinity-large-preview:free",
+      "attempt": 1,
+      "status": "success",
+      "stage": "analysis_parse_escalation"
+    }
+  ],
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "result": {
+    "human_summary": "Глава посвящена нефротическому синдрому (НС) — комплексу симптомов, включающему протеинурию, гипопротеинемию, гиперлипидемию и отеки. Рассмотрены этиология (первичные и вторичные заболевания почек), патогенез (иммунологическая и метаболическая концепции), клинические проявления, лабораторная диагностика, осложнения и принципы лечения, включая медикаментозную терапию.",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 7,
+        "priority": "high",
+        "covers_units": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "rationale": "Проверка знания определений, классификаций и ключевых фактов о НС"
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 3,
+        "priority": "low",
+        "covers_units": [
+          2,
+          4,
+          6
+        ],
+        "rationale": "Выбор верных утверждений о этиологии, клинике и осложнениях"
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 4,
+        "priority": "medium",
+        "covers_units": [
+          3,
+          7,
+          8
+        ],
+        "rationale": "Формулирование объяснений патогенеза и принципов лечения"
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 2,
+        "priority": "low",
+        "covers_units": [
+          5
+        ],
+        "rationale": "Поиск ошибок в описании лабораторных показателей"
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 2,
+        "priority": "medium",
+        "covers_units": [
+          7,
+          8
+        ],
+        "rationale": "Восстановление алгоритма лечения и последовательности применения препаратов"
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Нефротический синдром (НС)",
+        "type": "concept",
+        "description": "Клинико-лабораторный симптомокомплекс с протеинурией, гипопротеинемией, гиперлипидемией, отеками",
+        "explicitness": "explicit",
+        "evidence": "Определение в начале главы",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 2,
+        "title": "Этиология НС",
+        "type": "classification",
+        "description": "Первичные (гломерулонефрит, амилоидоз и др.) и вторичные (инфекционные, неинфекционные заболевания) причины",
+        "explicitness": "explicit",
+        "evidence": "Раздел \"Этиология\" с двумя группами",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 3,
+        "title": "Патогенез НС",
+        "type": "process",
+        "description": "Иммунологическая концепция (осаждение иммунных комплексов) и метаболическая концепция (изменение заряда базальной мембраны)",
+        "explicitness": "explicit",
+        "evidence": "Раздел \"Патогенез\" с двумя концепциями",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Клинические проявления НС",
+        "type": "concept",
+        "description": "Отеки, протеинурия, гипопротеинемия, гиперлипидемия, липидурия, нарушения обмена веществ",
+        "explicitness": "explicit",
+        "evidence": "Раздел \"Клиника и лабораторная диагностика\"",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 5,
+        "title": "Лабораторная диагностика НС",
+        "type": "process",
+        "description": "Анализ мочи (протеинурия, гематурия, лейкоцитурия), общий анализ крови, биохимические показатели",
+        "explicitness": "explicit",
+        "evidence": "Раздел \"Клиника и лабораторная диагностика\"",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 6,
+        "title": "Осложнения НС",
+        "type": "concept",
+        "description": "Отек мозга, кровоизлияния, шок, тромбозы, инфекции",
+        "explicitness": "explicit",
+        "evidence": "Раздел \"Осложнения\"",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 7,
+        "title": "Принципы лечения НС",
+        "type": "process",
+        "description": "Госпитализация, режим, диета, медикаментозная терапия (кортикостероиды, цитостатики, антикоагулянты, антиагреганты)",
+        "explicitness": "explicit",
+        "evidence": "Раздел \"Принципы лечения\"",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 8,
+        "title": "Медикаментозная терапия НС",
+        "type": "classification",
+        "description": "Группы препаратов: кортикостероиды, цитостатики, антикоагулянты, антиагреганты, противовоспалительные, мембранотропные, диуретики",
+        "explicitness": "explicit",
+        "evidence": "Раздел \"Медикаментозное лечение\"",
+        "modality": "text",
+        "assessment_risk": "medium"
+      }
+    ],
+    "not_recommended": [
+      {
+        "task_type": "IMAGE_BASED",
+        "reason": "В тексте нет изображений или схем для визуального распознавания"
+      }
+    ],
+    "illustrations_detected": false,
+    "illustrations_note": null,
+    "warnings": [
+      "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22)."
+    ],
+    "material_volume": "large",
+    "target_language": "ru"
+  }
+}

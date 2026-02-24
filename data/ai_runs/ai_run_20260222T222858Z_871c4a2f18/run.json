@@ -1,0 +1,42 @@
+{
+  "run_id": "ai_run_20260222T222858Z_871c4a2f18",
+  "phase": "generated",
+  "material_language": "en",
+  "material_word_count": 1222,
+  "provider_used": "openrouter",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "source_file_info": {
+    "format": "pdf",
+    "has_text_layer": true,
+    "original_name": "25-343.pdf",
+    "pages": 10,
+    "size_mb": 0.46,
+    "word_count": 1222
+  },
+  "created_at": "2026-02-22T22:30:49Z",
+  "updated_at": "2026-02-22T22:39:31Z",
+  "generation_summary": {
+    "total_generated": 8,
+    "total_valid": 7,
+    "total_warnings": 1,
+    "total_errors": 0,
+    "by_type": {
+      "test": 3,
+      "click_text": 2,
+      "sequence": 2,
+      "open_answer": 1
+    },
+    "quality": {
+      "material_language": "en",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 1,
+      "total_tasks": 8
+    }
+  },
+  "import_completed_at": "2026-02-22T22:39:31Z",
+  "imported_count": 8,
+  "module_id": "mammografiya_bi-rads",
+  "topic_id": "vidy_mg"
+}

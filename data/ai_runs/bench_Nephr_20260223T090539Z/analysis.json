@@ -1,0 +1,155 @@
+{
+  "run_id": "bench_Nephr_20260223T090539Z",
+  "created_at": "2026-02-23T09:10:26Z",
+  "provider_used": "openrouter",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "result": {
+    "human_summary": "Текст представляет собой подробное описание нефротического синдрома - клинико-лабораторного симптомокомплекса, включающего массивную протеинурию и нарушения обмена веществ. Материал охватывает этиологию, патогенез, клиническую картину, диагностику и лечение этого состояния. Анализ выявил 6 основных образовательных единиц, для которых можно разработать 15 интерактивных заданий различного типа для эффективного усвоения материала.",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 5,
+        "priority": "high",
+        "covers_units": [
+          2,
+          5
+        ],
+        "rationale": "Эффективен для проверки классификаций этиологии и лабораторных показателей."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 5,
+        "priority": "medium",
+        "covers_units": [
+          4,
+          5
+        ],
+        "rationale": "Позволяет проверить знание клинических проявлений и лабораторных данных."
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 3,
+        "priority": "high",
+        "covers_units": [
+          1,
+          3
+        ],
+        "rationale": "Позволяет проверить понимание определений и патогенетических механизмов."
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 2,
+        "priority": "low",
+        "covers_units": [
+          5
+        ],
+        "rationale": "Помогает выявить ошибки в интерпретации лабораторных показателей."
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 2,
+        "priority": "medium",
+        "covers_units": [
+          2,
+          6
+        ],
+        "rationale": "Подходит для структурирования информации о группах заболеваний и этапах лечения."
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Определение нефротического синдрома",
+        "type": "concept",
+        "description": "Клинико-лабораторный симптомокомплекс с массивной протеинурией и нарушениями обмена веществ",
+        "explicitness": "explicit",
+        "evidence": "Первый абзац",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 2,
+        "title": "Этиология нефротического синдрома",
+        "type": "classification",
+        "description": "Первичные и вторичные заболевания почек, вызывающие НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Этиология'",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 3,
+        "title": "Патогенез нефротического синдрома",
+        "type": "process",
+        "description": "Иммунологические и метаболические механизмы развития НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Патогенез'",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Клинические проявления нефротического синдрома",
+        "type": "fact",
+        "description": "Жалобы, отеки, транссудаты и другие симптомы НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 5,
+        "title": "Лабораторная диагностика нефротического синдрома",
+        "type": "classification",
+        "description": "Изменения анализов крови и мочи при НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 6,
+        "title": "Принципы лечения нефротического синдрома",
+        "type": "process",
+        "description": "Общие подходы и медикаментозная терапия НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Принципы лечения'",
+        "modality": "text",
+        "assessment_risk": "high"
+      }
+    ],
+    "not_recommended": [
+      {
+        "task_type": "OPEN_ANSWER",
+        "reason": "Избыточное количество заданий на свободный ответ может перегрузить студента при таком объеме материала."
+      },
+      {
+        "task_type": "TEST",
+        "reason": "Тесты с множественным выбором менее эффективны для проверки сложных патогенетических механизмов."
+      },
+      {
+        "task_type": "SEQUENCE",
+        "reason": "Последовательность важна только для определенных аспектов этиологии и лечения."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "reason": "Не подходит для проверки запоминания доз препаратов и показаний к их назначению."
+      }
+    ],
+    "illustrations_detected": false,
+    "illustrations_note": null,
+    "warnings": [
+      "Материал содержит много специфической медицинской терминологии, требующей дополнительного объяснения",
+      "Heuristic adjustment: CLICK_WORDS was removed from not_recommended because this material supports factual error-detection tasks.",
+      "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22).",
+      "SEQUENCE recommendation count was capped at 2 to avoid forcing implicit rankings."
+    ],
+    "material_volume": "large",
+    "target_language": "ru"
+  }
+}

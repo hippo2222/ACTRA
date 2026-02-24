@@ -1,0 +1,1094 @@
+{
+  "run_id": "bench_Nephr_20260223T203856Z",
+  "created_at": "2026-02-23T20:46:01Z",
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 8,
+        "educational_unit_ids": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 4,
+        "educational_unit_ids": [
+          4,
+          6
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 3,
+        "educational_unit_ids": [
+          7,
+          8
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 2,
+        "educational_unit_ids": [
+          5
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "educational_unit_ids": [
+          3
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 18,
+    "total_valid": 18,
+    "total_warnings": 0,
+    "total_errors": 0,
+    "by_type": {
+      "test": 8,
+      "click_text": 4,
+      "open_answer": 3,
+      "click_words": 2,
+      "sequence": 1
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 18,
+      "source_grounding_warnings": 0,
+      "total_tasks": 18
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 11986,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 11973,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 11950,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "educational_units_context": [
+        {
+          "id": 1,
+          "title": "Нефротический синдром",
+          "description": "Клинико-лабораторный симптомокомплекс с протеинурией, гипопротеинемией, гиперлипидемией, отеками",
+          "evidence": "Определение в начале главы",
+          "type": "concept",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 2,
+          "title": "Этиология НС",
+          "description": "Первичные (гломерулонефрит, амилоидоз и др.) и вторичные (инфекционные, неинфекционные) заболевания",
+          "evidence": "Раздел 'Этиология' с двумя группами",
+          "type": "classification",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 3,
+          "title": "Патогенез НС",
+          "description": "Иммунологическая и метаболическая концепции, изменения клубочковой мембраны",
+          "evidence": "Раздел 'Патогенез' с двумя концепциями",
+          "type": "process",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "high"
+        },
+        {
+          "id": 4,
+          "title": "Клинические проявления НС",
+          "description": "Отеки, протеинурия, гипопротеинемия, гиперлипидемия, липидурия, анемия, изменения свертывания",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "type": "concept",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 5,
+          "title": "Лабораторная диагностика НС",
+          "description": "Анализы мочи (протеинурия, гематурия, лейкоцитурия), крови (общий белок, альбумины, СОЭ, креатинин)",
+          "evidence": "Подраздел 'Основным методом диагностики НС являются общие и специализированные анализы мочи'",
+          "type": "process",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 6,
+          "title": "Осложнения НС",
+          "description": "Отек мозга, кровоизлияния, нефротический шок, тромбозы, инфекции",
+          "evidence": "Раздел 'НС редко протекает без осложнений'",
+          "type": "classification",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 7,
+          "title": "Принципы лечения НС",
+          "description": "Госпитализация, режим, диета, медикаментозная терапия (кортикостероиды, цитостатики, антикоагулянты, антиагреганты)",
+          "evidence": "Раздел 'Принципы лечения'",
+          "type": "process",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "high"
+        },
+        {
+          "id": 8,
+          "title": "Медикаментозная терапия НС",
+          "description": "Группы препаратов: кортикостероиды, цитостатики, антикоагулянты, антиагреганты, противовоспалительные, мембранотропные, диуретики",
+          "evidence": "Подраздел 'Медикаментозное лечение'",
+          "type": "classification",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "high"
+        }
+      ],
+      "generation_time_ms": 41521,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - Патогенез нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "d4942989ee20949e1c7f83084689044eedb4691f1b845cf2e6a599e1ec9a87e1",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 3,
+              "primary_unit_title": "Патогенез НС",
+              "score": 0.48,
+              "shared_token_count": 6,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "иммунологическая",
+                "клубочковой",
+                "концепции",
+                "мембраны",
+                "метаболическая",
+                "патогенез"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Задание - Основной метод диагностики нефротичес...",
+          "type": "test",
+          "status": "valid",
+          "hash": "88a9c942093dc83700b6d75f5541667ca4440d8debef4c409dce009a6675e7b8",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 5,
+              "primary_unit_title": "Лабораторная диагностика НС",
+              "score": 0.3789,
+              "shared_token_count": 9,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "альбумины",
+                "анализы",
+                "диагностики",
+                "крови",
+                "методом",
+                "мочи"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Задание - Классификация этиологии нефротическог...",
+          "type": "test",
+          "status": "valid",
+          "hash": "f882dfe8d0c3cde692c368af4b5a2c4563e93cb31b00c977ae92cf46b29ec7f6",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Этиология НС",
+              "score": 0.3636,
+              "shared_token_count": 5,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "вторичные",
+                "заболевания",
+                "инфекционные",
+                "неинфекционные",
+                "первичные"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Задание - Определение нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "994c5f3d85506ae508f43edbb46bf1d8a866d367a0b98e1f3475af7f9d3215ea",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 4,
+              "primary_unit_title": "Клинические проявления НС",
+              "score": 0.3429,
+              "shared_token_count": 6,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "анемия",
+                "гиперлипидемия",
+                "гипопротеинемия",
+                "липидурия",
+                "отеки",
+                "протеинурия"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Задание - Осложнения нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "a26d9791b3fdfea5e6d8dfb53746bd39d82f21069b46ba0871529687bbae03a7",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 6,
+              "primary_unit_title": "Осложнения НС",
+              "score": 0.2909,
+              "shared_token_count": 4,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "мозга",
+                "нефротический",
+                "осложнения",
+                "отек"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Задание - Медикаментозная терапия НС: антикоагу...",
+          "type": "test",
+          "status": "valid",
+          "hash": "000832a2e0a13b8ee67ffe4770cbc93c06dd3e3229c4e6bc50753ce0e58119f8",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 7,
+              "primary_unit_title": "Принципы лечения НС",
+              "score": 0.2667,
+              "shared_token_count": 4,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "антикоагулянты",
+                "лечения",
+                "медикаментозная",
+                "терапия"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Задание - Принципы лечения НС: диета",
+          "type": "test",
+          "status": "valid",
+          "hash": "4bb43e66c1607dbf568dc8280436d5c2e4f97f7eb9659922994333a00cc1239b",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 7,
+              "primary_unit_title": "Принципы лечения НС",
+              "score": 0.2,
+              "shared_token_count": 3,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "диета",
+                "лечения",
+                "принципы"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Задание - Медикаментозная терапия НС: показания...",
+          "type": "test",
+          "status": "valid",
+          "hash": "9e120862162e48fddd4dd97a2d98e2ed1d0d7b9da9789b61545b9e5b18fa3f49",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Этиология НС",
+              "score": 0.1455,
+              "shared_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "амилоидоз",
+                "этиология"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 11944,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 4
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 4
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 4,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 11886,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [
+        4,
+        6
+      ],
+      "educational_units_context": [
+        {
+          "id": 4,
+          "title": "Клинические проявления НС",
+          "description": "Отеки, протеинурия, гипопротеинемия, гиперлипидемия, липидурия, анемия, изменения свертывания",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "type": "concept",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 6,
+          "title": "Осложнения НС",
+          "description": "Отек мозга, кровоизлияния, нефротический шок, тромбозы, инфекции",
+          "evidence": "Раздел 'НС редко протекает без осложнений'",
+          "type": "classification",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 67785,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_TEXT after grounding cleanup: requested 4, kept 4, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - Какие из перечисленных состояний явля...",
+          "type": "click",
+          "status": "valid",
+          "hash": "e6ae8e2c2545511764b52232f58ef7925e42dd9a21647e00a800ff8bce4bb99a",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 6,
+              "primary_unit_title": "Осложнения НС",
+              "score": 0.3636,
+              "shared_token_count": 5,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "инфекции",
+                "кровоизлияния",
+                "мозга",
+                "нефротический",
+                "отек"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие из следующих утверждений о клин...",
+          "type": "click",
+          "status": "valid",
+          "hash": "27fb10457bb7742c2c98d39d38940fb78a31d2090aec61dd82cd7943a1e73f85",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 4,
+              "primary_unit_title": "Клинические проявления НС",
+              "score": 0.3429,
+              "shared_token_count": 6,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "анемия",
+                "гиперлипидемия",
+                "гипопротеинемия",
+                "липидурия",
+                "отеки",
+                "протеинурия"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие из перечисленных симптомов явля...",
+          "type": "click",
+          "status": "valid",
+          "hash": "40a6c02e6d6e03570e2fa00b14bd2f1219944431048e6945e9837f6f802c786e",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 4,
+              "primary_unit_title": "Клинические проявления НС",
+              "score": 0.2286,
+              "shared_token_count": 4,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гиперлипидемия",
+                "гипопротеинемия",
+                "липидурия",
+                "отеки"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              6
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие из перечисленных лабораторных п...",
+          "type": "click",
+          "status": "valid",
+          "hash": "8c01911e2f3824a0aeb87c4f33dfcd36e2e13cc65e6104efe3dc7b56881b1008",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 4,
+              "primary_unit_title": "Клинические проявления НС",
+              "score": 0.1143,
+              "shared_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гипопротеинемия",
+                "протеинурия"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              6
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 11876,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 11867,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [
+        7,
+        8
+      ],
+      "educational_units_context": [
+        {
+          "id": 7,
+          "title": "Принципы лечения НС",
+          "description": "Госпитализация, режим, диета, медикаментозная терапия (кортикостероиды, цитостатики, антикоагулянты, антиагреганты)",
+          "evidence": "Раздел 'Принципы лечения'",
+          "type": "process",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "high"
+        },
+        {
+          "id": 8,
+          "title": "Медикаментозная терапия НС",
+          "description": "Группы препаратов: кортикостероиды, цитостатики, антикоагулянты, антиагреганты, противовоспалительные, мембранотропные, диуретики",
+          "evidence": "Подраздел 'Медикаментозное лечение'",
+          "type": "classification",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "high"
+        }
+      ],
+      "generation_time_ms": 18832,
+      "parsing_errors": [
+        "Overgeneration trimmed for OPEN_ANSWER after grounding cleanup: requested 3, kept 3, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Каковы основные принципы лечения нефр...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "94d0c17457ae259d1624e0f10d72cafc2b836f7ad2630b7557cfe09b7a463e6d",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 7,
+              "primary_unit_title": "Принципы лечения НС",
+              "score": 0.6,
+              "shared_token_count": 9,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "антиагреганты",
+                "антикоагулянты",
+                "госпитализация",
+                "диета",
+                "кортикостероиды",
+                "лечения"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Каковы основные принципы лечения нефр...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "bf033011501dea0b58fcba0be75a55231d6ae7b2ea036fa890c8778aa5067285",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 7,
+              "primary_unit_title": "Принципы лечения НС",
+              "score": 0.3333,
+              "shared_token_count": 5,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "госпитализация",
+                "диета",
+                "лечения",
+                "принципы",
+                "режим"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              7,
+              8
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Какие группы медикаментов являются ос...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "2121d1c680accc4195a2f7fb90d3cbb36e369d6e0d50d6bf7ff3b9747ab981a6",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Медикаментозная терапия НС",
+              "score": 0.2857,
+              "shared_token_count": 5,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "антиагреганты",
+                "антикоагулянты",
+                "группы",
+                "кортикостероиды",
+                "препаратов"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              7,
+              8
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        }
+      ],
+      "educational_unit_ids": [
+        5
+      ],
+      "educational_units_context": [
+        {
+          "id": 5,
+          "title": "Лабораторная диагностика НС",
+          "description": "Анализы мочи (протеинурия, гематурия, лейкоцитурия), крови (общий белок, альбумины, СОЭ, креатинин)",
+          "evidence": "Подраздел 'Основным методом диагностики НС являются общие и специализированные анализы мочи'",
+          "type": "process",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 186520,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Найдите фактические ошибки в тексте.",
+          "type": "click",
+          "status": "valid",
+          "hash": "a0ca6fbf5b738e072979efe6de94913e19f1dadf34d86a696e2eb318f726a0e0",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 5,
+              "primary_unit_title": "Лабораторная диагностика НС",
+              "score": 0.1263,
+              "shared_token_count": 3,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гематурия",
+                "крови",
+                "протеинурия"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              5
+            ]
+          }
+        },
+        {
+          "name": "Клик - Найдите фактические ошибки в тексте.",
+          "type": "click",
+          "status": "valid",
+          "hash": "b89663b23679d465d56613288052127f01f0f2edce7bc422039b5cbfc683d136",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 5,
+              "primary_unit_title": "Лабораторная диагностика НС",
+              "score": 0.1263,
+              "shared_token_count": 3,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "белок",
+                "крови",
+                "общий"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              5
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        }
+      ],
+      "educational_unit_ids": [
+        3
+      ],
+      "educational_units_context": [
+        {
+          "id": 3,
+          "title": "Патогенез НС",
+          "description": "Иммунологическая и метаболическая концепции, изменения клубочковой мембраны",
+          "evidence": "Раздел 'Патогенез' с двумя концепциями",
+          "type": "process",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "high"
+        }
+      ],
+      "generation_time_ms": 32293,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Последовательность - Упорядочите этапы развития патогенети...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "0394e8b186c917ee42f3d38c253ae1bc9b19941310ed10a65e1575bb62d7a811",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 3,
+              "primary_unit_title": "Патогенез НС",
+              "score": 0.32,
+              "shared_token_count": 4,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "иммунологическая",
+                "концепции",
+                "мембраны",
+                "метаболическая"
+              ],
+              "shared_numbers": [],
+              "weak": false,
+              "weak_threshold": 0.05
+            },
+            "educational_unit_ids": [
+              3
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

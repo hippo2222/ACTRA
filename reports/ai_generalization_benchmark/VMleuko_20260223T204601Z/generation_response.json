@@ -1,0 +1,3624 @@
+{
+  "ai_run_id": "bench_VMleuko_20260223T204602Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11611,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 5,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11557,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 5,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11462,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 5,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11412,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11368,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 4,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11290,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11234,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11184,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11157,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        14,
+        15,
+        16,
+        17,
+        19,
+        24,
+        13,
+        18,
+        20,
+        21,
+        22,
+        23
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "кістковий мозок, тимус.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 1,
+          "modality": "text",
+          "title": "Центральні органи гемопоезу",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Локалізація кісткового мозку.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 2,
+          "modality": "text",
+          "title": "Локалізація кісткового мозку.",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Консистенція кісткового мозку.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 3,
+          "modality": "text",
+          "title": "Консистенція кісткового мозку.",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Маса червоного кісткового мозку.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 4,
+          "modality": "text",
+          "title": "Маса червоного кісткового мозку.",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "гемальний та стромальний компоненти.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 5,
+          "modality": "text",
+          "title": "Гемопоетична тканина",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "стан спокою/активності.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 6,
+          "modality": "text",
+          "title": "Поліпотентні стовбурові клітини",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Стимуляція гемопоезу (колонієстимулюючі фактори, гормони).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 7,
+          "modality": "text",
+          "title": "Стимуляція гемопоезу (колонієстимулюючі фактори, гормони).",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Пригнічення гемопоезу (продукти зрілих клітин, тканинні гормони, глюкокортикоїди).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 8,
+          "modality": "text",
+          "title": "Пригнічення гемопоезу (продукти зрілих клітин, тканинні гормони, глюкокортикоїди).",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Локалізація тимусу.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 9,
+          "modality": "text",
+          "title": "Локалізація тимусу.",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Маса тимусу.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 10,
+          "modality": "text",
+          "title": "Маса тимусу.",
+          "type": "fact"
+        }
+      ],
+      "generation_time_ms": 243486,
+      "parsing_errors": [
+        "Overgeneration trimmed for TEST: requested 15, kept 15, dropped 7.",
+        "Overgeneration trimmed for TEST after grounding cleanup: requested 15, kept 15, dropped 3."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11611,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 5,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11557,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 5,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11462,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 5,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11412,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 4,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Пригнічення гемопоезу (продукти зрілих клітин, тканинні гормони, глюкокортикоїди).",
+              "score": 0.4923,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 8,
+              "shared_tokens_sample": [
+                "гемопоезу",
+                "глюкокортикоїди",
+                "гормони",
+                "зрілих",
+                "клітин",
+                "пригнічення"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Пригнічення гемопоезу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Еритропоетин"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Продукти зрілих клітин крові"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тканинні гормони (простагландини, інтерферон)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Глюкокортикоїди"
+                  }
+                ],
+                "id": 0,
+                "text": "Який з перерахованих факторів НЕ пригнічує гемопоез?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 0,
+          "name": "Задание - Пригнічення гемопоезу",
+          "prompt": "Пригнічення гемопоезу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу",
+              "score": 0.4364,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 6,
+              "shared_tokens_sample": [
+                "гемопоезу",
+                "кістковий",
+                "мозок",
+                "органи",
+                "тимус",
+                "центральні"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Центральні органи гемопоезу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Кістковий мозок та тимус"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезінка та лімфатичні вузли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Печінка та нирки"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезінка та печінка"
+                  }
+                ],
+                "id": 0,
+                "text": "Які органи є центральними органами гемопоезу?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 1,
+          "name": "Задание - Центральні органи гемопоезу",
+          "prompt": "Центральні органи гемопоезу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Пригнічення гемопоезу (продукти зрілих клітин, тканинні гормони, глюкокортикоїди).",
+              "score": 0.4308,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 7,
+              "shared_tokens_sample": [
+                "гемопоезу",
+                "глюкокортикоїди",
+                "гормони",
+                "зрілих",
+                "клітин",
+                "продукти"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Стимуляція гемопоезу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Колонієстимулюючі фактори та гормони (еритропоетин, тироксин, соматотропний гормон)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Продукти зрілих клітин крові"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тканинні гормони (простагландини, інтерферон)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Глюкокортикоїди"
+                  }
+                ],
+                "id": 0,
+                "text": "Які речовини стимулюють гемопоез?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 2,
+          "name": "Задание - Стимуляція гемопоезу",
+          "prompt": "Стимуляція гемопоезу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 5,
+              "primary_unit_title": "Гемопоетична тканина",
+              "score": 0.4,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 5,
+              "shared_tokens_sample": [
+                "гемальний",
+                "гемопоетична",
+                "компоненти",
+                "стромальний",
+                "тканина"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Гемопоетична тканина",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гемальний та стромальний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Еритроїдний та гранулоцитарний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфоїдний та моноцитарний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Мієлоїдний та мегакаріоцитарний"
+                  }
+                ],
+                "id": 0,
+                "text": "Які два основних компоненти складають гемопоетичну тканину?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 3,
+          "name": "Задание - Гемопоетична тканина",
+          "prompt": "Гемопоетична тканина",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу",
+              "score": 0.3636,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 5,
+              "shared_tokens_sample": [
+                "гемопоезу",
+                "кістковий",
+                "мозок",
+                "органи",
+                "тимус"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Гемопоез і гострий лейкоз",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Кістковий мозок та тимус"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезінка та лімфатичні вузли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Печінка та нирки"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезінка та печінка"
+                  }
+                ],
+                "id": 0,
+                "text": "Які органи є центральними органами гемопоезу?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 4,
+          "name": "Задание - Гемопоез і гострий лейкоз",
+          "prompt": "Гемопоез і гострий лейкоз",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 4,
+              "primary_unit_title": "Маса червоного кісткового мозку.",
+              "score": 0.3556,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 4,
+              "shared_tokens_sample": [
+                "кісткового",
+                "маса",
+                "мозку",
+                "червоного"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Маса червоного кісткового мозку",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "1200-1500 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "800-1000 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "2000-2500 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "500-700 г"
+                  }
+                ],
+                "id": 0,
+                "text": "Яка маса червоного кісткового мозку у дорослої людини?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Маса червоного кісткового мозку",
+          "prompt": "Маса червоного кісткового мозку",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Локалізація кісткового мозку.",
+              "score": 0.3,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "кісткового",
+                "локалізація",
+                "мозку"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Локалізація кісткового мозку",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "У губчатій речовині губчатих та плоских кісток, а також діафізах трубчастих кісток"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У порожнині грудної клітки"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У порожнині черепа"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У порожнині живота"
+                  }
+                ],
+                "id": 0,
+                "text": "Де локалізується кістковий мозок?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 6,
+          "name": "Задание - Локалізація кісткового мозку",
+          "prompt": "Локалізація кісткового мозку",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 3,
+              "primary_unit_title": "Консистенція кісткового мозку.",
+              "score": 0.3,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "консистенція",
+                "кісткового",
+                "мозку"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Консистенція кісткового мозку",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Напіврідка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тверда"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Рідка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Газоподібна"
+                  }
+                ],
+                "id": 0,
+                "text": "Яка консистенція кісткового мозку?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 7,
+          "name": "Задание - Консистенція кісткового мозку",
+          "prompt": "Консистенція кісткового мозку",
+          "status": "warning",
+          "type": "test",
+          "validation_issues": [
+            {
+              "field": "duplicate_task",
+              "message": "Похоже на дубликат другого сгенерированного задания",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 3,
+              "primary_unit_title": "Консистенція кісткового мозку.",
+              "score": 0.3,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "консистенція",
+                "кісткового",
+                "мозку"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Консистенція кісткового мозку",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Напіврідка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тверда"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Рідка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Газоподібна"
+                  }
+                ],
+                "id": 0,
+                "text": "Яка консистенція кісткового мозку?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 8,
+          "name": "Задание - Консистенція кісткового мозку",
+          "prompt": "Консистенція кісткового мозку",
+          "status": "warning",
+          "type": "test",
+          "validation_issues": [
+            {
+              "field": "duplicate_task",
+              "message": "Похоже на дубликат другого сгенерированного задания",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 9,
+              "primary_unit_title": "Локалізація тимусу.",
+              "score": 0.2286,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "локалізація",
+                "тимусу"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Локалізація тимусу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "За грудиною"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Під серцем"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У черевній порожнині"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У черепній коробці"
+                  }
+                ],
+                "id": 0,
+                "text": "Де розташований тимус?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 9,
+          "name": "Задание - Локалізація тимусу",
+          "prompt": "Локалізація тимусу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Локалізація кісткового мозку.",
+              "score": 0.2,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "кісткового",
+                "мозку"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Патогенез гострих лейкемій",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Соматичні мутації, порушення імунологічного захисту, апоптозу, формування клонів, доброякісне/злоякісне зростання"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Підвищена продукція еритропоетину, гіперплазія кісткового мозку, поліцитемія"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Підвищена фагоцитарна активність, гіперпродукція антитіл, імуноусилення"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Підвищена продукція тромбоцитів, гіперкоагуляція, тромбоз"
+                  }
+                ],
+                "id": 0,
+                "text": "Які процеси беруть участь у патогенезі гострих лейкозів?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 10,
+          "name": "Задание - Патогенез гострих лейкемій",
+          "prompt": "Патогенез гострих лейкемій",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 6,
+              "primary_unit_title": "Поліпотентні стовбурові клітини",
+              "score": 0.1455,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "клітини",
+                "стовбурові"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Классифікація клітин гемопоезу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Стовбурові клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Напівстовбурові клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Уніпотентні клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бласти"
+                  }
+                ],
+                "id": 0,
+                "text": "Який клас клітин гемопоезу може давати початок всім форменим елементам крові?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 11,
+          "name": "Задание - Классифікація клітин гемопоезу",
+          "prompt": "Классифікація клітин гемопоезу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 6,
+              "primary_unit_title": "Поліпотентні стовбурові клітини",
+              "score": 0.0727,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "клітини"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Класифікація лейкоцитів",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Лімфоцити та моноцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Нейтрофіли та еоінофіли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Базофіли та еоінофіли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Нейтрофіли та моноцити"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини відносяться до агранулоцитів?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 12,
+          "name": "Задание - Класифікація лейкоцитів",
+          "prompt": "Класифікація лейкоцитів",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу",
+              "score": 0.0727,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "органи"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Периферичні органи кровотворення",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Генерація імунної відповіді на контакт лімфоцитів з антигеном"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Продукція еритроцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Синтез тромбоцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Формування нейтрофілів"
+                  }
+                ],
+                "id": 0,
+                "text": "Яка основна функція периферичних органів кровотворення?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 13,
+          "name": "Задание - Периферичні органи кровотворення",
+          "prompt": "Периферичні органи кровотворення",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              19,
+              24,
+              13,
+              18,
+              20,
+              21,
+              22,
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 6,
+              "primary_unit_title": "Поліпотентні стовбурові клітини",
+              "score": 0.0727,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "клітини"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "FAB класифікація гострої лімфобластної лейкемії",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "L3"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L1"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L2"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L4"
+                  }
+                ],
+                "id": 0,
+                "text": "Який FAB варіант гострої лімфобластної лейкемії характеризується бластами, морфологічно схожими на клітини лімфоми Беркіта?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 14,
+          "name": "Задание - FAB класифікація гострої лімфобластно...",
+          "prompt": "FAB класифікація гострої лімфобластної лейкемії",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        20,
+        13,
+        18,
+        21,
+        22
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "соматичні мутації, порушення імунологічного захисту, апоптозу, формування клонів, доброякісне/злоякісне зростання.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 20,
+          "modality": "text",
+          "title": "Патогенез",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "гранулоцити (нейтрофіли, еоінофіли, базофіли) та агранулоцити (лімфоцити, моноцити).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 13,
+          "modality": "text",
+          "title": "Класифікація лейкоцитів",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "визначення, морфологічний субстрат (незрілі бласти), класифікація на лімфобластні та нелімфобластні (мієлобластні).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 18,
+          "modality": "text",
+          "title": "Гостра лейкемія",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 21,
+          "modality": "text",
+          "title": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 22,
+          "modality": "text",
+          "title": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+          "type": "classification"
+        }
+      ],
+      "generation_time_ms": 183960,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_TEXT after grounding cleanup: requested 7, kept 7, dropped 3."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11368,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 4,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11290,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11234,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20,
+              13,
+              18,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Патогенез",
+              "score": 0.4706,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 10,
+              "shared_tokens_sample": [
+                "апоптозу",
+                "доброякісне",
+                "захисту",
+                "злоякісне",
+                "зростання",
+                "мутації"
+              ],
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Під впливом етіологічних факторів відбуваються соматичні мутації клітин-попередниць кровотворної та лімфоїдної тканин."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Цьому сприяють процеси порушення імунологічного захисту організму та порушення апоптозу (запрограмованої клітинної смерті)."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Перший етап формування лейкозів починається з мутації родоначальної клітини, яка набуває здатність швидко проліферувати."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Клітини, які утворюються внаслідок такої проліферації вважаються клоном."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "На етапі формування першого клону клітини пухлини зберігають здатність до диференціювання (доброякісне пухлинне зростання)."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Втім, з часом, в клітинах первинного лейкозного клону відбуваються численні мутації."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "В результаті клітини вторинного лейкозного клону не лише активно проліферують, але й втрачають здатність до диференціювання (злоякісне пухлинне зростання)."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Проліферація лейкозних клітин в кістковому мозку, лейкозна інфільтрація органів та тканин, аутоімунні та інфекціно-запальні ускладнення формують клінічну картину гострих анемій."
+              }
+            ],
+            "prompt": "Какие из перечисленных утверждений о патогенезе гострих лейкозів є правильними?",
+            "subtype": "error_detection"
+          },
+          "index": 15,
+          "name": "Клик - Какие из перечисленных утверждений о ...",
+          "prompt": "Какие из перечисленных утверждений о патогенезе гострих лейкозів є правильними?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20,
+              13,
+              18,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 22,
+              "primary_unit_title": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+              "score": 0.32,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 4,
+              "shared_tokens_sample": [
+                "гострої",
+                "класифікація",
+                "лейкемії",
+                "лімфобластної"
+              ],
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L1 відповідає гострій лімфобластній лейкемії з малими розмірами бластів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L2 відповідає гострій лімфобластній лейкемії з великими розмірами бластів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L3 відповідає гострій лімфобластній лейкемії з бластними клітинами типа клітин при лімфомі Беркіта"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "FAB класифікація включає 7 варіантів гострої лімфобластної лейкемії"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L1 найчастіше зустрічається у дорослих"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L3 найчастіше зустрічається у дітей"
+              }
+            ],
+            "prompt": "Визначте правильні твердження щодо FAB класифікації гострої лімфобластної лейкемії",
+            "subtype": "error_detection"
+          },
+          "index": 16,
+          "name": "Клик - Визначте правильні твердження щодо FA...",
+          "prompt": "Визначте правильні твердження щодо FAB класифікації гострої лімфобластної лейкемії",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20,
+              13,
+              18,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+              "score": 0.32,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 4,
+              "shared_tokens_sample": [
+                "гострої",
+                "класифікація",
+                "лейкемії",
+                "мієлобластної"
+              ],
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М1 відповідає гострій мієлобластній лейкемії без ознак дозрівання бластів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М2 відповідає гострій мієлобластній лейкемії з ознаками дозрівання бластів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М3 відповідає гострій промієлоцитарній лейкемії"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М4 відповідає гострій мієломоноцитарній лейкемії"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "FAB класифікація мієлобластної лейкемії включає 5 варіантів"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М7 відповідає гострій еритролейкемії"
+              }
+            ],
+            "prompt": "Визначте правильні твердження щодо морфологічної FAB класифікації гострої мієлобластної лейкемії",
+            "subtype": "error_detection"
+          },
+          "index": 17,
+          "name": "Клик - Визначте правильні твердження щодо мо...",
+          "prompt": "Визначте правильні твердження щодо морфологічної FAB класифікації гострої мієлобластної лейкемії",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20,
+              13,
+              18,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+              "score": 0.24,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "гострої",
+                "лейкемії",
+                "мієлобластної"
+              ],
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М0 - гостра мієлобластна лейкемія з недиференційованими бластними клітинами"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М3 - гостра промієлоцитарна лейкемія"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М6 - гостра еритролейкемія"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М4 - гостра моноцитарна лейкемія"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М7 - гостра мієломоноцитарна лейкемія"
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про FAB класифікацію гострої мієлобластної лейкемії",
+            "subtype": "error_detection"
+          },
+          "index": 18,
+          "name": "Клик - Виберіть правильні твердження про FAB...",
+          "prompt": "Виберіть правильні твердження про FAB класифікацію гострої мієлобластної лейкемії",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20,
+              13,
+              18,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 22,
+              "primary_unit_title": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+              "score": 0.24,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "гострої",
+                "лейкемії",
+                "лімфобластної"
+              ],
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L1 - гостра лімфобластна лейкемія з малими розмірами бластів (частіше у дітей)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L2 - гостра лімфобластна лейкемія з великими розмірами бластів (частіше у дорослих)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L3 - гостра лімфобластна лейкемія з бластними клітинами типа клітин при лімфомі Беркіта"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L1 - гостра лімфобластна лейкемія з великими розмірами бластів"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L3 - гостра лімфобластна лейкемія з малими розмірами бластів"
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про FAB класифікацію гострої лімфобластної лейкемії",
+            "subtype": "error_detection"
+          },
+          "index": 19,
+          "name": "Клик - Виберіть правильні твердження про FAB...",
+          "prompt": "Виберіть правильні твердження про FAB класифікацію гострої лімфобластної лейкемії",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20,
+              13,
+              18,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 18,
+              "primary_unit_title": "Гостра лейкемія",
+              "score": 0.1,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "гостра",
+                "лейкемія"
+              ],
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Мо – гостра мієлобластна лейкемія з недиференційованими бластними клітинами."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М1 – гостра мієлобластна лейкемія без ознак дозрівання бластів."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М2 – гостра мієлобластна лейкемія з ознаками дозрівання бластів."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М3 – гостра промієлоцитарна лейкемія."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М4 – гостра мієломоноцитарна лейкемія."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М5 – гостра моноцитарна лейкемія."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М6 – гостра еритролейкемія."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М7 – гостра мегакаріобластна лейкемія."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L1 – гостра лімфобластна лейкемія з малими розмірами бластів (частіше у дітей)."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L2 – гостра лімфобластна лейкемія з великими розмірами бластів (частіше у дорослих)."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L3 – гостра лімфобластна лейкемія з бластними клітинами типа клітин при лімфомі Беркіта."
+              }
+            ],
+            "prompt": "Які з наведених FAB класифікацій відповідають правильним назвам гострих лейкозів?",
+            "subtype": "error_detection"
+          },
+          "index": 20,
+          "name": "Клик - Які з наведених FAB класифікацій відп...",
+          "prompt": "Які з наведених FAB класифікацій відповідають правильним назвам гострих лейкозів?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20,
+              13,
+              18,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Класифікація лейкоцитів",
+              "score": 0.0571,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "лейкоцитів"
+              ],
+              "weak": true,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Геморагічний синдром зумовлений тромбоцитопенією, підвищенням проникності судин, порушенням коагуляції"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Анемічний синдром зумовлений зменшенням кількості клітин червоного кровотворного паростку"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Інтоксикаційний синдром зумовлений підвищеним розпадом лейкозних клітин"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Геморагічний синдром зумовлений лише тромбоцитопенією"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Анемічний синдром зумовлений лише зменшенням кількості лейкоцитів"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Інтоксикаційний синдром зумовлений лише порушенням функції печінки"
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про клінічну картину гострих лейкозів",
+            "subtype": "error_detection"
+          },
+          "index": 21,
+          "name": "Клик - Виберіть правильні твердження про клі...",
+          "prompt": "Виберіть правильні твердження про клінічну картину гострих лейкозів",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "weak_source_grounding",
+              "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+              "severity": "warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        20
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "соматичні мутації, порушення імунологічного захисту, апоптозу, формування клонів, доброякісне/злоякісне зростання.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 20,
+          "modality": "text",
+          "title": "Патогенез",
+          "type": "process"
+        }
+      ],
+      "generation_time_ms": 83352,
+      "parsing_errors": [
+        "Overgeneration trimmed for OPEN_ANSWER after grounding cleanup: requested 5, kept 5, dropped 2."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11184,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 11157,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20
+            ],
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Патогенез",
+              "score": 0.2353,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 5,
+              "shared_tokens_sample": [
+                "доброякісне",
+                "злоякісне",
+                "зростання",
+                "мутації",
+                "соматичні"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "keywords": [
+              "соматичні мутації",
+              "клон",
+              "доброякісне зростання",
+              "злоякісне зростання",
+              "проліферація",
+              "диференціювання"
+            ],
+            "question": "Як відбувається перехід від доброякісного до злоякісного клону при формуванні гострих лейкемій?",
+            "reference_answer": "Після первинної соматичної мутації родоначальної клітини утворюється клон, що активно проліферує (доброякісне пухлинне зростання). Згодом у клітинах первинного клону відбуваються додаткові мутації, що призводять до втрати здатності до диференціювання та переходу до злоякісного пухлинного зростання."
+          },
+          "index": 22,
+          "name": "Открытый ответ - Як відбувається перехід від доброякіс...",
+          "prompt": "Як відбувається перехід від доброякісного до злоякісного клону при формуванні гострих лейкемій?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20
+            ],
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Патогенез",
+              "score": 0.2353,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 5,
+              "shared_tokens_sample": [
+                "доброякісне",
+                "злоякісне",
+                "зростання",
+                "мутації",
+                "формування"
+              ],
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "question": "Як відбувається формування лейкозного клону та яка відмінність між первинним і вторинним клоном у патогенезі гострих лейкозів?",
+            "reference_answer": "Формування лейкозного клону починається з мутації родоначальної клітини, яка набуває здатності швидко проліферувати. Клітини, утворені внаслідок цієї проліферації, становлять первинний лейкозний клон і зберігають здатність до диференціювання (доброякісне пухлинне зростання). З часом у клітинах первинного клону відбуваються подальші мутації, що призводить до утворення вторинного лейкозного клону. Клітини вторинного клону не лише активно проліферують, але й втрачають здатність до диференціювання (злоякісне пухлинне з"
+          },
+          "index": 23,
+          "name": "Открытый ответ - Як відбувається формування лейкозного...",
+          "prompt": "Як відбувається формування лейкозного клону та яка відмінність між первинним і вторинним клоном у патогенезі гострих лейкозів?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20
+            ],
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Патогенез",
+              "score": 0.0,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 0,
+              "shared_tokens_sample": [],
+              "weak": true,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "keywords": [
+              "<ключове слово 1>",
+              "<ключове слово 2>"
+            ],
+            "question": "<питання>",
+            "reference_answer": "<еталонна відповідь>"
+          },
+          "index": 24,
+          "name": "Открытый ответ - <питання>",
+          "prompt": "<питання>",
+          "status": "warning",
+          "type": "open_answer",
+          "validation_issues": [
+            {
+              "field": "weak_source_grounding",
+              "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20
+            ],
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Патогенез",
+              "score": 0.0,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 0,
+              "shared_tokens_sample": [],
+              "weak": true,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "keywords": [
+              "трансплантація кісткового мозку",
+              "показання",
+              "лейкеми",
+              "лімфоми",
+              "мієломна хвороба",
+              "хронічний мієлолейкоз",
+              "мієлодиспластичний синдром"
+            ],
+            "question": "Для яких захворювань показано трансплантацію кісткового мозку?",
+            "reference_answer": "Гострий мієлобластний та лімфобластний лейкози, лімфоми з високим ступенем злоякісності, мієломна хвороба II-III стадій, лімфогранулематоз, хронічний мієлолейкоз, мієлодиспластичний синдром у дорослих."
+          },
+          "index": 25,
+          "name": "Открытый ответ - Для яких захворювань показано транспл...",
+          "prompt": "Для яких захворювань показано трансплантацію кісткового мозку?",
+          "status": "warning",
+          "type": "open_answer",
+          "validation_issues": [
+            {
+              "field": "weak_source_grounding",
+              "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              20
+            ],
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Патогенез",
+              "score": 0.0,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 0,
+              "shared_tokens_sample": [],
+              "weak": true,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "keywords": [
+              "FAB",
+              "мієлобластна лейкемія",
+              "класифікація",
+              "М0",
+              "М1",
+              "М2",
+              "М3",
+              "М4",
+              "М5",
+              "М6",
+              "М7"
+            ],
+            "question": "Які типи входять до морфологічної FAB класифікації гострої мієлобластної лейкемії?",
+            "reference_answer": "М0 (недиференційовані бласти), М1 (без ознак дозрівання бластів), М2 (з ознаками дозрівання бластів), М3 (промієлоцитарна), М4 (мієломоноцитарна), М5 (моноцитарна), М6 (еритролейкемія), М7 (мегакаріобластна)."
+          },
+          "index": 26,
+          "name": "Открытый ответ - Які типи входять до морфологічної FAB...",
+          "prompt": "Які типи входять до морфологічної FAB класифікації гострої мієлобластної лейкемії?",
+          "status": "warning",
+          "type": "open_answer",
+          "validation_issues": [
+            {
+              "field": "weak_source_grounding",
+              "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+              "severity": "warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        16,
+        21,
+        22
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "Напрямки мієлопоезу (6) та лімфопоезу (2).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Напрямки мієлопоезу (6) та лімфопоезу (2).",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 21,
+          "modality": "text",
+          "title": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 22,
+          "modality": "text",
+          "title": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+          "type": "classification"
+        }
+      ],
+      "generation_time_ms": 258644,
+      "parsing_errors": [
+        "Задание #3: не указаны индексы ошибок (используйте 'индексы: 1, 3' в промпте или [слово] в тексте)",
+        "Overgeneration trimmed for CLICK_WORDS: requested 4, kept 4, dropped 1.",
+        "Overgeneration trimmed for CLICK_WORDS after iterative repair 1: requested 4, kept 4, dropped 1.",
+        "Iterative repair 1 made no valid-progress for CLICK_WORDS (valid 1/4).",
+        "Overgeneration trimmed for CLICK_WORDS after cleanup repair: requested 4, kept 4, dropped 1.",
+        "Overgeneration trimmed for CLICK_WORDS after grounding cleanup: requested 4, kept 4, dropped 1."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 4,
+      "status": "success",
+      "subrequest_count": 6,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              16,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+              "score": 0.08,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "лейкемії"
+              ],
+              "weak": false,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              1,
+              5,
+              21
+            ],
+            "mode": "word_errors",
+            "prompt": "Знайдіть фактичні помилки у тексті",
+            "subtype": "error_detection",
+            "text": "text: Гостра лейкемія – це злоякісна пухлина кровотворної тканини, морфологічним субстратом якої є незрілі бластні клітини – недиференційовані або мало диференційовані. Гострі лейкемії підрозділяють на лімфобластні та нелімфобластні (мієлобластні). Етіологія, патогенез та основні клінічні прояви лімфобластних та мієлобластних лейкемій суттєво не відрізняються. Тому ці питання будуть висвітлені разом. Головні відмінності полягають у даних цитоморфологічного, цитохімічного та цитоімунного аналізу та різних підходах до лікування цих видів гострих лейкемій."
+          },
+          "index": 27,
+          "name": "Клик - Знайдіть фактичні помилки у тексті",
+          "prompt": "Знайдіть фактичні помилки у тексті",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              16,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 16,
+              "primary_unit_title": "Напрямки мієлопоезу (6) та лімфопоезу (2).",
+              "score": 0.0,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 0,
+              "shared_tokens_sample": [],
+              "weak": true,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              1,
+              11
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Гемопоез — це утворення всіх формених елементів крові, крім лімфоцитів. Лімфопоез — це утворення лімфоцитів (В- і Т-клітин)."
+          },
+          "index": 28,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "weak_source_grounding",
+              "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+              "severity": "warning"
+            },
+            {
+              "field": "duplicate_task",
+              "message": "Похоже на дубликат другого сгенерированного задания",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              16,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 16,
+              "primary_unit_title": "Напрямки мієлопоезу (6) та лімфопоезу (2).",
+              "score": 0.0,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 0,
+              "shared_tokens_sample": [],
+              "weak": true,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              1,
+              11
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Гемопоез — це утворення всіх формених елементів крові, крім лімфоцитів. Лімфопоез — це утворення лімфоцитів (В- і Т-клітин)."
+          },
+          "index": 29,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "weak_source_grounding",
+              "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+              "severity": "warning"
+            },
+            {
+              "field": "duplicate_task",
+              "message": "Похоже на дубликат другого сгенерированного задания",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              16,
+              21,
+              22
+            ],
+            "source_grounding": {
+              "primary_unit_id": 16,
+              "primary_unit_title": "Напрямки мієлопоезу (6) та лімфопоезу (2).",
+              "score": 0.6,
+              "shared_number_count": 2,
+              "shared_numbers": [
+                "2",
+                "6"
+              ],
+              "shared_token_count": 5,
+              "shared_tokens_sample": [
+                "2",
+                "6",
+                "лімфопоезу",
+                "мієлопоезу",
+                "напрямки"
+              ],
+              "weak": false,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              217,
+              463,
+              549,
+              553,
+              565,
+              567,
+              575,
+              577,
+              615,
+              638,
+              666,
+              670,
+              716,
+              727,
+              731,
+              738,
+              739,
+              740,
+              741,
+              742,
+              744,
+              971,
+              1011,
+              1023,
+              1025,
+              1051,
+              1181,
+              1236,
+              1259,
+              1263,
+              1280,
+              1281,
+              1282,
+              1283,
+              1284,
+              1286
+            ],
+            "mode": "word_errors",
+            "prompt": "<инструкция: что именно искать>",
+            "subtype": "error_detection",
+            "text": "text: <связный текст> Так что, после @CLICK_WORTS, я пишу строку с # и инструкцией, затем строку с text: и текстом. Инструкция должна описывать, что искать. Например, \"Найдите фактические ошибки в тексте.\" Но, возможно, более специфично, так как это задание на клик по неверным словам. В контексте, инструкция может быть общей, например, \"Выберите неверные утверждения.\" Но в задании CLICK_WORDS, студент кликает на неверные слова/фразы, так что инструкция должна указывать на то, чтобы найти ошибки. В quality_criteria сказано: \"Задания типа CLICK_WORDS — это упражнения на поиск фактических ошибок в тексте. Студент кликает на неверные слова/фразы.\" Так что инструкция может быть: \"Найдите и кликните на слова или фразы, содержащие фактические ошибки.\" Но в output_format, инструкция указана как \"# <инструкция: что именно искать>\", так что я могу написать что-то вроде: \"# Найдите фактические ошибки в тексте.\" Теперь, для каждого задания, я должен создать связный текст из 2-4 предложений с 2-4 ошибками, основанный на одной из образовательных единиц. Перечислю единицы: 1. Напрямки мієлопоезу (6) та лімфопоезу (2). – то есть, направлений миелопоэза 6 и лимфопоэза 2. 2. FAB класифікація гострої мієлобластної лейкемії (M0-M7). – FAB классификация острой миелобластной лейкемии, подтипы M0 до M7. 3. FAB класифікація гострої лімфобластної лейкемії (L1-L3). – FAB классификация острой лимфобластной лейкемии, подтипы L1, L2, L3. В материале есть подробности по этим классификациям. Для задания 1, основанного на 16: направлений миелопоэза 6 и лимфопоэза 2. В тексте сказано: \"Відповідно до числа формених елементів крові виділяють 6 напрямків мієлопоезу та 2 напрямки лімфопоезу.\" Так что факт: 6 направлений миелопоэза и 2 лимфопоэза. Ошибки могут быть: перепутать числа, например, сказать 5 и 3, или 7 и 1, или инвертировать, но числа четкие. Также, в тексте есть классы клітин: I, II, III, IV, V, VI – но это классы клеток, а не направления. Направления – это типы форменных элементов? В контексте, \"напрямки мієлопоезу\" вероятно относятся к линиям дифференцировки: эритроидная, гранулоцитарная, моноцитарная, мегакариоцитарная, лимфоидная? Но в материале не явно указано, какие именно 6 направлений. Из общего знания, миелопоэз включает: эритроциты, гранулоциты (нейтрофилы, эозинофилы, базофилы), моноциты, тромбоциты (мегакариоциты). Но это 4? Или включая лимфоциты? Но лимфопоэз отдельно. В материале: \"Мієлопоез – це утворення всіх формених елементів крові, крім лімфоцитів. Лімфопоез – це утворення лімфоцитів (В- і Т-клітин).\" И затем: \"Відповідно до числа формених елементів крові виділяють 6 напрямків мієлопоезу та 2 напрямки лімфопоезу.\" Так что, вероятно, 6 направлений миелопоэза соответствуют шести типам форменных элементов, кроме лимфоцитов? Но форменные элементы крови: эритроциты, тромбоциты, нейтрофилы, эозинофилы, базофилы, моноциты – это 6. И лимфопоэз: В-лимфоциты и Т-лимфоциты – 2 направления. Так что для ошибки, я могу изменить числа или термины. Например, сказать: \"Відповідно до числа формених елементів крові виділяють 5 напрямків мієлопоезу та 3 напрямки лімфопоезу.\" Но это явная ошибка, но в тексте она должна быть вплетена в связный параграф. Мне нужно создать связный текст из 2-4 предложений. Так что, например, для 16: \"В гемопоэзе различают шесть направлений миелопоэза и два направления лимфопоэза. К направлениям миелопоэза относятся эритроидное, гранулоцитарное, моноцитарное, мегакариоцитарное, а также два других, которые часто объединяют. Лимфопоэз включает В-лимфоциты и Т-лимфоциты.\" Но здесь я добавил \"два других\", что неявно, но ошибка в том, что всего 6, а я перечислил только 4? Нет, в ошибках должны быть конкретные подмены. Лучше сделать явные ошибки в числах или терминах. Чтобы было 2-4 ошибки, я могу в одном предложении иметь несколько ошибок. Например: \"Відповідно до числа формених елементів крові виділяють 7 напрямків мієлопоезу та 1 напрямки лімфопоезу. Основні напрямки включають еритроїдний, гранулоцитарний, моноцитарний, мегакаріоцитарний, а також лімфоїдний та тромбоцитарний для мієлопоезу, тоді як для лімфопоезу це B-лімфоцити і T-лімфоцити.\" Но здесь я перечислил лимфоидный и тромбоцитарный как направления миелопоэза, но тромбоцитарный – это часть миелопоэза (мегакариоциты), а лимфоидный – это лимфопоэз. Так что это путаница. Но в задании, ошибки должны быть в отдельных фрагментах, обернутых в скобки. И каждый ошибочный фрагмент – это слово или фраза, не многословные. Из guardrails: \"Wrap only single-word (or hyphenated single-token) erroneous fragments in brackets; avoid multi-word bracket spans.\" Так что я должен оборачивать только отдельные слова или короткие фразы, например, числа или термины. Например: \"Відповідно до числа формених елементів крові виділяють 7 напрямків мієлопоезу та 1 напрямки лімфопоезу.\" Здесь два ошибки: 7 вместо 6, и 1 вместо 2. Но это только две ошибки, а нужно 2-4. Я могу добавить еще ошибки в других частях текста. Текст должен быть из 2-4 предложений. Так что, например, два предложения с двумя ошибками каждое. Для 16, я могу сделать: \"Відповідно до числа формених елементів крові виділяють 7 напрямків мієлопоезу та 1 напрямки лімфопоезу. Серед напрямків мієлопоезу виділяють еритроїдний, гранулоцитарний, моноцитарний, мегакаріоцитарний, лімфоїдний та тромбоцитарний.\" Здесь ошибки: числа 7 и 1, и термины \"лімфоїдний\" и \"тромбоцитарний\" – но \"тромбоцитарний\" может быть синонимом мегакариоцитарного? В материале не указано конкретно названия направлений, только общее число. Так что, возможно, \"тромбоцитарний\" не ошибка, если он считается частью миелопоэза. Но в контексте, миелопоэз включает тромбоциты через мегакариоциты, так что \"тромбоцитарний\" может быть приемлемым. Но \"лімфоїдний\" – это лимфопоэз, так что ошибка. Чтобы быть точным, я должен опираться на материал. В материале не перечислены названия направлений, только числа. Так что для ошибок, я могу менять числа или добавлять неверные термины, но если термины не указаны, то это может быть внешним знанием. Но по правилу, я должен использовать только факты из материала. В материале: \"Відповідно до числа формених елементів крові виділяють 6 напрямків мієлопоезу та 2 напрямки лімфопоезу.\" И далее: \"Мієлопоез – це утворення всіх формених елементів крові, крім лімфоцитів. Лімфопоез – це утворення лімфоцитів (В- і Т-клітин).\" Так что, форменные элементы крови, кроме лимфоцитов, это: эритроциты, тромбоциты, нейтрофилы, эозинофилы, базофилы, моноциты – 6 типов. И лимфоциты: В- и Т-лимфоциты – 2 направления. Так что в тексте, если я перечисляю, я должен перечислить эти 6 для миелопоэза и 2 для лимфопоэза. Но в материале не перечислены явно, так что для задания, я могу создать текст, который утверждает что-то о числах и перечисляет, но с ошибками. Чтобы избежать добавления несуществующих деталей, лучше сосредоточиться на числах и ключевых терминах. Для 16, ошибки могут быть: - Неправильное число направлений миелопоэза или лимфопоэза. - Путаница в терминах: например, сказать, что лимфопоэз включает другие клетки. Но в материале четко: миелопоэз – все кроме лимфоцитов, лимфопоэз – лимфоциты. Так что, например: \"Мієлопоез охоплює утворення лімфоцитів разом з іншими форменими елементами крові, тоді як лімфопоез відповідає за нейтрофіли та еозінофіли.\" Но это явная подмена. Но в задании, текст должен быть связным и неочевидным. Так что, возможно, более тонкие ошибки. Давайте посмотрим на другие единицы. Для 21: FAB классификация острой миелобластной лейкемии (M0-M7). В материале перечислены: M0, M1, M2, M3, M4, M5, M6, M7. Так что 8 подтипов? M0 до M7 включительно – это 8 типов: M0, M1, M2, M3, M4, M5, M6, M7. Но в описании сказано \"M0-M7\", что включает 8 пунктов. В тексте: \"Мо – гостра мієлобластна лейкемія з недиференційованими бластними клітинами. М1 – ... М2 – ... М3 – ... М4 – ... М5 – ... М6 – ... М7 – ...\" Так что 8 типов. Но в названии единицы сказано \"(M0-M7)\", что подразумевает 8. Ошибки могут быть: пропустить один, изменить названия, перепутать порядок. Например, сказать, что M3 – это остра миелобластна лейкемія без ознак дозрівання, но на самом деле M1 – без ознак дозрівання, M3 – промієлоцитарна. Или изменить число подтипов. Для 22: FAB классификация острой лимфобластной лейкемии (L1-L3). В материале: L1, L2, L3. Так что 3 подтипа. Ошибки: например, сказать L4, или перепутать характеристики. Теперь, я должен создать три задания, каждое на одну единицу, и каждое с 2-4 ошибками. Так как нужно ровно 3 задания, и три единицы, я сделаю по одному на каждую. Начнем с 16. Задание 1: на направлений миелопоэза и лимфопоэза. Создам связный текст из 2-4 предложений. Предложение 1: \"Відповідно до числа формених елементів крові виділяють 7 напрямків мієлопоезу та 3 напрямки лімфопоезу.\" – ошибки: 7 вместо 6, 3 вместо 2. Предложение 2: \"До напрямків мієлопоезу належать еритроїдний, гранулоцитарний, моноцитарний, мегакаріоцитарний, лімфоїдний та тромбоцитарний.\" – здесь \"лімфоїдний\" не должен быть в миелопоэзе, и \"тромбоцитарний\" может быть синонимом, но в материале не указано, так что, возможно, \"тромбоцитарний\" – это то же, что мегакариоцитарный? Но чтобы быть безопасным, я могу сделать ошибку в терминах. Но в материале нет пере"
+          },
+          "index": 30,
+          "name": "Клик - <инструкция: что именно искать>",
+          "prompt": "<инструкция: что именно искать>",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        23
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "Стадії гострого лейкозу (передлейкоз, початковий період, розгорнутий, ремісія, загострення, термінальний).",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 23,
+          "modality": "text",
+          "title": "Стадії гострого лейкозу (передлейкоз, початковий період, розгорнутий, ремісія, загострення, термінальний).",
+          "type": "fact"
+        }
+      ],
+      "generation_time_ms": 40723,
+      "parsing_errors": [
+        "Задание #1: не найдено ни одного уровня (level_X)",
+        "Overgeneration trimmed for SEQUENCE: requested 1, kept 1, dropped 1."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              23
+            ],
+            "source_grounding": {
+              "primary_unit_id": 23,
+              "primary_unit_title": "Стадії гострого лейкозу (передлейкоз, початковий період, розгорнутий, ремісія, загострення, термінальний).",
+              "score": 0.5333,
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 10,
+              "shared_tokens_sample": [
+                "гострого",
+                "загострення",
+                "лейкозу",
+                "передлейкоз",
+                "період",
+                "початковий"
+              ],
+              "weak": false,
+              "weak_threshold": 0.05
+            }
+          },
+          "data": {
+            "elements": {
+              "element_1": "Передлейкоз",
+              "element_2": "Початковий період",
+              "element_3": "Розгорнутий період",
+              "element_4": "Ремісія",
+              "element_5": "Загострення",
+              "element_6": "Термінальний період"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ],
+              "5": [
+                "element_5"
+              ],
+              "6": [
+                "element_6"
+              ]
+            },
+            "prompt": "Упорядкуйте стадії гострого лейкозу в хронологічному порядку розвитку захворювання"
+          },
+          "index": 31,
+          "name": "Последовательность - Упорядкуйте стадії гострого лейкозу в...",
+          "prompt": "Упорядкуйте стадії гострого лейкозу в хронологічному порядку розвитку захворювання",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 7,
+      "click_words": 4,
+      "open_answer": 5,
+      "sequence": 1,
+      "test": 15
+    },
+    "quality": {
+      "duplicate_groups": 2,
+      "duplicate_tasks": 4,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 32,
+      "source_grounding_warnings": 6,
+      "total_tasks": 32
+    },
+    "total_errors": 0,
+    "total_generated": 32,
+    "total_valid": 23,
+    "total_warnings": 9
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "error": "analysis_failed",
+  "ok": false,
+  "provider_chain_attempts": [
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "stage": "analysis_initial",
+      "status": "success"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "stage": "analysis_parse_escalation",
+      "status": "success"
+    }
+  ]
+}

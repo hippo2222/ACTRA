@@ -166,14 +166,21 @@ def create_release_data_bundle() -> None:
     shutil.copytree(source_modules, release_data / "modules", dirs_exist_ok=True)
     shutil.copytree(source_complexes, release_data / "complexes", dirs_exist_ok=True)
 
-    # Runtime directories must start empty.
+    # Ship bundled default avatars (if present).
+    source_avatars = source_data / "avatars"
+    if source_avatars.exists():
+        shutil.copytree(source_avatars, release_data / "avatars", dirs_exist_ok=True)
+    else:
+        (release_data / "avatars").mkdir(parents=True, exist_ok=True)
+
+    # Runtime directories must start empty (except bundled avatars above).
     runtime_dirs = [
         release_data / "users",
-        release_data / "avatars",
         release_data / "images",
         release_data / "user_calendar",
         release_data / "feedback" / "tickets",
         release_data / "import_manifests",
+        release_data / "system",
     ]
     for d in runtime_dirs:
         d.mkdir(parents=True, exist_ok=True)
@@ -182,6 +189,9 @@ def create_release_data_bundle() -> None:
     src_difficulty = source_data / "difficulty_config.json"
     if src_difficulty.exists():
         shutil.copy2(src_difficulty, release_data / "difficulty_config.json")
+    src_update_manifest = source_data / "system" / "update_manifest.json"
+    if src_update_manifest.exists():
+        shutil.copy2(src_update_manifest, release_data / "system" / "update_manifest.json")
 
     # Drop mutable history from shipped content.
     history_dir = release_data / "complexes" / "history"
@@ -242,7 +252,6 @@ a = Analysis(
         'bcrypt',
         'PIL',
         'PIL.Image',
-        'numpy',
         'Levenshtein',
         'pymorphy2',
         'pymorphy2.units',
@@ -270,6 +279,7 @@ a = Analysis(
         'matplotlib',
         'scipy',
         'pandas',
+        'numpy',
         'IPython',
         'jupyter',
         'notebook',

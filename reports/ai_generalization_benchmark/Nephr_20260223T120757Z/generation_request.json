@@ -1,0 +1,194 @@
+{
+  "tasks_to_generate": [
+    {
+      "task_type": "TEST",
+      "count": 8,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Клинико-лабораторный симптомокомплекс с протеинурией, гипопротеинемией, гиперлипидемией, отеками",
+          "evidence": "Определение в начале главы",
+          "explicitness": "explicit",
+          "id": 1,
+          "modality": "text",
+          "title": "Нефротический синдром",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Первичные и вторичные заболевания почек, вызывающие НС",
+          "evidence": "Детальная классификация в разделе 'Этиология'",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Этиология НС",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Иммунологическая и метаболическая концепции развития НС",
+          "evidence": "Раздел 'Патогенез' с двумя концепциями",
+          "explicitness": "explicit",
+          "id": 3,
+          "modality": "text",
+          "title": "Патогенез НС",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Жалобы, отеки, транссудаты, анемия, изменения в крови и моче",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Клинические проявления НС",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Анализы мочи, крови, функциональные пробы почек",
+          "evidence": "Подраздел 'Основной метод диагностики'",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Лабораторная диагностика НС",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Отек мозга, кровоизлияния, шок, тромбозы, инфекции",
+          "evidence": "Раздел 'Осложнения'",
+          "explicitness": "explicit",
+          "id": 6,
+          "modality": "text",
+          "title": "Осложнения НС",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Госпитализация, режим, диета, медикаментозная терапия",
+          "evidence": "Раздел 'Принципы лечения'",
+          "explicitness": "explicit",
+          "id": 7,
+          "modality": "text",
+          "title": "Принципы лечения НС",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Кортикостероиды, цитостатики, антикоагулянты, антиагреганты, противовоспалительные средства",
+          "evidence": "Подраздел 'Медикаментозное лечение'",
+          "explicitness": "explicit",
+          "id": 8,
+          "modality": "text",
+          "title": "Медикаментозная терапия НС",
+          "type": "classification"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 3,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Первичные и вторичные заболевания почек, вызывающие НС",
+          "evidence": "Детальная классификация в разделе 'Этиология'",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Этиология НС",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Отек мозга, кровоизлияния, шок, тромбозы, инфекции",
+          "evidence": "Раздел 'Осложнения'",
+          "explicitness": "explicit",
+          "id": 6,
+          "modality": "text",
+          "title": "Осложнения НС",
+          "type": "concept"
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 4,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Иммунологическая и метаболическая концепции развития НС",
+          "evidence": "Раздел 'Патогенез' с двумя концепциями",
+          "explicitness": "explicit",
+          "id": 3,
+          "modality": "text",
+          "title": "Патогенез НС",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Жалобы, отеки, транссудаты, анемия, изменения в крови и моче",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Клинические проявления НС",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Госпитализация, режим, диета, медикаментозная терапия",
+          "evidence": "Раздел 'Принципы лечения'",
+          "explicitness": "explicit",
+          "id": 7,
+          "modality": "text",
+          "title": "Принципы лечения НС",
+          "type": "process"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 1,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Жалобы, отеки, транссудаты, анемия, изменения в крови и моче",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Клинические проявления НС",
+          "type": "concept"
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 2,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Анализы мочи, крови, функциональные пробы почек",
+          "evidence": "Подраздел 'Основной метод диагностики'",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Лабораторная диагностика НС",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Кортикостероиды, цитостатики, антикоагулянты, антиагреганты, противовоспалительные средства",
+          "evidence": "Подраздел 'Медикаментозное лечение'",
+          "explicitness": "explicit",
+          "id": 8,
+          "modality": "text",
+          "title": "Медикаментозная терапия НС",
+          "type": "classification"
+        }
+      ]
+    }
+  ]
+}

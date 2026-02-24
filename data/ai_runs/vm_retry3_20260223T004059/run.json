@@ -1,0 +1,8 @@
+{
+  "run_id": "vm_retry3_20260223T004059",
+  "phase": "analysis_parse_failed",
+  "provider_used": "openrouter",
+  "parse_error": "Cannot parse analysis response: truncated_analysis_json_block",
+  "created_at": "2026-02-23T00:48:24Z",
+  "updated_at": "2026-02-23T00:48:24Z"
+}

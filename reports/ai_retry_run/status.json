@@ -1,0 +1,21 @@
+{
+  "active_provider": "openrouter",
+  "ai_available": true,
+  "daily_limit": {
+    "files_remaining": 3,
+    "max_files_per_day": 3,
+    "resets_at": "2026-02-24T00:00:00Z"
+  },
+  "ok": true,
+  "providers": {
+    "gemini": {
+      "available": true
+    },
+    "groq": {
+      "available": false
+    },
+    "openrouter": {
+      "available": true
+    }
+  }
+}

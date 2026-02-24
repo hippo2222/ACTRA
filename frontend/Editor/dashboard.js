@@ -257,6 +257,7 @@ class EditorDashboard {
 
         this.setupSortControls();
         this.setupSelectionControls(); // Add selection controls
+        this.setupSidebarResizer();
     }
 
     setupSelectionControls() {
@@ -301,6 +302,51 @@ class EditorDashboard {
             // Insert before the last element (usually profile/settings)
             headerActions.insertBefore(btn, headerActions.firstChild);
         }
+    }
+
+    setupSidebarResizer() {
+        const resizer = document.getElementById('sidebar-resizer');
+        const sidebar = document.getElementById('editor-sidebar');
+        const overlay = document.getElementById('sidebar-blur-overlay');
+        const modal = document.getElementById('sidebar-delete-modal');
+        if (!resizer || !sidebar) return;
+
+        let isResizing = false;
+
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            resizer.classList.add('is-resizing');
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            e.preventDefault();
+        });
+
+        const handleMouseMove = (e) => {
+            if (!isResizing) return;
+            let newWidth = e.clientX;
+
+            // Constrain width
+            if (newWidth < 160) newWidth = 160;
+            if (newWidth > 600) newWidth = 600;
+
+            document.documentElement.style.setProperty('--sidebar-width', newWidth + 'px');
+            if (overlay) overlay.style.width = newWidth + 'px';
+            if (modal) modal.style.width = newWidth + 'px';
+        };
+
+        const handleMouseUp = () => {
+            if (!isResizing) return;
+            isResizing = false;
+            document.body.style.cursor = '';
+            resizer.classList.remove('is-resizing');
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+
+            // Save to localStorage
+            const finalWidth = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width'));
+            localStorage.setItem('editorSidebarWidth', finalWidth);
+        };
     }
 
     setupSortControls() {
@@ -372,6 +418,95 @@ class EditorDashboard {
     updateSortLabel() {
         if (!this.sortLabelEl) return;
         this.sortLabelEl.textContent = this.sortLabels[this.currentSort] || '';
+    }
+
+    syncSidebarSelection() {
+        if (!this.activeModuleId && !this.activeTopicId) {
+            document.querySelectorAll('[data-module-button], [data-topic-button]').forEach(btn => {
+                btn.classList.remove('bg-primary-lighter', 'text-primary');
+            });
+            const allTasksBtn = document.querySelector('[data-role="all-tasks"]');
+            if (allTasksBtn) allTasksBtn.classList.add('bg-primary-lighter', 'text-primary');
+            return;
+        }
+
+        document.querySelectorAll('[data-module-button]').forEach(btn => {
+            const moduleId = btn.getAttribute('data-module-id');
+            const isActive = moduleId === this.activeModuleId;
+            btn.classList.toggle('bg-primary-lighter', isActive);
+            btn.classList.toggle('text-primary', isActive);
+            if (isActive) {
+                btn.classList.remove('text-text-secondary');
+            } else {
+                btn.classList.add('text-text-secondary');
+            }
+        });
+
+        document.querySelectorAll('[data-topic-button]').forEach(btn => {
+            const topicId = btn.getAttribute('data-topic-id');
+            const isActive = topicId === this.activeTopicId;
+            btn.classList.toggle('bg-primary-lighter', isActive);
+            btn.classList.toggle('text-primary', isActive);
+            if (isActive) {
+                btn.classList.remove('text-text-secondary');
+            } else {
+                btn.classList.add('text-text-secondary');
+            }
+        });
+
+        const allTasksBtn = document.querySelector('[data-role="all-tasks"]');
+        if (allTasksBtn) {
+            const isActive = !this.activeModuleId && !this.activeTopicId && !this.currentSearchQuery;
+            allTasksBtn.classList.toggle('bg-primary-lighter', isActive);
+            allTasksBtn.classList.toggle('text-primary', isActive);
+        }
+    }
+
+    updateHeaderBreadcrumbs() {
+        const nav = document.querySelector('#header-breadcrumbs');
+        if (!nav) return;
+
+        nav.innerHTML = '';
+
+        // Root Level
+        const root = document.createElement('span');
+        root.className = 'cursor-pointer hover:text-primary transition-colors';
+        root.textContent = 'Библиотека';
+        root.onclick = () => this.renderAllTasks();
+        nav.appendChild(root);
+
+        // Module Level
+        if (this.activeModuleId) {
+            const separator1 = document.createElement('span');
+            separator1.className = 'text-text-disabled mx-1 font-normal text-xl';
+            separator1.textContent = '›';
+            nav.appendChild(separator1);
+
+            const module = this.catalog.find(m => m.id === this.activeModuleId);
+            const moduleName = module ? (module.name || module.id) : this.activeModuleId;
+            const moduleSpan = document.createElement('span');
+            moduleSpan.className = 'cursor-pointer hover:text-primary transition-colors truncate inline-block align-bottom anim-scale-in';
+            moduleSpan.textContent = moduleName;
+            moduleSpan.title = moduleName;
+            moduleSpan.onclick = () => this.renderModuleTopics(this.activeModuleId);
+            nav.appendChild(moduleSpan);
+
+            // Topic Level
+            if (this.activeTopicId) {
+                const separator2 = document.createElement('span');
+                separator2.className = 'text-text-disabled mx-1 font-normal text-xl shrink-0 anim-scale-in';
+                separator2.textContent = '›';
+                nav.appendChild(separator2);
+
+                const topic = (module?.topics || []).find(t => t.id === this.activeTopicId);
+                const topicName = topic ? (topic.name || topic.id) : this.activeTopicId;
+                const topicSpan = document.createElement('span');
+                topicSpan.className = 'text-text-main truncate inline-block align-bottom anim-scale-in';
+                topicSpan.textContent = topicName;
+                topicSpan.title = topicName;
+                nav.appendChild(topicSpan);
+            }
+        }
     }
 
     updateSortMenuChecks() {
@@ -525,11 +660,22 @@ class EditorDashboard {
     }
 
     // Topic Creation
-    showTopicModal() {
-        const module_id = document.querySelector('#task-module-select').value;
+    showTopicModal(moduleId = null) {
+        let module_id = moduleId;
+        if (!module_id) {
+            module_id = document.querySelector('#task-module-select').value;
+        }
+
         if (!module_id) {
             NotificationUI.toast('Сначала выберите модуль', 'warning');
             return;
+        }
+
+        // Update task-module-select if it differs, to keep UI in sync
+        const moduleSelect = document.querySelector('#task-module-select');
+        if (moduleSelect && moduleSelect.value !== module_id) {
+            moduleSelect.value = module_id;
+            this.updateTopicSelect();
         }
 
         const module = this.catalog.find(m => m.id === module_id);
@@ -548,7 +694,7 @@ class EditorDashboard {
     }
 
     async submitTopicForm() {
-        const module_id = document.querySelector('#task-module-select').value;
+        const module_id = document.querySelector('#topic-module-select').value;
         const nameInput = document.querySelector('#topic-name-input');
         const name = nameInput.value.trim();
         if (!name) {
@@ -652,6 +798,7 @@ class EditorDashboard {
         });
 
         this.syncSidebarSelection();
+        this.updateHeaderBreadcrumbs(); // Call breadcrumbs update
         // After rendering sidebar, render the grid with all tasks
         this.renderGrid();
     }
@@ -721,6 +868,7 @@ class EditorDashboard {
         this.expandSidebarModule(module.id);
         this.expandSidebarTopic(module.id, topic.id);
         this.syncSidebarSelection();
+        this.updateHeaderBreadcrumbs();
         this.updateUrlState();
 
         const topicTasks = (topic.tasks || []).map(task => ({
@@ -742,6 +890,7 @@ class EditorDashboard {
         this.activeTopicId = null;
         this.expandSidebarModule(module.id);
         this.syncSidebarSelection();
+        this.updateHeaderBreadcrumbs();
         this.updateUrlState();
 
         const moduleTasks = (module.topics || []).flatMap(topic =>
@@ -874,6 +1023,7 @@ class EditorDashboard {
             this.activeModuleId = null;
             this.activeTopicId = null;
             this.syncSidebarSelection();
+            this.updateHeaderBreadcrumbs();
             this.renderGrid();
             return;
         }
@@ -897,7 +1047,17 @@ class EditorDashboard {
         this.activeModuleId = null;
         this.activeTopicId = null;
         this.syncSidebarSelection();
+        this.updateHeaderBreadcrumbs(); // Call breadcrumbs update
         this.renderGrid(matches);
+    }
+
+    renderAllTasks() {
+        this.activeModuleId = null;
+        this.activeTopicId = null;
+        this.currentSearchQuery = ''; // Clear search query when viewing all tasks
+        this.syncSidebarSelection();
+        this.updateHeaderBreadcrumbs();
+        this.renderGrid();
     }
 
     refreshCurrentView() {
@@ -1209,19 +1369,21 @@ class EditorDashboard {
         container.dataset.module = module.id;
 
         const button = document.createElement('button');
-        button.className = 'flex items-center gap-2 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors group w-full text-left';
+        button.className = 'flex items-center gap-2 px-3 h-9 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors group w-full text-left';
         button.dataset.moduleButton = module.id;
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">folder_open</span>
             <span class="text-sm font-medium flex-1 truncate" title="${module.name || module.id}">${module.name || module.id}</span>
-            <div class="flex items-center gap-1">
-                <span class="material-symbols-outlined text-[18px] text-text-disabled hover:text-primary transition-colors opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-primary-lighter"
-                      onclick="dashboard.startRenameModule('${module.id}'); event.stopPropagation();"
-                      title="Переименовать модуль">edit</span>
-                <span class="material-symbols-outlined text-[18px] text-text-disabled hover:text-error transition-colors opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-error-lighter"
-                      onclick="dashboard.deleteModule('${module.id}'); event.stopPropagation();"
-                      title="Удалить модуль">delete</span>
-                <span class="material-symbols-outlined text-[16px] transition-transform" data-role="toggle">expand_more</span>
+            <div class="flex items-center gap-1 h-full">
+                <div class="hidden group-hover:flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
+                          onclick="dashboard.startRenameModule('${module.id}'); event.stopPropagation();"
+                          title="Переименовать модуль">edit</span>
+                    <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-error transition-colors p-0.5 rounded hover:bg-error-lighter"
+                          onclick="dashboard.deleteModule('${module.id}'); event.stopPropagation();"
+                          title="Удалить модуль">delete</span>
+                </div>
+                <span class="material-symbols-outlined text-[16px] p-0.5 transition-transform" data-role="toggle">expand_more</span>
             </div>
         `;
 
@@ -1289,11 +1451,7 @@ class EditorDashboard {
         `;
         addTopicBtn.onclick = (e) => {
             e.stopPropagation();
-            // Pre-select this module in the task modal and show topic modal
-            const moduleSelect = document.querySelector('#task-module-select');
-            moduleSelect.value = module.id;
-            this.updateTopicSelect();
-            this.showTopicModal();
+            this.showTopicModal(module.id);
         };
         childrenContainer.appendChild(addTopicBtn);
 
@@ -1308,20 +1466,22 @@ class EditorDashboard {
         container.dataset.topic = `${moduleId}:${topic.id}`;
 
         const button = document.createElement('button');
-        button.className = 'flex items-center gap-2 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left group';
+        button.className = 'flex items-center gap-2 px-3 h-9 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left group';
         button.dataset.topicButton = topic.id;
         button.dataset.topicModule = moduleId;
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">folder</span>
             <span class="text-sm font-medium flex-1 truncate" title="${topic.name || topic.id}">${topic.name || topic.id}</span>
-            <div class="flex items-center gap-1">
-                <span class="material-symbols-outlined text-[18px] text-text-disabled hover:text-primary transition-colors opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-primary-lighter"
-                      onclick="dashboard.startRenameTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
-                      title="Переименовать тему">edit</span>
-                <span class="material-symbols-outlined text-[18px] text-text-disabled hover:text-error transition-colors opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-error-lighter"
-                      onclick="dashboard.deleteTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
-                      title="Удалить тему">delete</span>
-                <span class="material-symbols-outlined text-[16px] transition-transform" data-role="toggle">expand_more</span>
+            <div class="flex items-center gap-1 h-full">
+                <div class="hidden group-hover:flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
+                          onclick="dashboard.startRenameTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
+                          title="Переименовать тему">edit</span>
+                    <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-error transition-colors p-0.5 rounded hover:bg-error-lighter"
+                          onclick="dashboard.deleteTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
+                          title="Удалить тему">delete</span>
+                </div>
+                <span class="material-symbols-outlined text-[16px] p-0.5 transition-transform" data-role="toggle">expand_more</span>
             </div>
         `;
         const chevron = button.querySelector('[data-role="toggle"]');
@@ -1543,12 +1703,26 @@ class EditorDashboard {
         if (type === 'open_answer') editorPage = 'Open Answer Editor Textual Reasoning.html';
 
         if (editorPage) {
-            const m = task.task_data.meta.module;
-            const t = task.task_data.meta.topic;
+            const taskMeta = task?.task_data?.meta || {};
+            const rootMeta = task?.metadata || {};
+            let m = taskMeta.module || rootMeta.module;
+            let t = taskMeta.topic || rootMeta.topic;
             const id = task.metadata.id;
+
+            if ((!m || !t) && typeof rootMeta.path === 'string') {
+                const normalizedPath = rootMeta.path.replace(/\\/g, '/');
+                const match = normalizedPath.match(/modules\/([^/]+)\/topics\/([^/]+)\/tasks\/[^/]+\/task\.json$/);
+                if (match) {
+                    m = m || match[1];
+                    t = t || match[2];
+                }
+            }
+
+            if (!m || !t) {
+                console.error('Cannot open editor: missing module/topic in task metadata', task);
+                return;
+            }
             window.navigateWithTransition(`${editorPage}?module=${m}&topic=${t}&task=${id}`);
-        } else {
-            NotificationUI.toast(`Редактор для типа ${type} еще не реализован`, 'warning');
         }
     }
 
@@ -1560,23 +1734,14 @@ class EditorDashboard {
             return this.placeholderTaskNames.includes(name);
         };
 
-        return modules
-            .map(module => {
-                const topics = (module.topics || [])
-                    .map(topic => {
-                        const tasks = (topic.tasks || []).filter(task => !isPlaceholderTask(task));
-                        return { ...topic, tasks };
-                    })
-                    .filter(topic => topic.tasks && topic.tasks.length > 0);
-
-                return { ...module, topics };
-            })
-            .filter(module => module.topics && module.topics.length > 0);
+        return modules.map(module => {
+            const topics = (module.topics || []).map(topic => {
+                const tasks = (topic.tasks || []).filter(task => !isPlaceholderTask(task));
+                return { ...topic, tasks };
+            });
+            return { ...module, topics };
+        });
     }
-
-    // =========================================================================
-    // Import Modal Methods
-    // =========================================================================
 
     showImportModal() {
         const modal = document.getElementById('import-modal');
@@ -1588,7 +1753,11 @@ class EditorDashboard {
         modal.classList.remove('hidden');
 
         if (this.importManager) {
+            // Preset module/topic from current location before going to step 1
+            this.importManager.presetFromCurrentLocation();
             this.importManager.goToStep(1);
+            // Preload AI status in background (for faster AI mode switch)
+            this.importManager.aiCheckStatus().catch(() => {});
         } else {
             console.error('[Dashboard] ImportManager not initialized');
         }
@@ -1616,6 +1785,17 @@ class EditorDashboard {
             this.importManager.checkResult = null;
             this.importManager.archiveCacheId = null;
             this.importManager.perTaskConflictRes.clear();
+            this.importManager.aiTemplateType = 'material_analysis';
+            // Reset AI state
+            this.importManager.materialText = '';
+            this.importManager.aiUploadedFile = null;
+            this.importManager.aiFileInfo = null;
+            this.importManager.analysisResult = null;
+            this.importManager.generationResult = null;
+            this.importManager.aiProvider = null;
+            this.importManager.aiSelectedRecs.clear();
+            this.importManager.aiGenerating = false;
+            this.importManager.aiAnalyzing = false;
         }
     }
 

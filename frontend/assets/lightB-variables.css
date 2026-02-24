@@ -155,9 +155,9 @@
    /* ========== PRIMARY COLOR SYSTEM (Earth Grey - Deep Brown) ========== */
    --color-primary: #5D4037;
    /* Base: Earth Grey */
-   --color-primary-light: #7D665E;
+   --color-primary-light: #BFAEA8;
    /* Lightened */
-   --color-primary-lighter: #9E8C85;
+   --color-primary-lighter: #E2D4C8;
    /* Lighter */
    --color-primary-dark: #3E2723;
    /* Dark Roast */
@@ -309,52 +309,63 @@
    /* Alias для текста на светлом фоне */
 
    /* ========== BACKGROUND & SURFACE ========== */
-   /* Amethyst Dusk - Restored Authenticity */
-   --color-bg-main: #b0aac0;
-   /* Darkened for 1.3+ panel separation */
-   --color-bg-secondary: #e2dce8;
-   /* Lightened for text contrast > 4.5:1 */
-   --color-bg-tertiary: #9389aa;
-   /* Secondary Amethyst Base */
-   --color-bg-hover: #e5e0ed;
-   /* Light hover */
+   /* Amethyst Dusk - Polarized Neutral Hierarchy (Airy Variant) */
+   --color-bg-main: #b8afc8;
+   /* Airy Amethyst Canvas (L=73%) */
+   --color-bg-secondary: #e6e4eb;
+   /* Pale Lavender Sidebar (L=91%, +18% delta) */
+   --color-bg-tertiary: #f2f0f5;
+   /* Subtle Panel Elevation */
+   --color-bg-hover: #faf9fb;
+   /* Soft Hover */
    --color-bg-disabled: rgba(128, 138, 159, 0.4);
 
-   --color-surface-0: #e8e4ee;
-   /* Lilac Grey */
-   --color-surface-1: #e2dbe7;
-   /* Lilac White - Original Surface */
-   --color-surface-2: #fdfcff;
-   --color-surface-panel: var(--color-surface-2);
-   --color-surface-chip: #5a7350;
+   --color-surface-0: #f2f0f5;
+   /* Root Highlight (L=96%) */
+   --color-surface-1: #ffffff;
+   /* Main Card (Pure White) */
+   --color-surface-2: #ffffff;
+   /* Header/Footer (Pure White) */
+   --color-surface-panel: var(--color-surface-1);
+   --color-surface-chip: #9c93ad;
    --color-text-chip: #ffffff;
-   /* Titanium White - retained for max card contrast */
 
-   /* ========== TEXT COLORS ========== */
+   /* ========== DYNAMIC CHAIN PALETTE (Dusk Glow) ========== */
+   --color-chain-1: #4d7a43;
+   /* Sage Green */
+   --color-chain-2: #4a7ab5;
+   /* Dusk Blue */
+   --color-chain-3: #b48605;
+   /* Spiced Gold */
+   --color-chain-4: #8a6bbd;
+   /* Soft Amethyst */
+
+   /* ========== TEXT COLORS (Dark-on-Light) ========== */
    --color-text-main: #1a1226;
-   /* Darkened from #2C497F */
-   --color-text-secondary: #261a38;
-   /* Darkened for safety */
-   --color-text-muted: #1d232f;
-   /* FIXED: WCAG 4.5:1 Contrast (was #364156=4.10) */
-   --color-text-disabled: #5f5870;
+   /* Deep Amethyst - Main Text */
+   --color-text-secondary: #2e2042;
+   /* Dark Amethyst - Secondary */
+   --color-text-muted: #364156;
+   /* Dark Blue-Grey - Muted */
+   --color-text-disabled: #808a9f;
    --color-text-contrast: #FFFFFF;
 
-   /* ========== BORDER COLORS (High Contrast) ========== */
-   /* Adjusted for Amethyst Dusk palette */
-   --color-border-subtle: #5f667a;
-   /* Neutral grey for outlines */
-   --color-border-normal: var(--color-border-subtle);
-   --color-border: var(--color-border-subtle);
+   /* ========== BORDER COLORS (Subtle) ========== */
+   --color-border-subtle: #9890a8;
+   --color-border-normal: #8c82a3;
+   --color-border: var(--color-border-normal);
    --color-border-strong: #3d2b56;
-   /* Deep amethyst */
 
-   /* ========== SHADOW SYSTEM (Dusk-tinted) ========== */
-   --shadow-xs: 0 1px 2px rgba(44, 73, 127, 0.05);
-   --shadow-sm: 0 2px 4px rgba(44, 73, 127, 0.08);
-   --shadow-md: 0 4px 12px rgba(44, 73, 127, 0.1);
-   --shadow-lg: 0 12px 24px rgba(44, 73, 127, 0.12);
-   --shadow-xl: 0 20px 40px rgba(44, 73, 127, 0.15);
+   /* ========== SHADOW SYSTEM (Soft Depth) ========== */
+   --shadow-xs: 0 1px 2px rgba(44, 73, 127, 0.08);
+   --shadow-sm: 0 2px 4px rgba(44, 73, 127, 0.1);
+   --shadow-md: 0 4px 12px rgba(44, 73, 127, 0.12);
+   --shadow-lg: 0 12px 24px rgba(44, 73, 127, 0.15);
+   --shadow-xl: 0 20px 40px rgba(44, 73, 127, 0.18);
+
+   /* ========== GLASS EFFECTS ========== */
+   --sidebar-shadow-opacity: 0.12;
+   --sidebar-rim-opacity: 0.1;
 
    /* ========== TRANSITION SYSTEM ========== */
    --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);

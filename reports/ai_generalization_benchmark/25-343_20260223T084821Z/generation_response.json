@@ -1,0 +1,1046 @@
+{
+  "ai_run_id": "bench_25-343_20260223T084821Z",
+  "ok": true,
+  "parsing_errors": [],
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        10,
+        12,
+        3,
+        5
+      ],
+      "generation_time_ms": 245915,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "2025 FDA Update on Breast Density Reporting",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Singular phrasing for unilateral mammogram reports"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Dual phrasing for bilateral mammogram reports"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Percentage-based density calculation"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Automated density measurement requirement"
+                  }
+                ],
+                "id": 0,
+                "text": "According to the 2025 FDA update, what alternative standard was approved for breast density reporting?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 0,
+          "name": "Задание - 2025 FDA Update on Breast Density Rep...",
+          "prompt": "2025 FDA Update on Breast Density Reporting",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "Mass Characteristics - Shape",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Oval"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Triangular"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Square"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Curvilinear"
+                  }
+                ],
+                "id": 0,
+                "text": "Which of the following is a recognized shape category for breast masses in the BI-RADS® Mammography Lexicon?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 1,
+          "name": "Задание - Mass Characteristics - Shape",
+          "prompt": "Mass Characteristics - Shape",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "Mass Characteristics - Margin",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Spiculated"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Circumscribed"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Obscured"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Indistinct"
+                  }
+                ],
+                "id": 0,
+                "text": "What is the term for a margin that has short lines radiating from the mass into the surrounding tissue?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 2,
+          "name": "Задание - Mass Characteristics - Margin",
+          "prompt": "Mass Characteristics - Margin",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density and Cancer Risk",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "1.4"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "0.6"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "1.0"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "1.6"
+                  }
+                ],
+                "id": 0,
+                "text": "According to the provided material, what is the odds ratio for developing breast cancer in women with heterogeneously dense breasts compared to those with scattered fibroglandular tissue?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 3,
+          "name": "Задание - Breast Density and Cancer Risk",
+          "prompt": "Breast Density and Cancer Risk",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density Categories",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Category C"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Category A"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Category B"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Category D"
+                  }
+                ],
+                "id": 0,
+                "text": "According to BI-RADS, which breast density category is described as \"the breasts are heterogeneously dense, which may obscure small masses\"?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 4,
+          "name": "Задание - Breast Density Categories",
+          "prompt": "Breast Density Categories",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density Implications",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "It lowers sensitivity"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "It increases sensitivity"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "It has no effect on sensitivity"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "It only affects digital mammography but not film-screen mammography"
+                  }
+                ],
+                "id": 0,
+                "text": "What is the impact of extremely dense breasts (Category D) on mammography sensitivity?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Breast Density Implications",
+          "prompt": "Breast Density Implications",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "Mammography Findings - Asymmetries",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Global asymmetry"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Architectural distortion"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Masses"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Calcifications"
+                  }
+                ],
+                "id": 0,
+                "text": "Which of the following is classified as an asymmetry in the BI-RADS mammography lexicon?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 6,
+          "name": "Задание - Mammography Findings - Asymmetries",
+          "prompt": "Mammography Findings - Asymmetries",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              10,
+              12,
+              3,
+              5
+            ]
+          },
+          "data": {
+            "prompt": "Mammography Findings - Associated Features",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Skin retraction"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Lymph nodes"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Skin lesions"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Dilated ducts"
+                  }
+                ],
+                "id": 0,
+                "text": "Which of the following is classified as an associated feature in the BI-RADS mammography lexicon?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 7,
+          "name": "Задание - Mammography Findings - Associated Fea...",
+          "prompt": "Mammography Findings - Associated Features",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        4,
+        11
+      ],
+      "generation_time_ms": 290554,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Skin calcifications are considered benign in mammography"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Vascular calcifications are classified as typically benign findings"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Coarse calcifications without fine internal structures are generally benign"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Round calcifications with smooth margins are typically benign"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Fine pleomorphic calcifications are considered typically benign"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Fine linear calcifications are classified as typically benign"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Amorphous calcifications are generally benign"
+              }
+            ],
+            "prompt": "Which of the following are typically benign calcification types?",
+            "subtype": "error_detection"
+          },
+          "index": 8,
+          "name": "Клик - Which of the following are typically ...",
+          "prompt": "Which of the following are typically benign calcification types?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Fine pleomorphic calcifications are suspicious for malignancy"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Fine linear or fine linear-branching calcifications are highly suspicious"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Amorphous calcifications with indistinct margins are suspicious"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Coarse heterogeneous calcifications may indicate malignancy"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Round calcifications are suspicious for malignancy"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Skin calcifications are considered suspicious findings"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Vascular calcifications are classified as suspicious morphology"
+              }
+            ],
+            "prompt": "Which of the following calcification types are considered suspicious for malignancy?",
+            "subtype": "error_detection"
+          },
+          "index": 9,
+          "name": "Клик - Which of the following calcification ...",
+          "prompt": "Which of the following calcification types are considered suspicious for malignancy?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Segmental distribution of calcifications suggests a ductal distribution and is suspicious"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Linear calcifications along a vessel are typically benign"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Grouped calcifications clustered together in a small area may be suspicious"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Diffuse calcifications scattered throughout the breast are typically benign"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Regional distribution of calcifications is always highly suspicious for malignancy"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Linear distribution of calcifications is always indicative of malignancy"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Grouped calcifications are always considered benign findings"
+              }
+            ],
+            "prompt": "Which of the following statements about calcification distribution patterns are correct?",
+            "subtype": "error_detection"
+          },
+          "index": 10,
+          "name": "Клик - Which of the following statements abo...",
+          "prompt": "Which of the following statements about calcification distribution patterns are correct?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Reporting breast density is required by FDA legislation as of September 2024"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Language in reports to both referring physicians and patients must follow federal guidance"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "In July 2025, the FDA approved an alternative standard allowing singular phrasing for unilateral mammograms"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Breast density reporting requirements were established by the FDA in 2020"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "The FDA requires radiologists to use automated density measurement software for all assessments"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Federal guidance only applies to reports to referring physicians, not patients"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "The FDA requires breast density to be reported using percentage of dense tissue rather than BI-RADS categories"
+              }
+            ],
+            "prompt": "Which of the following statements about FDA requirements for breast density reporting are accurate?",
+            "subtype": "error_detection"
+          },
+          "index": 11,
+          "name": "Клик - Which of the following statements abo...",
+          "prompt": "Which of the following statements about FDA requirements for breast density reporting are accurate?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "With BI-RADS 5th Edition, classification changed from percentage of dense tissue to assessment based on likelihood of obscuring cancer"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "If each breast falls into a different density category, the greater density of the two is assigned to that examination"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Breast density can be variable from year to year depending on factors like weight changes and hormone therapy"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Heterogeneously dense breasts may obscure small masses on mammography"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Extremely dense breasts increase the sensitivity of mammography"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "The breasts are classified as \"non-dense\" if they are heterogeneously dense"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Breast density assessment is based solely on the overall amount of parenchymal tissue, not regional variations"
+              }
+            ],
+            "prompt": "Which of the following statements about breast density categories and reporting are correct?",
+            "subtype": "error_detection"
+          },
+          "index": 12,
+          "name": "Клик - Which of the following statements abo...",
+          "prompt": "Which of the following statements about breast density categories and reporting are correct?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        6,
+        9
+      ],
+      "generation_time_ms": 70790,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              6,
+              9
+            ]
+          },
+          "data": {
+            "keywords": [
+              "breast density",
+              "breast parenchyma",
+              "fat",
+              "mammography"
+            ],
+            "question": "How is breast density defined in mammography?",
+            "reference_answer": "Breast density is defined as the relative proportion of breast parenchyma to fat within the breast."
+          },
+          "index": 13,
+          "name": "Открытый ответ - How is breast density defined in mamm...",
+          "prompt": "How is breast density defined in mammography?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              6,
+              9
+            ]
+          },
+          "data": {
+            "keywords": [
+              "breast density",
+              "mammographic sensitivity",
+              "masking effect",
+              "dense breast tissue"
+            ],
+            "question": "How does breast density affect the sensitivity of mammography?",
+            "reference_answer": "Dense breast tissue can mask underlying cancers, reducing the sensitivity of mammography. The sensitivity declines significantly from fatty breasts to extremely dense breasts with film-screen mammography."
+          },
+          "index": 14,
+          "name": "Открытый ответ - How does breast density affect the se...",
+          "prompt": "How does breast density affect the sensitivity of mammography?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              6,
+              9
+            ]
+          },
+          "data": {
+            "keywords": [
+              "breast density categories",
+              "BI-RADS",
+              "heterogeneously dense",
+              "extremely dense",
+              "fatty breasts"
+            ],
+            "question": "What are the four categories of breast density according to BI-RADS?",
+            "reference_answer": "(A) The breasts are almost entirely fatty, (B) There are scattered areas of fibroglandular density, (C) The breasts are heterogeneously dense, which may obscure small masses, (D) The breasts are extremely dense, which lowers the sensitivity of mammography."
+          },
+          "index": 15,
+          "name": "Открытый ответ - What are the four categories of breas...",
+          "prompt": "What are the four categories of breast density according to BI-RADS?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              6,
+              9
+            ]
+          },
+          "data": {
+            "keywords": [
+              "digital mammography",
+              "DBT",
+              "sensitivity",
+              "cancer detection rate",
+              "dense breasts"
+            ],
+            "question": "What technological advancements have improved mammographic accuracy in women with dense breasts?",
+            "reference_answer": "Digital mammography and digital breast tomoscopy (DBT) have improved accuracy in women with dense breasts. Digital mammography increased sensitivity from 55% to 70%, and DBT increased the cancer detection rate from 4.5 to 5.8 per 1000 women screened."
+          },
+          "index": 16,
+          "name": "Открытый ответ - What technological advancements have ...",
+          "prompt": "What technological advancements have improved mammographic accuracy in women with dense breasts?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        8,
+        1,
+        2,
+        3,
+        4,
+        5,
+        10,
+        11,
+        12
+      ],
+      "generation_time_ms": 123213,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              8,
+              1,
+              2,
+              3,
+              4,
+              5,
+              10,
+              11,
+              12
+            ]
+          },
+          "data": {
+            "error_indices": [
+              25,
+              26,
+              28,
+              29,
+              38,
+              39
+            ],
+            "mode": "word_errors",
+            "prompt": "Identify incorrect information about breast density reporting and FDA updates",
+            "subtype": "error_detection",
+            "text": "text: In July 2024, the FDA approved an alternative standard that would allow the interpreting physician to provide an overall assessment of breast density using plural phrasing. The plural phrasing is intended to be used in reports of bilateral mammograms. Breast density remains constant throughout a woman's lifetime and does not need to be updated at each examination."
+          },
+          "index": 17,
+          "name": "Клик - Identify incorrect information about ...",
+          "prompt": "Identify incorrect information about breast density reporting and FDA updates",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              8,
+              1,
+              2,
+              3,
+              4,
+              5,
+              10,
+              11,
+              12
+            ]
+          },
+          "data": {
+            "error_indices": [
+              7,
+              8,
+              37,
+              49,
+              55
+            ],
+            "mode": "word_errors",
+            "prompt": "Find incorrect statements about breast density categories and FDA requirements",
+            "subtype": "error_detection",
+            "text": "text: According to FDA requirements as of July 2024, breast density reporting must be included in mammography reports. The four breast density categories include: (A) breasts that are almost entirely fatty with a cancer odds ratio of 1.6, (B) scattered areas of fibroglandular density with an odds ratio of 0.6, (C) heterogeneously dense breasts that increase mammography sensitivity, and (D) extremely dense breasts which may obscure small masses."
+          },
+          "index": 18,
+          "name": "Клик - Find incorrect statements about breas...",
+          "prompt": "Find incorrect statements about breast density categories and FDA requirements",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        2,
+        7
+      ],
+      "generation_time_ms": 32659,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              7
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "The breasts are almost entirely fatty",
+              "element_2": "There are scattered areas of fibroglandular density",
+              "element_3": "The breasts are heterogeneously dense, which may obscure small masses",
+              "element_4": "The breasts are extremely dense, which lowers the sensitivity of mammography"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ]
+            },
+            "prompt": "Order the breast density categories from least dense to most dense"
+          },
+          "index": 19,
+          "name": "Последовательность - Order the breast density categories f...",
+          "prompt": "Order the breast density categories from least dense to most dense",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 5,
+      "click_words": 2,
+      "open_answer": 4,
+      "sequence": 1,
+      "test": 8
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "material_language": "en",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 20
+    },
+    "total_errors": 0,
+    "total_generated": 20,
+    "total_valid": 19,
+    "total_warnings": 1
+  }
+}

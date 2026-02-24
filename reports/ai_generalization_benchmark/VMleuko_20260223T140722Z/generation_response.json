@@ -1,0 +1,2817 @@
+{
+  "ai_run_id": "bench_VMleuko_20260223T140722Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35505,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 5,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35462,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35446,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35423,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35361,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35313,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35298,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35214,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 220,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35183,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 188,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35160,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 165,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35114,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 120,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35104,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 109,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35078,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 83,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 35059,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 64,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        16,
+        17,
+        18,
+        21,
+        24,
+        5,
+        7,
+        8,
+        15,
+        19,
+        20,
+        22,
+        23
+      ],
+      "generation_time_ms": 82431,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35505,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 5,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35462,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35446,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Функции тимуса",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Завершение созревания Т-лимфоцитов и их пролиферация"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Локализация за грудиной, максимальная масса 35-40 г у подростков"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Первичное образование В-лимфоцитов"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Синтез колониестимулирующих факторов"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие основные функции выполняет тимус?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 0,
+          "name": "Задание - Функции тимуса",
+          "prompt": "Функции тимуса",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Локалізація тимусу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "За грудиною"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У черевній порожнині"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У грудному відділі хребта"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "У шийній зоні"
+                  }
+                ],
+                "id": 0,
+                "text": "Де розташований тимус у організмі людини?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 1,
+          "name": "Задание - Локалізація тимусу",
+          "prompt": "Локалізація тимусу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Функции гранулоцитов",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Фагоцитоз"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гуморальный иммунитет"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Клеточный иммунитет"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Синтез антител"
+                  }
+                ],
+                "id": 0,
+                "text": "Какова основная функция гранулоцитов?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 2,
+          "name": "Задание - Функции гранулоцитов",
+          "prompt": "Функции гранулоцитов",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Стимуляция гемопоэза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Колониестимулирующие факторы"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гормоны (эритропоэтин, тироксин)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Продукты зрелых клеток крови"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Глюкокортикоиды"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных факторов относятся к стимуляторам гемопоэза? Выберите два правильных ответа."
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 3,
+          "name": "Задание - Стимуляция гемопоэза",
+          "prompt": "Стимуляция гемопоэза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Класифікація лейкоцитів",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Нейтрофіли, еоінофіли, базофіли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфоцити, моноцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Еритроцити, тромбоцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стовбурові клітини"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини відносяться до гранулоцитів?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 4,
+          "name": "Задание - Класифікація лейкоцитів",
+          "prompt": "Класифікація лейкоцитів",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Стадії гострого лейкозу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Передлейкоз, початковий період, період повного розвитку, період ремісії, період загострення, термінальний період"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лише початковий і розвинений періоди"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лише період ремісії і загострення"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лише передлейкоз і термінальний періоди"
+                  }
+                ],
+                "id": 0,
+                "text": "Які стадії гострого лейкозу виділяються в клінічному перебігу?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Стадії гострого лейкозу",
+          "prompt": "Стадії гострого лейкозу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Консистенция костного мозга",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Полутвердая (из нее готовят срезы и мазки)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Жидкая, как кровь"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Твердая, как хрящ"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Мягкая, как жир"
+                  }
+                ],
+                "id": 0,
+                "text": "Какова консистенция костного мозга у взрослого человека?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 6,
+          "name": "Задание - Консистенция костного мозга",
+          "prompt": "Консистенция костного мозга",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Гостра лейкемія - визначення",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Незрілі бластні клітини – недиференційовані або мало диференційовані"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Зрілі еритроцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Нормальні лейкоцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тромбоцити"
+                  }
+                ],
+                "id": 0,
+                "text": "Яким є морфологічний субстрат гострої лейкемії?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 7,
+          "name": "Задание - Гостра лейкемія - визначення",
+          "prompt": "Гостра лейкемія - визначення",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Центральные органы гемопоэза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Костный мозг, тимус"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезёнка, лимфатические узлы"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Печень, селезёнка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Костный мозг, селезёнка"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие органы относятся к центральным органам гемопоэза?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 8,
+          "name": "Задание - Центральные органы гемопоэза",
+          "prompt": "Центральные органы гемопоэза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Масса красного костного мозга",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "1200-1500 г"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "1000-1200 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "500-800 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "2000-2500 г"
+                  }
+                ],
+                "id": 0,
+                "text": "Какова примерная масса красного костного мозга у взрослого человека?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 9,
+          "name": "Задание - Масса красного костного мозга",
+          "prompt": "Масса красного костного мозга",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Полипотентные стволовые клетки",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Около 90% находятся в состоянии покоя, 10% активно делятся"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Способны к самовосстановлению и образованию колоний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Все активно делятся для поддержания гемопоэза"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Не могут циркулировать в крови и репонировать в костном мозге"
+                  }
+                ],
+                "id": 0,
+                "text": "Какое утверждение о политопентных стволовых клетках костного мозга верно?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 10,
+          "name": "Задание - Полипотентные стволовые клетки",
+          "prompt": "Полипотентные стволовые клетки",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Компоненты гемопоэтической ткани",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Стромальный"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гемальный"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Миелоидный"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лимфоидный"
+                  }
+                ],
+                "id": 0,
+                "text": "Какой компонент гемопоэтической ткани обеспечивает микроокружение и поддерживающую функцию для гемопоэтических клеток?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 11,
+          "name": "Задание - Компоненты гемопоэтической ткани",
+          "prompt": "Компоненты гемопоэтической ткани",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Напрямки мієлопоезу та лімфопоезу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "6 напрямків мієлопоезу та 2 напрямки лімфопоезу"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "4 напрямки мієлопоезу та 3 напрямки лімфопоезу"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "8 напрямків мієлопоезу та 1 напрямок лімфопоезу"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "3 напрямки мієлопоезу та 4 напрямки лімфопоезу"
+                  }
+                ],
+                "id": 0,
+                "text": "Які напрямки мієлопоезу виділяються відповідно до числа формених елементів крові?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 12,
+          "name": "Задание - Напрямки мієлопоезу та лімфопоезу",
+          "prompt": "Напрямки мієлопоезу та лімфопоезу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Классификация FAB для миелобластного лейкоза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "M4"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "M3"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "M5"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "M6"
+                  }
+                ],
+                "id": 0,
+                "text": "Какая из перечисленных категорий согласно классификации FAB соответствует острой миеломоноцитарной лейкемии?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 13,
+          "name": "Задание - Классификация FAB для миелобластного ...",
+          "prompt": "Классификация FAB для миелобластного лейкоза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              16,
+              17,
+              18,
+              21,
+              24,
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "prompt": "Классификация FAB для лимфобластного лейкоза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "L1: бласты малого размера (чаще у детей)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "L2: бласты большого размера (чаще у взрослых)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L3: бласты среднего размера с гранулами"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L4: бласты с выраженными вакуолями"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие варианты соответствуют морфологической классификации FAB для острого лимфобластного лейкоза?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 14,
+          "name": "Задание - Классификация FAB для лимфобластного ...",
+          "prompt": "Классификация FAB для лимфобластного лейкоза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        5,
+        7,
+        8,
+        15,
+        19,
+        20,
+        22,
+        23
+      ],
+      "generation_time_ms": 124625,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35423,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35361,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35313,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Клітини I класу (стовбурові) є поліпотентними та можуть давати початок всім форменим елементам крові"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Клітини II класу (напівстовбурові) є комітіровані та олігопотентні"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Клітини III класу (уніпотентні) можуть диференціюватися лише в одному напрямку"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Клітини IV класу (бласти) відрізняються від попередніх класів більшим розміром та світлішою цитоплазмою"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Клітини V класу (клітини, що дозрівають) не можуть бути морфологічно ідентифіковані"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Клітини VI класу (зрілі клітини) можуть ділитися при нормальних умовах"
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про клітинні класи в гемопоезі",
+            "subtype": "error_detection"
+          },
+          "index": 15,
+          "name": "Клик - Виберіть правильні твердження про клі...",
+          "prompt": "Виберіть правильні твердження про клітинні класи в гемопоезі",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гострий лейкоз - це злоякісна пухлина кровотворної тканини з незрілими бластними клітинами"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гострі лейкемії поділяються на лімфобластні та нелімфобластні (мієлобластні)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Етіологічними факторами гострих лейкозів можуть бути іонізуюча радіація, хімічні речовини та вірусні інфекції"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Патогенез гострих лейкозів включає соматичні мутації клітин-попередниць"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Клінічна картина гострих лейкозів не включає геморагічний синдром"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Лікування гострих лейкозів не включає цитостатичну терапію"
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про гострий лейкоз",
+            "subtype": "error_detection"
+          },
+          "index": 16,
+          "name": "Клик - Виберіть правильні твердження про гос...",
+          "prompt": "Виберіть правильні твердження про гострий лейкоз",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Морфологічна FAB класифікація гострої мієлобластної лейкемії включає 7 варіантів (Мо, М1-М7)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Морфологічна FAB класифікація гострої лімфобластної лейкемії включає 3 варіанти (L1-L3)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L1 варіант гострої лімфобластної лейкемії частіше зустрічається у дітей"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L3 варіант гострої лімфобластної лейкемії характеризується бластними клітинами типу клітин при лімфомі Беркіта"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М2 варіант гострої мієлобластної лейкемії характеризується відсутністю ознак дозрівання бластів"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М3 варіант гострої мієлобластної лейкемії - це гостра промієлоцитарна лейкемія"
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про FAB класифікацію гострих лейкозів",
+            "subtype": "error_detection"
+          },
+          "index": 17,
+          "name": "Клик - Виберіть правильні твердження про FAB...",
+          "prompt": "Виберіть правильні твердження про FAB класифікацію гострих лейкозів",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L1 відповідає гострому лімфобластному лейкозу з малими розмірами бластів (частіше у дітей)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L2 відповідає гострому лімфобластному лейкозу з великими розмірами бластів (частіше у дорослих)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L3 відповідає гострому лімфобластному лейкозу з бластними клітинами типу клітин при лімфомі Беркіта"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "FAB класифікація включає 7 варіантів гострого лімфобластного лейкозу"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L1 найчастіше зустрічається у дорослих пацієнтів"
+              }
+            ],
+            "prompt": "Які з перерахованих тверджень про FAB класифікацію гострого лімфобластного лейкозу є правильними?",
+            "subtype": "error_detection"
+          },
+          "index": 18,
+          "name": "Клик - Які з перерахованих тверджень про FAB...",
+          "prompt": "Які з перерахованих тверджень про FAB класифікацію гострого лімфобластного лейкозу є правильними?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М1 відповідає гострому мієлобластному лейкозу з недиференційованими бластними клітинами"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М2 відповідає гострому мієлобластному лейкозу з ознаками дозрівання бластів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М3 відповідає гострій промієлоцитарній лейкемії"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М7 відповідає гострій мегакаріобластній лейкемії"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "FAB класифікація включає 5 варіантів гострого мієлобластного лейкозу"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М6 відповідає гострій мієломоноцитарній лейкемії"
+              }
+            ],
+            "prompt": "Які з перерахованих тверджень про FAB класифікацію гострого мієлобластного лейкозу є правильними?",
+            "subtype": "error_detection"
+          },
+          "index": 19,
+          "name": "Клик - Які з перерахованих тверджень про FAB...",
+          "prompt": "Які з перерахованих тверджень про FAB класифікацію гострого мієлобластного лейкозу є правильними?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "M3 — острая промелоцитарная лейкемия."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "M6 — острая эритролейкемия."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "M0 — острая миелобластная лейкемия с недифференцированными бластными клетками."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "M4 — острая лимфобластная лейкемия."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "M7 — острая моноцитарная лейкемия."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L3 — вариант острой миелобластной лейкемии."
+              }
+            ],
+            "prompt": "Какие варианты соответствуют морфологической FAB-классификации острой миелобластной лейкемии?",
+            "subtype": "error_detection"
+          },
+          "index": 20,
+          "name": "Клик - Какие варианты соответствуют морфолог...",
+          "prompt": "Какие варианты соответствуют морфологической FAB-классификации острой миелобластной лейкемии?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              8,
+              15,
+              19,
+              20,
+              22,
+              23
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Глюкокортикоиды."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Продукты зрелых клеток крови."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Тканевые гормоны (простагландины, интерферон)."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Колониестимулирующие факторы."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Эритропоэтин."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Тромбопоэтин."
+              }
+            ],
+            "prompt": "Какие из перечисленных факторов приводят к угнетению гемопоэза?",
+            "subtype": "error_detection"
+          },
+          "index": 21,
+          "name": "Клик - Какие из перечисленных факторов приво...",
+          "prompt": "Какие из перечисленных факторов приводят к угнетению гемопоэза?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "generation_time_ms": 115539,
+      "parsing_errors": [
+        "Overgeneration trimmed for OPEN_ANSWER: requested 5, kept 5, dropped 3."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35298,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35214,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 220,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "гуморальний імунітет",
+              "клітинний імунітет",
+              "агранулоцити"
+            ],
+            "question": "Які основні функції агранулоцитів?",
+            "reference_answer": "Агранулоцити забезпечують гуморальний та клітинний імунітет."
+          },
+          "index": 22,
+          "name": "Открытый ответ - Які основні функції агранулоцитів?",
+          "prompt": "Які основні функції агранулоцитів?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "індукція ремісії",
+              "консолідація",
+              "підтримуюча терапія",
+              "профілактика нейролейкемії",
+              "дезінтоксикаційна терапія",
+              "лікування інфекційних ускладнень"
+            ],
+            "question": "Опиши основні етапи лікування гострого лейкозу.",
+            "reference_answer": "Лікування гострого лейкозу включає: індукцію ремісії (4-6 тижнів), консолідацію (6 тижнів), підтримуючу терапію, профілактику нейролейкемії, дезінтоксикаційну терапію, лікування інфекційних ускладнень, анемії, геморагічного синдрому та цитостатичної хвороби."
+          },
+          "index": 23,
+          "name": "Открытый ответ - Опиши основні етапи лікування гострог...",
+          "prompt": "Опиши основні етапи лікування гострого лейкозу.",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "стовбурові клітини",
+              "напівстовбурові клітини",
+              "уніпотентні клітини",
+              "бласти",
+              "клітини, що дозрівають",
+              "зрілі клітини"
+            ],
+            "question": "Які стадії дозрівання клітин виділяють в гемопоезі?",
+            "reference_answer": "I. стовбурові клітини; II. напівстовбурові клітини; III. уніпотентні клітини; IV. бласти; V. клітини, що дозрівають; VI. зрілі клітини."
+          },
+          "index": 24,
+          "name": "Открытый ответ - Які стадії дозрівання клітин виділяют...",
+          "prompt": "Які стадії дозрівання клітин виділяють в гемопоезі?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "колонієстимулюючі фактори",
+              "еритропоетин",
+              "тироксин",
+              "соматотропний гормон",
+              "простагландини",
+              "інтерферон",
+              "глюкокортикоїди"
+            ],
+            "question": "Поясни, як відбувається стимуляція та пригнічення гемопоезу.",
+            "reference_answer": "Стимуляція гемопоезу відбувається завдяки колонієстимулюючим факторам, синтезованим гемопоетичними клітинами, та гормонам (еритропоетин, тироксин, соматотропний гормон). Пригнічення відбувається через продукти зрілих клітин крові, тканинні гормони (простагландини, інтерферон) та глюкокортикоїди."
+          },
+          "index": 25,
+          "name": "Открытый ответ - Поясни, як відбувається стимуляція та...",
+          "prompt": "Поясни, як відбувається стимуляція та пригнічення гемопоезу.",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "діти",
+              "помірно прогресуючий",
+              "шкіряні лейкеміди",
+              "лімфовузли",
+              "нейролейкемія",
+              "яєчок",
+              "оссалгій",
+              "гіпертермічний синдром",
+              "цитостатичної терапії"
+            ],
+            "question": "Які є основні клінічні особливості гострого лімфобластного лейкозу?",
+            "reference_answer": "Частіше хворіють діти; перебіг захворювання помірно прогресуючий; частіше виникають шкіряні лейкеміди; частіше збільшуються лімфовузли; частіше розвивається нейролейкемія; частіше виникає лейкозна інфільтрація яєчок; більша частота оссалгій; дуже характерний гіпертермічний синдром; ефективність цитостатичної терапії вища ніж при інших лейкозах."
+          },
+          "index": 26,
+          "name": "Открытый ответ - Які є основні клінічні особливості го...",
+          "prompt": "Які є основні клінічні особливості гострого лімфобластного лейкозу?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        22,
+        23
+      ],
+      "generation_time_ms": 78468,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_WORDS: requested 4, kept 4, dropped 1.",
+        "Overgeneration trimmed for CLICK_WORDS after iterative repair 1: requested 4, kept 4, dropped 1."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35183,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 188,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35160,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 165,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35114,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 120,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 2,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              10,
+              19
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Мо – гостра мієлобластна лейкемія з недиференційованими бластними клітинами. М1 – гостра мієлобластна лейкемія без ознак дозрівання бластів. М2 – гостра мієлобластна лейкемія з ознаками дозрівання бластів."
+          },
+          "index": 27,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              6,
+              11
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: М3 – гостра промієлоцитарна лейкемія. М4 – гостра мієломоноцитарна лейкемія. М5 – гостра моноцитарна лейкемія."
+          },
+          "index": 28,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              5
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: М6 – гостра еритролейкемія. М7 – гостра мегакаріобластна лейкемія."
+          },
+          "index": 29,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              2,
+              3,
+              5
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Гостра лімфобластна лейкемія з великими розмірами бластів (частіше у дорослих)."
+          },
+          "index": 30,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        24
+      ],
+      "generation_time_ms": 71326,
+      "parsing_errors": [
+        "Задание #1: не найдено ни одного элемента (element_X)",
+        "[repair-pass] Задание #1: не найдено ни одного элемента (element_X)",
+        "[iterative-sequence-1] Задание #1: не найдено ни одного элемента (element_X)",
+        "Iterative repair 1 made no valid-progress for SEQUENCE (valid 0/1).",
+        "Repair-pass incomplete for SEQUENCE: requested 1, obtained 0."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35104,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 109,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35078,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 83,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 35059,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 64,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": null,
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 2,
+      "status": "error",
+      "subrequest_count": 3,
+      "task_type": "SEQUENCE",
+      "tasks": []
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 7,
+      "click_words": 4,
+      "open_answer": 5,
+      "sequence": 0,
+      "test": 15
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 31
+    },
+    "total_errors": 1,
+    "total_generated": 31,
+    "total_valid": 31,
+    "total_warnings": 0
+  }
+}

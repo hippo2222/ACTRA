@@ -1,0 +1,153 @@
+{
+  "run_id": "guided_20260223T004110_9c78eeed",
+  "created_at": "2026-02-22T22:43:46Z",
+  "provider_used": "openrouter",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1222,
+    "char_count": 8215,
+    "language": "en"
+  },
+  "result": {
+    "human_summary": "This educational material covers the BI-RADS® Mammography Lexicon with a focus on breast density classification, reporting requirements, and clinical significance. The content includes detailed categorizations of breast tissue, findings (masses, calcifications, etc.), and the impact of breast density on mammographic accuracy and cancer risk. The material is well-structured with tables and figures illustrating each breast density category.",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 4,
+        "priority": "high",
+        "covers_units": [
+          1,
+          3,
+          8,
+          9
+        ],
+        "rationale": "Multiple choice questions effectively test recognition and recall of the four breast density categories, reporting requirements, cancer detection rates, and risk associations."
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 2,
+        "priority": "medium",
+        "covers_units": [
+          2,
+          6
+        ],
+        "rationale": "Open-ended questions allow students to demonstrate conceptual understanding of breast density definition and its impact on mammographic accuracy."
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 3,
+        "priority": "medium",
+        "covers_units": [
+          4,
+          7,
+          10
+        ],
+        "rationale": "Sequence tasks are ideal for understanding the evolution of density classification, technological advances in mammography, and the hierarchical organization of mass characteristics."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 1,
+        "priority": "low",
+        "covers_units": [
+          5
+        ],
+        "rationale": "Click text tasks effectively test identification of factors affecting breast density from a list that may include distractors."
+      },
+      {
+        "task_type": "TEST",
+        "count": 1,
+        "priority": "low",
+        "covers_units": [
+          11,
+          12
+        ],
+        "rationale": "Multiple choice questions can efficiently test knowledge of calcification types and other findings categories."
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Breast Density Categories",
+        "type": "classification",
+        "description": "The four BI-RADS categories of breast density: (A) almost entirely fatty, (B) scattered areas of fibroglandular density, (C) heterogeneously dense, (D) extremely dense."
+      },
+      {
+        "id": 2,
+        "title": "Breast Density Definition",
+        "type": "concept",
+        "description": "Breast density is defined as the relative proportion of breast parenchyma to fat within the breast."
+      },
+      {
+        "id": 3,
+        "title": "Reporting Requirements",
+        "type": "fact",
+        "description": "Reporting breast density is required by FDA legislation as of September 2024, with specific language requirements for both referring physicians and patients."
+      },
+      {
+        "id": 4,
+        "title": "Density Classification Evolution",
+        "type": "process",
+        "description": "The evolution of breast density classification from percentage-based to likelihood-based assessment with BI-RADS 5th Edition and v2025."
+      },
+      {
+        "id": 5,
+        "title": "Factors Affecting Breast Density",
+        "type": "fact",
+        "description": "Breast density can vary due to factors like weight changes, estrogen replacement therapy, menopause, etc."
+      },
+      {
+        "id": 6,
+        "title": "Impact of Breast Density on Mammographic Accuracy",
+        "type": "concept",
+        "description": "How breast density affects mammographic accuracy through the masking effect of dense fibroglandular tissue."
+      },
+      {
+        "id": 7,
+        "title": "Technology Advances in Mammography",
+        "type": "fact",
+        "description": "Advances in technology (film-screen to digital mammography to DBT) that have reduced the masking effect of dense breast tissue."
+      },
+      {
+        "id": 8,
+        "title": "Cancer Detection Rates",
+        "type": "fact",
+        "description": "The increased cancer detection rates with advanced technologies, particularly in women with dense breasts."
+      },
+      {
+        "id": 9,
+        "title": "Breast Cancer Risk Associated with Density",
+        "type": "concept",
+        "description": "How different breast density categories correlate with increased breast cancer risk (odds ratios provided)."
+      },
+      {
+        "id": 10,
+        "title": "Mass Characteristics",
+        "type": "classification",
+        "description": "The characteristics of masses in mammography: shape (oval, lobulated, round, irregular), margin (circumscribed, obscured, indistinct, spiculated), and density (fat-containing, low, equal, high)."
+      },
+      {
+        "id": 11,
+        "title": "Calcification Types",
+        "type": "classification",
+        "description": "The classification of calcifications into typically benign and suspicious morphology types, along with distribution patterns."
+      },
+      {
+        "id": 12,
+        "title": "Other Findings Categories",
+        "type": "classification",
+        "description": "Other findings categories including architectural distortion, asymmetries, lymph nodes, skin lesions, dilated ducts, associated features, special cases, and location of findings."
+      }
+    ],
+    "not_recommended": [
+      {
+        "task_type": "CLICK_WORDS",
+        "reason": "This material doesn't contain factual errors that would benefit from this type of detection exercise."
+      }
+    ],
+    "illustrations_detected": true,
+    "illustrations_note": "The material includes 16 figures (Figures 1-16) that visually demonstrate each breast density category (A-D) with both mediolateral oblique (MLO) and craniocaudal (CC) views. These images are essential for visual learning and should be incorporated into interactive tasks that require image identification and classification.",
+    "warnings": [],
+    "material_volume": "medium",
+    "target_language": "en"
+  }
+}

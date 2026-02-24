@@ -1,0 +1,544 @@
+{
+  "tasks_to_generate": [
+    {
+      "task_type": "TEST",
+      "count": 15,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Критерии протеинурии (факт)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 2,
+          "modality": "text",
+          "title": "Критерии протеинурии (факт)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Клинические симптомы (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 5,
+          "modality": "text",
+          "title": "Клинические симптомы (факты)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Осложнения (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 7,
+          "modality": "text",
+          "title": "Осложнения (факты)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Диета (факт)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 9,
+          "modality": "text",
+          "title": "Диета (факт)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Противопоказания к кортикостероидам (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 11,
+          "modality": "text",
+          "title": "Противопоказания к кортикостероидам (факты)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Критерии протеинурии (масса белка)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 13,
+          "modality": "text",
+          "title": "Критерии протеинурии (масса белка)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 18,
+          "modality": "text",
+          "title": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "протеинурия, гипопротеинемия, диспротеинемия, гиперлипидемия, липидурия, нарушения минерального обмена, свертываемость, иммунитет, анализы крови/мочи",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 19,
+          "modality": "text",
+          "title": "Лабораторные",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Осложнения",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 20,
+          "modality": "text",
+          "title": "Осложнения",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Диета",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 22,
+          "modality": "text",
+          "title": "Диета",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "кортикостероиды (дозы, показания, противопоказания)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 23,
+          "modality": "text",
+          "title": "Медикаменты",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Цитостатические",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 24,
+          "modality": "text",
+          "title": "Цитостатические",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Этиология (классификация)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 3,
+          "modality": "text",
+          "title": "Этиология (классификация)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Медикаменты и их дозировки (классификация/факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 10,
+          "modality": "text",
+          "title": "Медикаменты и их дозировки (классификация/факты)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 14,
+          "modality": "text",
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 15,
+          "modality": "text",
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС (концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 1,
+          "modality": "text",
+          "title": "Определение НС (концепция)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Патогенез (процесс/концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 4,
+          "modality": "text",
+          "title": "Патогенез (процесс/концепция)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Лабораторные показатели (факты/термины)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 6,
+          "modality": "text",
+          "title": "Лабораторные показатели (факты/термины)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Принципы лечения (процесс)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 8,
+          "modality": "text",
+          "title": "Принципы лечения (процесс)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 12,
+          "modality": "text",
+          "title": "Определение НС",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "иммунная концепция",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 17,
+          "modality": "text",
+          "title": "Патогенез",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "режим, ЛФК, санация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 21,
+          "modality": "text",
+          "title": "Принципы лечения",
+          "type": "process"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 7,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Патогенез (процесс/концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 4,
+          "modality": "text",
+          "title": "Патогенез (процесс/концепция)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Принципы лечения (процесс)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 8,
+          "modality": "text",
+          "title": "Принципы лечения (процесс)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "иммунная концепция",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 17,
+          "modality": "text",
+          "title": "Патогенез",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "режим, ЛФК, санация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 21,
+          "modality": "text",
+          "title": "Принципы лечения",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Этиология (классификация)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 3,
+          "modality": "text",
+          "title": "Этиология (классификация)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Медикаменты и их дозировки (классификация/факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 10,
+          "modality": "text",
+          "title": "Медикаменты и их дозировки (классификация/факты)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 14,
+          "modality": "text",
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 15,
+          "modality": "text",
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС (концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 1,
+          "modality": "text",
+          "title": "Определение НС (концепция)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Лабораторные показатели (факты/термины)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 6,
+          "modality": "text",
+          "title": "Лабораторные показатели (факты/термины)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 12,
+          "modality": "text",
+          "title": "Определение НС",
+          "type": "term"
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 5,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Патогенез (процесс/концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 4,
+          "modality": "text",
+          "title": "Патогенез (процесс/концепция)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Принципы лечения (процесс)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 8,
+          "modality": "text",
+          "title": "Принципы лечения (процесс)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "иммунная концепция",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 17,
+          "modality": "text",
+          "title": "Патогенез",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "режим, ЛФК, санация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 21,
+          "modality": "text",
+          "title": "Принципы лечения",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС (концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 1,
+          "modality": "text",
+          "title": "Определение НС (концепция)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Лабораторные показатели (факты/термины)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 6,
+          "modality": "text",
+          "title": "Лабораторные показатели (факты/термины)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 12,
+          "modality": "text",
+          "title": "Определение НС",
+          "type": "term"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 4,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 14,
+          "modality": "text",
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 15,
+          "modality": "text",
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "type": "classification"
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 1,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Этиология (классификация)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 3,
+          "modality": "text",
+          "title": "Этиология (классификация)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Медикаменты и их дозировки (классификация/факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 10,
+          "modality": "text",
+          "title": "Медикаменты и их дозировки (классификация/факты)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 14,
+          "modality": "text",
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 15,
+          "modality": "text",
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "type": "classification"
+        }
+      ]
+    }
+  ]
+}

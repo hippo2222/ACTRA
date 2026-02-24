@@ -90,7 +90,8 @@ class TestImportParser(TaskImportParser):
                 answer_text = a_match.group(2).strip()
                 current_answers.append({
                     'text': answer_text,
-                    'is_correct': is_correct
+                    'is_correct': is_correct,
+                    'correct': is_correct
                 })
                 continue
 
@@ -161,13 +162,18 @@ class TestImportParser(TaskImportParser):
 
         task_name = self.generate_task_name('test', index, prompt or f'Тест ({len(questions)} вопросов)')
 
+        has_multiple_questions = any(
+            sum(1 for a in q.get('answers', []) if a.get('is_correct', a.get('correct'))) > 1
+            for q in questions
+        )
+
         return {
             'type': 'test',
             'name': task_name,
             'prompt': prompt or f'Тест ({len(questions)} вопросов)',
             'data': {
                 'prompt': prompt or f'Тест ({len(questions)} вопросов)',
-                'test_type': 'single_choice',
+                'test_type': 'multiple_choice' if has_multiple_questions else 'single_choice',
                 'questions': questions,
                 'question_count': len(questions),
                 'settings': {

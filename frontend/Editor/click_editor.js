@@ -2323,7 +2323,7 @@ class ClickEditor extends BaseEditor {
     setupEventListeners() {
         if (this.previewBtn) {
             this.previewBtn.addEventListener("click", () => {
-                window.navigateWithTransition("Main_Dashboard.html");
+                this.goBack();
             });
         }
 

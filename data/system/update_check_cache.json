@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "manifest_url": "file:///D:/Ai%20Ai/radioproject_git/data/system/update_manifest.json",
+  "checked_at_ts": 1771707527.2176094,
+  "result": {
+    "current_version": "1.0.0",
+    "latest_version": "1.0.0",
+    "update_available": false,
+    "required_update": false,
+    "minimum_required_version": "1.0.0",
+    "download_url": "https://github.com/hippo2222/ACTRA/releases/latest",
+    "notes_url": "https://github.com/hippo2222/ACTRA/releases",
+    "published_at": "2026-02-17T00:00:00Z",
+    "checked_at": "2026-02-21T20:58:47.073053Z",
+    "internet_online": true,
+    "manifest_url_configured": true,
+    "manifest_requires_internet": false,
+    "from_cache": false,
+    "reason": "up_to_date"
+  }
+}

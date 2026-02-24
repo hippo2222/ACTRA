@@ -1,0 +1,100 @@
+{
+  "ai_run_id": "guided_20260223T004110_9c78eeed",
+  "tasks_to_generate": [
+    {
+      "task_type": "TEST",
+      "count": 4,
+      "educational_units": [
+        {
+          "id": 101,
+          "title": "Breast density definition",
+          "description": "Definition is based on relative proportion of parenchyma to fat, not absolute tissue amount."
+        },
+        {
+          "id": 102,
+          "title": "BI-RADS A-D categories and dense/non-dense grouping",
+          "description": "A/B are non-dense; C/D are dense; category descriptions must be distinguished accurately."
+        },
+        {
+          "id": 103,
+          "title": "Regulatory reporting requirements",
+          "description": "Federal reporting requirement since September 2024 and July 2025 alternative unilateral wording standard."
+        },
+        {
+          "id": 104,
+          "title": "Breast density risk statistics",
+          "description": "Breast density is a risk factor with odds ratios including 0.6, 1.4, and 1.6 compared to scattered fibroglandular tissue."
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 3,
+      "educational_units": [
+        {
+          "id": 201,
+          "title": "Masking effect and mammographic sensitivity",
+          "description": "Dense fibroglandular tissue can obscure cancers and reduce sensitivity."
+        },
+        {
+          "id": 202,
+          "title": "Technology progression and quantitative evidence",
+          "description": "Film-screen to digital to DBT; DMIST sensitivity ~55% to ~70% in dense breasts; detection rate 4.5/1000 to 5.8/1000 with DBT."
+        },
+        {
+          "id": 203,
+          "title": "Classification rationale and practical rules",
+          "description": "Shift from percentage-based to likelihood of obscuring cancer; local region masking matters; assign greater density if breasts differ; density can vary over time."
+        },
+        {
+          "id": 204,
+          "title": "Assessment process",
+          "description": "Visual subjective assessment on mammographic views and possible FDA-approved software assistance."
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 2,
+      "educational_units": [
+        {
+          "id": 301,
+          "title": "Numbers and dates accuracy",
+          "description": "Use factual substitutions around 55%, 70%, 4.5/1000, 5.8/1000, September 2024, and July 2025."
+        },
+        {
+          "id": 302,
+          "title": "Terminology and risk distortions",
+          "description": "Trap incorrect dense/non-dense grouping, risk odds ratios, and category definitions."
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 2,
+      "educational_units": [
+        {
+          "id": 401,
+          "title": "Why BI-RADS density classification changed",
+          "description": "Explain shift from percentage dense tissue to masking-likelihood logic and rationale."
+        },
+        {
+          "id": 402,
+          "title": "Why DBT helps in dense breasts",
+          "description": "Explain masking effect and slice-by-slice viewing reducing overlap of tissue."
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 1,
+      "educational_units": [
+        {
+          "id": 501,
+          "title": "Breast density categories ordered A to D",
+          "description": "Explicit order of BI-RADS density categories by increasing density / masking potential."
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "tasks_to_generate": [
+    {
+      "task_type": "TEST",
+      "count": 5,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Первичные и вторичные заболевания почек, вызывающие НС",
+          "evidence": "Раздел 'Этиология'",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Этиология нефротического синдрома",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Общие подходы к лечению нефротического синдрома",
+          "evidence": "Раздел 'Принципы лечения'",
+          "explicitness": "explicit",
+          "id": 7,
+          "modality": "text",
+          "title": "Принципы лечения НС",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Особенности питания пациентов с НС",
+          "evidence": "Раздел 'Диета'",
+          "explicitness": "explicit",
+          "id": 9,
+          "modality": "text",
+          "title": "Диета при нефротическом синдроме",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 4,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Жалобы и симптомы нефротического синдрома",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Клинические проявления НС",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Ключевые лабораторные показатели при нефротическом синдроме",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Лабораторная диагностика НС",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 5,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Клинико-лабораторный симптомокомплекс с массивной протеинурией и нарушениями обмена веществ",
+          "evidence": "Первый абзац",
+          "explicitness": "explicit",
+          "id": 1,
+          "modality": "text",
+          "title": "Определение нефротического синдрома",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Иммунологические и метаболические механизмы развития НС",
+          "evidence": "Раздел 'Патогенез'",
+          "explicitness": "explicit",
+          "id": 3,
+          "modality": "text",
+          "title": "Патогенез нефротического синдрома",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Факторы, влияющие на прогноз НС",
+          "evidence": "Последний абзац раздела 'Диагностика'",
+          "explicitness": "inferred",
+          "id": 10,
+          "modality": "text",
+          "title": "Прогноз нефротического синдрома",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 3,
+      "educational_units": [
+        {
+          "assessment_risk": "high",
+          "description": "Группы препаратов и их показания/противопоказания при лечении НС",
+          "evidence": "Раздел 'Медикаментозное лечение'",
+          "explicitness": "explicit",
+          "id": 8,
+          "modality": "text",
+          "title": "Медикаментозное лечение НС",
+          "type": "classification"
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 1,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Возможные осложнения при НС",
+          "evidence": "Раздел 'Осложнения'",
+          "explicitness": "explicit",
+          "id": 6,
+          "modality": "text",
+          "title": "Осложнения нефротического синдрома",
+          "type": "classification"
+        }
+      ]
+    }
+  ]
+}

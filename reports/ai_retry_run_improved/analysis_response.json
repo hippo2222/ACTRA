@@ -1,0 +1,184 @@
+{
+  "ai_run_id": "improved_20260222T230323",
+  "educational_units": [
+    {
+      "assessment_risk": "medium",
+      "description": "The four BI-RADS categories of breast density with their descriptions",
+      "evidence": "Table 1 and detailed descriptions in text",
+      "explicitness": "explicit",
+      "id": 1,
+      "modality": "text",
+      "title": "Breast Density Categories",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "low",
+      "description": "FDA legislation requirements for breast density reporting as of September 2024",
+      "evidence": "Mentioned in text",
+      "explicitness": "explicit",
+      "id": 2,
+      "modality": "text",
+      "title": "Breast Density Reporting Requirements",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Methods used to assess breast density (visual inspection and automated software)",
+      "evidence": "Detailed in text",
+      "explicitness": "explicit",
+      "id": 3,
+      "modality": "mixed",
+      "title": "Breast Density Assessment Methods",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "low",
+      "description": "Change from percentage evaluation to likelihood assessment of obscuring cancer",
+      "evidence": "Mentioned in text",
+      "explicitness": "explicit",
+      "id": 4,
+      "modality": "text",
+      "title": "BI-RADS Density Classification Evolution",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Rules for assessing breast density in different scenarios",
+      "evidence": "Detailed in text",
+      "explicitness": "explicit",
+      "id": 5,
+      "modality": "text",
+      "title": "Breast Density Assessment Rules",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "low",
+      "description": "Factors that can cause breast density to change over time",
+      "evidence": "Listed in text",
+      "explicitness": "explicit",
+      "id": 6,
+      "modality": "text",
+      "title": "Factors Affecting Breast Density Variability",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "high",
+      "description": "How breast density affects the accuracy of mammography and technological improvements",
+      "evidence": "Detailed explanation with data points",
+      "explicitness": "explicit",
+      "id": 7,
+      "modality": "text",
+      "title": "Impact of Breast Density on Mammographic Accuracy",
+      "type": "concept"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "The relationship between breast density and increased breast cancer risk",
+      "evidence": "Detailed with specific odds ratios",
+      "explicitness": "explicit",
+      "id": 8,
+      "modality": "text",
+      "title": "Breast Density and Cancer Risk",
+      "type": "concept"
+    },
+    {
+      "assessment_risk": "high",
+      "description": "Comprehensive classification of breast imaging findings",
+      "evidence": "Table 1 with detailed hierarchy",
+      "explicitness": "explicit",
+      "id": 9,
+      "modality": "text",
+      "title": "BI-RADS Findings Terms",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "low",
+      "description": "New alternative standard allowing singular phrasing for unilateral mammograms",
+      "evidence": "Mentioned in text",
+      "explicitness": "explicit",
+      "id": 10,
+      "modality": "text",
+      "title": "FDA Update on Breast Density Reporting (July 2025)",
+      "type": "fact"
+    }
+  ],
+  "human_summary": "This material provides a comprehensive overview of the BI-RADS® Mammography Lexicon, focusing primarily on breast density classification and reporting requirements. The content includes detailed descriptions of breast density categories, assessment methods, factors affecting density variability, and the clinical significance of breast density for both mammographic accuracy and cancer risk assessment. The material is moderately technical and would benefit from interactive assessments to reinforce the classification systems and factual information presented.",
+  "illustrations_detected": true,
+  "illustrations_note": "The material includes numerous figures (Figures 1-16) showing different breast density categories. These visual examples are valuable for learning but cannot be automatically assessed through text-based generation. Image-based recognition tasks should be created manually if visual identification of breast density categories is a learning objective.",
+  "material_volume": "medium",
+  "not_recommended": [
+    {
+      "reason": "Illustrations are present. Image-based tasks are not auto-generated in this flow; consider manually creating 2-4 image tasks in the editor for visual recognition/classification.",
+      "task_type": "IMAGE_TASKS (manual)"
+    }
+  ],
+  "ok": true,
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "provider_used": "openrouter",
+  "recommendations": [
+    {
+      "count": 7,
+      "covers_units": [
+        1,
+        2,
+        10,
+        8,
+        4
+      ],
+      "priority": "high",
+      "rationale": "Multiple choice questions effectively test knowledge of specific breast density categories, reporting requirements, and regulatory updates.",
+      "task_type": "TEST"
+    },
+    {
+      "count": 3,
+      "covers_units": [
+        6
+      ],
+      "priority": "medium",
+      "rationale": "Click text tasks effectively test identification of factors affecting breast density from a mixed list.",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "count": 2,
+      "covers_units": [
+        7
+      ],
+      "priority": "medium",
+      "rationale": "Open answer questions allow students to explain the conceptual relationship between breast density and mammographic accuracy in their own words.",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "count": 4,
+      "covers_units": [
+        1,
+        2,
+        8,
+        9,
+        10
+      ],
+      "priority": "medium",
+      "rationale": "Good fit for factual substitutions in numbers, dates, and terminology.",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "count": 2,
+      "covers_units": [
+        3,
+        5,
+        9
+      ],
+      "priority": "high",
+      "rationale": "Sequence tasks are ideal for teaching the process of breast density assessment and the decision-making rules involved.",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "target_language": "en",
+  "warnings": [
+    "The material contains technical medical terminology that may be challenging for learners without prior knowledge of breast imaging. Consider providing additional context or foundational materials for students new to this topic.",
+    "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+    "Visual content detected: text-only AI generation will not fully cover image recognition skills; add manual image tasks.",
+    "Heuristic adjustment: 1 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~19-23).",
+    "SEQUENCE recommendation count was capped at 2 to avoid forcing implicit rankings."
+  ]
+}

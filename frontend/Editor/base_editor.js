@@ -333,7 +333,7 @@ class BaseEditor {
                 <span class="material-symbols-outlined text-4xl text-error mb-4">error</span>
                 <h3 class="text-xl font-bold text-text-main mb-2">Ошибка загрузки</h3>
                 <p class="text-text-secondary mb-6">${message}</p>
-                <button onclick="window.navigateWithTransition('/ui/editor/Main_Dashboard.html')" class="w-full py-3 px-4 bg-surface-1 border border-border-subtle rounded-lg shadow-sm font-semibold text-text-main hover:bg-bg-hover transition-all flex items-center justify-center gap-2">
+                <button onclick="window.navigateWithTransition('/ui/editor')" class="w-full py-3 px-4 bg-surface-1 border border-border-subtle rounded-lg shadow-sm font-semibold text-text-main hover:bg-bg-hover transition-all flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined">arrow_back</span>
                     Вернуться в меню
                 </button>
@@ -442,9 +442,18 @@ class BaseEditor {
      */
     goBack() {
         if (this.hasUnsavedChanges) {
-            if (!confirm('Есть несохраненные изменения. Вы уверены, что хотите выйти?')) {
-                return;
-            }
+            this.showConfirmModal({
+                title: 'Несохранённые изменения',
+                message: 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?',
+                confirmText: 'Выйти',
+                cancelText: 'Остаться',
+                onConfirm: () => {
+                    this.hasUnsavedChanges = false;
+                    window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+                    window.navigateWithTransition('/ui/editor');
+                }
+            });
+            return;
         }
         window.navigateWithTransition('/ui/editor');
     }

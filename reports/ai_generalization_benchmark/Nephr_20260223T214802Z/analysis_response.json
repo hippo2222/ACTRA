@@ -1,0 +1,382 @@
+{
+  "ai_run_id": "bench_Nephr_20260223T214802Z",
+  "educational_units": [
+    {
+      "assessment_risk": "medium",
+      "description": "Определение НС (концепция)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 1,
+      "modality": "text",
+      "title": "Определение НС (концепция)",
+      "type": "term"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Критерии протеинурии (факт)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 2,
+      "modality": "text",
+      "title": "Критерии протеинурии (факт)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Этиология (классификация)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 3,
+      "modality": "text",
+      "title": "Этиология (классификация)",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Патогенез (процесс/концепция)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 4,
+      "modality": "text",
+      "title": "Патогенез (процесс/концепция)",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Клинические симптомы (факты)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 5,
+      "modality": "text",
+      "title": "Клинические симптомы (факты)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Лабораторные показатели (факты/термины)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 6,
+      "modality": "text",
+      "title": "Лабораторные показатели (факты/термины)",
+      "type": "term"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Осложнения (факты)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 7,
+      "modality": "text",
+      "title": "Осложнения (факты)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Принципы лечения (процесс)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 8,
+      "modality": "text",
+      "title": "Принципы лечения (процесс)",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Диета (факт)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 9,
+      "modality": "text",
+      "title": "Диета (факт)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Медикаменты и их дозировки (классификация/факты)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 10,
+      "modality": "text",
+      "title": "Медикаменты и их дозировки (классификация/факты)",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Противопоказания к кортикостероидам (факты)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 11,
+      "modality": "text",
+      "title": "Противопоказания к кортикостероидам (факты)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Определение НС",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 12,
+      "modality": "text",
+      "title": "Определение НС",
+      "type": "term"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Критерии протеинурии (масса белка)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 13,
+      "modality": "text",
+      "title": "Критерии протеинурии (масса белка)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "можно как одна классификация",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 14,
+      "modality": "text",
+      "title": "Этиология: первичные заболевания (4 пункта)",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "одна классификация",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 15,
+      "modality": "text",
+      "title": "Этиология: вторичные инфекционные (14 пунктов)",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "одна классификация",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 16,
+      "modality": "text",
+      "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "иммунная концепция",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 17,
+      "modality": "text",
+      "title": "Патогенез",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 18,
+      "modality": "text",
+      "title": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "протеинурия, гипопротеинемия, диспротеинемия, гиперлипидемия, липидурия, нарушения минерального обмена, свертываемость, иммунитет, анализы крови/мочи",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 19,
+      "modality": "text",
+      "title": "Лабораторные",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Осложнения",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 20,
+      "modality": "text",
+      "title": "Осложнения",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "режим, ЛФК, санация",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 21,
+      "modality": "text",
+      "title": "Принципы лечения",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Диета",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 22,
+      "modality": "text",
+      "title": "Диета",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "кортикостероиды (дозы, показания, противопоказания)",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 23,
+      "modality": "text",
+      "title": "Медикаменты",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Цитостатические",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 24,
+      "modality": "text",
+      "title": "Цитостатические",
+      "type": "fact"
+    }
+  ],
+  "effective_output_language": "ru",
+  "human_summary": "",
+  "illustrations_detected": false,
+  "illustrations_note": null,
+  "material_language": "ru",
+  "material_volume": "medium",
+  "not_recommended": [],
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "provider_chain_attempts": [
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "stage": "analysis_initial",
+      "status": "success"
+    }
+  ],
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "provider_used": "openrouter:2",
+  "recommendations": [
+    {
+      "count": 15,
+      "covers_units": [
+        2,
+        5,
+        7,
+        9,
+        11,
+        13,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        3,
+        10,
+        14,
+        15,
+        1,
+        4,
+        6,
+        8,
+        12,
+        16,
+        17,
+        21
+      ],
+      "priority": "high",
+      "rationale": "Heuristic fallback: factual and classification-heavy units fit objective testing.",
+      "task_type": "TEST"
+    },
+    {
+      "count": 7,
+      "covers_units": [
+        4,
+        8,
+        17,
+        21,
+        3,
+        10,
+        14,
+        15,
+        16,
+        1,
+        6,
+        12
+      ],
+      "priority": "medium",
+      "rationale": "Heuristic fallback: suitable for distinctions, rules, and misconception checks.",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "count": 5,
+      "covers_units": [
+        4,
+        8,
+        17,
+        21,
+        1,
+        6,
+        12
+      ],
+      "priority": "medium",
+      "rationale": "Heuristic fallback: process/concept units benefit from explanation-style answers.",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "count": 4,
+      "covers_units": [
+        14,
+        15,
+        16
+      ],
+      "priority": "medium",
+      "rationale": "Good fit for factual substitutions in numbers, dates, and terminology.",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "count": 1,
+      "covers_units": [
+        3,
+        10,
+        14,
+        15,
+        16
+      ],
+      "priority": "low",
+      "rationale": "Heuristic fallback: sequence/ranking only where wording suggests explicit order or stages.",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "target_language": "ru",
+  "warnings": [
+    "Heuristic fallback used: AI analysis response did not follow structured JSON format.",
+    "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~32-40)."
+  ]
+}

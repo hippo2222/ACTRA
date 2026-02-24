@@ -1,0 +1,518 @@
+{
+  "run_id": "bench_Nephr_20260223T141826Z",
+  "created_at": "2026-02-23T14:25:01Z",
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 6,
+        "educational_unit_ids": [
+          1,
+          2,
+          4,
+          6
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 3,
+        "educational_unit_ids": [
+          2,
+          4
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 4,
+        "educational_unit_ids": [
+          3,
+          5,
+          7
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 3,
+        "educational_unit_ids": [
+          5,
+          8
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 2,
+        "educational_unit_ids": [
+          7,
+          8
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 18,
+    "total_valid": 18,
+    "total_warnings": 0,
+    "total_errors": 0,
+    "by_type": {
+      "test": 6,
+      "click_text": 3,
+      "open_answer": 4,
+      "click_words": 3,
+      "sequence": 2
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 18
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34754,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34693,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        }
+      ],
+      "educational_unit_ids": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "generation_time_ms": 75867,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - Клинические проявления НС",
+          "type": "test",
+          "status": "valid",
+          "hash": "754c9b32c2fd382fc6554cd840b57298616942b46878df12fb534432a2a95a10",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Лабораторная диагностика НС",
+          "type": "test",
+          "status": "valid",
+          "hash": "7c051e051be27730e93d3f7f0ed4bb45363b259bcb62e8afac9470cbaf77eb09",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Нефротический синдром - этиология",
+          "type": "test",
+          "status": "valid",
+          "hash": "2b3dcc2a18bbeedfab6ef11d7c5f1379414ef0878fe2340e091d80ab8e868ca7",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Осложнения нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "1d32065231c0c0caafb77761b48edeb1f9355174208fcbb9a49ba572d3c58492",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Клинические проявления нефротического...",
+          "type": "test",
+          "status": "valid",
+          "hash": "fac838dbd5b2596722a903dafd6479ac82e143b49cb2f701ab231b25722b18e3",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Диагностический критерий нефротическо...",
+          "type": "test",
+          "status": "valid",
+          "hash": "87920830337b62c8078dd5c1f1785b1002297bdad2b2ea39e245251060ce3e0c",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34679,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3,
+          "start_after_provider": "openrouter:2"
+        }
+      ],
+      "educational_unit_ids": [
+        2,
+        4
+      ],
+      "generation_time_ms": 50092,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_TEXT: requested 3, kept 3, dropped 2."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - Какие из перечисленных осложнений мог...",
+          "type": "click",
+          "status": "valid",
+          "hash": "f9945709c24655b517d396739792c0f3d522107112d9f7ac3c0054f7e68ee66c",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Какие из перечисленных симптомов явля...",
+          "type": "click",
+          "status": "valid",
+          "hash": "4a3b12b7a8448aa012ff62041113f291cf898c0ad4ff9275bc919164946f14c6",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Какие из перечисленных методов диагно...",
+          "type": "click",
+          "status": "valid",
+          "hash": "cc7be9ddfa4d5ccaf67cc1ecffd94094a9e8eed06194bfbc4c2a8ebb414392de",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34628,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34614,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        3,
+        5,
+        7
+      ],
+      "generation_time_ms": 27051,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Какие две основные концепции патогене...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "79dea18df97a4b5b25f613258cfa9db37a39b64817205cc5e5592d71410854d8",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Каковы основные принципы медикаментоз...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "d39ac808df5e0e497447475ea54ec392eb883164732b50f8990a08a1fa14589e",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Какие основные лабораторные признаки ...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "06148e640b3513a99b2524802d2598a115199a07e3b55af24fe3c2efff915448",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Какие функциональные пробы почек имею...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "2539be144495ec35f627e0cdb3877dc7490162db0b973779330945f7b751add0",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34601,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34592,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34575,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        5,
+        8
+      ],
+      "generation_time_ms": 42284,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_WORDS: requested 3, kept 3, dropped 3.",
+        "Overgeneration trimmed for CLICK_WORDS after iterative repair 1: requested 3, kept 3, dropped 2."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "type": "click",
+          "status": "valid",
+          "hash": "647217e815abad1dc18489abec4bc3904b41b3548a2c7233298bf7f5ac0095b0",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "type": "click",
+          "status": "valid",
+          "hash": "0a227a76204b8583703360ce8b8e99cb494a32aab7950356882552d2e525839c",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "type": "click",
+          "status": "valid",
+          "hash": "cda5eb4f325375dd962fd2e8f90f710f966281f2cc9f338fd9e252f2d45d2d1e",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34559,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 34516,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        7,
+        8
+      ],
+      "generation_time_ms": 60130,
+      "parsing_errors": [
+        "Задание #1: не найдено ни одного элемента (element_X)"
+      ],
+      "tasks": [
+        {
+          "name": "Последовательность - Упорядочите этапы принципов лечения н...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "7e96a5f52c70d4e97e14ecfac2f11b5a5d1d4f9ade20fa16ebc89ad79abaa722",
+          "validation_issues": []
+        },
+        {
+          "name": "Последовательность - Упорядочите группы медикаментозных ср...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "adccf1942beb4dba9eb159012c90927eb37cbd35cbfb256d6e7b2aacc287fb44",
+          "validation_issues": []
+        }
+      ]
+    }
+  ]
+}

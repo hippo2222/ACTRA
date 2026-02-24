@@ -1,0 +1,191 @@
+{
+  "ai_run_id": "bench_Nephr_20260223T203856Z",
+  "educational_units": [
+    {
+      "assessment_risk": "medium",
+      "description": "Клинико-лабораторный симптомокомплекс с протеинурией, гипопротеинемией, гиперлипидемией, отеками",
+      "evidence": "Определение в начале главы",
+      "explicitness": "explicit",
+      "id": 1,
+      "modality": "text",
+      "title": "Нефротический синдром",
+      "type": "concept"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Первичные (гломерулонефрит, амилоидоз и др.) и вторичные (инфекционные, неинфекционные) заболевания",
+      "evidence": "Раздел 'Этиология' с двумя группами",
+      "explicitness": "explicit",
+      "id": 2,
+      "modality": "text",
+      "title": "Этиология НС",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "high",
+      "description": "Иммунологическая и метаболическая концепции, изменения клубочковой мембраны",
+      "evidence": "Раздел 'Патогенез' с двумя концепциями",
+      "explicitness": "explicit",
+      "id": 3,
+      "modality": "text",
+      "title": "Патогенез НС",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Отеки, протеинурия, гипопротеинемия, гиперлипидемия, липидурия, анемия, изменения свертывания",
+      "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+      "explicitness": "explicit",
+      "id": 4,
+      "modality": "text",
+      "title": "Клинические проявления НС",
+      "type": "concept"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Анализы мочи (протеинурия, гематурия, лейкоцитурия), крови (общий белок, альбумины, СОЭ, креатинин)",
+      "evidence": "Подраздел 'Основным методом диагностики НС являются общие и специализированные анализы мочи'",
+      "explicitness": "explicit",
+      "id": 5,
+      "modality": "text",
+      "title": "Лабораторная диагностика НС",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Отек мозга, кровоизлияния, нефротический шок, тромбозы, инфекции",
+      "evidence": "Раздел 'НС редко протекает без осложнений'",
+      "explicitness": "explicit",
+      "id": 6,
+      "modality": "text",
+      "title": "Осложнения НС",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "high",
+      "description": "Госпитализация, режим, диета, медикаментозная терапия (кортикостероиды, цитостатики, антикоагулянты, антиагреганты)",
+      "evidence": "Раздел 'Принципы лечения'",
+      "explicitness": "explicit",
+      "id": 7,
+      "modality": "text",
+      "title": "Принципы лечения НС",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "high",
+      "description": "Группы препаратов: кортикостероиды, цитостатики, антикоагулянты, антиагреганты, противовоспалительные, мембранотропные, диуретики",
+      "evidence": "Подраздел 'Медикаментозное лечение'",
+      "explicitness": "explicit",
+      "id": 8,
+      "modality": "text",
+      "title": "Медикаментозная терапия НС",
+      "type": "classification"
+    }
+  ],
+  "effective_output_language": "ru",
+  "human_summary": "Глава посвящена нефротическому синдрому (НС) — клинико-лабораторному симптомокомплексу, включающему массивную протеинурию, гипопротеинемию, гиперлипидемию, отеки и другие нарушения. Рассмотрены этиология (первичные и вторичные заболевания почек), патогенез, клинические проявления, лабораторная диагностика, осложнения и принципы лечения.",
+  "illustrations_detected": false,
+  "illustrations_note": null,
+  "material_language": "ru",
+  "material_volume": "large",
+  "not_recommended": [],
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "provider_chain_attempts": [
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "stage": "analysis_initial",
+      "status": "success"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "stage": "analysis_parse_escalation",
+      "status": "success"
+    }
+  ],
+  "provider_model": "arcee-ai/trinity-large-preview:free",
+  "provider_used": "openrouter:3",
+  "recommendations": [
+    {
+      "count": 8,
+      "covers_units": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "priority": "high",
+      "rationale": "Проверка знания определений, классификаций, показаний к лечению и противопоказаний",
+      "task_type": "TEST"
+    },
+    {
+      "count": 4,
+      "covers_units": [
+        4,
+        6
+      ],
+      "priority": "medium",
+      "rationale": "Выбор верных/неверных утверждений о клинических проявлениях и осложнениях",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "count": 3,
+      "covers_units": [
+        7,
+        8
+      ],
+      "priority": "medium",
+      "rationale": "Формулирование принципов лечения и обоснование выбора препаратов",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "count": 2,
+      "covers_units": [
+        5
+      ],
+      "priority": "low",
+      "rationale": "Поиск и исправление искаженных лабораторных показателей в тексте",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "count": 1,
+      "covers_units": [
+        3
+      ],
+      "priority": "medium",
+      "rationale": "Восстановление последовательности патогенетических механизмов НС",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "target_language": "ru",
+  "warnings": [
+    "Heuristic adjustment: CLICK_WORDS was removed from not_recommended because this material supports factual error-detection tasks.",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22)."
+  ]
+}

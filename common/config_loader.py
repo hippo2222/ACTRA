@@ -11,6 +11,23 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
+def _resolve_path_with_packaged_data_fallback(base_dir: Path, raw_path: str) -> Path:
+    """Resolve config path, preferring sibling app data in packaged (_internal) runtime."""
+    path = Path(raw_path)
+    if path.is_absolute():
+        return path
+
+    # In PyInstaller one-folder builds runtime modules live under "_internal",
+    # while mutable app data is placed next to it (../data).
+    if base_dir.name == "_internal" and path.parts and path.parts[0].lower() == "data":
+        sibling_candidate = base_dir.parent / path
+        internal_candidate = base_dir / path
+        if sibling_candidate.exists() or not internal_candidate.exists():
+            return sibling_candidate
+
+    return base_dir / path
+
+
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """
     Загружает конфигурацию из config.json.
@@ -47,7 +64,7 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     
     # Значения по умолчанию
     default_config = {
-        "data_root": str((base_dir / "data").resolve()),
+        "data_root": str(_resolve_path_with_packaged_data_fallback(base_dir, "data").resolve()),
         "task_system_root": str((base_dir / "task_system").resolve())
     }
     
@@ -62,17 +79,17 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         
         # Нормализуем пути относительно корня проекта
         if "data_root" in config:
-            data_root = Path(config["data_root"])
-            if not data_root.is_absolute():
-                data_root = base_dir / data_root
+            data_root = _resolve_path_with_packaged_data_fallback(
+                base_dir, str(config["data_root"])
+            )
             config["data_root"] = str(data_root.resolve())
         else:
             config["data_root"] = default_config["data_root"]
-        
+
         if "task_system_root" in config:
-            task_system_root = Path(config["task_system_root"])
-            if not task_system_root.is_absolute():
-                task_system_root = base_dir / task_system_root
+            task_system_root = _resolve_path_with_packaged_data_fallback(
+                base_dir, str(config["task_system_root"])
+            )
             config["task_system_root"] = str(task_system_root.resolve())
         else:
             config["task_system_root"] = default_config["task_system_root"]

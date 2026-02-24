@@ -1,0 +1,2435 @@
+{
+  "run_id": "bench_VMleuko_20260223T215842Z",
+  "created_at": "2026-02-23T22:22:58Z",
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "material_stats": {
+    "word_count": 2289,
+    "char_count": 19121,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 15,
+        "educational_unit_ids": [
+          1,
+          2,
+          4,
+          5,
+          7,
+          11,
+          12,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          23,
+          3,
+          6,
+          8,
+          9,
+          10,
+          13,
+          21,
+          22,
+          24
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 7,
+        "educational_unit_ids": [
+          8,
+          13,
+          24,
+          3,
+          6,
+          9,
+          10,
+          21,
+          22
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "educational_unit_ids": [
+          8,
+          13,
+          24
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 4,
+        "educational_unit_ids": [
+          1,
+          2,
+          3,
+          4
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "educational_unit_ids": [
+          9
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 32,
+    "total_valid": 28,
+    "total_warnings": 4,
+    "total_errors": 0,
+    "by_type": {
+      "test": 15,
+      "click_text": 7,
+      "open_answer": 5,
+      "click_words": 4,
+      "sequence": 1
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 32,
+      "source_grounding_warnings": 0,
+      "semantic_duplicate_groups": 0,
+      "semantic_duplicate_tasks": 0,
+      "total_tasks": 32
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7247,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7054,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6806,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6746,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6740,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [
+        1,
+        2,
+        4,
+        5,
+        7,
+        11,
+        12,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        23,
+        3,
+        6,
+        8,
+        9,
+        10,
+        13,
+        21,
+        22,
+        24
+      ],
+      "educational_units_context": [
+        {
+          "id": 1,
+          "title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+          "description": "концепція.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 2,
+          "title": "Локалізація та характеристики кісткового мозку",
+          "description": "факти.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 4,
+          "title": "Регуляція гемопоезу (стимуляція та пригнічення)",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 5,
+          "title": "Мієлопоез та лімфопоез",
+          "description": "терміни та поняття.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 7,
+          "title": "Етіологія гострих лейкозів",
+          "description": "факти.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 11,
+          "title": "Особливості лімфобластного та мієлобластного лейкозу",
+          "description": "порівняння.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 12,
+          "title": "Лабораторні дані",
+          "description": "факти.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 14,
+          "title": "Профілактика та прогноз",
+          "description": "факти.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 15,
+          "title": "Центральні та периферичні органи гемопоезу",
+          "description": "концепція.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 16,
+          "title": "Анатомія та фізиологія кісткового мозку",
+          "description": "факти.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 524785,
+      "parsing_errors": [
+        "Overgeneration trimmed for TEST: requested 15, kept 15, dropped 16.",
+        "Overgeneration trimmed for TEST after cleanup repair: requested 15, kept 15, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Задание - Центральні органи гемопоезу",
+          "type": "test",
+          "status": "valid",
+          "hash": "2ae0b194abe9c425dc7a9d5b2fbd11ac744d2889c73317b4859ffe30848643f7",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+              "score": 0.4,
+              "shared_token_count": 6,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гемопоез",
+                "кістков",
+                "мозок",
+                "орган",
+                "тимус",
+                "центральні"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Гемопоетична система та гострі лейкози",
+          "type": "test",
+          "status": "valid",
+          "hash": "fbf610b94a0f80eb1815586cf3ea7c23125a2cf6e8e06f311640b4f7f24e582d",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+              "score": 0.3733,
+              "shared_token_count": 5,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гемопоез",
+                "кістков",
+                "мозок",
+                "орган",
+                "тимус"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "центральних~центральні"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Периферичні органи кровотворення",
+          "type": "test",
+          "status": "valid",
+          "hash": "e1080b3992e50c7fb55e9bc90c5b8a6f1657eedd6dfb808f3855f23555674532",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+              "score": 0.2667,
+              "shared_token_count": 4,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "кістков",
+                "мозок",
+                "орган",
+                "тимус"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Профілактика та прогноз",
+          "type": "test",
+          "status": "valid",
+          "hash": "edde97f0bfe79154665513f1eee1088049b65c763a457fdca00b7941eb6e44ac",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Профілактика та прогноз",
+              "score": 0.26,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "прогноз",
+                "профілактик"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "факторів~факт"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.049
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Анатомія кісткового мозку",
+          "type": "test",
+          "status": "valid",
+          "hash": "a02e311b3f50b7d44c45d9c460aa839992dbb107aa52e61f50571ee2eefceeab",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 16,
+              "primary_unit_title": "Анатомія та фізиологія кісткового мозку",
+              "score": 0.24,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "анатомі",
+                "кістков",
+                "мозк"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Особливості гострого лімфобластного л...",
+          "type": "test",
+          "status": "valid",
+          "hash": "c00313e9c3132117374d67737e262d081b104486ca0f5eab9b58afba7d42b9c4",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Особливості лімфобластного та мієлобластного лейкозу",
+              "score": 0.24,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз",
+                "лімфобластн",
+                "особливості"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Особливості гострого мієлобластного л...",
+          "type": "test",
+          "status": "valid",
+          "hash": "e97b0a922c764195340d9fb94f2463455ecb82fdd3cf11e9e7584ca9128526c5",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Особливості лімфобластного та мієлобластного лейкозу",
+              "score": 0.24,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз",
+                "мієлобластн",
+                "особливості"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Цитохімічні дослідження при гострих л...",
+          "type": "test",
+          "status": "valid",
+          "hash": "d789bebb8941573626df35a8614a16615a261f4b452640dc0cceafbf49d467b8",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Особливості лімфобластного та мієлобластного лейкозу",
+              "score": 0.24,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз",
+                "лімфобластн",
+                "мієлобластн"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Класифікація гострих лейкозів за FAB ...",
+          "type": "test",
+          "status": "valid",
+          "hash": "25c995599c25f6cffb8b41a99f6d4d9f4c44c30003d876eae6a63aae2ade780f",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Особливості лімфобластного та мієлобластного лейкозу",
+              "score": 0.208,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз",
+                "лімфобластн"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "мієлобластні~мієлобластн"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Лабораторні дані при гострих лейкозах",
+          "type": "test",
+          "status": "valid",
+          "hash": "fb588d12fca1be35b92e8abfd9e77b3fa9afcc4a617dd18e7a8f08fbd50169ef",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 12,
+              "primary_unit_title": "Лабораторні дані",
+              "score": 0.2,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "дані",
+                "лабораторні"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.049
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Мієлопоез та лімфопоез",
+          "type": "test",
+          "status": "valid",
+          "hash": "246daf67ed8c51f529efe6619ddf4b6ddf54699df87c1c7d4f98014ec4c52585",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 5,
+              "primary_unit_title": "Мієлопоез та лімфопоез",
+              "score": 0.1778,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лімфопоез",
+                "мієлопоез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Мієлопоез та лімфопоез",
+          "type": "test",
+          "status": "valid",
+          "hash": "57baa9c18a04ffa992c9aa95d6208e771977107fb515394db42246347ba5e673",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 5,
+              "primary_unit_title": "Мієлопоез та лімфопоез",
+              "score": 0.1778,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лімфопоез",
+                "мієлопоез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Патогенез гострих лейкозів",
+          "type": "test",
+          "status": "valid",
+          "hash": "b0c28e833143590c786f31405b6078a49d92bab9a1d51f0bdb7c87821fc124f3",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 7,
+              "primary_unit_title": "Етіологія гострих лейкозів",
+              "score": 0.1778,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гострих",
+                "лейкозів"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.049
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Структура гемопоетичної тканини (гема...",
+          "type": "test",
+          "status": "valid",
+          "hash": "6997895b32af0d4fccf91e6d894d7bbbfca12567eabce30a6ff52157378e93c3",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+              "score": 0.1733,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "кістков",
+                "мозок"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "гемопоетичної~гемопоез"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Задание - Стимуляція гемопоезу",
+          "type": "test",
+          "status": "valid",
+          "hash": "5eb58c00a9bb53775b596e64769eebba47a97d62f5c4bf827b2623e0e451af05",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 4,
+              "primary_unit_title": "Регуляція гемопоезу (стимуляція та пригнічення)",
+              "score": 0.16,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гемопоез",
+                "стимуляці"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              5,
+              7,
+              11,
+              12,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              23,
+              3,
+              6,
+              8,
+              9,
+              10,
+              13,
+              21,
+              22,
+              24
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6723,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6709,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6638,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6556,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 1,
+          "start_after_provider": "openrouter:2"
+        }
+      ],
+      "educational_unit_ids": [
+        8,
+        13,
+        24,
+        3,
+        6,
+        9,
+        10,
+        21,
+        22
+      ],
+      "educational_units_context": [
+        {
+          "id": 8,
+          "title": "Патогенез гострих лейкозів",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 13,
+          "title": "Лікування гострих лейкозів (етапи, препарати)",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 24,
+          "title": "Патогенез гострих лейкозів (мутації, клони)",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 3,
+          "title": "Гемопоетична тканина: компоненти, стовбурові клітини",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 6,
+          "title": "Класифікація гострих лейкозів за FAB (мієлобластні та лімфобластні)",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 9,
+          "title": "Стадії гострого лейкозу",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 10,
+          "title": "Клінічні синдроми при гострих лейкозах",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 21,
+          "title": "Класифікація гемопоетичних клітин за ступенями диференціювання (I-VI класи)",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 22,
+          "title": "Гострий лейкоз: визначення та класифікація за FAB",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 213946,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Класифікація гемопоетичних клітин за ...",
+          "type": "click",
+          "status": "valid",
+          "hash": "89fa4dd803839af4954e054cc92baef13e17ef84a8a7d53d03c11124bdafb1cd",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "Класифікація гемопоетичних клітин за ступенями диференціювання (I-VI класи)",
+              "score": 0.4,
+              "shared_token_count": 6,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гемопоетичних",
+                "диференціюв",
+                "клас",
+                "класифікаці",
+                "клітин",
+                "ступен"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24,
+              3,
+              6,
+              9,
+              10,
+              21,
+              22
+            ]
+          }
+        },
+        {
+          "name": "Клик - Які з перерахованих тверджень про гос...",
+          "type": "click",
+          "status": "valid",
+          "hash": "34a58c11774415163ec2649f9231babaef33b10e2dc5778f21d24c1c82f87337",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 6,
+              "primary_unit_title": "Класифікація гострих лейкозів за FAB (мієлобластні та лімфобластні)",
+              "score": 0.4,
+              "shared_token_count": 5,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гострих",
+                "класифікаці",
+                "лейкозів",
+                "лімфобластні",
+                "мієлобластні"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24,
+              3,
+              6,
+              9,
+              10,
+              21,
+              22
+            ]
+          }
+        },
+        {
+          "name": "Клик - Патогенез гострих лейкозів",
+          "type": "click",
+          "status": "valid",
+          "hash": "bcf2d68363cff6a0dae63a6c2868a35570e6f0600d1917391852cda3b4de9604",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 24,
+              "primary_unit_title": "Патогенез гострих лейкозів (мутації, клони)",
+              "score": 0.3636,
+              "shared_token_count": 5,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гострих",
+                "клон",
+                "лейкозів",
+                "мутації",
+                "патогенез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24,
+              3,
+              6,
+              9,
+              10,
+              21,
+              22
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие из перечисленных утверждений о ...",
+          "type": "click",
+          "status": "valid",
+          "hash": "bed38d1886755cb127db3a639810cd74cda6834e47e4fce9d967461429f02680",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 10,
+              "primary_unit_title": "Клінічні синдроми при гострих лейкозах",
+              "score": 0.208,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз",
+                "синдром"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "гостр~гострих"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24,
+              3,
+              6,
+              9,
+              10,
+              21,
+              22
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие утверждения о гемопоэтических т...",
+          "type": "click",
+          "status": "valid",
+          "hash": "5716d8cf55fd74bb7a52b9e59fbfe07d2b751e461c21b8f506afd238a267b0eb",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 3,
+              "primary_unit_title": "Гемопоетична тканина: компоненти, стовбурові клітини",
+              "score": 0.16,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "компонент"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "гемопоэз~гемопоетичн",
+                "ткан~тканин"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24,
+              3,
+              6,
+              9,
+              10,
+              21,
+              22
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие утверждения о стадиях и клиниче...",
+          "type": "click",
+          "status": "valid",
+          "hash": "5f36a3e6cd7507198fd28553c8bf744e4c81bcafdc49d1c885ad808a50e7d0b0",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 10,
+              "primary_unit_title": "Клінічні синдроми при гострих лейкозах",
+              "score": 0.16,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз",
+                "синдром"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24,
+              3,
+              6,
+              9,
+              10,
+              21,
+              22
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие утверждения о классификации ост...",
+          "type": "click",
+          "status": "valid",
+          "hash": "e6ca7dc194dfdc28500b9525f3df60721e6bae74c51798749937d02c480adfac",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 9,
+              "primary_unit_title": "Стадії гострого лейкозу",
+              "score": 0.0889,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24,
+              3,
+              6,
+              9,
+              10,
+              21,
+              22
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6509,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 6498,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        8,
+        13,
+        24
+      ],
+      "educational_units_context": [
+        {
+          "id": 8,
+          "title": "Патогенез гострих лейкозів",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 13,
+          "title": "Лікування гострих лейкозів (етапи, препарати)",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 24,
+          "title": "Патогенез гострих лейкозів (мутації, клони)",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 26670,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Опишіть патогенез гострих лейкозів, в...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "1ef5a81ebbdb1ba761d4c1ce08cabbfe251c058faa52c3df0b9e3fec44f7af5d",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 24,
+              "primary_unit_title": "Патогенез гострих лейкозів (мутації, клони)",
+              "score": 0.3636,
+              "shared_token_count": 5,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гострих",
+                "клон",
+                "лейкозів",
+                "мутації",
+                "патогенез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Опишите патогенез острых лейкозов, вы...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "e50baafca87b8a1fd8c8547d90e99cb151424f327a0d0c7423fdc13ce0929f58",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 24,
+              "primary_unit_title": "Патогенез гострих лейкозів (мутації, клони)",
+              "score": 0.2327,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "клон",
+                "патогенез"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "лейкозов~лейкозів",
+                "мутаци~мутації"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Порівняйте гострі лімфобластний та мі...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "b8316ae9770e3b5376349a00809a2e82fffd509a443d51f4c5bb0b36f63edc57",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Патогенез гострих лейкозів",
+              "score": 0.1067,
+              "shared_token_count": 0,
+              "shared_fuzzy_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [],
+              "shared_fuzzy_tokens_sample": [
+                "гостр~гострих",
+                "лейкоз~лейкозів"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.6,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Каковы основные этапы цитостатической...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "12ac738e65a0ac8252c17f2760760d3493103f929b89bf6044713224315c496e",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Патогенез гострих лейкозів",
+              "score": 0.0533,
+              "shared_token_count": 0,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [],
+              "shared_fuzzy_tokens_sample": [
+                "лейкоз~лейкозів"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.6,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Что обозначают буквенные обозначения ...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "30a388a5cc70f4403442c794fbf76c7657dfba112592d0bc56b39cc15153dad2",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Патогенез гострих лейкозів",
+              "score": 0.0533,
+              "shared_token_count": 0,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [],
+              "shared_fuzzy_tokens_sample": [
+                "лейкоз~лейкозів"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.6,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              8,
+              13,
+              24
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        }
+      ],
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "educational_units_context": [
+        {
+          "id": 1,
+          "title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+          "description": "концепція.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 2,
+          "title": "Локалізація та характеристики кісткового мозку",
+          "description": "факти.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 3,
+          "title": "Гемопоетична тканина: компоненти, стовбурові клітини",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 4,
+          "title": "Регуляція гемопоезу (стимуляція та пригнічення)",
+          "description": "процес.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 631963,
+      "parsing_errors": [
+        "Iterative repair 1 made no valid-progress for CLICK_WORDS (valid 0/4).",
+        "Overgeneration trimmed for CLICK_WORDS after cleanup repair: requested 4, kept 4, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "warning",
+          "hash": "262dbca9e77a8feff7539bb3393090e8d946703e07aad635a9b0a4bb8c23578a",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 3,
+              "primary_unit_title": "Гемопоетична тканина: компоненти, стовбурові клітини",
+              "score": 0.4364,
+              "shared_token_count": 6,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гемопоетичн",
+                "класифікаці",
+                "клітин",
+                "компонент",
+                "стовбур",
+                "тканин"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        {
+          "name": "Клик - Знайдіть фактичні помилки в тексті",
+          "type": "click",
+          "status": "warning",
+          "hash": "cadec3ac4181a0b9e13c4aa90d82e3f3843ea438e6dc864abde98fde0ddb14fb",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 3,
+              "primary_unit_title": "Гемопоетична тканина: компоненти, стовбурові клітини",
+              "score": 0.4073,
+              "shared_token_count": 5,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гемопоетичн",
+                "класифікаці",
+                "клітин",
+                "компонент",
+                "тканин"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "стовбурових~стовбур"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "warning",
+          "hash": "1f78d5e01e54e9f01cbf879a1fde9655b8fb87538adb16148d12c4ab3ef2ce4b",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+              "score": 0.24,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "кістков",
+                "мозок",
+                "тимус"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "органів~орган"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        },
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "warning",
+          "hash": "b55ab4ddaf802dd80a8e639ec27946ecc2a7cc93e61754d72a332b072382ae3e",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "Центральні органи гемопоезу (кістковий мозок, тимус)",
+              "score": 0.2133,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "орган",
+                "тимус"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "гемопоэз~гемопоез",
+                "центральн~центральні"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        }
+      ],
+      "educational_unit_ids": [
+        9
+      ],
+      "educational_units_context": [
+        {
+          "id": 9,
+          "title": "Стадії гострого лейкозу",
+          "description": "класифікація.",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 27963,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Последовательность - Расположите стадии острого лейкоза в ...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "f3aa28352a96646e1238488a1459225a6de4f47a34c63357a14f394a0b79450b",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 9,
+              "primary_unit_title": "Стадії гострого лейкозу",
+              "score": 0.1422,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лейкоз"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "стади~стадії"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.035
+            },
+            "educational_unit_ids": [
+              9
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

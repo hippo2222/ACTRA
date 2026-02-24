@@ -1,0 +1,260 @@
+{
+  "run_id": "bench_VMleuko_20260223T202503Z",
+  "created_at": "2026-02-23T20:27:58Z",
+  "provider_used": "openrouter:3",
+  "provider_model": "arcee-ai/trinity-large-preview:free",
+  "provider_chain_attempts": [
+    {
+      "provider": "openrouter:1",
+      "model": "z-ai/glm-4.5-air:free",
+      "attempt": 0,
+      "status": "skipped_cooldown",
+      "cooldown_remaining_sec": 12897,
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:2",
+      "model": "stepfun/step-3.5-flash:free",
+      "attempt": 1,
+      "status": "success",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:3",
+      "model": "arcee-ai/trinity-large-preview:free",
+      "attempt": 1,
+      "status": "success",
+      "stage": "analysis_parse_escalation"
+    }
+  ],
+  "material_stats": {
+    "word_count": 2289,
+    "char_count": 19121,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "result": {
+    "human_summary": "Текст містить детальну інформацію про гемопоез, клітинні етапи диференціровки кровотворних клітин, а також етіологію, патогенез, клінічну картину, діагностику та лікування гострих лейкозів. Матеріал є навчальним і призначений для студентів медичних закладів.",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 8,
+        "priority": "high",
+        "covers_units": [
+          1,
+          2,
+          3,
+          5,
+          6,
+          8,
+          9,
+          14
+        ],
+        "rationale": "Тест найкраще підходить для перевірки знань фактів, класифікацій та прогностичних факторів."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 5,
+        "priority": "medium",
+        "covers_units": [
+          11,
+          13
+        ],
+        "rationale": "Вибір правильних тверджень про лабораторні дані та лікування."
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "priority": "medium",
+        "covers_units": [
+          10,
+          12,
+          13
+        ],
+        "rationale": "Вільна відповідь дозволяє оцінити розуміння клінічної картини та процесів лікування."
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 2,
+        "priority": "low",
+        "covers_units": [
+          6,
+          8,
+          9
+        ],
+        "rationale": "Знаходження фактичних помилок у переліку етіологічних факторів."
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 2,
+        "priority": "medium",
+        "covers_units": [
+          4,
+          7
+        ],
+        "rationale": "Відновлення послідовності етапів диференціровки та патогенезу."
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Центральні органи гемопоезу",
+        "type": "concept",
+        "description": "Кістковий мозок та тимус як основні органи кровотворення",
+        "explicitness": "explicit",
+        "evidence": "Текст прямо вказує на ці органи",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 2,
+        "title": "Гемопоетична тканина",
+        "type": "concept",
+        "description": "Два компоненти: гемальний (клітини) і стромальний",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить чітке визначення",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 3,
+        "title": "Стимуляція та пригнічення гемопоезу",
+        "type": "process",
+        "description": "Фактори, гормони та умови, що впливають на кровотворення",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить перелік факторів",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Клітинні етапи диференціровки",
+        "type": "classification",
+        "description": "Шість класів клітин від стовбурових до зрілих",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить чітку класифікацію",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 5,
+        "title": "Гостра лейкемія - визначення",
+        "type": "concept",
+        "description": "Злоякісна пухлина кровотворної тканини з бластними клітинами",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить чітке визначення",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 6,
+        "title": "Етіологія гострих лейкозів",
+        "type": "classification",
+        "description": "Іонізуюча радіація, хімічні речовини, віруси, генетичні фактори",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить перелік причин",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 7,
+        "title": "Патогенез гострих лейкозів",
+        "type": "process",
+        "description": "Мутації, клональний розвиток, втрата здатності до диференціювання",
+        "explicitness": "explicit",
+        "evidence": "Текст описує механізм розвитку",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 8,
+        "title": "FAB класифікація гострої мієлобластної лейкемії",
+        "type": "classification",
+        "description": "М1-М7 варіанти залежно від ступеня диференціювання",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить повну класифікацію",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 9,
+        "title": "FAB класифікація гострої лімфобластної лейкемії",
+        "type": "classification",
+        "description": "L1-L3 варіанти залежно від розміру бластів",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить повну класифікацію",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 10,
+        "title": "Клінічна картина гострих лейкозів",
+        "type": "classification",
+        "description": "Шість синдромів: гіперпластичний, геморагічний, анемічний, інтоксикаційний, імунодефіцитний",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить повну класифікацію",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 11,
+        "title": "Лабораторні дані при гострих лейкозах",
+        "type": "classification",
+        "description": "Зміни в клінічному аналізі крові, біохімії, мієлограмі",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить повний перелік змін",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 12,
+        "title": "Діагностика гострих лейкозів",
+        "type": "process",
+        "description": "Цитохімічні, імунофенотипові, молекулярно-біологічні, цитогенетичні дослідження",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить перелік методів",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 13,
+        "title": "Лікування гострих лейкозів",
+        "type": "process",
+        "description": "Цитостатична терапія, трансплантація, лікування ускладнень",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить детальну схему лікування",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 14,
+        "title": "Прогноз при гострих лейкозах",
+        "type": "concept",
+        "description": "Прогностичні фактори та шанси на одужання",
+        "explicitness": "explicit",
+        "evidence": "Текст наводить прогностичні фактори",
+        "modality": "text",
+        "assessment_risk": "medium"
+      }
+    ],
+    "not_recommended": [
+      {
+        "task_type": "IMAGE_BASED",
+        "reason": "Матеріал не містить ілюстрацій або схем, які можна було б використати для візуальних завдань."
+      }
+    ],
+    "illustrations_detected": false,
+    "illustrations_note": null,
+    "warnings": [
+      "Матеріал дуже об'ємний, рекомендується розділити на кілька окремих завдань для кращого засвоєння.",
+      "Coverage calibration increased recommended text tasks to improve coverage (target ~22-27)."
+    ],
+    "material_volume": "large",
+    "target_language": "ru"
+  }
+}

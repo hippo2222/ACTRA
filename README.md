@@ -135,8 +135,46 @@ radioproject/
 | `ACTRA_FEEDBACK_SMTP_USE_TLS` | Использовать STARTTLS | `1` |
 | `ACTRA_FEEDBACK_SMTP_USE_SSL` | Использовать SMTP SSL (вместо STARTTLS) | `0` |
 | `ACTRA_FEEDBACK_SMTP_TIMEOUT_SEC` | Таймаут SMTP-запроса (сек) | `15` |
+| `ACTRA_UPDATE_CHECK_ENABLED` | Включить проверку обновлений | `1` |
+| `ACTRA_UPDATE_MANIFEST_URL` | URL JSON-манифеста обновлений (перекрывает `config.json`) | берётся из `config.json:update_manifest_url` |
+| `ACTRA_UPDATE_CHECK_INTERVAL_SEC` | TTL кэша проверки обновлений (сек) | `86400` |
+| `ACTRA_UPDATE_REQUEST_TIMEOUT_SEC` | Таймаут запроса манифеста (сек) | `3` |
 
 Примечание для Proton: для SMTP обычно используется Proton Mail Bridge (локальный SMTP host/port и bridge-учётные данные).
+
+### Манифест обновлений в config.json
+
+В `config.json` поддерживается ключ:
+
+```json
+{
+  "update_manifest_url": "data/system/update_manifest.json"
+}
+```
+
+Можно указать `http(s)://...`, `file://...` или путь к локальному JSON-файлу (относительный путь считается от директории `config.json`).
+
+### Автоканал через GitHub Releases
+
+В репозитории есть workflow `.github/workflows/release-manifest.yml`:
+
+- срабатывает на `release.published`;
+- читает данные релиза и публикует `latest.json` в ветку `gh-pages`.
+
+После включения GitHub Pages (Source: `Deploy from a branch`, Branch: `gh-pages`), можно использовать:
+
+```json
+{
+  "update_manifest_url": "https://<owner>.github.io/<repo>/latest.json"
+}
+```
+
+Опциональные repository variables для workflow:
+
+- `ACTRA_UPDATE_ASSET_NAME` — имя ассета релиза (по умолчанию `ACTRA-Setup.exe`);
+- `ACTRA_MIN_SUPPORTED_VERSION` — значение `min_supported_version` в манифесте.
+
+Workflow также можно запустить вручную (`workflow_dispatch`) для принудительного обновления `latest.json`.
 
 ### Проверка email-канала feedback
 

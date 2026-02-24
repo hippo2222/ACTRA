@@ -1,0 +1,103 @@
+{
+  "created_at": "2026-02-23T13:53:16.419369+00:00",
+  "materials": [
+    {
+      "file": "Nephr.pdf",
+      "path": "D:\\Ai Ai\\radioproject_git\\Nephr.pdf",
+      "ok": true,
+      "word_count": 1595,
+      "format": "pdf",
+      "stage": "done",
+      "target_language": "ru",
+      "units_count": 8,
+      "recommendation_types": 5,
+      "recommended_total": 18,
+      "recommended_by_type": {
+        "TEST": 7,
+        "CLICK_TEXT": 3,
+        "OPEN_ANSWER": 4,
+        "CLICK_WORDS": 2,
+        "SEQUENCE": 2
+      },
+      "illustrations_detected": false,
+      "analysis_warnings_count": 1,
+      "not_recommended_count": 1,
+      "generated_total": 18,
+      "generated_valid": 18,
+      "generated_warnings": 0,
+      "generated_errors": 0,
+      "generated_by_type": {
+        "click_text": 3,
+        "click_words": 2,
+        "open_answer": 4,
+        "sequence": 2,
+        "test": 7
+      },
+      "quality": {
+        "duplicate_groups": 0,
+        "duplicate_tasks": 0,
+        "expected_output_language": "ru",
+        "language_mismatch_warnings": 0,
+        "material_language": "ru",
+        "sequence_grounding_warnings": 0,
+        "total_tasks": 18
+      },
+      "subrequest_count_by_type": {
+        "TEST": 3,
+        "CLICK_TEXT": 1,
+        "OPEN_ANSWER": 2,
+        "CLICK_WORDS": 1,
+        "SEQUENCE": 1
+      }
+    },
+    {
+      "file": "VMleuko.docx",
+      "path": "D:\\Ai Ai\\radioproject_git\\VMleuko.docx",
+      "ok": true,
+      "word_count": 2289,
+      "format": "docx",
+      "stage": "done",
+      "target_language": "ru",
+      "units_count": 24,
+      "recommendation_types": 5,
+      "recommended_total": 32,
+      "recommended_by_type": {
+        "TEST": 15,
+        "CLICK_TEXT": 7,
+        "OPEN_ANSWER": 5,
+        "CLICK_WORDS": 4,
+        "SEQUENCE": 1
+      },
+      "illustrations_detected": false,
+      "analysis_warnings_count": 3,
+      "not_recommended_count": 0,
+      "generated_total": 32,
+      "generated_valid": 27,
+      "generated_warnings": 0,
+      "generated_errors": 5,
+      "generated_by_type": {
+        "click_text": 7,
+        "click_words": 4,
+        "open_answer": 5,
+        "sequence": 1,
+        "test": 15
+      },
+      "quality": {
+        "duplicate_groups": 0,
+        "duplicate_tasks": 0,
+        "expected_output_language": "ru",
+        "language_mismatch_warnings": 0,
+        "material_language": "ru",
+        "sequence_grounding_warnings": 0,
+        "total_tasks": 32
+      },
+      "subrequest_count_by_type": {
+        "TEST": 3,
+        "CLICK_TEXT": 4,
+        "OPEN_ANSWER": 1,
+        "CLICK_WORDS": 5,
+        "SEQUENCE": 1
+      }
+    }
+  ]
+}

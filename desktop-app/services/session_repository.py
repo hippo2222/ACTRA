@@ -17,11 +17,6 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
-try:
-    import numpy as np  # type: ignore
-except Exception:  # pragma: no cover
-    np = None
-
 from task_system.core.models.complex_models import (
     ComplexSession,
     COMPLEX_SESSION_VERSION
@@ -71,10 +66,10 @@ class SessionRepository:
             except Exception:
                 return str(obj)
 
-        if np is not None:
+        obj_module = type(obj).__module__
+        if obj_module and obj_module.split(".", 1)[0] == "numpy" and hasattr(obj, "item"):
             try:
-                if isinstance(obj, np.generic):
-                    return obj.item()
+                return obj.item()
             except Exception:
                 pass
 

@@ -402,14 +402,7 @@ class SequenceEditor extends BaseEditor {
     setupEventListeners() {
         const backBtn = document.querySelector('#back-to-dashboard');
         if (backBtn) {
-            backBtn.onclick = () => {
-                if (this.hasUnsavedChanges) {
-                    if (!confirm('Есть несохранённые изменения. Выйти без сохранения?')) {
-                        return;
-                    }
-                }
-                window.navigateWithTransition('/ui/editor');
-            };
+            backBtn.onclick = () => this.goBack();
         }
 
         const clearAllBtn = document.querySelector('#clear-all-btn');

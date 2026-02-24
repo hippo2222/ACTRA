@@ -1,0 +1,57 @@
+{
+  "run_id": "ai_run_20260223T140556Z_12bb6d23e6",
+  "created_at": "2026-02-23T14:05:56Z",
+  "provider_model": "arcee",
+  "material_stats": {
+    "word_count": 50,
+    "char_count": 300,
+    "language": "unknown"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "unknown",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 3,
+        "educational_unit_ids": []
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 0,
+    "total_valid": 0,
+    "total_warnings": 0,
+    "total_errors": 1,
+    "by_type": {
+      "test": 0
+    },
+    "quality": {
+      "material_language": "unknown",
+      "expected_output_language": "unknown",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 0
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "error",
+      "provider_used": null,
+      "provider_chain_attempts": [],
+      "educational_unit_ids": [],
+      "generation_time_ms": 0,
+      "parsing_errors": [
+        "Ошибка генерации TEST (part 1/1): cannot access free variable '_count_test_repair_issue_tasks' where it is not associated with a value in enclosing scope"
+      ],
+      "tasks": []
+    }
+  ]
+}

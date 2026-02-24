@@ -588,7 +588,6 @@ const StatisticsApp = {
         document.querySelectorAll('.period-btn').forEach(btn => {
             const isActive = parseInt(btn.dataset.period) === days;
             btn.classList.toggle('active', isActive);
-            btn.classList.toggle('active', isActive);
 
             // Active State
             btn.classList.toggle('bg-surface-1', isActive);
@@ -648,8 +647,25 @@ const StatisticsApp = {
     renderMetrics() {
         const stats = this.state.stats || {};
         const hasData = this.state.hasData;
+        const hasStatsData = !!(
+            (stats.total_tasks_attempted || 0) > 0 ||
+            (stats.total_time_spent || 0) > 0
+        );
 
         console.log('[Statistics] renderMetrics - stats:', stats, 'hasData:', hasData);
+
+        const toggleMetricEmpty = (valueId, emptyId, hasMetricData) => {
+            const valueEl = document.getElementById(valueId);
+            const emptyEl = document.getElementById(emptyId);
+            if (!valueEl || !emptyEl) return;
+            if (hasMetricData) {
+                valueEl.classList.remove('hidden');
+                emptyEl.classList.add('hidden');
+            } else {
+                valueEl.classList.add('hidden');
+                emptyEl.classList.remove('hidden');
+            }
+        };
 
         // Always show actual values from API (even if 0)
         const tasksMastered = stats.tasks_mastered ?? 0;
@@ -670,7 +686,18 @@ const StatisticsApp = {
         const bestEl = document.getElementById('streak-best');
         if (bestEl) bestEl.textContent = streakBest;
 
-        this.updateMetricStyles(hasData);
+        const hasMetricData = hasStatsData;
+        toggleMetricEmpty('metric-tasks-value', 'metric-tasks-empty', hasMetricData);
+        toggleMetricEmpty('metric-time-value', 'metric-time-empty', hasMetricData);
+        toggleMetricEmpty('metric-streak-value', 'metric-streak-empty', hasMetricData);
+
+        ['metric-tasks', 'metric-time', 'metric-streak'].forEach((id) => {
+            const card = document.getElementById(id);
+            if (!card) return;
+            card.classList.toggle('metric-card--empty', !hasMetricData);
+        });
+
+        this.updateMetricStyles(hasMetricData);
     },
 
     updateMetricStyles(hasData) {
@@ -695,13 +722,14 @@ const StatisticsApp = {
     renderChart() {
         const container = document.getElementById('chart-content');
         const dynamics = this.state.dynamics || [];
-        const hasData = dynamics.length > 0;
+        const hasData = dynamics.some(day => this.getMetricValue(day) > 0);
 
         this.updateChartLayoutState(hasData);
 
         if (!container || !hasData) {
             this.hideChartTooltip();
             this.updateChartInsight(null);
+            if (container) container.innerHTML = '';
             return;
         }
 
@@ -1291,40 +1319,54 @@ const StatisticsApp = {
 
         const names = this.state.complexNames || {};
 
-        // Sort by number of sessions and take top 2
-        const sortedComplexes = complexIds
-            .map(id => ({
-                id,
-                name: names[id] || id,
-                ...complexStats[id].aggregated,
-                sessions: complexStats[id].recent_sessions?.length || 0
-            }))
-            .sort((a, b) => b.attempts - a.attempts)
+        // Sort by most recent session end_time, take top 2
+        const recentComplexes = complexIds
+            .map(id => {
+                const sessions = complexStats[id].recent_sessions || [];
+                const lastSession = sessions[0] || null;
+                const lastEndTime = lastSession?.end_time || null;
+                const aggregated = complexStats[id].aggregated || {};
+                return {
+                    id,
+                    name: names[id] || `Комплекс ${id.slice(0, 8)}`,
+                    lastEndTime,
+                    attempts: aggregated.attempts || 0,
+                    successRate: aggregated.success_rate || 0,
+                    sessionCount: sessions.length
+                };
+            })
+            .filter(c => c.lastEndTime !== null)
+            .sort((a, b) => (b.lastEndTime > a.lastEndTime ? 1 : -1))
             .slice(0, 2);
 
-        container.innerHTML = sortedComplexes.map((complex, idx) => {
-            const attempts = complex.attempts || 0;
-            const wins = complex.wins || 0;
-            const errors = attempts - wins;
-            const isTop = idx === 0;
-            const tooltip = `Попыток: ${attempts} · Ошибок: ${errors}`;
+        if (recentComplexes.length === 0) {
+            container.innerHTML = `
+                <div class="col-span-2 bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col items-center justify-center text-center hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="Карточки комплексов появятся после первых сессий">
+                    <span class="material-symbols-outlined text-text-muted text-2xl mb-2">folder_open</span>
+                    <p class="text-xs text-text-muted">Нет данных о комплексах</p>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = recentComplexes.map((complex) => {
+            const rate = Math.round(complex.successRate * 100);
+            const dateLabel = this.formatSessionDate(complex.lastEndTime);
+            const tooltip = `Попыток: ${complex.attempts} · Успешность: ${rate}%`;
 
             return `
                 <div class="bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="${tooltip}">
                     <div>
-                        <div class="flex justify-between items-center mb-1">
-                            <h4 class="font-bold text-sm text-text-main truncate" title="${complex.name}">${complex.name}</h4>
-                            ${isTop ? '<span class="text-[10px] font-bold text-primary-fg bg-primary px-1.5 rounded">TOP</span>' : ''}
-                        </div>
-                        <p class="text-xs text-text-secondary">${attempts} попыток</p>
+                        <h4 class="font-bold text-sm text-text-main truncate leading-tight" title="${complex.name}">${complex.name}</h4>
+                        <p class="text-[10px] text-text-muted mt-0.5">${dateLabel}</p>
                     </div>
                     <div>
                         <div class="flex justify-between text-[10px] font-bold mb-1 text-text-main">
-                            <span>Ошибки</span>
-                            <span class="${errors === 0 ? 'text-success' : errors <= 5 ? 'text-warning-dark' : 'text-error-dark'}">${errors}</span>
+                            <span>Успешность</span>
+                            <span class="${rate >= 80 ? 'text-success' : rate >= 50 ? 'text-warning-dark' : 'text-error-dark'}">${rate}%</span>
                         </div>
                         <div class="h-1.5 w-full bg-bg-secondary rounded-full overflow-hidden">
-                            <div class="h-full ${errors === 0 ? 'bg-success' : errors <= 5 ? 'bg-warning' : 'bg-error'} rounded-full transition-all duration-500" style="width: ${attempts > 0 ? Math.round((errors / attempts) * 100) : 0}%"></div>
+                            <div class="h-full ${rate >= 80 ? 'bg-success' : rate >= 50 ? 'bg-warning' : 'bg-error'} rounded-full transition-all duration-500" style="width: ${rate}%"></div>
                         </div>
                     </div>
                 </div>

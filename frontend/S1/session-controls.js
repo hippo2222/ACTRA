@@ -574,9 +574,22 @@
             }
 
             showStatus("");
+
+            // Update streak BEFORE rendering result so the badge shows the correct value
+            const isSuccess = !!response.result && response.result.success === true;
+            if (typeof SuccessEffects !== 'undefined') {
+                if (isSuccess) { SuccessEffects.recordSuccess(); }
+                else { SuccessEffects.recordFailure(); }
+            }
+
             showEvaluationResult(response.result);
 
             setCanGoNext(true);
+
+            // Play success/failure game effects (confetti, glow, shake)
+            if (typeof SuccessEffects !== 'undefined') {
+                SuccessEffects.playResultEffects(isSuccess);
+            }
 
             // Apply feedback
             // Note: Simplified logic to call applyCheckFeedback on various UIs

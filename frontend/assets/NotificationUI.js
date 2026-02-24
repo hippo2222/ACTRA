@@ -14,7 +14,7 @@ window.NotificationUI = (function () {
         if (!c) {
             c = document.createElement('div');
             c.id = 'notify-toast-container';
-            c.className = 'fixed bottom-6 right-6 z-[200] flex flex-col gap-3 pointer-events-none';
+            c.className = 'fixed inset-0 z-[200] flex flex-col items-end justify-end gap-3 p-6 pointer-events-none overflow-hidden';
             document.body.appendChild(c);
         }
         return c;
@@ -59,7 +59,7 @@ window.NotificationUI = (function () {
         const el = document.createElement('div');
         el.className =
             `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg ` +
-            `${colors.bg} transform translate-x-[120%] transition-transform duration-300 max-w-sm`;
+            `${colors.bg} w-full max-w-sm transform translate-x-[120%] transition-transform duration-300`;
         el.innerHTML = `
             <span class="material-symbols-outlined text-[20px] ${colors.icon} shrink-0">${icon}</span>
             <span class="text-sm font-medium ${colors.text} flex-1">${_esc(message)}</span>
@@ -75,7 +75,10 @@ window.NotificationUI = (function () {
             el.classList.add('translate-x-0');
         });
 
+        let dismissed = false;
         const dismiss = () => {
+            if (dismissed) return;
+            dismissed = true;
             el.classList.remove('translate-x-0');
             el.classList.add('translate-x-[120%]');
             setTimeout(() => el.remove(), 300);

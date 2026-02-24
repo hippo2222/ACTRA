@@ -1,0 +1,190 @@
+{
+  "ai_run_id": "bench_Nephr_20260223T141826Z",
+  "educational_units": [
+    {
+      "assessment_risk": "medium",
+      "description": "Клинико-лабораторный симптомокомплекс с протеинурией, гипопротеинемией, гиперлипидемией и отеками",
+      "evidence": "Определение в начале главы",
+      "explicitness": "explicit",
+      "id": 1,
+      "modality": "text",
+      "title": "Нефротический синдром",
+      "type": "concept"
+    },
+    {
+      "assessment_risk": "low",
+      "description": "Первичные (гломерулонефрит, амилоидоз и др.) и вторичные (инфекционные и неинфекционные) заболевания почек",
+      "evidence": "Раздел \"Этиология\" с двумя группами заболеваний",
+      "explicitness": "explicit",
+      "id": 2,
+      "modality": "text",
+      "title": "Этиология НС",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Иммунологическая концепция (осаждение иммунных комплексов) и метаболическая концепция (изменение заряда клубочковой мембраны)",
+      "evidence": "Раздел \"Патогенез\" с описанием двух концепций",
+      "explicitness": "explicit",
+      "id": 3,
+      "modality": "text",
+      "title": "Патогенез НС",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Отеки, протеинурия, гипопротеинемия, гиперлипидемия, липидурия, нарушение фосфорно-кальциевого обмена",
+      "evidence": "Раздел \"Клиника и лабораторная диагностика\"",
+      "explicitness": "explicit",
+      "id": 4,
+      "modality": "text",
+      "title": "Клинические проявления НС",
+      "type": "concept"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Анализ мочи (протеинурия, липидурия), общий анализ крови (гипопротеинемия, диспротеинемия), функциональные пробы почек",
+      "evidence": "Подраздел \"Основным методом диагностики НС являются общие и специализированные анализы мочи\"",
+      "explicitness": "explicit",
+      "id": 5,
+      "modality": "text",
+      "title": "Лабораторная диагностика НС",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Отек мозга, кровоизлияния, нефротический шок, тромбозы, инфекции",
+      "evidence": "Раздел \"НС редко протекает без осложнений\"",
+      "explicitness": "explicit",
+      "id": 6,
+      "modality": "text",
+      "title": "Осложнения НС",
+      "type": "concept"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Госпитализация, режим, диета, медикаментозная терапия (кортикостероиды, цитостатики, антикоагулянты, антиагреганты, симптоматические средства)",
+      "evidence": "Раздел \"Принципы лечения\" и \"Медикаментозное лечение\"",
+      "explicitness": "explicit",
+      "id": 7,
+      "modality": "text",
+      "title": "Принципы лечения НС",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Кортикостероиды, цитостатики, антикоагулянты, антиагреганты, противовоспалительные средства, мембранотропные средства, диуретики",
+      "evidence": "Подраздел \"Медикаментозное лечение\" с перечислением групп препаратов",
+      "explicitness": "explicit",
+      "id": 8,
+      "modality": "text",
+      "title": "Медикаментозная терапия НС",
+      "type": "classification"
+    }
+  ],
+  "effective_output_language": "ru",
+  "human_summary": "Глава посвящена нефротическому синдрому (НС) — клинико-лабораторному симптомокомплексу с протеинурией, гипопротеинемией, гиперлипидемией и отеками. Рассмотрены этиология (первичные и вторичные заболевания почек), патогенез (иммунологическая и метаболическая концепции), клинические проявления, лабораторная диагностика, осложнения и принципы лечения, включая медикаментозную терапию.",
+  "illustrations_detected": false,
+  "illustrations_note": null,
+  "material_language": "ru",
+  "material_volume": "large",
+  "not_recommended": [],
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "provider_chain_attempts": [
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "error"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "stage": "analysis_initial",
+      "status": "success"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "stage": "analysis_parse_escalation",
+      "status": "success"
+    }
+  ],
+  "provider_model": "arcee-ai/trinity-large-preview:free",
+  "provider_used": "openrouter:3",
+  "recommendations": [
+    {
+      "count": 6,
+      "covers_units": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "priority": "high",
+      "rationale": "Тест позволяет эффективно проверить знание определений, классификаций и клинических проявлений НС",
+      "task_type": "TEST"
+    },
+    {
+      "count": 3,
+      "covers_units": [
+        2,
+        4
+      ],
+      "priority": "medium",
+      "rationale": "Выбор верных/неверных утверждений помогает выявить распространенные заблуждения об этиологии и клинике",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "count": 4,
+      "covers_units": [
+        3,
+        5,
+        7
+      ],
+      "priority": "high",
+      "rationale": "Свободный ответ подходит для объяснения патогенеза, диагностических методов и принципов лечения",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "count": 3,
+      "covers_units": [
+        5,
+        8
+      ],
+      "priority": "medium",
+      "rationale": "Поиск ошибок в описании лабораторных показателей и дозировках препаратов",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "count": 2,
+      "covers_units": [
+        7,
+        8
+      ],
+      "priority": "medium",
+      "rationale": "Восстановление последовательности этапов лечения и порядка применения препаратов",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "target_language": "ru",
+  "warnings": [
+    "Heuristic adjustment: CLICK_WORDS was removed from not_recommended because this material supports factual error-detection tasks.",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22)."
+  ]
+}

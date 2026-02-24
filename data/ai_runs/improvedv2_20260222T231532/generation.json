@@ -1,0 +1,296 @@
+{
+  "run_id": "improvedv2_20260222T231532",
+  "created_at": "2026-02-22T23:23:53Z",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1222,
+    "char_count": 8215,
+    "language": "en"
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 7,
+        "educational_unit_ids": [
+          1,
+          2,
+          10,
+          8,
+          4
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 3,
+        "educational_unit_ids": [
+          6
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 2,
+        "educational_unit_ids": [
+          7
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 4,
+        "educational_unit_ids": [
+          1,
+          2,
+          8,
+          9,
+          10
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 2,
+        "educational_unit_ids": [
+          3,
+          5,
+          9
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 18,
+    "total_valid": 15,
+    "total_warnings": 3,
+    "total_errors": 0,
+    "by_type": {
+      "test": 7,
+      "click_text": 3,
+      "open_answer": 2,
+      "click_words": 4,
+      "sequence": 2
+    },
+    "quality": {
+      "material_language": "en",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 18
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        1,
+        2,
+        10,
+        8,
+        4
+      ],
+      "generation_time_ms": 105695,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - Breast Density Categories",
+          "type": "test",
+          "status": "valid",
+          "hash": "ba2098a91262f29befd5e19d585d602746e3de7b9edc67ac6f8efa26e4202955",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Breast Density Reporting Requirements",
+          "type": "test",
+          "status": "valid",
+          "hash": "1b179857ee744ae31516816c9d4af1c8b55b24238345a854ba07c53513cdbbf6",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - FDA Update on Breast Density Reportin...",
+          "type": "test",
+          "status": "valid",
+          "hash": "8290efec43d675b5804d022da94510a2bc52e51f090c91b979b5d1121ea2b358",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Breast Density and Cancer Risk",
+          "type": "test",
+          "status": "warning",
+          "hash": "cc45a783ccc34fadcb58147d436ceb24200063a4028f60708727f45d34858e0c",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Вопрос 1: несколько правильных ответов (multiple choice)",
+              "field": "multiple_correct"
+            }
+          ]
+        },
+        {
+          "name": "Задание - BI-RADS Density Classification Evolution",
+          "type": "test",
+          "status": "valid",
+          "hash": "00cee1dcf56a16f63f18764ca5686151d9e68a999ed6921e929b6fc88f335886",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Breast Density Categories",
+          "type": "test",
+          "status": "valid",
+          "hash": "82900010b6e5b2262e7633cc6030b1b0c2ba6df248d62c7852e5c6ea154264bf",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Breast Density and Technology",
+          "type": "test",
+          "status": "warning",
+          "hash": "499d4d135b762cdd9e2b82d359096de3f333d3d4ad87ce88d27ba3a3dccaa0f8",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Вопрос 1: несколько правильных ответов (multiple choice)",
+              "field": "multiple_correct"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        6
+      ],
+      "generation_time_ms": 120039,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Breast Density Categories",
+          "type": "click",
+          "status": "valid",
+          "hash": "71805fae5540f97021556da6d07c02cf206a4890c899a8bcd0b3bbd494b3444d",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Factors Affecting Breast Density",
+          "type": "click",
+          "status": "valid",
+          "hash": "81e0642cd03238174dfe2d06d06ef3c7f3a97a353f5fed6b3dcfafe789d39e9e",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Significance of Breast Density",
+          "type": "click",
+          "status": "valid",
+          "hash": "dec789042e6beea3c82b9deed78f886bbbfc8592199bce984093eac403f609f5",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        7
+      ],
+      "generation_time_ms": 63799,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Открытый ответ - How does breast density affect the ac...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "b5ceafd1296390b21251b9211861686e05ce569564ddd59c9944faaffa8c3333",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Describe how technological advancemen...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "fd364e5146898dc0a0551a92e589d0878569f24c8b11e50ad358551da6122d53",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        1,
+        2,
+        8,
+        9,
+        10
+      ],
+      "generation_time_ms": 100883,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Identify incorrect descriptions of br...",
+          "type": "click",
+          "status": "warning",
+          "hash": "3975585e1fa92a01863b74693c2dbaf54f6f4e4e615e791a21a03dc89d2cc7f9",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Identify incorrect FDA reporting requ...",
+          "type": "click",
+          "status": "valid",
+          "hash": "d309df2f27b27be7cf6bd9ca78dd15ad1a11becbf1c77323949e404a7a450bb6",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Identify incorrect breast cancer risk...",
+          "type": "click",
+          "status": "valid",
+          "hash": "c0757651a4ea0f7909b1074fb18d52b0b84743f187fabde74ddc5442d29680ba",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Identify incorrect information about ...",
+          "type": "click",
+          "status": "valid",
+          "hash": "fa561e843461e90746b2250a72e63ff45a64129252bb46b65de976a9da8f83bb",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        3,
+        5,
+        9
+      ],
+      "generation_time_ms": 109982,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Последовательность - Order the methods used to assess brea...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "e9530a7103dc1810ffc5e0539e1b5db94ca3d2d6324180795c8a9f2c7ed0b7a2",
+          "validation_issues": []
+        },
+        {
+          "name": "Последовательность - Order the breast density categories f...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "7db1c08e5e02abac673c0bfb61e9e2b16de106ef0ab17df984602d8703a21518",
+          "validation_issues": []
+        }
+      ]
+    }
+  ]
+}

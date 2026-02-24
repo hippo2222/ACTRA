@@ -1,0 +1,919 @@
+{
+  "ai_run_id": "improvedv2_20260222T231532",
+  "ok": true,
+  "parsing_errors": [],
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        10,
+        8,
+        4
+      ],
+      "generation_time_ms": 105695,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              10,
+              8,
+              4
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density Categories",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "The breasts are heterogeneously dense, which may obscure small masses"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "The breasts are almost entirely fatty"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "There are scattered areas of fibroglandular density"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "The breasts are extremely dense, which lowers the sensitivity of mammography"
+                  }
+                ],
+                "id": 0,
+                "text": "According to BI-RADS classification, which category describes breasts that are heterogeneously dense and may obscure small masses?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 0,
+          "name": "Задание - Breast Density Categories",
+          "prompt": "Breast Density Categories",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              10,
+              8,
+              4
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density Reporting Requirements",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Reporting breast density is required by FDA legislation"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Breast density reporting is optional but recommended"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Breast density must be reported only to referring physicians, not patients"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Breast density reporting is required only for women under 50"
+                  }
+                ],
+                "id": 0,
+                "text": "What is the requirement for breast density reporting according to FDA legislation as of September 2024?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 1,
+          "name": "Задание - Breast Density Reporting Requirements",
+          "prompt": "Breast Density Reporting Requirements",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              10,
+              8,
+              4
+            ]
+          },
+          "data": {
+            "prompt": "FDA Update on Breast Density Reporting (July 2025)",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "An alternative standard allowing singular phrasing for breast density in unilateral mammogram reports"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "A requirement to use automated density measurement software for all reports"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "A new classification system for breast density"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "A mandate to report breast density only in percentage terms"
+                  }
+                ],
+                "id": 0,
+                "text": "What did the FDA approve in July 2025 regarding breast density reporting?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 2,
+          "name": "Задание - FDA Update on Breast Density Reportin...",
+          "prompt": "FDA Update on Breast Density Reporting (July 2025)",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              10,
+              8,
+              4
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density and Cancer Risk",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Heterogeneously dense breasts have an odds ratio of 1.4 for breast cancer"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Extremely dense breasts have an odds ratio of 1.6 for breast cancer"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Almost entirely fatty breasts have an odds ratio of 1.2 for breast cancer"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Scattered areas of fibroglandular density have an odds ratio of 1.8 for breast cancer"
+                  }
+                ],
+                "id": 0,
+                "text": "How does breast density affect breast cancer risk compared to breasts with scattered fibroglandular tissue?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 3,
+          "name": "Задание - Breast Density and Cancer Risk",
+          "prompt": "Breast Density and Cancer Risk",
+          "status": "warning",
+          "type": "test",
+          "validation_issues": [
+            {
+              "field": "multiple_correct",
+              "message": "Вопрос 1: несколько правильных ответов (multiple choice)",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              10,
+              8,
+              4
+            ]
+          },
+          "data": {
+            "prompt": "BI-RADS Density Classification Evolution",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "From an evaluation of the percentage of dense tissue to an assessment based on the likelihood that overlying tissue may obscure a cancer"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "From visual inspection to automated measurement"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "From a four-category system to a five-category system"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "From annual reporting to biennial reporting"
+                  }
+                ],
+                "id": 0,
+                "text": "With the BI-RADS 5th Edition, the classification of breast density changed from what to what?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 4,
+          "name": "Задание - BI-RADS Density Classification Evolution",
+          "prompt": "BI-RADS Density Classification Evolution",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              10,
+              8,
+              4
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density Categories",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "The breasts are extremely dense, which lowers the sensitivity of mammography"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "The breasts are almost entirely fatty"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "There are scattered areas of fibroglandular density"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "The breasts are heterogeneously dense, which may obscure small masses"
+                  }
+                ],
+                "id": 0,
+                "text": "Which BI-RADS breast density category is associated with lower mammographic sensitivity?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Breast Density Categories",
+          "prompt": "Breast Density Categories",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              10,
+              8,
+              4
+            ]
+          },
+          "data": {
+            "prompt": "Breast Density and Technology",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Digital breast tomosynthesis (DBT)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Digital mammography"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Film-screen mammography"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Ultrasound imaging"
+                  }
+                ],
+                "id": 0,
+                "text": "What technological advancement has helped reduce the masking effect of dense breast tissue in mammography?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 6,
+          "name": "Задание - Breast Density and Technology",
+          "prompt": "Breast Density and Technology",
+          "status": "warning",
+          "type": "test",
+          "validation_issues": [
+            {
+              "field": "multiple_correct",
+              "message": "Вопрос 1: несколько правильных ответов (multiple choice)",
+              "severity": "warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        6
+      ],
+      "generation_time_ms": 120039,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              6
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Breast density is defined as the relative proportion of breast parenchyma to fat within the breast."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "There are four categories of breast density: almost entirely fatty, scattered areas of fibroglandular density, heterogeneously dense, and extremely dense."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "The breasts being heterogeneously dense may obscure small masses."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "The breasts being extremely dense lowers the sensitivity of mammography."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Breast density is determined by the absolute amount of breast tissue rather than the proportion of parenchyma to fat."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "The BI-RADS classification of breast density is based on the percentage of dense tissue rather than the likelihood that overlying tissue may obscure a cancer."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "People with heterogeneously dense breasts are considered to have non-dense breasts."
+              }
+            ],
+            "prompt": "Breast Density Categories",
+            "subtype": "error_detection"
+          },
+          "index": 7,
+          "name": "Клик - Breast Density Categories",
+          "prompt": "Breast Density Categories",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              6
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Breast density can be variable from year to year."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Weight gain can cause breast density to change over time."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Weight loss can cause breast density to change over time."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Estrogen replacement therapy can affect breast density."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Menopause can cause breast density to change over time."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Breast density remains constant throughout a person's lifetime once adulthood is reached."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Dietary habits have been shown to have no impact on breast density variability."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Physical exercise is the primary factor affecting breast density changes over time."
+              }
+            ],
+            "prompt": "Factors Affecting Breast Density",
+            "subtype": "error_detection"
+          },
+          "index": 8,
+          "name": "Клик - Factors Affecting Breast Density",
+          "prompt": "Factors Affecting Breast Density",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              6
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Breast density affects mammographic accuracy due to the masking effect of dense fibroglandular tissue."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "The sensitivity of mammography increases significantly from fatty breasts to extremely dense breasts."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Digital mammography has improved sensitivity in women with dense breasts compared to film mammography."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "DBT (Digital Breast Tomosynthesis) reduces the masking effect of dense breast tissue."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Having dense breasts confers an increased inherent risk for developing breast cancer."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Compared to women with scattered fibroglandular tissue, women with extremely dense breasts have a higher odds ratio for developing breast cancer."
+              }
+            ],
+            "prompt": "Significance of Breast Density",
+            "subtype": "error_detection"
+          },
+          "index": 9,
+          "name": "Клик - Significance of Breast Density",
+          "prompt": "Significance of Breast Density",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        7
+      ],
+      "generation_time_ms": 63799,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "masking effect",
+              "heterogeneously dense",
+              "extremely dense",
+              "sensitivity",
+              "mammographic accuracy"
+            ],
+            "question": "How does breast density affect the accuracy of mammography, and what are the two main categories of breast density that significantly impact mammographic accuracy?",
+            "reference_answer": "Breast density affects mammographic accuracy through the masking effect of dense fibroglandular tissue, which can obscure small masses and cancers. The two main categories that significantly impact accuracy are heterogeneously dense breasts (category C) and extremely dense breasts (category D), with extremely dense breasts having the most significant impact as they lower the sensitivity of mammography."
+          },
+          "index": 10,
+          "name": "Открытый ответ - How does breast density affect the ac...",
+          "prompt": "How does breast density affect the accuracy of mammography, and what are the two main categories of breast density that significantly impact mammographic accuracy?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "digital mammography",
+              "DBT",
+              "sensitivity",
+              "masking effect",
+              "cancer detection rate"
+            ],
+            "question": "Describe how technological advancements have improved mammographic accuracy in women with dense breasts.",
+            "reference_answer": "Technological advancements have improved mammographic accuracy in women with dense breasts through two major innovations. First, digital mammography increased sensitivity from 55% to 70% compared to film-screen mammography. Second, Digital Breast Tomosynthesis (DBT) allows radiologists to scroll through images slice by slice, further reducing the masking effect of dense tissue, which increased the cancer detection rate from 4.5 to 5.8 per 1000 women screened."
+          },
+          "index": 11,
+          "name": "Открытый ответ - Describe how technological advancemen...",
+          "prompt": "Describe how technological advancements have improved mammographic accuracy in women with dense breasts.",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        8,
+        9,
+        10
+      ],
+      "generation_time_ms": 100883,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              8,
+              9,
+              10
+            ]
+          },
+          "data": {
+            "error_indices": [
+              13,
+              14,
+              22,
+              23,
+              28,
+              40
+            ],
+            "mode": "word_errors",
+            "prompt": "Identify incorrect descriptions of breast density categories",
+            "subtype": "error_detection",
+            "text": "text: The four BI-RADS categories of breast density include: (A) The breasts are almost entirely fibroglandular, (B) There are scattered areas of fatty tissue, (C) The breasts are homogeneously dense, which may obscure small masses, and (D) The breasts are moderately dense, which lowers the sensitivity of mammography."
+          },
+          "index": 12,
+          "name": "Клик - Identify incorrect descriptions of br...",
+          "prompt": "Identify incorrect descriptions of breast density categories",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              8,
+              9,
+              10
+            ]
+          },
+          "data": {
+            "error_indices": [
+              3,
+              16,
+              20,
+              30
+            ],
+            "mode": "word_errors",
+            "prompt": "Identify incorrect FDA reporting requirements",
+            "subtype": "error_detection",
+            "text": "text: As of August 2024, the FDA requires that breast density be reported to both the referring surgeon and the insurance company. The language included in the report must follow state-specific guidance rather than federal guidance."
+          },
+          "index": 13,
+          "name": "Клик - Identify incorrect FDA reporting requ...",
+          "prompt": "Identify incorrect FDA reporting requirements",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              8,
+              9,
+              10
+            ]
+          },
+          "data": {
+            "error_indices": [
+              15,
+              20,
+              25,
+              32,
+              36
+            ],
+            "mode": "word_errors",
+            "prompt": "Identify incorrect breast cancer risk statistics",
+            "subtype": "error_detection",
+            "text": "text: Compared to women with scattered fibroglandular tissue, the odds ratio of breast cancer is 1.6 for almost entirely fatty, 0.6 for heterogeneously dense, and 1.4 for extremely dense breasts. People with almost entirely fatty or scattered areas of fibroglandular density breasts are considered to have dense breasts."
+          },
+          "index": 14,
+          "name": "Клик - Identify incorrect breast cancer risk...",
+          "prompt": "Identify incorrect breast cancer risk statistics",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              8,
+              9,
+              10
+            ]
+          },
+          "data": {
+            "error_indices": [
+              2,
+              28,
+              41
+            ],
+            "mode": "word_errors",
+            "prompt": "Identify incorrect information about the July 2025 FDA update",
+            "subtype": "error_detection",
+            "text": "text: In June 2025, the FDA approved an alternative standard that would allow interpreting physicians to provide an overall assessment of breast density that is phrased in the plural phrasing. The singular phrasing is intended to be used in reports of bilateral mammograms rather than unilateral mammograms."
+          },
+          "index": 15,
+          "name": "Клик - Identify incorrect information about ...",
+          "prompt": "Identify incorrect information about the July 2025 FDA update",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        3,
+        5,
+        9
+      ],
+      "generation_time_ms": 109982,
+      "parsing_errors": [],
+      "provider_used": "openrouter",
+      "status": "success",
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              9
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "Visual inspection of breast parenchyma on craniocaudal and mediolateral views",
+              "element_2": "Film-screen mammography assessment",
+              "element_3": "Digital mammography assessment",
+              "element_4": "Digital breast tomosynthesis (DBT) assessment",
+              "element_5": "FDA-approved automated density measurement software"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ],
+              "5": [
+                "element_5"
+              ]
+            },
+            "prompt": "Order the methods used to assess breast density based on their historical development"
+          },
+          "index": 16,
+          "name": "Последовательность - Order the methods used to assess brea...",
+          "prompt": "Order the methods used to assess breast density based on their historical development",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              9
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "The breasts are almost entirely fatty",
+              "element_2": "There are scattered areas of fibroglandular density",
+              "element_3": "The breasts are heterogeneously dense, which may obscure small masses",
+              "element_4": "The breasts are extremely dense, which lowers the sensitivity of mammography"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ]
+            },
+            "prompt": "Order the breast density categories from least dense to most dense"
+          },
+          "index": 17,
+          "name": "Последовательность - Order the breast density categories f...",
+          "prompt": "Order the breast density categories from least dense to most dense",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 3,
+      "click_words": 4,
+      "open_answer": 2,
+      "sequence": 2,
+      "test": 7
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "material_language": "en",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 18
+    },
+    "total_errors": 0,
+    "total_generated": 18,
+    "total_valid": 15,
+    "total_warnings": 3
+  }
+}
