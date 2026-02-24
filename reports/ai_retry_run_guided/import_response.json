@@ -1,0 +1,20 @@
+{
+  "errors": [],
+  "idempotency_key": "guided-import-1771800573",
+  "imported": 12,
+  "ok": true,
+  "task_ids": [
+    "task_e4c5e9ce112b",
+    "task_e7e4eaf84e6f",
+    "task_9ff1a2eabbb4",
+    "task_5b49b902bbff",
+    "task_6ee8629f3e37",
+    "task_be7f3dba6092",
+    "task_e1c8211f39fe",
+    "task_f6e7511cfb8c",
+    "task_f88a497cb7e8",
+    "task_41d12adbb12f",
+    "task_f3e8d94f671a",
+    "task_2cbdc169b446"
+  ]
+}

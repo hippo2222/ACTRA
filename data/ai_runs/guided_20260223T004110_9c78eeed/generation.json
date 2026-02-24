@@ -1,0 +1,250 @@
+{
+  "run_id": "guided_20260223T004110_9c78eeed",
+  "created_at": "2026-02-22T22:49:33Z",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1222,
+    "char_count": 8215,
+    "language": "en"
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 4,
+        "educational_unit_ids": [
+          101,
+          102,
+          103,
+          104
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 3,
+        "educational_unit_ids": [
+          201,
+          202,
+          203,
+          204
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 2,
+        "educational_unit_ids": [
+          301,
+          302
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 2,
+        "educational_unit_ids": [
+          401,
+          402
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "educational_unit_ids": [
+          501
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 12,
+    "total_valid": 9,
+    "total_warnings": 3,
+    "total_errors": 0,
+    "by_type": {
+      "test": 4,
+      "click_text": 3,
+      "click_words": 2,
+      "open_answer": 2,
+      "sequence": 1
+    },
+    "quality": {
+      "material_language": "en",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 12
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        101,
+        102,
+        103,
+        104
+      ],
+      "generation_time_ms": 95353,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - Breast Density Definition",
+          "type": "test",
+          "status": "valid",
+          "hash": "d0c6282ca79699ed3ccd6c22409d246bbd2379050931b1abce4f6a3714fb7431",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - BI-RADS Categories",
+          "type": "test",
+          "status": "warning",
+          "hash": "acd63e9a2f097a35842c61619ced2d23853af5959562b8d5408fcd0ccd96ce94",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Вопрос 1: несколько правильных ответов (multiple choice)",
+              "field": "multiple_correct"
+            }
+          ]
+        },
+        {
+          "name": "Задание - Regulatory Reporting Requirements",
+          "type": "test",
+          "status": "warning",
+          "hash": "b4c4afb8e2df771fd347b377b663e3dfca5cf6ab3c4f1a474ee6cce12d1652ea",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Вопрос 1: несколько правильных ответов (multiple choice)",
+              "field": "multiple_correct"
+            }
+          ]
+        },
+        {
+          "name": "Задание - Breast Density Risk Statistics",
+          "type": "test",
+          "status": "warning",
+          "hash": "928d70644c68e8a6d6b81dfa30e6ed8d856d28d618aa8a07358c3ed6c835a732",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Вопрос 1: несколько правильных ответов (multiple choice)",
+              "field": "multiple_correct"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        201,
+        202,
+        203,
+        204
+      ],
+      "generation_time_ms": 103856,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Which of the following statements abo...",
+          "type": "click",
+          "status": "valid",
+          "hash": "4dfa4389895f70750b796a06f0dea9e20184cf4623e546c2368993a38e015d0d",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Which of the following statements abo...",
+          "type": "click",
+          "status": "valid",
+          "hash": "83d71138d239bd85cd422d9a5145b050da30e36a2d1791dfe32ca5230a07c2ed",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Which of the following statements abo...",
+          "type": "click",
+          "status": "valid",
+          "hash": "1f44b9b86e944fcc536ed49fbb22b96e894ddae5e0dde2188504f8b8be03cf9f",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        301,
+        302
+      ],
+      "generation_time_ms": 35975,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Identify incorrect dates and statistics",
+          "type": "click",
+          "status": "valid",
+          "hash": "9c06d566664f6b43e93c3f676a591634b4c6da1161a9c6f750f097314829c5c6",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Identify incorrect terminology and de...",
+          "type": "click",
+          "status": "valid",
+          "hash": "20851b499f12594182a867d465800ab2f30959fc95e46fd7ce2ff7f135ac3a4e",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        401,
+        402
+      ],
+      "generation_time_ms": 86690,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Explain the rationale behind the shif...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "93a393d8c9a7e2d12e0e7f5949259708cca1948b25746896bbb89bf9d7076764",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - How does Digital Breast Tomography (D...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "17baf0e5dbbaacd500697b597babcfd6404c6cbad663500047dc5193327edd4e",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        501
+      ],
+      "generation_time_ms": 24963,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Последовательность - Order the breast density categories f...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "97b2dd866a1c0d83fbe4d7b45df4ccac34ee8449274dddd7c8fc59c039d49ca5",
+          "validation_issues": []
+        }
+      ]
+    }
+  ]
+}

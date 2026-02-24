@@ -1,0 +1,234 @@
+{
+  "tasks_to_generate": [
+    {
+      "task_type": "TEST",
+      "count": 8,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Four categories (A-D) of breast density with specific descriptions and implications",
+          "evidence": "Table 1 and Table 2",
+          "explicitness": "explicit",
+          "id": 1,
+          "modality": "text",
+          "title": "Breast Density Categories",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Association between breast density categories and breast cancer risk with specific odds ratios",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 10,
+          "modality": "text",
+          "title": "Breast Density and Cancer Risk",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Alternative standard allowing singular phrasing for unilateral mammogram reports",
+          "evidence": "Footnotes in Tables 1 and 2",
+          "explicitness": "explicit",
+          "id": 12,
+          "modality": "text",
+          "title": "2025 FDA Update on Breast Density Reporting",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Shape, margin, and density categories for breast masses",
+          "evidence": "Table 1, section A",
+          "explicitness": "explicit",
+          "id": 3,
+          "modality": "text",
+          "title": "Mass Characteristics",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Additional findings including architectural distortion, asymmetries, lymph nodes, and associated features",
+          "evidence": "Table 1, sections C-I",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Other Findings",
+          "type": "classification"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 5,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Typically benign and suspicious calcification types with distribution patterns",
+          "evidence": "Table 1, section B",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Calcification Types",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Legislative requirements for breast density reporting as of September 2024",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 11,
+          "modality": "text",
+          "title": "FDA Requirements for Breast Density Reporting",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 4,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Breast density as the relative proportion of breast parenchyma to fat",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 6,
+          "modality": "text",
+          "title": "Breast Density Definition",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "How breast density affects mammographic sensitivity and technological improvements",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 9,
+          "modality": "text",
+          "title": "Impact of Breast Density on Mammographic Accuracy",
+          "type": "concept"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 2,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Factors affecting breast density changes and the need for regular updates",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 8,
+          "modality": "text",
+          "title": "Breast Density Variability",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Four categories (A-D) of breast density with specific descriptions and implications",
+          "evidence": "Table 1 and Table 2",
+          "explicitness": "explicit",
+          "id": 1,
+          "modality": "text",
+          "title": "Breast Density Categories",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Organization of terms into breast tissue terms and findings terms with hierarchical structure",
+          "evidence": "Table 1",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "BI-RADS® Mammography Lexicon Structure",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Shape, margin, and density categories for breast masses",
+          "evidence": "Table 1, section A",
+          "explicitness": "explicit",
+          "id": 3,
+          "modality": "text",
+          "title": "Mass Characteristics",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Typically benign and suspicious calcification types with distribution patterns",
+          "evidence": "Table 1, section B",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Calcification Types",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Additional findings including architectural distortion, asymmetries, lymph nodes, and associated features",
+          "evidence": "Table 1, sections C-I",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Other Findings",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Association between breast density categories and breast cancer risk with specific odds ratios",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 10,
+          "modality": "text",
+          "title": "Breast Density and Cancer Risk",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Legislative requirements for breast density reporting as of September 2024",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 11,
+          "modality": "text",
+          "title": "FDA Requirements for Breast Density Reporting",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Alternative standard allowing singular phrasing for unilateral mammogram reports",
+          "evidence": "Footnotes in Tables 1 and 2",
+          "explicitness": "explicit",
+          "id": 12,
+          "modality": "text",
+          "title": "2025 FDA Update on Breast Density Reporting",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 1,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Organization of terms into breast tissue terms and findings terms with hierarchical structure",
+          "evidence": "Table 1",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "BI-RADS® Mammography Lexicon Structure",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Methods for assessing breast density including visual inspection and automated software",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 7,
+          "modality": "text",
+          "title": "Breast Density Assessment Methods",
+          "type": "process"
+        }
+      ]
+    }
+  ]
+}

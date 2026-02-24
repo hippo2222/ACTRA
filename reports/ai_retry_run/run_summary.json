@@ -1,0 +1,48 @@
+{
+  "ai_run_id": "ai_run_20260222T222858Z_871c4a2f18",
+  "analyze": {
+    "provider": "openrouter",
+    "provider_model": "z-ai/glm-4.5-air:free",
+    "target_language": "en",
+    "units_count": 10,
+    "recs_count": 4,
+    "not_recommended_count": 1,
+    "illustrations_detected": true
+  },
+  "generate_summary": {
+    "by_type": {
+      "click_text": 2,
+      "open_answer": 1,
+      "sequence": 2,
+      "test": 3
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "material_language": "en",
+      "sequence_grounding_warnings": 1,
+      "total_tasks": 8
+    },
+    "total_errors": 0,
+    "total_generated": 8,
+    "total_valid": 7,
+    "total_warnings": 1
+  },
+  "import": {
+    "errors": [],
+    "idempotency_key": "manual-retry-1771799920",
+    "imported": 8,
+    "ok": true,
+    "task_ids": [
+      "task_682eeef120ac",
+      "task_4e7698a894d6",
+      "task_acd61786b390",
+      "task_a1e3469cdc69",
+      "task_9d6abf3bffe9",
+      "task_b139a4c517f4",
+      "task_e6917ced389a",
+      "task_e2ae4cc5c0d9"
+    ]
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "run_id": "ai_run_20260223T122745Z_36f31db1bd",
+  "created_at": "2026-02-23T12:27:45Z",
+  "provider_model": "arcee-ai/trinity-large-preview:free",
+  "material_stats": {
+    "word_count": 60,
+    "char_count": 440,
+    "language": "unknown"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "unknown",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 2,
+        "educational_unit_ids": []
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 2,
+    "total_valid": 2,
+    "total_warnings": 0,
+    "total_errors": 0,
+    "by_type": {
+      "click_text": 2
+    },
+    "quality": {
+      "material_language": "unknown",
+      "expected_output_language": "unknown",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 2
+    }
+  },
+  "results": [
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate"
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate"
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate"
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate"
+        }
+      ],
+      "educational_unit_ids": [],
+      "generation_time_ms": 0,
+      "parsing_errors": [
+        "Задание #1: не найден текст вопроса (должен начинаться с #)"
+      ],
+      "tasks": [
+        {
+          "name": "Клик - ???????? ?????? ???????????",
+          "type": "click",
+          "status": "valid",
+          "hash": "c5b054e9dd2cf77c98f98baa4e76d89935f1a471d7f1ae5be1b680359a120fe0",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - ???????? ??????????",
+          "type": "click",
+          "status": "valid",
+          "hash": "18b40fac837f18eeaf8a012ac57625f40776d40ef968656c4bc9000caf65a9f1",
+          "validation_issues": []
+        }
+      ]
+    }
+  ]
+}

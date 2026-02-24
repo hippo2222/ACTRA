@@ -1,0 +1,186 @@
+{
+  "run_id": "bench_Nephr_20260223T091905Z",
+  "created_at": "2026-02-23T09:21:58Z",
+  "provider_used": "openrouter",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "result": {
+    "human_summary": "Материал представляет собой главу о нефротическом синдроме из медицинского учебника, охватывающего определение, этиологию, патогенез, клинику, диагностику, осложнения и лечение этого состояния. Текст содержит детализированную информацию о классификациях, лабораторных показателях и принципах терапии, что требует создания разнообразных интерактивных заданий для комплексного усвоения материала.",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 5,
+        "priority": "high",
+        "covers_units": [
+          2,
+          7,
+          9
+        ],
+        "rationale": "Позволяет проверить знание классификации этиологических факторов НС."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 4,
+        "priority": "high",
+        "covers_units": [
+          4,
+          5
+        ],
+        "rationale": "Позволяет проверить знание клинических проявлений и лабораторных показателей, распознавая правильные и неправильные утверждения."
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "priority": "high",
+        "covers_units": [
+          1,
+          3,
+          10
+        ],
+        "rationale": "Проверяет понимание определения и основных компонентов нефротического синдрома."
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 3,
+        "priority": "medium",
+        "covers_units": [
+          8
+        ],
+        "rationale": "Позволяет проверить внимание к деталям в назначении медикаментов путем поиска ошибок в тексте."
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "priority": "medium",
+        "covers_units": [
+          6
+        ],
+        "rationale": "Способствует запоминанию осложнений путем их упорядочивания по логике или частоте встречаемости."
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Определение нефротического синдрома",
+        "type": "concept",
+        "description": "Клинико-лабораторный симптомокомплекс с массивной протеинурией и нарушениями обмена веществ",
+        "explicitness": "explicit",
+        "evidence": "Первый абзац",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 2,
+        "title": "Этиология нефротического синдрома",
+        "type": "classification",
+        "description": "Первичные и вторичные заболевания почек, вызывающие НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Этиология'",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 3,
+        "title": "Патогенез нефротического синдрома",
+        "type": "process",
+        "description": "Иммунологические и метаболические механизмы развития НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Патогенез'",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Клинические проявления НС",
+        "type": "fact",
+        "description": "Жалобы и симптомы нефротического синдрома",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 5,
+        "title": "Лабораторная диагностика НС",
+        "type": "fact",
+        "description": "Ключевые лабораторные показатели при нефротическом синдроме",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 6,
+        "title": "Осложнения нефротического синдрома",
+        "type": "classification",
+        "description": "Возможные осложнения при НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Осложнения'",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 7,
+        "title": "Принципы лечения НС",
+        "type": "concept",
+        "description": "Общие подходы к лечению нефротического синдрома",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Принципы лечения'",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 8,
+        "title": "Медикаментозное лечение НС",
+        "type": "classification",
+        "description": "Группы препаратов и их показания/противопоказания при лечении НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Медикаментозное лечение'",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 9,
+        "title": "Диета при нефротическом синдроме",
+        "type": "fact",
+        "description": "Особенности питания пациентов с НС",
+        "explicitness": "explicit",
+        "evidence": "Раздел 'Диета'",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 10,
+        "title": "Прогноз нефротического синдрома",
+        "type": "fact",
+        "description": "Факторы, влияющие на прогноз НС",
+        "explicitness": "inferred",
+        "evidence": "Последний абзац раздела 'Диагностика'",
+        "modality": "text",
+        "assessment_risk": "low"
+      }
+    ],
+    "not_recommended": [
+      {
+        "task_type": "SEQUENCE",
+        "reason": "Материал не содержит четкой последовательности действий или процессов, требующей восстановления порядка."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "reason": "Хотя этот тип заданий рекомендован для единиц 4 и 5, он уже включен в рекомендации для этих пунктов."
+      }
+    ],
+    "illustrations_detected": false,
+    "illustrations_note": null,
+    "warnings": [
+      "Материал содержит много специфической медицинской терминологии, требующей внимательного изучения.",
+      "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22)."
+    ],
+    "material_volume": "medium",
+    "target_language": "ru"
+  }
+}

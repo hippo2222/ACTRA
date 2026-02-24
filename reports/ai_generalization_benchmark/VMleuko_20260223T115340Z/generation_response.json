@@ -1,0 +1,2231 @@
+{
+  "ai_run_id": "bench_VMleuko_20260223T115340Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        4,
+        7,
+        9,
+        12,
+        15,
+        17,
+        18,
+        19,
+        20,
+        3,
+        5,
+        6,
+        8,
+        10,
+        11,
+        13,
+        14,
+        16,
+        21,
+        22,
+        23,
+        24
+      ],
+      "generation_time_ms": 52468,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоэз: анатомия и классификация",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Костный мозг и тимус"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезёнка и лимфатические узлы"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Печень и селезёнка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Костный мозг и лимфатические узлы"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие органы относятся к центральным органам гемопоэза?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 0,
+          "name": "Задание - Гемопоэз: анатомия и классификация",
+          "prompt": "Гемопоэз: анатомия и классификация",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Классификация клеток гемопоэза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "I (стволовые клетки), II (полустволовые), III (унипотентные)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "IV (бласты), V (клетки, созревающие), VI (зрелые клетки)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Только I класс (стволовые клетки)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Только II класс (полустволовые клетки)"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие классы клеток гемопоэза характеризуются способностью к самовосстановлению и образованию колоний?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 1,
+          "name": "Задание - Классификация клеток гемопоэза",
+          "prompt": "Классификация клеток гемопоэза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Клиника острого лимфобластного лейкоза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Чаще встречается у детей, характерны лейкемиды и нейролейкоз"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Чаще развивается злокачественный, но умеренно прогрессирующий процесс"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Преобладает быстро прогрессирующий тезис с выраженными некротическими поражениями"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Геморрагический синдром выражен сильнее, чем при миелобластном лейкозе"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие клинические особенности характерны для острого лимфобластного лейкоза?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 2,
+          "name": "Задание - Клиника острого лимфобластного лейкоза",
+          "prompt": "Клиника острого лимфобластного лейкоза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Регуляция гемопоэза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Колониестимулирующие факторы, синтезируемые микроокружением"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гормоны (эритропоэтин, тироксин, соматотропный гормон)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Продукты зрелых клеток крови"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Глюкокортикоиды и интерферон"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие факторы стимулируют гемопоэз?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 3,
+          "name": "Задание - Регуляция гемопоэза",
+          "prompt": "Регуляция гемопоэза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Морфология костного мозга",
+            "question_count": 6,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Консистенция полужидкая, масса 1200-1500 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Консистенция плотная, масса 500-800 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Консистенция жидкая, масса 2000-2500 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Консистенция студенистая, масса 800-1000 г"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "На вопрос 4 варианта, 1-2 правильных."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Дистракторы правдоподобные."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стиль и длина вариантов сопоставимы."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Вопросы покрывают разные единицы обучения (из списка в generation_parameters)."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Если несколько правильных ответов, помечать все \"+\"."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Никаких пояснений в ответе, только блоки @TEST."
+                  }
+                ],
+                "id": 0,
+                "text": "Каковы консистенция и масса красного костного мозга у взрослого человека?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Незрілі бластні клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Зрілі лейкоцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Еритроцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тромбоцити"
+                  }
+                ],
+                "id": 1,
+                "text": "Что является морфологическим субстратом острой лейкемии?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "L3"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L1"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L2"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "M3"
+                  }
+                ],
+                "id": 2,
+                "text": "Для какого варианта FAB-классификации острого лимфобластного лейкоза характерны бластные клетки типа клеток при лимфоме Беркитта?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Бензол"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Хлорамбуцил"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Формальдегид"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Аспірин"
+                  }
+                ],
+                "id": 3,
+                "text": "Какие из перечисленных химических веществ являются этиологическими факторами острых лейкозов?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гемальний"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Стромальний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Мієлоїдний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфоїдний"
+                  }
+                ],
+                "id": 4,
+                "text": "Какие компоненты входят в состав гемопоэтической ткани?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Швидко прогресуючий перебіг"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Виразність геморагічного синдрому більша"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Частіше хворіють діти"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Часті виникнення лейкемідів"
+                  }
+                ],
+                "id": 5,
+                "text": "Какие клинические особенности характерны для острого миелобластного лейкоза?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 4,
+          "name": "Задание - Морфология костного мозга",
+          "prompt": "Морфология костного мозга",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Определение миелопоэза и лимфопоэза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Миелопоэз: образование всех форменных элементов крови, кроме лимфоцитов. Лимфопоэз: образование лимфоцитов (В- и Т-клеток)."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Миелопоэз: образование только эритроцитов и тромбоцитов. Лимфопоэз: образование всех лейкоцитов."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Миелопоэз: образование гранулоцитов и моноцитов. Лимфопоэз: образование эритроцитов и тромбоцитов."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Миелопоэз: процесс, происходящий только в периферических органах. Лимфопоэз: процесс, происходящий только в костном мозге."
+                  }
+                ],
+                "id": 0,
+                "text": "Какие процессы охватывает миелопоэз, а какие — лимфопоэз?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Определение миелопоэза и лимфопоэза",
+          "prompt": "Определение миелопоэза и лимфопоэза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Классификация FAB для миелобластного лейкоза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "M3: острая промелоцитарная лейкемия."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "M5: острая моноцитарная лейкемия."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L1: острая лимфобластная лейкемия с малыми бластами."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "L3: острая лимфобластная лейкемия с бластами типа клеток Беркитта."
+                  }
+                ],
+                "id": 0,
+                "text": "Какие варианты входят в морфологическую FAB-классификацию острой миелобластной лейкемии (M0-M7)?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 6,
+          "name": "Задание - Классификация FAB для миелобластного ...",
+          "prompt": "Классификация FAB для миелобластного лейкоза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Локализация созревания клеток",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "В тимусе."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "В красном костном мозге."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "В периферических лимфоидных органах (лимфоузлы, селезёнка)."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "В вилочковой железе (это синоним тимуса, но в варианте использовано другое название)."
+                  }
+                ],
+                "id": 0,
+                "text": "Где происходит окончательное созревание Т-лимфоцитов?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 7,
+          "name": "Задание - Локализация созревания клеток",
+          "prompt": "Локализация созревания клеток",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              7,
+              9,
+              12,
+              15,
+              17,
+              18,
+              19,
+              20,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Схемы лечения ALL и AML",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Винкристин."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Преднизолон."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Цитарабин."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Доксорубицин."
+                  }
+                ],
+                "id": 0,
+                "text": "Какие препараты входят в индукцию ремиссии при остром лимфобластном лейкозе (ALL)?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 8,
+          "name": "Задание - Схемы лечения ALL и AML",
+          "prompt": "Схемы лечения ALL и AML",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        22,
+        23,
+        24,
+        3,
+        5,
+        6,
+        8,
+        10,
+        11,
+        13,
+        14,
+        16,
+        21
+      ],
+      "generation_time_ms": 84145,
+      "parsing_errors": [
+        "Задание #1: не найден текст вопроса (должен начинаться с #)",
+        "Задание #1: не найден текст вопроса (должен начинаться с #)"
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23,
+              24,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L1 — гостра лімфобластна лейкемія з малими розмірами бластів, частіше зустрічається у дітей."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L2 — гостра лімфобластна лейкемія з великими розмірами бластів, частіше зустрічається у дорослих."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L3 — гостра лімфобластна лейкемія з бластними клітинами типу клітин при лімфомі Беркіта."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L1 характеризується великими розмірами бластів і частіше зустрічається у дорослих."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L3 — це недиференційовані бласти без ознак дозрівання, що відповідає типу M0 за FAB."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L2 — це лімфобластний лейкоз з малими бластами, характерний для дітей."
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про класифікацію FAB для лімфобластного лейкозу (L1-L3).",
+            "subtype": "error_detection"
+          },
+          "index": 9,
+          "name": "Клик - Виберіть правильні твердження про кла...",
+          "prompt": "Виберіть правильні твердження про класифікацію FAB для лімфобластного лейкозу (L1-L3).",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23,
+              24,
+              3,
+              5,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              16,
+              21
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гемопоетична тканина складається з гемального (гемопоетичні клітини) та стромального компонентів."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "При гострому лімфобластному лейкозі (ALL) в індукційну терапію включають Вінкристин, Преднізолон, L-аспарагіназу та Доксорубіцин."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "При гострому мієлобластному лейкозі (AML) індукційну терапію проводять Цитарабіном та Доксорубіцином."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Стромальний компонент гемопоетичної тканини включає гемопоетичні клітини."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "При ALL у підтримуючу терапію використовують Цитарабін та Циклофосфамід."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L-аспарагіназа при ALL призначається в дозі 10000 МО/м2 на добу."
+              }
+            ],
+            "prompt": "Виберіть правильні твердження про компоненти гемопоетичної тканини та схеми лікування гострих лейкозів.",
+            "subtype": "error_detection"
+          },
+          "index": 10,
+          "name": "Клик - Виберіть правильні твердження про ком...",
+          "prompt": "Виберіть правильні твердження про компоненти гемопоетичної тканини та схеми лікування гострих лейкозів.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        22,
+        23,
+        24
+      ],
+      "generation_time_ms": 53509,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "ключове слово 1",
+              "ключове слово 2"
+            ],
+            "question": "питання",
+            "reference_answer": "еталонний відповідь"
+          },
+          "index": 11,
+          "name": "Открытый ответ - питання",
+          "prompt": "питання",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "соматические мутации",
+              "клон",
+              "дифференцировка",
+              "пролиферация",
+              "апоптоз",
+              "первичный клон",
+              "вторичный клон",
+              "доброкачественный рост",
+              "злокачественный рост"
+            ],
+            "question": "Как соматические мутации влияют на поведение клонов гемопоэтических клеток при развитии острого лейкоза?",
+            "reference_answer": "Мутации в клетке-предшественнице вызывают её быструю пролиферацию и образование первичного клона, который сохраняет способность к дифференцировке (доброкачественный рост). Последующие мутации в клетках этого клона приводят к образованию вторичного клона, который не только активно пролиферирует, но и теряет способность к дифференцировке (злокачественный рост)."
+          },
+          "index": 12,
+          "name": "Открытый ответ - Как соматические мутации влияют на по...",
+          "prompt": "Как соматические мутации влияют на поведение клонов гемопоэтических клеток при развитии острого лейкоза?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "цитохимия",
+              "иммунофенотип",
+              "миелопероксидаза",
+              "гликоген",
+              "В-лимфоциты",
+              "Т-лимфоциты",
+              "FAB-классификация",
+              "дифференциальная диагностика"
+            ],
+            "question": "В чём заключаются основные различия между острым лимфобластным и острым миелобластным лейкозом с точки зрения методов диагностики?",
+            "reference_answer": "Основные различия заключаются в результатах цитохимического и иммунофенотипического анализа. Для острых лимфобластных лейкозов характерна позитивная реакция на гликоген и выявление В- или Т-клеточных маркеров. Для острых миелобластных лейкозов характерна позитивная реакция на миелопероксидазу."
+          },
+          "index": 13,
+          "name": "Открытый ответ - В чём заключаются основные различия м...",
+          "prompt": "В чём заключаются основные различия между острым лимфобластным и острым миелобластным лейкозом с точки зрения методов диагностики?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        13,
+        14,
+        16
+      ],
+      "generation_time_ms": 63116,
+      "parsing_errors": [
+        "Repair-pass incomplete for CLICK_WORDS: requested 4, obtained 2."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              13,
+              14,
+              16
+            ]
+          },
+          "data": {
+            "error_indices": [
+              35,
+              36,
+              47,
+              48
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в описании классификации FAB для лимфобластного лейкоза.",
+            "subtype": "error_detection",
+            "text": "Морфологическая FAB классификация острого лимфобластного лейкоза включает три варианта: L1 – с большими размерами бластов (чаще у взрослых), L2 – с малыми размерами бластов (чаще у детей), L3 – с бластными клетками, напоминающими клетки при лимфоме Ходжкина. Классификация основана на размере и морфологии бластов, а также на возрасте пациента как ключевом диагностическом критерии."
+          },
+          "index": 14,
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "prompt": "Найдите фактические ошибки в описании классификации FAB для лимфобластного лейкоза.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              13,
+              14,
+              16
+            ]
+          },
+          "data": {
+            "error_indices": [
+              9,
+              32,
+              33,
+              667,
+              679,
+              692,
+              706,
+              806,
+              807,
+              817,
+              818,
+              827,
+              828,
+              829,
+              830,
+              831,
+              832,
+              833,
+              844,
+              845,
+              846,
+              847,
+              848,
+              849,
+              850,
+              851,
+              852,
+              853,
+              854,
+              961,
+              971,
+              999,
+              1014,
+              1127,
+              1128,
+              1132,
+              1133,
+              1137,
+              1138,
+              1142,
+              1143,
+              1174,
+              1179
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в описании пяти основных клинических синдромов острого лейкоза.",
+            "subtype": "error_detection",
+            "text": "Пять основных клинических синдромов острого лейкоза включают: гиперпластический, геморрагический, агранулоцитарный, интоксикационный и иммунодефицитный. Гиперпластический синдром проявляется увеличением печени, селезёнки и лимфоузлов. Агранулоцитарный синдром характеризуется резким снижением числа нейтрофилов и высокой восприимчивостью к бактериальным инфекциям. Геморрагический синдром вызван тромбоцитопенией и проявляется кровоизлияниями в кожу и слизистые. Спочатку потрібно проаналізувати наданий матеріал та визначити ключові факти, пов'язані з класифікацією FAB для мієобластного лейкозу (М0-М7). Потім створити два завдання формату @CLICK_WORDS, кожне з 2-4 фактичними помилками, обгорнутими в квадратні дужки. Текст має бути зв'язним, а помилки — неочевидними без знання матеріалу. Перше завдання можна зосередити на загальних поняттях гемопоезу та анатомії, включивши помилки щодо локалізації, маси, складу тощо. Друге завдання — безпосередньо на класифікації FAB, де помилки будуть стосуватися типів лейкозу, їхніх ознак або назв. Перевіримо критерії якості: - Текст повинен бути зв'язним параграфом. - Помилки — підміна фактів (числа, терміни, інверсії). - Ошібочні фрагменти в квадратних дужках. - Верна частина тексту дійсно верна. Також потрібно врахувати, що кожен освітній модуль (classification) має бути охоплений принаймні один раз перед додаванням другого завдання на той самий модуль. Оскільки у нас лише один модуль, обидва завдання можуть бути на ньому, але краще різні аспекти. Генераційні параметри: - Рівно 2 завдання. - Мова: ru. - Обмеження: 2-4 фактичні помилки на завдання. - Обгортати лише однослівні (або через дефіс) фрагменти. Тепер спробуємо сформулювати перше завдання. Візьмемо деякі факти з початку тексту: - До центральних органів гемопоезу відносяться кістковий мозок та тимус. (Вірно) - Локалізація кісткового мозку – губчаста речовина губчастих та плоских кісток, а також діафізів трубчатих кісток. (Вірно) - Консистенція кісткового мозку – напіврідка. (Вірно) - Маса червоного кісткового мозку у дорослої людини – 1200-1500 г. (Вірно? Перевіримо: у тексті сказано \"Маса червоного кісткового мозку у дорослої людини – 1200-1500 г.\" Це, здається, вірно, але можна змінити на неправильне число.) - Гемопоетична тканина представлена двома компонентами: гемальним (гемопоетичні клітини) і стромальним. (Вірно) - 90% поліпотентних стовбурових клітин у кістковому мозку знаходяться у стані спокою і лише 10% активно діляться. (Вірно? У тексті: \"90% поліпотентних стовбурових кліitin у кістковому мозку знаходяться у стані спокою і лише 10% цих клітин активно діляться\". Можна змінити на 70% і 30% або навпаки.) - Стимуляція гемопоезу: колонієстимулюючі фактори, гормони (еритропоетин, тироксин, соматотропний гормон). (Вірно) - Пригнічення гемопоезу: продукти зрілих клітин крові, тканинні гормони (простагландини, інтерферон), глюкокортикоїди. (Вірно) - У червоному кістковому мозку відбуваються всі стадії дозрівання еритроцитів, гранулоцитів, моноцитів, тромбоцитів, В-лімфоцитів, а також утворення попередників Т-лімфоцитів. (Вірно? Т-лімфоцити дозрівають у тимусі, тому \"утворення попередників Т-лімфоцитів\" у кістковому мозку — це помилка? У тексті сказано \"утворення попередників Т-лімфоцитів\", але насправді попередники Т-лімфоцитів утворюються в кістковому мозку, а дозрівання відбувається в тимусі. Тому можна зробити помилку, сказавши, що \"всі стадії дозрівання Т-лімфоцитів\" відбуваються в кістковому мозку.) - Локалізація тимусу – за грудиною. (Вірно) - Максимальна маса тимусу – 35-40 г. (у підлітків 14-15 років). (Вірно? У тексті: \"Максимальна маса тимусу – 35-40 г. (у підлітків 14-15 років).\" Можна змінити вік або масу.) - У тимусі завершується дозрівання Т-лімфоцитів та відбувається їх проліферація. (Вірно) - Периферичні органи кровотворення включають лімфоїдні утворення слизових оболонок, лімфатичні вузли, селезінку. (Вірно) - В периферичних органах кровотворення відбувається генерація імунної відповіді на контакт лімфоцитів з антигеном. (Вірно? Це стосується лімфопоезу, але генерація імунної відповіді — це функція лімфоцитів, а не безпосередньо кровотворення. Можна зробити помилку, сказавши, що в периферичних органах відбувається гемопоез.) - Лейкоцити поділяються на гранулоцити (нейтрофіли, еоінофіли, базофіли) та агранулоцити (лімфоцити, моноцити). (Вірно) - Основна функція гранулоцитів – фагоцитоз. (Вірно) - Основні функції агранулоцитів – забезпечення гуморального та клітинного імунітету. (Вірно) - Мієлопоез – це утворення всіх формених елементів крові, крім лімфоцитів. Лімфопоез – це утворення лімфоцитів (В- і Т-клітин). (Вірно) - Відповідно до числа формених елементів крові виділяють 6 напрямків мієлопоезу та 2 напрямки лімфопоезу. (Вірно? У тексті сказано 6 напрямків мієлопоезу та 2 лімфопоезу. Це може бути правильним, але можна змінити числа.) - У кожному з напрямків диференціровки виділяють 6 класів клітин. (Вірно? У тексті описані 6 класів: I-VI. Тож це вірно.) Для першого завдання можна взяти перші кілька речень і вставити помилки: 1. Маса червоного кісткового мозку у дорослої людини – 1200-1500 г. (Замінимо на 800-1000 г) 2. 90% поліпотентних стовбурових клітин... – 90% (Замінимо на 70%) 3. У червоному кістковому мозку відбуваються всі стадії дозрівання... В-лімфоцитів (Замінимо на Т-лімфоцитів, бо Т-лімфоцити дозрівають у тимусі) 4. Максимальна маса тимусу – 35-40 г. (Замінимо на 50-60 г) Але потрібно 2-4 помилки. Можна зробити три. Друге завдання повинно стосуватися класифікації FAB. З тексту: - Морфологічна FAB класифікація гострої мієлобластної лейкемії: М0-М7. - М0 – гостра мієлобластна лейкемія з недиференційованими бластними клітинами. - М1 – гостра мієлобластна лейкемія без ознак дозрівання бластів. - М2 – гостра мієлобластна лейкемія з ознаками дозрівання бластів. - М3 – гостра промієлоцитарна лейкемія. - М4 – гостра мієломоноцитарна лейкемія. - М5 – гостра моноцитарна лейкемія. - М6 – гостра еритролейкемія. - М7 – гостра мегакаріобластна лейкемія. - Для лімфобластної: L1, L2, L3. Помилки можна вставити: 1. М3 – гостра промієлоцитарна лейкемія. (Замінимо на \"мієлобластна\" або \"мієломоноцитарна\") 2. М6 – гостра еритролейкемія. (Замінимо на \"мієлобластна\" або \"лімфобластна\") 3. L1 – гостра лімфобластна лейкемія з малими розмірами бластів (частіше у дітей). (Замінимо на \"великими розмірами\") 4. L3 – гостра лімфобластна лейкемія з бластними клітинами типа клітин при лімфомі Беркіта. (Можна сказати, що це тип L1 або L2) Але потрібно, щоб текст був зв'язним. Створимо короткий абзац про класифікацію FAB з помилками. Також переконаємося, що помилки не очевидні. Наприклад, для M3 правильне — \"промієлоцитарна\", тому помилка — \"мієлобластна\". Для M6 — \"еритролейкемія\", помилка — \"мієломоноцитарна\". Для L1 — малі бласти, помилка — великі. Для L3 — специфічний тип, помилка — сказати, що це L2. Тепер сформулюємо завдання. Перше завдання: \"До центральних органів гемопоезу відносяться кістковий мозок та тимус. Локалізація кісткового мозку – губчаста речовина губчастих та плоских кісток, а також діафізів трубчатих кісток. Консистенція кісткового мозку – напіврідка. Маса червоного кісткового мозку у дорослої людини – 800-1000 г. Гемопоетична тканина представлена двома компонентами: гемальним і стромальним. 70% поліпотентних стовбурових клітин у кістковому мозку знаходяться у стані спокою і лише 30% активно діляться. У червоному кістковому мозку відбуваються всі стадії дозрівання еритроцитів, гранулоцитів, моноцитів, тромбоцитів, Т-лімфоцитів, а також утворення попередників В-лімфоцитів. Локалізація тимусу – за грудиною. Максимальна маса тимусу – 50-60 г. (у підлітків 14-15 років).\" Тут помилки: 1. Маса червоного кісткового мозку: замість 1200-1500 г → 800-1000 г. 2. Відсоток поліпотентних стовбурових кліitin: замість 90% спокою, 10% активних → 70% спокою, 30% активних (або навпаки? У тексті: 90% спокою, 10% активних. Тому 70% спокою — помилка, бо має бути більше). 3. У червоному кістковому мозку дозрівають Т-лімфоцити? Ні, Т-лімфоцити дозрівають у тимусі, тому це помилка. 4. Маса тимусу: замість 35-40 г → 50-60 г. Це 4 помилки, що задовольняє критерій 2-4. Друге завдання: \"Морфологічна FAB (French-American-British) класифікація гострої мієлобластної лейкемії включає 7 типів: М0 – з недиференційованими бластами, М1 – без ознак дозрівання бластів, М2 – з ознаками дозрівання бластів, М3 – гостра мієлобластна лейкемія, М4 – гостра моноцитарна лейкемія, М5 – гостра мієломоноцитарна лейкемія, М6 – гостра лімфобластна лейкемія, М7 – мегакаріобластна. Для лімфобластних лейкемій виділяють L1 з малими бластами, L2 з великими бластами та L3 з бластами, подібними до клітин при лімфомі Беркіта. L1 частіше зустрічається у дорослих, а L3 – у дітей.\" Тут помилки: 1. М3: замість \"промієлоцитарна\" → \"мієлобластна\" (але М3 — це промієлоцитарна, тому \"мієлобластна\" — помилка). 2. М4: замість \"мієломоноцитарна\" → \"моноцитарна\" (але М4 — це мієломоноцитарна, М5 — моноцитарна). 3. М5: замість \"моноцитарна\" → \"мієломоноцитарна\" (переплутано з М4). 4. М6: замість \"еритролейкемія\" → \"лімфобластна\" (це зовсім інший тип). 5. L1 частіше у дітей, а не у дорослих. У тексті: \"L1 – гостра лімфобластна лейкемія з малими розмірами бластів (частіше у дітей).\" Тому \"частіше у дорослих\" — помилка. 6. L3 частіше у дорослих? У тексті не сказано явно для L3, але L3 — це Burkitt, який може бути у дітей і дорослих, але зазвичай асо"
+          },
+          "index": 15,
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "prompt": "Найдите фактические ошибки в описании пяти основных клинических синдромов острого лейкоза.",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        3,
+        5,
+        6,
+        8,
+        10,
+        11
+      ],
+      "generation_time_ms": 65869,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              6,
+              8,
+              10,
+              11
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "M0 – гостра мієлобластна лейкемія з недиференційованими бластними клітинами",
+              "element_2": "M1 – гостра мієлобластна лейкемія без ознак дозрівання бластів",
+              "element_3": "M2 – гостра мієлобластна лейкемія з ознаками дозрівання бластів",
+              "element_4": "M3 – гостра промієлоцитарна лейкемія",
+              "element_5": "M4 – гостра мієломоноцитарна лейкемія",
+              "element_6": "M5 – гостра моноцитарна лейкемія",
+              "element_7": "M6 – гостра еритролейкемія",
+              "element_8": "M7 – гостра мегакаріобластна лейкемія"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ],
+              "5": [
+                "element_5"
+              ],
+              "6": [
+                "element_6"
+              ],
+              "7": [
+                "element_7"
+              ],
+              "8": [
+                "element_8"
+              ]
+            },
+            "prompt": "Расположите подтипы в порядке возрастания номера по классификации FAB (French-American-British)"
+          },
+          "index": 16,
+          "name": "Последовательность - Расположите подтипы в порядке возраст...",
+          "prompt": "Расположите подтипы в порядке возрастания номера по классификации FAB (French-American-British)",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              6,
+              8,
+              10,
+              11
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "Стволовые клетки",
+              "element_2": "Полустволовые клетки",
+              "element_3": "Унипотентные клетки",
+              "element_4": "Бласты",
+              "element_5": "Созревающие клетки",
+              "element_6": "Зрелые клетки"
+            },
+            "levels": {
+              "1": [
+                "гранулоциты"
+              ],
+              "2": [
+                "нейтрофилы",
+                "эозинофилы",
+                "базофилы"
+              ],
+              "3": [
+                "агранулоциты"
+              ],
+              "4": [
+                "лимфоциты",
+                "моноциты"
+              ],
+              "5": [
+                "element_5"
+              ],
+              "6": [
+                "element_6"
+              ]
+            },
+            "prompt": "Расположите классы клеток гемопоэза в порядке их дифференциации от наиболее недифференцированных к наиболее дифференцированным"
+          },
+          "index": 17,
+          "name": "Последовательность - Расположите классы клеток гемопоэза в...",
+          "prompt": "Расположите классы клеток гемопоэза в порядке их дифференциации от наиболее недифференцированных к наиболее дифференцированным",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 2,
+      "click_words": 2,
+      "open_answer": 3,
+      "sequence": 2,
+      "test": 9
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 18
+    },
+    "total_errors": 0,
+    "total_generated": 18,
+    "total_valid": 17,
+    "total_warnings": 1
+  }
+}

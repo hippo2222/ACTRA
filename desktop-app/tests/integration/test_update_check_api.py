@@ -22,6 +22,7 @@ def client():
 def test_update_check_returns_not_configured_when_manifest_missing(client, monkeypatch, tmp_path):
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.delenv("ACTRA_UPDATE_MANIFEST_URL", raising=False)
+    monkeypatch.setattr(server, "_configured_update_manifest_url_from_config", lambda: "")
     monkeypatch.setattr(server, "_update_cache_path", lambda: tmp_path / "update_check_cache.json")
 
     resp = client.get("/api/update/check")
@@ -82,3 +83,25 @@ def test_update_check_returns_offline_with_cache_fallback(client, monkeypatch, t
     assert data and data.get("ok") is True
     assert data.get("from_cache") is True
     assert data.get("reason") == "offline_cached"
+
+
+def test_update_check_uses_local_config_manifest_without_internet(client, monkeypatch, tmp_path):
+    monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
+    monkeypatch.delenv("ACTRA_UPDATE_MANIFEST_URL", raising=False)
+    monkeypatch.setattr(
+        server,
+        "_configured_update_manifest_url_from_config",
+        lambda: str(tmp_path / "update_manifest.json"),
+    )
+    monkeypatch.setattr(server, "_update_cache_path", lambda: tmp_path / "update_check_cache.json")
+    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: False)
+    monkeypatch.setattr(server, "_get_app_version", lambda: "1.0.0")
+    monkeypatch.setattr(server, "_fetch_update_manifest", lambda *_args, **_kwargs: {"latest_version": "1.0.0"})
+
+    resp = client.get("/api/update/check?force=1")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data and data.get("ok") is True
+    assert data.get("manifest_url_configured") is True
+    assert data.get("manifest_requires_internet") is False
+    assert data.get("reason") == "up_to_date"

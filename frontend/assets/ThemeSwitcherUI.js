@@ -18,27 +18,51 @@
         if (document.getElementById('theme-switcher-container')) return;
 
         const currentThemeId = window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a';
+        const sidebarTarget = document.getElementById('theme-switcher-sidebar-target');
 
         // --- Wrapper (relative for dropdown positioning) ---
         const container = document.createElement('div');
         container.id = 'theme-switcher-container';
         container.className = 'relative';
 
-        // --- Toggle button (compact) ---
+        // --- Toggle button ---
         const toggleBtn = document.createElement('button');
-        toggleBtn.className = 'flex size-8 items-center justify-center rounded-full bg-surface-2 text-text-muted border border-border-strong transition-colors hover:bg-surface-1 hover:text-primary';
-        toggleBtn.title = 'Сменить тему';
-        toggleBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">palette</span>';
+        if (sidebarTarget) {
+            // Sidebar style (Rectangular, with text)
+            toggleBtn.className = 'flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left';
+            toggleBtn.innerHTML = `
+                <span class="material-symbols-outlined text-[20px]">palette</span>
+                <span class="text-sm font-medium">Сменить тему</span>
+            `;
+        } else {
+            // Header style (Compact circle)
+            toggleBtn.className = 'flex size-8 items-center justify-center rounded-full bg-surface-2 text-text-muted border border-border-strong transition-colors hover:bg-surface-1 hover:text-primary';
+            toggleBtn.title = 'Сменить тему';
+            toggleBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">palette</span>';
+        }
+
         toggleBtn.onclick = (e) => {
             e.stopPropagation();
             const isHidden = menu.classList.contains('hidden');
             menu.classList.toggle('hidden', !isHidden);
             if (isHidden) {
                 updateActiveState(window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a');
-                // Reposition if menu goes off-screen
+                // Reposition logic
                 requestAnimationFrame(() => {
                     const rect = menu.getBoundingClientRect();
-                    // Horizontal: keep within viewport
+
+                    // Sidebar-specific positioning: always open up if in sidebar
+                    if (sidebarTarget) {
+                        menu.style.bottom = '100% ';
+                        menu.style.top = 'auto';
+                        menu.style.marginBottom = '8px ';
+                        menu.style.marginTop = '0';
+                        menu.style.left = '0';
+                        menu.style.right = 'auto';
+                        return;
+                    }
+
+                    // Standard dynamic positioning
                     if (rect.left < 4) {
                         menu.style.right = 'auto';
                         menu.style.left = '0';
@@ -46,17 +70,11 @@
                         menu.style.right = '0';
                         menu.style.left = 'auto';
                     }
-                    // Vertical: if overflows bottom, open upward
                     if (rect.bottom > window.innerHeight - 4) {
                         menu.style.top = 'auto';
                         menu.style.bottom = '100%';
                         menu.style.marginTop = '0';
                         menu.style.marginBottom = '8px';
-                    } else {
-                        menu.style.top = '';
-                        menu.style.bottom = '';
-                        menu.style.marginTop = '';
-                        menu.style.marginBottom = '';
                     }
                 });
             }
@@ -101,17 +119,20 @@
         container.appendChild(toggleBtn);
         container.appendChild(menu);
 
-        // --- Insert into header or fallback to fixed position ---
-        const headerActions = document.querySelector('header .flex.items-center.gap-4:last-child')
-            || document.querySelector('header .flex.items-center.gap-4')
-            || document.querySelector('header .flex.items-center.gap-3');
-
-        if (headerActions) {
-            headerActions.insertBefore(container, headerActions.firstChild);
+        // --- Insertion logic ---
+        if (sidebarTarget) {
+            sidebarTarget.appendChild(container);
         } else {
-            // Fallback: fixed position top-right
-            container.style.cssText = 'position:fixed;top:12px;right:12px;z-index:9999';
-            document.body.appendChild(container);
+            const headerActions = document.querySelector('header .flex.items-center.gap-4:last-child')
+                || document.querySelector('header .flex.items-center.gap-4')
+                || document.querySelector('header .flex.items-center.gap-3');
+
+            if (headerActions) {
+                headerActions.insertBefore(container, headerActions.firstChild);
+            } else {
+                container.style.cssText = 'position:fixed;top:12px;right:12px;z-index:9999';
+                document.body.appendChild(container);
+            }
         }
 
         // Close menu when clicking outside

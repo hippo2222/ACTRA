@@ -557,21 +557,20 @@
 
       }
 
-      document.getElementById("stat-failed-tasks").textContent = failed;
-
-      document.getElementById("stat-success-rate").textContent = rate;
-
-      // UX-21: Show iteration time
-      const timeEl = document.getElementById("stat-iteration-time");
-      if (timeEl) {
-        const dur = data.duration_seconds ?? data.duration ?? data.time_seconds ?? null;
-        if (dur != null && dur > 0) {
-          const mins = Math.floor(dur / 60);
-          const secs = Math.round(dur % 60);
-          timeEl.textContent = mins > 0 ? `${mins}м ${secs}с` : `${secs}с`;
+      // Animated stat counters
+      if (typeof CelebrationEffects !== 'undefined') {
+        CelebrationEffects.animateCounter(
+          document.getElementById("stat-failed-tasks"), failed);
+        const rateNum = parseInt(rate, 10);
+        if (Number.isFinite(rateNum)) {
+          CelebrationEffects.animateCounter(
+            document.getElementById("stat-success-rate"), rateNum, { suffix: '%' });
         } else {
-          timeEl.textContent = "—";
+          document.getElementById("stat-success-rate").textContent = rate;
         }
+      } else {
+        document.getElementById("stat-failed-tasks").textContent = failed;
+        document.getElementById("stat-success-rate").textContent = rate;
       }
 
       document.getElementById("breakdown-success-count").textContent = success;
@@ -613,6 +612,12 @@
       breakdownBar.style.width = `${widthValue}%`;
 
       breakdownBar.className = barClass.trim();
+
+      // Play celebration effects based on success rate
+      if (typeof CelebrationEffects !== 'undefined') {
+        const isPerfect = failed === 0 && total > 0;
+        CelebrationEffects.celebrate(successPercent, { isPerfect: isPerfect });
+      }
 
       const triggerList = document.getElementById("trigger-tasks-list");
 
@@ -830,6 +835,7 @@
 
   </script>
 
+  <script src="/assets/celebration-effects.js"></script>
   <script src="../assets/NotificationUI.js"></script>
   <script src="../assets/ThemeSwitcherUI.js"></script>
   <script src="../assets/ConnectionMonitor.js"></script>

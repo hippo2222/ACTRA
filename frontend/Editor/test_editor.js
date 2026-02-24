@@ -541,7 +541,7 @@ class TestEditor extends BaseEditor {
     setupEventListeners() {
         // Back
         const backBtn = document.querySelector('header button');
-        if (backBtn) backBtn.onclick = () => window.navigateWithTransition('Main_Dashboard.html');
+        if (backBtn) backBtn.onclick = () => this.goBack();
 
         // Add Question
         const addQBtn = document.querySelector('#add-question-btn');
@@ -1065,7 +1065,7 @@ class TestEditor extends BaseEditor {
                 const data = await response.json();
                 if (data.ok) {
                     this.showToast('Задание удалено', 'success');
-                    window.navigateWithTransition('Main_Dashboard.html');
+                    window.navigateWithTransition('/ui/editor');
                 }
             });
         } catch (err) {

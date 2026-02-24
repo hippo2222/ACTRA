@@ -1,0 +1,384 @@
+{
+  "run_id": "bench_Nephr_20260223T091905Z",
+  "created_at": "2026-02-23T09:38:04Z",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 5,
+        "educational_unit_ids": [
+          2,
+          7,
+          9
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 4,
+        "educational_unit_ids": [
+          4,
+          5
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "educational_unit_ids": [
+          1,
+          3,
+          10
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 3,
+        "educational_unit_ids": [
+          8
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "educational_unit_ids": [
+          6
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 25,
+    "total_valid": 14,
+    "total_warnings": 11,
+    "total_errors": 1,
+    "by_type": {
+      "test": 5,
+      "click_text": 4,
+      "open_answer": 5,
+      "click_words": 11,
+      "sequence": 0
+    },
+    "quality": {
+      "material_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 25
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        2,
+        7,
+        9
+      ],
+      "generation_time_ms": 147304,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - Диета при нефротическом синдроме",
+          "type": "test",
+          "status": "valid",
+          "hash": "f51cde83cc44a6e90fdf13c046d0fa99e871b1895d9ddde5c9802b7f771062e1",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Этиология нефротического синдрома - п...",
+          "type": "test",
+          "status": "valid",
+          "hash": "10d9264c93d239e96dddf4a820e3b88fa7ebabff2796a05d5ff8162c7ac88b08",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Этиология нефротического синдрома - в...",
+          "type": "test",
+          "status": "valid",
+          "hash": "b56d0a11d6aec52417d1681df2a16b89592a77322c1e245825dc529f439793bc",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Принципы лечения нефротического синдр...",
+          "type": "test",
+          "status": "valid",
+          "hash": "c0997b3c9f0e2fad1314f22b5c1d169c265b4796bb36600b4d94ea2bdd56bb29",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Принципы лечения нефротического синдр...",
+          "type": "test",
+          "status": "valid",
+          "hash": "cca6d7e002ba89493b4e30431a0cd176dbd1bc9391c5cbf74e8105653c15bb55",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        4,
+        5
+      ],
+      "generation_time_ms": 151892,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Клинические проявления нефротического...",
+          "type": "click",
+          "status": "valid",
+          "hash": "d390716a08242360317c70bd9a917cef3b6de53be2cae902d08f1a53f85876c7",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Лабораторная диагностика нефротическо...",
+          "type": "click",
+          "status": "valid",
+          "hash": "22b5b653c64be3d48855b64c3ff229bf08c68f6270925c5485ddf27a088ccbd5",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Клинические проявления нефротического...",
+          "type": "click",
+          "status": "valid",
+          "hash": "1166c5edbdba20fe6d4b558f9fbfc0ab80d937fa2d4a2b488abffd63fd855dfe",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Лабораторная диагностика нефротическо...",
+          "type": "click",
+          "status": "valid",
+          "hash": "1c6e10d015151c9d619760354ac28b3d471f192025c15e83b022e66a2aca2d61",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        1,
+        3,
+        10
+      ],
+      "generation_time_ms": 137335,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Определите нефротический синдром, пер...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "9afac9b2aa41ed16323025cd8579fe9de2d30dc22da7098cb6a63bf79430cb83",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Опишите иммунологические механизмы ра...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "7045be8139cc64e33603c3623515582a750a75adee519c8c288f66fa1308407f",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Объясните метаболические механизмы ра...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "e1a192bbb40b69123ba03091d8cd1586d5bd880690a8e1f58e72b3ed1adfe25e",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Какие факторы влияют на прогноз нефро...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "ad48a968a7e437db0b12b8e97335767982daba0af88d5c6cb0c2ea865bc33332",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Какие вторичные симптомы нефротическо...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "64b681146064593fe2344d6066e2db5ff69713cc0350ffa857c86265c4e5f435",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        8
+      ],
+      "generation_time_ms": 228092,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Найдите ошибки в определении нефротич...",
+          "type": "click",
+          "status": "warning",
+          "hash": "a9fa9afbc835622992fe55588fcc559ea22348f5393b1141c091ef6eb32d5ab7",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании медикаменто...",
+          "type": "click",
+          "status": "warning",
+          "hash": "f69816840a54995d7e87ccef6edd9e690ea17b2754c1c8c322edb5366f299971",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании патогенеза ...",
+          "type": "click",
+          "status": "warning",
+          "hash": "474c97cf1946cce6e0be2682cc228477143809a9efbc2f3390ccce365a88665b",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в определении нефротич...",
+          "type": "click",
+          "status": "warning",
+          "hash": "6e3686a208a4208797e83bfc70995f853635ad301ead5753c7e3075d24a6e131",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании медикаменто...",
+          "type": "click",
+          "status": "warning",
+          "hash": "e68d45ddf56360200507fe14fc4e515d6745cfeec2e7663da46df2d20d04cb9c",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании патогенеза ...",
+          "type": "click",
+          "status": "warning",
+          "hash": "eb1eeaca592b0a51ebe6e2345b098e0e188e7b2023742f08c3fa2653d2900ad8",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании патогенеза ...",
+          "type": "click",
+          "status": "warning",
+          "hash": "bda5bb818467dd675609a3c6d1671b68cef90e0e886bbcfbb3e9912ce0a00f32",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании патогенеза ...",
+          "type": "click",
+          "status": "warning",
+          "hash": "c0d4f3fb62d288ce51f8c9017c05f0efbb82763e3361d75447022150368258b2",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании патогенеза ...",
+          "type": "click",
+          "status": "warning",
+          "hash": "2f3624403724db802e1adc6acbdb475e669968650a1566998e7e5c695c5bef85",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании патогенеза ...",
+          "type": "click",
+          "status": "warning",
+          "hash": "403c932f95cc94e45e1bed203599280971a05f5785a7b015447790f4452ffa97",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в определении нефротич...",
+          "type": "click",
+          "status": "warning",
+          "hash": "046a5d3c804d28a3f2cecd51764638077a911f4790932e6893dc8f4e1abc8325",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "В тексте обнаружена несбалансированная inline-разметка [ошибок]",
+              "field": "unbalanced_brackets"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "error",
+      "provider_used": null,
+      "educational_unit_ids": [
+        6
+      ],
+      "generation_time_ms": 301439,
+      "parsing_errors": [
+        "Задание #1: не найдено описание задачи (должно начинаться с #)"
+      ],
+      "tasks": []
+    }
+  ]
+}

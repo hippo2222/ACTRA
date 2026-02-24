@@ -264,13 +264,7 @@ class OpenAnswerEditor extends BaseEditor {
         // Back
         const backBtn = document.querySelector('#back-to-dashboard-btn');
         if (backBtn) {
-            backBtn.onclick = () => {
-                if (this.hasUnsavedChanges) {
-                    const confirmed = window.confirm('Есть несохранённые изменения. Выйти без сохранения?');
-                    if (!confirmed) return;
-                }
-                window.navigateWithTransition('/ui/editor');
-            };
+            backBtn.onclick = () => this.goBack();
         }
 
         // Split button

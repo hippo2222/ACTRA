@@ -1,0 +1,358 @@
+{
+  "ai_run_id": "bench_VMleuko_20260223T204602Z",
+  "educational_units": [
+    {
+      "assessment_risk": "medium",
+      "description": "кістковий мозок, тимус.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 1,
+      "modality": "text",
+      "title": "Центральні органи гемопоезу",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Локалізація кісткового мозку.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 2,
+      "modality": "text",
+      "title": "Локалізація кісткового мозку.",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Консистенція кісткового мозку.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 3,
+      "modality": "text",
+      "title": "Консистенція кісткового мозку.",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Маса червоного кісткового мозку.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 4,
+      "modality": "text",
+      "title": "Маса червоного кісткового мозку.",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "гемальний та стромальний компоненти.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 5,
+      "modality": "text",
+      "title": "Гемопоетична тканина",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "стан спокою/активності.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 6,
+      "modality": "text",
+      "title": "Поліпотентні стовбурові клітини",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Стимуляція гемопоезу (колонієстимулюючі фактори, гормони).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 7,
+      "modality": "text",
+      "title": "Стимуляція гемопоезу (колонієстимулюючі фактори, гормони).",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Пригнічення гемопоезу (продукти зрілих клітин, тканинні гормони, глюкокортикоїди).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 8,
+      "modality": "text",
+      "title": "Пригнічення гемопоезу (продукти зрілих клітин, тканинні гормони, глюкокортикоїди).",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Локалізація тимусу.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 9,
+      "modality": "text",
+      "title": "Локалізація тимусу.",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Маса тимусу.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 10,
+      "modality": "text",
+      "title": "Маса тимусу.",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Функція тимусу (дозрівання Т-лімфоцитів).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 11,
+      "modality": "text",
+      "title": "Функція тимусу (дозрівання Т-лімфоцитів).",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Периферичні органи кровотворення (лімфоїдні утворення слизових, лімфатичні вузли, селезінка) та їх функція (генерація імунної відповіді).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 12,
+      "modality": "text",
+      "title": "Периферичні органи кровотворення (лімфоїдні утворення слизових, лімфатичні вузли, селезінка) та їх функція (генерація ім",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "гранулоцити (нейтрофіли, еоінофіли, базофіли) та агранулоцити (лімфоцити, моноцити).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 13,
+      "modality": "text",
+      "title": "Класифікація лейкоцитів",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Функції гранулоцитів (фагоцитоз) та агранулоцитів (імунітет).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 14,
+      "modality": "text",
+      "title": "Функції гранулоцитів (фагоцитоз) та агранулоцитів (імунітет).",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Визначення мієлопоезу та лімфопоезу.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 15,
+      "modality": "text",
+      "title": "Визначення мієлопоезу та лімфопоезу.",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Напрямки мієлопоезу (6) та лімфопоезу (2).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 16,
+      "modality": "text",
+      "title": "Напрямки мієлопоезу (6) та лімфопоезу (2).",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "стовбурові, напівстовбурові (КУО), уніпотентні (КУО), бласти, клітини дозрівання, зрілі клітини. Їх характеристики.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 17,
+      "modality": "text",
+      "title": "Класи клітин гемопоезу (I-VI)",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "визначення, морфологічний субстрат (незрілі бласти), класифікація на лімфобластні та нелімфобластні (мієлобластні).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 18,
+      "modality": "text",
+      "title": "Гостра лейкемія",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "іонізуюча радіація, хімічні речовини, вірусна інфекція, генетичні дефекти.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 19,
+      "modality": "text",
+      "title": "Етіологія гострих лейкемій",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "соматичні мутації, порушення імунологічного захисту, апоптозу, формування клонів, доброякісне/злоякісне зростання.",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 20,
+      "modality": "text",
+      "title": "Патогенез",
+      "type": "process"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 21,
+      "modality": "text",
+      "title": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 22,
+      "modality": "text",
+      "title": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+      "type": "classification"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Стадії гострого лейкозу (передлейкоз, початковий період, розгорнутий, ремісія, загострення, термінальний).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 23,
+      "modality": "text",
+      "title": "Стадії гострого лейкозу (передлейкоз, початковий період, розгорнутий, ремісія, загострення, термінальний).",
+      "type": "fact"
+    },
+    {
+      "assessment_risk": "medium",
+      "description": "Клінічні \"маски\" у початковому періоді (інфекційно-токсична, пухлинна, кістково-суглобна, кардіальна, анемічна).",
+      "evidence": "heuristic extraction from freeform AI response",
+      "explicitness": "inferred",
+      "id": 24,
+      "modality": "text",
+      "title": "Клінічні \"маски\" у початковому періоді (інфекційно-токсична, пухлинна, кістково-суглобна, кардіальна, анемічна).",
+      "type": "fact"
+    }
+  ],
+  "effective_output_language": "ru",
+  "human_summary": "",
+  "illustrations_detected": false,
+  "illustrations_note": null,
+  "material_language": "ru",
+  "material_volume": "medium",
+  "not_recommended": [],
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 11638,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "stage": "analysis_initial",
+      "status": "skipped_cooldown"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "stage": "analysis_initial",
+      "status": "success"
+    }
+  ],
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "provider_used": "openrouter:2",
+  "recommendations": [
+    {
+      "count": 15,
+      "covers_units": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        14,
+        15,
+        16,
+        17,
+        19,
+        24,
+        13,
+        18,
+        20,
+        21,
+        22,
+        23
+      ],
+      "priority": "high",
+      "rationale": "Heuristic fallback: factual and classification-heavy units fit objective testing.",
+      "task_type": "TEST"
+    },
+    {
+      "count": 7,
+      "covers_units": [
+        20,
+        13,
+        18,
+        21,
+        22
+      ],
+      "priority": "medium",
+      "rationale": "Heuristic fallback: suitable for distinctions, rules, and misconception checks.",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "count": 5,
+      "covers_units": [
+        20
+      ],
+      "priority": "medium",
+      "rationale": "Heuristic fallback: process/concept units benefit from explanation-style answers.",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "count": 4,
+      "covers_units": [
+        16,
+        21,
+        22
+      ],
+      "priority": "medium",
+      "rationale": "Good fit for factual substitutions in numbers, dates, and terminology.",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "count": 1,
+      "covers_units": [
+        23
+      ],
+      "priority": "low",
+      "rationale": "Heuristic fallback: sequence/ranking only where wording suggests explicit order or stages.",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "target_language": "ru",
+  "warnings": [
+    "Heuristic fallback used: AI analysis response did not follow structured JSON format.",
+    "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+    "Heuristic adjustment: 2 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~32-40)."
+  ]
+}

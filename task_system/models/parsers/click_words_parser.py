@@ -105,20 +105,50 @@ class ClickWordsParser(TaskImportParser):
             self.errors.append(f"Задание #{index + 1}: не найден текст с ошибками")
             return None
         
-        # Поддержка inline-маркировки [слово] как альтернативы числовым индексам
+        # Поддержка inline-маркировки [слово]/[фраза] как альтернативы числовым индексам
         if not error_indices and '[' in text_content:
-            import re as _re
-            bracket_pattern = _re.compile(r'\[([^\]]+)\]')
-            # Разбиваем текст на слова, сохраняя скобки для позиционирования
             clean_words = []
             raw_words = text_content.split()
-            for word_idx, word in enumerate(raw_words):
-                if bracket_pattern.search(word):
-                    error_indices.append(len(clean_words))
-                    cleaned = bracket_pattern.sub(r'\1', word)
+            inside_bracket = False
+            bracket_balance = 0
+            for raw_word in raw_words:
+                open_count = raw_word.count('[')
+                close_count = raw_word.count(']')
+                if open_count:
+                    inside_bracket = True
+                    bracket_balance += open_count
+
+                cleaned = raw_word.replace('[', '').replace(']', '')
+                if cleaned:
+                    if inside_bracket:
+                        error_indices.append(len(clean_words))
                     clean_words.append(cleaned)
-                else:
-                    clean_words.append(word)
+
+                if close_count:
+                    bracket_balance -= close_count
+                    if bracket_balance <= 0:
+                        inside_bracket = False
+                        bracket_balance = 0
+
+            if bracket_balance != 0 or inside_bracket:
+                self.warnings.append({
+                    'index': index,
+                    'severity': 'warning',
+                    'code': 'unbalanced_brackets',
+                    'message': 'В тексте обнаружена несбалансированная inline-разметка [ошибок]',
+                    'line': None
+                })
+
+            if error_indices:
+                seen = set()
+                deduped = []
+                for idx_val in error_indices:
+                    if idx_val in seen:
+                        continue
+                    seen.add(idx_val)
+                    deduped.append(idx_val)
+                error_indices = deduped
+
             text_content = ' '.join(clean_words)
 
         if not error_indices:

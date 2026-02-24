@@ -1,0 +1,2448 @@
+{
+  "run_id": "bench_Nephr_20260223T214802Z",
+  "created_at": "2026-02-23T21:58:41Z",
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 15,
+        "educational_unit_ids": [
+          2,
+          5,
+          7,
+          9,
+          11,
+          13,
+          18,
+          19,
+          20,
+          22,
+          23,
+          24,
+          3,
+          10,
+          14,
+          15,
+          1,
+          4,
+          6,
+          8,
+          12,
+          16,
+          17,
+          21
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 7,
+        "educational_unit_ids": [
+          4,
+          8,
+          17,
+          21,
+          3,
+          10,
+          14,
+          15,
+          16,
+          1,
+          6,
+          12
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "educational_unit_ids": [
+          4,
+          8,
+          17,
+          21,
+          1,
+          6,
+          12
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 4,
+        "educational_unit_ids": [
+          14,
+          15,
+          16
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "educational_unit_ids": [
+          3,
+          10,
+          14,
+          15,
+          16
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 32,
+    "total_valid": 32,
+    "total_warnings": 0,
+    "total_errors": 0,
+    "by_type": {
+      "test": 15,
+      "click_text": 7,
+      "open_answer": 5,
+      "click_words": 4,
+      "sequence": 1
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 32,
+      "source_grounding_warnings": 0,
+      "semantic_duplicate_groups": 0,
+      "semantic_duplicate_tasks": 0,
+      "total_tasks": 32
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7887,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7875,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7864,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7852,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        2,
+        5,
+        7,
+        9,
+        11,
+        13,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        3,
+        10,
+        14,
+        15,
+        1,
+        4,
+        6,
+        8,
+        12,
+        16,
+        17,
+        21
+      ],
+      "educational_units_context": [
+        {
+          "id": 2,
+          "title": "Критерии протеинурии (факт)",
+          "description": "Критерии протеинурии (факт)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 5,
+          "title": "Клинические симптомы (факты)",
+          "description": "Клинические симптомы (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 7,
+          "title": "Осложнения (факты)",
+          "description": "Осложнения (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 9,
+          "title": "Диета (факт)",
+          "description": "Диета (факт)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 11,
+          "title": "Противопоказания к кортикостероидам (факты)",
+          "description": "Противопоказания к кортикостероидам (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 13,
+          "title": "Критерии протеинурии (масса белка)",
+          "description": "Критерии протеинурии (масса белка)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 18,
+          "title": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+          "description": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 19,
+          "title": "Лабораторные",
+          "description": "протеинурия, гипопротеинемия, диспротеинемия, гиперлипидемия, липидурия, нарушения минерального обмена, свертываемость, иммунитет, анализы крови/мочи",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 20,
+          "title": "Осложнения",
+          "description": "Осложнения",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 22,
+          "title": "Диета",
+          "description": "Диета",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "fact",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 47445,
+      "parsing_errors": [
+        "Overgeneration trimmed for TEST after grounding cleanup: requested 15, kept 15, dropped 2."
+      ],
+      "tasks": [
+        {
+          "name": "Задание - Диагностические критерии нефротическо...",
+          "type": "test",
+          "status": "valid",
+          "hash": "43f6a2a3aa8929b42b31160d6bdb4ba9ab2b3388643ba281655f58e6aed0bc1d",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.2667,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "критери",
+                "масс",
+                "протеинури"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Определение нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "c8d86e6b303690ba0a2c8470a27fff658d29074d3c90ff059b66d55a35e3ca96",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.2311,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "критери",
+                "протеинури"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "массивн~масс"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Противопоказания к кортикостероидам",
+          "type": "test",
+          "status": "valid",
+          "hash": "3a1b1003f387806bc894f194c584d89518c2586a23a98c97b2035985e9b38b34",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.2,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "кортикостероид",
+                "противопоказани"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Противопоказания к кортикостероидам п...",
+          "type": "test",
+          "status": "valid",
+          "hash": "18bc480b96f3efb29365cca827f9657dcfaa4d3927de79034bbbe56d2e320dc8",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.2,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "кортикостероид",
+                "противопоказани"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Критерии протеинурии при нефротическо...",
+          "type": "test",
+          "status": "valid",
+          "hash": "e8f92fb93968f00128cfb3896f71f552c14edb8bc5932ee59a180f6e7fb4c713",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Критерии протеинурии (факт)",
+              "score": 0.2,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "критери",
+                "протеинури"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Диагностический критерий нефротическо...",
+          "type": "test",
+          "status": "valid",
+          "hash": "4b9d2bcac5a633e95b1ab4281965246d33d3b967c395e21209739197d5faef5b",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Критерии протеинурии (факт)",
+              "score": 0.2,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "критери",
+                "протеинури"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Принципы лечения: диета",
+          "type": "test",
+          "status": "valid",
+          "hash": "5b1492592972c57171f499b2c4d823309db2e547ef33e3a939a738cd92ba17f0",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1778,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "белк",
+                "масс"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Диетотерапия при нефротическом синдроме",
+          "type": "test",
+          "status": "valid",
+          "hash": "44eb1f8c732f9389d3463109c54aee6583b2cf2fb8d9034fa5ea61f7b597c0e0",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1778,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "белк",
+                "масс"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Медикаментозное лечение: цитостатические",
+          "type": "test",
+          "status": "valid",
+          "hash": "d90f0d1cc931db0267d1a45ad19f8f8e9a1a4d9dc9518bef8e788efef478a6be",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.16,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "кортикостероид"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "противопоказан~противопоказани"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Показания и противопоказания к кортик...",
+          "type": "test",
+          "status": "valid",
+          "hash": "562f68319f4dd329867505c8f8d90f9537d87faebc5a2c075fed5faca6e8ec07",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.16,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "противопоказани"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "кортикостероидн~кортикостероид"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Патогенез: ключевое изменение",
+          "type": "test",
+          "status": "valid",
+          "hash": "f1fbe4be7cff9e26dcf46d19e621ba0ad981b663a5a735bce09646747ee7613b",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1422,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "протеинури"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "массивн~масс"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Патогенез нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "999c486bb1606b8adf66aa27dd55d4271a25a4dd445a3f596034f39f20919b38",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1422,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "протеинури"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "массивн~масс"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Осложнения нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "9a92c1f2824c3eed538c95c2d3dfe4139263fb5240b58d36ca641370b4f4d056",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Осложнения",
+              "score": 0.1333,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "осложнени"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.049
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Лабораторный признак НС",
+          "type": "test",
+          "status": "valid",
+          "hash": "f8c8b3d1382bd258107e46b7388b3a8a1b1abfaeb375371250dc0b91304980b0",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 19,
+              "primary_unit_title": "Лабораторные",
+              "score": 0.1263,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "гиперлипидеми",
+                "лабораторн",
+                "протеинури"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        },
+        {
+          "name": "Задание - Принципы медикаментозного лечения НС",
+          "type": "test",
+          "status": "valid",
+          "hash": "086b9ba9d33da78d9aef0dc1a45c7ecbf553d292f79a20405386c2b7d242fa90",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.0889,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "масс"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7839,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7795,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7785,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7748,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:2"
+        }
+      ],
+      "educational_unit_ids": [
+        4,
+        8,
+        17,
+        21,
+        3,
+        10,
+        14,
+        15,
+        16,
+        1,
+        6,
+        12
+      ],
+      "educational_units_context": [
+        {
+          "id": 4,
+          "title": "Патогенез (процесс/концепция)",
+          "description": "Патогенез (процесс/концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 8,
+          "title": "Принципы лечения (процесс)",
+          "description": "Принципы лечения (процесс)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 17,
+          "title": "Патогенез",
+          "description": "иммунная концепция",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 21,
+          "title": "Принципы лечения",
+          "description": "режим, ЛФК, санация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 3,
+          "title": "Этиология (классификация)",
+          "description": "Этиология (классификация)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 10,
+          "title": "Медикаменты и их дозировки (классификация/факты)",
+          "description": "Медикаменты и их дозировки (классификация/факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 14,
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 15,
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 16,
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 1,
+          "title": "Определение НС (концепция)",
+          "description": "Определение НС (концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "term",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 119324,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_TEXT: requested 7, kept 7, dropped 3.",
+        "Overgeneration trimmed for CLICK_TEXT after grounding cleanup: requested 7, kept 7, dropped 4."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - Какие утверждения верны в отношении п...",
+          "type": "click",
+          "status": "valid",
+          "hash": "f6e4e80c8aa2678150cfdc5ef4d37f744321f9af491d58f1bf2bae7e837b8c26",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие патогенетические механизмы лежа...",
+          "type": "click",
+          "status": "valid",
+          "hash": "ebfdc28cc0a746776899a7f217781f061178cbe523a9ecf4d60d0bed32e4b6a4",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.22,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "концепци"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "иммунных~иммунн",
+                "патогенетическ~патогенез"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие утверждения точно отражают опре...",
+          "type": "click",
+          "status": "valid",
+          "hash": "2938467e3820b2ece011aa0bbd105423954a727aeac5544e19af4be479227af0",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.1846,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "заболевани",
+                "первичн",
+                "этиологи"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие этиологические факторы могут вы...",
+          "type": "click",
+          "status": "valid",
+          "hash": "a1861489e2fa20a0f75947cb5acb6e77fbf9b671cf5a92eb3a73fdcfbeff982f",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 15,
+              "primary_unit_title": "Этиология: вторичные инфекционные (14 пунктов)",
+              "score": 0.1733,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "вторичн",
+                "инфекционн"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "этиологическ~этиологи"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие из перечисленных принципов лече...",
+          "type": "click",
+          "status": "valid",
+          "hash": "55dc23e2f4b57cd81ec00f64507de3785bf1977d1617eb4f079b3b3da0fcf566",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Принципы лечения (процесс)",
+              "score": 0.16,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лечени"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "принципов~принцип"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какой из перечисленных режимов рекоме...",
+          "type": "click",
+          "status": "valid",
+          "hash": "d3d961320ac9c7491aeced0a7d794883aad9b60de2547a0426fa0c59bf81de11",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "Принципы лечения",
+              "score": 0.0889,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "режим"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.7,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Клик - Какие из перечисленных заболеваний мо...",
+          "type": "click",
+          "status": "valid",
+          "hash": "5a74b7f6fee235ae9ae56db23d451a12cc2afdd76af0f5575a53573da4447498",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 15,
+              "primary_unit_title": "Этиология: вторичные инфекционные (14 пунктов)",
+              "score": 0.0667,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "вторичн"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.06
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7720,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7711,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 7696,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [
+        4,
+        8,
+        17,
+        21,
+        1,
+        6,
+        12
+      ],
+      "educational_units_context": [
+        {
+          "id": 4,
+          "title": "Патогенез (процесс/концепция)",
+          "description": "Патогенез (процесс/концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 8,
+          "title": "Принципы лечения (процесс)",
+          "description": "Принципы лечения (процесс)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 17,
+          "title": "Патогенез",
+          "description": "иммунная концепция",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 21,
+          "title": "Принципы лечения",
+          "description": "режим, ЛФК, санация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "process",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 1,
+          "title": "Определение НС (концепция)",
+          "description": "Определение НС (концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "term",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 6,
+          "title": "Лабораторные показатели (факты/термины)",
+          "description": "Лабораторные показатели (факты/термины)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "term",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 12,
+          "title": "Определение НС",
+          "description": "Определение НС",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "term",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 31180,
+      "parsing_errors": [
+        "Overgeneration trimmed for OPEN_ANSWER after grounding cleanup: requested 5, kept 5, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Какие немедикаментозные принципы лече...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "4c125193dec527c90b1c7f3abe8d9d59512e9b785f13fee9ced8794737768429",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "Принципы лечения",
+              "score": 0.3556,
+              "shared_token_count": 4,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лечени",
+                "принцип",
+                "режим",
+                "санаци"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.6,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Какая концепция патогенеза объясняет ...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "ad4592aa7ac0c3ccc6681fdd87f0b1fb97515c025fec221bc4e1d379176be913",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.6,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Какие две основные концепции патогене...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "1c60f94b3796311b42c6996182b08c90d1ad8ec094f09c4400ea56e0fda66f79",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.6,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Объясните, как взаимодействуют иммунн...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "2b7ff2344a6617f8a4616271face6a1d410b9bd121a6a91350600bb4b71c88e0",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_token_count": 3,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "en",
+              "threshold_relaxation": 0.6,
+              "weak": false,
+              "weak_threshold": 0.042
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ]
+          }
+        },
+        {
+          "name": "Открытый ответ - Каковы основные показания и противопо...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "514b6f3a66d5e8f9ee40ffbebff0afa54c95679cbedcc8bc312fb2812d1faddd",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Принципы лечения (процесс)",
+              "score": 0.1,
+              "shared_token_count": 1,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "лечени"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "mixed",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.07
+            },
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 1,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        }
+      ],
+      "educational_unit_ids": [
+        14,
+        15,
+        16
+      ],
+      "educational_units_context": [
+        {
+          "id": 14,
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 15,
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 16,
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 362029,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_WORDS: requested 4, kept 4, dropped 2.",
+        "Overgeneration trimmed for CLICK_WORDS after grounding cleanup: requested 4, kept 4, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "valid",
+          "hash": "432570d2fbff9ae36032734264e0ccd313a57f2ca22d893a5543aea98ed96707",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.5077,
+              "shared_token_count": 5,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 1,
+              "shared_tokens_sample": [
+                "4",
+                "заболевани",
+                "можн",
+                "первичн",
+                "этиологи"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [
+                "4"
+              ],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ]
+          }
+        },
+        {
+          "name": "Клик - Найдите фактические ошибки в тексте",
+          "type": "click",
+          "status": "valid",
+          "hash": "17ab8e554dee5d01e675c88616023146b953bbb15227a25d87de92243d4d5519",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.5077,
+              "shared_token_count": 5,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 1,
+              "shared_tokens_sample": [
+                "4",
+                "заболевани",
+                "можн",
+                "первичн",
+                "этиологи"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [
+                "4"
+              ],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ]
+          }
+        },
+        {
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "type": "click",
+          "status": "valid",
+          "hash": "cd34415cc2a736eb0a3f33dbf75fd90a2c6d80b6f00f319d074045c7660512bc",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.4462,
+              "shared_token_count": 4,
+              "shared_fuzzy_token_count": 0,
+              "shared_number_count": 1,
+              "shared_tokens_sample": [
+                "4",
+                "заболевани",
+                "первичн",
+                "этиологи"
+              ],
+              "shared_fuzzy_tokens_sample": [],
+              "shared_numbers": [
+                "4"
+              ],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ]
+          }
+        },
+        {
+          "name": "Клик - Найдите фактические ошибки: неправиль...",
+          "type": "click",
+          "status": "valid",
+          "hash": "4e12f5841068a8e2de6b7182df233f4868441e34bbc957099d84fc91a62f4da1",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 16,
+              "primary_unit_title": "Этиология: вторичные неинфекционные (14 пунктов)",
+              "score": 0.08,
+              "shared_token_count": 0,
+              "shared_fuzzy_token_count": 2,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [],
+              "shared_fuzzy_tokens_sample": [
+                "вторичным~вторичн",
+                "неинфекционным~неинфекционн"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.03
+            },
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "success",
+      "provider_used": "openrouter:2",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1,
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1,
+          "start_after_provider": "openrouter:3",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ]
+        }
+      ],
+      "educational_unit_ids": [
+        3,
+        10,
+        14,
+        15,
+        16
+      ],
+      "educational_units_context": [
+        {
+          "id": 3,
+          "title": "Этиология (классификация)",
+          "description": "Этиология (классификация)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 10,
+          "title": "Медикаменты и их дозировки (классификация/факты)",
+          "description": "Медикаменты и их дозировки (классификация/факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 14,
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 15,
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        },
+        {
+          "id": 16,
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "type": "classification",
+          "explicitness": "inferred",
+          "modality": "text",
+          "assessment_risk": "medium"
+        }
+      ],
+      "generation_time_ms": 48096,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Последовательность - Упорядочить этиологические группы неф...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "ac30653f0f9e41a41a79ab9cf71f315572cfabceb5fa8159279f68d79541b3c6",
+          "validation_issues": [],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 15,
+              "primary_unit_title": "Этиология: вторичные инфекционные (14 пунктов)",
+              "score": 0.1733,
+              "shared_token_count": 2,
+              "shared_fuzzy_token_count": 1,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [
+                "вторичн",
+                "инфекционн"
+              ],
+              "shared_fuzzy_tokens_sample": [
+                "этиологическ~этиологи"
+              ],
+              "shared_numbers": [],
+              "task_language": "ru",
+              "unit_language": "ru",
+              "threshold_relaxation": 1.0,
+              "weak": false,
+              "weak_threshold": 0.05
+            },
+            "educational_unit_ids": [
+              3,
+              10,
+              14,
+              15,
+              16
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

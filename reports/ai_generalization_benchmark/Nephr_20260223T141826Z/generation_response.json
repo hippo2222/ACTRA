@@ -1,0 +1,1353 @@
+{
+  "ai_run_id": "bench_Nephr_20260223T141826Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34754,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34693,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34679,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34628,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34614,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34601,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34592,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34575,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34559,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 34516,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        4,
+        6
+      ],
+      "generation_time_ms": 75867,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34754,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34693,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6
+            ]
+          },
+          "data": {
+            "prompt": "Клинические проявления НС",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Отеки, начинающиеся с лица и век"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Массивная протеинурия (более 3,5 г/сут)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гипопротеинемия"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гиперлипидемия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Артериальная гипертензия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гематурия"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие симптомы характерны для нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 0,
+          "name": "Задание - Клинические проявления НС",
+          "prompt": "Клинические проявления НС",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6
+            ]
+          },
+          "data": {
+            "prompt": "Лабораторная диагностика НС",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Протеинурия более 3,5 г/сут"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Снижение общего белка крови до 30-40 г/л"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Повышение холестерина в сыворотке крови"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Наличие жировых цилиндров в моче"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Повышение уровня креатинина крови"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Повышение уровня глюкозы крови"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие лабораторные изменения характерны для нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 1,
+          "name": "Задание - Лабораторная диагностика НС",
+          "prompt": "Лабораторная диагностика НС",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6
+            ]
+          },
+          "data": {
+            "prompt": "Нефротический синдром - этиология",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Сифилис"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Туберкулез"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Сахарный диабет"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Системная красная волчанка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Острый аппендицит"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гипертоническая болезнь"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных заболеваний могут вызывать нефротический синдром как вторичное заболевание почек?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 2,
+          "name": "Задание - Нефротический синдром - этиология",
+          "prompt": "Нефротический синдром - этиология",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6
+            ]
+          },
+          "data": {
+            "prompt": "Осложнения нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Отек мозга"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Нефротический (гиповолемический) шок"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Почечная колика"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Острая почечная недостаточность"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Пневмония"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных состояний являются характерными осложнениями нефротического синдрома? Выберите два верных ответа."
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 3,
+          "name": "Задание - Осложнения нефротического синдрома",
+          "prompt": "Осложнения нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6
+            ]
+          },
+          "data": {
+            "prompt": "Клинические проявления нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Массивные отеки"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гипопротеинемия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гематурия как ведущий симптом"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Артериальная гипертензия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Повыжение уровня креатинина в крови"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных признаков являются обязательными компонентами клинической картины нефротического синдрома? Выберите два верных ответа."
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 4,
+          "name": "Задание - Клинические проявления нефротического...",
+          "prompt": "Клинические проявления нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6
+            ]
+          },
+          "data": {
+            "prompt": "Диагностический критерий нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "3,5 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "1,5 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "50 мг на 1 кг массы тела в сутки"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Более 5 г/сут"
+                  }
+                ],
+                "id": 0,
+                "text": "Какое значение протеинурии является ведущим диагностическим признаком нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Диагностический критерий нефротическо...",
+          "prompt": "Диагностический критерий нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        2,
+        4
+      ],
+      "generation_time_ms": 50092,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_TEXT: requested 3, kept 3, dropped 2."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34679,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              4
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Отек мозга"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Кровоизлияния в сетчатку"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Периферические флеботромбозы"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Инфекции различной локализации"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Острая почечная недостаточность"
+              }
+            ],
+            "prompt": "Какие из перечисленных осложнений могут развиться при нефротическом синдроме?",
+            "subtype": "error_detection"
+          },
+          "index": 6,
+          "name": "Клик - Какие из перечисленных осложнений мог...",
+          "prompt": "Какие из перечисленных осложнений могут развиться при нефротическом синдроме?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              4
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Отеки"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Протеинурия"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гипопротеинемия"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гиперлипидемия"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Гипертония"
+              }
+            ],
+            "prompt": "Какие из перечисленных симптомов являются характерными для нефротического синдрома?",
+            "subtype": "error_detection"
+          },
+          "index": 7,
+          "name": "Клик - Какие из перечисленных симптомов явля...",
+          "prompt": "Какие из перечисленных симптомов являются характерными для нефротического синдрома?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              4
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Общий анализ мочи"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Специализированные анализы мочи"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Рентген грудной клетки"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "УЗИ почек"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Биопсия печени"
+              }
+            ],
+            "prompt": "Какие из перечисленных методов диагностики являются основными при нефротическом синдроме?",
+            "subtype": "error_detection"
+          },
+          "index": 8,
+          "name": "Клик - Какие из перечисленных методов диагно...",
+          "prompt": "Какие из перечисленных методов диагностики являются основными при нефротическом синдроме?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        3,
+        5,
+        7
+      ],
+      "generation_time_ms": 27051,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34628,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34614,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "иммунные комплексы",
+              "заряд мембраны",
+              "протеинурия",
+              "комплемент",
+              "подоциты"
+            ],
+            "question": "Какие две основные концепции патогенеза нефротического синдрома существуют и в чём заключается ключевое различие между ними?",
+            "reference_answer": "Иммунологическая концепция объясняет развитие синдрома осаждением иммунных комплексов и фракций комплемента в почках. Метаболическая (физико-химическая) концепция объясняет основной симптом — протеинурию — потерей отрицательного заряда клубочковой мембраны и подоцитов, что усиливает фильтрацию белков."
+          },
+          "index": 9,
+          "name": "Открытый ответ - Какие две основные концепции патогене...",
+          "prompt": "Какие две основные концепции патогенеза нефротического синдрома существуют и в чём заключается ключевое различие между ними?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "кортикостероиды",
+              "цитостатики",
+              "антикоагулянты",
+              "антиагреганты",
+              "диуретики",
+              "мембранотропные средства"
+            ],
+            "question": "Каковы основные принципы медикаментозного лечения нефротического синдрома и какие группы препаратов для этого используются?",
+            "reference_answer": "Принципы лечения включают назначение кортикостероидов как основной терапии, цитостатиков при неэффективности или противопоказаниях к стероидам, а также антикоагулянтов и антиагрегантов для профилактики тромбозов. Дополнительно применяются симптоматические средства (диуретики) и мембранотропные препараты при аллергическом компоненте."
+          },
+          "index": 10,
+          "name": "Открытый ответ - Каковы основные принципы медикаментоз...",
+          "prompt": "Каковы основные принципы медикаментозного лечения нефротического синдрома и какие группы препаратов для этого используются?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "протеинурия",
+              "гипопротеинемия",
+              "диспротеинемия",
+              "гиперлипидемия",
+              "липидурия"
+            ],
+            "question": "Какие основные лабораторные признаки формируют клинико-лабораторную картину нефротического синдрома согласно представленному материалу?",
+            "reference_answer": "Ключевыми лабораторными признаками нефротического синдрома являются массивная протеинурия (≥3,5 г/сут), гипопротеинемия, диспротеинемия (снижение альбуминов, повышение альфа-2- и бета-глобулинов), гиперлипидемия и липидурия."
+          },
+          "index": 11,
+          "name": "Открытый ответ - Какие основные лабораторные признаки ...",
+          "prompt": "Какие основные лабораторные признаки формируют клинико-лабораторную картину нефротического синдрома согласно представленному материалу?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              5,
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "пробы Зимницкого",
+              "пробы Реберга",
+              "функциональные пробы почек",
+              "клубочковая фильтрация",
+              "концентрационная функция почек"
+            ],
+            "question": "Какие функциональные пробы почек имеют наибольшее значение в повседневной практике ведения больных с нефротическим синдромом и для чего они применяются?",
+            "reference_answer": "В повседневной практике наибольшее значение имеют пробы Зимницкого (оценка концентрационной функции почек) и Реберга (оценка клубочковой фильтрации). Они применяются для оценки функционального состояния почек при нефротическом синдроме."
+          },
+          "index": 12,
+          "name": "Открытый ответ - Какие функциональные пробы почек имею...",
+          "prompt": "Какие функциональные пробы почек имеют наибольшее значение в повседневной практике ведения больных с нефротическим синдромом и для чего они применяются?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        5,
+        8
+      ],
+      "generation_time_ms": 42284,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_WORDS: requested 3, kept 3, dropped 3.",
+        "Overgeneration trimmed for CLICK_WORDS after iterative repair 1: requested 3, kept 3, dropped 2."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34601,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34592,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34575,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 2,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              8
+            ]
+          },
+          "data": {
+            "error_indices": [
+              10,
+              19,
+              29
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в описании медикаментозной терапии.",
+            "subtype": "error_detection",
+            "text": "text: При лечении нефротического синдрома кортикостероиды (преднизолон) назначаются в дозе 3 мг/кг массы тела в сутки. Цитостатики, такие как циклофосфамид, применяются при неэффективности стероидов. Антикоагулянты (гепарин) показаны только при гипопротеинемии ниже 20 г/л для профилактики тромбозов."
+          },
+          "index": 13,
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "prompt": "Найдите фактические ошибки в описании медикаментозной терапии.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              8
+            ]
+          },
+          "data": {
+            "error_indices": [
+              9,
+              12,
+              20,
+              27,
+              34
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в описании лабораторной диагностики.",
+            "subtype": "error_detection",
+            "text": "text: Основным лабораторным признаком нефротического синдрома является протеинурия, превышающая 5,5 г/сут, и гиперпротеинемия, при которой общий белок крови повышается до 60 г/л. Гиперлипидемия проявляется повышением холестерина до 30 ммоль/л, а липидурия часто путают с гематурией из-за схожего внешнего вида мочи."
+          },
+          "index": 14,
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "prompt": "Найдите фактические ошибки в описании лабораторной диагностики.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              8
+            ]
+          },
+          "data": {
+            "error_indices": [
+              9,
+              27,
+              32,
+              38
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в описании лабораторной диагностики НС.",
+            "subtype": "error_detection",
+            "text": "text: Протеинурия — ведущий симптом НС, достигающая или превышающая 30 мг на 1 кг массы больного, т. е. 3,5 г/сут и более. Гиперлипидемия проявляется повышением холестерина до 32 ммоль/л и триглицеридов до 24 ммоль/л. При НС часто наблюдается гиперкальциемия, что приводит к остеопорозу."
+          },
+          "index": 15,
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "prompt": "Найдите фактические ошибки в описании лабораторной диагностики НС.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        7,
+        8
+      ],
+      "generation_time_ms": 60130,
+      "parsing_errors": [
+        "Задание #1: не найдено ни одного элемента (element_X)"
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34559,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 34516,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              8
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "Госпитализация",
+              "element_2": "Режим",
+              "element_3": "Диета",
+              "element_4": "Медикаментозная терапия"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ]
+            },
+            "prompt": "Упорядочите этапы принципов лечения нефротического синдрома по последовательности их рассмотрения в тексте."
+          },
+          "index": 16,
+          "name": "Последовательность - Упорядочите этапы принципов лечения н...",
+          "prompt": "Упорядочите этапы принципов лечения нефротического синдрома по последовательности их рассмотрения в тексте.",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              8
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "Кортикостероиды",
+              "element_2": "Цитостатические препараты",
+              "element_3": "Антикоагулянты",
+              "element_4": "Антиагреганты",
+              "element_5": "Противовоспалительные средства",
+              "element_6": "Мембранотропные средства",
+              "element_7": "Симптоматические средства (диуретики)"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ],
+              "5": [
+                "element_5"
+              ],
+              "6": [
+                "element_6"
+              ],
+              "7": [
+                "element_7"
+              ]
+            },
+            "prompt": "Упорядочите группы медикаментозных средств для лечения нефротического синдрома в порядке их перечисления в разделе \"Медикаментозное лечение\"."
+          },
+          "index": 17,
+          "name": "Последовательность - Упорядочите группы медикаментозных ср...",
+          "prompt": "Упорядочите группы медикаментозных средств для лечения нефротического синдрома в порядке их перечисления в разделе \"Медикаментозное лечение\".",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 3,
+      "click_words": 3,
+      "open_answer": 4,
+      "sequence": 2,
+      "test": 6
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 18
+    },
+    "total_errors": 0,
+    "total_generated": 18,
+    "total_valid": 18,
+    "total_warnings": 0
+  }
+}

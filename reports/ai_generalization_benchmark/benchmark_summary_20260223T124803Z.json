@@ -1,0 +1,14 @@
+{
+  "created_at": "2026-02-23T12:48:03.756229+00:00",
+  "materials": [
+    {
+      "file": "VMleuko.docx",
+      "path": "D:\\Ai Ai\\radioproject_git\\VMleuko.docx",
+      "ok": false,
+      "word_count": 2289,
+      "format": "docx",
+      "stage": "analyze",
+      "error": "analysis_failed"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "run_id": "guided_20260223T004110_9c78eeed",
+  "created_at": "2026-02-22T22:49:33Z",
+  "module_id": "mammografiya_bi-rads",
+  "topic_id": "vidy_mg",
+  "imported_count": 12,
+  "task_ids": [
+    "task_e4c5e9ce112b",
+    "task_e7e4eaf84e6f",
+    "task_9ff1a2eabbb4",
+    "task_5b49b902bbff",
+    "task_6ee8629f3e37",
+    "task_be7f3dba6092",
+    "task_e1c8211f39fe",
+    "task_f6e7511cfb8c",
+    "task_f88a497cb7e8",
+    "task_41d12adbb12f",
+    "task_f3e8d94f671a",
+    "task_2cbdc169b446"
+  ],
+  "errors": [],
+  "idempotency_key": "guided-import-1771800573",
+  "source_context": {
+    "source": "ai",
+    "ai_provider": "openrouter",
+    "source_file_name": "25-343.pdf"
+  }
+}

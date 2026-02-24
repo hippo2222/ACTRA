@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import random
+import re
 import secrets
 import shutil
 import sys
@@ -30,7 +31,7 @@ from datetime import datetime, date
 from email.message import EmailMessage
 from email.utils import formatdate
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from flask import (
     Flask,
@@ -42,7 +43,7 @@ from flask import (
     Response,
     stream_with_context,
 )
-from urllib.parse import unquote
+from urllib.parse import unquote, urlparse
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
@@ -60,6 +61,33 @@ if str(CURRENT_DIR) not in sys.path:
     sys.path.insert(0, str(CURRENT_DIR))
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+
+def _resolve_frontend_root() -> Path:
+    """Resolve frontend root both for source checkout and packaged runtime."""
+    candidates: List[Path] = []
+
+    # PyInstaller onefile extraction dir (if present).
+    meipass = getattr(sys, "_MEIPASS", None)
+    if meipass:
+        candidates.append(Path(str(meipass)) / "frontend")
+
+    candidates.extend(
+        [
+            PROJECT_ROOT / "frontend",
+            CURRENT_DIR / "frontend",
+            CURRENT_DIR / "_internal" / "frontend",
+            PROJECT_ROOT / "_internal" / "frontend",
+            CURRENT_DIR.parent / "_internal" / "frontend",
+        ]
+    )
+
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+
+    # Keep old behavior as fallback to avoid surprising path changes.
+    return PROJECT_ROOT / "frontend"
 
 from task_system.core.logging_config import setup_logging, install_crash_handlers  # type: ignore
 
@@ -103,6 +131,7 @@ if FLASK_DEBUG_ENABLED:
 # Editor imports
 from task_system.core.io.task_io import TaskIO
 from task_system.core.models.task_data import TaskData
+from task_system.migrations import CURRENT_SCHEMA_VERSION
 from task_system.models.test_parser import TestFileParser
 from task_system.models.test_task import TestTask
 
@@ -230,6 +259,19 @@ except ImportError:
     CalendarService = None
     CALENDAR_AVAILABLE = False
     logger.warning("[HTTP] CalendarService not available")
+
+# AI Generation Service
+try:
+    from services.ai_generation_service import AIGenerationService, AnalysisParseError
+    from services.file_processor import FileProcessor
+
+    AI_SERVICE_AVAILABLE = True
+except ImportError:
+    AIGenerationService = None  # type: ignore[assignment,misc]
+    AnalysisParseError = ValueError  # type: ignore[assignment,misc]
+    FileProcessor = None  # type: ignore[assignment,misc]
+    AI_SERVICE_AVAILABLE = False
+    logger.warning("[HTTP] AIGenerationService not available")
 
 
 # Import Export Service
@@ -509,23 +551,48 @@ statistics_service: StatisticsService = _headless_app_ctx.statistics_service
 theory_service: TheoryService = _headless_app_ctx.theory_service
 calendar_service = _headless_app_ctx.calendar_service
 
+# AI Generation Service (optional — works only if ai_config.json exists with valid keys)
+_ai_service = None
+_file_processor = None
+if AI_SERVICE_AVAILABLE and AIGenerationService is not None:
+    try:
+        _ai_service = AIGenerationService(data_dir=_headless_app_ctx.data_dir)
+        if _ai_service.is_configured:
+            logger.info("[HTTP] AIGenerationService initialized with %d provider(s)",
+                        len(_ai_service._providers))
+        else:
+            logger.info("[HTTP] AIGenerationService loaded but no providers configured")
+        # FileProcessor uses config values from AIGenerationService
+        if FileProcessor is not None:
+            _file_processor = FileProcessor(
+                allowed_extensions=_ai_service.allowed_extensions,
+                max_file_size_mb=_ai_service.max_file_size_mb,
+                max_word_count=_ai_service.max_word_count,
+            )
+            logger.info("[HTTP] FileProcessor initialized (max_file=%dMB, max_words=%d)",
+                        _ai_service.max_file_size_mb, _ai_service.max_word_count)
+    except Exception as e:
+        logger.warning("[HTTP] Failed to initialize AIGenerationService: %s", e)
+        _ai_service = None
+
 # Directories with HTML UI screens and static assets
-S1_UI_DIR = PROJECT_ROOT / "frontend" / "S1"
-S2_UI_DIR = PROJECT_ROOT / "frontend" / "S2"
-S3_UI_DIR = PROJECT_ROOT / "frontend" / "S3"
-MAINSCREEN_UI_DIR = PROJECT_ROOT / "frontend" / "MainScreen"
-WELCOME_UI_DIR = PROJECT_ROOT / "frontend" / "Welcome"
-COMPLEXES_UI_DIR = PROJECT_ROOT / "frontend" / "Complexes"
-TESTUI_DIR = PROJECT_ROOT / "frontend" / "TestUI"
-SEQUENCEUI_DIR = PROJECT_ROOT / "frontend" / "SequenceUI"
-CLICKUI_DIR = PROJECT_ROOT / "frontend" / "ClickUI"
-DRAWUI_DIR = PROJECT_ROOT / "frontend" / "DrawUI"
-OPENANSWERUI_DIR = PROJECT_ROOT / "frontend" / "OpenAnswerUI"
-MISTAKESUI_DIR = PROJECT_ROOT / "frontend" / "MistakesUI"
-EDITOR_UI_DIR = PROJECT_ROOT / "frontend" / "Editor"
-CALENDAR_UI_DIR = PROJECT_ROOT / "frontend" / "Calendar"
-STATISTICS_UI_DIR = PROJECT_ROOT / "frontend" / "statistics"
-ASSETS_DIR = PROJECT_ROOT / "frontend" / "assets"
+FRONTEND_ROOT = _resolve_frontend_root()
+S1_UI_DIR = FRONTEND_ROOT / "S1"
+S2_UI_DIR = FRONTEND_ROOT / "S2"
+S3_UI_DIR = FRONTEND_ROOT / "S3"
+MAINSCREEN_UI_DIR = FRONTEND_ROOT / "MainScreen"
+WELCOME_UI_DIR = FRONTEND_ROOT / "Welcome"
+COMPLEXES_UI_DIR = FRONTEND_ROOT / "Complexes"
+TESTUI_DIR = FRONTEND_ROOT / "TestUI"
+SEQUENCEUI_DIR = FRONTEND_ROOT / "SequenceUI"
+CLICKUI_DIR = FRONTEND_ROOT / "ClickUI"
+DRAWUI_DIR = FRONTEND_ROOT / "DrawUI"
+OPENANSWERUI_DIR = FRONTEND_ROOT / "OpenAnswerUI"
+MISTAKESUI_DIR = FRONTEND_ROOT / "MistakesUI"
+EDITOR_UI_DIR = FRONTEND_ROOT / "Editor"
+CALENDAR_UI_DIR = FRONTEND_ROOT / "Calendar"
+STATISTICS_UI_DIR = FRONTEND_ROOT / "statistics"
+ASSETS_DIR = FRONTEND_ROOT / "assets"
 
 
 # ---------------------------------------------------------------------------
@@ -856,7 +923,7 @@ UPDATE_CHECK_DEFAULT_TIMEOUT_SEC = 3.0
 
 
 def _legal_dir() -> Path:
-    return PROJECT_ROOT / "frontend" / "legal"
+    return FRONTEND_ROOT / "legal"
 
 
 def _legal_manifest_path() -> Path:
@@ -1132,7 +1199,42 @@ def _get_app_version() -> str:
 
 
 def _update_manifest_url() -> str:
-    return str(os.environ.get("ACTRA_UPDATE_MANIFEST_URL") or "").strip()
+    env_value = str(os.environ.get("ACTRA_UPDATE_MANIFEST_URL") or "").strip()
+    if env_value:
+        return env_value
+
+    config_value = _configured_update_manifest_url_from_config()
+    if not config_value:
+        return ""
+
+    parsed = urlparse(config_value)
+    scheme = (parsed.scheme or "").lower()
+    if scheme in {"http", "https", "file"}:
+        return config_value
+
+    manifest_path = Path(config_value)
+    if not manifest_path.is_absolute():
+        manifest_path = PROJECT_ROOT / manifest_path
+    return manifest_path.resolve().as_uri()
+
+
+def _configured_update_manifest_url_from_config() -> str:
+    try:
+        config = load_config()
+    except Exception:
+        return ""
+    return str(config.get("update_manifest_url") or "").strip()
+
+
+def _manifest_url_requires_internet(manifest_url: str) -> bool:
+    parsed = urlparse(str(manifest_url or "").strip())
+    scheme = (parsed.scheme or "").lower()
+    if scheme not in {"http", "https"}:
+        return False
+    host = (parsed.hostname or "").strip().lower()
+    if host in {"localhost", "127.0.0.1", "::1"}:
+        return False
+    return True
 
 
 def _update_cache_path() -> Path:
@@ -1249,6 +1351,7 @@ def _fetch_update_manifest(
 def _build_update_status(*, force: bool = False) -> Dict[str, Any]:
     current_version = _get_app_version()
     manifest_url = _update_manifest_url()
+    manifest_requires_internet = _manifest_url_requires_internet(manifest_url)
     internet_online = _get_cached_internet_connectivity(force=False)
     now_iso = datetime.utcnow().isoformat() + "Z"
 
@@ -1264,6 +1367,7 @@ def _build_update_status(*, force: bool = False) -> Dict[str, Any]:
         "checked_at": now_iso,
         "internet_online": internet_online,
         "manifest_url_configured": bool(manifest_url),
+        "manifest_requires_internet": manifest_requires_internet,
         "from_cache": False,
         "reason": "unknown",
     }
@@ -1287,7 +1391,7 @@ def _build_update_status(*, force: bool = False) -> Dict[str, Any]:
             cached_result["internet_online"] = internet_online
             return {**base, **cached_result}
 
-    if not internet_online:
+    if manifest_requires_internet and not internet_online:
         if cache:
             cached_result = dict(cache.get("result") or {})
             cached_result["from_cache"] = True
@@ -1945,12 +2049,6 @@ def client_log():
         return jsonify({"error": "client_log_failed"}), 500
 
 
-try:
-    import numpy as np  # type: ignore
-except Exception:
-    np = None
-
-
 def _json_safe(obj: Any) -> Any:
     if obj is None:
         return None
@@ -1961,10 +2059,10 @@ def _json_safe(obj: Any) -> Any:
         except Exception:
             return str(obj)
 
-    if np is not None:
+    obj_module = type(obj).__module__
+    if obj_module and obj_module.split(".", 1)[0] == "numpy" and hasattr(obj, "item"):
         try:
-            if isinstance(obj, np.generic):
-                return obj.item()
+            return obj.item()
         except Exception:
             pass
 
@@ -2216,8 +2314,10 @@ def network_status() -> Any:
         feedback_delivery_configured = (
             bool(feedback_settings.get("enabled")) and not feedback_missing
         )
-        updates_configured = bool(
-            _env_bool("ACTRA_UPDATE_CHECK_ENABLED", True) and _update_manifest_url()
+        manifest_url = _update_manifest_url()
+        updates_configured = bool(_env_bool("ACTRA_UPDATE_CHECK_ENABLED", True) and manifest_url)
+        updates_requires_internet = (
+            bool(updates_configured) and _manifest_url_requires_internet(manifest_url)
         )
 
         return jsonify(
@@ -2233,8 +2333,9 @@ def network_status() -> Any:
                 },
                 "updates": {
                     "configured": updates_configured,
-                    "available_now": updates_configured and internet_online,
-                    "requires_internet": True,
+                    "available_now": updates_configured
+                    and (internet_online or not updates_requires_internet),
+                    "requires_internet": updates_requires_internet,
                 },
             }
         )
@@ -3600,10 +3701,9 @@ def get_quick_access() -> Any:
     # Fetch stats and health (safe fallback if services missing)
     complex_stats_map = {}
     try:
-        stats_list = _headless_app_ctx.statistics_service.get_complex_statistics(user_id)
-        for s in stats_list:
-            if isinstance(s, dict) and "complex_id" in s:
-                complex_stats_map[s["complex_id"]] = s
+        stats_dict = _headless_app_ctx.statistics_service.get_complex_statistics(user_id)
+        if isinstance(stats_dict, dict):
+            complex_stats_map = stats_dict
     except Exception:
         pass
 
@@ -3640,6 +3740,7 @@ def get_quick_access() -> Any:
 
         # Merge stats
         c_stats = complex_stats_map.get(cid, {})
+        c_aggregated = c_stats.get("aggregated", {}) if isinstance(c_stats, dict) else {}
         c_health = health_map.get(cid, {})
 
         paused_info = paused_sessions_by_complex.get(cid)
@@ -3652,9 +3753,9 @@ def get_quick_access() -> Any:
                 "is_pinned": cid in pinned,
                 "is_recent": cid in recent,
                 "stats": {
-                    "progress": c_stats.get("progress", 0),
-                    "solved": c_stats.get("solved", 0),
-                    "total": c_stats.get("total", 0),
+                    "progress": c_aggregated.get("success_rate", 0),
+                    "solved": c_aggregated.get("wins", 0),
+                    "total": c_aggregated.get("attempts", 0),
                 },
                 "health": c_health,
                 "paused_session": paused_info,
@@ -4188,7 +4289,72 @@ def serve_avatar(filename: str) -> Any:
     avatar_dir = Path(_headless_app_ctx.data_dir) / "avatars"
     if not avatar_dir.exists():
         avatar_dir.mkdir(parents=True, exist_ok=True)
-    return send_from_directory(str(avatar_dir), filename)
+    trim_param = str(request.args.get("trim") or "").strip().lower()
+    trim_enabled = trim_param in {"1", "true", "yes", "on"}
+
+    if not trim_enabled:
+        return send_from_directory(str(avatar_dir), filename)
+
+    try:
+        base_dir = avatar_dir.resolve()
+        target = (base_dir / filename).resolve()
+        if not target.exists() or not target.is_file():
+            return jsonify({"ok": False, "error": "avatar_not_found"}), 404
+        try:
+            target.relative_to(base_dir)
+        except ValueError:
+            return jsonify({"ok": False, "error": "avatar_path_invalid"}), 400
+
+        # Keep SVG/raw files untouched; trim is useful for raster avatars with white margins.
+        if target.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
+            return send_file(str(target))
+
+        try:
+            requested_size = int(str(request.args.get("size") or "256"))
+        except Exception:
+            requested_size = 256
+        requested_size = max(64, min(1024, requested_size))
+
+        from PIL import Image  # type: ignore
+
+        with Image.open(target) as src:
+            img = src.convert("RGBA")
+            pixels = img.load()
+            w, h = img.size
+
+            # Convert near-white pixels to transparent so outer white paddings disappear.
+            for y in range(h):
+                for x in range(w):
+                    r, g, b, a = pixels[x, y]
+                    if a > 0 and r >= 245 and g >= 245 and b >= 245:
+                        pixels[x, y] = (r, g, b, 0)
+
+            bbox = img.getbbox()
+            if bbox:
+                img = img.crop(bbox)
+
+            iw, ih = img.size
+            side = max(iw, ih, 1)
+            square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+            square.paste(img, ((side - iw) // 2, (side - ih) // 2))
+
+            if side != requested_size:
+                resampling = getattr(Image, "Resampling", Image)
+                square = square.resize((requested_size, requested_size), resampling.LANCZOS)
+
+            out = io.BytesIO()
+            square.save(out, format="PNG", optimize=True)
+            out.seek(0)
+
+        resp = send_file(out, mimetype="image/png")
+        try:
+            resp.headers["Cache-Control"] = "public, max-age=300"
+        except Exception:
+            pass
+        return resp
+    except Exception as exc:
+        logger.warning("[HTTP] Avatar trim failed for %s: %s", filename, exc)
+        return send_from_directory(str(avatar_dir), filename)
 
 
 # ---------------------------------------------------------------------------
@@ -5526,6 +5692,1686 @@ def serve_local_image() -> Any:
 
 
 # ---------------------------------------------------------------------------
+# AI Generation API
+# ---------------------------------------------------------------------------
+
+
+@app.route("/api/editor/ai/status", methods=["GET"])
+def ai_status() -> Any:
+    """Check AI provider availability and daily limits."""
+    if _ai_service is None or not _ai_service.is_configured:
+        return jsonify({
+            "ok": True,
+            "ai_available": False,
+            "active_provider": None,
+            "providers": {},
+            "daily_limit": {
+                "files_remaining": 0,
+                "max_files_per_day": 3,
+                "resets_at": None,
+            },
+        })
+    try:
+        user_id = _headless_app_ctx.user_id or "default_user"
+        result = _ai_service.get_status(user_id)
+        return jsonify(result)
+    except Exception as exc:
+        logger.exception("[HTTP] ai/status error: %s", exc)
+        return jsonify({"ok": False, "error": "status_check_failed"}), 500
+
+
+@app.route("/api/editor/ai/analyze", methods=["POST"])
+def ai_analyze() -> Any:
+    """Phase 1: Analyze material and return recommendations."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+    if _ai_service is None or not _ai_service.is_configured:
+        return jsonify({
+            "ok": False,
+            "error": "ai_unavailable",
+            "provider_chain_attempts": provider_chain_attempts,
+            "fallback": "manual",
+            "message": "Извините, сервис ИИ-генерации временно недоступен. "
+                       "Пожалуйста, попробуйте позже или воспользуйтесь ручным режимом.",
+        }), 503
+
+    payload = request.get_json(silent=True) or {}
+    material = payload.get("material", "")
+    requested_run_id = payload.get("ai_run_id")
+    source_file_info = payload.get("source_file_info")
+    if source_file_info is not None and not isinstance(source_file_info, dict):
+        source_file_info = None
+
+    if not material or not isinstance(material, str):
+        return jsonify({"ok": False, "error": "material_required"}), 400
+
+    material = material.strip()
+    if len(material) > _ai_service.max_text_length:
+        return jsonify({
+            "ok": False,
+            "error": "material_too_long",
+            "message": f"Текст слишком длинный ({len(material)} символов). "
+                       f"Максимум — {_ai_service.max_text_length} символов.",
+        }), 400
+
+    word_count = len(material.split())
+    if word_count < 50:
+        return jsonify({
+            "ok": False,
+            "error": "material_too_short",
+            "message": "Слишком мало текста для анализа. Нужно хотя бы 50 слов учебного материала.",
+        }), 400
+
+    material_language = _guess_language_code(material)
+    output_language_pref = _normalize_output_language_request(payload, material_language)
+
+    try:
+        ai_run_id = _safe_ai_run_id(requested_run_id)
+        analysis_result, provider_name = _ai_service.analyze_material(
+            material,
+            target_language_override=output_language_pref.get("effective"),
+        )
+        provider_chain_attempts = _ai_service.consume_last_provider_chain_attempts()
+        if output_language_pref.get("translation_warning"):
+            warnings = list(analysis_result.warnings or [])
+            if output_language_pref["translation_warning"] not in warnings:
+                warnings.append(output_language_pref["translation_warning"])
+            analysis_result.warnings = warnings
+        analysis_result.target_language = output_language_pref.get("effective") or analysis_result.target_language
+        active_provider = getattr(_ai_service, "_active_provider", None)
+        provider_model = getattr(active_provider, "model", None) if active_provider else None
+        try:
+            _ai_run_merge_manifest(
+                ai_run_id,
+                {
+                    "phase": "analyzed",
+                    "material_language": material_language,
+                    "output_language_mode": output_language_pref.get("mode"),
+                    "requested_output_language": output_language_pref.get("requested"),
+                    "effective_output_language": output_language_pref.get("effective"),
+                    "material_word_count": word_count,
+                    "provider_used": provider_name,
+                    "provider_model": provider_model,
+                    "provider_chain_attempts": provider_chain_attempts,
+                    "source_file_info": source_file_info,
+                    "source_file_name": (
+                        (source_file_info or {}).get("name")
+                        or (source_file_info or {}).get("filename")
+                    ),
+                },
+            )
+            _ai_run_write_artifact(
+                ai_run_id,
+                "analysis",
+                {
+                    "run_id": ai_run_id,
+                    "created_at": _utc_now_iso(),
+                    "provider_used": provider_name,
+                    "provider_model": provider_model,
+                    "provider_chain_attempts": provider_chain_attempts,
+                    "material_stats": {
+                        "word_count": word_count,
+                        "char_count": len(material),
+                        "language": material_language,
+                    },
+                    "language_preferences": output_language_pref,
+                    "result": analysis_result.to_dict(),
+                },
+            )
+        except Exception:
+            logger.exception("[HTTP] Failed to persist ai-run analysis artifact: %s", ai_run_id)
+        response = {
+            "ok": True,
+            "ai_run_id": ai_run_id,
+            "provider_used": provider_name,
+            "provider_model": provider_model,
+            "provider_chain_attempts": provider_chain_attempts,
+            "material_language": material_language,
+            "output_language_mode": output_language_pref.get("mode"),
+            "requested_output_language": output_language_pref.get("requested"),
+            "effective_output_language": output_language_pref.get("effective"),
+            "output_language_warning": output_language_pref.get("translation_warning"),
+            **analysis_result.to_dict(),
+        }
+        logger.info(
+            "[HTTP] ai/analyze: provider=%s units=%d recommendations=%d",
+            provider_name,
+            len(analysis_result.educational_units),
+            len(analysis_result.recommendations),
+        )
+        return jsonify(response)
+
+    except AnalysisParseError as ve:
+        logger.warning("[HTTP] ai/analyze parse failed: %s", ve)
+        provider_chain_attempts = _ai_service.consume_last_provider_chain_attempts()
+        try:
+            _ai_run_merge_manifest(
+                ai_run_id,
+                {
+                    "phase": "analysis_parse_failed",
+                    "provider_used": getattr(ve, "provider_name", None),
+                    "provider_chain_attempts": provider_chain_attempts,
+                    "parse_error": str(ve),
+                },
+            )
+            _ai_run_write_artifact(
+                ai_run_id,
+                "analysis_parse_error",
+                {
+                    "run_id": ai_run_id,
+                    "created_at": _utc_now_iso(),
+                    "provider_used": getattr(ve, "provider_name", None),
+                    "error": str(ve),
+                    "provider_chain_attempts": provider_chain_attempts,
+                    "raw_response_preview": (getattr(ve, "raw_text", "") or "")[:4000],
+                    "raw_response": getattr(ve, "raw_text", "") or "",
+                    "material_stats": {
+                        "word_count": word_count,
+                        "char_count": len(material),
+                        "language": _guess_language_code(material),
+                    },
+                },
+            )
+        except Exception:
+            logger.exception("[HTTP] Failed to persist ai-run analysis parse-error artifact: %s", ai_run_id)
+        return jsonify({
+            "ok": False,
+            "error": "analysis_parse_failed",
+            "provider_chain_attempts": provider_chain_attempts,
+            "message": "РќРµ СѓРґР°Р»РѕСЃСЊ РѕР±СЂР°Р±РѕС‚Р°С‚СЊ РѕС‚РІРµС‚ РР.",
+        }), 502
+
+    except ValueError as ve:
+        logger.warning("[HTTP] ai/analyze parse failed: %s", ve)
+        provider_chain_attempts = _ai_service.consume_last_provider_chain_attempts()
+        return jsonify({
+            "ok": False,
+            "error": "analysis_parse_failed",
+            "provider_chain_attempts": provider_chain_attempts,
+            "message": "Не удалось обработать ответ ИИ.",
+        }), 502
+
+    except RuntimeError as re_:
+        logger.error("[HTTP] ai/analyze all providers failed: %s", re_)
+        provider_chain_attempts = _ai_service.consume_last_provider_chain_attempts()
+        return jsonify({
+            "ok": False,
+            "error": "ai_unavailable",
+            "provider_chain_attempts": provider_chain_attempts,
+            "fallback": "manual",
+            "message": "Извините, сервис ИИ-генерации временно недоступен. "
+                       "Пожалуйста, попробуйте позже или воспользуйтесь ручным режимом.",
+        }), 503
+
+    except Exception as exc:
+        logger.exception("[HTTP] ai/analyze unexpected error: %s", exc)
+        provider_chain_attempts = _ai_service.consume_last_provider_chain_attempts()
+        return jsonify({"ok": False, "error": "analysis_failed", "provider_chain_attempts": provider_chain_attempts}), 500
+
+
+@app.route("/api/editor/ai/generate", methods=["POST"])
+def ai_generate() -> Any:
+    """Phase 2: Generate tasks of selected types."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+    if _ai_service is None or not _ai_service.is_configured:
+        return jsonify({
+            "ok": False,
+            "error": "ai_unavailable",
+            "message": "Сервис ИИ-генерации недоступен.",
+        }), 503
+    if not PARSERS_AVAILABLE:
+        return jsonify({"ok": False, "error": "parsers_not_available"}), 500
+
+    payload = request.get_json(silent=True) or {}
+    material = payload.get("material", "")
+    tasks_to_generate = payload.get("tasks_to_generate", [])
+    ai_run_id = _safe_ai_run_id(payload.get("ai_run_id"))
+
+    if not material or not isinstance(material, str):
+        return jsonify({"ok": False, "error": "material_required"}), 400
+    if not tasks_to_generate or not isinstance(tasks_to_generate, list):
+        return jsonify({"ok": False, "error": "tasks_to_generate_required"}), 400
+
+    material_language = _guess_language_code(material)
+    output_language_pref = _normalize_output_language_request(payload, material_language)
+
+    # Map task_type -> parser class
+    _PARSER_MAP = {
+        "TEST": TestImportParser,
+        "OPEN_ANSWER": OpenAnswerParser,
+        "SEQUENCE": SequenceParser,
+        "CLICK_TEXT": ClickTextParser,
+        "CLICK_WORDS": ClickWordsParser,
+    }
+
+    # Map task_type -> marker for parse_text
+    _MARKER_MAP = {
+        "TEST": "@TEST",
+        "OPEN_ANSWER": "@OPEN_ANSWER",
+        "SEQUENCE": "@SEQUENCE",
+        "CLICK_TEXT": "@CLICK_TEXT",
+        "CLICK_WORDS": "@CLICK_WORDS",
+    }
+
+    def _parse_ai_response_for_type(task_type_local: str, raw_response_local: str) -> tuple[list, Any, list]:
+        parser_cls_local = _PARSER_MAP[task_type_local]
+        marker_local = _MARKER_MAP[task_type_local]
+        parsed_local = []
+        parser_local = None
+        parse_errors_local: List[str] = []
+        try:
+            parser_local = parser_cls_local()
+            text_to_parse_local = raw_response_local or ""
+            if marker_local not in text_to_parse_local:
+                text_to_parse_local = f"{marker_local}\n{text_to_parse_local}"
+            parsed_local = parser_local.parse_text(text_to_parse_local)
+            if getattr(parser_local, "errors", None):
+                parse_errors_local.extend(parser_local.errors)
+        except Exception as parse_exc_local:
+            logger.error("[HTTP] ai/generate parse %s failed: %s", task_type_local, parse_exc_local)
+            parse_errors_local.append(f"Ошибка парсинга {task_type_local}: {str(parse_exc_local)}")
+        return parsed_local, parser_local, parse_errors_local
+
+    def _build_ai_preview_tasks(
+        task_type_local: str,
+        parsed_tasks_local: List[Dict[str, Any]],
+        parser_local: Any,
+        index_base_local: int = 0,
+    ) -> List[Dict[str, Any]]:
+        preview_tasks_local: List[Dict[str, Any]] = []
+        parser_warnings_local = getattr(parser_local, "warnings", []) if parser_local is not None else []
+        for i_local, task_local in enumerate(parsed_tasks_local):
+            task_data_local = task_local.get("data", {})
+            validation_issues_local = []
+
+            for w in parser_warnings_local or []:
+                if w.get("index", 0) != i_local:
+                    continue
+                if task_type_local == "TEST" and w.get("code") == "multiple_correct":
+                    continue
+                validation_issues_local.append({
+                    "severity": w.get("severity", "warning"),
+                    "message": w.get("message", ""),
+                    "field": w.get("code", "unknown"),
+                })
+
+            try:
+                validation_issues_local.extend(_validate_with_task_type(task_local.get("type", "unknown"), task_data_local))
+            except Exception as validator_exc_local:
+                logger.warning(
+                    "[HTTP] ai/generate validation failed for %s #%s: %s",
+                    task_type_local,
+                    i_local,
+                    validator_exc_local,
+                )
+                validation_issues_local.append({
+                    "severity": "warning",
+                    "message": f"Validation check failed: {validator_exc_local}",
+                    "field": "validation_runtime",
+                })
+
+            status_local = "valid"
+            if any(v.get("severity") == "error" for v in validation_issues_local):
+                status_local = "error"
+            elif validation_issues_local:
+                status_local = "warning"
+
+            preview_tasks_local.append({
+                "index": index_base_local + i_local,
+                "type": task_local.get("type", "unknown"),
+                "name": task_local.get("name", f"Task #{i_local + 1}"),
+                "prompt": task_local.get("prompt", ""),
+                "data": task_data_local,
+                "status": status_local,
+                "validation_issues": validation_issues_local,
+            })
+        return preview_tasks_local
+
+    def _preview_sort_key(task_type_local: str, preview_local: Dict[str, Any]) -> tuple:
+        status_rank = {"valid": 0, "warning": 1, "error": 2}
+        issues_local = preview_local.get("validation_issues") or []
+        issue_fields = [str(v.get("field") or "") for v in issues_local if isinstance(v, dict)]
+        critical_click_words = {"error_spans_count_high", "error_spans_count_low", "unbalanced_brackets"}
+        critical_count = sum(1 for field in issue_fields if field in critical_click_words)
+        grounding_info_local = _source_grounding_info_from_preview(preview_local) or {}
+        semantic_dup_info_local = _semantic_duplicate_info_from_preview(preview_local) or {}
+        grounding_weak_local = bool(grounding_info_local.get("weak"))
+        semantic_dup_local = bool(semantic_dup_info_local.get("candidate"))
+        try:
+            grounding_score_local = float(grounding_info_local.get("score", 0.0) or 0.0)
+        except Exception:
+            grounding_score_local = 0.0
+        try:
+            semantic_dup_score_local = float(semantic_dup_info_local.get("score", 0.0) or 0.0)
+        except Exception:
+            semantic_dup_score_local = 0.0
+        return (
+            status_rank.get(str(preview_local.get("status") or "warning"), 1),
+            critical_count if task_type_local == "CLICK_WORDS" else 0,
+            1 if semantic_dup_local else 0,
+            semantic_dup_score_local if semantic_dup_local else 0.0,
+            1 if grounding_weak_local else 0,
+            -grounding_score_local,
+            len(issues_local),
+            len(str(preview_local.get("prompt") or "")),
+        )
+
+    def _reindex_previews(previews_local: List[Dict[str, Any]], index_base_local: int) -> None:
+        for offset_local, preview_local in enumerate(previews_local):
+            if isinstance(preview_local, dict):
+                preview_local["index"] = index_base_local + offset_local
+
+    def _annotate_previews_source_grounding(
+        previews_local: List[Dict[str, Any]],
+        unit_contexts_local: List[Dict[str, Any]],
+        *,
+        task_type_hint_local: Optional[str] = None,
+    ) -> None:
+        if not isinstance(previews_local, list) or not unit_contexts_local:
+            return
+        for preview_local in previews_local:
+            if not isinstance(preview_local, dict):
+                continue
+            task_type_preview_local = str(task_type_hint_local or preview_local.get("type") or "")
+            _annotate_task_preview_source_grounding(
+                preview_local,
+                unit_contexts_local,
+                task_type=task_type_preview_local,
+            )
+
+    def _count_weak_source_grounding_tasks(previews_local: List[Dict[str, Any]]) -> int:
+        count_local = 0
+        for preview_local in previews_local or []:
+            grounding_local = _source_grounding_info_from_preview(preview_local) or {}
+            if bool(grounding_local.get("weak")):
+                count_local += 1
+        return count_local
+
+    def _annotate_previews_semantic_duplicates(previews_local: List[Dict[str, Any]], task_type_local: str) -> Dict[str, int]:
+        if not isinstance(previews_local, list) or len(previews_local) < 2:
+            return {"groups": 0, "tasks_marked": 0}
+        return _annotate_semantic_duplicate_candidates(previews_local, task_type=task_type_local)
+
+    def _count_semantic_duplicate_tasks(previews_local: List[Dict[str, Any]]) -> int:
+        count_local = 0
+        for preview_local in previews_local or []:
+            dup_local = _semantic_duplicate_info_from_preview(preview_local) or {}
+            if bool(dup_local.get("candidate")):
+                count_local += 1
+        return count_local
+
+    def _has_remaining_providers_after(
+        provider_name_local: Optional[str],
+        preferred_provider_names_local: Optional[List[str]] = None,
+    ) -> bool:
+        if not provider_name_local:
+            return False
+        iter_chain_fn = getattr(_ai_service, "_iter_provider_chain", None)
+        if not callable(iter_chain_fn):
+            return False
+        try:
+            remaining = iter_chain_fn(
+                start_after_provider=provider_name_local,
+                preferred_provider_names=preferred_provider_names_local,
+            )
+            return bool(remaining)
+        except Exception:
+            return False
+
+    def _provider_preferences_for_task_type(task_type_local: str) -> Optional[List[str]]:
+        """Prefer stricter-format models first for parser-sensitive generation types."""
+        task_type_norm = str(task_type_local or "").upper()
+        # Arcee has shown better format discipline for parser-sensitive generation
+        # (especially SEQUENCE and CLICK_WORDS) in benchmark runs.
+        if task_type_norm in {"SEQUENCE", "CLICK_WORDS"}:
+            return ["openrouter:3", "openrouter:2"]
+        return None
+
+    def _build_generate_format_repair_hint(task_type_local: str, expected_count_local: int) -> str:
+        if task_type_local == "CLICK_TEXT":
+            return (
+                f"Format recovery mode. Return exactly {expected_count_local} @CLICK_TEXT blocks and no extra text. "
+                "Each block must use strict syntax only: @CLICK_TEXT, then one line starting with # (question), "
+                "then 3-6 answer lines starting with + or -. No Markdown, no prose, no numbering."
+            )
+        if task_type_local == "CLICK_WORDS":
+            return (
+                f"Format recovery mode. Return exactly {expected_count_local} @CLICK_WORDS blocks and no extra text. "
+                "Use strict @CLICK_WORDS syntax only with matched [ ] markers for erroneous tokens."
+            )
+        if task_type_local == "SEQUENCE":
+            return (
+                f"Format recovery mode. Return exactly {expected_count_local} @SEQUENCE blocks and no extra text. "
+                "Use strict parser syntax only: @SEQUENCE, one # line, at least 3 lines like 'element_1: ...', "
+                "then one or more lines like 'level_1: element_1, element_2'. Levels must reference existing element_X IDs only."
+            )
+        if task_type_local == "TEST":
+            return (
+                f"Format recovery mode. Return exactly {expected_count_local} @TEST blocks and no extra text. "
+                "Use strict parser syntax only (@TEST, # title, ? question, answer lines with + or -)."
+            )
+        if task_type_local == "OPEN_ANSWER":
+            return (
+                f"Format recovery mode. Return exactly {expected_count_local} @OPEN_ANSWER blocks and no extra text. "
+                "Use strict parser syntax only."
+            )
+        return f"Format recovery mode. Return exactly {expected_count_local} blocks in strict parser syntax only."
+
+    def _parse_probe_score(parsed_local: List[Dict[str, Any]], parse_errors_local: List[str]) -> tuple:
+        return (
+            len(parsed_local),
+            -len(parse_errors_local),
+        )
+
+    def _generate_raw_with_parse_escalation(
+        task_type_local: str,
+        count_local: int,
+        edu_units_local: List[Dict[str, Any]],
+        *,
+        extra_instructions_local: Optional[str] = None,
+        preferred_provider_names_local: Optional[List[str]] = None,
+    ) -> tuple[str, Optional[str], List[Dict[str, Any]]]:
+        def _probe_test_repair_issue_count(previews_local: List[Dict[str, Any]]) -> int:
+            count_bad_local = 0
+            for preview_local in previews_local or []:
+                if not isinstance(preview_local, dict):
+                    continue
+                issue_fields_local = {
+                    str(issue.get("field") or "")
+                    for issue in (preview_local.get("validation_issues") or [])
+                    if isinstance(issue, dict)
+                }
+                has_issue_local = bool(issue_fields_local & {"questions", "no_correct_answer", "no_answers", "empty_question"})
+
+                if not has_issue_local:
+                    data_local = preview_local.get("data") or {}
+                    questions_local = data_local.get("questions") if isinstance(data_local, dict) else None
+                    if not isinstance(questions_local, list) or not questions_local:
+                        has_issue_local = True
+                    else:
+                        for q_local in questions_local:
+                            if not isinstance(q_local, dict):
+                                has_issue_local = True
+                                break
+                            answers_local = q_local.get("answers") or []
+                            if not isinstance(answers_local, list) or not answers_local:
+                                has_issue_local = True
+                                break
+                            correct_flags_local = [
+                                bool(a.get("correct", a.get("is_correct", False)))
+                                for a in answers_local
+                                if isinstance(a, dict)
+                            ]
+                            if not correct_flags_local or not any(correct_flags_local) or all(correct_flags_local):
+                                has_issue_local = True
+                                break
+                if has_issue_local:
+                    count_bad_local += 1
+            return count_bad_local
+
+        def _probe_sequence_repair_issue_count(previews_local: List[Dict[str, Any]]) -> int:
+            count_bad_local = 0
+            target_fields_local = {
+                "elements",
+                "levels",
+                "duplicate_element_id",
+                "too_few_elements",
+                "unused_element",
+                "too_many_levels",
+            }
+            for preview_local in previews_local or []:
+                if not isinstance(preview_local, dict):
+                    continue
+                issue_fields_local = {
+                    str(issue.get("field") or "")
+                    for issue in (preview_local.get("validation_issues") or [])
+                    if isinstance(issue, dict)
+                }
+                has_issue_local = bool(issue_fields_local & target_fields_local)
+                if not has_issue_local:
+                    data_local = preview_local.get("data") or {}
+                    if not isinstance(data_local, dict):
+                        has_issue_local = True
+                    else:
+                        elements_local = data_local.get("elements") or {}
+                        levels_local = data_local.get("levels") or {}
+                        if not elements_local or not levels_local:
+                            has_issue_local = True
+                        elif hasattr(elements_local, "__len__") and len(elements_local) < 3:
+                            has_issue_local = True
+                if has_issue_local:
+                    count_bad_local += 1
+            return count_bad_local
+
+        raw_response_local, provider_name_local = _ai_service.generate_tasks(
+            material,
+            task_type_local,
+            count_local,
+            edu_units_local,
+            target_language_override=output_language_pref.get("effective"),
+            extra_instructions=extra_instructions_local,
+            preferred_provider_names=preferred_provider_names_local,
+        )
+        chain_local = list(_ai_service.consume_last_provider_chain_attempts())
+
+        parsed_probe_local, parser_probe_local, parse_probe_errors_local = _parse_ai_response_for_type(
+            task_type_local,
+            raw_response_local or "",
+        )
+        expected_count_local = max(1, int(count_local or 1))
+        probe_preview_local: List[Dict[str, Any]] = []
+        probe_repair_issue_count_local = 0
+        probe_sequence_issue_count_local = 0
+        if task_type_local == "TEST":
+            probe_preview_local = _build_ai_preview_tasks(task_type_local, parsed_probe_local, parser_probe_local, index_base_local=0)
+            probe_repair_issue_count_local = _probe_test_repair_issue_count(probe_preview_local)
+        elif task_type_local == "SEQUENCE":
+            probe_preview_local = _build_ai_preview_tasks(task_type_local, parsed_probe_local, parser_probe_local, index_base_local=0)
+            probe_sequence_issue_count_local = _probe_sequence_repair_issue_count(probe_preview_local)
+
+        needs_escalation = (
+            bool(parse_probe_errors_local)
+            or len(parsed_probe_local) < expected_count_local
+            or (task_type_local == "TEST" and probe_repair_issue_count_local > 0)
+            or (task_type_local == "SEQUENCE" and probe_sequence_issue_count_local > 0)
+        )
+
+        if not needs_escalation or not _has_remaining_providers_after(
+            provider_name_local,
+            preferred_provider_names_local=preferred_provider_names_local,
+        ):
+            return raw_response_local, provider_name_local, chain_local
+
+        format_hint_local = _build_generate_format_repair_hint(task_type_local, expected_count_local)
+        if extra_instructions_local:
+            escalation_extra_local = f"{extra_instructions_local} {format_hint_local}"
+        else:
+            escalation_extra_local = format_hint_local
+
+        try:
+            escalated_raw_local, escalated_provider_name_local = _ai_service.generate_tasks(
+                material,
+                task_type_local,
+                count_local,
+                edu_units_local,
+                target_language_override=output_language_pref.get("effective"),
+                extra_instructions=escalation_extra_local,
+                start_after_provider=provider_name_local,
+                preferred_provider_names=preferred_provider_names_local,
+            )
+            chain_local.extend(_ai_service.consume_last_provider_chain_attempts())
+        except Exception:
+            chain_local.extend(_ai_service.consume_last_provider_chain_attempts())
+            return raw_response_local, provider_name_local, chain_local
+
+        escalated_parsed_local, escalated_parser_local, escalated_parse_errors_local = _parse_ai_response_for_type(
+            task_type_local,
+            escalated_raw_local or "",
+        )
+        escalated_repair_issue_count_local = 0
+        escalated_sequence_issue_count_local = 0
+        if task_type_local == "TEST":
+            escalated_preview_local = _build_ai_preview_tasks(
+                task_type_local,
+                escalated_parsed_local,
+                escalated_parser_local,
+                index_base_local=0,
+            )
+            escalated_repair_issue_count_local = _probe_test_repair_issue_count(escalated_preview_local)
+        elif task_type_local == "SEQUENCE":
+            escalated_preview_local = _build_ai_preview_tasks(
+                task_type_local,
+                escalated_parsed_local,
+                escalated_parser_local,
+                index_base_local=0,
+            )
+            escalated_sequence_issue_count_local = _probe_sequence_repair_issue_count(escalated_preview_local)
+
+        initial_score_local = (
+            *_parse_probe_score(parsed_probe_local, parse_probe_errors_local),
+            -probe_repair_issue_count_local if task_type_local == "TEST" else 0,
+            -probe_sequence_issue_count_local if task_type_local == "SEQUENCE" else 0,
+        )
+        escalated_score_local = (
+            *_parse_probe_score(escalated_parsed_local, escalated_parse_errors_local),
+            -escalated_repair_issue_count_local if task_type_local == "TEST" else 0,
+            -escalated_sequence_issue_count_local if task_type_local == "SEQUENCE" else 0,
+        )
+
+        if escalated_score_local > initial_score_local:
+            return escalated_raw_local, escalated_provider_name_local, chain_local
+
+        return raw_response_local, provider_name_local, chain_local
+
+    results = []
+    total_generated = 0
+    total_valid = 0
+    total_warnings = 0
+    total_errors = 0
+    by_type = {}
+
+    for task_spec in tasks_to_generate:
+        task_type = task_spec.get("task_type", "")
+        count = task_spec.get("count", 3)
+        edu_units = task_spec.get("educational_units", [])
+        task_type_provider_preferences = _provider_preferences_for_task_type(task_type)
+        edu_unit_ids = [
+            u.get("id")
+            for u in (edu_units if isinstance(edu_units, list) else [])
+            if isinstance(u, dict) and u.get("id") is not None
+        ]
+        edu_unit_contexts = _compact_ai_unit_contexts(edu_units, max_units=10)
+
+        if task_type not in _PARSER_MAP:
+            results.append({
+                "task_type": task_type,
+                "status": "error",
+                "error": f"Unknown task type: {task_type}",
+                "tasks": [],
+                "parsing_errors": [f"Неизвестный тип задания: {task_type}"],
+                "generation_time_ms": 0,
+                "educational_unit_ids": edu_unit_ids,
+            })
+            total_errors += 1
+            continue
+
+        subrequests = _plan_ai_generation_subrequests(task_type, count, edu_units)
+        start_time = time.time()
+        provider_name = None
+        raw_chunks: List[str] = []
+        parsing_errors = []
+        subrequest_failures = 0
+        provider_chain_attempts: List[Dict[str, Any]] = []
+
+        for sub_idx, sub in enumerate(subrequests):
+            sub_count = max(1, int(sub.get("count") or 1))
+            sub_units = sub.get("educational_units") or []
+            try:
+                sub_raw_response, sub_provider_name, sub_chain_attempts = _generate_raw_with_parse_escalation(
+                    task_type,
+                    sub_count,
+                    sub_units,
+                    extra_instructions_local=None,
+                    preferred_provider_names_local=task_type_provider_preferences,
+                )
+                if sub_provider_name and provider_name is None:
+                    provider_name = sub_provider_name
+                provider_chain_attempts.extend(sub_chain_attempts)
+                if isinstance(sub_raw_response, str) and sub_raw_response.strip():
+                    raw_chunks.append(sub_raw_response)
+            except Exception as gen_exc:
+                provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                subrequest_failures += 1
+                logger.error(
+                    "[HTTP] ai/generate %s subrequest %d/%d failed: %s",
+                    task_type,
+                    sub_idx + 1,
+                    len(subrequests),
+                    gen_exc,
+                )
+                parsing_errors.append(
+                    f"Ошибка генерации {task_type} (part {sub_idx + 1}/{len(subrequests)}): {str(gen_exc)}"
+                )
+
+        if not raw_chunks:
+            results.append({
+                "task_type": task_type,
+                "status": "error",
+                "error": "all_subrequests_failed",
+                "tasks": [],
+                "parsing_errors": parsing_errors or [f"Ошибка генерации {task_type}"],
+                "generation_time_ms": int((time.time() - start_time) * 1000),
+                "educational_unit_ids": edu_unit_ids,
+                "subrequest_count": len(subrequests),
+                "provider_chain_attempts": provider_chain_attempts,
+            })
+            total_errors += 1
+            continue
+
+        raw_response = "\n\n".join(raw_chunks)
+        requested_count = max(1, int(count or 1))
+
+        # Parse the LLM response through the appropriate parser
+        parsed_tasks, parser, parse_errors_local = _parse_ai_response_for_type(task_type, raw_response)
+        if parse_errors_local:
+            parsing_errors.extend(parse_errors_local)
+        preview_tasks = _build_ai_preview_tasks(task_type, parsed_tasks, parser, index_base_local=0)
+        _annotate_previews_source_grounding(preview_tasks, edu_unit_contexts, task_type_hint_local=task_type)
+
+        repair_attempted = False
+        repair_subrequest_count = 0
+
+        def _valid_count(previews_local: List[Dict[str, Any]]) -> int:
+            return sum(1 for p in previews_local if str(p.get("status") or "") == "valid")
+
+        def _count_click_words_repair_issue_tasks(previews_local: List[Dict[str, Any]]) -> int:
+            target_fields = {"error_spans_count_high", "error_spans_count_low", "unbalanced_brackets"}
+            count_local = 0
+            for p in previews_local:
+                has_repair_issue = False
+                for issue in (p.get("validation_issues") or []):
+                    if str(issue.get("field") or "") in target_fields:
+                        has_repair_issue = True
+                        break
+                if has_repair_issue:
+                    count_local += 1
+            return count_local
+
+        def _has_click_words_repair_issues(previews_local: List[Dict[str, Any]]) -> bool:
+            return _count_click_words_repair_issue_tasks(previews_local) > 0
+
+        def _sequence_task_has_repairable_issues(preview_local: Dict[str, Any]) -> bool:
+            if not isinstance(preview_local, dict):
+                return False
+            issue_fields_local = {
+                str(issue.get("field") or "")
+                for issue in (preview_local.get("validation_issues") or [])
+                if isinstance(issue, dict)
+            }
+            if issue_fields_local & {
+                "elements",
+                "levels",
+                "duplicate_element_id",
+                "too_few_elements",
+                "unused_element",
+                "too_many_levels",
+            }:
+                return True
+            if str(preview_local.get("status") or "") == "error":
+                return True
+            data_local = preview_local.get("data") or {}
+            if not isinstance(data_local, dict):
+                return True
+            elements_local = data_local.get("elements") or {}
+            levels_local = data_local.get("levels") or {}
+            if not elements_local or not levels_local:
+                return True
+            if hasattr(elements_local, "__len__") and len(elements_local) < 3:
+                return True
+            return False
+
+        def _count_sequence_repair_issue_tasks(previews_local: List[Dict[str, Any]]) -> int:
+            return sum(1 for p in previews_local if _sequence_task_has_repairable_issues(p))
+
+        def _test_task_has_repairable_issues(preview_local: Dict[str, Any]) -> bool:
+            if not isinstance(preview_local, dict):
+                return False
+
+            issue_fields_local = {
+                str(issue.get("field") or "")
+                for issue in (preview_local.get("validation_issues") or [])
+                if isinstance(issue, dict)
+            }
+            if issue_fields_local & {"questions", "no_correct_answer", "no_answers", "empty_question"}:
+                return True
+
+            data_local = preview_local.get("data") or {}
+            if not isinstance(data_local, dict):
+                return False
+            questions_local = data_local.get("questions") or []
+            if not isinstance(questions_local, list):
+                return True
+
+            for q_local in questions_local:
+                if not isinstance(q_local, dict):
+                    return True
+                q_text_local = str(q_local.get("text") or "").strip()
+                if not q_text_local:
+                    return True
+                answers_local = q_local.get("answers") or []
+                if not isinstance(answers_local, list) or not answers_local:
+                    return True
+
+                normalized_answer_texts: List[str] = []
+                correct_flags_local: List[bool] = []
+                for ans_local in answers_local:
+                    if not isinstance(ans_local, dict):
+                        continue
+                    ans_text_local = str(ans_local.get("text") or "").strip()
+                    if not ans_text_local:
+                        return True
+                    normalized_answer_texts.append(re.sub(r"\s+", " ", ans_text_local).lower())
+                    correct_flags_local.append(bool(ans_local.get("correct", ans_local.get("is_correct", False))))
+
+                if not correct_flags_local:
+                    return True
+                if not any(correct_flags_local):
+                    return True
+                if all(correct_flags_local):
+                    return True
+                if len(set(normalized_answer_texts)) < len(normalized_answer_texts):
+                    return True
+
+            return False
+
+        def _count_test_repair_issue_tasks(previews_local: List[Dict[str, Any]]) -> int:
+            return sum(1 for p in previews_local if _test_task_has_repairable_issues(p))
+
+        repair_count = 0
+        if task_type == "CLICK_WORDS":
+            current_valid_count = _valid_count(preview_tasks)
+            if current_valid_count < requested_count and (
+                _has_click_words_repair_issues(preview_tasks)
+                or len(preview_tasks) != requested_count
+                or bool(parsing_errors)
+            ):
+                repair_count = max(1, requested_count - current_valid_count)
+        elif task_type == "TEST":
+            current_valid_count = _valid_count(preview_tasks)
+            test_issue_count = _count_test_repair_issue_tasks(preview_tasks)
+            if test_issue_count > 0 or current_valid_count < requested_count or bool(parsing_errors):
+                repair_count = max(1, min(requested_count, max(test_issue_count, requested_count - current_valid_count)))
+        elif task_type == "CLICK_TEXT":
+            current_valid_count = _valid_count(preview_tasks)
+            if current_valid_count < requested_count and (
+                len(preview_tasks) < requested_count
+                or bool(parsing_errors)
+            ):
+                repair_count = max(1, requested_count - current_valid_count)
+        elif task_type == "SEQUENCE":
+            current_valid_count = _valid_count(preview_tasks)
+            sequence_issue_count = _count_sequence_repair_issue_tasks(preview_tasks)
+            if sequence_issue_count > 0 or current_valid_count < requested_count or bool(parsing_errors):
+                repair_count = max(
+                    1,
+                    min(requested_count, max(sequence_issue_count, requested_count - current_valid_count)),
+                )
+
+        if repair_count > 0:
+            repair_attempted = True
+            if task_type == "CLICK_WORDS":
+                repair_hint = (
+                    f"Repair mode. Return exactly {repair_count} @CLICK_WORDS blocks and no extra blocks. "
+                    "Each block must contain exactly 2-4 bracketed factual errors. "
+                    "Use matched [ ] brackets only and wrap minimal erroneous token(s)."
+                )
+            elif task_type == "TEST":
+                repair_hint = (
+                    f"Repair mode. Return exactly {repair_count} @TEST blocks and no extra blocks. "
+                    "Strict parser syntax only: @TEST, one # title line, one or more ? question lines, and answer lines prefixed with + or -. "
+                    "Every question must have at least 2 answers, at least one correct (+) and at least one incorrect (-). "
+                    "Avoid duplicate answer texts and trivial distractors."
+                )
+            elif task_type == "CLICK_TEXT":
+                repair_hint = (
+                    f"Repair mode. Return exactly {repair_count} @CLICK_TEXT blocks and no extra blocks. "
+                    "Strict syntax only: @CLICK_TEXT, one # question line, then 3-6 answer lines prefixed with + or -. "
+                    "No prose, no Markdown, no numbered lists."
+                )
+            else:
+                repair_hint = (
+                    f"Repair mode. Return exactly {repair_count} @SEQUENCE blocks and no extra blocks. "
+                    "Use strict parser syntax only: @SEQUENCE, one # line, at least 3 element_X lines, then level_X lines "
+                    "that reference only existing element_X IDs. Include the ordering principle in the # line. No prose or Markdown."
+                )
+            try:
+                repair_raw_response, repair_provider_name, repair_chain_attempts = _generate_raw_with_parse_escalation(
+                    task_type,
+                    repair_count,
+                    edu_units,
+                    extra_instructions_local=repair_hint,
+                    preferred_provider_names_local=task_type_provider_preferences,
+                )
+                repair_subrequest_count += 1
+                if repair_provider_name and provider_name is None:
+                    provider_name = repair_provider_name
+                provider_chain_attempts.extend(repair_chain_attempts)
+                repair_parsed_tasks, repair_parser, repair_parse_errors = _parse_ai_response_for_type(
+                    task_type,
+                    repair_raw_response or "",
+                )
+                if repair_parse_errors:
+                    parsing_errors.extend([f"[repair-pass] {e}" for e in repair_parse_errors])
+                repair_preview_tasks = _build_ai_preview_tasks(task_type, repair_parsed_tasks, repair_parser, index_base_local=0)
+                _annotate_previews_source_grounding(repair_preview_tasks, edu_unit_contexts, task_type_hint_local=task_type)
+                preview_tasks.extend(repair_preview_tasks)
+            except Exception as repair_exc:
+                provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                logger.warning("[HTTP] ai/generate repair-pass %s failed: %s", task_type, repair_exc)
+                parsing_errors.append(f"Repair-pass failed for {task_type}: {str(repair_exc)}")
+
+        if preview_tasks and (task_type in {"CLICK_WORDS", "SEQUENCE", "TEST"} or len(preview_tasks) > requested_count):
+            preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+
+        if len(preview_tasks) > requested_count:
+            dropped_count = len(preview_tasks) - requested_count
+            preview_tasks = preview_tasks[:requested_count]
+            parsing_errors.append(
+                f"Overgeneration trimmed for {task_type}: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+            )
+
+        # Iterative fill for CLICK_WORDS:
+        # if model still under-produces valid tasks after initial repair, try a few additional rounds.
+        if task_type == "CLICK_WORDS":
+            max_click_words_fill_rounds = 2
+            fill_round = 0
+            previous_valid_count = _valid_count(preview_tasks)
+            while fill_round < max_click_words_fill_rounds and previous_valid_count < requested_count:
+                fill_round += 1
+                repair_attempted = True
+                fill_count = max(1, requested_count - previous_valid_count)
+                fill_hint = (
+                    f"Iterative fill repair round {fill_round}. Return exactly {fill_count} @CLICK_WORDS blocks and no extra blocks. "
+                    "Strict parser-safe syntax only. Each block must contain exactly 2-4 bracketed factual errors, "
+                    "with matched [ ] markers around minimal erroneous token(s). Prefer short, clean tasks."
+                )
+                try:
+                    fill_raw_response, fill_provider_name, fill_chain_attempts = _generate_raw_with_parse_escalation(
+                        task_type,
+                        fill_count,
+                        edu_units,
+                        extra_instructions_local=fill_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if fill_provider_name and provider_name is None:
+                        provider_name = fill_provider_name
+                    provider_chain_attempts.extend(fill_chain_attempts)
+                    fill_parsed_tasks, fill_parser, fill_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        fill_raw_response or "",
+                    )
+                    if fill_parse_errors:
+                        parsing_errors.extend([f"[iterative-repair-{fill_round}] {e}" for e in fill_parse_errors])
+                    fill_preview_tasks = _build_ai_preview_tasks(task_type, fill_parsed_tasks, fill_parser, index_base_local=0)
+                    _annotate_previews_source_grounding(fill_preview_tasks, edu_unit_contexts, task_type_hint_local=task_type)
+                    if fill_preview_tasks:
+                        preview_tasks.extend(fill_preview_tasks)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after iterative repair {fill_round}: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                    new_valid_count = _valid_count(preview_tasks)
+                    if new_valid_count <= previous_valid_count:
+                        parsing_errors.append(
+                            f"Iterative repair {fill_round} made no valid-progress for {task_type} (valid {new_valid_count}/{requested_count})."
+                        )
+                        break
+                    previous_valid_count = new_valid_count
+                except Exception as fill_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate iterative repair-pass %s failed: %s", task_type, fill_exc)
+                    parsing_errors.append(f"Iterative repair-pass failed for {task_type} (round {fill_round}): {str(fill_exc)}")
+                    break
+
+        # Iterative fill for SEQUENCE:
+        # if model still under-produces valid tasks after initial repair, retry with stricter parser-aware format hints.
+        if task_type == "SEQUENCE":
+            max_sequence_fill_rounds = 2
+            sequence_fill_round = 0
+            previous_valid_count = _valid_count(preview_tasks)
+            while sequence_fill_round < max_sequence_fill_rounds and previous_valid_count < requested_count:
+                sequence_fill_round += 1
+                repair_attempted = True
+                fill_count = max(1, requested_count - previous_valid_count)
+                sequence_fill_hint = (
+                    f"Iterative fill repair round {sequence_fill_round}. Return exactly {fill_count} @SEQUENCE blocks and no extra blocks. "
+                    "Strict parser syntax only: @SEQUENCE, one # line, at least 3 lines 'element_N: text', and one or more "
+                    "lines 'level_N: element_1, element_2'. Levels must reference only declared element_N IDs. No prose or Markdown."
+                )
+                try:
+                    seq_fill_raw_response, seq_fill_provider_name, seq_fill_chain_attempts = _generate_raw_with_parse_escalation(
+                        task_type,
+                        fill_count,
+                        edu_units,
+                        extra_instructions_local=sequence_fill_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if seq_fill_provider_name and provider_name is None:
+                        provider_name = seq_fill_provider_name
+                    provider_chain_attempts.extend(seq_fill_chain_attempts)
+                    seq_fill_parsed_tasks, seq_fill_parser, seq_fill_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        seq_fill_raw_response or "",
+                    )
+                    if seq_fill_parse_errors:
+                        parsing_errors.extend([f"[iterative-sequence-{sequence_fill_round}] {e}" for e in seq_fill_parse_errors])
+                    seq_fill_preview_tasks = _build_ai_preview_tasks(task_type, seq_fill_parsed_tasks, seq_fill_parser, index_base_local=0)
+                    _annotate_previews_source_grounding(seq_fill_preview_tasks, edu_unit_contexts, task_type_hint_local=task_type)
+                    if seq_fill_preview_tasks:
+                        preview_tasks.extend(seq_fill_preview_tasks)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after iterative repair {sequence_fill_round}: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                    new_valid_count = _valid_count(preview_tasks)
+                    if new_valid_count <= previous_valid_count:
+                        parsing_errors.append(
+                            f"Iterative repair {sequence_fill_round} made no valid-progress for {task_type} (valid {new_valid_count}/{requested_count})."
+                        )
+                        break
+                    previous_valid_count = new_valid_count
+                except Exception as seq_fill_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate iterative repair-pass %s failed: %s", task_type, seq_fill_exc)
+                    parsing_errors.append(f"Iterative repair-pass failed for {task_type} (round {sequence_fill_round}): {str(seq_fill_exc)}")
+                    break
+
+        # Iterative fill for TEST:
+        # replace invalid/broken tests until valid-count is restored or progress stops.
+        if task_type == "TEST":
+            max_test_fill_rounds = 2
+            test_fill_round = 0
+            previous_valid_count = _valid_count(preview_tasks)
+            while test_fill_round < max_test_fill_rounds and previous_valid_count < requested_count:
+                test_fill_round += 1
+                repair_attempted = True
+                test_issue_count = _count_test_repair_issue_tasks(preview_tasks)
+                fill_count = max(1, min(requested_count, max(test_issue_count, requested_count - previous_valid_count)))
+                test_fill_hint = (
+                    f"Iterative fill repair round {test_fill_round}. Return exactly {fill_count} @TEST blocks and no extra blocks. "
+                    "Strict parser syntax only: @TEST, one # title line, one or more ? question lines, and answer lines starting with + or -. "
+                    "Each question must have at least one correct (+) and at least one incorrect (-) answer, and no duplicate answer texts. "
+                    "Use plausible distractors and avoid trivial duplicates."
+                )
+                try:
+                    test_fill_raw_response, test_fill_provider_name, test_fill_chain_attempts = _generate_raw_with_parse_escalation(
+                        task_type,
+                        fill_count,
+                        edu_units,
+                        extra_instructions_local=test_fill_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if test_fill_provider_name and provider_name is None:
+                        provider_name = test_fill_provider_name
+                    provider_chain_attempts.extend(test_fill_chain_attempts)
+                    test_fill_parsed_tasks, test_fill_parser, test_fill_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        test_fill_raw_response or "",
+                    )
+                    if test_fill_parse_errors:
+                        parsing_errors.extend([f"[iterative-test-{test_fill_round}] {e}" for e in test_fill_parse_errors])
+                    test_fill_preview_tasks = _build_ai_preview_tasks(task_type, test_fill_parsed_tasks, test_fill_parser, index_base_local=0)
+                    _annotate_previews_source_grounding(test_fill_preview_tasks, edu_unit_contexts, task_type_hint_local=task_type)
+                    if test_fill_preview_tasks:
+                        preview_tasks.extend(test_fill_preview_tasks)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after iterative repair {test_fill_round}: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                    new_valid_count = _valid_count(preview_tasks)
+                    if new_valid_count <= previous_valid_count:
+                        parsing_errors.append(
+                            f"Iterative repair {test_fill_round} made no valid-progress for {task_type} (valid {new_valid_count}/{requested_count})."
+                        )
+                        break
+                    previous_valid_count = new_valid_count
+                except Exception as test_fill_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate iterative repair-pass %s failed: %s", task_type, test_fill_exc)
+                    parsing_errors.append(f"Iterative repair-pass failed for {task_type} (round {test_fill_round}): {str(test_fill_exc)}")
+                    break
+
+        # Cleanup layer for TEST:
+        # even when requested count is met, replace remaining repairable test tasks.
+        if task_type == "TEST" and len(preview_tasks) == requested_count:
+            remaining_test_repairable = _count_test_repair_issue_tasks(preview_tasks)
+            if remaining_test_repairable > 0:
+                repair_attempted = True
+                cleanup_test_count = max(1, min(requested_count, remaining_test_repairable))
+                cleanup_test_hint = (
+                    f"Cleanup repair mode. Return exactly {cleanup_test_count} @TEST blocks and no extra blocks. "
+                    "Strict parser syntax only. Every question must include at least one + and one -, with non-empty texts and no duplicate answers. "
+                    "Prioritize correctness and parser-valid structure over complexity."
+                )
+                try:
+                    cleanup_test_raw, cleanup_test_provider, cleanup_test_chain = _generate_raw_with_parse_escalation(
+                        task_type,
+                        cleanup_test_count,
+                        edu_units,
+                        extra_instructions_local=cleanup_test_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if cleanup_test_provider and provider_name is None:
+                        provider_name = cleanup_test_provider
+                    provider_chain_attempts.extend(cleanup_test_chain)
+                    cleanup_test_parsed, cleanup_test_parser, cleanup_test_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        cleanup_test_raw or "",
+                    )
+                    if cleanup_test_parse_errors:
+                        parsing_errors.extend([f"[repair-pass-test-cleanup] {e}" for e in cleanup_test_parse_errors])
+                    cleanup_test_previews = _build_ai_preview_tasks(task_type, cleanup_test_parsed, cleanup_test_parser, index_base_local=0)
+                    _annotate_previews_source_grounding(cleanup_test_previews, edu_unit_contexts, task_type_hint_local=task_type)
+                    if cleanup_test_previews:
+                        preview_tasks.extend(cleanup_test_previews)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after cleanup repair: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                except Exception as cleanup_test_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate cleanup repair-pass %s failed: %s", task_type, cleanup_test_exc)
+                    parsing_errors.append(f"Cleanup repair-pass failed for {task_type}: {str(cleanup_test_exc)}")
+
+        # Cleanup layer for SEQUENCE:
+        # even when requested count is met, replace parser-valid but validator-weak sequence tasks.
+        if task_type == "SEQUENCE" and len(preview_tasks) == requested_count:
+            remaining_sequence_repairable = _count_sequence_repair_issue_tasks(preview_tasks)
+            if remaining_sequence_repairable > 0:
+                repair_attempted = True
+                cleanup_sequence_count = max(1, min(requested_count, remaining_sequence_repairable))
+                cleanup_sequence_hint = (
+                    f"Cleanup repair mode. Return exactly {cleanup_sequence_count} @SEQUENCE blocks and no extra blocks. "
+                    "Strict parser syntax only: @SEQUENCE, one # line, at least 3 element_N lines, and level_N lines "
+                    "using only declared element_N IDs. Use all elements in levels and avoid duplicate element IDs."
+                )
+                try:
+                    cleanup_sequence_raw, cleanup_sequence_provider, cleanup_sequence_chain = _generate_raw_with_parse_escalation(
+                        task_type,
+                        cleanup_sequence_count,
+                        edu_units,
+                        extra_instructions_local=cleanup_sequence_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if cleanup_sequence_provider and provider_name is None:
+                        provider_name = cleanup_sequence_provider
+                    provider_chain_attempts.extend(cleanup_sequence_chain)
+                    cleanup_sequence_parsed, cleanup_sequence_parser, cleanup_sequence_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        cleanup_sequence_raw or "",
+                    )
+                    if cleanup_sequence_parse_errors:
+                        parsing_errors.extend([f"[repair-pass-sequence-cleanup] {e}" for e in cleanup_sequence_parse_errors])
+                    cleanup_sequence_previews = _build_ai_preview_tasks(
+                        task_type,
+                        cleanup_sequence_parsed,
+                        cleanup_sequence_parser,
+                        index_base_local=0,
+                    )
+                    _annotate_previews_source_grounding(cleanup_sequence_previews, edu_unit_contexts, task_type_hint_local=task_type)
+                    if cleanup_sequence_previews:
+                        preview_tasks.extend(cleanup_sequence_previews)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after cleanup repair: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                except Exception as cleanup_sequence_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate cleanup repair-pass %s failed: %s", task_type, cleanup_sequence_exc)
+                    parsing_errors.append(f"Cleanup repair-pass failed for {task_type}: {str(cleanup_sequence_exc)}")
+
+        # Second cleanup layer for CLICK_WORDS:
+        # even when the requested count is already met, try replacing remaining warning tasks.
+        if task_type == "CLICK_WORDS" and len(preview_tasks) == requested_count:
+            remaining_repairable = _count_click_words_repair_issue_tasks(preview_tasks)
+            if remaining_repairable > 0:
+                repair_attempted = True
+                cleanup_repair_count = max(1, min(requested_count, remaining_repairable))
+                cleanup_hint = (
+                    f"Cleanup repair mode. Return exactly {cleanup_repair_count} @CLICK_WORDS blocks and no extra blocks. "
+                    "Fix common parser/validator issues: use exactly 2-4 bracketed factual errors, matched [ ] only, "
+                    "and wrap minimal erroneous token(s). Prioritize syntactically clean tasks over complexity."
+                )
+                try:
+                    cleanup_raw_response, cleanup_provider_name, cleanup_chain_attempts = _generate_raw_with_parse_escalation(
+                        task_type,
+                        cleanup_repair_count,
+                        edu_units,
+                        extra_instructions_local=cleanup_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if cleanup_provider_name and provider_name is None:
+                        provider_name = cleanup_provider_name
+                    provider_chain_attempts.extend(cleanup_chain_attempts)
+                    cleanup_parsed_tasks, cleanup_parser, cleanup_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        cleanup_raw_response or "",
+                    )
+                    if cleanup_parse_errors:
+                        parsing_errors.extend([f"[repair-pass-2] {e}" for e in cleanup_parse_errors])
+                    cleanup_previews = _build_ai_preview_tasks(task_type, cleanup_parsed_tasks, cleanup_parser, index_base_local=0)
+                    _annotate_previews_source_grounding(cleanup_previews, edu_unit_contexts, task_type_hint_local=task_type)
+                    preview_tasks.extend(cleanup_previews)
+                    if preview_tasks:
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                    if len(preview_tasks) > requested_count:
+                        dropped_count = len(preview_tasks) - requested_count
+                        preview_tasks = preview_tasks[:requested_count]
+                        parsing_errors.append(
+                            f"Overgeneration trimmed for {task_type} after cleanup repair: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                        )
+                except Exception as cleanup_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate cleanup repair-pass %s failed: %s", task_type, cleanup_exc)
+                    parsing_errors.append(f"Cleanup repair-pass failed for {task_type}: {str(cleanup_exc)}")
+
+        # Iterative cleanup for CLICK_WORDS warning tasks:
+        # if count is already met but repairable warning-tasks remain (e.g. too many error spans),
+        # keep attempting targeted replacements for a few rounds.
+        if task_type == "CLICK_WORDS" and len(preview_tasks) == requested_count:
+            max_click_words_cleanup_rounds = 2
+            cleanup_round = 0
+            previous_repairable_count = _count_click_words_repair_issue_tasks(preview_tasks)
+            previous_valid_count = _valid_count(preview_tasks)
+            while cleanup_round < max_click_words_cleanup_rounds and previous_repairable_count > 0:
+                cleanup_round += 1
+                repair_attempted = True
+                iterative_cleanup_count = max(1, min(requested_count, previous_repairable_count))
+                iterative_cleanup_hint = (
+                    f"Iterative cleanup round {cleanup_round}. Return exactly {iterative_cleanup_count} @CLICK_WORDS blocks and no extra blocks. "
+                    "Strict parser-safe syntax only. Each block must contain exactly 2-4 bracketed factual errors (never more than 4), "
+                    "with matched [ ] markers and minimal erroneous token spans. Prefer short, clear tasks."
+                )
+                try:
+                    iterative_cleanup_raw, iterative_cleanup_provider, iterative_cleanup_chain = _generate_raw_with_parse_escalation(
+                        task_type,
+                        iterative_cleanup_count,
+                        edu_units,
+                        extra_instructions_local=iterative_cleanup_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if iterative_cleanup_provider and provider_name is None:
+                        provider_name = iterative_cleanup_provider
+                    provider_chain_attempts.extend(iterative_cleanup_chain)
+                    iterative_cleanup_parsed, iterative_cleanup_parser, iterative_cleanup_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        iterative_cleanup_raw or "",
+                    )
+                    if iterative_cleanup_parse_errors:
+                        parsing_errors.extend([f"[repair-pass-click-words-cleanup-{cleanup_round}] {e}" for e in iterative_cleanup_parse_errors])
+                    iterative_cleanup_previews = _build_ai_preview_tasks(
+                        task_type,
+                        iterative_cleanup_parsed,
+                        iterative_cleanup_parser,
+                        index_base_local=0,
+                    )
+                    _annotate_previews_source_grounding(iterative_cleanup_previews, edu_unit_contexts, task_type_hint_local=task_type)
+                    if iterative_cleanup_previews:
+                        preview_tasks.extend(iterative_cleanup_previews)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after iterative cleanup {cleanup_round}: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                    new_repairable_count = _count_click_words_repair_issue_tasks(preview_tasks)
+                    new_valid_count = _valid_count(preview_tasks)
+                    if new_repairable_count >= previous_repairable_count and new_valid_count <= previous_valid_count:
+                        parsing_errors.append(
+                            f"Iterative CLICK_WORDS cleanup {cleanup_round} made no quality progress ({new_valid_count} valid, {new_repairable_count} repairable warnings)."
+                        )
+                        break
+                    previous_repairable_count = new_repairable_count
+                    previous_valid_count = new_valid_count
+                except Exception as iterative_cleanup_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate iterative cleanup %s failed: %s", task_type, iterative_cleanup_exc)
+                    parsing_errors.append(
+                        f"Iterative cleanup failed for {task_type} (round {cleanup_round}): {str(iterative_cleanup_exc)}"
+                    )
+                    break
+
+        # Generic source-grounding cleanup:
+        # when count is met but some tasks are weakly grounded in selected educational units, try replacing them.
+        if len(preview_tasks) == requested_count and task_type in {"TEST", "CLICK_TEXT", "OPEN_ANSWER", "CLICK_WORDS", "SEQUENCE"}:
+            weak_grounding_count = _count_weak_source_grounding_tasks(preview_tasks)
+            if weak_grounding_count > 0:
+                repair_attempted = True
+                grounding_cleanup_count = max(1, min(requested_count, weak_grounding_count, 3))
+                grounding_cleanup_hint = (
+                    f"Source-grounding cleanup mode. Return exactly {grounding_cleanup_count} {('@' + task_type)} blocks and no extra blocks. "
+                    "Ground every task strictly in the listed educational units and evidence snippets. "
+                    "Reuse exact source anchors where applicable (numbers, dates, named categories, threshold terms) and avoid adding external details."
+                )
+                try:
+                    grounding_cleanup_raw, grounding_cleanup_provider, grounding_cleanup_chain = _generate_raw_with_parse_escalation(
+                        task_type,
+                        grounding_cleanup_count,
+                        edu_units,
+                        extra_instructions_local=grounding_cleanup_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if grounding_cleanup_provider and provider_name is None:
+                        provider_name = grounding_cleanup_provider
+                    provider_chain_attempts.extend(grounding_cleanup_chain)
+                    grounding_cleanup_parsed, grounding_cleanup_parser, grounding_cleanup_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        grounding_cleanup_raw or "",
+                    )
+                    if grounding_cleanup_parse_errors:
+                        parsing_errors.extend([f"[repair-pass-grounding] {e}" for e in grounding_cleanup_parse_errors])
+                    grounding_cleanup_previews = _build_ai_preview_tasks(
+                        task_type,
+                        grounding_cleanup_parsed,
+                        grounding_cleanup_parser,
+                        index_base_local=0,
+                    )
+                    _annotate_previews_source_grounding(grounding_cleanup_previews, edu_unit_contexts, task_type_hint_local=task_type)
+                    if grounding_cleanup_previews:
+                        preview_tasks.extend(grounding_cleanup_previews)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after grounding cleanup: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                except Exception as grounding_cleanup_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate source-grounding cleanup %s failed: %s", task_type, grounding_cleanup_exc)
+                    parsing_errors.append(f"Source-grounding cleanup failed for {task_type}: {str(grounding_cleanup_exc)}")
+
+        # Generic semantic-duplicate cleanup:
+        # when count is met but tasks are too similar, try replacing duplicate-like tasks.
+        if len(preview_tasks) == requested_count and task_type in {"TEST", "CLICK_TEXT", "OPEN_ANSWER", "CLICK_WORDS", "SEQUENCE"}:
+            _annotate_previews_semantic_duplicates(preview_tasks, task_type)
+            semantic_dup_count = _count_semantic_duplicate_tasks(preview_tasks)
+            if semantic_dup_count > 0:
+                repair_attempted = True
+                semantic_cleanup_count = max(1, min(requested_count, semantic_dup_count, 3))
+                semantic_cleanup_hint = (
+                    f"Diversity cleanup mode. Return exactly {semantic_cleanup_count} {('@' + task_type)} blocks and no extra blocks. "
+                    "Avoid semantic duplicates of each other: do not repeat the same fact, wording pattern, or identical answer logic. "
+                    "Prefer different educational units and different cognitive operations (definition vs comparison vs mechanism vs rule vs numeric fact) "
+                    "while staying strictly grounded in the listed educational units/evidence."
+                )
+                try:
+                    semantic_cleanup_raw, semantic_cleanup_provider, semantic_cleanup_chain = _generate_raw_with_parse_escalation(
+                        task_type,
+                        semantic_cleanup_count,
+                        edu_units,
+                        extra_instructions_local=semantic_cleanup_hint,
+                        preferred_provider_names_local=task_type_provider_preferences,
+                    )
+                    repair_subrequest_count += 1
+                    if semantic_cleanup_provider and provider_name is None:
+                        provider_name = semantic_cleanup_provider
+                    provider_chain_attempts.extend(semantic_cleanup_chain)
+                    semantic_cleanup_parsed, semantic_cleanup_parser, semantic_cleanup_parse_errors = _parse_ai_response_for_type(
+                        task_type,
+                        semantic_cleanup_raw or "",
+                    )
+                    if semantic_cleanup_parse_errors:
+                        parsing_errors.extend([f"[repair-pass-semantic] {e}" for e in semantic_cleanup_parse_errors])
+                    semantic_cleanup_previews = _build_ai_preview_tasks(
+                        task_type,
+                        semantic_cleanup_parsed,
+                        semantic_cleanup_parser,
+                        index_base_local=0,
+                    )
+                    _annotate_previews_source_grounding(semantic_cleanup_previews, edu_unit_contexts, task_type_hint_local=task_type)
+                    if semantic_cleanup_previews:
+                        preview_tasks.extend(semantic_cleanup_previews)
+                        _annotate_previews_semantic_duplicates(preview_tasks, task_type)
+                        preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+                        if len(preview_tasks) > requested_count:
+                            dropped_count = len(preview_tasks) - requested_count
+                            preview_tasks = preview_tasks[:requested_count]
+                            parsing_errors.append(
+                                f"Overgeneration trimmed for {task_type} after semantic cleanup: requested {requested_count}, kept {requested_count}, dropped {dropped_count}."
+                            )
+                except Exception as semantic_cleanup_exc:
+                    provider_chain_attempts.extend(_ai_service.consume_last_provider_chain_attempts())
+                    logger.warning("[HTTP] ai/generate semantic cleanup %s failed: %s", task_type, semantic_cleanup_exc)
+                    parsing_errors.append(f"Semantic cleanup failed for {task_type}: {str(semantic_cleanup_exc)}")
+
+        if repair_attempted and len(preview_tasks) < requested_count:
+            parsing_errors.append(
+                f"Repair-pass incomplete for {task_type}: requested {requested_count}, obtained {len(preview_tasks)}."
+            )
+
+        if preview_tasks:
+            _annotate_previews_semantic_duplicates(preview_tasks, task_type)
+            preview_tasks = sorted(preview_tasks, key=lambda p: _preview_sort_key(task_type, p))
+            if len(preview_tasks) > requested_count:
+                preview_tasks = preview_tasks[:requested_count]
+
+        gen_time_ms = int((time.time() - start_time) * 1000)
+        _reindex_previews(preview_tasks, total_generated)
+
+        task_count = len(preview_tasks)
+        total_generated += task_count
+        by_type[task_type.lower()] = task_count
+
+        results.append({
+            "task_type": task_type,
+            "status": "success" if preview_tasks else "error",
+            "provider_used": provider_name if preview_tasks else None,
+            "provider_chain_attempts": provider_chain_attempts,
+            "tasks": preview_tasks,
+            "parsing_errors": parsing_errors,
+            "generation_time_ms": gen_time_ms,
+            "educational_unit_ids": edu_unit_ids,
+            "educational_units_context": edu_unit_contexts,
+            "subrequest_count": len(subrequests) + repair_subrequest_count,
+            "repair_pass_attempted": repair_attempted,
+            "repair_subrequest_count": repair_subrequest_count,
+        })
+
+    quality_summary = _postprocess_ai_generate_results(
+        material,
+        results,
+        expected_output_language=output_language_pref.get("effective"),
+    )
+
+    total_generated = 0
+    total_valid = 0
+    total_warnings = 0
+    total_errors = 0
+    by_type = {}
+    for result in results:
+        result_task_type = str(result.get("task_type", "")).lower()
+        result_tasks = result.get("tasks", []) if isinstance(result.get("tasks"), list) else []
+        if result_task_type:
+            by_type[result_task_type] = by_type.get(result_task_type, 0) + len(result_tasks)
+        total_generated += len(result_tasks)
+        if result.get("status") == "error" and not result_tasks:
+            total_errors += 1
+        for t in result_tasks:
+            status = t.get("status", "valid")
+            if status == "error":
+                total_errors += 1
+            elif status == "warning":
+                total_warnings += 1
+            else:
+                total_valid += 1
+
+    response = {
+        "ok": True,
+        "ai_run_id": ai_run_id,
+        "material_language": material_language,
+        "output_language_mode": output_language_pref.get("mode"),
+        "requested_output_language": output_language_pref.get("requested"),
+        "effective_output_language": output_language_pref.get("effective"),
+        "output_language_warning": output_language_pref.get("translation_warning"),
+        "results": results,
+        "provider_chain_attempts": [
+            attempt
+            for r in results
+            if isinstance(r, dict)
+            for attempt in (r.get("provider_chain_attempts") or [])
+        ],
+        "summary": {
+            "total_generated": total_generated,
+            "total_valid": total_valid,
+            "total_warnings": total_warnings,
+            "total_errors": total_errors,
+            "by_type": by_type,
+            "quality": quality_summary,
+        },
+        "parsing_errors": [],
+    }
+
+    try:
+        active_provider = getattr(_ai_service, "_active_provider", None)
+        provider_model = getattr(active_provider, "model", None) if active_provider else None
+        _ai_run_merge_manifest(
+            ai_run_id,
+            {
+                "phase": "generated",
+                "provider_model": provider_model,
+                "material_language": material_language,
+                "output_language_mode": output_language_pref.get("mode"),
+                "requested_output_language": output_language_pref.get("requested"),
+                "effective_output_language": output_language_pref.get("effective"),
+                "generation_summary": response.get("summary"),
+            },
+        )
+        _ai_run_write_artifact(
+            ai_run_id,
+            "generation",
+            {
+                "run_id": ai_run_id,
+                "created_at": _utc_now_iso(),
+                "provider_model": provider_model,
+                "material_stats": {
+                    "word_count": len(material.split()),
+                    "char_count": len(material),
+                    "language": material_language,
+                },
+                "language_preferences": output_language_pref,
+                "request": {
+                    "tasks_to_generate": [
+                        {
+                            "task_type": spec.get("task_type"),
+                            "count": spec.get("count"),
+                            "educational_unit_ids": [
+                                u.get("id")
+                                for u in (spec.get("educational_units") or [])
+                                if isinstance(u, dict)
+                            ],
+                        }
+                        for spec in tasks_to_generate
+                        if isinstance(spec, dict)
+                    ],
+                },
+                "summary": response.get("summary"),
+                "results": [
+                    {
+                        "task_type": r.get("task_type"),
+                        "status": r.get("status"),
+                        "provider_used": r.get("provider_used"),
+                        "provider_chain_attempts": r.get("provider_chain_attempts") or [],
+                        "educational_unit_ids": r.get("educational_unit_ids") or [],
+                        "educational_units_context": r.get("educational_units_context") or [],
+                        "generation_time_ms": r.get("generation_time_ms"),
+                        "parsing_errors": r.get("parsing_errors") or [],
+                        "tasks": [
+                            {
+                                "name": t.get("name"),
+                                "type": t.get("type"),
+                                "status": t.get("status"),
+                                "hash": _stable_json_hash(_extract_task_preview_signature(t)),
+                                "validation_issues": t.get("validation_issues") or [],
+                                "ai_meta": t.get("ai_meta") if isinstance(t.get("ai_meta"), dict) else None,
+                            }
+                            for t in (r.get("tasks") or [])
+                            if isinstance(t, dict)
+                        ],
+                    }
+                    for r in results
+                    if isinstance(r, dict)
+                ],
+            },
+        )
+    except Exception:
+        logger.exception("[HTTP] Failed to persist ai-run generation artifact: %s", ai_run_id)
+
+    logger.info(
+        "[HTTP] ai/generate: total=%d valid=%d warnings=%d errors=%d types=%s",
+        total_generated, total_valid, total_warnings, total_errors,
+        list(by_type.keys()),
+    )
+
+    return jsonify(response)
+
+
+@app.route("/api/editor/ai/upload", methods=["POST"])
+def ai_upload() -> Any:
+    """Upload a file (PDF/DOCX/TXT) and extract text via FileProcessor."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+    if _ai_service is None or not _ai_service.is_configured:
+        return jsonify({"ok": False, "error": "ai_unavailable"}), 503
+    if _file_processor is None:
+        return jsonify({"ok": False, "error": "file_processor_unavailable"}), 500
+
+    user_id = _headless_app_ctx.user_id or "default_user"
+
+    # Check daily limit
+    allowed, remaining, max_files = _ai_service.check_daily_limit(user_id)
+    if not allowed:
+        return jsonify({
+            "ok": False,
+            "error": "daily_limit_exceeded",
+            "message": f"Вы уже загрузили {max_files} файлов сегодня — это максимум на сутки. "
+                       "Лимит обновится завтра в 00:00.",
+        }), 429
+
+    if "file" not in request.files:
+        return jsonify({"ok": False, "error": "file_required"}), 400
+
+    file = request.files["file"]
+    if not file.filename:
+        return jsonify({"ok": False, "error": "file_required"}), 400
+
+    file_bytes = file.read()
+    result = _file_processor.process_file(file_bytes, file.filename)
+
+    if not result.ok:
+        # Map error codes to HTTP status codes
+        _ERROR_STATUS = {
+            "file_too_large": 400,
+            "unsupported_format": 400,
+            "file_empty": 400,
+            "no_text_layer": 400,
+            "too_few_words": 400,
+            "server_missing_library": 500,
+            "extraction_failed": 500,
+        }
+        status = _ERROR_STATUS.get(result.error_code, 400)
+        return jsonify({
+            "ok": False,
+            "error": result.error_code,
+            "message": result.error_message,
+        }), status
+
+    # Increment daily counter
+    _ai_service.increment_daily_usage(user_id)
+
+    logger.info(
+        "[HTTP] ai/upload: file=%s format=%s size=%sMB words=%d",
+        file.filename,
+        result.file_info.get("format", "?"),
+        result.file_info.get("size_mb", "?"),
+        result.word_count,
+    )
+
+    return jsonify({
+        "ok": True,
+        "extracted_text": result.extracted_text,
+        "word_count": result.word_count,
+        "file_info": result.file_info,
+        "warnings": result.warnings,
+    })
+
+
+# ---------------------------------------------------------------------------
 # Task Import API
 # ---------------------------------------------------------------------------
 
@@ -5553,6 +7399,1096 @@ def _word_ranges(text: str) -> List[tuple[int, int]]:
     if not isinstance(text, str) or not text:
         return []
     return [(m.start(), m.end()) for m in re.finditer(r"\S+", text)]
+
+
+_IMPORT_EXECUTE_IDEMPOTENCY_LOCK = threading.Lock()
+_IMPORT_EXECUTE_IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
+_IMPORT_EXECUTE_IDEMPOTENCY_TTL_SECONDS = 15 * 60
+
+
+def _utc_now_iso() -> str:
+    return datetime.utcnow().isoformat(timespec="seconds") + "Z"
+
+
+def _canonicalize_test_questions(questions: Any) -> tuple[List[Dict[str, Any]], str]:
+    """Normalize TEST questions to backend schema (`correct`) and infer test_type."""
+    if not isinstance(questions, list):
+        return [], "single_choice"
+
+    normalized_questions: List[Dict[str, Any]] = []
+    has_multiple_correct = False
+
+    for q_idx, q in enumerate(questions):
+        if not isinstance(q, dict):
+            continue
+        normalized_answers: List[Dict[str, Any]] = []
+        correct_count = 0
+        for a_idx, ans in enumerate(q.get("answers", []) or []):
+            if not isinstance(ans, dict):
+                continue
+            is_correct = bool(ans.get("correct", ans.get("is_correct", False)))
+            if is_correct:
+                correct_count += 1
+            normalized_answer = dict(ans)
+            normalized_answer["correct"] = is_correct
+            normalized_answer["is_correct"] = is_correct
+            if not normalized_answer.get("id"):
+                normalized_answer["id"] = f"q{q_idx + 1}_a{a_idx + 1}"
+            normalized_answers.append(normalized_answer)
+        if correct_count > 1:
+            has_multiple_correct = True
+        normalized_q = dict(q)
+        normalized_q["answers"] = normalized_answers
+        if "id" not in normalized_q:
+            normalized_q["id"] = q_idx
+        normalized_questions.append(normalized_q)
+
+    return normalized_questions, ("multiple_choice" if has_multiple_correct else "single_choice")
+
+
+def _stable_json_hash(data: Any) -> str:
+    try:
+        raw = json.dumps(data, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    except Exception:
+        raw = str(data)
+    return hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
+
+
+def _cleanup_import_idempotency_cache() -> None:
+    now = time.time()
+    stale_keys = [
+        key for key, item in _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.items()
+        if now - float(item.get("created_ts", 0)) > _IMPORT_EXECUTE_IDEMPOTENCY_TTL_SECONDS
+    ]
+    for key in stale_keys:
+        _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.pop(key, None)
+
+
+def _import_idempotency_get(idempotency_key: str, request_fingerprint: str) -> Optional[Dict[str, Any]]:
+    if not idempotency_key:
+        return None
+    with _IMPORT_EXECUTE_IDEMPOTENCY_LOCK:
+        _cleanup_import_idempotency_cache()
+        item = _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.get(idempotency_key)
+        if not item:
+            return None
+        if item.get("request_fingerprint") != request_fingerprint:
+            return {"conflict": True}
+        if item.get("in_progress"):
+            return {"in_progress": True}
+        cached_response = dict(item.get("response") or {})
+        cached_response["idempotent_replay"] = True
+        return cached_response
+
+
+def _import_idempotency_reserve(idempotency_key: str, request_fingerprint: str) -> Optional[Dict[str, Any]]:
+    if not idempotency_key:
+        return None
+    with _IMPORT_EXECUTE_IDEMPOTENCY_LOCK:
+        _cleanup_import_idempotency_cache()
+        item = _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.get(idempotency_key)
+        if item:
+            if item.get("request_fingerprint") != request_fingerprint:
+                return {"conflict": True}
+            if item.get("in_progress"):
+                return {"in_progress": True}
+            cached_response = dict(item.get("response") or {})
+            cached_response["idempotent_replay"] = True
+            return cached_response
+        _IMPORT_EXECUTE_IDEMPOTENCY_CACHE[idempotency_key] = {
+            "created_ts": time.time(),
+            "request_fingerprint": request_fingerprint,
+            "in_progress": True,
+            "response": None,
+        }
+        return None
+
+
+def _import_idempotency_store(idempotency_key: str, request_fingerprint: str, response: Dict[str, Any]) -> None:
+    if not idempotency_key:
+        return
+    with _IMPORT_EXECUTE_IDEMPOTENCY_LOCK:
+        _cleanup_import_idempotency_cache()
+        _IMPORT_EXECUTE_IDEMPOTENCY_CACHE[idempotency_key] = {
+            "created_ts": time.time(),
+            "request_fingerprint": request_fingerprint,
+            "in_progress": False,
+            "response": dict(response or {}),
+        }
+
+
+def _import_idempotency_release(idempotency_key: str, request_fingerprint: str) -> None:
+    if not idempotency_key:
+        return
+    with _IMPORT_EXECUTE_IDEMPOTENCY_LOCK:
+        item = _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.get(idempotency_key)
+        if not item:
+            return
+        if item.get("request_fingerprint") == request_fingerprint and item.get("in_progress"):
+            _IMPORT_EXECUTE_IDEMPOTENCY_CACHE.pop(idempotency_key, None)
+
+
+def _safe_ai_run_id(value: Optional[str] = None) -> str:
+    raw = (value or "").strip()
+    if raw and re.fullmatch(r"[A-Za-z0-9._-]{6,128}", raw):
+        return raw
+    ts = datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
+    return f"ai_run_{ts}_{uuid.uuid4().hex[:10]}"
+
+
+def _ai_runs_root() -> Path:
+    root = _headless_app_ctx.data_dir / "ai_runs"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _ai_run_dir(run_id: str) -> Path:
+    run_dir = _ai_runs_root() / run_id
+    run_dir.mkdir(parents=True, exist_ok=True)
+    return run_dir
+
+
+def _read_json_file(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        if not path.exists():
+            return None
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else None
+    except Exception:
+        logger.exception("[HTTP] Failed to read JSON file: %s", path)
+        return None
+
+
+def _write_json_file(path: Path, payload: Dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
+    tmp.replace(path)
+
+
+def _ai_run_merge_manifest(run_id: str, patch_data: Dict[str, Any]) -> None:
+    run_dir = _ai_run_dir(run_id)
+    manifest_path = run_dir / "run.json"
+    manifest = _read_json_file(manifest_path) or {"run_id": run_id}
+    if not isinstance(manifest, dict):
+        manifest = {"run_id": run_id}
+    manifest.update({k: v for k, v in (patch_data or {}).items() if v is not None})
+    manifest.setdefault("created_at", _utc_now_iso())
+    manifest["updated_at"] = _utc_now_iso()
+    _write_json_file(manifest_path, manifest)
+
+
+def _ai_run_write_artifact(run_id: str, artifact_name: str, payload: Dict[str, Any]) -> None:
+    run_dir = _ai_run_dir(run_id)
+    artifact_path = run_dir / f"{artifact_name}.json"
+    _write_json_file(artifact_path, payload)
+
+
+def _guess_language_code(text: str) -> str:
+    if not isinstance(text, str) or not text.strip():
+        return "unknown"
+    cyr = sum(1 for ch in text if "а" <= ch.lower() <= "я" or ch.lower() == "ё")
+    lat = sum(1 for ch in text if "a" <= ch.lower() <= "z")
+    if cyr > lat * 1.3:
+        return "ru"
+    if lat > cyr * 1.3:
+        return "en"
+    if cyr == 0 and lat == 0:
+        return "unknown"
+    return "mixed"
+
+
+def _extract_task_preview_signature(task: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(task, dict):
+        return {}
+    signature = {
+        "type": task.get("type"),
+        "name": task.get("name"),
+        "prompt": (task.get("prompt") or task.get("data", {}).get("prompt", "")) if isinstance(task.get("data"), dict) else task.get("prompt"),
+    }
+    data = task.get("data", {})
+    if isinstance(data, dict):
+        # Exclude volatile/UI-only fields from duplicate hashing
+        signature["data"] = {
+            k: v for k, v in data.items()
+            if k not in {"metadata", "question_count", "elements_count", "levels_count", "options_count", "correct_count", "text_length", "error_count"}
+        }
+    return signature
+
+
+def _task_preview_semantic_blob(task_preview: Dict[str, Any]) -> str:
+    """Semantic dedupe blob: text-heavy and stable enough for near-duplicate checks."""
+    if not isinstance(task_preview, dict):
+        return ""
+    fragments: List[str] = []
+    _collect_text_fragments_for_grounding(task_preview.get("name"), fragments)
+    _collect_text_fragments_for_grounding(task_preview.get("prompt"), fragments)
+    data = task_preview.get("data")
+    if isinstance(data, dict):
+        # Keep content-bearing fields; skip volatile counters/metadata.
+        filtered = {
+            k: v
+            for k, v in data.items()
+            if k not in {"metadata", "question_count", "elements_count", "levels_count", "options_count", "correct_count", "text_length", "error_count"}
+        }
+        _collect_text_fragments_for_grounding(filtered, fragments)
+    if not fragments:
+        return ""
+    return re.sub(r"\s+", " ", " \n ".join(fragments)).strip()
+
+
+def _char_ngrams(text: str, n: int = 4) -> set:
+    if not isinstance(text, str):
+        return set()
+    cleaned = re.sub(r"\s+", " ", text.strip().lower())
+    if len(cleaned) < n:
+        return {cleaned} if cleaned else set()
+    return {cleaned[i:i + n] for i in range(0, len(cleaned) - n + 1)}
+
+
+def _semantic_duplicate_threshold(task_type: Optional[str]) -> float:
+    tt = str(task_type or "").strip().lower()
+    if tt == "click_words":
+        return 0.72
+    if tt in {"open_answer"}:
+        return 0.78
+    if tt in {"click_text", "test"}:
+        return 0.82
+    if tt in {"sequence", "sequence_assembly"}:
+        return 0.75
+    return 0.8
+
+
+def _semantic_duplicate_similarity(task_a: Dict[str, Any], task_b: Dict[str, Any]) -> float:
+    blob_a = _task_preview_semantic_blob(task_a)
+    blob_b = _task_preview_semantic_blob(task_b)
+    if not blob_a or not blob_b:
+        return 0.0
+    tokens_a = _grounding_token_set(blob_a)
+    tokens_b = _grounding_token_set(blob_b)
+    nums_a = _grounding_number_set(blob_a)
+    nums_b = _grounding_number_set(blob_b)
+    exact_hash_a = _stable_json_hash(_extract_task_preview_signature(task_a))
+    exact_hash_b = _stable_json_hash(_extract_task_preview_signature(task_b))
+    if exact_hash_a and exact_hash_a == exact_hash_b:
+        return 1.0
+
+    tok_union = len(tokens_a | tokens_b)
+    tok_jaccard = (len(tokens_a & tokens_b) / tok_union) if tok_union else 0.0
+
+    nums_union = len(nums_a | nums_b)
+    num_jaccard = (len(nums_a & nums_b) / nums_union) if nums_union else 0.0
+
+    ng_a = _char_ngrams(blob_a, 4)
+    ng_b = _char_ngrams(blob_b, 4)
+    ng_union = len(ng_a | ng_b)
+    ng_jaccard = (len(ng_a & ng_b) / ng_union) if ng_union else 0.0
+
+    # For short prompts n-grams are noisy; cap influence unless there is token overlap too.
+    if tok_jaccard < 0.15 and ng_jaccard > 0.85:
+        ng_jaccard *= 0.6
+
+    score = (tok_jaccard * 0.6) + (ng_jaccard * 0.25) + (num_jaccard * 0.15)
+    return round(min(1.0, max(0.0, score)), 4)
+
+
+def _semantic_duplicate_info_from_preview(task_preview: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not isinstance(task_preview, dict):
+        return None
+    ai_meta = task_preview.get("ai_meta")
+    if not isinstance(ai_meta, dict):
+        return None
+    info = ai_meta.get("semantic_duplicate")
+    return info if isinstance(info, dict) else None
+
+
+def _clear_semantic_duplicate_annotations(task_previews: List[Dict[str, Any]]) -> None:
+    for task in task_previews or []:
+        if not isinstance(task, dict):
+            continue
+        ai_meta = task.get("ai_meta")
+        if isinstance(ai_meta, dict):
+            ai_meta.pop("semantic_duplicate", None)
+
+
+def _annotate_semantic_duplicate_candidates(
+    task_previews: List[Dict[str, Any]],
+    *,
+    task_type: Optional[str] = None,
+) -> Dict[str, int]:
+    """Annotate near-duplicate tasks within a same-type preview list (in-place).
+
+    Marks weaker tasks in a near-duplicate cluster using `ai_meta.semantic_duplicate`.
+    Returns counts for UI/cleanup heuristics.
+    """
+    if not isinstance(task_previews, list) or len(task_previews) < 2:
+        return {"groups": 0, "tasks_marked": 0}
+
+    _clear_semantic_duplicate_annotations(task_previews)
+    threshold = _semantic_duplicate_threshold(task_type or (task_previews[0].get("type") if isinstance(task_previews[0], dict) else None))
+    n = len(task_previews)
+    parent = list(range(n))
+    pair_best: Dict[tuple, float] = {}
+
+    def _find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def _union(a: int, b: int) -> None:
+        ra = _find(a)
+        rb = _find(b)
+        if ra != rb:
+            parent[rb] = ra
+
+    def _preview_quality_rank(preview: Dict[str, Any]) -> tuple:
+        status_rank = {"valid": 0, "warning": 1, "error": 2}
+        status = status_rank.get(str(preview.get("status") or "warning"), 1)
+        issues = preview.get("validation_issues") or []
+        grounding_info = _source_grounding_info_from_preview(preview) or {}
+        try:
+            grounding_score = float(grounding_info.get("score", 0.0) or 0.0)
+        except Exception:
+            grounding_score = 0.0
+        return (
+            status,
+            len(issues),
+            1 if grounding_info.get("weak") else 0,
+            -grounding_score,
+            -len(str(preview.get("prompt") or "")),
+        )
+
+    for i in range(n):
+        a = task_previews[i]
+        if not isinstance(a, dict):
+            continue
+        for j in range(i + 1, n):
+            b = task_previews[j]
+            if not isinstance(b, dict):
+                continue
+            score = _semantic_duplicate_similarity(a, b)
+            if score < threshold:
+                continue
+            _union(i, j)
+            pair_best[(i, j)] = score
+
+    groups: Dict[int, List[int]] = {}
+    for idx in range(n):
+        groups.setdefault(_find(idx), []).append(idx)
+
+    groups_marked = 0
+    tasks_marked = 0
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        groups_marked += 1
+        keeper_idx = sorted(members, key=lambda idx: _preview_quality_rank(task_previews[idx]))[0]
+        for idx in members:
+            if idx == keeper_idx:
+                continue
+            task = task_previews[idx]
+            if not isinstance(task, dict):
+                continue
+            best_pair_score = 0.0
+            best_peer_name = None
+            best_peer_index = None
+            for peer in members:
+                if peer == idx:
+                    continue
+                i, j = (idx, peer) if idx < peer else (peer, idx)
+                s = pair_best.get((i, j), 0.0)
+                if s >= best_pair_score:
+                    best_pair_score = s
+                    peer_task = task_previews[peer] if 0 <= peer < len(task_previews) else {}
+                    best_peer_name = peer_task.get("name") if isinstance(peer_task, dict) else None
+                    best_peer_index = peer_task.get("index") if isinstance(peer_task, dict) else None
+
+            task.setdefault("ai_meta", {})
+            if isinstance(task.get("ai_meta"), dict):
+                task["ai_meta"]["semantic_duplicate"] = {
+                    "candidate": True,
+                    "score": round(float(best_pair_score or 0.0), 4),
+                    "group_size": len(members),
+                    "similar_to_index": best_peer_index,
+                    "similar_to_name": best_peer_name,
+                }
+            tasks_marked += 1
+
+    return {"groups": groups_marked, "tasks_marked": tasks_marked}
+
+
+def _append_validation_issue(task_preview: Dict[str, Any], issue: Dict[str, Any]) -> None:
+    if not isinstance(task_preview, dict) or not isinstance(issue, dict):
+        return
+    issues = task_preview.setdefault("validation_issues", [])
+    if not isinstance(issues, list):
+        issues = []
+        task_preview["validation_issues"] = issues
+    issues.append(issue)
+    if task_preview.get("status") == "valid":
+        task_preview["status"] = "warning"
+
+
+def _looks_language_mismatch(material_lang: str, text: str) -> bool:
+    if material_lang not in {"ru", "en"}:
+        return False
+    task_lang = _guess_language_code(text or "")
+    if task_lang == "unknown":
+        return False
+    if material_lang == "ru":
+        return task_lang == "en"
+    if material_lang == "en":
+        return task_lang == "ru"
+    return False
+
+
+def _compact_ai_unit_contexts(units: Any, *, max_units: int = 8) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    if not isinstance(units, list):
+        return out
+    for raw in units[: max(0, int(max_units))]:
+        if not isinstance(raw, dict):
+            continue
+        evidence = re.sub(r"\s+", " ", str(raw.get("evidence") or "")).strip()
+        if len(evidence) > 240:
+            evidence = evidence[:237].rstrip() + "..."
+        out.append(
+            {
+                "id": raw.get("id"),
+                "title": str(raw.get("title") or "").strip(),
+                "description": str(raw.get("description") or "").strip(),
+                "evidence": evidence,
+                "type": str(raw.get("type") or "").strip().lower() or None,
+                "explicitness": str(raw.get("explicitness") or "").strip().lower() or None,
+                "modality": str(raw.get("modality") or "").strip().lower() or None,
+                "assessment_risk": str(raw.get("assessment_risk") or "").strip().lower() or None,
+            }
+        )
+    return out
+
+
+def _collect_text_fragments_for_grounding(value: Any, out: List[str], depth: int = 0) -> None:
+    if depth > 5:
+        return
+    if isinstance(value, str):
+        text = value.strip()
+        if text:
+            out.append(text)
+        return
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        out.append(str(value))
+        return
+    if isinstance(value, dict):
+        for key, item in value.items():
+            key_norm = str(key or "").strip().lower()
+            if key_norm in {"metadata", "ai_meta", "validation_issues"}:
+                continue
+            _collect_text_fragments_for_grounding(item, out, depth + 1)
+        return
+    if isinstance(value, list):
+        for item in value[:80]:
+            _collect_text_fragments_for_grounding(item, out, depth + 1)
+
+
+def _task_preview_grounding_blob(task_preview: Dict[str, Any]) -> str:
+    if not isinstance(task_preview, dict):
+        return ""
+    fragments: List[str] = []
+    _collect_text_fragments_for_grounding(task_preview.get("name"), fragments)
+    _collect_text_fragments_for_grounding(task_preview.get("prompt"), fragments)
+    _collect_text_fragments_for_grounding(task_preview.get("data"), fragments)
+    if not fragments:
+        return ""
+    joined = " \n ".join(fragments)
+    return re.sub(r"\s+", " ", joined).strip()
+
+
+def _grounding_token_set(text: str) -> set:
+    if not isinstance(text, str) or not text.strip():
+        return set()
+    tokens = re.findall(r"[A-Za-z\u0400-\u04FF0-9][A-Za-z\u0400-\u04FF0-9_-]*", text.lower())
+    out = set()
+    for tok in tokens:
+        if not tok:
+            continue
+        normalized = _normalize_grounding_token(tok)
+        if not normalized:
+            continue
+        if any(ch.isdigit() for ch in normalized):
+            out.add(normalized)
+            continue
+        if len(normalized) >= 4:
+            out.add(normalized)
+    return out
+
+
+def _grounding_number_set(text: str) -> set:
+    if not isinstance(text, str) or not text.strip():
+        return set()
+    return set(re.findall(r"\b\d+(?:[.,]\d+)?\b", text))
+
+
+def _token_script_hint(token: str) -> str:
+    if not isinstance(token, str) or not token:
+        return "other"
+    has_cyr = any("\u0400" <= ch <= "\u04FF" for ch in token)
+    has_lat = any("a" <= ch.lower() <= "z" for ch in token)
+    if has_cyr and has_lat:
+        return "mixed"
+    if has_cyr:
+        return "cyr"
+    if has_lat:
+        return "lat"
+    return "other"
+
+
+def _normalize_grounding_token(token: str) -> str:
+    t = str(token or "").strip().lower()
+    if not t:
+        return ""
+    t = t.replace("ё", "е")
+    t = t.strip("_-")
+    if not t:
+        return ""
+    if any(ch.isdigit() for ch in t):
+        return t
+
+    script = _token_script_hint(t)
+    # Lightweight suffix trimming for RU/UK-like forms to reduce false negatives.
+    if script == "cyr" and len(t) >= 5:
+        suffixes = (
+            "иями", "ями", "ами", "еві", "ові", "ого", "ему", "ими", "ыми",
+            "ість", "ости", "ення", "ання", "ями", "ями", "ях", "ах", "ою", "ею",
+            "ий", "ый", "ій", "ая", "яя", "ое", "ее", "ые", "ие", "ой", "ей",
+            "ам", "ям", "ом", "ем", "у", "ю", "а", "я", "ы", "и", "е", "о",
+        )
+        for suf in suffixes:
+            if len(t) - len(suf) >= 4 and t.endswith(suf):
+                t = t[: -len(suf)]
+                break
+    elif script == "lat" and len(t) >= 6:
+        for suf in ("ization", "isation", "ations", "ation", "ments", "ment", "ingly", "ingly", "ingly", "ing", "edly", "edly", "ed", "ies", "es", "s"):
+            if len(t) - len(suf) >= 4 and t.endswith(suf):
+                t = t[: -len(suf)]
+                break
+    return t
+
+
+def _common_prefix_len(a: str, b: str) -> int:
+    n = min(len(a), len(b))
+    i = 0
+    while i < n and a[i] == b[i]:
+        i += 1
+    return i
+
+
+def _is_fuzzy_grounding_token_match(a: str, b: str) -> bool:
+    if not a or not b or a == b:
+        return False
+    if any(ch.isdigit() for ch in a) or any(ch.isdigit() for ch in b):
+        return False
+    script_a = _token_script_hint(a)
+    script_b = _token_script_hint(b)
+    # Allow fuzzy only within same script family (RU/UK both Cyrillic).
+    if script_a != script_b:
+        return False
+    min_pref = 4 if script_a == "cyr" else 5 if script_a == "lat" else 4
+    cp = _common_prefix_len(a, b)
+    if cp < min_pref:
+        return False
+    shorter = min(len(a), len(b))
+    longer = max(len(a), len(b))
+    if shorter <= 0:
+        return False
+    if (cp / shorter) < 0.6:
+        return False
+    if abs(len(a) - len(b)) > max(4, int(longer * 0.5)):
+        return False
+    return True
+
+
+def _fuzzy_grounding_overlap_pairs(task_tokens: set, unit_tokens: set) -> List[Tuple[str, str]]:
+    if not task_tokens or not unit_tokens:
+        return []
+    remaining_unit = set(unit_tokens)
+    pairs: List[Tuple[str, str]] = []
+    for t in sorted(task_tokens):
+        best_u = None
+        best_rank = None
+        for u in list(remaining_unit):
+            if not _is_fuzzy_grounding_token_match(t, u):
+                continue
+            cp = _common_prefix_len(t, u)
+            rank = (cp, -abs(len(t) - len(u)))
+            if best_rank is None or rank > best_rank:
+                best_rank = rank
+                best_u = u
+        if best_u is not None:
+            pairs.append((t, best_u))
+            remaining_unit.discard(best_u)
+    return pairs
+
+
+def _source_grounding_threshold_relaxation(task_type: Optional[str], task_lang: str, unit_lang: str) -> float:
+    tl = str(task_lang or "").lower()
+    ul = str(unit_lang or "").lower()
+    if not tl or not ul or tl in {"unknown", "mixed"} or ul in {"unknown", "mixed"}:
+        return 1.0
+    if tl == ul:
+        return 1.0
+    langs = {tl, ul}
+    task_type_norm = str(task_type or "").strip().lower()
+    if langs <= {"ru", "uk"}:
+        return 0.75
+    if "en" in langs and (("ru" in langs) or ("uk" in langs)):
+        # Future-primary case: English material -> Russian/Ukrainian tasks via translation.
+        # Relax lexical threshold because exact token overlap becomes weaker.
+        if task_type_norm in {"open_answer", "click_words"}:
+            return 0.6
+        return 0.7
+    return 0.85
+
+
+def _source_grounding_weak_threshold(task_type: Optional[str]) -> float:
+    task_type_norm = str(task_type or "").strip().lower()
+    # CLICK_WORDS intentionally mutates source tokens, so lexical overlap is naturally lower.
+    if task_type_norm == "click_words":
+        return 0.03
+    if task_type_norm in {"sequence_assembly", "sequence"}:
+        return 0.05
+    if task_type_norm in {"test", "open_answer"}:
+        return 0.07
+    if task_type_norm in {"click_text", "click"}:
+        return 0.06
+    return 0.06
+
+
+def _source_grounding_info_from_preview(task_preview: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    if not isinstance(task_preview, dict):
+        return None
+    ai_meta = task_preview.get("ai_meta")
+    if not isinstance(ai_meta, dict):
+        return None
+    grounding = ai_meta.get("source_grounding")
+    return grounding if isinstance(grounding, dict) else None
+
+
+def _annotate_task_preview_source_grounding(
+    task_preview: Dict[str, Any],
+    unit_contexts: List[Dict[str, Any]],
+    *,
+    task_type: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    if not isinstance(task_preview, dict) or not isinstance(unit_contexts, list) or not unit_contexts:
+        return None
+    grounding_info = _evaluate_task_source_grounding(task_preview, unit_contexts, task_type=task_type)
+    if grounding_info is None:
+        return None
+    task_preview.setdefault("ai_meta", {})
+    if isinstance(task_preview.get("ai_meta"), dict):
+        task_preview["ai_meta"]["source_grounding"] = grounding_info
+    return grounding_info
+
+
+def _evaluate_task_source_grounding(
+    task_preview: Dict[str, Any],
+    unit_contexts: List[Dict[str, Any]],
+    *,
+    task_type: Optional[str] = None,
+) -> Optional[Dict[str, Any]]:
+    if not isinstance(task_preview, dict) or not isinstance(unit_contexts, list) or not unit_contexts:
+        return None
+
+    task_blob = _task_preview_grounding_blob(task_preview)
+    if not task_blob:
+        return None
+
+    task_tokens = _grounding_token_set(task_blob)
+    task_numbers = _grounding_number_set(task_blob)
+    task_lang = _guess_language_code(task_blob)
+    if not task_tokens and not task_numbers:
+        return None
+
+    best_info: Optional[Dict[str, Any]] = None
+    for unit in unit_contexts:
+        if not isinstance(unit, dict):
+            continue
+        unit_blob = re.sub(
+            r"\s+",
+            " ",
+            " ".join(
+                [
+                    str(unit.get("title") or ""),
+                    str(unit.get("description") or ""),
+                    str(unit.get("evidence") or ""),
+                ]
+            ),
+        ).strip()
+        if not unit_blob:
+            continue
+        unit_tokens = _grounding_token_set(unit_blob)
+        unit_numbers = _grounding_number_set(unit_blob)
+        unit_lang = _guess_language_code(unit_blob)
+        shared_tokens = sorted(task_tokens & unit_tokens)
+        shared_numbers = sorted(task_numbers & unit_numbers)
+        fuzzy_pairs = _fuzzy_grounding_overlap_pairs(task_tokens - set(shared_tokens), unit_tokens - set(shared_tokens))
+
+        denom_tokens = max(1, min(max(1, len(task_tokens)), max(1, len(unit_tokens))))
+        token_overlap = min(1.0, (len(shared_tokens) + (0.6 * len(fuzzy_pairs))) / denom_tokens)
+        num_overlap = 0.0
+        if task_numbers or unit_numbers:
+            num_overlap = len(shared_numbers) / max(1, min(max(1, len(task_numbers)), max(1, len(unit_numbers))))
+        score = round((token_overlap * 0.8) + (num_overlap * 0.2), 4)
+        threshold_relaxation = _source_grounding_threshold_relaxation(task_type, task_lang, unit_lang)
+
+        candidate = {
+            "primary_unit_id": unit.get("id"),
+            "primary_unit_title": unit.get("title"),
+            "score": score,
+            "shared_token_count": len(shared_tokens),
+            "shared_fuzzy_token_count": len(fuzzy_pairs),
+            "shared_number_count": len(shared_numbers),
+            "shared_tokens_sample": shared_tokens[:6],
+            "shared_fuzzy_tokens_sample": [f"{a}~{b}" for a, b in fuzzy_pairs[:6]],
+            "shared_numbers": shared_numbers[:6],
+            "task_language": task_lang,
+            "unit_language": unit_lang,
+            "threshold_relaxation": threshold_relaxation,
+        }
+        if best_info is None:
+            best_info = candidate
+            continue
+        if (
+            candidate["score"] > best_info["score"]
+            or (
+                candidate["score"] == best_info["score"]
+                and (
+                    candidate["shared_token_count"] + candidate.get("shared_fuzzy_token_count", 0)
+                    > best_info["shared_token_count"] + best_info.get("shared_fuzzy_token_count", 0)
+                )
+            )
+        ):
+            best_info = candidate
+
+    if best_info is None:
+        return None
+
+    threshold = _source_grounding_weak_threshold(task_type)
+    threshold = round(float(threshold) * float(best_info.get("threshold_relaxation", 1.0) or 1.0), 4)
+    weak_grounding = (
+        (best_info.get("score", 0.0) < threshold)
+        or (
+            best_info.get("shared_token_count", 0) == 0
+            and best_info.get("shared_fuzzy_token_count", 0) == 0
+            and best_info.get("shared_number_count", 0) == 0
+        )
+    )
+    best_info["weak"] = bool(weak_grounding)
+    best_info["weak_threshold"] = threshold
+    return best_info
+
+
+def _normalize_output_language_request(
+    payload: Dict[str, Any],
+    material_language: str,
+) -> Dict[str, Any]:
+    raw_mode = str((payload or {}).get("output_language_mode") or "same_as_material").strip().lower()
+    mode = raw_mode if raw_mode in {"same_as_material", "custom"} else "same_as_material"
+    raw_lang = str((payload or {}).get("output_language") or "").strip().lower()
+    if raw_lang in {"", "auto", "same", "same_as_material"}:
+        raw_lang = ""
+    if raw_lang and not re.fullmatch(r"[a-z][a-z0-9_-]{0,15}", raw_lang):
+        raw_lang = ""
+
+    effective = raw_lang if (mode == "custom" and raw_lang) else material_language
+    if effective not in {"ru", "en", "mixed"} and not re.fullmatch(r"[a-z][a-z0-9_-]{0,15}", str(effective or "")):
+        effective = "unknown"
+
+    translation_warning = None
+    if mode == "custom" and raw_lang and material_language in {"ru", "en"} and raw_lang != material_language:
+        translation_warning = (
+            "Выбран язык заданий, отличный от языка материала. Перевод может быть посредственным, "
+            "и задания, вероятно, потребуют доработки в редакторе."
+        )
+
+    return {
+        "mode": mode,
+        "requested": raw_lang or None,
+        "effective": effective or "unknown",
+        "translation_warning": translation_warning,
+    }
+
+
+def _ai_unit_planning_blob(unit: Dict[str, Any]) -> str:
+    if not isinstance(unit, dict):
+        return ""
+    return f"{unit.get('title', '')} {unit.get('description', '')} {unit.get('type', '')}".lower()
+
+
+def _score_unit_for_task_type(task_type: str, unit: Dict[str, Any]) -> int:
+    blob = _ai_unit_planning_blob(unit)
+    score = 0
+    if task_type == "SEQUENCE":
+        if any(k in blob for k in ["order", "sequence", "step", "stage", "chronolog", "rank", "category", "ordered", "поряд", "этап", "послед"]):
+            score += 4
+        if any(k in blob for k in ["classification", "категор"]):
+            score += 2
+    elif task_type == "CLICK_WORDS":
+        if re.search(r"\d|%|p\s*[<=>]\s*0?\.\d+", blob):
+            score += 4
+        if any(k in blob for k in ["date", "year", "risk", "odds", "ratio", "report", "guidance", "дата", "риск", "требован", "отчет", "отчёт"]):
+            score += 3
+    elif task_type == "OPEN_ANSWER":
+        if any(k in blob for k in ["mechan", "why", "how", "effect", "process", "reason", "влия", "механ", "процесс", "почему", "как"]):
+            score += 3
+        if any(k in blob for k in ["concept", "classification", "conceptual", "концеп"]):
+            score += 1
+    elif task_type == "CLICK_TEXT":
+        if any(k in blob for k in ["difference", "distinction", "rule", "criteria", "risk", "accuracy", "чувств", "правил", "различ", "критер"]):
+            score += 2
+    elif task_type == "TEST":
+        if any(k in blob for k in ["fact", "term", "definition", "classification", "date", "number", "факт", "термин", "определ", "категор", "дата"]):
+            score += 2
+    if unit.get("assessment_risk") == "high":
+        score += 1  # often worth isolating to avoid hallucinated simplifications
+    return score
+
+
+def _plan_ai_generation_subrequests(
+    task_type: str,
+    count: int,
+    educational_units: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    """Split one large AI generation request into smaller focused subrequests for better coverage."""
+    safe_count = max(1, int(count or 1))
+    units = [u for u in (educational_units or []) if isinstance(u, dict)]
+    if safe_count <= 1 or len(units) <= 1:
+        return [{"count": safe_count, "educational_units": units}]
+
+    task_type = str(task_type or "").upper()
+    if task_type == "SEQUENCE":
+        max_subrequests = min(2, safe_count, len(units))
+    elif task_type in {"OPEN_ANSWER", "CLICK_WORDS"}:
+        max_subrequests = min(2, safe_count)
+    else:
+        max_subrequests = min(3, safe_count)
+
+    if len(units) <= 3 and safe_count <= 3:
+        return [{"count": safe_count, "educational_units": units}]
+
+    units_sorted = sorted(
+        units,
+        key=lambda u: (
+            -_score_unit_for_task_type(task_type, u),
+            str(u.get("title") or ""),
+        ),
+    )
+
+    # Prefer narrower unit bundles for higher-risk formats.
+    if task_type == "SEQUENCE":
+        target_units_per_sub = 1
+    elif task_type == "OPEN_ANSWER":
+        target_units_per_sub = 2
+    elif task_type == "CLICK_WORDS":
+        target_units_per_sub = 2
+    else:
+        target_units_per_sub = 3
+
+    ideal_by_units = max(1, (len(units_sorted) + target_units_per_sub - 1) // target_units_per_sub)
+    n_sub = max(1, min(max_subrequests, ideal_by_units))
+    if n_sub <= 1:
+        return [{"count": safe_count, "educational_units": units_sorted}]
+
+    buckets: List[List[Dict[str, Any]]] = [[] for _ in range(n_sub)]
+    # Snake distribution balances high-priority units across buckets.
+    idx_order = list(range(n_sub)) + list(range(n_sub - 2, 0, -1))
+    if not idx_order:
+        idx_order = [0]
+    for idx, unit in enumerate(units_sorted):
+        bucket_idx = idx_order[idx % len(idx_order)]
+        buckets[bucket_idx].append(unit)
+
+    # Remove empty buckets (can happen when n_sub > len(units))
+    buckets = [b for b in buckets if b]
+    n_sub = len(buckets)
+    if n_sub <= 1:
+        return [{"count": safe_count, "educational_units": units_sorted}]
+
+    base = safe_count // n_sub
+    rem = safe_count % n_sub
+    counts = [base + (1 if i < rem else 0) for i in range(n_sub)]
+    # Guarantee at least 1 request count per bucket by borrowing from the largest bucket if needed.
+    for i, c in enumerate(counts):
+        if c > 0:
+            continue
+        donor_idx = max(range(n_sub), key=lambda j: counts[j])
+        if counts[donor_idx] > 1:
+            counts[donor_idx] -= 1
+            counts[i] = 1
+    counts = [c for c in counts if c > 0]
+    buckets = [buckets[i] for i, c in enumerate([base + (1 if i < rem else 0) for i in range(n_sub)]) if c > 0] if len(counts) != n_sub else buckets
+
+    planned: List[Dict[str, Any]] = []
+    for i, c in enumerate(counts):
+        planned.append({"count": int(c), "educational_units": buckets[i]})
+    return planned or [{"count": safe_count, "educational_units": units_sorted}]
+
+
+def _postprocess_ai_generate_results(
+    material: str,
+    results: List[Dict[str, Any]],
+    expected_output_language: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Add quality warnings and analytics to AI generation preview results."""
+    material_lang = _guess_language_code(material)
+    expected_lang = str(expected_output_language or material_lang or "unknown").strip().lower()
+    flat_tasks: List[Dict[str, Any]] = []
+    duplicate_buckets: Dict[str, List[Dict[str, Any]]] = {}
+    sequence_risk_count = 0
+    language_mismatch_count = 0
+    source_grounding_warning_count = 0
+    source_grounding_checked_tasks = 0
+    semantic_duplicate_groups = 0
+    semantic_duplicate_tasks = 0
+    warning_fields_breakdown: Dict[str, int] = {}
+
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        task_type = str(result.get("task_type") or "")
+        unit_ids = result.get("educational_unit_ids") or []
+        unit_contexts = result.get("educational_units_context") or []
+        tasks_in_result = result.get("tasks", []) or []
+        if isinstance(tasks_in_result, list) and len(tasks_in_result) >= 2:
+            sem_stats = _annotate_semantic_duplicate_candidates(tasks_in_result, task_type=task_type)
+            semantic_duplicate_groups += int(sem_stats.get("groups", 0) or 0)
+            semantic_duplicate_tasks += int(sem_stats.get("tasks_marked", 0) or 0)
+        for task in tasks_in_result:
+            if not isinstance(task, dict):
+                continue
+            flat_tasks.append(task)
+
+            data = task.get("data") if isinstance(task.get("data"), dict) else {}
+            prompt_text = str(task.get("prompt") or (data.get("prompt") if isinstance(data, dict) else "") or task.get("name") or "")
+            signature_hash = _stable_json_hash(_extract_task_preview_signature(task))
+            duplicate_buckets.setdefault(signature_hash, []).append(task)
+
+            if _looks_language_mismatch(expected_lang, f"{task.get('name', '')}\n{prompt_text}"):
+                _append_validation_issue(
+                    task,
+                    {
+                        "severity": "warning",
+                        "message": "Возможное несоответствие языка задания ожидаемому языку генерации",
+                        "field": "language_mismatch",
+                    },
+                )
+                language_mismatch_count += 1
+
+            if task_type == "SEQUENCE":
+                prompt_lower = prompt_text.lower()
+                if any(phrase in prompt_lower for phrase in [
+                    "злокачествен",
+                    "подозрительн",
+                    "suspiciousness",
+                    "malignan",
+                    "степени подозр",
+                ]):
+                    _append_validation_issue(
+                        task,
+                        {
+                            "severity": "warning",
+                            "message": "Проверьте, что порядок в SEQUENCE явно задан в исходном материале (возможен неявный рейтинг).",
+                            "field": "implicit_sequence_order",
+                        },
+                    )
+                    sequence_risk_count += 1
+            grounding_info = _source_grounding_info_from_preview(task)
+            if grounding_info is None:
+                grounding_info = _evaluate_task_source_grounding(task, unit_contexts, task_type=task_type)
+            if grounding_info is not None:
+                source_grounding_checked_tasks += 1
+                task.setdefault("ai_meta", {})
+                if isinstance(task["ai_meta"], dict):
+                    task["ai_meta"]["source_grounding"] = grounding_info
+                if grounding_info.get("weak"):
+                    _append_validation_issue(
+                        task,
+                        {
+                            "severity": "warning",
+                            "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+                            "field": "weak_source_grounding",
+                        },
+                    )
+                    source_grounding_warning_count += 1
+            semantic_dup_info = _semantic_duplicate_info_from_preview(task)
+            if semantic_dup_info and semantic_dup_info.get("candidate"):
+                _append_validation_issue(
+                    task,
+                    {
+                        "severity": "warning",
+                        "message": "Task is semantically too similar to another generated task; consider replacing one for better coverage/diversity.",
+                        "field": "semantic_duplicate_task",
+                    },
+                )
+
+            if isinstance(unit_ids, list):
+                task.setdefault("ai_meta", {})
+                if isinstance(task["ai_meta"], dict):
+                    task["ai_meta"]["educational_unit_ids"] = list(unit_ids)
+
+    duplicate_groups = 0
+    duplicate_tasks_marked = 0
+    for bucket in duplicate_buckets.values():
+        if len(bucket) < 2:
+            continue
+        duplicate_groups += 1
+        for task in bucket:
+            _append_validation_issue(
+                task,
+                {
+                    "severity": "warning",
+                    "message": "Похоже на дубликат другого сгенерированного задания",
+                    "field": "duplicate_task",
+                },
+            )
+            duplicate_tasks_marked += 1
+
+    # Aggregate warning fields after all postprocessing issues have been appended.
+    for task in flat_tasks:
+        if not isinstance(task, dict):
+            continue
+        for issue in (task.get("validation_issues") or []):
+            if not isinstance(issue, dict):
+                continue
+            if str(issue.get("severity") or "warning") != "warning":
+                continue
+            field = str(issue.get("field") or "unknown")
+            warning_fields_breakdown[field] = warning_fields_breakdown.get(field, 0) + 1
+
+    warning_fields_breakdown = dict(
+        sorted(
+            warning_fields_breakdown.items(),
+            key=lambda kv: (-int(kv[1]), str(kv[0])),
+        )
+    )
+
+    return {
+        "material_language": material_lang,
+        "expected_output_language": expected_lang,
+        "duplicate_groups": duplicate_groups,
+        "duplicate_tasks": duplicate_tasks_marked,
+        "language_mismatch_warnings": language_mismatch_count,
+        "sequence_grounding_warnings": sequence_risk_count,
+        "source_grounding_checked_tasks": source_grounding_checked_tasks,
+        "source_grounding_warnings": source_grounding_warning_count,
+        "semantic_duplicate_groups": semantic_duplicate_groups,
+        "semantic_duplicate_tasks": semantic_duplicate_tasks,
+        "warning_fields_breakdown": warning_fields_breakdown,
+        "total_tasks": len(flat_tasks),
+    }
 
 
 def _normalize_click_import_data(task_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -5694,6 +8630,30 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                         }
                     )
                 else:
+                    if "[" in text or "]" in text:
+                        issues.append(
+                            {
+                                "severity": "warning",
+                                "message": "Unparsed '[' or ']' found in CLICK_WORDS text; possible malformed bracket markup (e.g. multi-word bracket span).",
+                                "field": "text_brackets_leftover",
+                            }
+                        )
+                    if len(spans) < 2:
+                        issues.append(
+                            {
+                                "severity": "warning",
+                                "message": "CLICK_WORDS usually works better with 2-4 error spans.",
+                                "field": "error_spans_count_low",
+                            }
+                        )
+                    elif len(spans) > 5:
+                        issues.append(
+                            {
+                                "severity": "warning",
+                                "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+                                "field": "error_spans_count_high",
+                            }
+                        )
                     text_len = len(text)
                     for idx, span in enumerate(spans):
                         start = span.get("start") if isinstance(span, dict) else None
@@ -5854,7 +8814,12 @@ def _generate_unique_task_ids(
 
 
 def _save_task_to_storage(
-    task: Dict[str, Any], module_id: str, topic_id: str, task_id: str, modules_dir: Path
+    task: Dict[str, Any],
+    module_id: str,
+    topic_id: str,
+    task_id: str,
+    modules_dir: Path,
+    import_context: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """
     Save task to file system.
@@ -5870,21 +8835,31 @@ def _save_task_to_storage(
         True if successful, False otherwise
     """
     try:
+        import_context = import_context if isinstance(import_context, dict) else {}
+        import_source = str(import_context.get("source") or "text").strip().lower() or "text"
+        ai_run_id = str(import_context.get("ai_run_id") or "").strip() or None
+
         # Create task directory
         task_dir = modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
         task_dir.mkdir(parents=True, exist_ok=True)
 
         # Prepare task.json data
+        now_iso = datetime.now().isoformat()
         task_json_data = {
             "id": task_id,
             "name": task.get("name", task_id),
             "type": task.get("type", "unknown"),
             "description": "",
             "meta": {
-                "created_at": datetime.now().isoformat(),
+                "created_at": now_iso,
                 "imported": True,
-                "import_date": datetime.now().isoformat(),
-                "import_source": "text",
+                "import_date": now_iso,
+                "import_source": import_source,
+                "module": module_id,
+                "topic": topic_id,
+                "id": task_id,
+                "name": task.get("name", task_id),
+                "task_schema_version": CURRENT_SCHEMA_VERSION,
             },
         }
 
@@ -5898,6 +8873,53 @@ def _save_task_to_storage(
             for extra_key in ("max_length", "time_limit", "case_sensitive"):
                 if extra_key in task_metadata:
                     task_json_data["meta"][extra_key] = task_metadata[extra_key]
+            for passthrough_key in ("language", "source_file_name"):
+                if passthrough_key in task_metadata and passthrough_key not in task_json_data["meta"]:
+                    task_json_data["meta"][passthrough_key] = task_metadata[passthrough_key]
+
+        if ai_run_id:
+            task_json_data["meta"]["ai_run_id"] = ai_run_id
+        ai_provider = import_context.get("ai_provider")
+        if ai_provider:
+            task_json_data["meta"]["ai_provider"] = ai_provider
+        ai_model = import_context.get("ai_model")
+        if ai_model:
+            task_json_data["meta"]["ai_model"] = ai_model
+        source_file_info = import_context.get("source_file_info")
+        if isinstance(source_file_info, dict):
+            source_file_name = source_file_info.get("name") or source_file_info.get("filename")
+            if source_file_name:
+                task_json_data["meta"]["source_file_name"] = source_file_name
+        source_file_name = import_context.get("source_file_name")
+        if source_file_name and not task_json_data["meta"].get("source_file_name"):
+            task_json_data["meta"]["source_file_name"] = source_file_name
+
+        task_ai_meta = task.get("ai_meta")
+        if isinstance(task_ai_meta, dict):
+            unit_ids = task_ai_meta.get("educational_unit_ids")
+            if isinstance(unit_ids, list) and unit_ids:
+                task_json_data["meta"]["educational_unit_ids"] = list(unit_ids)
+            source_grounding = task_ai_meta.get("source_grounding")
+            if isinstance(source_grounding, dict):
+                grounded_meta = {}
+                if source_grounding.get("primary_unit_id") is not None:
+                    grounded_meta["primary_unit_id"] = source_grounding.get("primary_unit_id")
+                if source_grounding.get("primary_unit_title"):
+                    grounded_meta["primary_unit_title"] = source_grounding.get("primary_unit_title")
+                if isinstance(source_grounding.get("score"), (int, float)):
+                    grounded_meta["score"] = float(source_grounding.get("score"))
+                if isinstance(source_grounding.get("shared_token_count"), int):
+                    grounded_meta["shared_token_count"] = int(source_grounding.get("shared_token_count"))
+                if isinstance(source_grounding.get("shared_number_count"), int):
+                    grounded_meta["shared_number_count"] = int(source_grounding.get("shared_number_count"))
+                if isinstance(source_grounding.get("weak"), bool):
+                    grounded_meta["weak"] = bool(source_grounding.get("weak"))
+                if grounded_meta:
+                    task_json_data["meta"]["source_grounding"] = grounded_meta
+            if task_ai_meta.get("provider_used") and not task_json_data["meta"].get("ai_provider"):
+                task_json_data["meta"]["ai_provider"] = task_ai_meta.get("provider_used")
+            if task_ai_meta.get("run_id") and not task_json_data["meta"].get("ai_run_id"):
+                task_json_data["meta"]["ai_run_id"] = task_ai_meta.get("run_id")
 
         # Add type-specific data
         if task.get("type") == "open_answer":
@@ -5912,6 +8934,10 @@ def _save_task_to_storage(
                 oa_content["reference_answer"] = oa_data["reference_answer"]
             if oa_data.get("max_length"):
                 oa_content["max_length"] = oa_data["max_length"]
+            if isinstance(oa_data.get("min_keywords"), int):
+                oa_content["min_keywords"] = oa_data["min_keywords"]
+            if isinstance(oa_data.get("require_all_keywords"), bool):
+                oa_content["require_all_keywords"] = oa_data["require_all_keywords"]
             task_json_data["content"] = oa_content
         elif task.get("type") == "sequence_assembly":
             data = task.get("data", {})
@@ -5968,14 +8994,16 @@ def _save_task_to_storage(
                 raise ValueError(f"Unsupported click import mode: {data.get('mode')}")
         elif task.get("type") == "test":
             data = task.get("data", {})
-            questions = data.get("questions", [])
-            # Determine test_type from questions
-            has_multiple = any(
-                sum(1 for a in q.get("answers", []) if a.get("correct")) > 1
-                for q in questions
-                if isinstance(q, dict)
-            )
-            test_type = "multiple_choice" if has_multiple else "single_choice"
+            questions, inferred_test_type = _canonicalize_test_questions(data.get("questions", []))
+            requested_test_type = str(data.get("test_type") or "").strip()
+            if requested_test_type in {"single_choice", "multiple_choice"}:
+                test_type = (
+                    "multiple_choice"
+                    if inferred_test_type == "multiple_choice" or requested_test_type == "multiple_choice"
+                    else "single_choice"
+                )
+            else:
+                test_type = inferred_test_type
             task_json_data["content"] = {
                 "test_type": test_type,
                 "questions": questions,
@@ -6469,6 +9497,10 @@ def import_execute() -> Any:
         module_id = payload.get("module_id")
         topic_id = payload.get("topic_id")
         tasks = payload.get("tasks", [])
+        import_context = payload.get("import_context", {})
+        if not isinstance(import_context, dict):
+            import_context = {}
+        idempotency_key = str(payload.get("idempotency_key") or "").strip()
 
         if not module_id or not topic_id:
             return jsonify({"ok": False, "error": "module_id_and_topic_id_required"}), 400
@@ -6476,14 +9508,41 @@ def import_execute() -> Any:
         if not isinstance(tasks, list) or not tasks:
             return jsonify({"ok": False, "error": "tasks_required"}), 400
 
+        request_fingerprint = _stable_json_hash(
+            {
+                "module_id": module_id,
+                "topic_id": topic_id,
+                "tasks": [_extract_task_preview_signature(t) for t in tasks],
+                "import_context": {
+                    "source": import_context.get("source"),
+                    "ai_run_id": import_context.get("ai_run_id"),
+                },
+            }
+        )
+        cached_response = _import_idempotency_reserve(idempotency_key, request_fingerprint)
+        if cached_response:
+            if cached_response.get("conflict"):
+                return jsonify({"ok": False, "error": "idempotency_key_conflict"}), 409
+            if cached_response.get("in_progress"):
+                return jsonify({"ok": False, "error": "idempotency_key_in_progress"}), 409
+            logger.info(
+                "[HTTP] import/execute idempotent replay: module=%s topic=%s key=%s",
+                module_id,
+                topic_id,
+                idempotency_key,
+            )
+            return jsonify(cached_response)
+
         # Validate module and topic exist
         storage_service = _headless_app_ctx.storage_service
         module = storage_service.get_module(module_id)
         if not module:
+            _import_idempotency_release(idempotency_key, request_fingerprint)
             return jsonify({"ok": False, "error": "module_not_found"}), 400
 
         topic = storage_service.get_topic(module_id, topic_id)
         if not topic:
+            _import_idempotency_release(idempotency_key, request_fingerprint)
             return jsonify({"ok": False, "error": "topic_not_found"}), 400
 
         # Filter importable tasks
@@ -6512,10 +9571,17 @@ def import_execute() -> Any:
                     "prompt": task.get("data", {}).get("prompt", ""),
                     "data": task.get("data", {}),
                 }
+                if isinstance(task.get("ai_meta"), dict):
+                    full_task["ai_meta"] = task.get("ai_meta")
 
                 # Save to storage
                 success = _save_task_to_storage(
-                    full_task, module_id, topic_id, task_id, modules_dir
+                    full_task,
+                    module_id,
+                    topic_id,
+                    task_id,
+                    modules_dir,
+                    import_context=import_context,
                 )
 
                 if success:
@@ -6559,6 +9625,47 @@ def import_execute() -> Any:
             "task_ids": imported_ids,
             "errors": errors,
         }
+        if idempotency_key:
+            response["idempotency_key"] = idempotency_key
+        _import_idempotency_store(idempotency_key, request_fingerprint, response)
+
+        ai_run_id = str(import_context.get("ai_run_id") or "").strip()
+        if ai_run_id:
+            try:
+                _ai_run_write_artifact(
+                    ai_run_id,
+                    "import",
+                    {
+                        "run_id": ai_run_id,
+                        "created_at": _utc_now_iso(),
+                        "module_id": module_id,
+                        "topic_id": topic_id,
+                        "imported_count": len(imported_ids),
+                        "task_ids": imported_ids,
+                        "errors": errors,
+                        "idempotency_key": idempotency_key or None,
+                        "source_context": {
+                            "source": import_context.get("source"),
+                            "ai_provider": import_context.get("ai_provider"),
+                            "source_file_name": (
+                                import_context.get("source_file_name")
+                                or (import_context.get("source_file_info") or {}).get("name")
+                                or (import_context.get("source_file_info") or {}).get("filename")
+                            ),
+                        },
+                    },
+                )
+                _ai_run_merge_manifest(
+                    ai_run_id,
+                    {
+                        "import_completed_at": _utc_now_iso(),
+                        "imported_count": len(imported_ids),
+                        "module_id": module_id,
+                        "topic_id": topic_id,
+                    },
+                )
+            except Exception:
+                logger.exception("[HTTP] Failed to persist ai-run import artifact: %s", ai_run_id)
 
         logger.info(
             "[HTTP] import/execute: module=%s topic=%s imported=%s errors=%s",
@@ -6571,6 +9678,13 @@ def import_execute() -> Any:
         return jsonify(response)
 
     except Exception as exc:
+        try:
+            _import_idempotency_release(
+                str((payload or {}).get("idempotency_key") or "").strip(),
+                locals().get("request_fingerprint", ""),
+            )
+        except Exception:
+            pass
         logger.exception("[HTTP] Failed to execute import: %s", exc)
         return jsonify({"ok": False, "error": "import_failed"}), 500
 
@@ -6579,8 +9693,10 @@ if __name__ == "__main__":
     # Start watchdog
     watchdog.start()
     try:
-        # Default dev server on http://127.0.0.1:8000
+        import os
+        port = int(os.environ.get("TRAINER_HTTP_PORT", 8000))
+        # Default dev server
         _debug = FLASK_DEBUG_ENABLED
-        app.run(host="127.0.0.1", port=8000, debug=_debug, threaded=True)
+        app.run(host="127.0.0.1", port=port, debug=_debug, threaded=True)
     finally:
         watchdog.stop()

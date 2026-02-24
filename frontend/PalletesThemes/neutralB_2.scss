@@ -42,55 +42,59 @@
     --color-accent-very-dark: #354228;
 
     /* NEUTRAL: Backgrounds, Text & Borders */
-    /* Amethyst Dusk - 72% lightness (true Neutral with character) */
-    --color-bg-primary: #b8b3c5;
-    /* 72% lightness - приглушенный лавандовый */
-    --color-bg-secondary: #a8a0b8;
-    /* 68% lightness - более насыщенный */
-    --color-bg-tertiary: #9890a8;
-    /* 64% lightness - темнее */
-    --color-surface: #f5f3f8;
-    /* Очень светлый лавандовый вместо белого */
+    /* Amethyst Dusk - Polarized Neutral Hierarchy (Airy Variant) */
+    --color-bg-primary: #b8afc8;
+    /* 73% lightness - Airy Amethyst Foundation */
+    --color-bg-secondary: #e6e4eb;
+    /* 91% lightness - Pale Lavender Sidebar (+18% delta) */
+    --color-bg-tertiary: #f2f0f5;
+    /* 96% lightness - Panel Elevation */
+    --color-surface: #ffffff;
+    /* 100% lightness - Content Cards */
 
-    /* Text - High Contrast */
+    /* Text - High Contrast Dark-on-Light */
     --color-text-primary: #1a1226;
     /* Very Dark Amethyst */
     --color-text-secondary: #2e2042;
     /* Dark Amethyst */
     --color-text-muted: #364156;
-    /* Dark Blue-Grey to pass 4.5 on bg-secondary (#a8a0b8) */
+    /* Dark Blue-Grey */
     --color-text-disabled: #808a9f;
 
-    /* Borders */
-    --color-border-light: #a8a0b8;
-    /* Мягкая граница, близкая к bg-secondary */
-    --color-border-normal: #808a9f;
-    /* Стандартная граница - Lavender Grey */
+    /* Borders - Subtle Separation */
+    --color-border-light: #bcb5c5;
+    --color-border-normal: #a8a0b8;
     --color-border-strong: #3d2b56;
-    /* Сильная граница - Dark Amethyst */
 
-    /* STATES - Darkened for icon visibility */
-    --color-success-light: #e6f7e0;
-    --color-success: #4d7a43;
-    /* Darkened from #70b362 */
-    --color-success-dark: #36572f;
+    /* STATES - Adjusted for airy neutral backgrounds */
+    --color-success-light: #eef9eb;
+    --color-success: #3d6135;
+    --color-success-dark: #2a4325;
 
-    /* Error - using a reddish tone that fits the purple/blue vibe, maybe a berry color */
-    --color-error-light: #fce8e8;
-    --color-error: #c94040;
-    --color-error-dark: #8f2a2a;
+    /* Error - Berry tone */
+    --color-error-light: #fff0f0;
+    --color-error: #a33434;
+    --color-error-dark: #7a2626;
 
-    /* Warning - muted gold */
-    --color-warning-light: #fff8e1;
-    --color-warning: #b48605;
-    /* Darkened from #eab308 */
-    --color-warning-dark: #7a5c04;
+    /* Warning - Muted gold */
+    --color-warning-light: #fffcf0;
+    --color-warning: #947105;
+    --color-warning-dark: #6e5404;
 
-    /* Info - standard blue but tuned */
-    --color-info-light: #e0f2fe;
-    --color-info: #0284c7;
-    /* Darkened from #0ea5e9 */
-    --color-info-dark: #025a88;
+    /* Info - Dusk blue */
+    --color-info-light: #f0f9ff;
+    --color-info: #2c497f;
+    --color-info-dark: #1f3359;
+
+    /* Dynamic Chain Palette (Muted Glow) */
+    --color-chain-1: #4d7a43;
+    --color-chain-2: #4a7ab5;
+    --color-chain-3: #b48605;
+    --color-chain-4: #8a6bbd;
+
+    /* Glass Effects */
+    --sidebar-shadow-opacity: 0.12;
+    --sidebar-rim-opacity: 0.1;
 }
 
 /* SCSS Variables (for backward compatibility/preprocessing) */

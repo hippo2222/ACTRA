@@ -255,10 +255,10 @@
     }
 
     .add-btn-premium:disabled {
-      background-color: var(--color-bg-secondary) !important;
+      background-color: var(--color-surface-1) !important;
       background-image: none !important;
-      color: var(--color-text-main) !important;
-      border-color: var(--color-border-subtle);
+      color: var(--color-text-muted) !important;
+      border: 1px solid var(--color-border-subtle) !important;
       box-shadow: none;
       cursor: not-allowed;
       opacity: 1;
@@ -376,6 +376,11 @@
       animation-fill-mode: both;
     }
 
+    /* Page entrance */
+    .cx-create-enter {
+      animation: fadeInUp 0.4s ease-out both;
+    }
+
     /* Slide-in animation for task cards */
     @keyframes slideInTask {
       from {
@@ -420,26 +425,12 @@
       transform: scale(0.98);
     }
 
-    /* Flat sidebar - stage for content with subtle separation */
+    /* Flat sidebar - stage for content with sharp separation */
     .sidebar-glass {
-      background: linear-gradient(180deg,
-          color-mix(in srgb, var(--color-surface-2) 92%, var(--color-bg-secondary)) 0%,
-          color-mix(in srgb, var(--color-surface-1) 88%, var(--color-bg-tertiary)) 100%);
-      border: 1px solid color-mix(in srgb, var(--color-border-normal) 70%, transparent);
-      box-shadow:
-        -10px 0 24px rgba(20, 13, 31, 0.08),
-        inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      background: var(--color-bg-secondary);
+      border-left: 1px solid var(--color-border-strong);
+      box-shadow: -4px 0 16px color-mix(in srgb, var(--color-text-main) 12%, transparent);
       position: relative;
-    }
-
-    .sidebar-glass::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      border-radius: inherit;
-      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
-      opacity: 0.6;
     }
 
     .sidebar-glass .text-text-main {
@@ -455,9 +446,9 @@
     }
 
     .sidebar-header {
-      background: color-mix(in srgb, var(--color-surface-2) 85%, transparent);
-      border-bottom: 1px solid color-mix(in srgb, var(--color-border-normal) 70%, transparent);
-      backdrop-filter: blur(6px);
+      background: var(--color-surface-2);
+      border-bottom: 1px solid var(--color-border-subtle);
+      /* backdrop-filter removed as background is opaque */
     }
 
     .sidebar-tabs button {
@@ -489,7 +480,9 @@
     }
 
     .sidebar-panel.no-top {
-      border-top-color: transparent;
+      border: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
     }
 
     .sidebar-panel.no-bottom {
@@ -512,10 +505,11 @@
     /* Module cards - elevation system */
     .module-card {
       background: var(--color-surface-1);
+      border: 1.5px solid var(--color-border-normal);
       border-radius: 0.75rem;
-      border: 1.5px solid var(--color-border-subtle);
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      margin-bottom: 1rem;
+      box-shadow: 0 1px 4px color-mix(in srgb, var(--color-text-main) 8%, transparent);
+      margin-bottom: 0.75rem;
+      transition: all 0.2s ease;
       overflow: hidden;
     }
 
@@ -588,22 +582,28 @@
     }
 
     .module-card-content {
-      max-height: 0;
+      display: grid;
+      grid-template-rows: 0fr;
       overflow: hidden;
-      transition: max-height 0.28s ease-out;
+      transition: grid-template-rows 0.28s ease;
+    }
+
+    .module-card-content>.module-card-content-inner {
+      overflow: hidden;
+      min-height: 0;
     }
 
     .module-card-content.expanded {
-      max-height: 5000px;
+      grid-template-rows: 1fr;
       padding: 1rem;
     }
 
     .topic-card {
       padding: 1rem 1.25rem;
-      background: color-mix(in srgb, var(--color-surface-1) 85%, var(--color-bg-tertiary));
+      background: var(--color-surface-1);
       margin-bottom: 0.75rem;
       border-radius: 0.75rem;
-      border: 1px solid color-mix(in srgb, var(--color-border-subtle) 70%, transparent);
+      border: 1px solid var(--color-border-subtle);
     }
 
     .topic-card:last-child {
@@ -620,7 +620,7 @@
       cursor: pointer;
       transition: background 0.2s;
       border-radius: 0.5rem 0.5rem 0 0;
-      background: color-mix(in srgb, var(--color-bg-secondary) 50%, transparent);
+      background: transparent;
     }
 
     .topic-card-header:hover {
@@ -634,13 +634,121 @@
     }
 
     .topic-tasks-container {
-      max-height: 5000px;
+      display: grid;
+      grid-template-rows: 1fr;
       overflow: hidden;
-      transition: max-height 0.28s ease-out;
+      transition: grid-template-rows 0.28s ease;
+    }
+
+    .topic-tasks-container>.topic-tasks-inner {
+      overflow: hidden;
+      min-height: 0;
     }
 
     .topic-tasks-container.collapsed {
+      grid-template-rows: 0fr;
+    }
+
+    /* Theory section collapsible body */
+    .theory-body {
+      overflow: hidden;
       max-height: 0;
+      transition: max-height 0.35s ease;
+    }
+
+    .theory-body-open {
+      max-height: 2000px;
+    }
+
+    .theory-body-inner {
+      min-height: 0;
+    }
+
+    /* Editor content styles */
+    #theory-editor ul {
+      list-style-type: disc;
+      padding-left: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    #theory-editor ol {
+      list-style-type: decimal;
+      padding-left: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    #theory-editor h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-top: 0.75rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.2;
+    }
+
+    #theory-editor h2 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-top: 0.75rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.3;
+    }
+
+    #theory-editor h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    #theory-editor li {
+      margin-bottom: 0.25rem;
+    }
+
+    /* Theory toolbar */
+    .theory-toolbar-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2rem;
+      height: 2rem;
+      border-radius: 0.375rem;
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--color-text-secondary);
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+
+    .theory-toolbar-btn .material-symbols-outlined {
+      font-size: 1.125rem;
+      line-height: 1;
+    }
+
+    .theory-toolbar-btn--text {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .theory-toolbar-btn:hover {
+      background: var(--color-bg-secondary);
+      color: var(--color-text-main);
+      border-color: var(--color-border-subtle);
+    }
+
+    .theory-toolbar-btn:active {
+      background: var(--color-bg-tertiary);
+    }
+
+    .theory-toolbar-sep {
+      display: inline-block;
+      width: 1px;
+      height: 1.25rem;
+      background: var(--color-border-subtle);
+      margin: 0 0.25rem;
+      flex-shrink: 0;
     }
 
     .topic-name {
@@ -682,15 +790,18 @@
       align-items: center;
       gap: 0.5rem;
       padding: 0.5rem 0.875rem;
-      background: var(--color-surface-1) !important;
-      border: 1px solid var(--color-border-subtle);
+      background: var(--color-surface-chip) !important;
+      /* Use specific chip background */
+      border: 1px solid transparent;
       border-radius: 0.625rem;
       cursor: pointer;
       transition: all 0.15s ease;
       font-size: 0.8125rem;
       font-weight: 500;
-      color: var(--color-text-main) !important;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      color: var(--color-text-chip) !important;
+      /* Use specific chip text color */
+      /* Enhanced shadow for better separation from topic bg */
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.1);
       white-space: nowrap;
     }
 
@@ -785,6 +896,15 @@
 
     /* --- PREMIUM UI V3 OVERHAUL --- */
 
+    /* Dynamic Chain Colors Palette */
+    :root {
+      --color-chain-1: var(--color-success);
+      --color-chain-2: var(--color-info);
+      --color-chain-3: var(--color-warning);
+      --color-chain-4: var(--color-accent);
+    }
+
+
     /* 1. Task Item Premium Card - COMPACT */
     .task-card-premium {
       background: var(--color-bg-secondary);
@@ -793,6 +913,8 @@
       padding: 0.375rem 0.75rem;
       margin-bottom: 0.25rem;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+      border-left-width: 0;
       cursor: pointer;
       position: relative;
       display: flex;
@@ -800,9 +922,25 @@
       gap: 0.5rem;
       min-height: 2rem;
       overflow: visible;
-      box-shadow:
-        0 1px 1px color-mix(in srgb, var(--color-text-main) 2%, transparent);
+      box-shadow: 0 1px 1px color-mix(in srgb, var(--color-text-main) var(--sidebar-shadow-opacity, 4%), transparent);
       animation: slideInTask 0.3s ease-out backwards;
+    }
+
+    /* Dynamic Chain Indicators (Left Border) */
+    .task-card-premium[data-chain-color="1"] {
+      border-left: 3px solid var(--color-chain-1) !important;
+    }
+
+    .task-card-premium[data-chain-color="2"] {
+      border-left: 3px solid var(--color-chain-2) !important;
+    }
+
+    .task-card-premium[data-chain-color="3"] {
+      border-left: 3px solid var(--color-chain-3) !important;
+    }
+
+    .task-card-premium[data-chain-color="4"] {
+      border-left: 3px solid var(--color-chain-4) !important;
     }
 
     .task-card-premium:hover {
@@ -1012,6 +1150,27 @@
       color: var(--color-text-main);
     }
 
+    /* Chain Tag Dynamic Coloring */
+    .task-tag-chain[data-chain-color="1"] {
+      background: color-mix(in srgb, var(--color-chain-1) 12%, transparent);
+      border-color: color-mix(in srgb, var(--color-chain-1) 28%, transparent);
+    }
+
+    .task-tag-chain[data-chain-color="2"] {
+      background: color-mix(in srgb, var(--color-chain-2) 12%, transparent);
+      border-color: color-mix(in srgb, var(--color-chain-2) 28%, transparent);
+    }
+
+    .task-tag-chain[data-chain-color="3"] {
+      background: color-mix(in srgb, var(--color-chain-3) 12%, transparent);
+      border-color: color-mix(in srgb, var(--color-chain-3) 28%, transparent);
+    }
+
+    .task-tag-chain[data-chain-color="4"] {
+      background: color-mix(in srgb, var(--color-chain-4) 12%, transparent);
+      border-color: color-mix(in srgb, var(--color-chain-4) 28%, transparent);
+    }
+
     .task-tag:hover {
       background: color-mix(in srgb, var(--color-primary) 15%, transparent);
       border-color: var(--color-primary);
@@ -1138,10 +1297,15 @@
 
   <header class="bg-surface-1 border-b border-border-subtle px-4 h-16 shrink-0 flex items-center justify-between z-20">
     <div class="flex items-center gap-4">
-      <a href="/ui/complexes" class="text-text-muted hover:text-text-main transition-colors" title="Назад к списку">
+      <a href="/ui/complexes"
+        onclick="event.preventDefault(); if (!hasUnsavedChanges()) { window.navigateWithTransition('/ui/complexes'); } else { showUnsavedChangesModal('/ui/complexes'); }"
+        class="text-text-muted hover:text-text-main transition-colors cursor-pointer" title="Назад к списку">
         <span class="material-symbols-outlined">arrow_back</span>
       </a>
-      <h1 class="text-xl font-bold text-text-main">Создание комплекса</h1>
+      <h1 class="text-xl font-bold text-text-main flex items-center gap-4">
+        <span id="page-title-text">Создание комплекса</span>
+        <span id="save-status" class="text-sm font-normal text-text-muted transition-opacity duration-300"></span>
+      </h1>
 
       <!-- Moved Last Saved Info -->
       <div class="hidden md:flex items-center gap-2 ml-4 pl-4 border-l border-border-subtle">
@@ -1172,8 +1336,7 @@
   </header>
 
   <main class="flex-1 flex overflow-hidden">
-
-    <div class="w-full h-full max-w-[1600px] mx-auto p-6 flex flex-col lg:flex-row gap-6">
+    <div class="w-full min-h-0 flex-1 max-w-[1600px] mx-auto p-6 flex flex-col lg:flex-row gap-6 items-stretch cx-create-enter">
 
       <div class="flex-1 overflow-y-auto pb-24 pr-2 custom-scrollbar">
 
@@ -1230,122 +1393,204 @@
             </section>
 
             <section
-              class="card-section-premium p-5 flex flex-col gap-4 relative before:absolute before:left-0 before:top-4 before:bottom-4 before:w-1 before:bg-info before:rounded-r">
-              <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-info text-[20px]">menu_book</span>
-                <h2 class="text-base font-bold text-text-main">Теория</h2>
+              class="card-section-premium p-0 relative overflow-hidden before:absolute before:left-0 before:top-4 before:bottom-4 before:w-1 before:bg-info before:rounded-r">
+
+              <!-- Theory Header (always visible, clickable) -->
+              <div id="theory-header"
+                class="flex items-center justify-between p-5 cursor-pointer select-none hover:bg-bg-secondary transition-colors"
+                onclick="toggleTheorySection()">
+                <div class="flex items-center gap-2">
+                  <span class="material-symbols-outlined text-info text-[20px]">menu_book</span>
+                  <h2 class="text-base font-bold text-text-main">Теория</h2>
+                  <span class="text-xs text-text-muted font-normal" id="theory-status-label">Добавить теорию</span>
+                </div>
+                <span class="material-symbols-outlined text-text-muted text-[20px]"
+                  id="theory-header-chevron">add</span>
               </div>
 
-              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div class="flex flex-col gap-1.5">
-                  <label class="text-sm font-medium text-text-secondary">Источник теории</label>
-                  <select id="theory-mode" class="form-field form-field-input">
-                    <option value="none">Не привязывать</option>
-                    <option value="new">Новая теория</option>
-                    <option value="link">Привязать существующую</option>
-                  </select>
-                </div>
-                <div id="theory-link-picker-wrap" class="flex flex-col gap-1.5 hidden">
-                  <label class="text-sm font-medium text-text-secondary">Существующая теория</label>
-                  <div class="flex gap-2">
-                    <select id="theory-link-picker" class="form-field form-field-input flex-1"></select>
-                    <button id="theory-reload-list" type="button" class="btn-secondary h-12 px-3">↻</button>
+              <!-- Theory Body (collapsible) -->
+              <div id="theory-body" class="theory-body" style="max-height: 0; overflow: hidden;">
+                <div class="theory-body-inner px-5 pb-5 pt-1 flex flex-col gap-4">
+
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-medium text-text-secondary">Источник теории</label>
+                      <select id="theory-mode" class="form-field form-field-input">
+                        <option value="new">Новая теория</option>
+                        <option value="link">Привязать существующую</option>
+                      </select>
+                    </div>
+                    <div id="theory-link-picker-wrap" class="flex flex-col gap-1.5 hidden">
+                      <label class="text-sm font-medium text-text-secondary">Существующая теория</label>
+                      <div class="flex gap-2">
+                        <select id="theory-link-picker" class="form-field form-field-input flex-1"></select>
+                        <button id="theory-reload-list" type="button" class="btn-secondary h-12 px-3">↻</button>
+                      </div>
+                      <button id="theory-create-copy" type="button"
+                        class="btn-secondary h-10 px-3 hidden self-start">Создать копию теории</button>
+                    </div>
                   </div>
-                  <button id="theory-create-copy" type="button" class="btn-secondary h-10 px-3 hidden self-start">Создать копию теории</button>
-                </div>
-              </div>
 
-              <div id="theory-editor-wrap" class="hidden flex flex-col gap-3">
-                <div class="flex flex-col gap-1.5">
-                  <label class="text-sm font-medium text-text-secondary">Название теории</label>
-                  <input id="theory-title" class="form-field form-field-input" placeholder="Например: КТ грудной клетки" type="text" />
-                </div>
+                  <div id="theory-editor-wrap" class="hidden flex flex-col gap-3">
+                    <div class="flex flex-col gap-1.5">
+                      <label class="text-sm font-medium text-text-secondary">Название теории</label>
+                      <input id="theory-title" class="form-field form-field-input"
+                        placeholder="Например: КТ грудной клетки" type="text" />
+                    </div>
 
-                <div class="flex flex-wrap items-center gap-2">
-                  <button id="theory-bold" type="button" class="btn-secondary h-9 px-3 font-bold">B</button>
-                  <button id="theory-italic" type="button" class="btn-secondary h-9 px-3 italic">I</button>
-                  <button id="theory-h1" type="button" class="btn-secondary h-9 px-3">H1</button>
-                  <button id="theory-h2" type="button" class="btn-secondary h-9 px-3">H2</button>
-                  <button id="theory-h3" type="button" class="btn-secondary h-9 px-3">H3</button>
-                  <button id="theory-ul" type="button" class="btn-secondary h-9 px-3">• List</button>
-                  <button id="theory-ol" type="button" class="btn-secondary h-9 px-3">1. List</button>
-                  <button id="theory-image-btn" type="button" class="btn-secondary h-9 px-3">+ Image</button>
-                  <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg" class="hidden" />
-                </div>
+                    <div class="flex flex-wrap items-center gap-1" onmousedown="event.preventDefault()">
+                      <!-- Text formatting -->
+                      <button id="theory-bold" type="button" class="theory-toolbar-btn" title="Жирный (Ctrl+B)">
+                        <span class="material-symbols-outlined">format_bold</span>
+                      </button>
+                      <button id="theory-italic" type="button" class="theory-toolbar-btn" title="Курсив (Ctrl+I)">
+                        <span class="material-symbols-outlined">format_italic</span>
+                      </button>
 
-                <div id="theory-editor" class="w-full min-h-[240px] rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary-light" contenteditable="true"></div>
-                <p class="text-xs text-text-muted">Формат хранения: Delta JSON. Изображения сохраняются вместе с файлами комплексов.</p>
-              </div>
-            </section>
+                      <span class="theory-toolbar-sep"></span>
 
-            <section class="card-section-premium flex flex-col">
-              <!-- Premium Header with Buttons -->
-              <div class="section-header-premium flex items-center justify-between p-4">
-                <div class="flex items-center gap-3">
-                  <h3 class="text-base font-bold text-text-main">
-                    Задания в комплексе
-                  </h3>
-                  <span
-                    class="px-2 py-0.5 bg-bg-tertiary text-text-secondary border border-border-subtle rounded-md text-sm font-semibold">
-                    <span id="selected-count">0</span>
-                  </span>
-                </div>
+                      <!-- Headings -->
+                      <button id="theory-h1" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
+                        title="Заголовок 1">H1</button>
+                      <button id="theory-h2" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
+                        title="Заголовок 2">H2</button>
+                      <button id="theory-h3" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
+                        title="Заголовок 3">H3</button>
 
-                <!-- Management Buttons -->
-                <div class="flex gap-2">
+                      <span class="theory-toolbar-sep"></span>
 
-                  <button id="remove-selected" class="btn-secondary btn-danger flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[16px]">delete_outline</span>
-                    <span class="hidden sm:inline">Удалить</span>
-                  </button>
-                </div>
-              </div>
+                      <!-- Lists -->
+                      <button id="theory-ul" type="button" class="theory-toolbar-btn" title="Маркированный список">
+                        <span class="material-symbols-outlined">format_list_bulleted</span>
+                      </button>
+                      <button id="theory-ol" type="button" class="theory-toolbar-btn" title="Нумерованный список">
+                        <span class="material-symbols-outlined">format_list_numbered</span>
+                      </button>
 
+                      <span class="theory-toolbar-sep"></span>
 
+                      <!-- Alignment -->
+                      <button id="theory-align-left" type="button" class="theory-toolbar-btn" title="По левому краю">
+                        <span class="material-symbols-outlined">format_align_left</span>
+                      </button>
+                      <button id="theory-align-center" type="button" class="theory-toolbar-btn" title="По центру">
+                        <span class="material-symbols-outlined">format_align_center</span>
+                      </button>
+                      <button id="theory-align-right" type="button" class="theory-toolbar-btn" title="По правому краю">
+                        <span class="material-symbols-outlined">format_align_right</span>
+                      </button>
+                      <button id="theory-align-justify" type="button" class="theory-toolbar-btn" title="По ширине">
+                        <span class="material-symbols-outlined">format_align_justify</span>
+                      </button>
 
-              <!-- Content Wrapper -->
-              <div class="px-4 pb-4 flex flex-col gap-3">
+                      <span class="theory-toolbar-sep"></span>
 
-                <!-- Enhanced Empty State -->
-                <div id="selected-empty"
-                  class="bg-bg-secondary rounded-xl border-2 border-dashed border-border-subtle p-8 flex flex-col items-center justify-center gap-3 text-center">
-                  <div class="w-16 h-16 rounded-full bg-primary-lighter flex items-center justify-center">
-                    <span class="material-symbols-outlined text-primary text-3xl">playlist_add</span>
+                      <!-- Image -->
+                      <button id="theory-image-btn" type="button" class="theory-toolbar-btn"
+                        title="Вставить изображение">
+                        <span class="material-symbols-outlined">add_photo_alternate</span>
+                      </button>
+                      <input id="theory-image-input" type="file" accept=".png,.jpg,.jpeg,.gif,.webp,.svg"
+                        class="hidden" />
+                    </div>
                   </div>
-                  <p class="text-text-main font-semibold">Комплекс пуст</p>
-                  <p class="text-text-muted text-sm flex items-center gap-1">
-                    Выберите задания из каталога
-                    <span class="material-symbols-outlined text-primary text-lg">arrow_forward</span>
-                  </p>
+
+                  <div id="theory-editor"
+                    class="w-full min-h-[240px] rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary-light"
+                    contenteditable="true"></div>
+                  <p class="text-xs text-text-muted">Формат хранения: Delta JSON. Изображения сохраняются вместе с
+                    файлами
+                    комплексов.</p>
                 </div>
 
-                <div id="selected-cards" class="hidden flex flex-col gap-2 p-1"></div>
-                <select id="selected-list" size="10" class="hidden" multiple></select>
-                <p id="tasks-error" class="text-xs text-error" hidden></p>
               </div>
-            </section>
-
           </div>
-        </div>
+          </section>
 
+
+          <section class="card-section-premium flex flex-col">
+            <!-- Premium Header with Buttons -->
+            <div class="section-header-premium flex items-center justify-between p-4">
+              <div class="flex items-center gap-3">
+                <h3 class="text-base font-bold text-text-main">
+                  Задания в комплексе
+                </h3>
+                <span
+                  class="px-2 py-0.5 bg-bg-tertiary text-text-secondary border border-border-subtle rounded-md text-sm font-semibold">
+                  <span id="selected-count">0</span>
+                </span>
+              </div>
+
+              <!-- Management Buttons -->
+              <div class="flex gap-2">
+
+                <button id="remove-selected" class="btn-secondary btn-danger flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-[16px]">delete_outline</span>
+                  <span class="hidden sm:inline">Удалить</span>
+                </button>
+              </div>
+            </div>
+
+
+
+            <!-- Content Wrapper -->
+            <div class="px-4 pb-4 flex flex-col gap-3">
+
+              <!-- Enhanced Empty State -->
+              <div id="selected-empty"
+                class="bg-bg-secondary rounded-xl border-2 border-dashed border-border-subtle p-8 flex flex-col items-center justify-center gap-3 text-center">
+                <div class="w-16 h-16 rounded-full bg-primary-lighter flex items-center justify-center">
+                  <span class="material-symbols-outlined text-primary text-3xl">playlist_add</span>
+                </div>
+                <p class="text-text-main font-semibold">Комплекс пуст</p>
+                <p class="text-text-muted text-sm flex items-center gap-1">
+                  Выберите задания из каталога
+                  <span class="material-symbols-outlined text-primary text-lg">arrow_forward</span>
+                </p>
+              </div>
+
+              <div id="selected-cards" class="hidden flex flex-col gap-2 p-1"></div>
+              <select id="selected-list" size="10" class="hidden" multiple></select>
+              <p id="tasks-error" class="text-xs text-error" hidden></p>
+            </div>
+          </section>
+
+          <!-- Chains Section (Bug 2 fix: was missing from DOM) -->
+          <section id="chains-section"
+            class="card-section-premium flex flex-col rounded-xl border border-border-subtle bg-surface-1 overflow-hidden"
+            hidden>
+            <div class="flex items-center justify-between p-4 border-b border-border-subtle">
+              <div class="flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[20px]">link</span>
+                <h3 class="text-base font-bold text-text-main">Сцепки</h3>
+              </div>
+            </div>
+            <div id="chains-content-wrapper" class="px-4 pb-4 pt-3">
+              <div id="chains-container"></div>
+            </div>
+          </section>
+
+        </div>
       </div>
 
-      <aside class="sidebar-responsive shrink-0 flex flex-col sidebar-minimal rounded-lg overflow-hidden h-full">
+    </div>
 
-        <div class="flex border-b border-border-subtle shrink-0 px-4 gap-6 sidebar-header sidebar-tabs">
-          <button id="tab-tasks"
-            class="py-2 text-sm font-medium text-text-main border-b-2 border-primary transition-all active-tab">
-            Задания
-          </button>
-          <button id="tab-complexes"
-            class="py-2 text-sm font-medium text-text-muted border-b-2 border-transparent hover:text-text-secondary transition-all">
-            Комплексы
-          </button>
-        </div>
+    <aside class="sidebar-responsive shrink-0 flex flex-col sidebar-glass rounded-xl overflow-hidden self-stretch">
+      <div
+        class="flex border-b border-border-subtle shrink-0 px-4 gap-6 sidebar-header sidebar-tabs sticky top-0 z-30 bg-surface-2">
+        <button id="tab-tasks"
+          class="py-2 text-sm font-medium text-text-main border-b-2 border-primary transition-all active-tab">
+          Задания
+        </button>
+        <button id="tab-complexes"
+          class="py-2 text-sm font-medium text-text-muted border-b-2 border-transparent hover:text-text-secondary transition-all">
+          Комплексы
+        </button>
+      </div>
 
-        <div id="tab-content-tasks" class="flex-1 flex flex-col overflow-hidden min-h-0">
-
-          <div class="px-4 py-3 z-10 space-y-2.5 sidebar-panel no-top section-header">
+      <div id="tab-content-tasks" class="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div class="flex flex-col flex-1 min-h-0 relative">
+          <div class="flex-none flex flex-col gap-2.5 p-4 z-20 border-b border-border-subtle">
 
             <div class="flex items-center justify-between">
 
@@ -1359,10 +1604,10 @@
 
               <div class="flex items-center gap-2">
 
-                <span class="text-xs text-text-muted" id="catalog-total">Всего: —</span>
+                <span class="text-xs text-text-secondary" id="catalog-total">Всего: —</span>
 
-                <span class="neutral-b-badge px-2 py-0.5 rounded text-xs font-medium" id="catalog-selected"
-                  data-count="0">Выбрано: 0</span>
+                <span class="px-2 py-0.5 rounded text-xs font-medium" id="catalog-selected" data-count="0">Выбрано:
+                  0</span>
 
               </div>
 
@@ -1374,67 +1619,66 @@
                 class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary text-[20px] transition-colors peer-focus:text-primary">search</span>
 
               <input id="catalog-search"
-                class="peer w-full pl-9 pr-3 py-2 bg-transparent border-0 border-b border-border-subtle rounded-none text-sm focus:outline-none focus:border-primary transition-all placeholder:text-text-main text-text-main focus-visible:outline-2 focus-visible:outline-primary focus-visible:outline-offset-2"
+                class="peer w-full pl-9 pr-3 py-2 bg-bg-tertiary border border-transparent rounded-lg text-sm focus:outline-none focus:border-transparent focus:ring-2 focus:ring-primary transition-all placeholder:text-text-muted text-text-main"
                 placeholder="Поиск по названию, ID или тегу..." type="text" aria-label="Поиск заданий" />
 
             </div>
 
-            <div class="section-divider"></div>
+          </div>
 
-            <div class="flex-1 overflow-y-auto custom-scrollbar sidebar-section relative">
-              <div class="p-4 space-y-2">
-                <select id="catalog-list" size="18" class="hidden" multiple></select>
-                <div id="catalog-tree" class="space-y-6"></div>
-                <div id="catalog-state" class="mt-3 text-sm text-text-muted" hidden></div>
-              </div>
-
-              <div
-                class="p-4 bg-surface-2 text-text-muted shadow-[0_-8px_16px_rgba(0,0,0,0.06)] z-10 backdrop-blur-sm sidebar-panel sidebar-section panel-footer sticky bottom-0">
-
-                <button id="add-from-catalog"
-                  class="add-btn-premium w-full h-11 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
-                  aria-label="Добавить выбранные задания (0)">
-
-                  <span class="material-symbols-outlined text-xl text-text-main">add_circle</span>
-
-                  Добавить выбранные
-
-                  <span id="add-counter"
-                    class="counter-glass inline-flex items-center justify-center min-w-[1.5rem] h-6 rounded-full text-xs font-bold px-2 ml-2">0</span>
-
-                </button>
-
-                <button id="reload-catalog"
-                  class="mt-2 w-full h-9 text-text-main hover:text-text-secondary text-sm transition-colors">Обновить</button>
-              </div>
+          <div class="sidebar-section relative flex-1 overflow-y-auto min-h-0">
+            <div class="p-4 space-y-2">
+              <select id="catalog-list" size="18" class="hidden" multiple></select>
+              <div id="catalog-tree" class="space-y-6"></div>
+              <div id="catalog-state" class="mt-3 text-sm text-text-muted" hidden></div>
             </div>
           </div>
 
+          <div class="p-4 border-t border-border-subtle shrink-0">
+
+            <button id="add-from-catalog"
+              class="add-btn-premium w-full h-11 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
+              aria-label="Добавить выбранные задания (0)">
+
+              <span class="material-symbols-outlined text-xl text-text-main">add_circle</span>
+
+              Добавить выбранные
+
+              <span id="add-counter"
+                class="counter-glass inline-flex items-center justify-center min-w-[1.5rem] h-6 rounded-full text-xs font-bold px-2 ml-2">0</span>
+
+            </button>
+
+            <button id="reload-catalog"
+              class="mt-2 w-full h-9 rounded-lg text-text-secondary hover:bg-bg-secondary hover:text-text-main text-sm transition-colors border border-transparent hover:border-border-subtle">Обновить</button>
+          </div>
         </div>
 
-        <div id="tab-content-complexes" class="hidden flex-1 flex flex-col overflow-hidden">
-          <div class="p-4 border-b border-border-subtle bg-surface-2 z-10 space-y-3">
-            <div class="relative">
-              <span
-                class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-disabled text-[20px]">search</span>
-              <input id="complex-search"
-                class="w-full pl-10 pr-4 py-2.5 bg-bg-tertiary border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-primary transition-all placeholder:text-text-muted text-text-main"
-                placeholder="Поиск комплексов..." type="text" />
-            </div>
+      </div>
+
+      <div id="tab-content-complexes" class="hidden flex-1 flex flex-col overflow-hidden">
+        <div class="p-4 border-b border-border-subtle bg-surface-2 z-10 space-y-3">
+          <div class="relative">
+            <span
+              class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-disabled text-[20px]">search</span>
+            <input id="complex-search"
+              class="w-full pl-10 pr-4 py-2.5 bg-bg-tertiary border border-border-subtle rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-light focus:border-primary transition-all placeholder:text-text-muted text-text-main"
+              placeholder="Поиск комплексов..." type="text" />
           </div>
-
-          <div id="complexes-list" class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2"></div>
-
-          <div class="p-4 bg-surface-2 border-t border-border-subtle shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10">
-            <a href="/ui/complexes/create"
-              class="w-full h-10 bg-bg-secondary border border-border-subtle text-text-secondary hover:bg-bg-tertiary rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
-              <span class="material-symbols-outlined text-[20px]">add</span>
-              Создать новый
-            </a>
-          </div>
-
         </div>
-      </aside>
+
+        <div id="complexes-list" class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2"></div>
+
+        <div class="p-4 bg-surface-2 border-t border-border-subtle shadow-[0_-4px_12px_rgba(0,0,0,0.03)] z-10">
+          <a href="/ui/complexes/create"
+            class="w-full h-10 bg-bg-secondary border border-border-subtle text-text-secondary hover:bg-bg-tertiary rounded-lg font-semibold text-sm transition-all flex items-center justify-center gap-2">
+            <span class="material-symbols-outlined text-[20px]">add</span>
+            Создать новый
+          </a>
+        </div>
+
+      </div>
+    </aside>
 
     </div>
 
@@ -1491,9 +1735,39 @@
       catalog: [],
 
       selectedTasks: [], // [{ref, label}]
+      chains: []         // [[ref1, ref2], [ref3, ref4]]
+    };
 
-      chains: [], // array of arrays of refs
+    function toggleTheorySection(forceState) {
+      const header = document.getElementById('theory-header');
+      const body = document.getElementById('theory-body');
+      const label = document.getElementById('theory-status-label');
+      const chevron = document.getElementById('theory-header-chevron');
+      const modeEl = document.getElementById('theory-mode');
 
+      const isEnabled = forceState !== undefined ? forceState : !window._theoryEnabled;
+      window._theoryEnabled = isEnabled;
+
+      if (isEnabled) {
+        header.classList.add('theory-header--active');
+        body.style.maxHeight = '2000px';
+        if (label) { label.style.display = 'none'; label.textContent = ''; }
+        if (chevron) chevron.textContent = 'expand_less';
+
+        const currentMode = modeEl ? modeEl.value : 'new';
+        if (typeof setTheoryMode === 'function') {
+          setTheoryMode(currentMode || 'new');
+          if (modeEl && !modeEl.value) modeEl.value = 'new';
+        }
+      } else {
+        header.classList.remove('theory-header--active');
+        body.style.maxHeight = '0';
+        if (label) { label.style.display = ''; label.textContent = 'Добавить теорию'; }
+        if (chevron) chevron.textContent = 'add';
+      }
+    }
+
+    Object.assign(state, {
       editingId: null,
 
       currentVersion: null, // ISO timestamp for optimistic locking
@@ -1513,7 +1787,7 @@
         dirty: false,
         delta: { ops: [{ insert: "\n" }] },
       },
-    };
+    });
 
 
     const ERROR_DETECTION_TOOLTIP = 'Задание на поиск ошибок';
@@ -2055,34 +2329,35 @@
       cards.innerHTML = '';
 
       for (const t of state.selectedTasks) {
-
-        const chainIdx = chainIndexForTaskRef(t.ref);
-
-        const inChain = chainIdx >= 0;
-
+        const chains = getTaskChains(t.ref);
+        const primaryChain = chains.length > 0 ? chains[0] : null;
+        const colorIdx = primaryChain ? (primaryChain.index % 4) + 1 : 0;
         const isSelected = prevSelected.has(t.ref);
 
         const card = document.createElement('div');
         card.setAttribute('data-selected-task-ref', t.ref);
         card.setAttribute('data-selected', isSelected ? '1' : '0');
+        if (colorIdx > 0) card.setAttribute('data-chain-color', colorIdx);
 
         // Premium classes
         card.className = `task-card-premium group ${isSelected ? 'selected' : ''}`;
 
-        // Get meta chips (topic name with fallback)
+        // Get meta chips
         const metaLabel = t.topic_name || (t.module_name ? `${t.module_name.replace(/_/g, ' ')}` : 'Задание');
 
         // Inner HTML Structure
-        const chains = getTaskChains(t.ref);
         const tagsHtml = `
           <div class="task-tags-row">
             <span class="task-tag task-tag-meta">${metaLabel}</span>
-            ${chains.map(chain => `
-              <span class="task-tag task-tag-chain">
-                <span class="task-tag-icon">🔗</span>
-                <span>${chain.label} (${chain.tasksCount})</span>
-              </span>
-            `).join('')}
+            ${chains.map(chain => {
+          const cColorIdx = (chain.index % 4) + 1;
+          return `
+                <span class="task-tag task-tag-chain" data-chain-color="${cColorIdx}">
+                  <span class="task-tag-icon">🔗</span>
+                  <span>${chain.label} (${chain.tasksCount})</span>
+                </span>
+              `;
+        }).join('')}
           </div>
         `;
 
@@ -2262,8 +2537,16 @@
 
         const el = document.getElementById(id);
 
-        if (el) { el.hidden = true; el.textContent = ''; }
+        if (el) { el.hidden = true; el.textContent = ''; el.classList.add('invisible'); el.setAttribute('aria-hidden', 'true'); }
 
+      });
+
+      // Remove error highlight from inputs
+      ['name', 'description'].forEach((inputId) => {
+        const input = document.getElementById(inputId);
+        if (input) {
+          input.classList.remove('border-status-error', 'ring-1', 'ring-status-error');
+        }
       });
 
     }
@@ -2277,6 +2560,17 @@
       el.textContent = message;
 
       el.hidden = false;
+
+      el.classList.remove('invisible');
+
+      el.setAttribute('aria-hidden', 'false');
+
+      // Highlight associated input field with error border
+      const inputId = id.replace('-error', '');
+      const input = document.getElementById(inputId);
+      if (input && (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA')) {
+        input.classList.add('border-status-error', 'ring-1', 'ring-status-error');
+      }
 
     }
 
@@ -2609,25 +2903,24 @@
         // Module content
         const modContent = document.createElement('div');
         modContent.className = 'module-card-content'; // Start collapsed
-        modContent.style.maxHeight = '0';
+
+        // Inner wrapper required for grid-template-rows animation trick
+        const modContentInner = document.createElement('div');
+        modContentInner.className = 'module-card-content-inner';
 
         // Toggle functionality
         let isExpanded = false;
         const toggleBtn = modHeader.querySelector('[data-action="toggle"]');
         const chevron = modHeader.querySelector('[data-chevron]');
 
-        modHeader.addEventListener('click', (e) => {
-          if (e.target.closest('[data-action="toggle"]') || e.target.closest('.module-info')) {
-            isExpanded = !isExpanded;
-            if (isExpanded) {
-              modContent.classList.add('expanded');
-              modContent.style.maxHeight = '5000px';
-              chevron.textContent = 'expand_more';
-            } else {
-              modContent.classList.remove('expanded');
-              modContent.style.maxHeight = '0';
-              chevron.textContent = 'chevron_right';
-            }
+        modHeader.addEventListener('click', () => {
+          isExpanded = !isExpanded;
+          if (isExpanded) {
+            modContent.classList.add('expanded');
+            chevron.textContent = 'expand_more';
+          } else {
+            modContent.classList.remove('expanded');
+            chevron.textContent = 'chevron_right';
           }
         });
 
@@ -2650,7 +2943,11 @@
 
           // Tasks chips container wrapper for collapse
           const tasksWrapper = document.createElement('div');
-          tasksWrapper.className = 'topic-tasks-container';
+          tasksWrapper.className = 'topic-tasks-container collapsed';
+
+          // Inner wrapper required for grid-template-rows animation trick
+          const tasksInner = document.createElement('div');
+          tasksInner.className = 'topic-tasks-inner';
 
           const chipsContainer = document.createElement('div');
           chipsContainer.className = 'tasks-chips';
@@ -2702,8 +2999,9 @@
             chipsContainer.appendChild(chip);
           }
 
-          // Append chips to wrapper
-          tasksWrapper.appendChild(chipsContainer);
+          // Append chips to wrapper via inner
+          tasksInner.appendChild(chipsContainer);
+          tasksWrapper.appendChild(tasksInner);
 
           // Topic collapse/expand functionality
           let topicExpanded = false;
@@ -2711,19 +3009,15 @@
           if (topicChevron) {
             topicChevron.textContent = 'chevron_right';
           }
-          tasksWrapper.classList.add('collapsed');
-          tasksWrapper.style.maxHeight = '0';
           topicHeader.addEventListener('click', () => {
             topicExpanded = !topicExpanded;
             if (topicExpanded) {
               tasksWrapper.classList.remove('collapsed');
-              tasksWrapper.style.maxHeight = '5000px';
               if (topicChevron) {
                 topicChevron.textContent = 'expand_more';
               }
             } else {
               tasksWrapper.classList.add('collapsed');
-              tasksWrapper.style.maxHeight = '0';
               if (topicChevron) {
                 topicChevron.textContent = 'chevron_right';
               }
@@ -2732,8 +3026,10 @@
 
           topicCard.appendChild(topicHeader);
           topicCard.appendChild(tasksWrapper);
-          modContent.appendChild(topicCard);
+          modContentInner.appendChild(topicCard);
         }
+
+        modContent.appendChild(modContentInner);
 
         modCard.appendChild(modHeader);
         modCard.appendChild(modContent);
@@ -2791,8 +3087,7 @@
 
       applyCatalogFilter();
 
-      markClean();
-      captureInitialState();
+      markDirty();
 
     }
 
@@ -3034,18 +3329,21 @@
         if (listType) {
           if (activeListType && activeListType !== listType) flushList();
           activeListType = listType;
-          activeListItems.push(`<li>${lineHtml}</li>`);
+          const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
+          activeListItems.push(`<li${align}>${lineHtml}</li>`);
           continue;
         }
 
         flushList();
         const headerLevel = Number(attrs.header);
+        const align = attrs.align ? ` style="text-align: ${attrs.align}"` : "";
+
         if (Number.isInteger(headerLevel) && headerLevel >= 1 && headerLevel <= 6) {
-          blocks.push(`<h${headerLevel}>${lineHtml}</h${headerLevel}>`);
+          blocks.push(`<h${headerLevel}${align}>${lineHtml}</h${headerLevel}>`);
         } else if (attrs.blockquote) {
-          blocks.push(`<blockquote>${lineHtml}</blockquote>`);
+          blocks.push(`<blockquote${align}>${lineHtml}</blockquote>`);
         } else {
-          blocks.push(`<p>${lineHtml}</p>`);
+          blocks.push(`<p${align}>${lineHtml}</p>`);
         }
       }
 
@@ -3130,7 +3428,9 @@
             const items = Array.from(node.children || []).filter((child) => child.tagName && child.tagName.toLowerCase() === "li");
             for (const li of items) {
               collectTheoryInlineOps(li, {}, ops);
-              ops.push({ insert: "\n", attributes: { list: listType } });
+              const liAttrs = { list: listType };
+              if (li.style.textAlign) liAttrs.align = li.style.textAlign;
+              ops.push({ insert: "\n", attributes: liAttrs });
             }
             continue;
           }
@@ -3139,6 +3439,8 @@
           const headerLevel = getTheoryHeaderLevel(tag);
           if (headerLevel) lineAttrs.header = headerLevel;
           if (tag === "blockquote") lineAttrs.blockquote = true;
+          if (node.style.textAlign) lineAttrs.align = node.style.textAlign;
+
           collectTheoryInlineOps(node, {}, ops);
           ops.push(Object.keys(lineAttrs).length ? { insert: "\n", attributes: lineAttrs } : { insert: "\n" });
         } else {
@@ -3175,6 +3477,77 @@
       copyBtn.disabled = !canCopy;
     }
 
+    function insertTheoryList(tag) {
+      const editor = document.getElementById('theory-editor');
+      if (!editor) return;
+
+      const sel = window.getSelection();
+      const range = (sel && sel.rangeCount > 0) ? sel.getRangeAt(0) : null;
+
+      const BLOCK_TAGS = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'LI', 'BLOCKQUOTE', 'PRE']);
+
+      function getBlockAncestor(node) {
+        while (node && node !== editor) {
+          if (node.nodeType === 1 && BLOCK_TAGS.has(node.tagName)) return node;
+          node = node.parentNode;
+        }
+        return null;
+      }
+
+      if (!range) {
+        const list = document.createElement(tag);
+        const li = document.createElement('li');
+        li.innerHTML = '<br>';
+        list.appendChild(li);
+        editor.appendChild(list);
+        editor.focus();
+        return;
+      }
+
+      const startBlock = getBlockAncestor(range.startContainer) || editor.firstElementChild;
+      const endBlock = getBlockAncestor(range.endContainer) || editor.lastElementChild;
+
+      if (!startBlock) {
+        editor.focus();
+        document.execCommand('insertHTML', false,
+          tag === 'ul' ? '<ul><li><br></li></ul>' : '<ol><li><br></li></ol>');
+        return;
+      }
+
+      // Collect sibling blocks from startBlock to endBlock
+      const blocks = [];
+      let node = startBlock;
+      while (node) {
+        if (BLOCK_TAGS.has(node.tagName)) blocks.push(node);
+        if (node === endBlock) break;
+        node = node.nextElementSibling;
+      }
+      if (blocks.length === 0) blocks.push(startBlock);
+
+      // Build list
+      const list = document.createElement(tag);
+      for (const block of blocks) {
+        const li = document.createElement('li');
+        li.innerHTML = block.innerHTML || '<br>';
+        list.appendChild(li);
+      }
+
+      // Insert list before first block, remove originals
+      startBlock.parentNode.insertBefore(list, startBlock);
+      for (const block of blocks) block.remove();
+
+      // Place cursor in first li
+      const firstLi = list.firstElementChild;
+      if (firstLi) {
+        editor.focus();
+        const newRange = document.createRange();
+        newRange.setStart(firstLi, 0);
+        newRange.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(newRange);
+      }
+    }
+
     function setTheoryMode(mode) {
       state.theory.mode = ["none", "new", "link"].includes(mode) ? mode : "none";
       const wrap = document.getElementById("theory-editor-wrap");
@@ -3182,6 +3555,16 @@
       if (wrap) wrap.classList.toggle("hidden", state.theory.mode === "none");
       if (pickerWrap) pickerWrap.classList.toggle("hidden", state.theory.mode !== "link");
       updateTheoryCopyButtonState();
+
+      // Sync the theory section toggle UI
+      const enabled = state.theory.mode !== "none";
+      window._theoryEnabled = enabled;
+      const body = document.getElementById("theory-body");
+      const label = document.getElementById("theory-status-label");
+      const chevron = document.getElementById("theory-header-chevron");
+      if (body) body.style.maxHeight = enabled ? '2000px' : '0';
+      if (label) { label.textContent = enabled ? "" : "Добавить теорию"; label.style.display = enabled ? "none" : ""; }
+      if (chevron) chevron.textContent = enabled ? "expand_less" : "add";
     }
 
     async function loadTheoryCatalog() {
@@ -3445,6 +3828,13 @@
         setFieldError('name-error', 'Название обязательно');
 
         ok = false;
+
+        // Auto-focus and scroll to the name field
+        const nameInput = document.getElementById('name');
+        if (nameInput) {
+          nameInput.focus();
+          nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
 
       }
 
@@ -3823,6 +4213,11 @@
 
         updateLastSaveTimestamp(state.currentVersion || null);
 
+        // Clear autosave draft on successful save
+        if (window.autoSaveManager) {
+          window.autoSaveManager.clearDraft();
+        }
+
         markClean();
         captureInitialState();
         state.suppressUnloadWarning = true;
@@ -3958,7 +4353,7 @@
 
         saveBtn.classList.remove('pulse');
 
-        saveBtn.textContent = saveBtn.textContent.replace(' *', '');
+        saveBtn.innerHTML = saveBtn.innerHTML.replace(' *', '');
 
       }
 
@@ -4059,45 +4454,64 @@
         markDirty();
       });
 
+      // Toolbar: save selection whenever user interacts with editor,
+      // restore it before applying any formatting command.
+      // Toolbar button handlers
+      // Note: Focus is preserved by onmousedown="event.preventDefault()" on the toolbar container.
+
       document.getElementById("theory-bold")?.addEventListener("click", () => {
         document.execCommand("bold");
-        theoryEditorEl?.focus();
         state.theory.dirty = true;
         markDirty();
       });
       document.getElementById("theory-italic")?.addEventListener("click", () => {
         document.execCommand("italic");
-        theoryEditorEl?.focus();
         state.theory.dirty = true;
         markDirty();
       });
       document.getElementById("theory-h1")?.addEventListener("click", () => {
         document.execCommand("formatBlock", false, "h1");
-        theoryEditorEl?.focus();
         state.theory.dirty = true;
         markDirty();
       });
       document.getElementById("theory-h2")?.addEventListener("click", () => {
         document.execCommand("formatBlock", false, "h2");
-        theoryEditorEl?.focus();
         state.theory.dirty = true;
         markDirty();
       });
       document.getElementById("theory-h3")?.addEventListener("click", () => {
         document.execCommand("formatBlock", false, "h3");
-        theoryEditorEl?.focus();
         state.theory.dirty = true;
         markDirty();
       });
       document.getElementById("theory-ul")?.addEventListener("click", () => {
-        document.execCommand("insertUnorderedList");
-        theoryEditorEl?.focus();
+        insertTheoryList("ul");
         state.theory.dirty = true;
         markDirty();
       });
       document.getElementById("theory-ol")?.addEventListener("click", () => {
-        document.execCommand("insertOrderedList");
-        theoryEditorEl?.focus();
+        insertTheoryList("ol");
+        state.theory.dirty = true;
+        markDirty();
+      });
+
+      document.getElementById("theory-align-left")?.addEventListener("click", () => {
+        document.execCommand("justifyLeft");
+        state.theory.dirty = true;
+        markDirty();
+      });
+      document.getElementById("theory-align-center")?.addEventListener("click", () => {
+        document.execCommand("justifyCenter");
+        state.theory.dirty = true;
+        markDirty();
+      });
+      document.getElementById("theory-align-right")?.addEventListener("click", () => {
+        document.execCommand("justifyRight");
+        state.theory.dirty = true;
+        markDirty();
+      });
+      document.getElementById("theory-align-justify")?.addEventListener("click", () => {
+        document.execCommand("justifyFull");
         state.theory.dirty = true;
         markDirty();
       });
@@ -4113,17 +4527,7 @@
 
       document.getElementById('history-btn')?.addEventListener('click', () => showHistoryModal(state.editingId));
 
-      window.addEventListener('beforeunload', (e) => {
-
-        if (state.isDirty && !state.suppressUnloadWarning) {
-
-          e.preventDefault();
-
-          e.returnValue = '';
-
-        }
-
-      });
+      // Removed duplicate beforeunload — using named beforeUnloadHandler instead (see below)
 
       document.addEventListener('click', (e) => {
 
@@ -4191,7 +4595,7 @@
 
       });
 
-      document.getElementById('remove-selected')?.addEventListener('click', (e) => { onRemoveSelectedTasks(e); markDirty(); });
+      document.getElementById('remove-selected')?.addEventListener('click', (e) => { onRemoveSelectedTasks(e); });
 
       document.getElementById('ctx-chain')?.addEventListener('click', markDirty);
 
@@ -4859,16 +5263,7 @@
         renderComplexes(filtered);
       });
     }
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const filtered = complexesData.filter(c =>
-          (c.name || '').toLowerCase().includes(term) ||
-          (c.id || '').toLowerCase().includes(term)
-        );
-        renderComplexes(filtered);
-      });
-    }
+    // Removed duplicate searchInput listener (already registered above)
 
     // Warn user about unsaved changes when leaving the page
     let initialState = null;
@@ -4973,6 +5368,7 @@
     if (modalLeave) {
       modalLeave.addEventListener('click', () => {
         if (pendingNavigation) {
+          state.suppressUnloadWarning = true;
           window.removeEventListener('beforeunload', beforeUnloadHandler);
           window.navigateWithTransition(pendingNavigation);
         }
@@ -5074,286 +5470,8 @@
   </div>
 
 
-  <script>
-    // Redefine renderChains to implement modern compact design and dynamic hint logic
-    function renderChains() {
-      const section = document.getElementById('chains-section');
-
-      // Update: Always show section if initialized, but manage content visibility
-      if (section) section.hidden = false;
-
-      const root = document.getElementById('chains-container');
-      if (!root) return;
-
-      root.innerHTML = '';
-
-      const wrapper = document.getElementById('chains-content-wrapper');
-
-      // If no chains: Show helper tip (Dynamic Empty State)
-      if (!state.chains.length) {
-        const emptyState = document.createElement('div');
-        emptyState.className = 'px-4 py-8 text-center bg-bg-hover rounded-xl border-2 border-dashed border-border-subtle';
-        emptyState.innerHTML = `
-           <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-lighter text-primary mb-3">
-             <span class="material-symbols-outlined text-[24px]">lightbulb</span>
-           </div>
-           <p class="text-sm font-bold text-text-main mb-1">Создание сцепок</p>
-           <p class="text-xs text-text-muted max-w-[280px] mx-auto leading-relaxed">
-             Выделите 2 или более заданий в списке выше (Ctrl+Click), затем кликните ПКМ по одному из них для создания сцепки.
-           </p>
-         `;
-        root.appendChild(emptyState);
-        return;
-      }
-
-      // If chains exist: Render them using Compact Flow Design
-
-      state.chains.forEach((ch, idx) => {
-        // Helper to get human-readable name from ref
-        const getTaskLabel = (ref) => {
-          const task = state.selectedTasks.find(t => t.ref === ref);
-          if (task && task.label) return task.label;
-          // Fallback: extract last segment and format
-          const parts = ref.split('/');
-          const taskId = parts[parts.length - 1];
-          return taskId.replace(/_/g, ' ').replace(/task\s*/i, 'Задание ');
-        };
-
-        // Card container
-        const card = document.createElement('div');
-        card.className = 'rounded-xl border border-border-subtle bg-bg-secondary overflow-hidden group hover:border-border-primary transition-colors shadow-sm';
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'flex items-center justify-between px-4 py-3 bg-bg-tertiary border-b border-border-subtle';
-
-        const headerLeft = document.createElement('div');
-        headerLeft.className = 'flex items-center gap-3';
-
-        const badge = document.createElement('span');
-        badge.className = 'h-6 px-2 rounded-md bg-primary-lighter text-primary text-xs font-bold uppercase tracking-wider flex items-center shadow-sm';
-        badge.textContent = `Сцепка ${idx + 1}`;
-
-        const count = document.createElement('span');
-        count.className = 'text-xs font-medium text-text-muted';
-        count.textContent = `${ch.length} заданий`;
-
-        headerLeft.appendChild(badge);
-        headerLeft.appendChild(count);
-        header.appendChild(headerLeft);
-
-        // Body with horizontal flow
-        const body = document.createElement('div');
-        body.className = 'p-4';
-
-        const flow = document.createElement('div');
-        flow.className = 'flex flex-wrap items-center gap-2';
-
-        ch.forEach((ref, i) => {
-          // Task Pill
-          const pill = document.createElement('div');
-          pill.className = 'group/task flex items-center gap-2 px-2.5 py-1.5 bg-bg-tertiary border border-border-subtle rounded-lg shadow-sm max-w-[220px] transition-transform hover:-translate-y-0.5';
-
-          // Number bubble
-          const num = document.createElement('span');
-          num.className = 'w-4 h-4 rounded-full bg-bg-secondary border border-border-subtle text-[10px] font-bold text-text-secondary flex items-center justify-center';
-          num.textContent = i + 1;
-
-          // Label
-          const label = document.createElement('span');
-          label.className = 'text-xs font-medium text-text-main truncate';
-          label.textContent = getTaskLabel(ref);
-          label.title = ref; // tooltip
-
-          pill.appendChild(num);
-          pill.appendChild(label);
-
-          flow.appendChild(pill);
-
-          // Arrow
-          if (i < ch.length - 1) {
-            const arrow = document.createElement('span');
-            arrow.className = 'material-symbols-outlined text-text-disabled text-[18px]';
-            arrow.textContent = 'arrow_forward';
-            flow.appendChild(arrow);
-          }
-        });
-
-        body.appendChild(flow);
-
-        // Footer with Centered Delete Button using grid (to center properly)
-        const footer = document.createElement('div');
-        footer.className = 'border-t border-border-subtle bg-bg-hover';
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'w-full py-2 flex items-center justify-center gap-2 text-xs font-medium text-text-muted hover:text-status-error hover:bg-error-lighter transition-colors';
-        delBtn.innerHTML = `
-            <span class="material-symbols-outlined text-[18px] text-text-main">delete</span>
-          <span>Удалить сцепку</span>
-        `;
-
-        delBtn.addEventListener('click', async (e) => {
-          const ok = await NotificationUI.confirm({ title: 'Удалить сцепку?', message: 'Это действие нельзя отменить.', confirmText: 'Удалить', cancelText: 'Отмена', variant: 'error' });
-          if (ok) {
-            state.chains.splice(idx, 1);
-            renderSelectedList();
-            renderChains();
-            applyCatalogFilter();
-          }
-        });
-
-        footer.appendChild(delBtn);
-
-        card.appendChild(header);
-        card.appendChild(body);
-        card.appendChild(footer);
-
-        root.appendChild(card);
-      });
-    }
-  </script>
-  <script>
-    // FINAL Override: RenderChains with Enhanced Visual Depth & Shadows
-    function renderChains() {
-      const section = document.getElementById('chains-section');
-      if (section) section.hidden = (state.chains.length === 0);
-
-      const root = document.getElementById('chains-container');
-      if (!root) return;
-
-      root.innerHTML = '';
-
-      const wrapper = document.getElementById('chains-content-wrapper');
-
-      // If no chains: Show helper tip (Dynamic Empty State)
-      if (!state.chains.length) {
-        const emptyState = document.createElement('div');
-        emptyState.className = 'px-4 py-8 text-center bg-bg-hover rounded-xl border-2 border-dashed border-border-subtle';
-        emptyState.innerHTML = `
-           <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-lighter text-primary mb-3">
-             <span class="material-symbols-outlined text-[24px]">lightbulb</span>
-           </div>
-           <p class="text-sm font-bold text-text-main mb-1">Создание сцепок</p>
-           <p class="text-xs text-text-muted max-w-[280px] mx-auto leading-relaxed">
-             Выделите 2 или более заданий в списке выше (Ctrl+Click), затем кликните ПКМ по одному из них для создания сцепки.
-           </p>
-         `;
-        root.appendChild(emptyState);
-        return;
-      }
-
-      // If chains exist: Render them using Compact Flow Design
-
-      state.chains.forEach((ch, idx) => {
-        // Helper to get human-readable name from ref
-        const getTaskLabel = (ref) => {
-          const task = state.selectedTasks.find(t => t.ref === ref);
-          if (task && task.label) return task.label;
-          // Fallback: extract last segment and format
-          const parts = ref.split('/');
-          const taskId = parts[parts.length - 1];
-          return taskId.replace(/_/g, ' ').replace(/task\s*/i, 'Задание ');
-        };
-
-        // Card container with pop-out elevation
-        const card = document.createElement('div');
-        // bg-surface-1 makes it stand out against secondary/tertiary page bg
-        // group-hover:shadow-lg creates lift
-        card.className = 'rounded-xl border border-border-subtle bg-surface-1 overflow-hidden group transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 mb-3';
-        // Base shadow is stronger than default
-        card.style.cssText = 'box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);';
-
-        // Header with gradient for depth
-        const header = document.createElement('div');
-        header.className = 'flex items-center justify-between px-5 py-3.5 border-b border-border-subtle bg-gradient-to-r from-bg-main to-bg-secondary';
-
-        const headerLeft = document.createElement('div');
-        headerLeft.className = 'flex items-center gap-3';
-
-        // Badge with solid color pop
-        const badge = document.createElement('span');
-        badge.className = 'h-6 px-2.5 rounded-lg bg-primary text-primary-fg text-xs font-bold uppercase tracking-wider flex items-center shadow-sm';
-        badge.textContent = `Сцепка ${idx + 1}`;
-
-        const count = document.createElement('span');
-        count.className = 'text-xs font-medium text-text-muted bg-bg-tertiary px-2 py-0.5 rounded-md border border-border-subtle';
-        count.textContent = `${ch.length} заданий`;
-
-        headerLeft.appendChild(badge);
-        headerLeft.appendChild(count);
-        header.appendChild(headerLeft);
-
-        // Body with horizontal flow
-        const body = document.createElement('div');
-        body.className = 'p-5 bg-surface-1';
-
-        const flow = document.createElement('div');
-        flow.className = 'flex flex-wrap items-center gap-3';
-
-        ch.forEach((ref, i) => {
-          // Task Pill - "Card within Card"
-          const pill = document.createElement('div');
-          // bg-bg-secondary helps it sit "above" the primary card bg
-          pill.className = 'group/task flex items-center gap-3 p-2 bg-bg-secondary border border-border-subtle rounded-xl shadow-sm max-w-[240px] hover:border-primary hover:shadow-md hover:scale-[1.02] transition-all cursor-default relative';
-
-          // Number bubble - Distinct
-          const num = document.createElement('span');
-          num.className = 'w-5 h-5 rounded-full bg-bg-tertiary border border-border-subtle text-[11px] font-bold text-text-secondary flex items-center justify-center shadow-inner';
-          num.textContent = i + 1;
-
-          // Label
-          const label = document.createElement('span');
-          label.className = 'text-xs font-semibold text-text-main truncate leading-tight';
-          label.textContent = getTaskLabel(ref);
-          label.title = ref;
-
-          pill.appendChild(num);
-          pill.appendChild(label);
-
-          flow.appendChild(pill);
-
-          // Arrow with clearer style
-          if (i < ch.length - 1) {
-            const arrow = document.createElement('div');
-            arrow.className = 'w-6 h-6 flex items-center justify-center rounded-full bg-bg-tertiary text-text-disabled';
-            arrow.innerHTML = '<span class="material-symbols-outlined text-[16px]">arrow_forward</span>';
-            flow.appendChild(arrow);
-          }
-        });
-
-        body.appendChild(flow);
-
-        // Footer (lighter background to differentiate from body)
-        const footer = document.createElement('div');
-        footer.className = 'border-t border-border-subtle bg-bg-hover';
-
-        const delBtn = document.createElement('button');
-        delBtn.className = 'w-full py-2.5 flex items-center justify-center gap-2 text-xs font-bold text-text-muted hover:text-status-error hover:bg-error-lighter transition-all uppercase tracking-wide opacity-70 hover:opacity-100';
-        delBtn.innerHTML = `
-            <span class="material-symbols-outlined text-[18px] text-text-main">delete</span>
-          <span>Удалить сцепку</span>
-        `;
-
-        delBtn.addEventListener('click', async (e) => {
-          const ok = await NotificationUI.confirm({ title: 'Удалить сцепку?', message: 'Это действие нельзя отменить.', confirmText: 'Удалить', cancelText: 'Отмена', variant: 'error' });
-          if (ok) {
-            state.chains.splice(idx, 1);
-            renderSelectedList();
-            renderChains();
-            applyCatalogFilter();
-          }
-        });
-
-        footer.appendChild(delBtn);
-
-        card.appendChild(header);
-        card.appendChild(body);
-        card.appendChild(footer);
-
-        root.appendChild(card);
-      });
-    }
-  </script>
+  <!-- Removed dead renderChains override #1 (modern compact design) — superseded by final version below -->
+  <!-- Removed dead renderChains override #2 (Enhanced Visual Depth) — superseded by final version below -->
   <script>
     // FINAL Override 2: RenderChains with "Settled" Interior & No White Lines
     // Addressed user feedback: "White line annoying" -> Removed internal borders
@@ -5504,6 +5622,145 @@
     }
   </script>
   <script src="/assets/NotificationUI.js"></script>
+  <script src="complex_autosave_manager.js"></script>
+  <script>
+    // AutoSave Initialization and Logic
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const complexId = urlParams.get('id');
+
+      window.autoSaveManager = new ComplexAutoSaveManager({
+        captureState: captureComplexState,
+        restoreState: restoreComplexState,
+        updateStatus: updateComplexSaveStatus
+      }, {
+        complexId: complexId || 'new'
+      });
+
+      // Check for draft
+      // Wait a bit for other initialization to complete
+      setTimeout(async () => {
+        if (window.autoSaveManager.hasFresherDraft()) {
+          const draft = window.autoSaveManager.loadDraft();
+          const savedDate = new Date(draft.timestamp);
+          const timeStr = savedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const dateStr = savedDate.toLocaleDateString();
+
+          const ok = await NotificationUI.confirm({
+            title: 'Несохраненный черновик',
+            message: `Обнаружена автоматическая копия от ${dateStr} ${timeStr}.\nХотите восстановить данные?`,
+            confirmText: 'Восстановить',
+            cancelText: 'Не восстанавливать',
+            variant: 'info'
+          });
+
+          if (ok) {
+            if (draft && draft.data) {
+              restoreComplexState(draft.data);
+              window.autoSaveManager.start();
+              NotificationUI.toast('Черновик восстановлен', 'success');
+            }
+          } else {
+            window.autoSaveManager.clearDraft();
+            window.autoSaveManager.start();
+            NotificationUI.toast('Черновик удален', 'info');
+          }
+        } else {
+          window.autoSaveManager.start();
+        }
+      }, 1000);
+    });
+
+    function captureComplexState() {
+      // Capture theory current state if it's new mode
+      if (state.theory.mode === 'new') {
+        // This function is defined in create.html
+        if (typeof editorHtmlToTheoryDelta === 'function') {
+          state.theory.data = editorHtmlToTheoryDelta();
+        }
+        state.theory.title = document.getElementById('theory-title')?.value || '';
+      }
+
+      return {
+        name: document.getElementById('name')?.value || '',
+        description: document.getElementById('description')?.value || '',
+        selectedTasks: state.selectedTasks,
+        chains: state.chains,
+        theory: state.theory,
+        editingId: state.editingId
+      };
+    }
+
+    function restoreComplexState(data) {
+      if (!data) return;
+
+      // Restore text fields
+      if (document.getElementById('name')) document.getElementById('name').value = data.name || '';
+      if (document.getElementById('description')) document.getElementById('description').value = data.description || '';
+
+      // Restore tasks
+      if (data.selectedTasks) {
+        state.selectedTasks = data.selectedTasks;
+        if (typeof renderSelectedTasks === 'function') renderSelectedTasks();
+      }
+
+      // Restore chains
+      if (data.chains) {
+        state.chains = data.chains;
+        if (typeof renderChains === 'function') renderChains();
+      }
+
+      // Restore theory (merged with existing state carefully)
+      if (data.theory) {
+        const title = data.theory.title;
+        const mode = data.theory.mode;
+
+        state.theory = { ...state.theory, ...data.theory };
+
+        const theoryModeSelect = document.getElementById('theory-mode');
+        if (theoryModeSelect) {
+          theoryModeSelect.value = state.theory.mode;
+          // Helper to trigger UI update
+          if (typeof toggleTheoryMode === 'function') toggleTheoryMode();
+        }
+
+        if (state.theory.mode === 'new') {
+          setTimeout(() => {
+            if (state.theory.data && typeof renderTheoryDeltaToEditor === 'function') {
+              renderTheoryDeltaToEditor(state.theory.data);
+            }
+            if (document.getElementById('theory-title')) {
+              document.getElementById('theory-title').value = state.theory.title || '';
+            }
+          }, 100);
+        } else if (state.theory.mode === 'link') {
+          if (state.theory.theoryId) {
+            const picker = document.getElementById('theory-link-picker');
+            // Wait for theory list to load (it loads on mode change usually)
+            setTimeout(() => {
+              if (picker) picker.value = state.theory.theoryId;
+            }, 500);
+          }
+        }
+      }
+
+      // Force validation update
+      if (typeof validateForm === 'function') validateForm();
+    }
+
+    function updateComplexSaveStatus(status) {
+      const el = document.getElementById('save-status');
+      if (el) {
+        if (status) {
+          el.textContent = `Черновик сохранен ${status.time}`;
+          el.style.opacity = '1';
+        } else {
+          el.textContent = '';
+          el.style.opacity = '0';
+        }
+      }
+    }
+  </script>
 </body>
 
 </html>

@@ -1,0 +1,214 @@
+{
+  "tasks_to_generate": [
+    {
+      "task_type": "TEST",
+      "count": 8,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "The structure and components of the BI-RADS mammography lexicon including breast tissue terms and findings terms.",
+          "evidence": "Table 1 overview",
+          "explicitness": "explicit",
+          "id": 1,
+          "modality": "text",
+          "title": "BI-RADS Mammography Lexicon Components",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "The four categories of breast density (A-D) with their characteristics and clinical implications.",
+          "evidence": "Table 2 and detailed descriptions",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Breast Density Categories",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "FDA legislation requirements for breast density reporting as of September 2024.",
+          "evidence": "FDA legislation mentioned",
+          "explicitness": "explicit",
+          "id": 10,
+          "modality": "text",
+          "title": "FDA Requirements for Breast Density Reporting",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "The association between breast density categories and increased breast cancer risk.",
+          "evidence": "Odds ratio statistics provided",
+          "explicitness": "explicit",
+          "id": 9,
+          "modality": "text",
+          "title": "Breast Density and Cancer Risk",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "The new FDA-approved alternative standard for singular phrasing in unilateral mammogram reports.",
+          "evidence": "July 2025 FDA approval mentioned",
+          "explicitness": "explicit",
+          "id": 11,
+          "modality": "text",
+          "title": "2025 FDA Update on Breast Density Reporting",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 5,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Definition of breast density as the proportion of breast parenchyma to fat and methods for assessment.",
+          "evidence": "Breast Density section",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Breast Density Definition and Assessment",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "Factors that can cause breast density to change over time.",
+          "evidence": "Factors listed in text",
+          "explicitness": "explicit",
+          "id": 7,
+          "modality": "text",
+          "title": "Breast Density Variability",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 3,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "The change in BI-RADS classification from percentage-based to likelihood of obscuring cancer.",
+          "evidence": "BI-RADS 5th Edition change description",
+          "explicitness": "explicit",
+          "id": 6,
+          "modality": "text",
+          "title": "Breast Density Classification Evolution",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "How dense tissue affects mammographic sensitivity and technological improvements to address this.",
+          "evidence": "Sensitivity statistics and technological comparisons",
+          "explicitness": "explicit",
+          "id": 8,
+          "modality": "text",
+          "title": "Impact of Breast Density on Mammographic Accuracy",
+          "type": "concept"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 2,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Classification of masses by shape, margin, and density according to BI-RADS.",
+          "evidence": "Table 1 section A",
+          "explicitness": "explicit",
+          "id": 3,
+          "modality": "text",
+          "title": "Mass Characteristics",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Classification of calcifications as typically benign or suspicious, along with their distribution patterns.",
+          "evidence": "Table 1 section B",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Calcifications Types and Distribution",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "The structure and components of the BI-RADS mammography lexicon including breast tissue terms and findings terms.",
+          "evidence": "Table 1 overview",
+          "explicitness": "explicit",
+          "id": 1,
+          "modality": "text",
+          "title": "BI-RADS Mammography Lexicon Components",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "The four categories of breast density (A-D) with their characteristics and clinical implications.",
+          "evidence": "Table 2 and detailed descriptions",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Breast Density Categories",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "The change in BI-RADS classification from percentage-based to likelihood of obscuring cancer.",
+          "evidence": "BI-RADS 5th Edition change description",
+          "explicitness": "explicit",
+          "id": 6,
+          "modality": "text",
+          "title": "Breast Density Classification Evolution",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "The association between breast density categories and increased breast cancer risk.",
+          "evidence": "Odds ratio statistics provided",
+          "explicitness": "explicit",
+          "id": 9,
+          "modality": "text",
+          "title": "Breast Density and Cancer Risk",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "FDA legislation requirements for breast density reporting as of September 2024.",
+          "evidence": "FDA legislation mentioned",
+          "explicitness": "explicit",
+          "id": 10,
+          "modality": "text",
+          "title": "FDA Requirements for Breast Density Reporting",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "low",
+          "description": "The new FDA-approved alternative standard for singular phrasing in unilateral mammogram reports.",
+          "evidence": "July 2025 FDA approval mentioned",
+          "explicitness": "explicit",
+          "id": 11,
+          "modality": "text",
+          "title": "2025 FDA Update on Breast Density Reporting",
+          "type": "fact"
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 1,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "The four categories of breast density (A-D) with their characteristics and clinical implications.",
+          "evidence": "Table 2 and detailed descriptions",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Breast Density Categories",
+          "type": "classification"
+        }
+      ]
+    }
+  ]
+}

@@ -31,9 +31,9 @@
 
         /* ===== LEFT HERO PANEL V3 ===== */
         .welcome-hero {
-            /* SOLID DARK BACKGROUND FALLBACK FIRST */
-            background-color: #2D3748;
-            /* Rich Gradient: Dark -> Accent */
+            /* SOLID DARK BACKGROUND FALLBACK — canvas replaces gradient */
+            background-color: var(--color-primary-darker, #1e1b4b);
+            /* Fallback gradient for no-JS / reduced-motion */
             background: radial-gradient(circle at 100% 0%, var(--color-accent-dark) 0%, transparent 60%),
                 linear-gradient(135deg, var(--color-primary-darker) 0%, var(--color-primary-dark) 100%);
             position: relative;
@@ -44,11 +44,27 @@
             /* Separator shadow */
         }
 
+        /* Hide fallback gradient when canvas is active */
+        .welcome-hero.has-canvas {
+            background: var(--color-primary-darker, #1e1b4b) !important;
+        }
+
+        /* Canvas overlay */
+        #heroGradientCanvas {
+            position: absolute;
+            inset: 0;
+            z-index: 1;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
         /* Subtle mesh pattern */
         .welcome-hero::before {
             content: '';
             position: absolute;
             inset: 0;
+            z-index: 2;
             background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
             background-size: 24px 24px;
             opacity: 0.5;
@@ -60,8 +76,9 @@
             content: '';
             position: absolute;
             inset: 0;
+            z-index: 2;
             background: radial-gradient(circle at 50% 120%, var(--color-primary) 0%, transparent 70%);
-            opacity: 0.4;
+            opacity: 0.25;
             pointer-events: none;
         }
 
@@ -73,12 +90,12 @@
             justify-content: center;
         }
 
-        /* Explicit IMG tag for reliability */
         .hero-logo-img {
             position: relative;
             z-index: 10;
             filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.4));
         }
+
 
         /* ===== RIGHT PANEL V3 ===== */
         .panel-right {
@@ -207,6 +224,84 @@
             display: block;
         }
 
+        /* Avatar fill helper: remove visible inner margins in source images */
+        .avatar-fill {
+            display: block;
+            object-fit: cover !important;
+            object-position: center center !important;
+            transform: scale(1.0);
+            transform-origin: center;
+        }
+
+        .welcome-name-input::placeholder {
+            transition: opacity 120ms ease;
+        }
+
+        .welcome-name-input:focus::placeholder {
+            opacity: 0;
+        }
+
+        @media (max-height: 900px) {
+            .panel-right {
+                overflow: hidden !important;
+            }
+
+            .welcome-main {
+                justify-content: center !important;
+                padding-top: 0.75rem !important;
+                padding-bottom: 0.75rem !important;
+            }
+
+            .welcome-header {
+                margin-bottom: 1.25rem !important;
+            }
+
+            #welcomeHeaderTitle {
+                font-size: clamp(1.75rem, 4.6vh, 2.7rem) !important;
+                margin-bottom: 0.5rem !important;
+            }
+
+            #welcomeHeaderSubtitle {
+                font-size: clamp(0.95rem, 2.2vh, 1.1rem) !important;
+            }
+
+            #modeOnboarding {
+                gap: 0.75rem !important;
+                margin-top: 0.35rem !important;
+            }
+
+            #modeOnboardingCard {
+                padding: 1rem !important;
+            }
+
+            #onboardingAvatarPreview {
+                width: 72px !important;
+                height: 72px !important;
+            }
+
+            #onboardingAvatarGallery {
+                max-height: none !important;
+                gap: 0.5rem !important;
+                margin-top: 0.25rem !important;
+                overflow: visible !important;
+            }
+
+            #onboardingConsentBox {
+                margin-top: 0.75rem !important;
+                padding: 0.75rem !important;
+            }
+
+            #onboardingCreateBtn {
+                padding-top: 0.75rem !important;
+                padding-bottom: 0.75rem !important;
+                font-size: 0.95rem !important;
+            }
+
+            .welcome-footer {
+                display: none !important;
+            }
+        }
+
         #loadingLogoStatic {
             display: none;
         }
@@ -237,12 +332,92 @@
         <!-- ===== LEFT HERO (33%) ===== -->
         <section class="welcome-hero flex flex-col items-center justify-center md:w-1/3 text-center p-8 relative z-20">
 
+            <!-- Lava-lamp gradient canvas -->
+            <canvas id="heroGradientCanvas"></canvas>
+
             <div class="relative z-20 flex flex-col items-center">
                 <!-- Logo Block -->
-                <div class="logo-container mb-10 hero-enter hero-delay-1">
-                    <img src="/assets/logo.svg" alt="ACTRA Logo"
-                        class="hero-logo-img w-28 h-28 lg:w-36 lg:h-36 object-contain"
-                        style="filter: brightness(0) invert(1);">
+                <div class="logo-container mb-10 hero-enter hero-delay-1" id="heroLogoContainer">
+                    <svg id="heroLogo" class="hero-logo-img w-28 h-28 lg:w-36 lg:h-36"
+                        viewBox="0 0 357.306133 248.000000" preserveAspectRatio="xMidYMid meet">
+                        <style>
+                            #heroLogo.animating .hero-mask-spin {
+                                animation: heroSpin 4s linear 1, heroGap 4s linear 1;
+                                transform-origin: 5124px 5179px;
+                            }
+
+                            #heroLogo.animating .hero-flip {
+                                animation: heroFlip 4s linear 1;
+                                transform-origin: 5090px 5128.5px;
+                            }
+
+                            @keyframes heroSpin {
+                                from {
+                                    transform: rotate(0deg);
+                                }
+
+                                to {
+                                    transform: rotate(360deg);
+                                }
+                            }
+
+                            @keyframes heroGap {
+                                0% {
+                                    stroke-dasharray: 8800 0;
+                                }
+
+                                8% {
+                                    stroke-dasharray: 7500 1300;
+                                }
+
+                                92% {
+                                    stroke-dasharray: 7500 1300;
+                                }
+
+                                100% {
+                                    stroke-dasharray: 8800 0;
+                                }
+                            }
+
+                            @keyframes heroFlip {
+
+                                0%,
+                                82.5% {
+                                    transform: scaleX(1);
+                                }
+
+                                87.5% {
+                                    transform: scaleX(-1);
+                                }
+
+                                92.5%,
+                                100% {
+                                    transform: scaleX(1);
+                                }
+                            }
+                        </style>
+                        <defs>
+                            <mask id="heroOrbitMask">
+                                <circle class="hero-mask-spin" cx="5124" cy="5179" r="1400" fill="none" stroke="white"
+                                    stroke-width="2800" stroke-dasharray="8800 0" />
+                            </mask>
+                        </defs>
+                        <g transform="translate(-333.139632,636.000000) scale(0.100000,-0.100000)" fill="currentColor"
+                            stroke="none">
+                            <path
+                                d="M4569 5339 c-280 -562 -509 -1023 -507 -1024 8 -8 143 27 147 38 19 55 904 1807 911 1802 5 -3 138 -261 295 -573 157 -312 289 -573 294 -581 7 -11 18 -8 55 14 25 15 46 30 46 33 0 4 -147 300 -327 659 l-328 653 -37 0 -38 0 -511 -1021z" />
+                            <g mask="url(#heroOrbitMask)">
+                                <path
+                                    d="M6210 6263 c-83 -8 -244 -36 -349 -59 -139 -31 -391 -111 -391 -124 0 -19 34 -80 45 -80 6 0 51 14 101 30 240 82 484 129 704 137 180 7 270 -5 357 -47 106 -51 137 -98 131 -199 -7 -135 -112 -296 -324 -501 -158 -152 -311 -272 -554 -435 -226 -151 -394 -248 -650 -374 -328 -162 -648 -283 -945 -356 -222 -55 -323 -69 -500 -69 -138 -1 -169 2 -230 21 -78 25 -130 58 -158 103 -16 25 -18 44 -15 104 3 63 9 86 46 157 66 130 215 302 379 440 l43 36 -33 37 -32 37 -100 -90 c-207 -185 -351 -385 -391 -541 -73 -284 168 -441 616 -400 565 50 1350 364 2010 803 479 318 794 625 903 880 26 61 31 85 31 157 1 73 -3 92 -26 136 -72 137 -248 206 -517 202 -64 0 -132 -3 -151 -5z" />
+                            </g>
+                            <path class="hero-flip"
+                                d="M5051 5305 c-59 -19 -117 -77 -137 -138 -70 -212 188 -376 352 -225 138 127 60 352 -128 373 -24 3 -63 -2 -87 -10z" />
+                            <path
+                                d="M5912 4704 c-24 -14 -42 -29 -40 -32 2 -4 92 -184 201 -399 l197 -393 66 0 c43 0 64 4 62 11 -14 43 -425 839 -433 839 -5 0 -29 -12 -53 -26z" />
+                            <path
+                                d="M3932 3972 c-61 -3 -62 -4 -82 -42 -11 -22 -20 -42 -20 -45 0 -3 29 -5 65 -5 l65 0 20 41 c12 22 20 44 18 47 -2 4 -31 6 -66 4z" />
+                        </g>
+                    </svg>
                 </div>
 
                 <!-- Brand Typography -->
@@ -271,38 +446,36 @@
 
             <!-- Main Content Area - Centered -->
             <main
-                class="flex-grow flex flex-col items-center justify-center p-6 md:p-12 lg:p-20 content-enter w-full max-w-5xl mx-auto">
+                class="welcome-main flex-grow flex flex-col items-center justify-center p-4 md:p-6 lg:p-8 content-enter w-full max-w-5xl mx-auto">
 
                 <!-- Header Typography -->
-                <header class="text-center mb-16 w-full max-w-2xl">
-                    <h2 class="text-4xl md:text-6xl font-black text-text-main mb-4 tracking-tighter leading-tight"
+                <header class="welcome-header text-center mb-10 md:mb-12 w-full max-w-2xl">
+                    <h2 id="welcomeHeaderTitle"
+                        class="text-4xl md:text-6xl font-black text-text-main mb-4 tracking-tighter leading-tight"
                         style="color: var(--color-primary-dark);">
                         Добро пожаловать
                     </h2>
-                    <p class="text-text-muted text-lg md:text-xl font-medium">
+                    <p id="welcomeHeaderSubtitle" class="text-text-muted text-lg md:text-xl font-medium">
                         Выберите профиль, чтобы продолжить обучение
                     </p>
                 </header>
 
                 <!-- ===== INTERACTIVE MODES ===== -->
-                <div class="w-full relative min-h-[320px] flex flex-col items-center">
+                <div class="w-full relative min-h-0 flex flex-col items-center">
 
                     <!-- MODE: ONBOARDING (0 profiles) -->
-                    <div id="modeOnboarding" class="hidden w-full max-w-lg flex flex-col gap-8">
-                        <div class="bg-surface-1 rounded-[2rem] p-8 shadow-xl border border-border-subtle">
+                    <div id="modeOnboarding" class="hidden w-full max-w-lg flex flex-col gap-7 mt-1">
+                        <div id="modeOnboardingCard"
+                            class="bg-surface-1 rounded-[2rem] p-6 md:p-7 shadow-xl border border-border-subtle">
                             <!-- Avatar Selection -->
-                            <div class="flex flex-col items-center gap-6 mb-8">
+                            <div class="flex flex-col items-center gap-4 mb-5">
                                 <div class="relative group cursor-pointer">
-                                    <img id="onboardingAvatarPreview" src="/api/assets/avatars/1.png"
-                                        class="w-24 h-24 rounded-full object-cover ring-4 ring-primary-light/50 shadow-lg">
-                                    <div
-                                        class="absolute bottom-0 right-0 bg-surface-1 rounded-full p-2 shadow-md border border-border-subtle">
-                                        <span class="material-symbols-outlined text-primary">edit</span>
-                                    </div>
+                                    <img id="onboardingAvatarPreview" src="/api/assets/avatars/1.png?trim=1&size=256"
+                                        class="w-24 h-24 rounded-full object-cover avatar-fill ring-4 ring-primary-light/50 shadow-lg">
                                 </div>
                                 <div class="w-full text-center">
                                     <input type="text" id="onboardingName" placeholder="Ваше имя"
-                                        class="w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-4 py-2 text-2xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary"
+                                        class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-4 py-2 text-2xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary"
                                         maxlength="50"
                                         onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
                                 </div>
@@ -310,11 +483,12 @@
 
                             <!-- Simple Avatar Grid -->
                             <div id="onboardingAvatarGallery"
-                                class="flex justify-center flex-wrap gap-4 max-h-[140px] overflow-y-auto p-2 scrollbar-hide">
+                                class="flex justify-center flex-wrap gap-3 p-2 overflow-visible">
                             </div>
                             <input type="hidden" id="onboardingAvatarSeed" value="1.png">
 
-                            <div class="mt-6 rounded-2xl border border-border-subtle bg-surface-2 p-4">
+                            <div id="onboardingConsentBox"
+                                class="mt-4 rounded-2xl border border-border-subtle bg-surface-2 p-3">
                                 <p class="text-xs font-semibold text-text-secondary mb-3">
                                     Для создания профиля подтвердите согласие с документами:
                                 </p>
@@ -324,8 +498,7 @@
                                         onchange="window.welcomeUpdateConsentState('onboarding')">
                                     <span>
                                         Я принимаю
-                                        <button type="button"
-                                            class="text-primary hover:underline font-semibold"
+                                        <button type="button" class="text-primary hover:underline font-semibold"
                                             onclick="window.welcomeOpenLegalDocument('terms'); return false;">
                                             Условия пользования
                                         </button>
@@ -337,8 +510,7 @@
                                         onchange="window.welcomeUpdateConsentState('onboarding')">
                                     <span>
                                         Я ознакомился(ась) с
-                                        <button type="button"
-                                            class="text-primary hover:underline font-semibold"
+                                        <button type="button" class="text-primary hover:underline font-semibold"
                                             onclick="window.welcomeOpenLegalDocument('privacy'); return false;">
                                             Политикой приватности
                                         </button>
@@ -353,7 +525,7 @@
                         </p>
 
                         <button onclick="window.welcomeCreateProfile()" id="onboardingCreateBtn"
-                            class="w-full bg-primary hover:bg-primary-hover text-primary-fg font-bold py-5 rounded-2xl shadow-xl shadow-primary/20 transform hover:-translate-y-1 transition-all flex items-center justify-center gap-3 text-lg tracking-wide disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
+                            class="w-full bg-primary hover:bg-primary-hover text-primary-fg font-bold py-4 rounded-2xl shadow-xl shadow-primary/20 transform hover:-translate-y-1 transition-all flex items-center justify-center gap-3 text-base tracking-wide disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0"
                             disabled>
                             Начать обучение
                             <span class="material-symbols-outlined">arrow_forward</span>
@@ -405,8 +577,8 @@
                     <div id="modeLogin" class="hidden w-full max-w-md">
                         <div
                             class="bg-surface-1 rounded-[2rem] shadow-xl p-10 flex flex-col items-center border border-border-subtle hover:border-border-strong transition-all duration-500 hover:shadow-2xl">
-                            <img id="loginAvatar" src=""
-                                class="w-32 h-32 rounded-full object-cover mb-6 ring-4 ring-primary-light/30 shadow-lg">
+                            <img id="loginAvatar" src="/api/assets/avatars/1.png?trim=1&size=256"
+                                class="w-32 h-32 rounded-full object-cover avatar-fill mb-6 ring-4 ring-primary-light/30 shadow-lg">
                             <h3 id="loginName" class="text-3xl font-black text-text-main mb-8"></h3>
 
                             <form class="w-full space-y-5"
@@ -434,7 +606,7 @@
 
             <!-- Sticky Footer right aligned -->
             <footer
-                class="p-6 flex justify-center items-center text-[10px] font-bold text-text-muted/40 uppercase tracking-widest mt-auto">
+                class="welcome-footer p-3 md:p-4 flex justify-center items-center text-[9px] md:text-[10px] font-bold text-text-muted/40 uppercase tracking-widest mt-auto">
                 <span>В© 2026 ACTRA Project</span>
             </footer>
 
@@ -443,7 +615,8 @@
     </div>
 
     <!-- Legal Document Modal -->
-    <div id="legalDocModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
+    <div id="legalDocModal"
+        class="fixed inset-0 z-[100] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
         <div class="w-full max-w-3xl rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div>
@@ -456,7 +629,8 @@
                 </button>
             </div>
             <div class="p-5 max-h-[60vh] overflow-y-auto">
-                <pre id="legalDocContent" class="whitespace-pre-wrap text-sm text-text-main leading-relaxed font-display"></pre>
+                <pre id="legalDocContent"
+                    class="whitespace-pre-wrap text-sm text-text-main leading-relaxed font-display"></pre>
             </div>
             <div class="px-5 py-3 border-t border-border-subtle bg-surface-2 flex justify-end">
                 <button type="button" onclick="window.welcomeCloseLegalDocument()"
@@ -468,11 +642,13 @@
     </div>
 
     <!-- Consent Gate Modal (for outdated/missing consent) -->
-    <div id="consentGateModal" class="fixed inset-0 z-[95] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
+    <div id="consentGateModal"
+        class="fixed inset-0 z-[95] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
         <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-border-subtle bg-surface-2">
                 <h3 class="text-lg font-bold text-text-main">Требуется согласие с условиями</h3>
-                <p class="text-xs text-text-secondary mt-1">Перед продолжением необходимо подтвердить актуальные документы.</p>
+                <p class="text-xs text-text-secondary mt-1">Перед продолжением необходимо подтвердить актуальные
+                    документы.</p>
             </div>
             <div class="p-5">
                 <div class="rounded-xl border border-border-subtle bg-surface-2 p-4 mb-4">
@@ -485,7 +661,8 @@
                         onchange="window.welcomeUpdateConsentState('gate')">
                     <span>Я принимаю
                         <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="window.welcomeOpenLegalDocument('terms'); return false;">Условия пользования</button>
+                            onclick="window.welcomeOpenLegalDocument('terms'); return false;">Условия
+                            пользования</button>
                     </span>
                 </label>
                 <label class="flex items-start gap-3 text-sm text-text-main cursor-pointer">
@@ -494,10 +671,12 @@
                         onchange="window.welcomeUpdateConsentState('gate')">
                     <span>Я ознакомился(ась) с
                         <button type="button" class="text-primary hover:underline font-semibold"
-                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;">Политикой приватности</button>
+                            onclick="window.welcomeOpenLegalDocument('privacy'); return false;">Политикой
+                            приватности</button>
                     </span>
                 </label>
-                <p id="consentGateError" class="hidden mt-3 text-xs text-error bg-error/10 border border-error/20 rounded-lg px-3 py-2"></p>
+                <p id="consentGateError"
+                    class="hidden mt-3 text-xs text-error bg-error/10 border border-error/20 rounded-lg px-3 py-2"></p>
             </div>
             <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end gap-2">
                 <button type="button" onclick="window.welcomeCancelConsentGate()"
@@ -525,6 +704,7 @@
 
     <script src="/assets/NotificationUI.js"></script>
     <script src="/assets/ThemeSwitcherUI.js"></script>
+    <script src="/Welcome/heroGradient.js"></script>
     <script src="/Welcome/welcome.js"></script>
 </body>
 

@@ -1,0 +1,54 @@
+{
+  "created_at": "2026-02-23T12:40:50.617526+00:00",
+  "materials": [
+    {
+      "file": "Nephr.pdf",
+      "path": "D:\\Ai Ai\\radioproject_git\\Nephr.pdf",
+      "ok": true,
+      "word_count": 1595,
+      "format": "pdf",
+      "stage": "done",
+      "target_language": "ru",
+      "units_count": 10,
+      "recommendation_types": 5,
+      "recommended_total": 18,
+      "recommended_by_type": {
+        "TEST": 7,
+        "CLICK_TEXT": 4,
+        "OPEN_ANSWER": 3,
+        "CLICK_WORDS": 3,
+        "SEQUENCE": 1
+      },
+      "illustrations_detected": false,
+      "analysis_warnings_count": 4,
+      "not_recommended_count": 2,
+      "generated_total": 16,
+      "generated_valid": 16,
+      "generated_warnings": 0,
+      "generated_errors": 0,
+      "generated_by_type": {
+        "click_text": 4,
+        "click_words": 1,
+        "open_answer": 3,
+        "sequence": 1,
+        "test": 7
+      },
+      "quality": {
+        "duplicate_groups": 0,
+        "duplicate_tasks": 0,
+        "expected_output_language": "ru",
+        "language_mismatch_warnings": 0,
+        "material_language": "ru",
+        "sequence_grounding_warnings": 0,
+        "total_tasks": 16
+      },
+      "subrequest_count_by_type": {
+        "TEST": 1,
+        "CLICK_TEXT": 1,
+        "OPEN_ANSWER": 1,
+        "CLICK_WORDS": 3,
+        "SEQUENCE": 1
+      }
+    }
+  ]
+}

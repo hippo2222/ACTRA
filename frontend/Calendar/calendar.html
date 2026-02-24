@@ -312,7 +312,7 @@
 
         </header>
 
-        <main class="flex-1 w-full max-w-[1200px] mx-auto p-3 md:p-4 lg:p-4 flex flex-col gap-3"
+        <main class="flex-1 w-full max-w-[1200px] mx-auto p-3 md:p-4 lg:p-4 flex flex-col gap-3 page-enter"
             style="transform: scale(0.9); transform-origin: top center;">
 
             <!-- Recipe Cards with Time Controller -->
@@ -580,8 +580,7 @@
 
                         <div id="health-content" class="flex items-center justify-center gap-4 flex-1">
 
-                            <div id="health-chart" class="relative size-20 flex-shrink-0 cursor-pointer"
-                                onclick="openHealthDetails()">
+                            <div id="health-chart" class="relative size-20 flex-shrink-0">
 
                                 <div id="health-ring" class="absolute inset-0 rounded-full"></div>
 
@@ -885,17 +884,9 @@
 
                     state.complexes = complexesData.items;
 
-                    state.hasData = state.hasData || complexesData.items.length > 0;
+                    // Do not fall back to demo complexes for main_focus_name;
 
-                    // If no daily plan but have complexes, use first complex as main focus
-
-                    if (!state.daily_plan.main_focus_name && complexesData.items.length > 0) {
-
-                        state.daily_plan.main_focus_name = complexesData.items[0].name;
-
-                        state.daily_plan.main_focus_count = complexesData.items[0].tasks?.length || 0;
-
-                    }
+                    // only real calendar progress should populate this field.
 
                 }
 
@@ -2273,14 +2264,6 @@
 
             }
 
-            // (Previous block handles the empty state and rendering)
-
-            // This block was redundant and caused redeclaration errors. 
-
-            // The logic above already sets percent, gradient, and renders the list.
-
-            // Ensure we don't have leftover code here.
-
             // Helper to get frequency label
 
             const getFrequencyLabel = (healthPercent) => {
@@ -2341,7 +2324,7 @@
 
             }
 
-            // Show chart when we have data
+            // Show chart when we have data — always restore visibility here
 
             if (chartEl) chartEl.classList.remove('hidden');
 
@@ -2493,13 +2476,13 @@
 
         function startUnplannedReview(complexName) {
 
-            alert(`Запуск внепланового повторения: ${complexName}`);
+            window.navigateWithTransition('/ui/complexes');
 
         }
 
         function openHealthDetails() {
 
-            alert('Открытие детальной панели здоровья памяти');
+            window.navigateWithTransition('/ui/complexes');
 
         }
 

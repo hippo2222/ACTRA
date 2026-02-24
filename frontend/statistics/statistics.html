@@ -47,11 +47,11 @@
             </div>
         </div>
     </header>
-    <main class="flex-1 min-h-0 w-full max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
+    <main class="flex-1 min-h-0 w-full max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 stats-page-enter">
         <section class="lg:col-span-8 flex flex-col gap-6 min-h-0">
             <div class="grid grid-cols-2 md:grid-cols-3 gap-4 shrink-0">
                 <div id="metric-tasks"
-                    class="metric-card relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
                     <div class="flex justify-between items-start">
                         <div id="metric-tasks-icon"
                             class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
@@ -59,7 +59,7 @@
                         </div>
                         <span id="metric-tasks-badge" class="hidden text-xs px-2 py-1 rounded-full font-medium"></span>
                     </div>
-                    <div>
+                    <div id="metric-tasks-value" class="metric-card-content">
                         <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
                             <span id="tasks-mastered">—</span>
                             <span id="tasks-total" class="text-text-muted text-lg font-semibold tracking-tight">/
@@ -67,6 +67,7 @@
                         </div>
                         <p class="text-text-secondary text-sm font-semibold mt-1">Освоено задач</p>
                     </div>
+                    <p id="metric-tasks-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Начни решать задачи, чтобы увидеть прогресс</p>
                     <button type="button" class="tooltip-dot tooltip-parent"
                         data-tooltip="Количество уникальных заданий с успешной попыткой"
                         aria-label="Что означает &quot;Освоено задач&quot;">
@@ -74,7 +75,7 @@
                     </button>
                 </div>
                 <div id="metric-time"
-                    class="metric-card relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
                     <div class="flex justify-between items-start">
                         <div id="metric-time-icon"
                             class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
@@ -82,7 +83,7 @@
                         </div>
                         <span id="metric-time-badge" class="hidden text-xs px-2 py-1 rounded-full font-medium"></span>
                     </div>
-                    <div>
+                    <div id="metric-time-value" class="metric-card-content">
                         <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2 tracking-tight">
                             <span id="time-hours">0</span>
                             <span class="text-lg text-text-muted font-semibold">ч</span>
@@ -91,6 +92,7 @@
                         </div>
                         <p class="text-text-secondary text-sm font-semibold mt-1">Время обучения</p>
                     </div>
+                    <p id="metric-time-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Начни заниматься, чтобы увидеть время обучения</p>
                     <button type="button" class="tooltip-dot tooltip-parent"
                         data-tooltip="Суммарное время обучения в часах и минутах"
                         aria-label="Что означает &quot;Время обучения&quot;">
@@ -98,7 +100,7 @@
                     </button>
                 </div>
                 <div id="metric-streak"
-                    class="metric-card relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
                     <div class="flex justify-between items-start">
                         <div id="metric-streak-icon"
                             class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
@@ -117,13 +119,14 @@
                             </a>
                         </div>
                     </div>
-                    <div>
+                    <div id="metric-streak-value" class="metric-card-content">
                         <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
                             <span id="streak-days">0</span>
                             <span class="text-lg font-semibold text-text-muted">дней</span>
                         </div>
                         <p class="text-text-secondary text-sm font-semibold mt-1">Серия</p>
                     </div>
+                    <p id="metric-streak-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Занимайся регулярно, чтобы увидеть серию</p>
                     <button type="button" class="tooltip-dot tooltip-parent"
                         data-tooltip="Количество последовательных дней с обучением"
                         aria-label="Что означает &quot;Серия&quot;">
@@ -144,21 +147,20 @@
                         <div class="chart-toggle" id="chart-metric-selector" role="tablist" aria-label="Метрика">
                             <button class="chart-toggle-btn active" data-metric="study" role="tab" aria-selected="true">
                                 <span>⏱️</span>
-                                <span class="text-xs">Время</span>
+                                <span>Время</span>
                             </button>
                             <button class="chart-toggle-btn" data-metric="attempts" role="tab" aria-selected="false">
                                 <span>✓</span>
-                                <span class="text-xs">Попытки</span>
+                                <span>Попытки</span>
                             </button>
                         </div>
-                        <div class="chart-period-switch flex bg-bg-secondary p-0.5 rounded-lg">
+                        <div class="chart-period-switch">
                             <button data-period="7"
-                                class="period-btn px-2 py-1 rounded text-xs font-semibold bg-surface-1 text-text-main shadow-sm border border-border-subtle transition-all">7
-                                дней</button>
+                                class="period-btn active bg-surface-1 text-text-main shadow-sm border border-border-subtle transition-all">7 дней</button>
                             <button data-period="30"
-                                class="period-btn px-2 py-1 rounded text-xs font-medium text-text-secondary hover:text-text-main transition-all">30</button>
+                                class="period-btn text-text-secondary hover:text-text-main transition-all">30</button>
                             <button data-period="90"
-                                class="period-btn px-2 py-1 rounded text-xs font-medium text-text-secondary hover:text-text-main transition-all">90</button>
+                                class="period-btn text-text-secondary hover:text-text-main transition-all">90</button>
                         </div>
                     </div>
                 </div>
@@ -198,7 +200,7 @@
                 </div>
             </div>
         </section>
-        <section id="right-column" class="lg:col-span-4 flex flex-col gap-6 min-h-0">
+        <section id="right-column" class="lg:col-span-4 flex flex-col gap-6 min-h-0 stats-side-enter">
             <div id="performance-card"
                 class="card-with-tooltip bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
                 <div class="flex items-center gap-2 mb-4">
@@ -212,7 +214,13 @@
                     <span class="material-symbols-outlined text-[16px] leading-none">help</span>
                 </button>
             </div>
-            <div id="complexes-grid" class="grid grid-cols-2 gap-4 shrink-0 h-[110px] min-h-[110px]"></div>
+            <div class="shrink-0">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="material-symbols-outlined text-text-secondary text-sm">history</span>
+                    <h3 class="text-base font-bold text-text-main">Последние комплексы</h3>
+                </div>
+                <div id="complexes-grid" class="grid grid-cols-2 gap-4 h-[110px] min-h-[110px]"></div>
+            </div>
         </section>
     </main>
     <!-- Profile Modal (injected by SharedProfileModal.js) -->

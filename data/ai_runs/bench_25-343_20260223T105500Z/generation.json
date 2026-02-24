@@ -1,0 +1,172 @@
+{
+  "run_id": "bench_25-343_20260223T105500Z",
+  "created_at": "2026-02-23T10:59:30Z",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1222,
+    "char_count": 8215,
+    "language": "en"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "en",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 8,
+        "educational_unit_ids": [
+          1,
+          2,
+          10,
+          9,
+          11
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 5,
+        "educational_unit_ids": [
+          5,
+          7
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 3,
+        "educational_unit_ids": [
+          6,
+          8
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 2,
+        "educational_unit_ids": [
+          3,
+          4,
+          1,
+          2,
+          6,
+          9,
+          10,
+          11
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "educational_unit_ids": [
+          2
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 0,
+    "total_valid": 0,
+    "total_warnings": 0,
+    "total_errors": 5,
+    "by_type": {
+      "test": 0,
+      "click_text": 0,
+      "open_answer": 0,
+      "click_words": 0,
+      "sequence": 0
+    },
+    "quality": {
+      "material_language": "en",
+      "expected_output_language": "en",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 0
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "error",
+      "provider_used": null,
+      "educational_unit_ids": [
+        1,
+        2,
+        10,
+        9,
+        11
+      ],
+      "generation_time_ms": 10716,
+      "parsing_errors": [
+        "Ошибка генерации TEST (part 1/2): All AI providers failed. Last error: HTTP Error 403: Forbidden",
+        "Ошибка генерации TEST (part 2/2): All AI providers failed. Last error: HTTP Error 403: Forbidden"
+      ],
+      "tasks": []
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "error",
+      "provider_used": null,
+      "educational_unit_ids": [
+        5,
+        7
+      ],
+      "generation_time_ms": 4622,
+      "parsing_errors": [
+        "Ошибка генерации CLICK_TEXT (part 1/1): All AI providers failed. Last error: HTTP Error 403: Forbidden"
+      ],
+      "tasks": []
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "error",
+      "provider_used": null,
+      "educational_unit_ids": [
+        6,
+        8
+      ],
+      "generation_time_ms": 4916,
+      "parsing_errors": [
+        "Ошибка генерации OPEN_ANSWER (part 1/1): All AI providers failed. Last error: HTTP Error 403: Forbidden"
+      ],
+      "tasks": []
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "error",
+      "provider_used": null,
+      "educational_unit_ids": [
+        3,
+        4,
+        1,
+        2,
+        6,
+        9,
+        10,
+        11
+      ],
+      "generation_time_ms": 10324,
+      "parsing_errors": [
+        "Ошибка генерации CLICK_WORDS (part 1/2): All AI providers failed. Last error: HTTP Error 403: Forbidden",
+        "Ошибка генерации CLICK_WORDS (part 2/2): All AI providers failed. Last error: HTTP Error 403: Forbidden"
+      ],
+      "tasks": []
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "error",
+      "provider_used": null,
+      "educational_unit_ids": [
+        2
+      ],
+      "generation_time_ms": 5047,
+      "parsing_errors": [
+        "Ошибка генерации SEQUENCE (part 1/1): All AI providers failed. Last error: HTTP Error 403: Forbidden"
+      ],
+      "tasks": []
+    }
+  ]
+}

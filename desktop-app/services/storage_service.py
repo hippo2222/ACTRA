@@ -644,6 +644,38 @@ class StorageService:
         self._validate_id(topic_id, "topic_id")
         self._validate_id(task_id, "task_id")
 
+        def _ensure_route_context(payload: Dict[str, Any]) -> Dict[str, Any]:
+            if not isinstance(payload, dict):
+                return payload
+
+            metadata_obj = payload.get("metadata")
+            if not isinstance(metadata_obj, dict):
+                metadata_obj = {}
+                payload["metadata"] = metadata_obj
+            if not metadata_obj.get("id"):
+                metadata_obj["id"] = task_id
+            if not metadata_obj.get("module"):
+                metadata_obj["module"] = module_id
+            if not metadata_obj.get("topic"):
+                metadata_obj["topic"] = topic_id
+
+            task_data_obj = payload.get("task_data")
+            if isinstance(task_data_obj, dict):
+                meta_obj = task_data_obj.get("meta")
+                if not isinstance(meta_obj, dict):
+                    meta_obj = {}
+                    task_data_obj["meta"] = meta_obj
+                if not meta_obj.get("id"):
+                    meta_obj["id"] = task_id
+                if not meta_obj.get("module"):
+                    meta_obj["module"] = module_id
+                if not meta_obj.get("topic"):
+                    meta_obj["topic"] = topic_id
+                if task_data_obj.get("name") and not meta_obj.get("name"):
+                    meta_obj["name"] = task_data_obj.get("name")
+
+            return payload
+
         # Сначала пробуем стандартный путь
         task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
         
@@ -691,6 +723,7 @@ class StorageService:
                         result['answer_key'] = self._normalize_answer_key(td, ak)
                 except Exception:
                     self.logger.exception("Failed to normalize answer_key")
+                result = _ensure_route_context(result)
                 return self._convert_datetime_to_str(result)
             except TaskValidationError as e:
                 self.logger.error(f"Task validation failed for {task_json_path}: {e}")
@@ -759,12 +792,14 @@ class StorageService:
         except Exception:
             self.logger.exception("Failed to normalize answer_key")
         
-        return self._convert_datetime_to_str({
+        result = {
             'task_data': task_data,
             'answer_key': answer_key,
             'metadata': metadata or {'id': task_id},
             'task_dir': str(task_dir),
-        })
+        }
+        result = _ensure_route_context(result)
+        return self._convert_datetime_to_str(result)
     
     def _resolve_task_path(self, path: str) -> Path:
         """

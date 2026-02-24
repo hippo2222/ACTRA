@@ -23,8 +23,10 @@
     // --- Avatar helpers ---
     function getAvatarUrl(avatarSeed) {
         if (!avatarSeed) avatarSeed = '1.png';
-        if (avatarSeed.includes('.')) return `/api/assets/avatars/${avatarSeed}`;
-        return `/api/assets/avatars/1.png`;
+        if (avatarSeed.includes('.')) {
+            return `/api/assets/avatars/${encodeURIComponent(avatarSeed)}?trim=1&size=256`;
+        }
+        return '/api/assets/avatars/1.png?trim=1&size=256';
     }
 
     function setupLoadingOverlayLogo() {
@@ -55,15 +57,14 @@
 
         gallery.innerHTML = files.map(file => {
             const selected = file === currentSeed;
-            // Larger avatars in gallery for easier selection
             return `
             <button class="avatar-option group relative rounded-full w-14 h-14 overflow-hidden focus:outline-none transition-all duration-200 ${selected
-                    ? 'ring-4 ring-primary ring-offset-2 ring-offset-surface-1 scale-110 opacity-100 z-10'
-                    : 'opacity-70 hover:opacity-100 hover:scale-110 hover:z-10'
+                    ? 'ring-2 ring-primary opacity-100'
+                    : 'opacity-75 hover:opacity-100'
                 }"
                  onclick="window._welcomeSelectAvatar('${file}', '${seedInputId}', '${previewId}', '${containerId}')"
                  data-filename="${file}">
-                <img src="/api/assets/avatars/${file}" class="w-full h-full object-cover pointer-events-none shadow-sm" alt="Avatar">
+                <img src="/api/assets/avatars/${encodeURIComponent(file)}?trim=1&size=256" class="w-full h-full object-cover avatar-fill pointer-events-none shadow-sm" alt="Avatar">
             </button>`;
         }).join('');
     }
@@ -75,11 +76,11 @@
         container.querySelectorAll('.avatar-option').forEach(item => {
             const isSelected = item.getAttribute('data-filename') === filename;
             if (isSelected) {
-                item.classList.remove('opacity-70', 'hover:opacity-100');
-                item.classList.add('ring-4', 'ring-primary', 'ring-offset-2', 'ring-offset-surface-1', 'scale-110', 'opacity-100', 'z-10');
+                item.classList.remove('opacity-75', 'hover:opacity-100');
+                item.classList.add('ring-2', 'ring-primary', 'opacity-100');
             } else {
-                item.classList.add('opacity-70', 'hover:opacity-100');
-                item.classList.remove('ring-4', 'ring-primary', 'ring-offset-2', 'ring-offset-surface-1', 'scale-110', 'opacity-100', 'z-10');
+                item.classList.add('opacity-75', 'hover:opacity-100');
+                item.classList.remove('ring-2', 'ring-primary', 'opacity-100');
             }
         });
     };
@@ -302,6 +303,28 @@
         document.getElementById('modeOnboarding').classList.toggle('hidden', mode !== 'onboarding');
         document.getElementById('modeSelect').classList.toggle('hidden', mode !== 'select');
         document.getElementById('modeLogin').classList.toggle('hidden', mode !== 'login');
+        updateWelcomeHeader(mode);
+    }
+
+    function updateWelcomeHeader(mode) {
+        const title = document.getElementById('welcomeHeaderTitle');
+        const subtitle = document.getElementById('welcomeHeaderSubtitle');
+        if (!title || !subtitle) return;
+
+        if (mode === 'onboarding') {
+            title.textContent = 'Добро пожаловать!';
+            subtitle.textContent = 'Похоже, вы здесь впервые. Создайте профиль, чтобы начать обучение.';
+            return;
+        }
+
+        if (mode === 'login') {
+            title.textContent = 'С возвращением';
+            subtitle.textContent = 'Введите пароль, чтобы продолжить обучение.';
+            return;
+        }
+
+        title.textContent = 'Добро пожаловать';
+        subtitle.textContent = 'Выберите профиль, чтобы продолжить обучение.';
     }
 
     // --- Navigate to main ---
@@ -402,18 +425,15 @@
                     
                     <div class="flex flex-col items-center gap-6 mb-8">
                         <div class="relative group cursor-pointer flex-shrink-0">
-                             <img id="selectAvatarPreview" src="/api/assets/avatars/1.png" 
-                                  class="w-20 h-20 rounded-full object-cover ring-4 ring-primary ring-offset-4 ring-offset-surface-1 shadow-md">
-                             <div class="absolute bottom-0 right-0 bg-surface-1 rounded-full p-1.5 border border-border-subtle shadow-sm">
-                                <span class="material-symbols-outlined text-primary text-sm block">edit</span>
-                             </div>
+                             <img id="selectAvatarPreview" src="/api/assets/avatars/1.png?trim=1&size=256" 
+                                  class="w-20 h-20 rounded-full object-cover avatar-fill ring-4 ring-primary ring-offset-4 ring-offset-surface-1 shadow-md">
                         </div>
                         <input type="text" id="selectNewName" placeholder="Имя профиля..."
-                            class="w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-2 py-2 text-xl font-bold text-text-main outline-none transition-colors placeholder:text-text-main"
+                            class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-2 py-2 text-xl font-bold text-text-main outline-none transition-colors placeholder:text-text-main"
                             maxlength="50" onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateFromSelect()}">
                     </div>
                     
-                    <div id="selectAvatarGallery" class="flex justify-center flex-wrap gap-3 max-h-[120px] overflow-y-auto p-2 mb-6 scrollbar-hide"></div>
+                    <div id="selectAvatarGallery" class="flex justify-center flex-wrap gap-3 p-2 mb-6 overflow-visible"></div>
                     <input type="hidden" id="selectAvatarSeed" value="1.png">
 
                     <div class="mb-4 rounded-xl border border-border-subtle bg-surface-2 p-4">
@@ -488,7 +508,7 @@
             pendingPasswordUserId = userId;
             const container = document.getElementById('passwordInlineUser');
             container.innerHTML = `
-                <img src="${getAvatarUrl(profile.avatar_seed)}" class="w-12 h-12 rounded-full bg-surface-2 object-cover ring-2 ring-primary/30 shadow-sm">
+                <img src="${getAvatarUrl(profile.avatar_seed)}" class="w-12 h-12 rounded-full bg-surface-2 object-cover avatar-fill ring-2 ring-primary/30 shadow-sm">
                 <div class="flex flex-col">
                     <span class="font-black text-text-main text-lg leading-tight tracking-tight">${profile.name}</span>
                     <span class="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-0.5">Вход по паролю</span>
@@ -606,7 +626,7 @@
                 <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 <div class="relative mb-5 transition-transform group-hover:scale-105 duration-300 transform-gpu">
-                    <img src="${getAvatarUrl(user.avatar_seed)}" class="w-24 h-24 rounded-full object-cover shadow-lg ring-4 ring-surface-0 group-hover:ring-primary/40 transition-shadow" alt="${user.name}">
+                    <img src="${getAvatarUrl(user.avatar_seed)}" class="w-24 h-24 rounded-full object-cover avatar-fill shadow-lg ring-4 ring-surface-0 group-hover:ring-primary/40 transition-shadow" alt="${user.name}">
                     ${lockBadges}
                 </div>
                 

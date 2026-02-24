@@ -280,7 +280,14 @@
                     : "bg-error-light text-error-dark");
         }
 
-        if (icon) {
+        // Animated SVG icons via SuccessEffects
+        if (typeof SuccessEffects !== 'undefined' && iconWrap) {
+            if (success) {
+                SuccessEffects.renderAnimatedCheckmark(iconWrap);
+            } else {
+                SuccessEffects.renderAnimatedCross(iconWrap);
+            }
+        } else if (icon) {
             icon.textContent = success ? "check" : "close";
         }
 
@@ -289,6 +296,11 @@
             title.className =
                 "text-sm font-bold leading-tight " +
                 "text-text-main dark:text-text-on-dark";
+        }
+
+        // Streak badge (only on success)
+        if (typeof SuccessEffects !== 'undefined' && header) {
+            SuccessEffects.renderStreakBadge(header, success ? SuccessEffects.getStreak() : 0);
         }
 
         let messageText = result && result.message ? String(result.message) : "";

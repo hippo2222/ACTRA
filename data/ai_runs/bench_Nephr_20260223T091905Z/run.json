@@ -1,0 +1,39 @@
+{
+  "run_id": "bench_Nephr_20260223T091905Z",
+  "phase": "generated",
+  "material_language": "ru",
+  "material_word_count": 1595,
+  "provider_used": "openrouter",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "source_file_info": {
+    "format": "pdf",
+    "has_text_layer": true,
+    "original_name": "Nephr.pdf",
+    "pages": 6,
+    "size_mb": 0.08,
+    "word_count": 1595
+  },
+  "created_at": "2026-02-23T09:21:58Z",
+  "updated_at": "2026-02-23T09:38:04Z",
+  "generation_summary": {
+    "total_generated": 25,
+    "total_valid": 14,
+    "total_warnings": 11,
+    "total_errors": 1,
+    "by_type": {
+      "test": 5,
+      "click_text": 4,
+      "open_answer": 5,
+      "click_words": 11,
+      "sequence": 0
+    },
+    "quality": {
+      "material_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 25
+    }
+  }
+}

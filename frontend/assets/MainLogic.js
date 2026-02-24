@@ -9,6 +9,7 @@
     let mainConsentGateResolver = null;
     let mainConsentGateUserId = null;
     let updateInfoToastShown = false;
+    let updatesConfigured = null;
 
     // --- Core API Helpers ---
     async function apiFetch(url, options = {}) {
@@ -37,11 +38,15 @@
     function openModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.add('open');
+        const appContent = document.getElementById('app-content');
+        if (appContent) appContent.classList.add('blurred');
     }
 
     function closeModal(modalId) {
         const modal = document.getElementById(modalId);
         if (modal) modal.classList.remove('open');
+        const appContent = document.getElementById('app-content');
+        if (appContent) appContent.classList.remove('blurred');
     }
 
     function showFeedbackError(message) {
@@ -80,6 +85,44 @@
         return data;
     }
 
+    function setUpdateButtonConfigured(configured) {
+        if (typeof configured !== 'boolean') return;
+        const btn = document.getElementById('checkUpdatesButton');
+        if (!btn) return;
+
+        const defaultTitle = btn.dataset.defaultTitle || btn.getAttribute('title') || '';
+        if (!btn.dataset.defaultTitle) {
+            btn.dataset.defaultTitle = defaultTitle;
+        }
+
+        btn.disabled = !configured;
+        if (configured) {
+            btn.removeAttribute('aria-disabled');
+            if (btn.dataset.defaultTitle) {
+                btn.setAttribute('title', btn.dataset.defaultTitle);
+            }
+            return;
+        }
+
+        btn.setAttribute('aria-disabled', 'true');
+        btn.setAttribute('title', 'Проверка обновлений недоступна в этой сборке');
+    }
+
+    async function syncUpdatesConfiguredState(forceRefresh = false) {
+        if (!forceRefresh && typeof updatesConfigured === 'boolean') {
+            setUpdateButtonConfigured(updatesConfigured);
+            return updatesConfigured;
+        }
+
+        const network = await fetchNetworkStatus();
+        const configured = network?.updates?.configured;
+        if (typeof configured === 'boolean') {
+            updatesConfigured = configured;
+            setUpdateButtonConfigured(updatesConfigured);
+        }
+        return updatesConfigured;
+    }
+
     async function retryPendingFeedbackDelivery() {
         // Best-effort background retry for tickets queued while offline.
         await apiFetch('/api/feedback/retry-pending', {
@@ -115,11 +158,22 @@
     }
 
     window.checkForAppUpdates = async function (force = false) {
+        const configured = await syncUpdatesConfiguredState(force);
+        if (configured === false) {
+            showAppUpdateNotice(null, null);
+            return;
+        }
+
         const query = force ? '?force=1' : '';
         const { ok, data } = await apiFetch(`/api/update/check${query}`);
         if (!ok || !data) {
             if (force) NotificationUI.toast('Не удалось проверить обновления', 'error');
             return;
+        }
+
+        if (typeof data.manifest_url_configured === 'boolean') {
+            updatesConfigured = data.manifest_url_configured;
+            setUpdateButtonConfigured(updatesConfigured);
         }
 
         const currentVersion = data.current_version || '-';
@@ -142,11 +196,25 @@
         if (!force) return;
 
         if (data.reason === 'not_configured') {
-            NotificationUI.toast('Проверка обновлений не настроена', 'warning');
+            updatesConfigured = false;
+            setUpdateButtonConfigured(false);
             return;
         }
         if (data.reason === 'offline' || data.reason === 'offline_cached') {
             NotificationUI.toast('Нет интернета: проверить обновления сейчас нельзя', 'warning');
+            return;
+        }
+        if (
+            data.reason === 'fetch_failed'
+            || data.reason === 'fetch_failed_cached'
+            || data.reason === 'manifest_invalid'
+            || data.reason === 'manifest_invalid_cached'
+        ) {
+            NotificationUI.toast('Не удалось получить данные об обновлениях', 'error');
+            return;
+        }
+        if (data.reason === 'disabled') {
+            NotificationUI.toast('Проверка обновлений отключена', 'warning');
             return;
         }
         if (data.reason === 'up_to_date') {
@@ -500,10 +568,27 @@
 
             initEscKeyHandler(); // WEAK-5 fix: ESC closes modals
             window.updateNewProfileConsentState();
+
+            // Listen for theme changes to sync with backend
+            window.addEventListener('themechanged', async (e) => {
+                if (isInitialThemeLoad) {
+                    console.log('[MainLogic] Ignoring initial theme load event');
+                    return;
+                }
+                const newThemeId = e.detail.themeId;
+                console.log('[MainLogic] Theme changed, syncing to backend:', newThemeId);
+                await apiFetch('/api/ui/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ settings: { theme: newThemeId } })
+                });
+            });
+
             await Promise.all([
                 loadQuickAccess(),
-                loadStatistics(),
-                loadCalendarWidget()
+                loadUserSettings(), // Renamed from loadStatsSettings
+                loadCalendarWidget(),
+                syncUpdatesConfiguredState(false),
             ]);
             window.checkForAppUpdates(false);
         }
@@ -550,8 +635,14 @@
         if (privacyEl) privacyEl.checked = false;
         if (nameEl) nameEl.value = '';
         window.updateNewProfileConsentState();
-        document.getElementById('profileModal').classList.add('open');
+
+        openModal('profileModal');
+
         await loadProfilesList();
+    }
+
+    window.closeProfileModal = function () {
+        closeModal('profileModal');
     }
 
     async function loadProfilesList() {
@@ -662,7 +753,8 @@
         });
 
         if (ok) {
-            document.getElementById('profileModal').classList.remove('open');
+            closeModal('profileModal');
+
             if (typeof NotificationUI !== 'undefined') {
                 NotificationUI.toast('Профиль переключён', 'success', 1500);
             }
@@ -718,7 +810,7 @@
         document.getElementById('avatarGallery').classList.remove('hidden');
         await loadAvatarGallery();
         updateEditAvatarPreview();
-        document.getElementById('editProfileModal').classList.add('open');
+        openModal('editProfileModal');
     }
 
     async function loadAvatarGallery() {
@@ -790,7 +882,7 @@
 
         if (ok) {
             NotificationUI.toast('Профиль успешно удалён', 'success');
-            document.getElementById('editProfileModal').classList.remove('open');
+            closeModal('editProfileModal');
             window.location.reload();
         }
     }
@@ -814,7 +906,7 @@
         });
 
         if (ok) {
-            document.getElementById('editProfileModal').classList.remove('open');
+            closeModal('editProfileModal');
             if (editingUserId === currentUser.user_id) window.location.reload();
             else await loadProfilesList();
         } else {
@@ -834,7 +926,7 @@
     async function showPasswordPrompt(title = "Вход в профиль") {
         document.getElementById('passPromptTitle').textContent = title;
         document.getElementById('promptPasswordInput').value = '';
-        document.getElementById('passwordPromptModal').classList.add('open');
+        openModal('passwordPromptModal');
         document.getElementById('promptPasswordInput').focus();
 
         return new Promise(resolve => {
@@ -891,25 +983,46 @@
     }
 
     function cleanupPrompt() {
-        document.getElementById('passwordPromptModal').classList.remove('open');
+        closeModal('passwordPromptModal');
         passwordPromptResolve = null;
     }
 
     // --- Statistics & Calendar ---
     let currentStatsPeriod = 30; // Default
-    let statsSettingsLoaded = false;
+    let userSettingsLoaded = false;
+    let isInitialThemeLoad = true;
 
-    async function loadStatsSettings() {
+    async function loadUserSettings() {
         try {
             const { ok, data } = await apiFetch('/api/ui/settings');
-            if (ok && data.settings?.stats_period) {
-                currentStatsPeriod = parseInt(data.settings.stats_period);
+            if (ok && data.settings) {
+                const settings = data.settings;
+
+                // 1. Stats Period
+                if (settings.stats_period) {
+                    currentStatsPeriod = parseInt(settings.stats_period);
+                }
+
+                // 2. Theme Persistence
+                if (settings.theme && window.ThemeManager) {
+                    const currentTheme = window.ThemeManager.getTheme();
+                    if (currentTheme !== settings.theme) {
+                        console.log('[MainLogic] Restoring theme from backend:', settings.theme);
+                        isInitialThemeLoad = true;
+                        window.ThemeManager.setTheme(settings.theme);
+                    }
+                }
             }
         } catch (e) {
-            console.error("Failed to load settings", e);
+            console.error("Failed to load user settings", e);
         }
-        statsSettingsLoaded = true;
+
+        // After initial settings are applied (or failed), future changes should sync
+        setTimeout(() => { isInitialThemeLoad = false; }, 800);
+
+        userSettingsLoaded = true;
         updatePeriodButtons();
+        await loadStatistics();
     }
 
     function updatePeriodButtons() {
@@ -974,11 +1087,7 @@
             }
         }
 
-        if (!statsSettingsLoaded) {
-            await loadStatsSettings();
-        } else {
-            updatePeriodButtons();
-        }
+        updatePeriodButtons();
 
         // RACE CONDITION FIX (7.4): Создаем новый AbortController для отслеживания этого запроса
         statsLoadAbortController = new AbortController();
@@ -1108,7 +1217,7 @@
                     } else if (id === 'passwordPromptModal' && typeof closePasswordPrompt === 'function') {
                         closePasswordPrompt();
                     } else {
-                        el.classList.remove('open');
+                        closeModal(id);
                     }
                     break;
                 }

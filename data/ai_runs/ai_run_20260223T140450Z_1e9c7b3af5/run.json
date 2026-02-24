@@ -1,0 +1,28 @@
+{
+  "run_id": "ai_run_20260223T140450Z_1e9c7b3af5",
+  "phase": "generated",
+  "provider_model": "arcee",
+  "material_language": "unknown",
+  "output_language_mode": "same_as_material",
+  "effective_output_language": "unknown",
+  "generation_summary": {
+    "total_generated": 3,
+    "total_valid": 0,
+    "total_warnings": 0,
+    "total_errors": 3,
+    "by_type": {
+      "test": 3
+    },
+    "quality": {
+      "material_language": "unknown",
+      "expected_output_language": "unknown",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 3
+    }
+  },
+  "created_at": "2026-02-23T14:04:50Z",
+  "updated_at": "2026-02-23T14:04:50Z"
+}

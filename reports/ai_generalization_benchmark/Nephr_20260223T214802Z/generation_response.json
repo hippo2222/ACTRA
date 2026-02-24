@@ -1,0 +1,3711 @@
+{
+  "ai_run_id": "bench_Nephr_20260223T214802Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7887,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7875,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7864,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7852,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7839,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7795,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7785,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7748,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7720,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7711,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 7696,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "start_after_provider": "openrouter:3",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        2,
+        5,
+        7,
+        9,
+        11,
+        13,
+        18,
+        19,
+        20,
+        22,
+        23,
+        24,
+        3,
+        10,
+        14,
+        15,
+        1,
+        4,
+        6,
+        8,
+        12,
+        16,
+        17,
+        21
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "Критерии протеинурии (факт)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 2,
+          "modality": "text",
+          "title": "Критерии протеинурии (факт)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Клинические симптомы (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 5,
+          "modality": "text",
+          "title": "Клинические симптомы (факты)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Осложнения (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 7,
+          "modality": "text",
+          "title": "Осложнения (факты)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Диета (факт)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 9,
+          "modality": "text",
+          "title": "Диета (факт)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Противопоказания к кортикостероидам (факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 11,
+          "modality": "text",
+          "title": "Противопоказания к кортикостероидам (факты)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Критерии протеинурии (масса белка)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 13,
+          "modality": "text",
+          "title": "Критерии протеинурии (масса белка)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 18,
+          "modality": "text",
+          "title": "Клинические симптомы (отеки, анасарка, транссудаты и т.д.)",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "протеинурия, гипопротеинемия, диспротеинемия, гиперлипидемия, липидурия, нарушения минерального обмена, свертываемость, иммунитет, анализы крови/мочи",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 19,
+          "modality": "text",
+          "title": "Лабораторные",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Осложнения",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 20,
+          "modality": "text",
+          "title": "Осложнения",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Диета",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 22,
+          "modality": "text",
+          "title": "Диета",
+          "type": "fact"
+        }
+      ],
+      "generation_time_ms": 47445,
+      "parsing_errors": [
+        "Overgeneration trimmed for TEST after grounding cleanup: requested 15, kept 15, dropped 2."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7887,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7875,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7864,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7852,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 4,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.2667,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "критери",
+                "масс",
+                "протеинури"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Диагностические критерии нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Протеинурия 3,5 г/сут и более или ≥50 мг/кг массы тела в сутки"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Преобладание в моче альбуминов"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гематурия более 10 эритроцитов в поле зрения"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лейкоцитурия более 10 в поле зрения"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных являются основным лабораторным критерием диагностики нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 0,
+          "name": "Задание - Диагностические критерии нефротическо...",
+          "prompt": "Диагностические критерии нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.2311,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "массивн~масс"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "критери",
+                "протеинури"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Определение нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Массивная протеинурия (3,5 г/сут и более)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Нарушения белково-липидного и водно-солевого обмена"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Наличие гематурии"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Повышение артериального давления"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие критерии являются обязательными для диагноза нефротического синдрома согласно приведённому определению?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 1,
+          "name": "Задание - Определение нефротического синдрома",
+          "prompt": "Определение нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.2,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "кортикостероид",
+                "противопоказани"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Противопоказания к кортикостероидам",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Амилоидоз"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Геморрагический васкулит"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Диабетическая нефропатия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Мембранозная нефропатия"
+                  }
+                ],
+                "id": 0,
+                "text": "При каких состояниях из перечисленных противопоказано назначение кортикостероидов при нефротическом синдроме?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 2,
+          "name": "Задание - Противопоказания к кортикостероидам",
+          "prompt": "Противопоказания к кортикостероидам",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.2,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "кортикостероид",
+                "противопоказани"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Противопоказания к кортикостероидам при НС",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Смешанная форма НС"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Диабетическая нефропатия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Мембранозная нефропатия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лекарственная этиология НС"
+                  }
+                ],
+                "id": 0,
+                "text": "При каких формах нефротического синдрома или сопутствующих состояниях назначение кортикостероидов противопоказано?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 3,
+          "name": "Задание - Противопоказания к кортикостероидам п...",
+          "prompt": "Противопоказания к кортикостероидам при НС",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Критерии протеинурии (факт)",
+              "score": 0.2,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "критери",
+                "протеинури"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "mixed",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Критерии протеинурии при нефротическом синдроме",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "3,5 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "5,0 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "2,5 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "1,0 г/сут и более"
+                  }
+                ],
+                "id": 0,
+                "text": "Какое значение протеинурии (в г/сут) является ведущим диагностическим критерием нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 4,
+          "name": "Задание - Критерии протеинурии при нефротическо...",
+          "prompt": "Критерии протеинурии при нефротическом синдроме",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 2,
+              "primary_unit_title": "Критерии протеинурии (факт)",
+              "score": 0.2,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "критери",
+                "протеинури"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "mixed",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Диагностический критерий нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "3,5 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "2,0 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "5,0 г/сут и более"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "1,0 г/сут и более"
+                  }
+                ],
+                "id": 0,
+                "text": "Какой минимальный уровень протеинурии в сутки является диагностическим критерием нефротического синдрома согласно представленному материалу?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Диагностический критерий нефротическо...",
+          "prompt": "Диагностический критерий нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1778,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "белк",
+                "масс"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Принципы лечения: диета",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Бессолевая, богатая калием, с ограничением белка до 1 г/кг массы тела"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Использование свежих овощей и зелени для улучшения вкуса"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Высокобелковая диета для восполнения потерь"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Полный отказ от жиров для снижения гиперлипидемии"
+                  }
+                ],
+                "id": 0,
+                "text": "Каковы основные принципы диеты при нефротическом синдроме при нормальной функции почек?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 6,
+          "name": "Задание - Принципы лечения: диета",
+          "prompt": "Принципы лечения: диета",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1778,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "белк",
+                "масс"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Диетотерапия при нефротическом синдроме",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Бессолевая диета"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Богатая калием"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Количество белка 1 г на 1 кг массы тела в сутки"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Высокобелковая диета (1,5-2 г/кг) для устранения гипопротеинемии"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных принципов диеты являются рекомендованными для пациента с нефротическим синдромом при сохранной функции почек?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 7,
+          "name": "Задание - Диетотерапия при нефротическом синдроме",
+          "prompt": "Диетотерапия при нефротическом синдроме",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.16,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "противопоказан~противопоказани"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "кортикостероид"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Медикаментозное лечение: цитостатические",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "При наличии противопоказаний к стероидной терапии или ее неэффективности"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "При смешанной форме нефротического синдрома"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Их можно сочетать с кортикостероидами для снижения доз"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "В качестве препаратов первой линии при любой форме НС"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Только при подтвержденной бактериальной инфекции"
+                  }
+                ],
+                "id": 0,
+                "text": "При каких условиях назначают цитостатические препараты (азатиоприн, циклофосфан) при лечении нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 8,
+          "name": "Задание - Медикаментозное лечение: цитостатические",
+          "prompt": "Медикаментозное лечение: цитостатические",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 11,
+              "primary_unit_title": "Противопоказания к кортикостероидам (факты)",
+              "score": 0.16,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "кортикостероидн~кортикостероид"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "противопоказани"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Показания и противопоказания к кортикостероидной терапии",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Амилоидоз"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Геморрагический васкулит"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Туберкулез"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Мембранозная нефропатия"
+                  }
+                ],
+                "id": 0,
+                "text": "При каких состояниях (нозологиях) при нефротическом синдроме **противопоказано** назначение кортикостероидов?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 9,
+          "name": "Задание - Показания и противопоказания к кортик...",
+          "prompt": "Показания и противопоказания к кортикостероидной терапии",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1422,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "массивн~масс"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "протеинури"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Патогенез: ключевое изменение",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Потеря отрицательного заряда базальной мембраны и подоцитов"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Осаждение иммунных комплексов в базальной мембране"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Активация клеточного иммунитета"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гиперпродукция альбуминов в печени"
+                  }
+                ],
+                "id": 0,
+                "text": "Согласно метаболической концепции патогенеза, какое ключевое изменение в клубочках способствует массивной протеинурии?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 10,
+          "name": "Задание - Патогенез: ключевое изменение",
+          "prompt": "Патогенез: ключевое изменение",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.1422,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "массивн~масс"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "протеинури"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Патогенез нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Потеря отрицательного заряда клубочковой базальной мембраны и подоцитов"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Превращение заряда мембраны в положительный"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Осаждение иммунных комплексов в почках"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Повышение онкотического давления плазмы"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных механизмов лежат в основе развития массивной протеинурии при нефротическом синдроме согласно метаболической концепции?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 11,
+          "name": "Задание - Патогенез нефротического синдрома",
+          "prompt": "Патогенез нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 20,
+              "primary_unit_title": "Осложнения",
+              "score": 0.1333,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "осложнени"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.7,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.049
+            }
+          },
+          "data": {
+            "prompt": "Осложнения нефротического синдрома",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Нефротический (гиповолемический) шок"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Тромбозы периферических вен"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Бактериальные инфекции различной локализации"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гипертонический криз"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных состояний являются характерными осложнениями нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 12,
+          "name": "Задание - Осложнения нефротического синдрома",
+          "prompt": "Осложнения нефротического синдрома",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 19,
+              "primary_unit_title": "Лабораторные",
+              "score": 0.1263,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "гиперлипидеми",
+                "лабораторн",
+                "протеинури"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Лабораторный признак НС",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Протеинурия, достигающая или превышающая 3,5 г/сут"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гиперлипидемия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гипокальциемия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Повышение СОЭ"
+                  }
+                ],
+                "id": 0,
+                "text": "Какой лабораторный показатель является ведущим и обязательным для диагностики нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 13,
+          "name": "Задание - Лабораторный признак НС",
+          "prompt": "Лабораторный признак НС",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              5,
+              7,
+              9,
+              11,
+              13,
+              18,
+              19,
+              20,
+              22,
+              23,
+              24,
+              3,
+              10,
+              14,
+              15,
+              1,
+              4,
+              6,
+              8,
+              12,
+              16,
+              17,
+              21
+            ],
+            "source_grounding": {
+              "primary_unit_id": 13,
+              "primary_unit_title": "Критерии протеинурии (масса белка)",
+              "score": 0.0889,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "масс"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "prompt": "Принципы медикаментозного лечения НС",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "1—2"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "0,5—1"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "3—4"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "5—6"
+                  }
+                ],
+                "id": 0,
+                "text": "Какую суточную дозу преднизолона (в мг на 1 кг массы тела) рекомендуют для лечения нефротического синдрома?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 14,
+          "name": "Задание - Принципы медикаментозного лечения НС",
+          "prompt": "Принципы медикаментозного лечения НС",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        4,
+        8,
+        17,
+        21,
+        3,
+        10,
+        14,
+        15,
+        16,
+        1,
+        6,
+        12
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "Патогенез (процесс/концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 4,
+          "modality": "text",
+          "title": "Патогенез (процесс/концепция)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Принципы лечения (процесс)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 8,
+          "modality": "text",
+          "title": "Принципы лечения (процесс)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "иммунная концепция",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 17,
+          "modality": "text",
+          "title": "Патогенез",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "режим, ЛФК, санация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 21,
+          "modality": "text",
+          "title": "Принципы лечения",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Этиология (классификация)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 3,
+          "modality": "text",
+          "title": "Этиология (классификация)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Медикаменты и их дозировки (классификация/факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 10,
+          "modality": "text",
+          "title": "Медикаменты и их дозировки (классификация/факты)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 14,
+          "modality": "text",
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 15,
+          "modality": "text",
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС (концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 1,
+          "modality": "text",
+          "title": "Определение НС (концепция)",
+          "type": "term"
+        }
+      ],
+      "generation_time_ms": 119324,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_TEXT: requested 7, kept 7, dropped 3.",
+        "Overgeneration trimmed for CLICK_TEXT after grounding cleanup: requested 7, kept 7, dropped 4."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7839,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7795,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7785,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7748,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 4,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.7,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.042
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Основной патогенетический механизм — повреждение клубочкового фильтра с потерей отрицательного заряда базальной мембраны."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "При НС развивается гиперлипидемия, чаще всего за счет повышения холестерина, триглицеридов и фосфолипидов."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Кортикостероиды (преднизолон) назначаются в дозе 1—2 мг/кг массы тела в сутки при лекарственной, волчаночной этиологии и мембранозной нефропатии."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Противопоказаниями к назначению кортикостероидов при НС являются амилоидоз, туберкулез и диабетическая нефропатия."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Патогенез НС полностью объясняется только иммунной концепцией осаждения комплексов."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Для лечения НС всегда показано внутривенное введение белковых растворов для коррекции гипопротеинемии."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Антикоагулянты (гепарин) при НС назначаются исключительно для профилактики тромбозов и не обладают иммуносупрессивным действием."
+              }
+            ],
+            "prompt": "Какие утверждения верны в отношении патогенеза и принципов лечения нефротического синдрома?",
+            "subtype": "error_detection"
+          },
+          "index": 15,
+          "name": "Клик - Какие утверждения верны в отношении п...",
+          "prompt": "Какие утверждения верны в отношении патогенеза и принципов лечения нефротического синдрома?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.22,
+              "shared_fuzzy_token_count": 2,
+              "shared_fuzzy_tokens_sample": [
+                "иммунных~иммунн",
+                "патогенетическ~патогенез"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "концепци"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.7,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.042
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Иммунологическая концепция с отложением иммунных комплексов в почках"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Метаболическая концепция с потерей отрицательного заряда базальной мембраны"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Повреждение клубочковой базальной мембраны и отростков подоцитов"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Первичное поражение канальцев почек"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Нарушение кровообращения в почках"
+              }
+            ],
+            "prompt": "Какие патогенетические механизмы лежат в основе нефротического синдрома?",
+            "subtype": "error_detection"
+          },
+          "index": 16,
+          "name": "Клик - Какие патогенетические механизмы лежа...",
+          "prompt": "Какие патогенетические механизмы лежат в основе нефротического синдрома?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.1846,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "заболевани",
+                "первичн",
+                "этиологи"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "НС — это клинико-лабораторный симптомокомплекс, включающий массивную протеинурию (≥3,5 г/сут) и нарушения обмена."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "К первичным заболеваниям, вызывающим НС, относятся гломерулонефрит, первичный амилоидоз и гипернефрома."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "К вторичным инфекционным причинам НС относятся сифилис, малярия, туберкулез и септический эндокардит."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "НС может быть вторичным при системной красной волчанке, ревматоидном артрите и сахарном диабете."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Обязательным лабораторным признаком НС является гематурия (кровь в моче)."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Порог протеинурии для диагностики НС составляет 1,0 г/сут."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Диета при НС с нормальной функцией почек должна быть бессолевой, с ограничением белка до 0,5 г/кг массы тела."
+              }
+            ],
+            "prompt": "Какие утверждения точно отражают определение и этиологию нефротического синдрома (НС)?",
+            "subtype": "error_detection"
+          },
+          "index": 17,
+          "name": "Клик - Какие утверждения точно отражают опре...",
+          "prompt": "Какие утверждения точно отражают определение и этиологию нефротического синдрома (НС)?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 15,
+              "primary_unit_title": "Этиология: вторичные инфекционные (14 пунктов)",
+              "score": 0.1733,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "этиологическ~этиологи"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "вторичн",
+                "инфекционн"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Первичные заболевания почек: гломерулонефрит, первичный амилоидоз"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Вторичные заболевания: системная красная волчанка, сахарный диабет"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Инфекционные причины: туберкулез, сифилис, гепатит"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Острый пиелонефрит"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Односторонний гидронефроз"
+              }
+            ],
+            "prompt": "Какие этиологические факторы могут вызывать нефротический синдром?",
+            "subtype": "error_detection"
+          },
+          "index": 18,
+          "name": "Клик - Какие этиологические факторы могут вы...",
+          "prompt": "Какие этиологические факторы могут вызывать нефротический синдром?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Принципы лечения (процесс)",
+              "score": 0.16,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "принципов~принцип"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "лечени"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "mixed",
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Дозированная двигательная активность для профилактики тромбозов"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Диета с ограничением соли и достаточным количеством белка (1 г/кг массы тела)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Применение кортикостероидов в полуторных или двойных дозах"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Обильное питье для улучшения функции почек"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Внутривенное введение белковых растворов для устранения гипопротеинемии"
+              }
+            ],
+            "prompt": "Какие из перечисленных принципов лечения нефротического синдрома являются верными?",
+            "subtype": "error_detection"
+          },
+          "index": 19,
+          "name": "Клик - Какие из перечисленных принципов лече...",
+          "prompt": "Какие из перечисленных принципов лечения нефротического синдрома являются верными?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "Принципы лечения",
+              "score": 0.0889,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "режим"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.7,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.042
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Дозированный двигательный"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Полный постельный"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Активный образ жизни"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Строгий постельный режим"
+              }
+            ],
+            "prompt": "Какой из перечисленных режимов рекомендуется при нефротическом синдроме?",
+            "subtype": "error_detection"
+          },
+          "index": 20,
+          "name": "Клик - Какой из перечисленных режимов рекоме...",
+          "prompt": "Какой из перечисленных режимов рекомендуется при нефротическом синдроме?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              3,
+              10,
+              14,
+              15,
+              16,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 15,
+              "primary_unit_title": "Этиология: вторичные инфекционные (14 пунктов)",
+              "score": 0.0667,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "вторичн"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.06
+            }
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Сифилис"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Туберкулез"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Сахарный диабет"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Острый аппендицит"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Гипертоническая болезнь"
+              }
+            ],
+            "prompt": "Какие из перечисленных заболеваний могут быть причиной вторичного нефротического синдрома?",
+            "subtype": "error_detection"
+          },
+          "index": 21,
+          "name": "Клик - Какие из перечисленных заболеваний мо...",
+          "prompt": "Какие из перечисленных заболеваний могут быть причиной вторичного нефротического синдрома?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        4,
+        8,
+        17,
+        21,
+        1,
+        6,
+        12
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "Патогенез (процесс/концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 4,
+          "modality": "text",
+          "title": "Патогенез (процесс/концепция)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Принципы лечения (процесс)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 8,
+          "modality": "text",
+          "title": "Принципы лечения (процесс)",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "иммунная концепция",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 17,
+          "modality": "text",
+          "title": "Патогенез",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "режим, ЛФК, санация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 21,
+          "modality": "text",
+          "title": "Принципы лечения",
+          "type": "process"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС (концепция)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 1,
+          "modality": "text",
+          "title": "Определение НС (концепция)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Лабораторные показатели (факты/термины)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 6,
+          "modality": "text",
+          "title": "Лабораторные показатели (факты/термины)",
+          "type": "term"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Определение НС",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 12,
+          "modality": "text",
+          "title": "Определение НС",
+          "type": "term"
+        }
+      ],
+      "generation_time_ms": 31180,
+      "parsing_errors": [
+        "Overgeneration trimmed for OPEN_ANSWER after grounding cleanup: requested 5, kept 5, dropped 1."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7720,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7711,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 7696,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 21,
+              "primary_unit_title": "Принципы лечения",
+              "score": 0.3556,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 4,
+              "shared_tokens_sample": [
+                "лечени",
+                "принцип",
+                "режим",
+                "санаци"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.6,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.042
+            }
+          },
+          "data": {
+            "keywords": [
+              "лечение",
+              "режим",
+              "ЛФК",
+              "санация",
+              "профилактика тромбозов",
+              "госпитализация",
+              "очаги инфекции"
+            ],
+            "question": "Какие немедикаментозные принципы лечения являются обязательными при нефротическом синдроме?",
+            "reference_answer": "Обязательные немедикаментозные принципы: ранняя госпитализация для уточнения нозологии, дозированный двигательный режим для профилактики тромбозов, лечебная физкультура (ЛФК) и санация очагов хронической инфекции."
+          },
+          "index": 22,
+          "name": "Открытый ответ - Какие немедикаментозные принципы лече...",
+          "prompt": "Какие немедикаментозные принципы лечения являются обязательными при нефротическом синдроме?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.6,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.042
+            }
+          },
+          "data": {
+            "keywords": [
+              "патогенез",
+              "метаболическая концепция",
+              "протеинурия",
+              "клубочковый фильтр",
+              "базальная мембрана",
+              "подоциты",
+              "отрицательный заряд",
+              "иммунная концепция"
+            ],
+            "question": "Какая концепция патогенеза объясняет развитие массивной протеинурии при нефротическом синдроме?",
+            "reference_answer": "Метаболическая (физико-химическая) концепция: при патологии клубочковая базальная мембрана и отростки подоцитов теряют отрицательный заряд, становятся положительными, что усиливает фильтрацию белковых молекул через клубочковый фильтр. Иммунная концепция объясняет причину повреждения почек, но не сам симптом протеинурии."
+          },
+          "index": 23,
+          "name": "Открытый ответ - Какая концепция патогенеза объясняет ...",
+          "prompt": "Какая концепция патогенеза объясняет развитие массивной протеинурии при нефротическом синдроме?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.6,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.042
+            }
+          },
+          "data": {
+            "keywords": [
+              "нефротический синдром",
+              "иммунные комплексы",
+              "базальная мембрана",
+              "подоциты",
+              "протеинурия",
+              "метаболическая концепция"
+            ],
+            "question": "Какие две основные концепции патогенеза нефротического синдрома (НС) описаны в тексте и в чём их суть?",
+            "reference_answer": "Иммунологическая концепция: НС возникает на иммунной основе с образованием иммунных комплексов или реакцией антител с антигенами базальной мембраны клубочков. Метаболическая (физико-химическая) концепция: при патологии клубочковая базальная мембрана и отростки подоцитов теряют отрицательный заряд, что усиливает фильтрацию белков."
+          },
+          "index": 24,
+          "name": "Открытый ответ - Какие две основные концепции патогене...",
+          "prompt": "Какие две основные концепции патогенеза нефротического синдрома (НС) описаны в тексте и в чём их суть?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 17,
+              "primary_unit_title": "Патогенез",
+              "score": 0.3,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 3,
+              "shared_tokens_sample": [
+                "иммунн",
+                "концепци",
+                "патогенез"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 0.6,
+              "unit_language": "en",
+              "weak": false,
+              "weak_threshold": 0.042
+            }
+          },
+          "data": {
+            "keywords": [
+              "иммунные комплексы",
+              "базальная мембрана",
+              "отрицательный заряд",
+              "протеинурия",
+              "метаболическая концепция"
+            ],
+            "question": "Объясните, как взаимодействуют иммунная и метаболическая концепции патогенеза нефротического синдрома, и какое ключевое явление объясняет вторая концепция.",
+            "reference_answer": "Иммунная концепция описывает формирование НС через отложение иммунных комплексов или реакцию антител с антигенами базальной мембраны клубочков. Однако она не объясняет основной симптом — протеинурию. Метаболическая (физико-химическая) концепция объясняет протеинурию потерей отрицательного заряда базальной мембраны и отростков подоцитов, что усиливает фильтрацию белков."
+          },
+          "index": 25,
+          "name": "Открытый ответ - Объясните, как взаимодействуют иммунн...",
+          "prompt": "Объясните, как взаимодействуют иммунная и метаболическая концепции патогенеза нефротического синдрома, и какое ключевое явление объясняет вторая концепция.",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              4,
+              8,
+              17,
+              21,
+              1,
+              6,
+              12
+            ],
+            "source_grounding": {
+              "primary_unit_id": 8,
+              "primary_unit_title": "Принципы лечения (процесс)",
+              "score": 0.1,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 1,
+              "shared_tokens_sample": [
+                "лечени"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "mixed",
+              "weak": false,
+              "weak_threshold": 0.07
+            }
+          },
+          "data": {
+            "keywords": [
+              "кортикостероиды",
+              "преднизолон",
+              "показания",
+              "противопоказания",
+              "мембранозная нефропатия",
+              "волчаночный нефрит",
+              "гломерулонефрит",
+              "иммуносупрессия"
+            ],
+            "question": "Каковы основные показания и противопоказания для назначения кортикостероидов при лечении нефротического синдрома?",
+            "reference_answer": "Показания: лекарственная и волчаночная этиология, липоидный нефроз, мембранозная нефропатия, чистая форма НС, НС при гломерулонефритах с минимальными изменениями. Противопоказания: смешанная форма НС, диабетическая, опухолевая, тромбогенная нефропатии, инфекции (туберкулез, сифилис), амилоидоз, геморрагический васкулит, узелковый периартериит, некоторые морфологические типы гломерулонефритов."
+          },
+          "index": 26,
+          "name": "Открытый ответ - Каковы основные показания и противопо...",
+          "prompt": "Каковы основные показания и противопоказания для назначения кортикостероидов при лечении нефротического синдрома?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        14,
+        15,
+        16
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 14,
+          "modality": "text",
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 15,
+          "modality": "text",
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "type": "classification"
+        }
+      ],
+      "generation_time_ms": 362029,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_WORDS: requested 4, kept 4, dropped 2.",
+        "Overgeneration trimmed for CLICK_WORDS after grounding cleanup: requested 4, kept 4, dropped 1."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 2,
+      "status": "success",
+      "subrequest_count": 4,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ],
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.5077,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 1,
+              "shared_numbers": [
+                "4"
+              ],
+              "shared_token_count": 5,
+              "shared_tokens_sample": [
+                "4",
+                "заболевани",
+                "можн",
+                "первичн",
+                "этиологи"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              30,
+              51,
+              228
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Нефротический синдром (НС) представляет собой клинико-ла-бораторный симптомокомплекс, слагающийся из массивной протеинурии (3,5—5 г/сут) и нарушений белково-липидного и водно-со-левого обмена, которые проявляются гипопротеинемией, диспротеинемией, гиперлипидемией, липидурией, а также отеками степени анасарки с водянкой серозных полостей. Этиология I. Первичные заболевания почек: 1. Гломерулонефрит. 2. Первичный амилоидоз. 3. Хронический пиелонефрит. 4. Опухоль почки (гипернефрома). II. Вторичные заболевания почек: 1. Инфекционная группа: • сифилис; • малярия; • туберкулез; • лейшманиоз; • септический эндокардит; • хронические воспалительные и нагноительные заболевания легких, костей; • ревматизм; • аортит; • гепатит с персистирующим НВs-антигеном и цирроз; • геморрагическая лихорадка. 2. Группа неинфекционных заболеваний: • системная красная волчанка; • ревматоидный артрит; • узелковый периартериит; • синдром Гудпасчера; • геморрагический васкулит; • неспецифический язвенный колит; • сахарный диабет; • опухоли внепочечной локализации; • тромбозы вен и артерий почек, аорты, нижней полой вены • периодическая болезнь; • лекарственная болезнь, аллергические заболевания типа поллинозов или пищевой идиосинкразии; • болезни крови (лимфома, лимфогранулематоз и др.); • нефропатия отторжения трансплантата; • нефропатия беременных; • диффузный токсический зоб. Патогенез Большинство из обусловливающих НС заболеваний возникают на иммунной основе. В почках осаждаются иммунные комплексы, фракции комплемента, либо возникает реакция взаимодействия антител с антигенами базальной мембраны капилляров клубочков с сопутствующими нарушениями клеточного иммунитета. Иммунологическая концепция патогенеза не объясняет основной симптом НС — протеинурию, поэтому сформирована метаболическая (физико-химическая) концепция патогенеза. В условиях патологического процесса клубочковая базальная мембрана и отростки подоцитов теряют отрицательный заряд и становятся положительными. Это способствует усилению процессов фильтрации белковых молекул через клубочковый фильтр. Повреждения клубочков почек и массивная протеинурия вызывают большое количество вторичных симптомов НС, формирующих клинику этого состояния, влияющих на его течение и исход и требующих дифференцированного подхода к терапии. Клиника и лабораторная диагностика Жалобы больных неспецифичны: слабость, отсутствие аппетита, сухость во рту, тошнота, рвота, головная боль, тяжесть в поясничной области, боли в мышцах и отеки, иногда судороги. Первым клиническим симптомом, заметным для больного и окружающих, являются отеки. Они могут появляться постепенно или бурно за одну ночь, достигнув степени анасарки. Отеки рыхлые, легко перемещаются и оставляют ямку при надавливании. Вначале заметные в области век, лица, поясничной области, половых органов, при прогрессировании распространяются на всю подкожную клетчатку. В это время могут образовываться транссудаты: одно- или двусторонний гидроторакс, реже гидроперикардит — появляется одышка при физической нагрузке и в покое. В период развития асцита состояние больного ухудшается: появляются вздутие живота, поносы, тошнота и рвота. При отсутствии асцита пальпируется увеличенная печень мягкоэластичной консистенции. Развитие анемии приводит к тахикардии, появлению систолического шума на верхушке и в V точке. Основным методом диагностики НС являются общие и специализированные анализы мочи. Протеинурия — ведущий симптом НС, достигающая или превышающая 50 мг на 1 кг массы больного, т. е. 3,5 г/сут и более. В основном это альбумины. Гипопротеинемия — постоянный синдром НС. Общий белок крови снижается до 40—30 и даже до 27 г/л, в связи с чем онкотическое давление плазмы падает с 30—40 до 10—15 см вод. ст. Гипопротеинемия при НС обусловлена потерей белков с мочой, катаболизмом белков, в частности альбумина, перемещением белков во внесосудистое пространство (при больших отеках — до 10—20 кг массы тела — в отечную жидкость переходит более 30 г белка), снижением синтеза белков и потерей белков через кишечник. Диспротеинемия выражается в резком уменьшении альбуминов в сыворотке крови, повышении содержания альфа-2- и бета-глобулинов. Гиперлипидемия — ключевой, но не обязательный признак НС. Встречаются случаи бесхолестеринового НС, например при подостром нефрите, сочетании НС и ХПН, так называемые псевдонефротические формы волчаночного нефрита. Наиболее закономерно повышение холестерина в сыворотке крови (до 52 ммоль/л), триглицеридов (до 44 ммоль/л), фосфолипидов (до 646 ммоль/л), а также дислипопротеидемия за счет липопротеидов низкой и очень низкой плотности при нормальном или пониженном количестве липопротеидов высокой плотности. Липидурия находится в тесной связи с гиперлипидемией и определяется по наличию жировых цилиндров в моче. При НС нарушен фосфорно-кальциевый обмен, метаболизм витамина D. Это выражается в гипокальциемии, гипокальциурии с клиническими признаками тетании, остеопороза, остеомаляции. Показатели свертывающей системы крови изменены при НС в сторону гиперкоагуляции от небольшой степени активности до претромботического состояния, криза локальной или диссеминированной внутрисосудистой коагуляции. Своеобразно изменена при НС система иммунитета, особенности которой зависят больше от основной нефропатии (волчаночный нефрит, амилоидоз, мембранозная нефропатия), чем от степени протеинурии. В клинических анализах крови и мочи имеется ряд своеобразных изменений. В периферической крови наиболее постоянный признак увеличения СОЭ, достигающей при некоторых формах НС 70—85 мм/ч, что зависит от степени диспротеинемии. Умеренная гипохромная анемия быстро нарастает с развитием ХПН. Моча больных до падения функции почек имеет очень высокую плотность (1,030—1,050). Гематурия может сопутствовать НС при геморрагическом васкулите, волчаночном нефрите, гломерулонефрите. Лейкоцитурия не всегда имеет связь с бактериальным воспалением почек; при амилоидном НС основной клеткой мочевого осадка являются нейтрофилы; могут определяться и лимфоциты (10—60 %), что характерно для высокой активности нефропатии. Функции почек при НС обычно нормальные, клубочковая фильтрация может быть даже повышена. В ранних стадиях вторичного НС играют роль острота и тяжесть основного заболевания почек, в поздних стадиях первичного и вторичного НС функции их снижены независимо от признаков обострения. В повседневной практике ведения больных с НС большое значение имеют пробы Зимницкого и Реберга. Реже производится изотопная ренография с 131I-гиппураном, позволяющая уточнить степень поражения канальцев. Метод сканирования имеет значение лишь для исключения очаговой патологии почек (подозрение на опухоль почки или туберкулез у больного с нефротическим синдромом). Уровень креатинина крови повышен лишь при наличии ОПН, ХПН; в то же время азот мочевины увеличен часто, отражая изменения в белковом обмене, состоянии печени, катаболизме белков. НС редко протекает без осложнений. Осложнения зависят от характера основного заболевания. НС осложняется отеком мозга, кровоизлияниями в сетчатку, нефротическим (гиповолемическим) шоком, периферическими флеботромбозами, ишемической болезнью сердца, инсультами, бактериальной, вирусной, грибковой инфекциями различной локализации. Диагностика НС трудностей не вызывает. Прогноз при НС зависит от многих факторов: возраста, характера основного заболевания, клинической формы НС, адекватности применяемых лекарственных средств. Принципы лечения Важное значение имеет ранняя госпитализация для уточнения нозологической формы нефропатии, определения функции почек. Режим — дозированный двигательный для профилактики тромбозов. Показаны ЛФК, санация очагов инфекции, профилактика запоров. Диета — при нормальной функции почек — бессолевая, богатая калием; белок — 1 г на 1 кг массы тела; используются свежие овощи, зелень, лук, томаты для улучшения вкусовых качеств пищи. Пищевые белковые нагрузки, внутривенное введение различных белковых растворов не показано, так как это не уменьшает гипопротеинемию и нередко усиливает протеинурию. Медикаментозное лечение Учитывая гипоальбуминемию, дозы медикаментов при НС должны быть полуторные или двойные: кортикостероиды (преднизолон, дексазон, урбазон и др.) — 1—2 мг на 1 кг массы в сутки до 7—6 нед. с последующим медленным снижением и длительным, в случае наличия эффекта (до 1,6 лет), применением. Показания к назначению кортикостероидов при НС: лекарственная, волчаночная этиология, липоидный нефроз, мембранозная нефропатия, чистая форма НС, НС при гломерулонефритах с минимальными изменениями, мембранозного, мезангиопролиферативного характера. Противопоказано назначение кортикостероидов при смешанной форме НС, при диабетической, опухолевой, тромбогенной нефропатиях, при инфекциях (туберкулез, сифилис), амилоидозе, геморрагическом васкулите, узелковом периартериите, при некоторых морфологических типах гломерулонефритов. При лечении кортикостероидами следует помнить об их осложнениях. Цитостатические препараты (антиметаболиты и алкилирующие): азатиоприн в дозе 2—4 мг/кг, циклофосфан, лейкеран (0,2—0,4 мг/кг) сроком на 6—8 мес. и более. Они, кроме иммунодепрессивного, обладают антипролиферативным действием. Назначаются при наличии противопоказаний к стероидной терапии или ее неэффективности, при смешанной форме НС; можно сочетать с кортикостероидами, что позволяет уменьшить дозы тех и других препаратов. Антикоагулянты: гепарин в дозе от 10 000 до 60 000 ЕД/сут внутривенно или подкожно в области живота и гребня подвздошной кости в течение 6 нед. Со второй половины курса лечения гепарином, после уменьшения дозы, добавляют антикоагулянты не прямого действия (пелентан, фенилин, синкумар и др.). Антикоагулянты оказывают действие на различные фазы свертывания крови, обладают антикомплементарным, натрийуретическим, диуретическим, гипотензивным и даже иммуносупрессивным действием, расширяют сосуды сердца и почек. Лечение антикоагулянтами может осложниться кровотечением, инсультом, гематурией. Антиагреганты — препараты, которые уменьшают агрегацию и адгезию тромбоцитов, улучшают микроциркуляцию, обладают сосудорасширяющим действием. Дипиридамол, трентал, продектин, никотиновая кислота — эти препараты в большинстве случаев назначаются в комплексе с антикоагулянтами и усиливают их действие. Клинически трудно оценить эффективность этих препаратов при самостоятельном применении, поэтому наряду со стероидами, цитостатиками, антикоагулянтами антиагреганты входят в четырехкомпонентную методику лечения наиболее тяжелых больных гломерулонефритами, предложенную P. Кinсaid-Smith (1972). Доза дипиридамола — 225—330 мг/сут в течение 2—3 мес., иногда дольше. Противовоспалительные средства — индометацин, диклофенак, ибупрофен — назначаются при затянувшемся остром нефрите с НС, нефротической и смешанной форме хронического нефрита, реже при волчаночном нефрите. Оценка эффективности этих препаратов спорная. Мембранотропные средства — инт"
+          },
+          "index": 27,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ],
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.5077,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 1,
+              "shared_numbers": [
+                "4"
+              ],
+              "shared_token_count": 5,
+              "shared_tokens_sample": [
+                "4",
+                "заболевани",
+                "можн",
+                "первичн",
+                "этиологи"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              1,
+              32,
+              95
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Гипопротеинемия — постоянный синдром НС. Общий белок крови снижается до 40—30 и даже до 27 г/л, в связи с чем онкотическое давление плазмы падает с 30—40 до 10—15 см вод. ст. Гиперлипидемия — ключевой, но не обязательный признак НС. Встречаются случаи бесхолестеринового НС, например при подостром нефрите, сочетании НС и ХПН, так называемые псевдонефротические формы волчаночного нефрита. Наиболее закономерно повышение холестерина в сыворотке крови (до 52 ммоль/л), триглицеридов (до 44 ммоль/л), фосфолипидов (до 646 ммоль/л), а также дислипопротеидемия за счет липопротеидов низкой и очень низкой плотности при нормальном или пониженном количестве липопротеидов высокой плотности. Липидурия находится в тесной связи с гиперлипидемией и определяется по наличию жировых цилиндров в моче. При НС нарушен фосфорно-кальциевый обмен, метаболизм витамина D. Это выражается в гипокальциемии, гипокальциурии с клиническими признаками тетании, остеопороза, остеомаляции. Показатели свертывающей системы крови изменены при НС в сторону гиперкоагуляции от небольшой степени активности до претромботического состояния, криза локальной или диссеминированной внутрисосудистой коагуляции. Своеобразно изменена при НС система иммунитета, особенности которой зависят больше от основной нефропатии (волчаночный нефрит, амилоидоз, мембранозная нефропатия), чем от степени протеинурии. В клинических анализах крови и мочи имеется ряд своеобразных изменений. В периферической крови наиболее постоянный признак увеличения СОЭ, достигающей при некоторых формах НС 70—85 мм/ч, что зависит от степени диспротеинемии. Умеренная гипохромная анемия быстро нарастает с развитием ХПН. Моча больных до падения функции почек имеет очень высокую плотность (1,030—1,050). Гематурия может сопутствовать НС при геморрагическом васкулите, волчаночном нефрите, гломерулонефрите. Лейкоцитурия не всегда имеет связь с бактериальным воспалением почек; при амилоидном НС основной клеткой мочевого осадка являются нейтрофилы; могут определяться и лимфоциты (10—60 %), что характерно для высокой активности нефропатии. Функции почек при НС обычно нормальные, клубочковая фильтрация может быть даже повышена. В ранних стадиях вторичного НС играют роль острота и тяжесть основного заболевания почек, в поздних стадиях первичного и вторичного НС функции их снижены независимо от признаков обострения. В повседневной практике ведения больных с НС большое значение имеют пробы Зимницкого и Реберга. Реже производится изотопная ренография с 131I-гиппураном, позволяющая уточнить степень поражения канальцев. Метод сканирования имеет значение лишь для исключения очаговой патологии почек (подозрение на опухоль почки или туберкулез у больного с нефротическим синдромом). Уровень креатинина крови повышен лишь при наличии ОПН, ХПН; в то же время азот мочевины увеличен часто, отражая изменения в белковом обмене, состоянии печени, катаболизме белков. НС редко протекает без осложнений. Осложнения зависят от характера основного заболевания. НС осложняется отеком мозга, кровоизлияниями в сетчатку, нефротическим (гиповолемическим) шоком, периферическими флеботромбозами, ишемической болезнью сердца, инсультами, бактериальной, вирусной, грибковой инфекциями различной локализации. Диагностика НС трудностей не вызывает. Прогноз при НС зависит от многих факторов: возраста, характера основного заболевания, клинической формы НС, адекватности применяемых лекарственных средств. Принципы лечения Важное значение имеет ранняя госпитализация для уточнения нозологической формы нефропатии, определения функции почек. Режим — дозированный двигательный для профилактики тромбозов. Показаны ЛФК, санация очагов инфекции, профилактика запоров. Диета — при нормальной функции почек — бессолевая, богатая калием; белок — 1 г на 1 кг массы тела; используются свежие овощи, зелень, лук, томаты для улучшения вкусовых качеств пищи. Пищевые белковые нагрузки, внутривенное введение различных белковых растворов не показано, так как это не уменьшает гипопротеинемию и нередко усиливает протеинурию. Медикаментозное лечение Учитывая гипоальбуминемию, дозы медикаментов при НС должны быть полуторные или двойные: кортикостероиды (преднизолон, дексазон, урбазон и др.) — 1—2 мг на 1 кг массы в сутки до 7—6 нед. с последующим медленным снижением и длительным, в случае наличия эффекта (до 1,6 лет), применением. Показания к назначению кортикостероидов при НС: лекарственная, волчаночная этиология, липоидный нефроз, мембранозная нефропатия, чистая форма НС, НС при гломерулонефритах с минимальными изменениями, мембранозного, мезангиопролиферативного характера. Противопоказано назначение кортикостероидов при смешанной форме НС, при диабетической, опухолевой, тромбогенной нефропатиях, при инфекциях (туберкулез, сифилис), амилоидозе, геморрагическом васкулите, узелковом периартериите, при некоторых морфологических типах гломерулонефритов. При лечении кортикостероидами следует помнить об их осложнениях. Цитостатические препараты (антиметаболиты и алкилирующие): азатиоприн в дозе 2—4 мг/кг, циклофосфан, лейкеран (0,2—0,4 мг/кг) сроком на 6—8 мес. и более. Они, кроме иммунодепрессивного, обладают антипролиферативным действием. Назначаются при наличии противопоказаний к стероидной терапии или ее неэффективности, при смешанной форме НС; можно сочетать с кортикостероидами, что позволяет уменьшить дозы тех и других препаратов. Антикоагулянты: гепарин в дозе от 10 000 до 60 000 ЕД/сут внутривенно или подкожно в области живота и гребня подвздошной кости в течение 6 нед. Со второй половины курса лечения гепарином, после уменьшения дозы, добавляют антикоагулянты непрямого действия (пелентан, фенилин, синкумар и др.). Антикоагулянты оказывают действие на различные фазы свертывания крови, обладают антикомплементарным, натрийуретическим, диуретическим, гипотензивным и даже иммуносупрессивным действием, расширяют сосуды сердца и почек. Лечение антикоагулянтами может осложниться кровотечением, инсультом, гематурией. Антиагреганты — препараты, которые уменьшают агрегацию и адгезию тромбоцитов, улучшают микроциркуляцию, обладают сосудорасширяющим действием. Дипиридамол, трентал, продектин, никотиновая кислота — эти препараты в большинстве случаев назначаются в комплексе с антикоагулянтами и усиливают их действие. Клинически трудно оценить эффективность этих препаратов при самостоятельном применении, поэтому наряду со стероидами, цитостатиками, антикоагулянтами антиагреганты входят в четырехкомпонентную методику лечения наиболее тяжелых больных гломерулонефритами, предложенную P. Кinсaid-Smith (1972). Доза дипиридамола — 225—330 мг/сут в течение 2—3 мес., иногда дольше. Противовоспалительные средства — индометацин, диклофенак, ибупрофен — назначаются при затянувшемся остром нефрите с НС, нефротической и смешанной форме хронического нефрита, реже при волчаночном нефрите. Оценка эффективности этих препаратов спорная. Мембранотропные средства — интал, задитен — применяются у детей, когда предполагают, что в основе нефротического синдрома могут лежать аллергические реакции. Это позволяет в ряде случаев уменьшить дозу и длительность использования преднизолона или отсрочить применение стероидов и цитостатиков при наличии противопоказаний. Интал применяют внутрь или в виде ингаляций, задитен — в разовой дозе 0,025 мг/кг массы 2 раза в день. Симптоматические средства — диуретики — гипотиазид, фуросемид, лазикс, бринальдикс, триампур; реже назначают верошпирон и урегит. Дозы подбираются индивидуально; потенцируют диуретический эффект эуфиллин, диафиллин. Литература Заруцкая Л. П. Дифференциальная диагностика и лечение нефротического синдрома: методич. рекомендации для студентов 6 курса и врачей-интернов. — Волгоград, 1993. — 12 с. Игнатова М. С. Первый опыт использования мембранотропных средств в лечении нефротического синдрома // Тер. архив. — 1991. — № 6. — С. 122. Коровина Н. А. Гломерулонефрит у детей. — М., 1990. Нефрология: руководство для врачей / под ред. И. Е. Тареевой. — 2-е изд. — М. : Медицина, 2000. Терапевтический справочник Вашингтонского университета. — М. : Практика, 2001. The Kidney / Ed. by B. Brenner, W. D. Saunders, 1995."
+          },
+          "index": 28,
+          "name": "Клик - Найдите фактические ошибки в тексте",
+          "prompt": "Найдите фактические ошибки в тексте",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ],
+            "source_grounding": {
+              "primary_unit_id": 14,
+              "primary_unit_title": "Этиология: первичные заболевания (4 пункта)",
+              "score": 0.4462,
+              "shared_fuzzy_token_count": 0,
+              "shared_fuzzy_tokens_sample": [],
+              "shared_number_count": 1,
+              "shared_numbers": [
+                "4"
+              ],
+              "shared_token_count": 4,
+              "shared_tokens_sample": [
+                "4",
+                "заболевани",
+                "первичн",
+                "этиологи"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              6,
+              7,
+              19,
+              31
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в описании этиологии и лечения.",
+            "subtype": "error_detection",
+            "text": "Первичные заболевания, вызывающие нефротический синдром, включают острый пиелонефрит, гломерулонефрит и первичный амилоидоз. При назначении кортикостероидов их суточная доза составляет 3—4 мг на 1 кг массы тела, а продолжительность терапии может достигать 1,6 года."
+          },
+          "index": 29,
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "prompt": "Найдите фактические ошибки в описании этиологии и лечения.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              14,
+              15,
+              16
+            ],
+            "source_grounding": {
+              "primary_unit_id": 16,
+              "primary_unit_title": "Этиология: вторичные неинфекционные (14 пунктов)",
+              "score": 0.08,
+              "shared_fuzzy_token_count": 2,
+              "shared_fuzzy_tokens_sample": [
+                "вторичным~вторичн",
+                "неинфекционным~неинфекционн"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 0,
+              "shared_tokens_sample": [],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.03
+            }
+          },
+          "data": {
+            "error_indices": [
+              13,
+              15,
+              16,
+              19,
+              22
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки: неправильные названия заболеваний.",
+            "subtype": "error_detection",
+            "text": "text: К вторичным неинфекционным заболеваниям, приводящим к нефротическому синдрому, относятся системная красная волчанка, ревматический артрит, узелковый полиартериит, синдром Гудпасчера, диабетическая нефропатия и внутрипочечные опухоли. Но в тексте пользователя после \"системная"
+          },
+          "index": 30,
+          "name": "Клик - Найдите фактические ошибки: неправиль...",
+          "prompt": "Найдите фактические ошибки: неправильные названия заболеваний.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        3,
+        10,
+        14,
+        15,
+        16
+      ],
+      "educational_units_context": [
+        {
+          "assessment_risk": "medium",
+          "description": "Этиология (классификация)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 3,
+          "modality": "text",
+          "title": "Этиология (классификация)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Медикаменты и их дозировки (классификация/факты)",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 10,
+          "modality": "text",
+          "title": "Медикаменты и их дозировки (классификация/факты)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "можно как одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 14,
+          "modality": "text",
+          "title": "Этиология: первичные заболевания (4 пункта)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 15,
+          "modality": "text",
+          "title": "Этиология: вторичные инфекционные (14 пунктов)",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "одна классификация",
+          "evidence": "heuristic extraction from freeform AI response",
+          "explicitness": "inferred",
+          "id": 16,
+          "modality": "text",
+          "title": "Этиология: вторичные неинфекционные (14 пунктов)",
+          "type": "classification"
+        }
+      ],
+      "generation_time_ms": 48096,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "start_after_provider": "openrouter:3",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3,
+              10,
+              14,
+              15,
+              16
+            ],
+            "source_grounding": {
+              "primary_unit_id": 15,
+              "primary_unit_title": "Этиология: вторичные инфекционные (14 пунктов)",
+              "score": 0.1733,
+              "shared_fuzzy_token_count": 1,
+              "shared_fuzzy_tokens_sample": [
+                "этиологическ~этиологи"
+              ],
+              "shared_number_count": 0,
+              "shared_numbers": [],
+              "shared_token_count": 2,
+              "shared_tokens_sample": [
+                "вторичн",
+                "инфекционн"
+              ],
+              "task_language": "ru",
+              "threshold_relaxation": 1.0,
+              "unit_language": "ru",
+              "weak": false,
+              "weak_threshold": 0.05
+            }
+          },
+          "data": {
+            "elements": {
+              "element_1": "Первичные заболевания почек (гломерулонефрит, первичный амилоидоз, хронический пиелонефрит, опухоль почки)",
+              "element_2": "Вторичные инфекционные заболевания (сифилис, малярия, туберкулез, септический эндокардит)",
+              "element_3": "Вторичные неинфекционные заболевания (системная красная волчанка, сахарный диабет, лекарственная болезнь, болезни крови)"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ]
+            },
+            "prompt": "Упорядочить этиологические группы нефротического синдрома по иерархии: от первичных заболеваний к вторичным, с разделением вторичных на инфекционные и неинфекционные"
+          },
+          "index": 31,
+          "name": "Последовательность - Упорядочить этиологические группы неф...",
+          "prompt": "Упорядочить этиологические группы нефротического синдрома по иерархии: от первичных заболеваний к вторичным, с разделением вторичных на инфекционные и неинфекционные",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 7,
+      "click_words": 4,
+      "open_answer": 5,
+      "sequence": 1,
+      "test": 15
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "semantic_duplicate_groups": 0,
+      "semantic_duplicate_tasks": 0,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 32,
+      "source_grounding_warnings": 0,
+      "total_tasks": 32
+    },
+    "total_errors": 0,
+    "total_generated": 32,
+    "total_valid": 32,
+    "total_warnings": 0
+  }
+}

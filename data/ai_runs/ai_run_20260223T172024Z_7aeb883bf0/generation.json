@@ -1,0 +1,108 @@
+{
+  "run_id": "ai_run_20260223T172024Z_7aeb883bf0",
+  "created_at": "2026-02-23T17:20:24Z",
+  "provider_model": null,
+  "material_stats": {
+    "word_count": 7,
+    "char_count": 70,
+    "language": "unknown"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "unknown",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 1,
+        "educational_unit_ids": [
+          1
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 1,
+    "total_valid": 0,
+    "total_warnings": 1,
+    "total_errors": 0,
+    "by_type": {
+      "test": 1
+    },
+    "quality": {
+      "material_language": "unknown",
+      "expected_output_language": "unknown",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 1,
+      "source_grounding_warnings": 1,
+      "total_tasks": 1
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:3",
+          "status": "success",
+          "model": "fake"
+        }
+      ],
+      "educational_unit_ids": [
+        1
+      ],
+      "educational_units_context": [
+        {
+          "id": 1,
+          "title": "?????? ????????? ??? ????????????? ????????",
+          "description": "??????? ? ????????????",
+          "evidence": "????????????? ??????? ?????????????? ???????????? ? ??????? ?????????.",
+          "type": "fact",
+          "explicitness": "explicit",
+          "modality": "text",
+          "assessment_risk": "low"
+        }
+      ],
+      "generation_time_ms": 0,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - ???????????",
+          "type": "test",
+          "status": "warning",
+          "hash": "033eacb212af7ac9c31c41ed22a77be6a0bbe13597a8bd93001105310c4c6498",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Task may be weakly grounded in the selected educational units/evidence; verify source alignment.",
+              "field": "weak_source_grounding"
+            }
+          ],
+          "ai_meta": {
+            "source_grounding": {
+              "primary_unit_id": 1,
+              "primary_unit_title": "?????? ????????? ??? ????????????? ????????",
+              "score": 0.0,
+              "shared_token_count": 0,
+              "shared_number_count": 0,
+              "shared_tokens_sample": [],
+              "shared_numbers": [],
+              "weak": true
+            },
+            "educational_unit_ids": [
+              1
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

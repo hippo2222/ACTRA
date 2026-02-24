@@ -1,0 +1,271 @@
+{
+  "run_id": "bench_Nephr_20260223T090539Z",
+  "created_at": "2026-02-23T09:21:19Z",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 1595,
+    "char_count": 12424,
+    "language": "ru"
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 5,
+        "educational_unit_ids": [
+          2,
+          5
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 5,
+        "educational_unit_ids": [
+          4,
+          5
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 3,
+        "educational_unit_ids": [
+          1,
+          3
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 2,
+        "educational_unit_ids": [
+          5
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 2,
+        "educational_unit_ids": [
+          2,
+          6
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 17,
+    "total_valid": 15,
+    "total_warnings": 2,
+    "total_errors": 0,
+    "by_type": {
+      "test": 5,
+      "click_text": 5,
+      "open_answer": 3,
+      "click_words": 2,
+      "sequence": 2
+    },
+    "quality": {
+      "material_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 17
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        2,
+        5
+      ],
+      "generation_time_ms": 142559,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - Лабораторная диагностика нефротическо...",
+          "type": "test",
+          "status": "valid",
+          "hash": "2203ab0f39be715d8cea1eb8ac7f5902d013b4db70ac31c4a3d1c75132f407a3",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Этиология нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "ce74f873264e8a2cf8172af3d2bc21d925eeb312ba46277708ae53b95d140c57",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Лабораторная диагностика нефротическо...",
+          "type": "test",
+          "status": "valid",
+          "hash": "98c3c029492f85d2c4d64f260c8df3110d496d3bd9aa07e7d09321df8ef463d6",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Этиология нефротического синдрома",
+          "type": "test",
+          "status": "valid",
+          "hash": "a6008ab350c4235bc4db72e2979c4831ded5f1f533a5b91596d4630e3e87be4a",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Лабораторная диагностика нефротическо...",
+          "type": "test",
+          "status": "valid",
+          "hash": "c87e25e3c45d6a5d1a050ca6cfad44f02cc62ef6c5f300e247b3ec503c13d377",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        4,
+        5
+      ],
+      "generation_time_ms": 166673,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Клинические проявления нефротического...",
+          "type": "click",
+          "status": "valid",
+          "hash": "87a220cfe44367f2c0e8f43e86baacc9b9f5828d5caadab6e5c0656dc504e7e5",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Лабораторная диагностика нефротическо...",
+          "type": "click",
+          "status": "valid",
+          "hash": "5ead3ee6e4e60f695c778dfd1fe5ce520ff3f5d924a79d4193b1427225a08a9c",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Клинические проявления нефротического...",
+          "type": "click",
+          "status": "valid",
+          "hash": "9e53349ea8f301c1f38a2b35adc9bb74fb56132707388d39ab24453c1b1b9ada",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Лабораторная диагностика нефротическо...",
+          "type": "click",
+          "status": "valid",
+          "hash": "5eb7b4d009b11e0bfb712d94e23587401922c0dd40ac392fbe379aa6635ad50c",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Клинические проявления нефротического...",
+          "type": "click",
+          "status": "valid",
+          "hash": "d5ed922e3ab433f892775c467a89868700142aa19aab1f03614d9e4e2e5c464e",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        1,
+        3
+      ],
+      "generation_time_ms": 106877,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Что такое нефротический синдром и как...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "9e18c4a6e65d11f3a2ff69796b1077ad6fa57c24fb5167db5ea9ef80d0e5b913",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Какие основные концепции патогенеза н...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "4555d855eeb16bc2c596c8a4e9232c4783105eb160e222fb23f4118a1ec2e476",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Каковы основные вторичные симптомы не...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "f79e100c435fd1f7dca9f8c9aaadd3974140c4a62b8bc81611e5065b4a3bfac7",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        5
+      ],
+      "generation_time_ms": 108064,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Найдите ошибки в описании лабораторны...",
+          "type": "click",
+          "status": "warning",
+          "hash": "3538fe13131b6f46932fbf327a931b64ef6fddc06bd2d79a4ba174dc62f3161f",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        },
+        {
+          "name": "Клик - Найдите ошибки в описании лечения неф...",
+          "type": "click",
+          "status": "warning",
+          "hash": "c845482ac31a0e3fd539be2b0316994850e2150c478a62e565f945456b45c9e1",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "field": "error_spans_count_high"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "success",
+      "provider_used": "openrouter",
+      "educational_unit_ids": [
+        2,
+        6
+      ],
+      "generation_time_ms": 128092,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Последовательность - Упорядочить заболевания, вызывающие н...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "0d64d40e8fc19fbebf9614cebd15826a2885ad3fa94da305fc59de91bd7261aa",
+          "validation_issues": []
+        },
+        {
+          "name": "Последовательность - Упорядочить препараты для лечения неф...",
+          "type": "sequence_assembly",
+          "status": "valid",
+          "hash": "20bd4684388312486716f2ec379f8fb55afb247afdaec6e56e77e910172d4691",
+          "validation_issues": []
+        }
+      ]
+    }
+  ]
+}

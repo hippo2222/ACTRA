@@ -29,6 +29,19 @@
       opacity: 0;
       transform: translateY(-8px);
     }
+
+    /* Page entrance */
+    .s1-page-enter {
+      animation: a-slide-up 0.4s ease-out both;
+    }
+
+    /* Button interactions */
+    .s1-btn {
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    }
+    .s1-btn:active {
+      transform: scale(0.97);
+    }
   </style>
 
   <link href="/assets/tailwind.css" rel="stylesheet" />
@@ -48,7 +61,7 @@
             class="task-chip mb-4 flex items-center justify-between whitespace-nowrap rounded-xl border border-solid border-border-strong bg-surface-1 px-4 py-2 shadow-sm sm:px-6 lg:px-8">
             <div class="flex items-center gap-4 text-text-main">
               <button id="back-to-complexes-btn"
-                class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center gap-1 overflow-hidden rounded-lg bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:bg-bg-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1"
+                class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center gap-1 overflow-hidden rounded-lg bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:bg-bg-disabled focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn"
                 type="button">
                 <span aria-hidden="true">←</span>
                 <span>К списку</span>
@@ -67,11 +80,13 @@
             <div class="flex items-start gap-4">
               <div class="flex items-center gap-2">
                 <button id="check-answer-btn"
-                  class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100">
+                  class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100 s1-btn"
+                  type="button">
                   <span class="truncate">Проверить ответ</span>
                 </button>
                 <button id="next-task-btn"
-                  class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-4 text-sm font-bold leading-normal tracking-[0.015em] text-text-main disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100">
+                  class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-4 text-sm font-bold leading-normal tracking-[0.015em] text-text-main disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100 s1-btn"
+                  type="button">
                   <span class="truncate">Следующее</span>
                 </button>
               </div>
@@ -90,7 +105,8 @@
                 </div>
               </div>
               <button id="finish-complex-btn"
-                class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100">
+                class="flex h-10 min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg border-2 border-border-strong bg-primary px-4 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg disabled:cursor-default disabled:border-border-strong disabled:bg-primary-light disabled:text-text-main dark:disabled:text-primary-fg disabled:opacity-100 s1-btn"
+                type="button">
                 <span class="truncate">Завершить комплекс</span>
               </button>
             </div>
@@ -124,16 +140,16 @@
                     class="hidden h-10 w-10 animate-spin rounded-full border-2 border-primary-light border-t-primary">
                   </div>
                   <button id="pause-confirm-continue" type="button"
-                    class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1">
+                    class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn">
                     Продолжить выполнение
                   </button>
                   <button id="pause-confirm-submit" type="button"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70">
+                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
                     Поставить на паузу и выйти
                   </button>
 
                   <button id="pause-confirm-discard" type="button"
-                    class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-error-dark px-4 py-2 text-sm font-semibold text-error-lighter transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70">
+                    class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-error-dark px-4 py-2 text-sm font-semibold text-error-lighter transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
                     Выйти без сохранения
                   </button>
                 </div>
@@ -162,18 +178,18 @@
                     class="hidden h-10 w-10 animate-spin rounded-full border-2 border-primary-light border-t-primary">
                   </div>
                   <button id="resume-exit-btn" type="button"
-                    class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1">
+                    class="inline-flex items-center justify-center rounded-lg border border-border-strong bg-surface-2 px-4 py-2 text-sm font-semibold text-text-main transition hover:bg-bg-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 s1-btn">
                     Выйти к списку
                   </button>
                   <button id="resume-continue-btn" type="button"
-                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70">
+                    class="inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-fg transition hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
                     Возобновить
                   </button>
                 </div>
               </div>
             </div>
             <!-- Task header + content (без дополнительной белой карточки) -->
-            <div class="p-4 @container">
+            <div class="p-4 @container s1-page-enter">
               <div id="task-header-block" class="mb-4 flex flex-col gap-1">
                 <p class="text-xs font-semibold uppercase tracking-wide text-text-secondary">
                   Задание
@@ -243,6 +259,7 @@
     <script src="/ui/S1/draft-storage.js"></script>
     <script src="/ui/S1/config.js"></script>
     <script src="/ui/S1/task-renderer.js"></script>
+    <script src="/ui/S1/success-effects.js"></script>
     <script src="/ui/S1/session_validation.js"></script>
     <script src="/ui/S1/session-controls.js"></script>
     <script src="/ui/S1/main.js"></script>

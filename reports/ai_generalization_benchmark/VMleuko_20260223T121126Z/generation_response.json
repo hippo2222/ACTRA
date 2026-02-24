@@ -1,0 +1,2095 @@
+{
+  "ai_run_id": "bench_VMleuko_20260223T121126Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42485,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42468,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42438,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42427,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42397,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42388,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42377,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42363,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42354,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42325,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 42297,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        8,
+        10,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        19,
+        20,
+        23,
+        2,
+        7,
+        9,
+        11,
+        18,
+        21,
+        22,
+        24
+      ],
+      "generation_time_ms": 57451,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42485,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42468,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42438,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Визначення гострої лейкемії",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Це злоякісна пухлина кровотворної тканини, морфологічним субстратом якої є незрілі бластні клітини."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гострі лейкемії поділяються на лімфобластні та нелімфобластні (мієлобластні)."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Це хронічне захворювання, що характеризується поступовим накопиченням зрілих лейкоцитів."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Основою є утворення зрілих лімфоцитів у периферичних органах кровотворення."
+                  }
+                ],
+                "id": 0,
+                "text": "Яке з наведених тверджень є правильним визначенням гострої лейкемії?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 0,
+          "name": "Задание - Визначення гострої лейкемії",
+          "prompt": "Визначення гострої лейкемії",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Класифікація FAB для мієобластних лейкемій",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "М3 – гостра промієлоцитарна лейкемія."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "М5 – гостра моноцитарна лейкемія."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "М7 – гостра мегакаріобластна лейкемія."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "M8 – гостра еозинофільна лейкемія."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "M9 – гостра базофільна лейкемія."
+                  }
+                ],
+                "id": 0,
+                "text": "Які варіанти входять до класифікації FAB гострої мієлобластної лейкемії? (виберіть всі правильні)"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 1,
+          "name": "Задание - Класифікація FAB для мієобластних лей...",
+          "prompt": "Класифікація FAB для мієобластних лейкемій",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Клінічні синдроми гострої лейкемії",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гіперпластичний синдром (наприклад, гепатолієнальний, лімфопластичний)."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Геморагічний синдром."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Анемічний синдром."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Синдром хронічної втоми."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Синдром метаболічного ацидозу."
+                  }
+                ],
+                "id": 0,
+                "text": "Які з перелічених синдромів є класичними проявами гострої лейкемії в розгорнутому періоді? (виберіть всі правильні)"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 2,
+          "name": "Задание - Клінічні синдроми гострої лейкемії",
+          "prompt": "Клінічні синдроми гострої лейкемії",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Мієлопоез та лімфопоез",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Мієлопоез – це утворення всіх формених елементів крові, крім лімфоцитів, а лімфопоез – утворення лімфоцитів."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Мієлопоез відбувається переважно в кістковому мозку, а лімфопоез – у периферичних лімфоїдних органах."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Мієлопоез утворює лише гранулоцити, а лімфопоез – лише моноцити."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфопоез включає утворення еритроцитів і тромбоцитів."
+                  }
+                ],
+                "id": 0,
+                "text": "Яке з наведених тверджень точно відображає відмінність мієлопоезу від лімфопоезу?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 3,
+          "name": "Задание - Мієлопоез та лімфопоез",
+          "prompt": "Мієлопоез та лімфопоез",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Поліпотентність стовбурових клітин",
+            "question_count": 5,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Вони можуть давати початок всім форменим елементам крові."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Частина з них здатна до самовідновлення і утворення колоній."
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Більшість (90%) перебувають у стані спокою (G0-фаза)."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Вони є остаточно диференційованими клітинами, що не діляться."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Вони утворюються виключно в тимусі."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Центральные органы гемопоэза: костный мозг и тимус."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Локализация и масса костного мозга."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Классификация FAB для миелобластных (M0-M7) и лимфобластных (L1-L3) лейкемий."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Классификация клеток гемопоэза по стадиям I-VI."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Этиологические факторы: ионизирующее излучение, химические вещества, вирусная инфекция, генетические дефекты."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Патогенез: этапы формирования клона."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лабораторные показатели при острых лейкозах."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Методы диагностики: цитохимия, иммунофенотипирование, цитогенетика."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Особенности лимфобластного и миелобластного лейкозов."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Полipotентность стромальных клеток."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стадии острого лейкоза."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Факторы, стимулирующие и подавляющие гемопоэз."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Клиническая картина, синдромы."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лечение и т.д."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[23] Этиологические факторы"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[22] FAB для лимфобластных"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[2] Классификация клеток гемопоэза"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[7] FAB для миелобластных и лимфобластных — но это объединяет, так что, возможно, лучше выбрать одну."
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[13] Лабораторные показатели"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[14] Методы диагностики"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[17] Органы гемопоэза"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[12] Особенности лімфобластного и мієобластного лейкозу"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[19] Поліпотентність стовбурових клітин"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[10] Стадії гострого лейкозу"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[4] Факторы, стимулирующие и подавляющие гемопоэз"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "[9] Патогенез гострих лейкемій"
+                  }
+                ],
+                "id": 0,
+                "text": "Які властивості характерні для поліпотентних стовбурових клітин кісткового мозку? (виберіть всі правильні)"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Ионизирующее излучение"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Химические вещества"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Вирусная инфекция"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бактериальная инфекция"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Аутоиммунные заболевания"
+                  }
+                ],
+                "id": 1,
+                "text": "Какие из следующих факторов относятся к этиологическим факторам острых лейкемий?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Ионизирующее излучение"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Химические вещества (например, бензол)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Вирусная инфекция (вирус Эпштейна-Барра, HTLV)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Аутоиммунные заболевания"
+                  }
+                ],
+                "id": 2,
+                "text": "Какие из перечисленных факторов являются установленными этиологическими факторами острых лейкемий?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Ионизирующее излучение"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Химические вещества (бензол, пестициды)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Бактериальные инфекции"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Вирусная инфекция (вирус Эпштейна-Барра)"
+                  }
+                ],
+                "id": 3,
+                "text": "Какой из перечисленных факторов НЕ является этиологическим фактором острых лейкемий согласно приведенному материалу?"
+              },
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Ионизирующее излучение"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Химические вещества (бензол, пестициды)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Питание и диета"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Физическая активность"
+                  }
+                ],
+                "id": 4,
+                "text": "Какие из перечисленных факторов упоминаются в материале как этиологические факторы острых лейкемий?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 4,
+          "name": "Задание - Поліпотентність стовбурових клітин",
+          "prompt": "Поліпотентність стовбурових клітин",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Органы гемопоэза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Костный мозг"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Тимус"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезёнка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лимфатические узлы"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие органы относятся к центральным органам гемопоэза?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 5,
+          "name": "Задание - Органы гемопоэза",
+          "prompt": "Органы гемопоэза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Классификация стадий гемопоэза",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "6"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "4"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "8"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "5"
+                  }
+                ],
+                "id": 0,
+                "text": "Сколько классов клетов выделяют в каждом из направлений дифференцировки гемопоэза?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 6,
+          "name": "Задание - Классификация стадий гемопоэза",
+          "prompt": "Классификация стадий гемопоэза",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Этиология острых лейкемий",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Ионизирующее излучение"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Химические вещества (бензол, пестициды)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Высокое потребление сахара"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Длительный стресс"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных факторов являются установленными этиологическими факторами острых лейкемий?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 7,
+          "name": "Задание - Этиология острых лейкемий",
+          "prompt": "Этиология острых лейкемий",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Патогенез острых лейкозов",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Мутация родоначальной клетки с приобретением способности к быстрой пролиферации"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Метастазирование зрелых лейкоцитов в другие органы"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Прямое повреждение ДНК вирусом Эпштейна-Барр"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Активация апоптоза в гемопоэтических клетках"
+                  }
+                ],
+                "id": 0,
+                "text": "Что происходит на первом этапе формирования лейкозного клона?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 8,
+          "name": "Задание - Патогенез острых лейкозов",
+          "prompt": "Патогенез острых лейкозов",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              3,
+              4,
+              5,
+              6,
+              8,
+              10,
+              12,
+              13,
+              14,
+              15,
+              16,
+              17,
+              19,
+              20,
+              23,
+              2,
+              7,
+              9,
+              11,
+              18,
+              21,
+              22,
+              24
+            ]
+          },
+          "data": {
+            "prompt": "Лечение острых лейкемий",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Индукция ремиссии"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Консолидация"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Поддерживающая терапия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Трансплантация костного мозга"
+                  }
+                ],
+                "id": 0,
+                "text": "Какой этап цитостатической терапии направлен на достижение первой ремиссии?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 9,
+          "name": "Задание - Лечение острых лейкемий",
+          "prompt": "Лечение острых лейкемий",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        9,
+        24,
+        2,
+        7,
+        11,
+        18,
+        21,
+        22
+      ],
+      "generation_time_ms": 49665,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42427,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42397,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42388,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24,
+              2,
+              7,
+              11,
+              18,
+              21,
+              22
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "M3 соответствует острому промиелоцитарному лейкозу."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "L3 характеризуется бластными клетками типа клеток при лимфоме Беркитта."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "M5 соответствует острому моноцитарному лейкозу."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "M6 соответствует острому моноцитарному лейкозу."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "L1 чаще встречается у взрослых, а L2 — у детей."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "В классификации FAB для миелоидных лейкозов выделяют 5 подтипов (M1-M5)."
+              }
+            ],
+            "prompt": "Какие утверждения о классификации FAB острых лейкозов являются верными?",
+            "subtype": "error_detection"
+          },
+          "index": 10,
+          "name": "Клик - Какие утверждения о классификации FAB...",
+          "prompt": "Какие утверждения о классификации FAB острых лейкозов являются верными?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24,
+              2,
+              7,
+              11,
+              18,
+              21,
+              22
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Первый лейкозный клон сохраняет способность к дифференцировке (доброкачественный рост)."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Формирование вторичного лейкозного клона связано с накоплением дополнительных мутаций."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Соматические мутации затрагивают клетки-предшественницы гемопоэтической и лимфоидной тканей."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Вторичный лейкозный клон менее агрессивен, чем первичный."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Ионизирующее излучение не является этиологическим фактором острых лейкозов."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Пролиферация лейкозных клеток происходит преимущественно в периферических органах кроветворения."
+              }
+            ],
+            "prompt": "Какие утверждения о патогенезе острых лейкозов являются верными?",
+            "subtype": "error_detection"
+          },
+          "index": 11,
+          "name": "Клик - Какие утверждения о патогенезе острых...",
+          "prompt": "Какие утверждения о патогенезе острых лейкозов являются верными?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24,
+              2,
+              7,
+              11,
+              18,
+              21,
+              22
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Стовбуровые клетки (I класс) полipotентны и могут давать начало всем форменным элементам крови."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Наполовинустовбуровые клетки (II класс) чувствительны к стимуляторам гемопоэза, таким как эритропоэтин."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Унипотентные клетки (III класс) могут дифференцироваться только в одном направлении."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Бласты (IV класс) способны к самовосстановлению и образованию колоний."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Зрелые клетки (VI класс) активно делятся и имеют специфические функции."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Клетки, созревающие (V класс), не имеют промежуточных морфологических форм."
+              }
+            ],
+            "prompt": "Какие утверждения о классификации стадий клеток гемопоэза верны?",
+            "subtype": "error_detection"
+          },
+          "index": 12,
+          "name": "Клик - Какие утверждения о классификации ста...",
+          "prompt": "Какие утверждения о классификации стадий клеток гемопоэза верны?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24,
+              2,
+              7,
+              11,
+              18,
+              21,
+              22
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Геморрагический синдром обусловлен тромбоцитопенией и повышением проницаемости сосудов."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Интоксикационный синдром вызван повышенным распадом лейкозных клеток."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Иммунодефицитный синдром связан с функциональной неполноценностью лейкоцитов."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Анемический синдром вызывается избыточным образованием лейкоцитов."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Гиперпластический синдром включает увеличение печени и селезёнки (гепатолиенальный синдром)."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "При остром лейкозе всегда наблюдается лейкоцитоз в периферической крови."
+              }
+            ],
+            "prompt": "Какие утверждения о клинических синдромах при острых лейкозах верны?",
+            "subtype": "error_detection"
+          },
+          "index": 13,
+          "name": "Клик - Какие утверждения о клинических синдр...",
+          "prompt": "Какие утверждения о клинических синдромах при острых лейкозах верны?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        9,
+        24
+      ],
+      "generation_time_ms": 14864,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42377,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "полупотентные стволовые клетки",
+              "клон",
+              "пролиферация",
+              "мутация",
+              "костный мозг"
+            ],
+            "question": "Какие клетки являются родоначальными в процессе гемопоэза и какова их роль в формировании клонов?",
+            "reference_answer": "Полупотентные стволовые клетки, находящиеся в костном мозге, являются родоначальными. При мутации они приобретают способность к активной пролиферации, образуя клон идентичных клеток-потомков."
+          },
+          "index": 14,
+          "name": "Открытый ответ - Какие клетки являются родоначальными ...",
+          "prompt": "Какие клетки являются родоначальными в процессе гемопоэза и какова их роль в формировании клонов?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "соматические мутации",
+              "первичный лейкозный клон",
+              "вторичный лейкозный клон",
+              "пролиферация",
+              "дифференцировка"
+            ],
+            "question": "Опишите основные этапы патогенеза острой лейкемии с точки зрения формирования лейкозного клона.",
+            "reference_answer": "Первый этап: соматическая мутация в клетке-предшественнице кроветворной ткани, приводящая к образованию первичного лейкозного клона с сохраненной способностью к дифференцировке. Второй этап: накопление дополнительных мутаций в клетках первичного клона, формирование вторичного лейкозного клона, который активно пролиферирует и теряет способность к созреванию (дифференцировке)."
+          },
+          "index": 15,
+          "name": "Открытый ответ - Опишите основные этапы патогенеза ост...",
+          "prompt": "Опишите основные этапы патогенеза острой лейкемии с точки зрения формирования лейкозного клона.",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "ионизирующая радиация",
+              "химические канцерогены",
+              "вирусная инфекция",
+              "соматические мутации",
+              "апоптоз"
+            ],
+            "question": "Какие факторы способствуют инициированию мутаций в клетках-предшественницах, приводящих к формированию лейкозного клона?",
+            "reference_answer": "К инициирующим факторам относятся ионизирующая радиация, химические канцерогены (бензол, пестициды), некоторые вирусы (вирус Эпштейна-Барр, HTLV) и генетические дефекты. Эти факторы вызывают соматические мутации в генах, регулирующих пролиферацию и апоптоз."
+          },
+          "index": 16,
+          "name": "Открытый ответ - Какие факторы способствуют инициирова...",
+          "prompt": "Какие факторы способствуют инициированию мутаций в клетках-предшественницах, приводящих к формированию лейкозного клона?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "первичный лейкозный клон",
+              "вторичный лейкозный клон",
+              "дифференцировка",
+              "пролиферация",
+              "злокачественный рост"
+            ],
+            "question": "В чём принципиальное различие между первичным и вторичным лейкозными клонами с точки зрения их биологических свойств?",
+            "reference_answer": "Клетки первичного лейкозного клона сохраняют способность к дифференцировке (доброкачественный рост). Клетки вторичного лейкозного клона, сформировавшиеся после накопления дополнительных мутаций, не только активно пролиферируют, но и полностью утративают способность к созреванию (злокачественный рост)."
+          },
+          "index": 17,
+          "name": "Открытый ответ - В чём принципиальное различие между п...",
+          "prompt": "В чём принципиальное различие между первичным и вторичным лейкозными клонами с точки зрения их биологических свойств?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              9,
+              24
+            ]
+          },
+          "data": {
+            "keywords": [
+              "пролиферация",
+              "инфильтрация",
+              "анемия",
+              "тромбоцитопения",
+              "интоксикация",
+              "нейтропения"
+            ],
+            "question": "Как формирование и рост лейкозного клона в костном мозге приводят к развитию основных клинических синдромов острой лейкемии?",
+            "reference_answer": "Массивная пролиферация лейкозных бластов вытесняет нормальные ростки кроветворения, вызывая анемию, тромбоцитопению и нейтропению. Инфильтрация тканей и органов (лимфоузлы, печень, селезенка, ЦНС) формирует гиперпластический синдром. Массовый распад бластов приводит к интоксикации. Нарушение иммунитета и тромбоцитопения вызывают инфекции и геморрагии."
+          },
+          "index": 18,
+          "name": "Открытый ответ - Как формирование и рост лейкозного кл...",
+          "prompt": "Как формирование и рост лейкозного клона в костном мозге приводят к развитию основных клинических синдромов острой лейкемии?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        17,
+        18,
+        19,
+        21,
+        22,
+        23,
+        24
+      ],
+      "generation_time_ms": 65737,
+      "parsing_errors": [
+        "Задание #1: не указаны индексы ошибок (используйте 'индексы: 1, 3' в промпте или [слово] в тексте)",
+        "Repair-pass incomplete for CLICK_WORDS: requested 4, obtained 1."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42363,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42354,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42325,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              17,
+              18,
+              19,
+              21,
+              22,
+              23,
+              24
+            ]
+          },
+          "data": {
+            "error_indices": [
+              122,
+              123,
+              434,
+              439,
+              442,
+              551,
+              552,
+              554,
+              555,
+              620,
+              621,
+              623,
+              624,
+              722,
+              723,
+              725,
+              726,
+              732,
+              733,
+              763,
+              764,
+              787,
+              788,
+              789,
+              828,
+              829,
+              831,
+              832,
+              839,
+              840,
+              868,
+              869,
+              944,
+              945,
+              949,
+              950,
+              957,
+              958,
+              962,
+              963,
+              970,
+              975,
+              976,
+              1022,
+              1023,
+              1029,
+              1030,
+              1054,
+              1055,
+              1056,
+              1089,
+              1090,
+              1092,
+              1130,
+              1131,
+              1132,
+              1141,
+              1142,
+              1172,
+              1173,
+              1174,
+              1182,
+              1183,
+              1276,
+              1313
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в описании классификации стадій диференціровки клітин гемопоезу.",
+            "subtype": "error_detection",
+            "text": "I. стовбурові клітини: діляться рідко; олігопотентні – можуть бути попередниками мієлопоезу або лімфопоезу; чутливі до стимуляторів гемопоезу. II. напівстовбурові клітини: поліпотентні – можуть давати початок всім форменим елементам крові; комітіровані. III. уніпотентні клітини: можуть диференціюватися лише в одному напрямку; поліпотентні. IV. Бласти: мають більший розмір, світліші ядро та цитоплазму; здатні самовідновлюватися. Спочатку потрібно проаналізувати наданий матеріал та визначити ключові освітні одиниці, на які потрібно зробити акцент. За вказівками, потрібно охопити: 1. Класифікація FAB для мієобластних лейкемій (classification) — перелік М0-М7. 2. Етіологічні фактори (fact) — перелік a-d. 3. Патогенез (форми клону) (process) — опис етапів мутацій. Також потрібно створити два блоки завдань @CLICK_WORDS, кожен з 2-4 фактичними помилками. Помилки мають бути підмінами фактів: неправильні числа, переплутані терміни, інверсії. Ошібочні фрагменти обгорнуті в квадратні дужки. Текст має бути зв'язним параграфом з 2-4 речень. Перевіримо матеріал на відповідні факти: - Класифікація FAB для мієобластних лейкемій: М0-М7, як перелічено. - Етіологічні фактори: a. Іонізуюча радіація, b. Хімічні речовини, c. Вірусна інфекція, d. Генетичні дефекти. - Патогенез: описує формування клону через мутації, первинний клон (доброякісний), вторинний клон (злоякісний) через додаткові мутації. Тепер потрібно створити два параграфи, кожен з 2-4 речень, з 2-4 помилками, що стосуються цих тем. Важливо, щоб помилки були неочевидні без знання матеріалу. Розглянемо можливі помилки: 1. Для класифікації FAB: можна переплутати номери, наприклад, сказати, що М3 — це моноцитарна, а М5 — промієлоцитарна. Або неправильно вказати кількість типів (наприклад, сказати 6 замість 7). 2. Для етіології: помилки в переліку факторів, наприклад, замінити HTLV на інший вірус, або додати неправильний фактор. 3. Для патогенезу: неправильна послідовність етапів, наприклад, сказати, що вторинний клон первинний, або що мутації відбуваються в зрілих клітинах. Також потрібно уникати дублювання між блоками. Один блок може охоплювати класифікацію FAB, інший — етіологію та патогенез, або поєднання. Враховуючи, що потрібно 2 блоки, і кожен має мати 2-4 помилки, спробую створити: **Блок 1:** Зосереджений на класифікації FAB та, можливо, патогенезі. **Блок 2:** Зосереджений на етіології та, можливо, інших аспектах. Але за критеріями потрібно охопити перелічені одиниці, тому краще розподілити так: - Блок 1: Класифікація FAB (помилки в номерах або назвах) та, можливо, щось інше. - Блок 2: Етіологія (помилки в факторах) та патогенез (помилки в описі етапів). Але в кожному блоці має бути 2-4 помилки. Отже, можна зробити: **Блок 1:** Текст про класифікацію FAB з 2-3 помилками в назвах типів. **Блок 2:** Текст про етіологію та патогенез з 2-3 помилками. Переконаюся, що помилки саме фактичні, а не орфографічні. Також потрібно, щоб текст був зв'язним параграфом. Тобто, 2-4 речення, що логічно пов'язані. Спробую сформулювати: **Блок 1 (FAB класифікація):** У морфологічній FAB класифікації гострої мієлобластної лейкемії виділяють 6 типів: М0, М1, М2, М3, М4, М5 та М6. М3 відповідає моноцитарній лейкемії, а М5 — промієлоцитарній. М7 не входять до класифікації, оскільки це окремий вид лейкемії. Перевіримо факти: - У матеріалі: М0-М7, всього 7 типів. Тут сказано 6 типів, але перелічено М0-М6, і додано, що М7 не входять. Це помилка: М7 є частиною класифікації (мегакаріобластна). Також помилка в тому, що М3 — це промієлоцитарна, а М5 — моноцитарна. У матеріалі: М3 — промієлоцитарна, М5 — моноцитарна. Тут навпаки. І ще помилка: сказано, що М7 не входять, але вони входять. Це три помилки. Можна обробити. Але потрібно 2-4 помилки. Тут три. Добре. **Блок 2 (етіологія та патогенез):** Етіологічні фактори гострих лейкемій включають іонізуючу радіацію, хімічні речовини, вірусну інфекцію та генетичні дефекти. Серед вірусів особливу роль відіграє вірус Епштейна-Бара та ретровірус HTLV-1. Патогенез починається з мутації в зрілих лейкоцитах, що призводить до формування первинного клону, який зберігає здатність до диференціювання. Згодом, через додаткові мутації, утворюється вторинний клон, який втрачає здатність до диференціювання та набуває злоякісних властивостей. Перевіримо факти: - Етіологія: у матеріалі: a. Іонізуюча радіація, b. Хімічні речовини, c. Вірусна інфекція (вірус Епштейна-Бара, ретровірус HTLV), d. Генетичні дефекти. Тут правильно перелічено, але помилки в квадратних дужках: вірус Епштейна-Бара та ретровірус HTLV-1. У матеріалі просто \"ретровірус HTLV\", без \"-1\". Але це може бути занадто дрібною помилкою? Краще зробити більш суттєву помилку. Наприклад, сказати, що вірус Епштейна-Бара не зв'язаний, або додати інший вірус. Або помилка в патогенезі: мутація відбувається в зрілих лейкоцитах, а за матеріалом — у клітин-попередниць кровотворної та лімфоїдної тканин. Також: первинний клон зберігає здатність до диференціювання (доброякісний), вторинний втрачає (злоякісний). У тексті сказано правильно, але в квадратних дужках нічого не виділено. Потрібно виділити помилкові фрагменти. Переглянемо блок 2: \"Етіологічні фактори гострих лейкемій включають іонізуючу радіацію, хімічні речовини, вірусну інфекцію та генетичні дефекти. Серед вірусів особливу роль відіграє вірус Епштейна-Бара та ретровірус HTLV-1. Патогенез починається з мутації в зрілих лейкоцитах, що призводить до формування первинного клону, який зберігає здатність до диференціювання. Згодом, через додаткові мутації, утворюється вторинний клон, який втрачає здатність до диференціювання та набуває злоякісних властивостей.\" Помилки: 1. вірус Епштейна-Бара — у матеріалі він є, але можна сказати, що це не вірус, а? Ні, він є. Можна замінити на інший вірус, наприклад, вірус імунодефіциту людини (ВІЛ), який не вказаний як фактор. Але в матеріалі чітко: вірус Епштейна-Бара та HTLV. Тому якщо сказати, що ВІЛ — це фактор, то це помилка. Але в тексті сказано \"вірус Епштейна-Бара\", що правильно. Треба змінити на неправильний. Наприклад: вірус грипу або вірус ВІЛ. Але краще зробити помилку в терміні: ретровірус HTLV-1 — у матеріалі просто HTLV, без \"-1\". Але це дрібниця. Можна сказати, що HTLV-2, але це не суттєво. Краще зробити помилку в патогенезі. У патогенезі: \"мутації в зрілих лейкоцитах\" — за матеріалом: \"під впливом етіологічних факторів відбуваються соматичні мутації клітин-попередниць кровотворної та лімфоїдної тканин\". Тобто мутації в клітин-попередниць, а не у зрілих лейкоцитах. Це суттєва помилка. Також можна помилку в описі клонів: первинний клон — доброякісний, вторинний — злоякісний. У тексті сказано правильно, але якщо виділити щось інше? Наприклад, сказати, що первинний клон вже злоякісний. Але в тексті не виділено. Треба виділити помилкові фрагменти. Отже, для блоку 2 можна зробити такі помилки: - вірус Епштейна-Бара — замінити на вірус ВІЛ (не є фактором за матеріалом). - зрілих лейкоцитах — замінити на зрілих еритроцитах або щось інше, але краще на клітинах-попередниках? Ні, треба неправильне. Наприклад, зрілих лейкоцитах — це неправильно, бо мутації в клітин-попередниць. Тож виділити \"зрілих лейкоцитах\" як помилкове. - Можна ще помилку в тому, що вторинний клон зберігає здатність до диференціювання? У тексті сказано \"втрачає\", що правильно. Тож не виділяти. Але потрібно 2-4 помилки. У блоці 2 зараз дві помилки: вірус Епштейна-Бара (якщо замінимо на ВІЛ) і зрілих лейкоцитах. Але \"вірус Епштейна-Бара\" сам по собі не помилка, якщо залишити як є. Треба змінити на неправильний фактор. Наприклад: \"серед вірусів особливу роль відіграє вірус гепатиту B та ретровірус HTLV.\" Але в матеріалі тільки EBV та HTLV. Тож вірус гепатиту B не вказаний. Це буде помилкою. Або можна зробити помилку в переліку етіологічних факторів: сказати, що до них належать бактеріальні інфекції або паразити. Але в тексті вже є перелік, і потім конкретні віруси. Можна виділити неправильний вірус. Отже, для блоку 2: \"Етіологічні фактори гострих лейкемій включають іонізуючу радіацію, хімічні речовини, вірусну інфекцію та генетичні дефекти. Серед вірусів особливу роль відіграє вірус гепатиту B та ретровірус HTLV. Патогенез починається з мутації в зрілих лейкоцитах, що призводить до формування первинного клону, який зберігає здатність до диференціювання. Згодом, через додаткові мутації, утворюється вторинний клон, який втрачає здатність до диференціювання та набуває злоякісних властивостей.\" Помилки: 1. вірус гепатиту B — не є фактором за матеріалом. 2. зрілих лейкоцитах — мутації відбуваються в клітин-попередниць, а не у зрілих лейкоцитах. Це дві помилки. Можна додати третю, наприклад, сказати, що первинний клон вже злоякісний, але в тексті сказано \"зберігає здатність до диференціювання\", що правильно. Тож не виділяти. Але потрібно 2-4 помилки. Дві — нормально. Але можна зробити три. Наприклад, додати помилку в тому, що вторинний клон зберігає здатність до диференціювання? Але в тексті сказано \"втрачає\". Тож якщо виділити \"зберігає\" замість \"втрачає\"? Але в тексті написано \"втрачає\". Треба змінити текст так, щоб була помилка. Можна перефразувати: \"Згодом, через додаткові мутації, утворюється вторинний клон, який зберігає здатність до диференціювання та набуває злоякісних властивостей.\" Але це суперечить логіці: якщо зберігає диференціювання, то не злоякісний. Але в матеріалі: вторинний клон втрачає здатність до диференціювання. Тож \"зберігає\" — помилка. Але тоді в тексті буде: \"який зберігає здатність до диференціювання\". Це помилка. Отже, для блоку 2 можна зр"
+          },
+          "index": 19,
+          "name": "Клик - Найдите фактические ошибки в описании...",
+          "prompt": "Найдите фактические ошибки в описании классификации стадій диференціровки клітин гемопоезу.",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        2,
+        10,
+        18,
+        21,
+        22
+      ],
+      "generation_time_ms": 10192,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 42297,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              2,
+              10,
+              18,
+              21,
+              22
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "М0 – гостра мієлобластна лейкемія з недиференційованими бластними клітинами.",
+              "element_2": "М1 – гостра мієлобластна лейкемія без ознак дозрівання бластів.",
+              "element_3": "М2 – гостра мієлобластна лейкемія з ознаками дозрівання бластів.",
+              "element_4": "М3 – гостра промієлоцитарна лейкемія.",
+              "element_5": "М4 – гостра мієломоноцитарна лейкемія.",
+              "element_6": "М5 – гостра моноцитарна лейкемія.",
+              "element_7": "М6 – гостра еритролейкемія.",
+              "element_8": "М7 – гостра мегакаріобластна лейкемія."
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ],
+              "5": [
+                "element_5"
+              ],
+              "6": [
+                "element_6"
+              ],
+              "7": [
+                "element_7"
+              ],
+              "8": [
+                "element_8"
+              ]
+            },
+            "prompt": "Расположите варианты острой миелобластной лейкемии по классификации FAB в порядке возрастания номера."
+          },
+          "index": 20,
+          "name": "Последовательность - Расположите варианты острой миелоблас...",
+          "prompt": "Расположите варианты острой миелобластной лейкемии по классификации FAB в порядке возрастания номера.",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 4,
+      "click_words": 1,
+      "open_answer": 5,
+      "sequence": 1,
+      "test": 10
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 21
+    },
+    "total_errors": 0,
+    "total_generated": 21,
+    "total_valid": 20,
+    "total_warnings": 1
+  }
+}

@@ -1,0 +1,1836 @@
+{
+  "ai_run_id": "bench_VMleuko_20260223T124847Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 40110,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 40093,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39990,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39946,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 5,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39901,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39888,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39872,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39864,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39685,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39658,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39605,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39593,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 39543,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 2,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 2,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 2,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        15
+      ],
+      "generation_time_ms": 163978,
+      "parsing_errors": [
+        "Overgeneration trimmed for TEST: requested 8, kept 8, dropped 11."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 40110,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 40093,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39990,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Мієлопоез та лімфопоез",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Утворення всіх формених елементів крові, крім лімфоцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення лише лімфоцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення лише еритроцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення лише тромбоцитів"
+                  }
+                ],
+                "id": 0,
+                "text": "Що таке мієлопоез?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 0,
+          "name": "Задание - Мієлопоез та лімфопоез",
+          "prompt": "Мієлопоез та лімфопоез",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Мієлопоез та лімфопоез",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Утворення лімфоцитів (В- і Т-клітин)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення всіх формених елементів крові, крім лімфоцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення лише еритроцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення лише тромбоцитів"
+                  }
+                ],
+                "id": 0,
+                "text": "Що таке лімфопоез?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 1,
+          "name": "Задание - Мієлопоез та лімфопоез",
+          "prompt": "Мієлопоез та лімфопоез",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Класифікація лейкоцитів",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Нейтрофіли, еоінофіли, базофіли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфоцити, моноцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Еритроцити, тромбоцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бласти, промієлоцити"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини відносяться до гранулоцитів?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 2,
+          "name": "Задание - Класифікація лейкоцитів",
+          "prompt": "Класифікація лейкоцитів",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Класифікація лейкоцитів",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Лімфоцити, моноцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Нейтрофіли, еоінофіли, базофіли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Еритроцити, тромбоцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бласти, промієлоцити"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини відносяться до агранулоцитів?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 3,
+          "name": "Задание - Класифікація лейкоцитів",
+          "prompt": "Класифікація лейкоцитів",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Этиология острых лейкозов",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Ионизирующая радиация"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Химические вещества (бензол, пестициды)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Вирусная инфекция (вирус Эпштейна-Барра, HTLV)"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Генетические дефекты и хромосомные аномалии"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бактериальные инфекции (например, стрептококковая)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Аутоиммунные заболевания"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных факторов являются установленными этиологическими причинами острых лейкозов? Выберите несколько."
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 4,
+          "name": "Задание - Этиология острых лейкозов",
+          "prompt": "Этиология острых лейкозов",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Центральні органи кровотворення",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Кістковий мозок та тимус"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфатичні вузли та селезінка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Печінка та селезінка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Легені та нирки"
+                  }
+                ],
+                "id": 0,
+                "text": "Які органи відносяться до центральних органів гемопоезу?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Центральні органи кровотворення",
+          "prompt": "Центральні органи кровотворення",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Клінічні стадії гострого лейкозу",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Період ремісії"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Початковий період"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Розгорнутий період"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Термінальний період"
+                  }
+                ],
+                "id": 0,
+                "text": "Яка стадія гострого лейкозу характеризується зникненням клінічної симптоматики та нормалізацією показників периферичної крові?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 6,
+          "name": "Задание - Клінічні стадії гострого лейкозу",
+          "prompt": "Клінічні стадії гострого лейкозу",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              3,
+              4,
+              6,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              15
+            ]
+          },
+          "data": {
+            "prompt": "Периферійні органи кровотворення",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфатичні вузли"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Селезінка"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лімфоїдні утворення слизових"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Кістковий мозок"
+                  }
+                ],
+                "id": 0,
+                "text": "Який з перерахованих органів НЕ є периферійним органом кровотворення?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 7,
+          "name": "Задание - Периферійні органи кровотворення",
+          "prompt": "Периферійні органи кровотворення",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        11
+      ],
+      "generation_time_ms": 58287,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39946,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 5,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39901,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гиперпластический синдром обусловлен лейкозной инфильтрацией тканей"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Геморрагический синдром обусловлен тромбоцитопенией, повышением проницаемости сосудов, нарушением коагуляции"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Анемический синдром обусловлен уменьшением количества клеток красного кроветворного ростка"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Интоксикационный синдром обусловлен повышенным распадом лейкозных клеток"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Иммунодефицитный синдром обусловлен резким нарушением клеточного и гуморального иммунитета вследствие функциональной неполноценности лейкоцитов"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Клинические особенности острого лимфобластного лейкоза включают более быстрое прогрессирование заболевания по сравнению с острым миелобластным лейкозом"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "При остром миелобластном лейкозе реже развиваются язвенно-некротические поражения кожи и слизистых оболочек"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Эффективность цитостатической терапии при остром миелобластном лейкозе выше, чем при остром лимфобластном лейкозе"
+              }
+            ],
+            "prompt": "Какие из перечисленных утверждений верны относительно клинических синдромов острого лейкоза?",
+            "subtype": "error_detection"
+          },
+          "index": 8,
+          "name": "Клик - Какие из перечисленных утверждений ве...",
+          "prompt": "Какие из перечисленных утверждений верны относительно клинических синдромов острого лейкоза?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Острые лейкемии классифицируют на лимфобластные и нелимфобластные (миелобластные)."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Первый этап формирования лейкоза начинается с мутации родоначальной клетки, которая приобретает способность к быстрой пролиферации."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "К факторам этиологии острых лейкозов относятся ионизирующая радиация, химические вещества (бензол) и вирусная инфекция (вирус Эпштейна-Барра)."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Гемопоэтическая ткань состоит только из гемальных (гемопоэтических) клеток."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Вторичный лейкозный клон характеризуется сохранением способности к дифференцировке."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Основной механизм патогенеза — активация апоптоза в гемопоэтических клетках."
+              }
+            ],
+            "prompt": "Какие утверждения о патогенезе и этиологии острых лейкозов верны?",
+            "subtype": "error_detection"
+          },
+          "index": 9,
+          "name": "Клик - Какие утверждения о патогенезе и этио...",
+          "prompt": "Какие утверждения о патогенезе и этиологии острых лейкозов верны?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гиперпластический синдром включает лимфопластический, гепатолиенальный и костно-суставной варианты."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Геморрагический синдром обусловлен тромбоцитопенией и нарушением свертывания."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Анемический синдром проявляется бледностью, тахикардией и одышкой."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Интоксикационный синдром связан с распадом лейкозных клеток."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Иммунодефицитный синдром при остром лейкозе развивается редко."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Костно-суставной синдром является редким осложнением."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Гиперпластический синдром не включает поражение кожи (лейкемиды)."
+              }
+            ],
+            "prompt": "Какие клинические синдромы характерны для острого лейкоза в период развернутой клинической картины?",
+            "subtype": "error_detection"
+          },
+          "index": 10,
+          "name": "Клик - Какие клинические синдромы характерны...",
+          "prompt": "Какие клинические синдромы характерны для острого лейкоза в период развернутой клинической картины?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "При миелограмме количество бластов увеличивается до 30% и более."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Для острого лимфобластного лейкоза характерна позитивная реакция на гликоген при гистохимическом исследовании."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Для острого миелобластного лейкоза характерна позитивная реакция на миелопероксидазу."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "В периферической крови может наблюдаться бластемия и феномен «проваллия»."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "При остром лейкозе всегда наблюдается лейкоцитоз."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Эозинофилы и базофилы обычно повышены в крови."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Молекулярно-биологические исследования не имеют значения для диагностики."
+              }
+            ],
+            "prompt": "Какие утверждения о диагностике и лабораторных признаках острых лейкозов верны?",
+            "subtype": "error_detection"
+          },
+          "index": 11,
+          "name": "Клик - Какие утверждения о диагностике и лаб...",
+          "prompt": "Какие утверждения о диагностике и лабораторных признаках острых лейкозов верны?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              11
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Основные этапы цитостатической терапии: индукция ремиссии, консолидация и поддерживающая терапия."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Профилактика нейролейкоза включает интратекальное введение метотрексата и облучение головы."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Трансплантация костного мозга может быть аллогенной, сингенной или аутологичной."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Прогноз при остром лимфобластном лейкозе у детей более благоприятный, чем у взрослых."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Основной метод лечения острых лейкозов — только поддерживающая терапия."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Противопоказанием к трансплантации костного мозга является возраст пациента до 30 лет."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "При остром миелобластном лейкозе частота достижения длительной ремиссии превышает 70%."
+              }
+            ],
+            "prompt": "Какие утверждения о лечении и прогнозе острых лейкозов верны?",
+            "subtype": "error_detection"
+          },
+          "index": 12,
+          "name": "Клик - Какие утверждения о лечении и прогноз...",
+          "prompt": "Какие утверждения о лечении и прогнозе острых лейкозов верны?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        5,
+        7,
+        14
+      ],
+      "generation_time_ms": 23099,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39888,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39872,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              14
+            ]
+          },
+          "data": {
+            "keywords": [
+              "стовбурові клітини",
+              "напівстовбурові клітини",
+              "уніпотентні клітини",
+              "бласти",
+              "клітини, що дозрівають",
+              "зрілі клітини",
+              "колонієутворюючі одиниці (КУО)",
+              "самовідновлювання"
+            ],
+            "question": "Как классифицируются клетки кроветворения по стадиям дифференцировки и какие основные свойства характерны для каждого из шести классов?",
+            "reference_answer": "Клетки кроветворения классифицируются на 6 классов: 1) Стовбуровые (полипотентные, способны к самовосстановлению, репопуляции, образуют колонии). 2) Наполовину стовбуровые/КУО (олигопотентные, коммитированы, чувствительны к стимуляторам, способны к самовосстановлению). 3) Унипотентные/КУО (дифференцируются в одном направлении, способны к самовосстановлению). 4) Бласты (крупные, светлые, синтезируют специфические продукты, не восстанавливаются). 5) Клетки, что дозревают (промежуточные формы). 6) Зрелые клетки (функциональные, не делятся)."
+          },
+          "index": 13,
+          "name": "Открытый ответ - Как классифицируются клетки кроветвор...",
+          "prompt": "Как классифицируются клетки кроветворения по стадиям дифференцировки и какие основные свойства характерны для каждого из шести классов?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              14
+            ]
+          },
+          "data": {
+            "keywords": [
+              "цитостатична терапія",
+              "профілактика нейролейкемії",
+              "дезінтоксикаційна терапія",
+              "синдром бластного лизису",
+              "трансплантація кісткового мозку",
+              "імунотерапія",
+              "інфекційні ускладнення"
+            ],
+            "question": "Каковы основные компоненты комплексного лечения острых лейкозов и цели каждого из них?",
+            "reference_answer": "Комплексное лечение включает: 1) Цитостатическую терапию (индукция ремиссии, консолидация, поддерживающая терапия). 2) Профилактику и лечение нейролейкемии (опроменивание головного мозга, интратекальный метотрексат/цитозар). 3) Дезинтоксикационную терапию (инфузии, форсированный диурез, гемосорбция). 4) Профилактику синдрома бластного лизиса (аллопуринол). 5) Иммунотерапию (интерферон). 6) Трансплантацию костного мозга (аллогенную, аутологичную). 7) Лечение инфекционных осложнений, анемии, геморрагического синдрома и цитостатической болезни."
+          },
+          "index": 14,
+          "name": "Открытый ответ - Каковы основные компоненты комплексно...",
+          "prompt": "Каковы основные компоненты комплексного лечения острых лейкозов и цели каждого из них?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              14
+            ]
+          },
+          "data": {
+            "keywords": [
+              "гостра лімфобластна лейкемія (ОЛЛ)",
+              "гостра мієлобластна лейкемія (ОМЛ)",
+              "індукція ремісії",
+              "винкристин",
+              "преднізолон",
+              "L-аспарагіназа",
+              "цитарабін",
+              "доксорубицин",
+              "підтримуюча терапія"
+            ],
+            "question": "В чем заключаются ключевые различия в подходах к цитостатической терапии острого лимфобластного и острого миелобластного лейкозов на этапе индукции ремиссии?",
+            "reference_answer": "На этапе индукции ремиссии для острого лимфобластного лейкоза (ОЛЛ) используется комбинация винкристина, преднизолона, L-аспарагиназы и доксорубицина. Для острого миелобластного лейкоза (ОМЛ) применяется комбинация цитарабина и доксорубицина. Поддерживающая терапия также различается: при ОЛЛ — меркаптопурин и метотрексат; при ОМЛ — цитарабин и циклофосфамид. Различия обусловлены разной чувствительностью бластов к препаратам."
+          },
+          "index": 15,
+          "name": "Открытый ответ - В чем заключаются ключевые различия в...",
+          "prompt": "В чем заключаются ключевые различия в подходах к цитостатической терапии острого лимфобластного и острого миелобластного лейкозов на этапе индукции ремиссии?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              14
+            ]
+          },
+          "data": {
+            "keywords": [
+              "соматические мутации",
+              "клон",
+              "дифференцировка",
+              "пролиферация",
+              "первичный клон",
+              "вторичный клон"
+            ],
+            "question": "Опишите ключевые этапы патогенеза острых лейкозов согласно представленному материалу.",
+            "reference_answer": "Патогенез острых лейкозов начинается с соматических мутаций в клетках-предшественницах гемопоэтической или лимфоидной ткани, что нарушает иммунный защитный механизм и апоптоз. Мутация родоначальной клетки приводит к её быстрой пролиферации и формированию первого (первичного) клона, клетки которого сохраняют способность к дифференцировке (доброкачественный рост). Впоследствии в клетках первичного клона происходят дополнительные мутации, формируя вторичный клон, клетки которого не только активно пролиферируют, но и теряют способность к дифференцировке (злокачественный рост)."
+          },
+          "index": 16,
+          "name": "Открытый ответ - Опишите ключевые этапы патогенеза ост...",
+          "prompt": "Опишите ключевые этапы патогенеза острых лейкозов согласно представленному материалу.",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              5,
+              7,
+              14
+            ]
+          },
+          "data": {
+            "keywords": [
+              "первичный клон",
+              "вторичный клон",
+              "дифференцировка",
+              "злокачественный рост",
+              "пролиферация",
+              "соматические мутации"
+            ],
+            "question": "В чём заключается принципиальное различие между первичным и вторичным лейкозными клонами на этапах патогенеза?",
+            "reference_answer": "Ключевое различие заключается в способности к дифференцировке. Клетки первичного лейкозного клона, образовавшегося после первой мутации, сохраняют возможность дифференцироваться (доброкачественный пухлинный рост). Клетки же вторичного лейкозного клона, сформировавшегося после последующих мутаций, не только активно пролиферируют, но и утрачивают способность к дифференцировке, что и определяет злокачественный характер роста."
+          },
+          "index": 17,
+          "name": "Открытый ответ - В чём заключается принципиальное разл...",
+          "prompt": "В чём заключается принципиальное различие между первичным и вторичным лейкозными клонами на этапах патогенеза?",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        12,
+        5,
+        8,
+        9,
+        11
+      ],
+      "generation_time_ms": 271614,
+      "parsing_errors": [
+        "Задание #2: не указаны индексы ошибок (используйте 'индексы: 1, 3' в промпте или [слово] в тексте)",
+        "Задание #2: не указаны индексы ошибок (используйте 'индексы: 1, 3' в промпте или [слово] в тексте)",
+        "Задание #3: не указаны индексы ошибок (используйте 'индексы: 1, 3' в промпте или [слово] в тексте)",
+        "Overgeneration trimmed for CLICK_WORDS after iterative repair 1: requested 3, kept 3, dropped 2."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39864,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39685,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39658,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39605,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 2,
+      "status": "success",
+      "subrequest_count": 4,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              12,
+              5,
+              8,
+              9,
+              11
+            ]
+          },
+          "data": {
+            "error_indices": [
+              13,
+              14
+            ],
+            "mode": "word_errors",
+            "prompt": "<інструкція: що саме шукати>",
+            "subtype": "error_detection",
+            "text": "text: <текст> Але в завданні сказано: \"Напиши связний текст... Ошибочные фрагменты оберни в квадратные скобки.\" І у вихідному форматі є \"# <інструкція: що саме шукати>\". Можливо, це загальна інструкція для всього завдання? Але в прикладі вихідного формату є \"# <інструкція: що саме шукати>\", але не вказано, що туди писати. Можливо, це частина формату, яку потрібно заповнити. Але в завданні сказано: \"Каждый блок начинается с маркера @CLICK_WORDS на отдельной строке. Между блоками — одна пустая строка. Ответ содержит только блоки заданий, без пояснений и без Markdown.\" Отже, кожен блок має вигляд:"
+          },
+          "index": 18,
+          "name": "Клик - <інструкція: що саме шукати>",
+          "prompt": "<інструкція: що саме шукати>",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              12,
+              5,
+              8,
+              9,
+              11
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              2,
+              21,
+              22
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Гостра лейкемія – це злоякісна пухлина кровотворної тканини, морфологічним субстратом якої є незрілі бластні клітини – недиференційовані або мало диференційовані. Гострі лейкемії підрозділяють на лімфобластні та нелімфобластні (мієлобластні). Етіологія, патогенез та основні клінічні прояви лімфобластних та мієлобластних лейкемій суттєво не відрізняються. Тому ці питання будуть висвітлені разом. Головні відмінності полягають у даних цитоморфологічного, цитохімічного та цитоімунного аналізу та різних підходах до лікування цих видів гострих лейкемій. Етіологія гострих лейкемії. a. Іонізуюча радіація: Променева терапія; Техногенні катастрофи на об’єктах атомної енергетики. b. Хімічні речовини: Бензол, пестициди, інсектициди, тютюновий дим; Фарби, розчинники, що містять хлор; Лікарські засоби (хлорамбуцил, циклофосфамід та ін.). c. Вірусна інфекція: Вірус Епштейна-Бара; Ретровірус HTLV. d. Генетичні дефекти та хромосомні аномалії. Патогенез гострих лейкозів. Під впливом етіологічних факторів відбуваються соматичні мутації клітин-попередниць кровотворної та лімфоїдної тканин. Цьому сприяють процеси порушення імунологічного захисту організму та порушення апоптозу (запрограмованої клітинної смерті). Перший етап формування лейкозів починається з мутації родоначальної клітини, яка набуває здатність швидко проліферувати. Клітини, які утворюються внаслідок такої проліферації вважаються клоном. На етапі формування першого клону клітини пухлини зберігають здатність до диференціювання (доброякісне пухлинне зростання). Втім, з часом, в клітинах первинного лейкозного клону відбуваються численні мутації. В результаті клітини вторинного лейкозного клону не лише активно проліферують, але й втрачають здатність до диференціювання (злоякісне пухлинне зростання). Проліферація лейкозних клітин в кістковому мозку, лейкозна інфільтрація органів та тканин, аутоімунні та інфекціно-запальні ускладнення формують клінічну картину гострих анемій."
+          },
+          "index": 19,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              12,
+              5,
+              8,
+              9,
+              11
+            ]
+          },
+          "data": {
+            "error_indices": [
+              17,
+              29,
+              30
+            ],
+            "mode": "word_errors",
+            "prompt": "Найдите фактические ошибки в прогнозе и показаниях к трансплантации.",
+            "subtype": "error_detection",
+            "text": "Прогноз при остром лимфобластном лейкозе менее благоприятен у детей, а у взрослых частота достижения 5-летней ремиссии составляет 75% и более. Основным показанием для трансплантации костного мозга является возраст пациента моложе 50 лет."
+          },
+          "index": 20,
+          "name": "Клик - Найдите фактические ошибки в прогнозе...",
+          "prompt": "Найдите фактические ошибки в прогнозе и показаниях к трансплантации.",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        10
+      ],
+      "generation_time_ms": 85726,
+      "parsing_errors": [
+        "Задание #1: не найдено описание задачи (должно начинаться с #)",
+        "[repair-pass] Задание #1: не найдено ни одного элемента (element_X)",
+        "Repair-pass incomplete for SEQUENCE: requested 2, obtained 0."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39593,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 39543,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 2,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 2,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 2,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": null,
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "error",
+      "subrequest_count": 2,
+      "task_type": "SEQUENCE",
+      "tasks": []
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 5,
+      "click_words": 3,
+      "open_answer": 5,
+      "sequence": 0,
+      "test": 8
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 21
+    },
+    "total_errors": 1,
+    "total_generated": 21,
+    "total_valid": 21,
+    "total_warnings": 0
+  }
+}

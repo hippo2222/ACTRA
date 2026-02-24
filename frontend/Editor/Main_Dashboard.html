@@ -32,6 +32,14 @@
                 topic: params.get('topic'),
                 sort: params.get('sort'),
             };
+
+            // Restore sidebar width immediately to avoid jump
+            const savedWidth = localStorage.getItem('editorSidebarWidth');
+            if (savedWidth) {
+                document.documentElement.style.setProperty('--sidebar-width', savedWidth + 'px');
+            } else {
+                document.documentElement.style.setProperty('--sidebar-width', '250px');
+            }
         })();
     </script>
     <script src="import_manager.js?v=1" defer></script>
@@ -47,7 +55,9 @@
 
 <body
     class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display antialiased selection:bg-primary-lighter selection:text-primary-dark">
-    <aside class="w-[250px] bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full">
+    <aside id="editor-sidebar"
+        class="bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full editor-sidebar-enter"
+        style="width: var(--sidebar-width, 250px);">
         <div class="h-16 flex items-center px-6 border-b border-border-subtle gap-3">
             <span class="brand-logo w-8 h-8" style="color:var(--color-primary)" aria-hidden="true"></span>
             <h1 class="text-text-main font-bold text-lg tracking-tight">ACTRA</h1>
@@ -80,20 +90,22 @@
             </div>
         </div>
         <div class="p-4 border-t border-border-subtle">
-            <button
-                class="flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left">
-                <span class="material-symbols-outlined text-[20px]">settings</span>
-                <span class="text-sm font-medium">Настройки</span>
-            </button>
+            <div id="theme-switcher-sidebar-target" class="w-full"></div>
         </div>
     </aside>
+    <!-- Sidebar Resizer Handle -->
+    <div id="sidebar-resizer" class="w-1 hover:bg-primary transition-colors cursor-col-resize z-30 h-full shrink-0">
+    </div>
+
     <!-- Sidebar Blur Overlay (Initially hidden) -->
     <div id="sidebar-blur-overlay"
-        class="absolute top-0 left-0 w-[250px] h-full modal-backdrop z-30 hidden transition-opacity duration-200">
+        class="absolute top-0 left-0 h-full modal-backdrop z-30 hidden transition-opacity duration-200"
+        style="width: var(--sidebar-width, 250px);">
     </div>
     <!-- Sidebar Confirmation Modal (Initially hidden) -->
     <div id="sidebar-delete-modal"
-        class="absolute top-0 left-0 w-[250px] h-full z-40 hidden flex items-center justify-center pointer-events-none">
+        class="absolute top-0 left-0 h-full z-40 hidden flex items-center justify-center pointer-events-none"
+        style="width: var(--sidebar-width, 250px);">
         <div class="bg-surface-1 w-[220px] rounded-xl shadow-xl p-4 border border-border-subtle transform transition-all scale-95 opacity-0 pointer-events-auto"
             id="sidebar-delete-modal-content">
             <div class="flex flex-col gap-3 text-center">
@@ -122,9 +134,12 @@
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
         <header
             class="h-20 flex items-center justify-between px-8 bg-surface-1 border-b border-border-subtle shrink-0 sticky top-0 z-10 transition-colors">
-            <h2 class="text-2xl font-bold text-text-main tracking-tight">Библиотека контента</h2>
-            <div class="flex items-center gap-4 flex-1 justify-end max-w-2xl">
-                <div class="relative w-full max-w-md">
+            <nav id="header-breadcrumbs"
+                class="flex items-center gap-2 text-text-main font-bold text-2xl tracking-tight shrink-1 min-w-0 flex-1">
+                <span class="cursor-pointer hover:text-primary transition-colors">Библиотека</span>
+            </nav>
+            <div class="flex items-center gap-8 justify-end min-w-0 shrink-0">
+                <div class="relative search-container-expanding shrink-0 rounded-lg">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-text-disabled">search</span>
                     </div>
@@ -132,9 +147,9 @@
                         class="block w-full rounded-lg border-0 bg-surface-2 py-2.5 pl-10 pr-4 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm sm:leading-6"
                         placeholder="Поиск заданий, модулей или файлов..." type="text" />
                 </div>
-                <div class="relative" data-role="sort-controller">
+                <div class="relative shrink-0" data-role="sort-controller">
                     <button data-role="sort-toggle"
-                        class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors shadow-sm">
+                        class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors shadow-sm whitespace-nowrap shrink-0">
                         <span class="material-symbols-outlined text-[20px] text-text-secondary">sort</span>
                         <span data-role="sort-label">По дате изменения</span>
                         <span class="material-symbols-outlined text-[18px] text-text-disabled">expand_more</span>
@@ -172,7 +187,7 @@
                 </div>
             </div>
         </header>
-        <div class="flex-1 overflow-y-auto p-8">
+        <div class="flex-1 overflow-y-auto p-8 editor-content-enter">
             <!-- Dynamic Grid Container -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-6 max-w-7xl mx-auto pb-10">
                 <!-- Tasks will be injected here by dashboard.js -->
@@ -328,7 +343,7 @@
     <!-- Import Tasks Modal -->
     <div id="import-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
         <div
-            class="bg-surface-1 rounded-2xl shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            class="bg-surface-1 rounded-2xl shadow-xl max-w-[900px] w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
             <!-- Header -->
             <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between shrink-0">
                 <h2 class="text-xl font-bold text-text-main">Импорт заданий</h2>

@@ -54,11 +54,19 @@ logs/
 .DS_Store
 Thumbs.db
 
+# Runtime user data — do not commit dev/test user profiles or progress
+data/users/user_*/
+data/user_calendar/user_*/
+data/app_state.json
 
+# Runtime content — modules, complexes, import history are user-generated at runtime
+data/modules/
+data/import_journal.json
+data/import_manifests/
+data/feedback/
 
-
-
-
+# AI config with API keys — never commit
+data/ai_config.json
 
 
 

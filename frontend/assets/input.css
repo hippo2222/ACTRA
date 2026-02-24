@@ -199,7 +199,8 @@
 
     /* Primary - Clay Brown */
     --color-primary: #5D4037;
-    --color-primary-light: #8C735A;
+    --color-primary-light: #BFAEA8;
+    --color-primary-lighter: #E2D4C8;
     --color-primary-dark: #3E2723;
     --color-primary-darkest: #271815;
     --color-primary-hover: #3E2723;

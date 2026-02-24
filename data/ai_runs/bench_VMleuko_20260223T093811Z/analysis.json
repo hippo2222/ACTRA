@@ -1,0 +1,248 @@
+{
+  "run_id": "bench_VMleuko_20260223T093811Z",
+  "created_at": "2026-02-23T09:41:04Z",
+  "provider_used": "openrouter",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 2289,
+    "char_count": 19121,
+    "language": "ru"
+  },
+  "result": {
+    "human_summary": "Текст представляет собой подробное описание физиологии кроветворения и патологии острых лейкозов. Материал охватывает структуру и функции органов кроветворения, классификацию клеток крови, регуляцию гемопоэза, этиологию, патогенез, клиническую картину, диагностику, лечение и прогноз острых лейкозов. Содержание представляет собой комплекс медицинской информации, требующей систематизации и детального изучения.",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 8,
+        "priority": "high",
+        "covers_units": [
+          1,
+          2,
+          5,
+          4,
+          6,
+          9,
+          15
+        ],
+        "rationale": "Проверка базовых фактов о структуре органов кроветворения и классификации лейкоцитов"
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 5,
+        "priority": "high",
+        "covers_units": [
+          12,
+          13
+        ],
+        "rationale": "Проверка понимания клинической картины и диагностики лейкозов"
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 4,
+        "priority": "high",
+        "covers_units": [
+          3,
+          7
+        ],
+        "rationale": "Объяснение механизмов регуляции гемопоэза и процессов кроветворения"
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 4,
+        "priority": "medium",
+        "covers_units": [
+          10,
+          14,
+          8
+        ],
+        "rationale": "Выявление ошибок в описании патогенеза и лечения лейкозов"
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 2,
+        "priority": "medium",
+        "covers_units": [
+          8,
+          11
+        ],
+        "rationale": "Восстановление последовательности классов клеток и классификации FAB"
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Центральные органы кроветворения",
+        "type": "concept",
+        "description": "Костный мозг и тимус как основные органы кроветворения",
+        "explicitness": "explicit",
+        "evidence": "До центральних органів гемопоезу відносяться кістковий мозок та тимус",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 2,
+        "title": "Структура и свойства костного мозга",
+        "type": "fact",
+        "description": "Локализация, консистенция, масса и состав костного мозга",
+        "explicitness": "explicit",
+        "evidence": "Локалізація кісткового мозку – губчата речовина...",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 3,
+        "title": "Регуляция гемопоэза",
+        "type": "process",
+        "description": "Механизмы стимуляции и торможения кроветворения",
+        "explicitness": "explicit",
+        "evidence": "Стимуляція гемопоезу відбувається завдяки...",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Функции органов кроветворения",
+        "type": "concept",
+        "description": "Роль костного мозга и тимуса в кроветворении",
+        "explicitness": "explicit",
+        "evidence": "У червоному кістковому мозку відбуваються всі стадії дозрівання...",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 5,
+        "title": "Классификация лейкоцитов",
+        "type": "classification",
+        "description": "Гранулоциты и агранулоциты с их типами",
+        "explicitness": "explicit",
+        "evidence": "Лейкоцити поділяються на гранулоцити (нейтрофіли, еоінофіли, базофіли) та агранулоцити (лімфоцити, моноцити)",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 6,
+        "title": "Функции лейкоцитов",
+        "type": "concept",
+        "description": "Основные функции гранулоцитов и агранулоцитов",
+        "explicitness": "explicit",
+        "evidence": "Основна функція гранулоцитів – фагоцитоз...",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 7,
+        "title": "Процессы кроветворения",
+        "type": "process",
+        "description": "Миелопоэз и лимфопоэз",
+        "explicitness": "explicit",
+        "evidence": "Мієлопоез – це утворення всіх формених елементів крові...",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 8,
+        "title": "Классификация клеток кроветворения",
+        "type": "classification",
+        "description": "6 классов клеток от стволовых до зрелых",
+        "explicitness": "explicit",
+        "evidence": "У кожному з напрямків диференцировки виділяють 6 класів клітин...",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 9,
+        "title": "Острые лейкозы: определение и классификация",
+        "type": "concept",
+        "description": "Определение острых лейкозов и их классификация",
+        "explicitness": "explicit",
+        "evidence": "Гостра лейкемія – це злоякісна пухлина...",
+        "modality": "text",
+        "assessment_risk": "low"
+      },
+      {
+        "id": 10,
+        "title": "Этиология и патогенез острых лейкозов",
+        "type": "process",
+        "description": "Причины развития и механизмы формирования острых лейкозов",
+        "explicitness": "explicit",
+        "evidence": "Етіологія гострих лейкемії...",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 11,
+        "title": "Классификация FAB острых лейкозов",
+        "type": "classification",
+        "description": "Морфологическая классификация FAB для миелобластных и лимфобластных лейкозов",
+        "explicitness": "explicit",
+        "evidence": "Морфологічна FAB (French-American-British) класифікація...",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 12,
+        "title": "Клиническая картина острых лейкозов",
+        "type": "concept",
+        "description": "Стадии и синдромы острых лейкозов",
+        "explicitness": "explicit",
+        "evidence": "Клінічна картина гострих лейкозів...",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 13,
+        "title": "Диагностика острых лейкозов",
+        "type": "concept",
+        "description": "Лабораторные и инструментальные методы диагностики",
+        "explicitness": "explicit",
+        "evidence": "Лабораторні дані при гострих лейкозах...",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 14,
+        "title": "Лечение острых лейкозов",
+        "type": "process",
+        "description": "Методы лечения острых лейкозов",
+        "explicitness": "explicit",
+        "evidence": "Лікування гострих лейкозів...",
+        "modality": "text",
+        "assessment_risk": "high"
+      },
+      {
+        "id": 15,
+        "title": "Прогноз острых лейкозов",
+        "type": "fact",
+        "description": "Прогностические факторы и исходы при острых лейкозах",
+        "explicitness": "explicit",
+        "evidence": "Прогноз при гострих лейкозах...",
+        "modality": "text",
+        "assessment_risk": "medium"
+      }
+    ],
+    "not_recommended": [
+      {
+        "task_type": "SEQUENCE",
+        "reason": "Не подходит для проверки знаний о функциях лейкоцитов, так как не требует восстановления порядка"
+      },
+      {
+        "task_type": "TEST",
+        "reason": "Не подходит для оценки понимания патогенеза, требующего объяснения, а не выбора ответа"
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "reason": "Не подходит для проверки классификаций FAB, где важна точность соответствия"
+      }
+    ],
+    "illustrations_detected": false,
+    "illustrations_note": null,
+    "warnings": [
+      "Материал содержит большой объем информации, который может быть перегружен для студентов. Рекомендуется разбить на более мелкие модули.",
+      "Heuristic adjustment: CLICK_WORDS was removed from not_recommended because this material supports factual error-detection tasks.",
+      "Heuristic adjustment: 4 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+      "Coverage calibration increased recommended text tasks to improve coverage (target ~23-29)."
+    ],
+    "material_volume": "large",
+    "target_language": "ru"
+  }
+}

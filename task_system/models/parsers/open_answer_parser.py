@@ -107,6 +107,24 @@ class OpenAnswerParser(TaskImportParser):
             data['keywords'] = keywords
         if reference_answer:
             data['reference_answer'] = reference_answer
+        if metadata:
+            raw_min_keywords = metadata.get('min_keywords')
+            try:
+                if raw_min_keywords is not None:
+                    min_kw = int(raw_min_keywords)
+                    if min_kw >= 1:
+                        data['min_keywords'] = min_kw
+            except (TypeError, ValueError):
+                pass
+            raw_require_all = metadata.get('require_all_keywords')
+            if isinstance(raw_require_all, str):
+                lowered = raw_require_all.strip().lower()
+                if lowered in ('true', '1', 'yes', 'да'):
+                    data['require_all_keywords'] = True
+                elif lowered in ('false', '0', 'no', 'нет'):
+                    data['require_all_keywords'] = False
+            elif isinstance(raw_require_all, bool):
+                data['require_all_keywords'] = raw_require_all
         
         if metadata:
             data['metadata'] = metadata

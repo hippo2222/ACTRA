@@ -583,25 +583,9 @@
 
       if (complexNameEl) complexNameEl.textContent = summary.complexId || "—";
 
-      document.getElementById("summary-iterations").textContent = String(
-
-        summary.totalIterations ?? 0
-
-      );
-
-      document.getElementById("summary-unique-tasks").textContent = String(
-
-        summary.totalTasks ?? 0
-
-      );
-
+      const iterationsNum = summary.totalIterations ?? 0;
+      const totalTasksNum = summary.totalTasks ?? 0;
       const successfulTasksNumber = summary.successfulTasks ?? 0;
-
-      document.getElementById("summary-completed-tasks").textContent = String(
-
-        successfulTasksNumber
-
-      );
 
       const successRate =
 
@@ -611,18 +595,43 @@
 
           : null;
 
-      const successRateEl = document.getElementById("summary-success-rate");
-
-      if (successRateEl) {
-
-        successRateEl.textContent =
-
-          successRate != null ? `${successRate}% успеха` : "—";
-
+      // Animated stat counters via CelebrationEffects
+      if (typeof CelebrationEffects !== 'undefined') {
+        CelebrationEffects.animateCounter(
+          document.getElementById("summary-iterations"), iterationsNum);
+        CelebrationEffects.animateCounter(
+          document.getElementById("summary-unique-tasks"), totalTasksNum);
+        CelebrationEffects.animateCounter(
+          document.getElementById("summary-completed-tasks"), successfulTasksNumber);
+        const successRateEl = document.getElementById("summary-success-rate");
+        if (successRateEl && successRate != null) {
+          CelebrationEffects.animateCounter(
+            successRateEl, successRate, { suffix: '% успеха' });
+        } else if (successRateEl) {
+          successRateEl.textContent = "—";
+        }
+      } else {
+        document.getElementById("summary-iterations").textContent = String(iterationsNum);
+        document.getElementById("summary-unique-tasks").textContent = String(totalTasksNum);
+        document.getElementById("summary-completed-tasks").textContent = String(successfulTasksNumber);
+        const successRateEl = document.getElementById("summary-success-rate");
+        if (successRateEl) {
+          successRateEl.textContent =
+            successRate != null ? `${successRate}% успеха` : "—";
+        }
       }
 
       document.getElementById("summary-total-time").textContent =
         summary.durationSeconds != null ? formatDuration(summary.durationSeconds) : "—";
+
+      // Play celebration effects (final results — extra celebration)
+      if (typeof CelebrationEffects !== 'undefined' && successRate != null) {
+        const isPerfect = summary.failedAttempts === 0 && totalTasksNum > 0;
+        CelebrationEffects.celebrate(successRate, {
+          isPerfect: isPerfect,
+          isFinalResults: true
+        });
+      }
 
       // UX-23: Show motivational message
       const motEl = document.getElementById("motivational-message");
@@ -1029,6 +1038,7 @@
 
   </script>
 
+  <script src="/assets/celebration-effects.js"></script>
   <script src="../assets/NotificationUI.js"></script>
   <script src="../assets/ThemeSwitcherUI.js"></script>
   <script src="../assets/ConnectionMonitor.js"></script>

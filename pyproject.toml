@@ -27,16 +27,17 @@ dependencies = [
     "Pillow==10.0.0",
     "packaging>=21.0",
     "pydantic>=2.0",
-    "numpy>=1.24.0",
     "python-Levenshtein>=0.21.0",
     "pymorphy2>=0.9.0",
     "bcrypt>=4.0.0",
+    "PyMuPDF>=1.20.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-playwright>=0.4.0",
     "requests>=2.31.0",
     "mypy>=1.6.0",
     "black==26.1.0",

@@ -1,0 +1,2670 @@
+{
+  "ai_run_id": "bench_VMleuko_20260223T143529Z",
+  "effective_output_language": "ru",
+  "material_language": "ru",
+  "ok": true,
+  "output_language_mode": "same_as_material",
+  "output_language_warning": null,
+  "parsing_errors": [],
+  "provider_chain_attempts": [
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33839,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 5,
+      "stage": "generate",
+      "start_after_provider": "openrouter:2",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33693,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33663,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 1,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "TEST"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33646,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 2,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33629,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 284,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 3,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_TEXT"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33573,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 228,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 5,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "OPEN_ANSWER"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33479,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 134,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33272,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 2,
+      "error": "HTTP Error 429: Too Many Requests",
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "error",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 33071,
+      "model": "z-ai/glm-4.5-air:free",
+      "provider": "openrouter:1",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 0,
+      "cooldown_remaining_sec": 102,
+      "model": "stepfun/step-3.5-flash:free",
+      "provider": "openrouter:2",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "skipped_cooldown",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "provider": "openrouter:3",
+      "requested_count": 4,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "CLICK_WORDS"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    },
+    {
+      "attempt": 1,
+      "model": "arcee-ai/trinity-large-preview:free",
+      "preferred_providers": [
+        "openrouter:3",
+        "openrouter:2"
+      ],
+      "provider": "openrouter:3",
+      "requested_count": 1,
+      "stage": "generate",
+      "status": "success",
+      "task_type": "SEQUENCE"
+    }
+  ],
+  "requested_output_language": null,
+  "results": [
+    {
+      "educational_unit_ids": [
+        1,
+        2,
+        4,
+        6,
+        8,
+        10,
+        11,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        3,
+        5,
+        7,
+        9,
+        12
+      ],
+      "generation_time_ms": 193225,
+      "parsing_errors": [
+        "Overgeneration trimmed for TEST: requested 15, kept 15, dropped 5."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33839,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 5,
+          "stage": "generate",
+          "start_after_provider": "openrouter:2",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33693,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33663,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "TEST"
+        },
+        {
+          "attempt": 1,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "TEST"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "TEST",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Тест (1 вопросов)",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "III. Уніпотентні клітини (КУО)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "I. Стовбурові клітини (поліпотентні)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "II. Напівстовбурові клітини (олігопотентні)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "IV. Бласти"
+                  }
+                ],
+                "id": 0,
+                "text": "Какой класс клеток гемопоэза включает унипотентні клітини, способные дифференцироваться только в одном направлении?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 0,
+          "name": "Задание - Тест (1 вопросов)",
+          "prompt": "Тест (1 вопросов)",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Тест (1 вопросов)",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Ионизирующая радиация"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Химические вещества (бензол, пестициды, некоторые лекарства)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бактериальные инфекции"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Аутоиммунные заболевания"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие из перечисленных факторов являются установленными этиологическими факторами острых лейкозов?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 1,
+          "name": "Задание - Тест (1 вопросов)",
+          "prompt": "Тест (1 вопросов)",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Тест (1 вопросов)",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Период ремиссии"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Период обострения (рецидив)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стадия диагностики"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стадия паллиативного ухода"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие стадии острого лейкоза выделяются в представленном материале? (выберите два)"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 2,
+          "name": "Задание - Тест (1 вопросов)",
+          "prompt": "Тест (1 вопросов)",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Тест (1 вопросов)",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Индукция ремиссии"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Консолідація (закріплення ремісії)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Профилактическая терапия"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Палліативна терапія"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие этапы входят в цитостатическую терапию при острых лейкозах согласно описанию? (выберите два)"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 3,
+          "name": "Задание - Тест (1 вопросов)",
+          "prompt": "Тест (1 вопросов)",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Тест (1 вопросов)",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Бластемія"
+                  },
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Тромбоцитопенія"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Лейкоцитоз (увеличение лейкоцитов)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Повышение ретикулоцитов"
+                  }
+                ],
+                "id": 0,
+                "text": "Какие изменения характерны для клинического анализа крови при острых лейкозах? (выберите два)"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "multiple_choice"
+          },
+          "index": 4,
+          "name": "Задание - Тест (1 вопросов)",
+          "prompt": "Тест (1 вопросов)",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Гемальний (гемопоетичні клітини) і стромальний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Гемальний і лімфоїдний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стромальний і ендотеліальний"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Еритроїдний і гранулоцитарний"
+                  }
+                ],
+                "id": 0,
+                "text": "Які два основних компоненти складають гемопоетичну тканину?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 5,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "90%"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "10%"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "50%"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "75%"
+                  }
+                ],
+                "id": 0,
+                "text": "Який відсоток поліпотентних стовбурових клітин у кістковому мозку знаходиться у стані спокою?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 6,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Колонієстимулюючі фактори"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Глюкокортикоїди"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Простагландини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Інтерферони"
+                  }
+                ],
+                "id": 0,
+                "text": "Які речовини стимулюють гемопоез за рахунок синтезу мікрооточенням гемопоетичних клітин?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 7,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Продукти зрілих клітин крові, простагландини, інтерферон, глюкокортикоїди"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Еритропоетин, тироксин, соматотропний гормон"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Колонієстимулюючі фактори"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Інсулін, глюкагон, адреналін"
+                  }
+                ],
+                "id": 0,
+                "text": "Які гормони пригнічують гемопоез?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 8,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Еритроцити, гранулоцити, моноцити, тромбоцити, В-лімфоцити, попередники Т-лімфоцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тільки еритроцити і тромбоцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тільки лімфоцити"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тільки гранулоцити і моноцити"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини формуються в червоному кістковому мозку?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 9,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Утворення всіх формених елементів крові, крім лімфоцитів, і утворення лімфоцитів (В- і Т-клітин)"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення еритроцитів і тромбоцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення гранулоцитів і моноцитів"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Утворення В-лімфоцитів і Т-лімфоцитів"
+                  }
+                ],
+                "id": 0,
+                "text": "Які два основні напрямки мієлопоезу?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 10,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Стовбурові клітини, напівстовбурові клітини, уніпотентні клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тільки стовбурові клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тільки бласти"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Тільки зрілі клітини"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини можуть самовідновлюватися і утворювати колонії?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 11,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Бласти"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стовбурові клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Напівстовбурові клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Зрілі клітини"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини не мають здатності до подальшого відновлення?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 12,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Зрілі клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бласти"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Клітини, що дозрівають"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стовбурові клітини"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини не діляться, але мають специфічні функції?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 13,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              1,
+              2,
+              4,
+              6,
+              8,
+              10,
+              11,
+              13,
+              14,
+              15,
+              16,
+              17,
+              18,
+              19,
+              20,
+              21,
+              22,
+              23,
+              24,
+              3,
+              5,
+              7,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "prompt": "Гемопоез і клітинні ряди",
+            "question_count": 1,
+            "questions": [
+              {
+                "answers": [
+                  {
+                    "correct": true,
+                    "is_correct": true,
+                    "text": "Клітини, що дозрівають"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Бласти"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Зрілі клітини"
+                  },
+                  {
+                    "correct": false,
+                    "is_correct": false,
+                    "text": "Стовбурові клітини"
+                  }
+                ],
+                "id": 0,
+                "text": "Які клітини представлені кількома проміжними формами?"
+              }
+            ],
+            "settings": {
+              "passing_score": 70,
+              "shuffle_answers": true,
+              "shuffle_questions": true,
+              "time_limit": null
+            },
+            "test_type": "single_choice"
+          },
+          "index": 14,
+          "name": "Задание - Гемопоез і клітинні ряди",
+          "prompt": "Гемопоез і клітинні ряди",
+          "status": "valid",
+          "type": "test",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        7,
+        3,
+        5,
+        9,
+        12
+      ],
+      "generation_time_ms": 73010,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_TEXT: requested 7, kept 7, dropped 2."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33646,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 2,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33629,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 284,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_TEXT"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 3,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_TEXT"
+        }
+      ],
+      "provider_used": "openrouter:2",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "CLICK_TEXT",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              3,
+              5,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Індукція ремісії (4-6 тижнів)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Консолідація (закріплення ремісії) - 6 тижнів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Підтримуюча терапія - чередується з циклами консолідації"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Лікування рецидиву"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Лише одна фаза індукції ремісії"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Лише хірургічне втручання"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Лише променева терапія"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Лише симптоматичне лікування"
+              }
+            ],
+            "prompt": "Етапи лікування гострих лейкозів",
+            "subtype": "error_detection"
+          },
+          "index": 15,
+          "name": "Клик - Етапи лікування гострих лейкозів",
+          "prompt": "Етапи лікування гострих лейкозів",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              3,
+              5,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Перший етап: мутація родоначальної клітини з утворенням доброякісного клону"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Другий етап: подальші мутації з утворенням злоякісного клону"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Проліферація лейкозних клітин в кістковому мозку"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Лейкозна інфільтрація органів та тканин"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Перший етап: прямий перехід до злоякісного росту"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Другий етап: зменшення проліферації клітин"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Проліферація лише в периферичній крові"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Лейкозна інфільтрація лише лімфатичних вузлів"
+              }
+            ],
+            "prompt": "Етапи патогенезу гострих лейкозів",
+            "subtype": "error_detection"
+          },
+          "index": 16,
+          "name": "Клик - Етапи патогенезу гострих лейкозів",
+          "prompt": "Етапи патогенезу гострих лейкозів",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              3,
+              5,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Гіперпластичний синдром зумовлений лейкозною інфільтрацією тканин"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Геморагічний синдром зумовлений тромбоцитопенією та порушенням коагуляції"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Анемічний синдром зумовлений зменшенням кількості клітин червоного кровотворного паростку"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Інтоксикаційний синдром зумовлений підвищеним розпадом лейкозних клітин"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Імунодефіцитний синдром зумовлений порушенням клітинного та гуморального імунітету"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Гіперпластичний синдром зумовлений зменшенням кількості клітин в органах"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Геморагічний синдром зумовлений лише підвищеною проникливістю судин"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Анемічний синдром зумовлений лише зменшенням кількості лейкоцитів"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Інтоксикаційний синдром зумовлений лише підвищеною температурою тіла"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Імунодефіцитний синдром зумовлений лише зменшенням кількості лімфоцитів"
+              }
+            ],
+            "prompt": "Клінічні синдроми гострих лейкозів",
+            "subtype": "error_detection"
+          },
+          "index": 17,
+          "name": "Клик - Клінічні синдроми гострих лейкозів",
+          "prompt": "Клінічні синдроми гострих лейкозів",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              3,
+              5,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Іонізуюча радіація (променева терапія, техногенні катастрофи)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Хімічні речовини (бензол, пестициди, лікарські засоби)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Вірусна інфекція (вірус Епштейна-Бара, ретровірус HTLV)"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Генетичні дефекти та хромосомні аномалії"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Вірусні інфекції (грип, коронавірус)"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Фізичні травми (удари, переломи)"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Алергічні реакції на продукти харчування"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Гормональні порушення (цукровий діабет, гіпотиреоз)"
+              }
+            ],
+            "prompt": "Етіологічні фактори гострих лейкозів",
+            "subtype": "error_detection"
+          },
+          "index": 18,
+          "name": "Клик - Етіологічні фактори гострих лейкозів",
+          "prompt": "Етіологічні фактори гострих лейкозів",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              3,
+              5,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Мо - гостра мієлобластна лейкемія з недиференційованими бластними клітинами"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М1 - гостра мієлобластна лейкемія без ознак дозрівання бластів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М2 - гостра мієлобластна лейкемія з ознаками дозрівання бластів"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М3 - гостра промієлоцитарна лейкемія"
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "М4 - гостра мієломоноцитарна лейкемія"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М5 - гостра еритролейкемія"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М6 - гостра мегакаріобластна лейкемія"
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "М7 - гостра лімфобластна лейкемія"
+              }
+            ],
+            "prompt": "FAB класифікація гострого мієлобластного лейкозу",
+            "subtype": "error_detection"
+          },
+          "index": 19,
+          "name": "Клик - FAB класифікація гострого мієлобластн...",
+          "prompt": "FAB класифікація гострого мієлобластного лейкозу",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              3,
+              5,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Лечение острого лимфобластного лейкоза включает индукцию ремиссии, консолидацию и поддерживающую терапию."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "При индукции ремиссии острого миелобластного лейкоза используются цитарабин и доксорубицин."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Профилактика и лечение нейролейкоза может включать люмбальную пункцию с введением метотрексата."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Поддерживающая терапия при остром лимфобластном лейкозе включает только непрерывное введение винкристина."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Трансплантация костного мозга является единственным методом лечения для всех пациентов с острыми лейкозами."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Основной этап лечения, направленный на достижение первой ремиссии, называется консолидацией."
+              }
+            ],
+            "prompt": "Какие утверждения о принципах лечения острых лейкозов верны?",
+            "subtype": "error_detection"
+          },
+          "index": 20,
+          "name": "Клик - Какие утверждения о принципах лечения...",
+          "prompt": "Какие утверждения о принципах лечения острых лейкозов верны?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7,
+              3,
+              5,
+              9,
+              12
+            ]
+          },
+          "data": {
+            "mode": "text_choice",
+            "options": [
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Острую миелобластную лейкемию (AML) классифицируют на подтипы от M0 до M7."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Подтип L3 острой лимфобластной лейкемии (ALL) соответствует клеткам типа при лимфоме Беркитта."
+              },
+              {
+                "correct": true,
+                "is_correct": true,
+                "text": "Классификация FAB используется для морфологической дифференциации острых лейкозов."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Подтип M3 соответствует острой миеломоноцитарной лейкемии."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Подтип L1 характеризуется большими размерами бластов и чаще встречается у взрослых."
+              },
+              {
+                "correct": false,
+                "is_correct": false,
+                "text": "Классификация FAB основана исключительно на иммунофенотипировании."
+              }
+            ],
+            "prompt": "Какие утверждения о классификации острых лейкозов по FAB верны?",
+            "subtype": "error_detection"
+          },
+          "index": 21,
+          "name": "Клик - Какие утверждения о классификации ост...",
+          "prompt": "Какие утверждения о классификации острых лейкозов по FAB верны?",
+          "status": "valid",
+          "type": "click",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        7
+      ],
+      "generation_time_ms": 93747,
+      "parsing_errors": [],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33573,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 228,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "OPEN_ANSWER"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 5,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "OPEN_ANSWER"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": false,
+      "repair_subrequest_count": 0,
+      "status": "success",
+      "subrequest_count": 1,
+      "task_type": "OPEN_ANSWER",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "мутація",
+              "клон",
+              "диференціювання",
+              "проліферація",
+              "інфільтрація",
+              "ускладнення"
+            ],
+            "question": "Опиши основні етапи патогенезу гострих лейкозів",
+            "reference_answer": "Патогенез гострих лейкозів включає: 1) мутацію родоначальної клітини під впливом етіологічних факторів, 2) формування першого клону з збереженою здатністю до диференціювання (доброякісне зростання), 3) накопичення мутацій у клітинах первинного клону, 4) формування вторинного клону з втратою здатності до диференціювання (злоякісне зростання), 5) проліферація лейкозних клітин в кістковому мозку, 6) лейкозна інфільтрація органів та тканин, 7) розвиток аутоімунних та інфекційно-запальних ускладнень."
+          },
+          "index": 22,
+          "name": "Открытый ответ - Опиши основні етапи патогенезу гостри...",
+          "prompt": "Опиши основні етапи патогенезу гострих лейкозів",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "мутації",
+              "проліферація",
+              "диференціювання",
+              "незрілі клітини",
+              "механізми регуляції"
+            ],
+            "question": "Поясни, чому клітини вторинного лейкозного клону втрачають здатність до диференціювання",
+            "reference_answer": "Клітини вторинного лейкозного клону втрачають здатність до диференціювання через накопичення численних мутацій внаслідок постійної проліферації. Ці мутації порушують нормальні механізми регуляції диференціювання, що призводить до зупинки розвитку клітин на різних стадіях та збереження їх у незрілому стані."
+          },
+          "index": 23,
+          "name": "Открытый ответ - Поясни, чому клітини вторинного лейко...",
+          "prompt": "Поясни, чому клітини вторинного лейкозного клону втрачають здатність до диференціювання",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "імунологічний захист",
+              "апоптоз",
+              "соматичні мутації",
+              "клітини-попередниці",
+              "лейкозний клон"
+            ],
+            "question": "Розкажи про роль імунологічного захисту та апоптозу в патогенезі гострих лейкозів",
+            "reference_answer": "Порушення імунологічного захисту організму та апоптозу (запрограмованої клітинної смерті) сприяють розвитку гострих лейкозів. Під впливом етіологічних факторів відбуваються соматичні мутації клітин-попередниць, а порушення імунного захисту та апоптозу дозволяють цим мутированим клітинам вижити, проліферувати та сформувати лейкозний клон."
+          },
+          "index": 24,
+          "name": "Открытый ответ - Розкажи про роль імунологічного захис...",
+          "prompt": "Розкажи про роль імунологічного захисту та апоптозу в патогенезі гострих лейкозів",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "етіологічні фактори",
+              "соматичні мутації",
+              "клітини-попередниці",
+              "проліферативна активність",
+              "диференціювання"
+            ],
+            "question": "Опиши, як етіологічні фактори впливають на розвиток гострих лейкозів",
+            "reference_answer": "Етіологічні фактори (іонізуюча радіація, хімічні речовини, вірусна інфекція, генетичні дефекти) викликають соматичні мутації в клітинах-попередницях кровотворної та лімфоїдної тканин. Ці мутації порушують нормальну регуляцію клітинного розвитку, призводячи до формування лейкозних клонів з підвищеною проліферативною активністю та втратою здатності до диференціювання."
+          },
+          "index": 25,
+          "name": "Открытый ответ - Опиши, як етіологічні фактори впливаю...",
+          "prompt": "Опиши, як етіологічні фактори впливають на розвиток гострих лейкозів",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              7
+            ]
+          },
+          "data": {
+            "keywords": [
+              "бластні клітини",
+              "проліферація",
+              "диференціювання",
+              "гемопоез",
+              "інфільтрація",
+              "ускладнення"
+            ],
+            "question": "Поясни, чому гострі лейкози характеризуються як злоякісні пухлини кровотворної тканини",
+            "reference_answer": "Гострі лейкози є злоякісними пухлинами кровотворної тканини, оскільки морфологічним субстратом є незрілі бластні клітини, які активно проліферують, але не можуть повноцінно диференціюватися. Це призводить до підміни нормальної кровотворної тканини, порушення гемопоезу, інфільтрації органів та розвитку важких ускладнень, що загрожують життю."
+          },
+          "index": 26,
+          "name": "Открытый ответ - Поясни, чому гострі лейкози характери...",
+          "prompt": "Поясни, чому гострі лейкози характеризуються як злоякісні пухлини кровотворної тканини",
+          "status": "valid",
+          "type": "open_answer",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        3
+      ],
+      "generation_time_ms": 422016,
+      "parsing_errors": [
+        "Iterative repair 1 made no valid-progress for CLICK_WORDS (valid 0/4).",
+        "Repair-pass incomplete for CLICK_WORDS: requested 4, obtained 3."
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33479,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 134,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33272,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 2,
+          "error": "HTTP Error 429: Too Many Requests",
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "error",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 33071,
+          "model": "z-ai/glm-4.5-air:free",
+          "provider": "openrouter:1",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 0,
+          "cooldown_remaining_sec": 102,
+          "model": "stepfun/step-3.5-flash:free",
+          "provider": "openrouter:2",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "skipped_cooldown",
+          "task_type": "CLICK_WORDS"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "provider": "openrouter:3",
+          "requested_count": 4,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "CLICK_WORDS"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 2,
+      "status": "success",
+      "subrequest_count": 3,
+      "task_type": "CLICK_WORDS",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              2,
+              4,
+              10,
+              11,
+              25,
+              26,
+              30,
+              31,
+              40,
+              41,
+              54,
+              55,
+              63,
+              64,
+              88,
+              89,
+              93,
+              94,
+              95,
+              96,
+              107,
+              108,
+              109,
+              112,
+              113,
+              129,
+              135,
+              144,
+              180,
+              181,
+              182,
+              185,
+              186,
+              201,
+              211,
+              228,
+              232,
+              267,
+              268,
+              288,
+              305,
+              307,
+              320,
+              322,
+              323,
+              324,
+              343,
+              438,
+              439,
+              458,
+              459,
+              462,
+              464,
+              465,
+              472,
+              474,
+              502,
+              503,
+              505,
+              506,
+              521,
+              533,
+              534,
+              551,
+              552,
+              648,
+              649,
+              662,
+              663,
+              668,
+              669,
+              670,
+              673,
+              674,
+              675,
+              682,
+              683,
+              684,
+              691,
+              692,
+              693,
+              700,
+              701,
+              702,
+              705,
+              706,
+              707,
+              710,
+              711,
+              712,
+              715,
+              716,
+              719,
+              720,
+              721,
+              726,
+              727,
+              728,
+              731,
+              732,
+              733,
+              743,
+              744,
+              745,
+              755,
+              756,
+              757,
+              768,
+              769,
+              771,
+              772,
+              780,
+              791,
+              799,
+              800,
+              811,
+              812,
+              814,
+              1025,
+              1026
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Кістковий мозок та тимус є центральними органами гемопоезу. Локалізація кісткового мозку – губчаста речовина губчатих та плоских кісток, а також діафізу трубчастих кісток. Консистенція кісткового мозку – напіврідка (з кісткового мозку виготовляють як зрізи, так і мазки). Маса червоного кісткового мозку у дорослої людини – 1200-1500 г. Гемопоетична тканина представлена двома компонентами: гемальним (гемопоетичні клітини) і стромальним. 90% поліпотентних стовбурових клітин у кістковому мозку знаходяться у стані спокою і лише 10% цих клітин активно діляться та забезпечують нормальний гемопоез. Стимуляція гемопоезу відбувається завдяки: Речовинам, які синтезуються мікрооточенням гемопоетичних клітин (колонієстимулюючі фактори); Гормонам (еритропоетин, тироксин, соматотропний гормон) Пригнічення гемопоезу відбувається завдяки: Продуктам зрілих клітин крові; Тканинним гормонам (простагландини, інтерферон) Глюкокортикоїдам. У червоному кістковому мозку відбуваються всі стадії дозрівання еритроцитів, гранулоцитів, моноцитів, тромбоцитів, В-лімфоцитів, а також утворення попередників Т-лімфоцитів. Локалізація тимусу – за грудиною. Максимальна маса тимусу – 35-40 г. (у підлітків 14-15 років). У тимусі завершується дозрівання Т-лімфоцитів та відбувається їх проліферація. Периферичні органи кровотворення включають лімфоїдні утворення слизових оболонок, лімфатичні вузли, селезінку. В периферичних органах кровотворення відбувається генерація імунної відповіді на контакт лімфоцитів з антигеном. Лейкоцити поділяються на гранулоцити (нейтрофіли, еоінофіли, базофіли) та агранулоцити (лімфоцити, моноцити). Основна функція гранулоцитів – фагоцитоз. Основні функції агранулоцитів – забезпечення гуморального та клітинного імунітету. Мієлопоез – це утворення всіх формених елементів крові, крім лімфоцитів. Лімфопоез – це утворення лімфоцитів (В- і Т-клітин). Відповідно до числа формених елементів крові виділяють 6 напрямків мієлопоезу та 2 напрямки лімфопоезу. У кожному з напрямків диференцировки виділяють 6 класів клітин: I. стовбурові клітини: діляться рідко; поліпотентні - можуть давати початок всім форменим елементам крові; можуть потрапляти в периферичну кров і після циркуляції знов осідати в кістковому мозку (репопуляція); морфологічно схожі на малі лімфоцити; можуть самовідновлюватися - частина клітин ідентична батьківським; здатні утворювати колонії. II. напівстовбурові клітини (КУО – колонієутворюючі одиниці): комітіровані (частково детерміновані) – можливості подальших перетворень обмежені; олігопотентні – можуть бути попередниками мієлопоезу або лімфопоезу, тобто диференціюватися по двом та більше напрямкам; чутливі до стимуляторів гемопоезу (регулятори мієлопоезу – еритропоетин, лейкопоетин, тромбопоетин) морфологічно схожі на малі лімфоцити; можуть самовідновлюватися - частина клітин ідентична батьківським; здатні утворювати колонії. III. уніпотентні клітини (КУО – колонієутворюючі одиниці); можуть диференціюватися лише в одному напрямку; морфологічно схожі на малі лімфоцити; можуть самовідновлюватися - частина клітин ідентична батьківським; здатні утворювати колонії. IV. Бласти: від клітин I-III класів бласти відрізняються тим, що мають більший розмір, світліші ядро та цитоплазму, містять продукти специфічного синтезу; Між собою морфологічно бласти не відрізняються; При подальшому діленні виникають лише більш диференційовані клітини; Клітини, що подібні батьківським (тобто власне бласти) не відновлюються. V. клітини, що дозрівають: представлені кількома проміжними формами; кожна проміжна форма може бути морфологічно ідентифікована; VI. зрілі клітини: не діляться (за деякими виключеннями); мають специфічні функції. Гостра лейкемія – це злоякісна пухлина кровотворної тканини, морфологічним субстратом якої є незрілі бластні клітини – недиференційовані або мало диференційовані. Гострі лейкемії підрозділяють на лімфобластні та нелімфобластні (мієлобластні). Етіологія, патогенез та основні клінічні прояви лімфобластних та мієлобластних лейкемій суттєво не відрізняються. Тому ці питання будуть висвітлені разом. Головні відмінності полягають у даних цитоморфологічного, цитохімічного та цитоімунного аналізу та різних підходах до лікування цих видів гострих лейкемій. Етіологія гострих лейкозів. a. Іонізуюча радіація: Променева терапія; Техногенні катастрофи на об’єктах атомної енергетики. b. Хімічні речовини: Бензол, пестициди, інсектициди, тютюновий дим; Фарби, розчинники, що містять хлор; Лікарські засоби (хлорамбуцил, циклофосфамід та ін.). c. Вірусна інфекція: Вірус Епштейна-Бара; Ретровірус HTLV. d. Генетичні дефекти та хромосомні аномалії. Патогенез гострих лейкозів. Під впливом етіологічних факторів відбуваються соматичні мутації клітин-попередниць кровотворної та лімфоїдної тканин. Цьому сприяють процеси порушення імунологічного захисту організму та порушення апоптозу (запрограмованої клітинної смерті). Перший етап формування лейкозів починається з мутації родоначальної клітини, яка набуває здатність швидко проліферувати. Клітини, які утворюються внаслідок такої проліферації вважаються клоном. На етапі формування першого клону клітини пухлини зберігають здатність до диференціювання (доброякісне пухлинне зростання). Втім, з часом, в клітинах первинного лейкозного клону відбуваються численні мутації. В результаті клітини вторинного лейкозного клону не лише активно проліферують, але й втрачають здатність до диференціювання (злоякісне пухлинне зростання). Проліферація лейкозних клітин в кістковому мозку, лейкозна інфільтрація органів та тканин, аутоімунні та інфекціно-запальні ускладнення формують клінічну картину гостих анемій. Морфологічна FAB (French-American-British) класифікація гострої мієлобластної лейкемії. Мо – гостра мієлобластна лейкемія з недиференційованими бластними клітинами. М1 – гостра мієлобластна лейкемія без ознак дозрівання бластів. М2 – гостра мієлобластна лейкемія з ознаками дозрівання бластів. М3 – гостра промієлоцитарна лейкемія. М4 – гостра мієломоноцитарна лейкемія. М5 – гостра моноцитарна лейкемія. М6 – гостра еритролейкемія. М7 – гостра мегакаріобластна лейкемія. Морфологічна FAB (French-American-British) класифікація гострої лімфобластної лейкемії. L1 – гостра лімфобластна лейкемія з малими розмірами бластів (частіше у дітей). L2 – гостра лімфобластна лейкемія з великими розмірами бластів (частіше у дорослих). L3 – гостра лімфобластна лейкемія з бластними клітинами типа клітин при лімфомі Беркіта. Клінічна картина гострих лейкозів. Стадії гострого лейкозу: Передлейкоз. Початковий період. Період повного розвитку захворювання (розгорнутий). Період ремісії (зникнення клінічної симптоматики, нормалізація показників периферичної крові та мієлограми). Період загострення (рецидив). Термінальний період. Клінічні «маски» гострого лейкозу в початковому періоді. Інфекційно-токсична. Пухлинна. Кістково-суглобна. Кардіальна. Анемічна. Клінічна картина гострого лейкозу у розгорнутому періоді: 1. Гіперпластичний синдром (зумовлений лейкозною інфільтрацією тканин): Лімфопластичний синдром – збільшення лімфатичних вузлів, піднебінних мигдалин. Гепатолієнальний синдром – збільшення печінки та селезінки. Кістково-суглобовий синдром – біль та болісність кісток та суглобів. Виразково-нектотичний синдром – стоматити, гінгівіти, тонзиліти. Нейролейкоз – вогнищеві неврологічні порушення, психічні розлади. Ураження сечостатевої системи – збільшення і ущільнення яєчок, збільшення яєчників, приапізм, порушення сечовипускання, можливі гематурія, маткові кровотечі. Ураження органів травлення – дисфагія та обструкція стравохіду, ознаки пептичної язви шлунка, обструкції шлунка, некротизуючого ентероколіту. Ураження нирок – протеїнурія, мікрогематурія, лейкоцитурія, ознаки гострої ниркової недостатністі. Ураження легень – кашель, кровохаркання, задишка, дрібнопухирчасті хрипи, ознаки дихальної недостатності. Ураження серця – ознаки міокардиту, ексудативного перикардиту, аритмії. Ураження ендокринної системи – можливі гіпопітуітаризм, гіпокортицизм, цукровий діабет. Ураження очей – біль, світлобоязнь, сльозотеча, зниження гостроти зору. Ураження шкіри – поява лейкемідів – щільних інфільтратів (вузлів) різного кольору, які часто супроводжуються свербінням. 2. Геморагічний синдром (зумовлений тромбоцитопенією, підвищенням проникності судин, порушенням коагуляції): Великі внутрішкірні крововиливи, носові, шлункові, кишкові, ниркові, легеневі, маткові, внутрішньоцеребральні кровотечі. 3. Анемічний синдром (зумовлений зменшенням кількості клітин червоного кровотворного паростку): Загальна слабкість, запаморочення, шум у вухах, потемніння в очах, мелькання метеликів перед очима, серцебиття та задишка, блідість шкіри, тахікардія, екстрасистолія, приглушеність тонів серця, систолічний шум на вертушці, неспецифічні зміни ЕКГ. Виразність анемії корелює зі ступенем проліферації лейкозних клітин в кістковому мозку. 4. Інтоксикаційний синдром (зумовлений підвищеним розпадом"
+          },
+          "index": 27,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              5,
+              8,
+              19,
+              22,
+              27,
+              34,
+              38,
+              42,
+              49,
+              53
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте",
+            "subtype": "error_detection",
+            "text": "text: Клітинні ряди гемопоезу включають 6 класів клітин, включаючи стовбурові, напівстовбурові, уніпотентні, бласти, клітини, що дозрівають та зрілі клітини. Клітини I-III класів морфологічно схожі на малі лімфоцити, мають більший розмір, світліше ядро та цитоплазму, містять продукти специфічного синтезу. Бласти відрізняються тим, що мають більший розмір, світліше ядро та цитоплазму, містять продукти специфічного синтезу. Між собою морфологічно бласти не відрізняються; при подальшому діленні виникають лише більш диференційовані клітини; клітини, що подібні батьківським (тобто власне бласти) не відновлюються."
+          },
+          "index": 28,
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "prompt": "Найди фактические ошибки в тексте",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        },
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              3
+            ]
+          },
+          "data": {
+            "error_indices": [
+              1,
+              2,
+              3,
+              8,
+              46,
+              47,
+              58,
+              71,
+              137,
+              138,
+              225,
+              229,
+              238
+            ],
+            "mode": "word_errors",
+            "prompt": "Найди фактические ошибки в тексте о гемопоэзе и лейкозах",
+            "subtype": "error_detection",
+            "text": "text: Центральными органами гемопоэза являются костный мозг и тимус. Локализация костного мозга – губчатое вещество губчатых и плоских костей, а также диафизов трубчатых костей. Консистенция костного мозга – полужидкая (из костного мозга изготавливают как срезы, так и мазки). Масса красного костного мозга у взрослого человека – 1200-1500 г. Гемопоэтическая ткань представлена двумя компонентами: гемальным (гемопоэтические клетки) и стромальным. 90% полипотентных стволовых клеток в костном мозге находятся в состоянии покоя и лишь 10% этих клеток активно делятся и обеспечивают нормальный гемопоэз. Стимуляция гемопоэза происходит благодаря: Веществам, которые синтезируются микроокружением гемопоэтических клеток (колонистимулирующим факторам); Гормонам (эритропоэтин, тироксин, соматотропный гормон) Подавление гемопоэза происходит благодаря: Продуктам зрелых клеток крови; Тканевым гормонам (простагландины, интерферон) Глюкокортикоидам. В красном костном мозге происходят все стадии созревания эритроцитов, гранулоцитов, моноцитов, тромбоцитов, В-лимфоцитов, а также образование предшественников Т-лимфоцитов. Локализация тимуса – за грудиной. Максимальная масса тимуса – 35-40 г (у подростков 14-15 лет). В тимусе завершается созревание Т-лимфоцитов и происходит их пролиферация. Периферические органы кроветворения включают лимфоидные образования слизистых оболочек, лимфатические узлы, селезенку. В периферических органах кроветворения происходит генерация иммунного ответа на контакт лимфоцитов с антигеном. Лейкоциты делятся на гранулоциты (нейтрофилы, эозинофилы, базофилы) и агранулоциты (лимфоциты, моноциты). Основная функция гранулоцитов – фагоцитоз. Основные функции агранулоцитов – обеспечение гуморального и клеточного иммунитета. Миелопоэз – это образование всех форменных элементов крови, кроме лимфоцитов. Лимфопоэз – это образование лимфоцитов (В- и Т-клеток). Соответственно числу форменных элементов крови выделяют 6 направлений миелопоэза и 2 направления лимфопоэза. В каждом из направлений дифференцировки выделяют 6 классов клеток: I. стволовые клетки: делятся редко; полипотентные - могут давать начало всем форменным элементам крови; могут попадать в периферическую кровь и после циркуляции снова оседать в костном мозге (репопуляция); морфологически схожи на малые лимфоциты; могут самообновляться - часть клеток идентична родительским; способны образовывать колонии. II. полустволовые клетки (КУО – колониеобразующие единицы): коммитированные (частично детерминированные) – возможности дальнейших превращений ограничены; олигопотентные – могут быть предшественниками миелопоэза или лимфопоэза, то есть дифференцироваться по двум и более направлениям; чувствительны к стимуляторам гемопоэза (регуляторы миелопоэза – эритропоэтин, лейкопоэтин, тромбопоэтин) морфологически схожи на малые лимфоциты; могут самообновляться - часть клеток идентична родительским; способны образовывать колонии. III. унипотентные клетки (КУО – колониеобразующие единицы); могут дифференцироваться лишь в одном направлении; морфологически схожи на малые лимфоциты; могут самообновляться - часть клеток идентична родительским; способны образовывать колонии. IV. Бласты: от клеток I-III классов бласты отличаются тем, что имеют больший размер, светлее ядро и цитоплазму, содержат продукты специфического синтеза; Между собой морфологически бласты не отличаются; При дальнейшем делении возникают лишь более дифференцированные клетки; Клетки, похожие родительским (то есть собственно бласты) не восстанавливаются. V. клетки, которые дозревают: представлены несколькими промежуточными формами; каждая промежуточная форма может быть морфологически идентифицирована; VI. зрелые клетки: не делятся (за некоторыми исключениями); имеют специфические функции. Острый лейкоз – это злокачественная опухоль кроветворной ткани, морфологическим субстратом которой являются незрелые бластные клетки – недифференцированные или мало дифференцированные. Острые лейкемии подразделяют на лимфобластные и нелимфобластные (миелобластные). Этиология, патогенез и основные клинические проявления лимфобластных и миелобластных лейкемий существенно не отличаются. Поэтому эти вопросы будут освещены вместе. Главные различия заключаются в данных цитоморфологического, цитохимического и цитоиммунного анализа и разных подходах к лечению этих видов острых лейкемий. Этиология острых лейкемии. a. Ионизирующая радиация: Лучевая терапия; Техногенные катастрофы на объектах атомной энергетики. b. Химические вещества: Бензол, пестициды, инсектициды, табачный дым; Краски, растворители, содержащие хлор; Лекарственные средства (хлорамбуцил, циклофосфамид и др.). c. Вирусная инфекция: Вирус Эпштейна-Бара; Ретровирус HTLV. d. Генетические дефекты и хромосомные аномалии. Патогенез острых лейкозов. Под влиянием этиологических факторов происходят соматические мутации клеток-предшественниц кроветворной и лимфоидной тканей. Этому способствуют процессы нарушения иммунологического защиты организма и нарушения апоптоза (запрограммированной клеточной смерти). Первый этап формирования лейкозов начинается с мутации родоначальной клетки, которая приобретает способность быстро пролиферировать. Клетки, которые образуются в результате такой пролиферации считаются клоном. На этапе формирования первого клона клетки опухоли сохраняют способность к дифференцировке (доброкачественное опухолевое рост). Впрочем, со временем, в клетках первичного лейкозного клона происходят многочисленные мутации. В результате клетки вторичного лейкозного клона не только активно пролиферируют, но и теряют способность к дифференцировке (злокачественное опухолевое рост). Пролиферация лейкозных клеток в костном мозге, лейкозная инфильтрация органов и тканей, аутоиммунные и инфекционно-воспалительные осложнения формируют клиническую картину острых анемий. Морфологическая FAB (French-American-British) классификация острой миелобластной лейкемии. Мо – острая миелобластная лейкемия с недифференцированными бластными клетками. М1 – острая миелобластная лейкемия без признаков дозревания бластов. М2 – острая миелобластная лейкемия с признаками дозревания бластов. М3 – острая промиелоцитарная лейкемия. М4 – острая миеломоноцитарная лейкемия. М5 – острая моноцитарная лейкемия. М6 – острая эритролейкемия. М7 – острая мегакариобластная лейкемия. Морфологическая FAB (French-American-British) классификация острой лимфобластной лейкемии. L1 – острая лимфобластная лейкемия с малыми размерами бластов (чаще у детей). L2 – острая лимфобластная лейкемия с большими размерами бластов (чаще у взрослых). L3 – острая лимфобластная лейкемия с бластными клетками типа клеток при лимфоме Беркита. Клиническая картина острых лейкозов. Стадии острого лейкоза: Передлейкоз. Начальный период. Период полного развития заболевания (развернутый). Период ремиссии (исчезновение клинической симптоматики, нормализация показателей периферической крови и миелограммы). Период обострения (рецидив). Терминальный период. Клинические «маски» острого лейкоза в начальном периоде. Инфекционно-токсическая. Пухлинная. Костно-суставная. Кардиальная. Анемическая. Клиническая картина острого лейкоза в развернутом периоде: 1. Гиперпластический синдром (обусловленный лейкозной инфильтрацией тканей): Лимфопластичный синдром – увеличение лимфатических узлов, поднебных миндалин. Гепатолиеальный синдром – увеличение печени и селезенки. Костно-суставной синдром – боль и болезненность костей и суставов. Язвенно-некротический синдром – стоматиты, гингивиты, тонзиллиты. Нейролейкоз – очаговые неврологические нарушения, психические расстройства. Поражения мочеполовой системы – увеличение и уплотнение яичек, увеличение яичников, приапизм, нарушения мочеиспускания, возможны гематурия, маточные кровотечения. Поражения органов пищеварения – дисфагия и обструкция пищевода, признаки пептической язвы желудка, обструкции желудка, некротизирующего энтероколита. Поражения почек – протеинурия, микрогематурия, лейкоцитурия, признаки острой почечной недостаточности. Поражения легких – кашель, кровохарканье, одышка, мелкопузырчатые хрипы, признаки дыхательной недостаточности. Поражения сердца – признаки миокардита, экссудативного перикардита, аритмии. Поражения эндокринной системы – возможны гипопитуитаризм, гипокортицизм, сахарный диабет. Поражения глаз – боль, светобоязнь, слезотечение, снижение остроты зрения. Поражения кожи – появление лейкемидов – плотных инфильтратов (узлов) разного цвета, которые часто сопровождаются зудом. 2. Геморрагический синдром (обусловленный тромбоцитопенией, повышением проницаемости сосудов, нарушением коагуляции): Крупные внутричерепные кровоизлияния, носовые, желудочные, кишечные, почечные, легочные, маточные, внутричерепные кровотечения. 3. Анемический синдром (обусловленный уменьшением количества клеток красного кроветворного ростка): Общая слабость, головокружение, шум в ушах, потемнение в глазах, мелькание бабочек перед глазами, сердцебиение и одышка, бледность кожи, тахикардия, экстрасистолия, приглушенность тонов сердца, систолический шум на вертушке, неспецифические изменения ЭКГ. Выраженность анемии коррелирует со степенью пролиферации лейкозных клеток в костном мозге. 4. Интоксикационный синдром (обусловленный повышенным распадом лейкозных клеток). Общая слабость, повышенная утомляемость, сонливость, обеднение эмоций, снижение аппетита, снижение массы тела, тошнота, рвота, головная боль, высокая температура тела (непластичная лихорадка), потливость (особенно ночью). 5. Иммунодефицитный синдром (обусловленный резким нарушением клеточного и гуморального иммунитета вследствие функциональной неполноценности лейкоцитов). Ангины, пневмонии и любые другие инфекции (бактериальные, вирусные, грибковые). Клинические особенности острого лимфобластного лейкоза: чаще болеют дети; течение заболевания умеренно прогрессирующее; чаще возникают кожные лейкемиды; чаще увеличиваются лимфоузлы; чаще развивается нейролейкоз; чаще возникает лейкозная инфильтрация яичек; большая частота оссалгий; очень характерный гипертермический синдром; эффективность цитостатической терапии выше чем при других лейкозах. Клинические особенности острого нелимфобластного (миелобластного) лейкоза: чаще болеют взрослые; – течение заболевания быстро прогрессирующее; чаще возникают язвенно-некротические поражения кожи и слизистых оболочек; выраженность геморрагического синдрома больше; Лабораторные данные при острых лейкозах: Клинический анализ крови: Нормохромная нормоцитарная анемия. Ретикулоцитопения. Тромбоцитопения. Изменение общей количества лейкоцитов (увеличение или уменьшение). Бластемия. Уменьшение количества зрелых нейтрофилов. Феномен «провалля». Исчезновение эозинофилов и базофилов. Повышение СОЭ. Биохимический анализ крови: возможны увеличения γ-глобулинов, серомукоида, фибрина, А"
+          },
+          "index": 29,
+          "name": "Клик - Найди фактические ошибки в тексте о г...",
+          "prompt": "Найди фактические ошибки в тексте о гемопоэзе и лейкозах",
+          "status": "warning",
+          "type": "click",
+          "validation_issues": [
+            {
+              "field": "error_spans_count_high",
+              "message": "CLICK_WORDS has too many error spans (recommended 2-4, practical max ~5).",
+              "severity": "warning"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "educational_unit_ids": [
+        8,
+        16,
+        19
+      ],
+      "generation_time_ms": 36633,
+      "parsing_errors": [
+        "Задание #1: не найдено ни одного элемента (element_X)"
+      ],
+      "provider_chain_attempts": [
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        },
+        {
+          "attempt": 1,
+          "model": "arcee-ai/trinity-large-preview:free",
+          "preferred_providers": [
+            "openrouter:3",
+            "openrouter:2"
+          ],
+          "provider": "openrouter:3",
+          "requested_count": 1,
+          "stage": "generate",
+          "status": "success",
+          "task_type": "SEQUENCE"
+        }
+      ],
+      "provider_used": "openrouter:3",
+      "repair_pass_attempted": true,
+      "repair_subrequest_count": 1,
+      "status": "success",
+      "subrequest_count": 2,
+      "task_type": "SEQUENCE",
+      "tasks": [
+        {
+          "ai_meta": {
+            "educational_unit_ids": [
+              8,
+              16,
+              19
+            ]
+          },
+          "data": {
+            "elements": {
+              "element_1": "Передлейкоз",
+              "element_2": "Початковий період",
+              "element_3": "Період повного розвитку захворювання (розгорнутий)",
+              "element_4": "Період ремісії (зникнення клінічної симптоматики, нормалізація показників периферичної крові та мієлограми)",
+              "element_5": "Період загострення (рецидив)",
+              "element_6": "Термінальний період"
+            },
+            "levels": {
+              "1": [
+                "element_1"
+              ],
+              "2": [
+                "element_2"
+              ],
+              "3": [
+                "element_3"
+              ],
+              "4": [
+                "element_4"
+              ],
+              "5": [
+                "element_5"
+              ],
+              "6": [
+                "element_6"
+              ]
+            },
+            "prompt": "Упорядкуйте стадії гострого лейкозу в хронологічному порядку"
+          },
+          "index": 30,
+          "name": "Последовательность - Упорядкуйте стадії гострого лейкозу в...",
+          "prompt": "Упорядкуйте стадії гострого лейкозу в хронологічному порядку",
+          "status": "valid",
+          "type": "sequence_assembly",
+          "validation_issues": []
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "by_type": {
+      "click_text": 7,
+      "click_words": 3,
+      "open_answer": 5,
+      "sequence": 1,
+      "test": 15
+    },
+    "quality": {
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "expected_output_language": "ru",
+      "language_mismatch_warnings": 0,
+      "material_language": "ru",
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 31
+    },
+    "total_errors": 0,
+    "total_generated": 31,
+    "total_valid": 28,
+    "total_warnings": 3
+  }
+}

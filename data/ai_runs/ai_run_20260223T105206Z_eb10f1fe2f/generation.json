@@ -1,0 +1,65 @@
+{
+  "run_id": "ai_run_20260223T105206Z_eb10f1fe2f",
+  "created_at": "2026-02-23T10:52:06Z",
+  "provider_model": null,
+  "material_stats": {
+    "word_count": 160,
+    "char_count": 1540,
+    "language": "unknown"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "unknown",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 1,
+        "educational_unit_ids": []
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 1,
+    "total_valid": 1,
+    "total_warnings": 0,
+    "total_errors": 0,
+    "by_type": {
+      "click_words": 1
+    },
+    "quality": {
+      "material_language": "unknown",
+      "expected_output_language": "unknown",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 1
+    }
+  },
+  "results": [
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "mock",
+      "educational_unit_ids": [],
+      "generation_time_ms": 0,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_WORDS: requested 1, kept 1, dropped 1.",
+        "Overgeneration trimmed for CLICK_WORDS after cleanup repair: requested 1, kept 1, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - ??????? ??????",
+          "type": "click",
+          "status": "valid",
+          "hash": "2f024a43fec0d0de0b0199ab17d7d97d766176a91f58aefdbecb0cfbb9215eeb",
+          "validation_issues": []
+        }
+      ]
+    }
+  ]
+}

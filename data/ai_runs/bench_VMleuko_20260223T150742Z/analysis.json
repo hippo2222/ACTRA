@@ -1,0 +1,384 @@
+{
+  "run_id": "bench_VMleuko_20260223T150742Z",
+  "created_at": "2026-02-23T15:08:50Z",
+  "provider_used": "openrouter:2",
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "provider_chain_attempts": [
+    {
+      "provider": "openrouter:1",
+      "model": "z-ai/glm-4.5-air:free",
+      "attempt": 1,
+      "status": "error",
+      "error": "HTTP Error 429: Too Many Requests",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:1",
+      "model": "z-ai/glm-4.5-air:free",
+      "attempt": 2,
+      "status": "error",
+      "error": "HTTP Error 429: Too Many Requests",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:2",
+      "model": "stepfun/step-3.5-flash:free",
+      "attempt": 1,
+      "status": "success",
+      "stage": "analysis_initial"
+    }
+  ],
+  "material_stats": {
+    "word_count": 2289,
+    "char_count": 19121,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "result": {
+    "human_summary": "",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 15,
+        "priority": "high",
+        "covers_units": [
+          2,
+          3,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          1,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          18
+        ],
+        "rationale": "Heuristic fallback: factual and classification-heavy units fit objective testing."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 7,
+        "priority": "medium",
+        "covers_units": [
+          8,
+          10,
+          11,
+          1,
+          4,
+          5,
+          6,
+          7,
+          9,
+          18
+        ],
+        "rationale": "Heuristic fallback: suitable for distinctions, rules, and misconception checks."
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "priority": "medium",
+        "covers_units": [
+          8,
+          10,
+          11
+        ],
+        "rationale": "Heuristic fallback: process/concept units benefit from explanation-style answers."
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 4,
+        "priority": "medium",
+        "covers_units": [
+          3,
+          7
+        ],
+        "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "priority": "low",
+        "covers_units": [
+          1,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "rationale": "Heuristic fallback: sequence/ranking only where wording suggests explicit order or stages."
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Выявить образовательные единицы",
+        "type": "classification",
+        "description": "концепции, факты, процессы, термины, классификации.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 2,
+        "title": "Добавить target_language",
+        "type": "fact",
+        "description": "ru.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 3,
+        "title": "Для каждой educational_units добавить explicitness, evidence, modality, assessment_risk.",
+        "type": "fact",
+        "description": "Для каждой educational_units добавить explicitness, evidence, modality, assessment_risk.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Основные понятия гемопоэза**",
+        "type": "classification",
+        "description": "центральные органы, периферические, классификация лейкоцитов, миелопоэз/лимфопоэз. Подходит для TEST или CLICK_TEXT на термины.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 5,
+        "title": "Клеточная дифференцировка**",
+        "type": "classification",
+        "description": "классы клеток I-VI. Подходит для SEQUENCE (порядок дифференцировки) или TEST на классификацию.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 6,
+        "title": "Острый лейкоз**",
+        "type": "classification",
+        "description": "определение, классификация (лимфобластный/миелобластный). TEST на типы.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 7,
+        "title": "FAB классификация**",
+        "type": "classification",
+        "description": "подтипы M0-M7 и L1-L3. SEQUENCE или TEST на соответствие.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 8,
+        "title": "Этиология и патогенез**",
+        "type": "process",
+        "description": "факторы, этапы клона. OPEN_ANSWER на объяснение механизма.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 9,
+        "title": "Стадии и клиническая картина**",
+        "type": "classification",
+        "description": "стадии, синдромы. SEQUENCE на стадии, CLICK_TEXT на синдромы.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 10,
+        "title": "Лабораторная диагностика**",
+        "type": "process",
+        "description": "анализы, исследования. TEST на методы и что выявляют.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 11,
+        "title": "Лечение**",
+        "type": "process",
+        "description": "этапы, схемы, трансплантация. OPEN_ANSWER на протоколы или TEST на препараты.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 12,
+        "title": "Прогноз**",
+        "type": "fact",
+        "description": "факторы для ALL и AML. CLICK_TEXT на благоприятные/неблагоприятные.",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 13,
+        "title": "title",
+        "type": "fact",
+        "description": "\"Центральные органы гемопоэза\"",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 14,
+        "title": "Центральные органы гемопоэза (факт)",
+        "type": "fact",
+        "description": "Центральные органы гемопоэза (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 15,
+        "title": "Локализация костного мозга (факт)",
+        "type": "fact",
+        "description": "Локализация костного мозга (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 16,
+        "title": "Консистенция костного мозга (факт)",
+        "type": "fact",
+        "description": "Консистенция костного мозга (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 17,
+        "title": "Масса красного костного мозга (факт)",
+        "type": "fact",
+        "description": "Масса красного костного мозга (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 18,
+        "title": "Компоненты гемопоэтической ткани (классификация)",
+        "type": "classification",
+        "description": "Компоненты гемопоэтической ткани (классификация)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 19,
+        "title": "Полипотентные стволовые клетки",
+        "type": "fact",
+        "description": "состояние и активность (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 20,
+        "title": "Стимуляция гемопоэза (факторы) (список)",
+        "type": "fact",
+        "description": "Стимуляция гемопоэза (факторы) (список)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 21,
+        "title": "Подавление гемопоэза (факторы) (список)",
+        "type": "fact",
+        "description": "Подавление гемопоэза (факторы) (список)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 22,
+        "title": "Функция костного мозга в созревании клеток (факт)",
+        "type": "fact",
+        "description": "Функция костного мозга в созревании клеток (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 23,
+        "title": "Тимус",
+        "type": "fact",
+        "description": "локализация и масса (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 24,
+        "title": "Функция тимуса (факт)",
+        "type": "fact",
+        "description": "Функция тимуса (факт)",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      }
+    ],
+    "not_recommended": [],
+    "illustrations_detected": false,
+    "illustrations_note": null,
+    "warnings": [
+      "Heuristic fallback used: AI analysis response did not follow structured JSON format.",
+      "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+      "Coverage calibration increased recommended text tasks to improve coverage (target ~32-40)."
+    ],
+    "material_volume": "medium",
+    "target_language": "ru"
+  }
+}

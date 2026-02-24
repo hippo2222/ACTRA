@@ -1,0 +1,37 @@
+{
+  "run_id": "ai_run_20260223T114426Z_4af0581119",
+  "phase": "analyzed",
+  "material_language": "en",
+  "output_language_mode": "same_as_material",
+  "effective_output_language": "en",
+  "material_word_count": 83,
+  "provider_used": "openrouter:2",
+  "provider_model": "stepfun/step-3.5-flash:free",
+  "provider_chain_attempts": [
+    {
+      "provider": "openrouter:1",
+      "model": "z-ai/glm-4.5-air:free",
+      "attempt": 1,
+      "status": "error",
+      "error": "HTTP Error 429: Too Many Requests",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:1",
+      "model": "z-ai/glm-4.5-air:free",
+      "attempt": 2,
+      "status": "error",
+      "error": "HTTP Error 429: Too Many Requests",
+      "stage": "analysis_initial"
+    },
+    {
+      "provider": "openrouter:2",
+      "model": "stepfun/step-3.5-flash:free",
+      "attempt": 1,
+      "status": "success",
+      "stage": "analysis_initial"
+    }
+  ],
+  "created_at": "2026-02-23T11:44:49Z",
+  "updated_at": "2026-02-23T11:44:49Z"
+}

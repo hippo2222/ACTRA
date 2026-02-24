@@ -1,0 +1,870 @@
+{
+  "run_id": "bench_VMleuko_20260223T140722Z",
+  "created_at": "2026-02-23T14:16:07Z",
+  "provider_model": "arcee-ai/trinity-large-preview:free",
+  "material_stats": {
+    "word_count": 2289,
+    "char_count": 19121,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 15,
+        "educational_unit_ids": [
+          1,
+          2,
+          3,
+          4,
+          6,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          16,
+          17,
+          18,
+          21,
+          24,
+          5,
+          7,
+          8,
+          15,
+          19,
+          20,
+          22,
+          23
+        ]
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 7,
+        "educational_unit_ids": [
+          5,
+          7,
+          8,
+          15,
+          19,
+          20,
+          22,
+          23
+        ]
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "educational_unit_ids": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ]
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 4,
+        "educational_unit_ids": [
+          22,
+          23
+        ]
+      },
+      {
+        "task_type": "SEQUENCE",
+        "count": 1,
+        "educational_unit_ids": [
+          24
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 31,
+    "total_valid": 31,
+    "total_warnings": 0,
+    "total_errors": 1,
+    "by_type": {
+      "test": 15,
+      "click_text": 7,
+      "open_answer": 5,
+      "click_words": 4,
+      "sequence": 0
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "total_tasks": 31
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35505,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35462,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35446,
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 5
+        }
+      ],
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        16,
+        17,
+        18,
+        21,
+        24,
+        5,
+        7,
+        8,
+        15,
+        19,
+        20,
+        22,
+        23
+      ],
+      "generation_time_ms": 82431,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Задание - Функции тимуса",
+          "type": "test",
+          "status": "valid",
+          "hash": "b9d82dbc7240fe3020ce444ac6b0cb7e755004d3b5e805b74405759e7b1de240",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Локалізація тимусу",
+          "type": "test",
+          "status": "valid",
+          "hash": "d8cba0bd6b6d6047234b958b29debff6466c58ce6e7ca747a0e873c53a47badd",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Функции гранулоцитов",
+          "type": "test",
+          "status": "valid",
+          "hash": "384e91f4c8478230993ceaa003dbfee4e55386d8ec932479905312229c81c315",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Стимуляция гемопоэза",
+          "type": "test",
+          "status": "valid",
+          "hash": "d68ba51f13a261855996e13548e7d0e903a41e7f3fb24b9ea783ef285fb0a00d",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Класифікація лейкоцитів",
+          "type": "test",
+          "status": "valid",
+          "hash": "1b64b3a42fcb74d214ffb8fb47de7628d7ec73836854640cc5696b8023069e6f",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Стадії гострого лейкозу",
+          "type": "test",
+          "status": "valid",
+          "hash": "10ba26eee07c7c42eca4bdd198d8d25a481288d7bb2d408fa1d020593be94d6f",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Консистенция костного мозга",
+          "type": "test",
+          "status": "valid",
+          "hash": "c2bc9f06d5265a0b865f60e44d27d8719a38c333665b395403a206dc72beed06",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Гостра лейкемія - визначення",
+          "type": "test",
+          "status": "valid",
+          "hash": "fd7d2a6482175629e71210c1f1ce5951de1f553a00a6a6c7d9a0efbc457cde36",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Центральные органы гемопоэза",
+          "type": "test",
+          "status": "valid",
+          "hash": "64afa654a270f2d2596d65f725d221371cf9b799cdec9a0bdc581b889a7c42ac",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Масса красного костного мозга",
+          "type": "test",
+          "status": "valid",
+          "hash": "b771dbd859a1ca3371edb0d6fc5e8af9579d6b7489ad640ae1673f99c09620eb",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Полипотентные стволовые клетки",
+          "type": "test",
+          "status": "valid",
+          "hash": "b14dd78d345949621b0bec6bd61b6cc97f4e32ba6c301cd1b6aa7b2c0a3ec8e5",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Компоненты гемопоэтической ткани",
+          "type": "test",
+          "status": "valid",
+          "hash": "921717e52c83ee9f1beabe5407eed4180df4b7055a89726ea3749995e7658561",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Напрямки мієлопоезу та лімфопоезу",
+          "type": "test",
+          "status": "valid",
+          "hash": "d532859d74f81b4e89bf864aa5b99506c84914da38a8ac71b9117d5a08d68cc5",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Классификация FAB для миелобластного ...",
+          "type": "test",
+          "status": "valid",
+          "hash": "68fde09f31d19ff565d1359d4fa2a29d3cb583312337e920525354c780ed2e40",
+          "validation_issues": []
+        },
+        {
+          "name": "Задание - Классификация FAB для лимфобластного ...",
+          "type": "test",
+          "status": "valid",
+          "hash": "4231a811c056346019343384f9b65c3de5cbf02cdc1344695218b316a5c9d8f9",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35423,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 3,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35361,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2,
+          "start_after_provider": "openrouter:2"
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35313,
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        5,
+        7,
+        8,
+        15,
+        19,
+        20,
+        22,
+        23
+      ],
+      "generation_time_ms": 124625,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Виберіть правильні твердження про клі...",
+          "type": "click",
+          "status": "valid",
+          "hash": "3d16cf00aa2b6d5a1f9d5ef06a466b5c7012898a71aa6ec2b5542139c32cbd78",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Виберіть правильні твердження про гос...",
+          "type": "click",
+          "status": "valid",
+          "hash": "e175790b84d90ed38b9fde8ff39d98c7e60de51bd5dd21a79b524c74b78344ab",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Виберіть правильні твердження про FAB...",
+          "type": "click",
+          "status": "valid",
+          "hash": "5431010de09b7be12b001bd97849eef30548ee432267f22cabe60009084217be",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Які з перерахованих тверджень про FAB...",
+          "type": "click",
+          "status": "valid",
+          "hash": "499751b6b2f05ef88169f81bcde5e5776e98a2215fedb85db80c4c162f6ec96b",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Які з перерахованих тверджень про FAB...",
+          "type": "click",
+          "status": "valid",
+          "hash": "e6af0e1af7426c91ff4575d84244d69cd7a2d57ef68bce936f9961d2eaf6cfff",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Какие варианты соответствуют морфолог...",
+          "type": "click",
+          "status": "valid",
+          "hash": "87bbd315e911988a84676c3d9e075cfec7e4b99a76e6fbdec9ece9ef20d9aff6",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Какие из перечисленных факторов приво...",
+          "type": "click",
+          "status": "valid",
+          "hash": "6bd6f722a34ceaf0d25427f260a31057ea779ad26f50033909d58fef54be3e15",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35298,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 1,
+          "status": "error",
+          "error": "HTTP Error 429: Too Many Requests",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 2,
+          "status": "error",
+          "error": "HTTP Error 429: Too Many Requests",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 3
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35214,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 220,
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 2
+        }
+      ],
+      "educational_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24
+      ],
+      "generation_time_ms": 115539,
+      "parsing_errors": [
+        "Overgeneration trimmed for OPEN_ANSWER: requested 5, kept 5, dropped 3."
+      ],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Які основні функції агранулоцитів?",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "e107b3a27a26679997cd79107dad8491c126d5dc377df2d8191c1f369fb00e86",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Опиши основні етапи лікування гострог...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "6f28eb05ff36e98fc2917061c7a16d1f7e60559e599d9c0e974f7def6ae68607",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Які стадії дозрівання клітин виділяют...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "d509ec630e14b091479021a5a7d6a168e26c7568db883d529acd13aa9f6ea706",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Поясни, як відбувається стимуляція та...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "5aae960fa7cce12be64f58fe886e79f6a82a37d1d40a120d3263822a949b6e62",
+          "validation_issues": []
+        },
+        {
+          "name": "Открытый ответ - Які є основні клінічні особливості го...",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "7a14f0dca1a55a29426ce83954c7217d483d908d1af1197efec7985c3c914e65",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "status": "success",
+      "provider_used": "openrouter:3",
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35183,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 188,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 4
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35160,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 165,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35114,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 120,
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_WORDS",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [
+        22,
+        23
+      ],
+      "generation_time_ms": 78468,
+      "parsing_errors": [
+        "Overgeneration trimmed for CLICK_WORDS: requested 4, kept 4, dropped 1.",
+        "Overgeneration trimmed for CLICK_WORDS after iterative repair 1: requested 4, kept 4, dropped 1."
+      ],
+      "tasks": [
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "valid",
+          "hash": "ffa73eeadc10e68a07e57fa9d1c0a15af2b479233088a2cb94744d938f30c666",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "valid",
+          "hash": "b21e0c1f6a17ba3f534e9be1c4a1650a834466a92702e725d954489a74106077",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "valid",
+          "hash": "6b69ea52834d6404a039a51208c34285420d3a50bcd6b3608ec4b0c5fabb7eca",
+          "validation_issues": []
+        },
+        {
+          "name": "Клик - Найди фактические ошибки в тексте",
+          "type": "click",
+          "status": "valid",
+          "hash": "f3b124dbfd6cd94ef15f6f11f515c5cdb4faf27c19ff6bf15bc282399f82ce7b",
+          "validation_issues": []
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "status": "error",
+      "provider_used": null,
+      "provider_chain_attempts": [
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35104,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 109,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35078,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 83,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:1",
+          "model": "z-ai/glm-4.5-air:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 35059,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:2",
+          "model": "stepfun/step-3.5-flash:free",
+          "attempt": 0,
+          "status": "skipped_cooldown",
+          "cooldown_remaining_sec": 64,
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        },
+        {
+          "provider": "openrouter:3",
+          "model": "arcee-ai/trinity-large-preview:free",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "SEQUENCE",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [
+        24
+      ],
+      "generation_time_ms": 71326,
+      "parsing_errors": [
+        "Задание #1: не найдено ни одного элемента (element_X)",
+        "[repair-pass] Задание #1: не найдено ни одного элемента (element_X)",
+        "[iterative-sequence-1] Задание #1: не найдено ни одного элемента (element_X)",
+        "Iterative repair 1 made no valid-progress for SEQUENCE (valid 0/1).",
+        "Repair-pass incomplete for SEQUENCE: requested 1, obtained 0."
+      ],
+      "tasks": []
+    }
+  ]
+}

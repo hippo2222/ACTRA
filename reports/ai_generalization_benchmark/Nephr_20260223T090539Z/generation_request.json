@@ -1,0 +1,124 @@
+{
+  "tasks_to_generate": [
+    {
+      "task_type": "TEST",
+      "count": 5,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Первичные и вторичные заболевания почек, вызывающие НС",
+          "evidence": "Раздел 'Этиология'",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Этиология нефротического синдрома",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Изменения анализов крови и мочи при НС",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Лабораторная диагностика нефротического синдрома",
+          "type": "classification"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 5,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Жалобы, отеки, транссудаты и другие симптомы НС",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 4,
+          "modality": "text",
+          "title": "Клинические проявления нефротического синдрома",
+          "type": "fact"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Изменения анализов крови и мочи при НС",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Лабораторная диагностика нефротического синдрома",
+          "type": "classification"
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 3,
+      "educational_units": [
+        {
+          "assessment_risk": "low",
+          "description": "Клинико-лабораторный симптомокомплекс с массивной протеинурией и нарушениями обмена веществ",
+          "evidence": "Первый абзац",
+          "explicitness": "explicit",
+          "id": 1,
+          "modality": "text",
+          "title": "Определение нефротического синдрома",
+          "type": "concept"
+        },
+        {
+          "assessment_risk": "medium",
+          "description": "Иммунологические и метаболические механизмы развития НС",
+          "evidence": "Раздел 'Патогенез'",
+          "explicitness": "explicit",
+          "id": 3,
+          "modality": "text",
+          "title": "Патогенез нефротического синдрома",
+          "type": "process"
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 2,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Изменения анализов крови и мочи при НС",
+          "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+          "explicitness": "explicit",
+          "id": 5,
+          "modality": "text",
+          "title": "Лабораторная диагностика нефротического синдрома",
+          "type": "classification"
+        }
+      ]
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 2,
+      "educational_units": [
+        {
+          "assessment_risk": "medium",
+          "description": "Первичные и вторичные заболевания почек, вызывающие НС",
+          "evidence": "Раздел 'Этиология'",
+          "explicitness": "explicit",
+          "id": 2,
+          "modality": "text",
+          "title": "Этиология нефротического синдрома",
+          "type": "classification"
+        },
+        {
+          "assessment_risk": "high",
+          "description": "Общие подходы и медикаментозная терапия НС",
+          "evidence": "Раздел 'Принципы лечения'",
+          "explicitness": "explicit",
+          "id": 6,
+          "modality": "text",
+          "title": "Принципы лечения нефротического синдрома",
+          "type": "process"
+        }
+      ]
+    }
+  ]
+}

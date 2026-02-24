@@ -1,0 +1,382 @@
+{
+  "run_id": "vm_retry4_20260223T004953",
+  "created_at": "2026-02-23T00:54:16Z",
+  "provider_used": "openrouter",
+  "provider_model": "z-ai/glm-4.5-air:free",
+  "material_stats": {
+    "word_count": 2289,
+    "char_count": 19121,
+    "language": "ru"
+  },
+  "result": {
+    "human_summary": "Матеріал охоплює тему гемопоезу, лейкопоезу та гострих лейкозів. Текст містить детальну інформацію про органи кровотворення, класифікацію клітин, етіологію, патогенез, клінічну картину, діагностику, лікування та прогноз гострих лейкозів. Матеріал є досить об'ємним і технічно насиченим, що вимагає різноманітних інтерактивних завдань для ефективного засвоєння.",
+    "recommendations": [
+      {
+        "task_type": "TEST",
+        "count": 16,
+        "priority": "high",
+        "covers_units": [
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          1,
+          2,
+          3,
+          4
+        ],
+        "rationale": "Added to cover educational units missed by the analysis response."
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 7,
+        "priority": "medium",
+        "covers_units": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ],
+        "rationale": "Added by coverage calibration to improve overall material coverage."
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 5,
+        "priority": "medium",
+        "covers_units": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          16,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24
+        ],
+        "rationale": "Added by coverage calibration to improve overall material coverage."
+      },
+      {
+        "task_type": "CLICK_WORDS",
+        "count": 4,
+        "priority": "medium",
+        "covers_units": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+      }
+    ],
+    "educational_units": [
+      {
+        "id": 1,
+        "title": "Центральні органи гемопоезу**",
+        "type": "fact",
+        "description": "кістковий мозок та тимус",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 2,
+        "title": "Локалізація та характеристики кісткового мозку",
+        "type": "fact",
+        "description": "Локалізація та характеристики кісткового мозку",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 3,
+        "title": "Компоненти гемопоетичної тканини",
+        "type": "fact",
+        "description": "Компоненти гемопоетичної тканини",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 4,
+        "title": "Стимуляція та пригнічення гемопоезу",
+        "type": "fact",
+        "description": "Стимуляція та пригнічення гемопоезу",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 5,
+        "title": "Процеси в червоному кістковому мозку",
+        "type": "fact",
+        "description": "Процеси в червоному кістковому мозку",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 6,
+        "title": "Локалізація та характеристики тимусу",
+        "type": "fact",
+        "description": "Локалізація та характеристики тимусу",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 7,
+        "title": "Периферичні органи кровотворення",
+        "type": "fact",
+        "description": "Периферичні органи кровотворення",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 8,
+        "title": "Класифікація лейкоцитів",
+        "type": "classification",
+        "description": "Класифікація лейкоцитів",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 9,
+        "title": "Мієлопоез та лімфопоез",
+        "type": "fact",
+        "description": "Мієлопоез та лімфопоез",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 10,
+        "title": "Класифікація клітин кровотворення",
+        "type": "classification",
+        "description": "Класифікація клітин кровотворення",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 11,
+        "title": "Гостра лейкемія",
+        "type": "classification",
+        "description": "визначення та класифікація",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 12,
+        "title": "Етіологія гострих лейкемій",
+        "type": "fact",
+        "description": "Етіологія гострих лейкемій",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 13,
+        "title": "Патогенез гострих лейкозів",
+        "type": "process",
+        "description": "Патогенез гострих лейкозів",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 14,
+        "title": "FAB класифікація гострої мієлобластної лейкемії",
+        "type": "classification",
+        "description": "FAB класифікація гострої мієлобластної лейкемії",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 15,
+        "title": "FAB класифікація гострої лімфобластної лейкемії",
+        "type": "classification",
+        "description": "FAB класифікація гострої лімфобластної лейкемії",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 16,
+        "title": "Стадії гострого лейкозу",
+        "type": "fact",
+        "description": "Стадії гострого лейкозу",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 17,
+        "title": "Клінічні \"маски\" гострої лейкемії",
+        "type": "fact",
+        "description": "Клінічні \"маски\" гострої лейкемії",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 18,
+        "title": "Клінічна картина гострих лейкозів у розгорнутому періоді",
+        "type": "fact",
+        "description": "Клінічна картина гострих лейкозів у розгорнутому періоді",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 19,
+        "title": "Клінічні особливості гострого лімфобластного лейкозу",
+        "type": "fact",
+        "description": "Клінічні особливості гострого лімфобластного лейкозу",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 20,
+        "title": "Клінічні особливості гострого нелімфобластного лейкозу",
+        "type": "fact",
+        "description": "Клінічні особливості гострого нелімфобластного лейкозу",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 21,
+        "title": "Лабораторні дані при гострих лейкозах",
+        "type": "fact",
+        "description": "Лабораторні дані при гострих лейкозах",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 22,
+        "title": "Методи дослідження при гострих лейкозах",
+        "type": "fact",
+        "description": "Методи дослідження при гострих лейкозах",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 23,
+        "title": "Диференційна діагностика гострих лейкозів",
+        "type": "fact",
+        "description": "Диференційна діагностика гострих лейкозів",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      },
+      {
+        "id": 24,
+        "title": "Ускладнення гострих лейкозів",
+        "type": "fact",
+        "description": "Ускладнення гострих лейкозів",
+        "explicitness": "inferred",
+        "evidence": "heuristic extraction from freeform AI response",
+        "modality": "text",
+        "assessment_risk": "medium"
+      }
+    ],
+    "not_recommended": [
+      {
+        "task_type": "SEQUENCE",
+        "reason": "No explicit order/ranking was clearly identified; use SEQUENCE only if the source defines a strict order."
+      }
+    ],
+    "illustrations_detected": false,
+    "illustrations_note": null,
+    "warnings": [
+      "Heuristic fallback used: AI analysis response did not follow structured JSON format.",
+      "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+      "Heuristic adjustment: 20 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+      "Coverage calibration increased recommended text tasks to improve coverage (target ~32-40)."
+    ],
+    "material_volume": "medium",
+    "target_language": "ru"
+  }
+}
