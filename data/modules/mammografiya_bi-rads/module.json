@@ -1,0 +1,27 @@
+{
+  "id": "mammografiya_bi-rads",
+  "name": "Маммография BI-RADS",
+  "topics": [
+    {
+      "id": "vidy_mg",
+      "name": "Виды маммографии",
+      "tasks": [
+        {
+          "id": "task_0f2ba935336b",
+          "type": "single_choice",
+          "path": "modules/mammografiya_bi-rads/topics/vidy_mg/tasks/task_0f2ba935336b/task.json"
+        },
+        {
+          "id": "task_46a04ab7314c",
+          "type": "single_choice",
+          "path": "modules/mammografiya_bi-rads/topics/vidy_mg/tasks/task_46a04ab7314c/task.json"
+        },
+        {
+          "id": "task_demo_001",
+          "type": "single_choice",
+          "path": "modules/mammografiya_bi-rads/topics/vidy_mg/tasks/task_demo_001/task.json"
+        }
+      ]
+    }
+  ]
+}

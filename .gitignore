@@ -64,7 +64,7 @@ data/user_calendar/user_*/
 data/app_state.json
 
 # Runtime content — modules, complexes, import history are user-generated at runtime
-data/modules/
+# data/modules/  # Commented out to allow demo modules for CI validation
 data/import_journal.json
 data/import_manifests/
 data/feedback/

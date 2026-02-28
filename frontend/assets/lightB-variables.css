@@ -158,6 +158,117 @@
 }
 
 /* ============================================================================
+   LIGHT B THEME - Warm Paper & Spiced Orange
+   ========================================================================== */
+:root[data-theme="light-b"],
+[data-theme="light-b"] {
+   /* ========== PRIMARY COLOR SYSTEM ========== */
+   --color-primary: #9C4215;
+   --color-primary-light: #E8D4C5;
+   --color-primary-lighter: #E2D4C8;
+   --color-primary-dark: #9C4215;
+   --color-primary-darker: #261614;
+   --color-primary-hover: #704F2D;
+   --color-primary-active: #704F2D;
+   --color-primary-fg: #FFFFFF;
+   --color-primary-contrast: var(--color-primary-fg);
+
+   /* ========== SECONDARY COLOR SYSTEM ========== */
+   --color-secondary: #8D7B6F;
+   --color-secondary-light: #C4B5AA;
+   --color-secondary-lighter: #DCC9B6;
+   --color-secondary-dark: #6B5F54;
+   --color-secondary-darker: #261614;
+   --color-secondary-hover: #4A3B2A;
+
+   /* ========== ACCENT COLOR SYSTEM ========== */
+   --color-accent: #D97706;
+   --color-accent-light: #FFEDD5;
+   --color-accent-lighter: #FFF7ED;
+   --color-accent-dark: #C2410C;
+   --color-accent-darker: #7C2D12;
+
+   /* ========== STATE COLORS ========== */
+   --color-success: #15803D;
+   --color-success-light: #D1F3EB;
+   --color-success-lighter: #ECFDF5;
+   --color-success-dark: #107D65;
+   --color-success-darker: #064E3B;
+   --color-success-text: #064E3B;
+
+   --color-error: #A24519;
+   --color-error-light: #F5E8E0;
+   --color-error-lighter: #FEF2F2;
+   --color-error-dark: #704F2D;
+   --color-error-darker: #7F1D1D;
+   --color-error-text: #7F1D1D;
+   --color-status-error: #A24519;
+
+   --color-warning: #C2410C;
+   --color-warning-light: #FEF3C7;
+   --color-warning-lighter: #FFFBEB;
+   --color-warning-dark: #7C4407;
+   --color-warning-darker: #78350F;
+   --color-warning-text: #78350F;
+
+   --color-info: #3B82F6;
+   --color-info-light: #DBEAFE;
+   --color-info-lighter: #EEF2FF;
+   --color-info-dark: #1E40AF;
+   --color-info-darker: #312E81;
+   --color-info-text: #312E81;
+
+   /* ========== BACKGROUND & SURFACE ========== */
+   --color-bg-main: #FAF7EF;
+   --color-bg-secondary: #F2EFE9;
+   --color-bg-tertiary: #E6E0D4;
+   --color-bg-hover: #E2E8F0;
+   --color-bg-disabled: #94A3B8;
+
+   --color-surface-0: #EBEDF2;
+   --color-surface-1: #FFFFFF;
+   --color-surface-2: #E6D3C8;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: var(--color-surface-2);
+   --color-text-chip: var(--color-text-secondary);
+
+   /* ========== TEXT COLORS ========== */
+   --color-text-main: #2D241E;
+   --color-text-secondary: #6B5F54;
+   --color-text-muted: #6B5F54;
+   --color-text-disabled: #AFA399;
+   --color-text-contrast: #FFFFFF;
+
+   /* ========== BORDER COLORS ========== */
+   --color-border: #E6E0D4;
+   --color-border-subtle: #8D7B6F;
+   --color-border-normal: var(--color-border);
+   --color-border-strong: #C05621;
+
+   /* ========== SHADOW SYSTEM ========== */
+   --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+   --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.1);
+   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.1);
+   --shadow-lg: 0 10px 15px -3px rgba(15, 23, 42, 0.1);
+   --shadow-xl: 0 20px 25px -5px rgba(15, 23, 42, 0.1);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+
+   /* ========== DYNAMIC CHAIN PALETTE ========== */
+   --color-chain-1: #4d7a43;
+   --color-chain-2: #4a7ab5;
+   --color-chain-3: #b48605;
+   --color-chain-4: #8a6bbd;
+
+   /* ========== GLASS EFFECTS ========== */
+   --sidebar-shadow-opacity: 0.12;
+   --sidebar-rim-opacity: 0.1;
+}
+
+/* ============================================================================
    NEUTRAL A THEME - Refined Earth
    ========================================================================== */
 :root[data-theme="neutral-a"],
@@ -287,6 +398,117 @@
    --transition-slow: 400ms ease;
 
    /* ========== DYNAMIC CHAIN PALETTE (Earth Tones) ========== */
+   --color-chain-1: #4d7a43;
+   --color-chain-2: #4a7ab5;
+   --color-chain-3: #b48605;
+   --color-chain-4: #8a6bbd;
+
+   /* ========== GLASS EFFECTS ========== */
+   --sidebar-shadow-opacity: 0.12;
+   --sidebar-rim-opacity: 0.1;
+}
+
+/* ============================================================================
+   NEUTRAL B THEME - Amethyst Dusk
+   ========================================================================== */
+:root[data-theme="neutral-b"],
+[data-theme="neutral-b"] {
+   /* ========== PRIMARY COLOR SYSTEM ========== */
+   --color-primary: #1f3a66;
+   --color-primary-light: #E8D4C5;
+   --color-primary-lighter: #E2D4C8;
+   --color-primary-dark: #9C4215;
+   --color-primary-darker: #261614;
+   --color-primary-hover: #162645;
+   --color-primary-active: #162645;
+   --color-primary-fg: #dbe4f0;
+   --color-primary-contrast: var(--color-primary-fg);
+
+   /* ========== SECONDARY COLOR SYSTEM ========== */
+   --color-secondary: #808a9f;
+   --color-secondary-light: #aab2c2;
+   --color-secondary-lighter: #DCC9B6;
+   --color-secondary-dark: #5e6678;
+   --color-secondary-darker: #261614;
+   --color-secondary-hover: #4A3B2A;
+
+   /* ========== ACCENT COLOR SYSTEM ========== */
+   --color-accent: #50663c;
+   --color-accent-light: #bad29f;
+   --color-accent-lighter: #DCC9B6;
+   --color-accent-dark: #4A3B2A;
+   --color-accent-darker: #271815;
+
+   /* ========== STATE COLORS ========== */
+   --color-success: #4d7a43;
+   --color-success-light: #D1F3EB;
+   --color-success-lighter: #E6F0EB;
+   --color-success-dark: #107D65;
+   --color-success-darker: #141E19;
+   --color-success-text: #1F2E27;
+
+   --color-error: #5A1919;
+   --color-error-light: #F5E8E0;
+   --color-error-lighter: #F9E4DE;
+   --color-error-dark: #704F2D;
+   --color-error-darker: #401D14;
+   --color-error-text: #401D14;
+   --color-status-error: #5A1919;
+
+   --color-warning: #947105;
+   --color-warning-light: #FEF3C7;
+   --color-warning-lighter: #FFFBEB;
+   --color-warning-dark: #7C4407;
+   --color-warning-darker: #3E2723;
+   --color-warning-text: #3E2723;
+
+   --color-info: #0284c7;
+   --color-info-light: #DBEAFE;
+   --color-info-lighter: #E2E4EB;
+   --color-info-dark: #1E40AF;
+   --color-info-darker: #0D0F16;
+   --color-info-text: #14151F;
+
+   /* ========== BACKGROUND & SURFACE ========== */
+   --color-bg-main: #b0aac0;
+   --color-bg-secondary: #e2dce8;
+   --color-bg-tertiary: #a8a0b8;
+   --color-bg-hover: #C9B8A8;
+   --color-bg-disabled: #B5A390;
+
+   --color-surface-0: #e8e4ee;
+   --color-surface-1: #e2dbe7;
+   --color-surface-2: #fdfcff;
+   --color-surface-panel: var(--color-surface-2);
+   --color-surface-chip: #5a7350;
+   --color-text-chip: #ffffff;
+
+   /* ========== TEXT COLORS ========== */
+   --color-text-main: #1a1226;
+   --color-text-secondary: #261a38;
+   --color-text-muted: #1d232f;
+   --color-text-disabled: #808a9f;
+   --color-text-contrast: #dbe4f0;
+
+   /* ========== BORDER COLORS ========== */
+   --color-border: #E6E0D4;
+   --color-border-subtle: #808a9f;
+   --color-border-normal: var(--color-border-subtle);
+   --color-border-strong: #3d2b56;
+
+   /* ========== SHADOW SYSTEM ========== */
+   --shadow-xs: 0 1px 2px rgba(62, 39, 35, 0.05);
+   --shadow-sm: 0 2px 4px rgba(62, 39, 35, 0.08);
+   --shadow-md: 0 4px 12px rgba(62, 39, 35, 0.1);
+   --shadow-lg: 0 12px 24px rgba(62, 39, 35, 0.12);
+   --shadow-xl: 0 20px 40px rgba(62, 39, 35, 0.15);
+
+   /* ========== TRANSITION SYSTEM ========== */
+   --transition-fast: 150ms ease;
+   --transition-normal: 250ms ease;
+   --transition-slow: 400ms ease;
+
+   /* ========== DYNAMIC CHAIN PALETTE ========== */
    --color-chain-1: #4d7a43;
    --color-chain-2: #4a7ab5;
    --color-chain-3: #b48605;
