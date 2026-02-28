@@ -48,8 +48,10 @@ from services.ai_generation_service import (
     GroqProvider,
     AIGenerationService,
     _build_generation_prompt,
+    _ensure_analysis_quality,
     load_ai_config,
     STRUCTURED_ANALYSIS_PROMPT,
+    ANALYSIS_V2_ROUTES_ADDENDUM,
 )
 
 
@@ -199,6 +201,138 @@ class TestAnalysisResult:
         assert d["educational_units"] == []
         assert d["illustrations_detected"] is False
         assert d["material_volume"] == "medium"
+
+
+class TestAnalysisCapabilityMatrixP1:
+
+    def test_ensure_analysis_quality_adds_fixed_progression_annotations_and_pair_matching(self):
+        raw = {
+            "material_volume": "medium",
+            "target_language": "ru",
+            "educational_units": [
+                {
+                    "id": 1,
+                    "title": "Классификация форм X",
+                    "type": "classification",
+                    "description": "Три группы и их признаки",
+                    "explicitness": "explicit",
+                    "evidence": "В тексте перечислены 3 группы",
+                    "modality": "text",
+                    "assessment_risk": "medium",
+                },
+                {
+                    "id": 2,
+                    "title": "Термины и определения",
+                    "type": "term",
+                    "description": "Ключевые термины темы",
+                    "explicitness": "explicit",
+                    "evidence": "Есть терминологический список",
+                    "modality": "text",
+                    "assessment_risk": "low",
+                },
+            ],
+            "recommendations": [
+                {
+                    "task_type": "SEQUENCE",
+                    "count": 1,
+                    "priority": "high",
+                    "covers_units": [1],
+                    "rationale": "Подходит для структурирования классификации.",
+                },
+                {
+                    "task_type": "TEST",
+                    "count": 2,
+                    "priority": "high",
+                    "covers_units": [1, 2],
+                    "rationale": "Подходит для проверки фактов и терминов.",
+                },
+            ],
+            "not_recommended": [],
+            "illustrations_detected": False,
+            "warnings": [],
+        }
+
+        normalized = _ensure_analysis_quality(
+            raw,
+            material="Есть три группы, признаки и термины. Стадии процесса не указаны.",
+            fallback_target_language="ru",
+        )
+
+        assert normalized["capability_matrix_version"] == "1.0"
+        assert normalized["capability_matrix_validation"]["valid"] is True
+        assert normalized["capability_matrix_validation"]["validated_recommendations"] >= 2
+
+        seq_rec = next(r for r in normalized["recommendations"] if r["task_type"] == "SEQUENCE")
+        assert seq_rec["progression_is_fixed"] is True
+        assert seq_rec["complex_role"] == "core"
+        assert seq_rec["supported_levels"] == [1, 2, 3]
+        assert [row["level"] for row in seq_rec["level_role_map"]] == [1, 2, 3]
+        assert "классификация" not in seq_rec.get("fixed_progression_note", "").lower()  # note is generic
+        assert "выбирать вручную" in seq_rec.get("fixed_progression_note", "").lower()
+        assert "classification" in seq_rec.get("sequence_intent_options", [])
+
+        test_rec = next(r for r in normalized["recommendations"] if r["task_type"] == "TEST")
+        assert test_rec["progression_is_fixed"] is True
+        assert test_rec["supported_levels"] == [1, 2]
+
+        future_caps = normalized.get("future_capabilities") or []
+        pair_matching = next(fc for fc in future_caps if fc.get("capability_id") == "pair_matching")
+        assert pair_matching["status"] == "planned"
+        assert pair_matching["recommended_surface"] == "microcards"
+        assert pair_matching["suitability"] in {"high", "medium", "low"}
+
+    def test_click_text_and_click_words_are_annotated_as_error_detection_finisher(self):
+        raw = {
+            "educational_units": [
+                {
+                    "id": 1,
+                    "title": "Факты и термины",
+                    "type": "fact",
+                    "description": "Числа, даты и термины",
+                    "explicitness": "explicit",
+                    "evidence": "Есть числовые пороги",
+                    "modality": "text",
+                    "assessment_risk": "low",
+                }
+            ],
+            "recommendations": [
+                {
+                    "task_type": "CLICK_TEXT",
+                    "count": 1,
+                    "priority": "medium",
+                    "covers_units": [1],
+                    "rationale": "Проверка различения утверждений.",
+                },
+                {
+                    "task_type": "CLICK_WORDS",
+                    "count": 1,
+                    "priority": "medium",
+                    "covers_units": [1],
+                    "rationale": "Поиск фактических ошибок.",
+                },
+            ],
+            "not_recommended": [],
+            "illustrations_detected": False,
+            "warnings": [],
+        }
+
+        normalized = _ensure_analysis_quality(raw, material="В тексте есть дата 2024 и порог 5 ммоль/л.", fallback_target_language="ru")
+
+        click_text = next(r for r in normalized["recommendations"] if r["task_type"] == "CLICK_TEXT")
+        click_words = next(r for r in normalized["recommendations"] if r["task_type"] == "CLICK_WORDS")
+
+        assert click_text["canonical_task_type"] == "CLICK"
+        assert click_text["canonical_subtype"] == "error_detection"
+        assert click_text["error_detection_mode"] == "text_choice"
+        assert click_text["complex_role"] == "finisher_special"
+        assert click_text["progression_is_fixed"] is False
+        assert click_text["level_role_map"] == []
+
+        assert click_words["canonical_task_type"] == "CLICK"
+        assert click_words["canonical_subtype"] == "error_detection"
+        assert click_words["error_detection_mode"] == "text_errors"
+        assert click_words["complex_role"] == "finisher_special"
+        assert click_words["progression_is_fixed"] is False
 
 
 # ============================================================================
@@ -665,3 +799,19 @@ class TestStructuredPrompt:
     def test_prompt_contains_all_task_types(self):
         for tt in ("OPEN_ANSWER", "SEQUENCE", "TEST", "CLICK_TEXT", "CLICK_WORDS"):
             assert tt in STRUCTURED_ANALYSIS_PROMPT
+
+    def test_p3_routes_addendum_contains_progression_and_route_rules(self):
+        assert "type_progression_suitability" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "authoring_routes" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "full_fixed_progression" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "pick_only_level" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "fixed progressions" in ANALYSIS_V2_ROUTES_ADDENDUM.lower()
+
+    def test_p3_routes_addendum_contains_sequence_intent_and_pair_matching_rules(self):
+        assert "sequence_intents" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "ordering" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "classification" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "future_capabilities" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "pair_matching" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "pair_match" in ANALYSIS_V2_ROUTES_ADDENDUM
+        assert "MATCH" in ANALYSIS_V2_ROUTES_ADDENDUM

@@ -49,7 +49,7 @@
     </header>
     <main class="flex-1 min-h-0 w-full max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 stats-page-enter">
         <section class="lg:col-span-8 flex flex-col gap-6 min-h-0">
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 shrink-0">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
                 <div id="metric-tasks"
                     class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
                     <div class="flex justify-between items-start">
@@ -90,12 +90,38 @@
                             <span id="time-minutes">00</span>
                             <span class="text-lg text-text-muted font-semibold">м</span>
                         </div>
-                        <p class="text-text-secondary text-sm font-semibold mt-1">Время обучения</p>
+                        <p class="text-text-secondary text-sm font-semibold mt-1">Время обучения
+                            <span id="time-source-hint" class="text-[10px] text-text-muted font-medium"></span>
+                        </p>
                     </div>
                     <p id="metric-time-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Начни заниматься, чтобы увидеть время обучения</p>
                     <button type="button" class="tooltip-dot tooltip-parent"
-                        data-tooltip="Суммарное время обучения в часах и минутах"
+                        data-tooltip="Суммарное время обучения (задачи + микрокарточки)"
                         aria-label="Что означает &quot;Время обучения&quot;">
+                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
+                    </button>
+                </div>
+                <div id="metric-microcards"
+                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    <div class="flex justify-between items-start">
+                        <div id="metric-microcards-icon"
+                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
+                            <span class="material-symbols-outlined">style</span>
+                        </div>
+                        <span id="microcards-correct-badge"
+                            class="hidden text-xs px-2 py-1 rounded-full font-bold"></span>
+                    </div>
+                    <div id="metric-microcards-value" class="metric-card-content">
+                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
+                            <span id="microcards-reviews-count">0</span>
+                            <span id="microcards-correct-rate" class="text-lg font-semibold text-text-muted"></span>
+                        </div>
+                        <p class="text-text-secondary text-sm font-semibold mt-1">Микрокарточки</p>
+                    </div>
+                    <p id="metric-microcards-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Пройди карточки, чтобы увидеть прогресс</p>
+                    <button type="button" class="tooltip-dot tooltip-parent"
+                        data-tooltip="Всего пройдено карточек и точность ответов"
+                        aria-label="Что означает &quot;Микрокарточки&quot;">
                         <span class="material-symbols-outlined text-[16px] leading-none">help</span>
                     </button>
                 </div>
@@ -128,7 +154,7 @@
                     </div>
                     <p id="metric-streak-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Занимайся регулярно, чтобы увидеть серию</p>
                     <button type="button" class="tooltip-dot tooltip-parent"
-                        data-tooltip="Количество последовательных дней с обучением"
+                        data-tooltip="Количество последовательных дней с любой учебной активностью"
                         aria-label="Что означает &quot;Серия&quot;">
                         <span class="material-symbols-outlined text-[16px] leading-none">help</span>
                     </button>
@@ -151,7 +177,7 @@
                             </button>
                             <button class="chart-toggle-btn" data-metric="attempts" role="tab" aria-selected="false">
                                 <span>✓</span>
-                                <span>Попытки</span>
+                                <span>Активность</span>
                             </button>
                         </div>
                         <div class="chart-period-switch">
@@ -208,8 +234,15 @@
                     <h3 class="text-base font-bold text-text-main">Производительность</h3>
                 </div>
                 <div id="performance-bars" class="space-y-3"></div>
+                <div id="microcards-performance" class="hidden mt-3 pt-3 border-t border-border-subtle">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="material-symbols-outlined text-text-secondary text-sm">style</span>
+                        <h4 class="text-sm font-bold text-text-main">Микрокарточки</h4>
+                    </div>
+                    <div id="microcards-performance-bars" class="space-y-3"></div>
+                </div>
                 <button type="button" class="tooltip-dot tooltip-dot--static tooltip-parent static-tooltip"
-                    data-tooltip="Распределение успешности по типам задач"
+                    data-tooltip="Распределение успешности по типам задач и микрокарточек"
                     aria-label="Что означает блок &quot;Производительность&quot;">
                     <span class="material-symbols-outlined text-[16px] leading-none">help</span>
                 </button>

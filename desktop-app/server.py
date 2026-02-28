@@ -37,6 +37,7 @@ from flask import (
     Flask,
     jsonify,
     request,
+    has_request_context,
     send_file,
     send_from_directory,
     after_this_request,
@@ -222,6 +223,8 @@ from services.theory_service import (  # type: ignore
 from services.statistics_service import StatisticsService  # type: ignore
 from services.difficulty_manager import DifficultyManager  # type: ignore
 from services.adaptive_session_manager import AdaptiveSessionManager  # type: ignore
+from services.microcards_service import MicrocardsService  # type: ignore
+from services.microcards_analytics_service import MicrocardsAnalyticsService  # type: ignore
 from common.watchdog import WatchdogService  # type: ignore
 
 from logic import (  # type: ignore
@@ -243,6 +246,7 @@ try:
         ClickTextParser,
         ClickWordsParser,
         TestImportParser,
+        MicrocardParser,
     )
 
     PARSERS_AVAILABLE = True
@@ -383,6 +387,12 @@ class AppContextHeadless:
 
         # Clear Statistics cache
         self.statistics_service.clear_cache(user_id)
+        analytics_service = getattr(self, "microcards_analytics_service", None)
+        if analytics_service is not None and hasattr(analytics_service, "clear_cache"):
+            try:
+                analytics_service.clear_cache(user_id)
+            except Exception as exc:
+                logger.warning("[HTTP] Failed to clear microcards analytics cache for user %s: %s", user_id, exc)
 
         # Re-init SessionAPI facade (or just update its user ID if needed)
         # Note: SessionAPI uses default_user_id but also takes user_id in methods
@@ -592,6 +602,7 @@ MISTAKESUI_DIR = FRONTEND_ROOT / "MistakesUI"
 EDITOR_UI_DIR = FRONTEND_ROOT / "Editor"
 CALENDAR_UI_DIR = FRONTEND_ROOT / "Calendar"
 STATISTICS_UI_DIR = FRONTEND_ROOT / "statistics"
+MICROCARDS_UI_DIR = FRONTEND_ROOT / "Microcards"
 ASSETS_DIR = FRONTEND_ROOT / "assets"
 
 
@@ -2645,6 +2656,35 @@ def serve_statistics_file(filename: str) -> Any:
     if not STATISTICS_UI_DIR.exists():
         return jsonify({"ok": False, "error": "statistics_ui_not_found"}), 500
     return send_from_directory(STATISTICS_UI_DIR, filename)
+
+
+# ---------------------------------------------------------------------------
+# Microcards Runtime UI Routes (M10)
+# ---------------------------------------------------------------------------
+
+
+@app.route("/ui/microcards", methods=["GET"])
+@app.route("/ui/microcards/", methods=["GET"])
+def serve_microcards_ui() -> Any:
+    """Serve the Microcards runtime review page (M10)."""
+    if not MICROCARDS_UI_DIR.exists():
+        logger.error("[HTTP] MICROCARDS_UI_DIR does not exist: %s", MICROCARDS_UI_DIR)
+        return jsonify({"ok": False, "error": "microcards_ui_not_found"}), 500
+
+    resp = send_from_directory(MICROCARDS_UI_DIR, "microcards.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
+
+
+@app.route("/ui/microcards/<path:filename>", methods=["GET"])
+def serve_microcards_file(filename: str) -> Any:
+    """Serve Microcards static files (CSS, JS)."""
+    if not MICROCARDS_UI_DIR.exists():
+        return jsonify({"ok": False, "error": "microcards_ui_not_found"}), 500
+    return send_from_directory(MICROCARDS_UI_DIR, filename)
 
 
 @app.route("/assets/<path:filename>", methods=["GET"])
@@ -5700,7 +5740,7 @@ def serve_local_image() -> Any:
 def ai_status() -> Any:
     """Check AI provider availability and daily limits."""
     if _ai_service is None or not _ai_service.is_configured:
-        return jsonify({
+        return jsonify(_attach_editor_feature_flags({
             "ok": True,
             "ai_available": False,
             "active_provider": None,
@@ -5710,14 +5750,14 @@ def ai_status() -> Any:
                 "max_files_per_day": 3,
                 "resets_at": None,
             },
-        })
+        }))
     try:
         user_id = _headless_app_ctx.user_id or "default_user"
         result = _ai_service.get_status(user_id)
-        return jsonify(result)
+        return jsonify(_attach_editor_feature_flags(result if isinstance(result, dict) else {"ok": True}))
     except Exception as exc:
         logger.exception("[HTTP] ai/status error: %s", exc)
-        return jsonify({"ok": False, "error": "status_check_failed"}), 500
+        return jsonify(_attach_editor_feature_flags({"ok": False, "error": "status_check_failed"})), 500
 
 
 @app.route("/api/editor/ai/analyze", methods=["POST"])
@@ -5726,14 +5766,14 @@ def ai_analyze() -> Any:
     if _headless_app_ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
     if _ai_service is None or not _ai_service.is_configured:
-        return jsonify({
+        return jsonify(_attach_editor_feature_flags({
             "ok": False,
             "error": "ai_unavailable",
             "provider_chain_attempts": provider_chain_attempts,
             "fallback": "manual",
             "message": "Извините, сервис ИИ-генерации временно недоступен. "
                        "Пожалуйста, попробуйте позже или воспользуйтесь ручным режимом.",
-        }), 503
+        })), 503
 
     payload = request.get_json(silent=True) or {}
     material = payload.get("material", "")
@@ -5820,7 +5860,7 @@ def ai_analyze() -> Any:
             )
         except Exception:
             logger.exception("[HTTP] Failed to persist ai-run analysis artifact: %s", ai_run_id)
-        response = {
+        response = _sanitize_analysis_response_for_client({
             "ok": True,
             "ai_run_id": ai_run_id,
             "provider_used": provider_name,
@@ -5832,12 +5872,21 @@ def ai_analyze() -> Any:
             "effective_output_language": output_language_pref.get("effective"),
             "output_language_warning": output_language_pref.get("translation_warning"),
             **analysis_result.to_dict(),
-        }
+        })
         logger.info(
             "[HTTP] ai/analyze: provider=%s units=%d recommendations=%d",
             provider_name,
             len(analysis_result.educational_units),
             len(analysis_result.recommendations),
+        )
+        _emit_theory_rollout_telemetry(
+            "analysis_analyze_success",
+            ai_run_id=ai_run_id,
+            provider_used=provider_name,
+            provider_model=provider_model,
+            material_language=material_language,
+            output_language=output_language_pref.get("effective"),
+            **_analysis_rollout_quality_fields(response),
         )
         return jsonify(response)
 
@@ -5907,6 +5956,974 @@ def ai_analyze() -> Any:
         logger.exception("[HTTP] ai/analyze unexpected error: %s", exc)
         provider_chain_attempts = _ai_service.consume_last_provider_chain_attempts()
         return jsonify({"ok": False, "error": "analysis_failed", "provider_chain_attempts": provider_chain_attempts}), 500
+
+
+@app.route("/api/editor/ai/analyses", methods=["GET"])
+def ai_list_analyses() -> Any:
+    """List persisted theory analyses (ai_run artifacts with analysis.json)."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+
+    try:
+        limit_raw = str(request.args.get("limit", "20") or "20").strip()
+        try:
+            limit = int(limit_raw)
+        except ValueError:
+            limit = 20
+        limit = max(1, min(100, limit))
+
+        rows: List[Tuple[str, Dict[str, Any]]] = []
+        root = _ai_runs_root()
+        for run_dir in root.iterdir():
+            if not run_dir.is_dir():
+                continue
+            run_id = run_dir.name
+            if not _is_valid_ai_run_id(run_id):
+                continue
+
+            analysis_artifact = _read_json_file(run_dir / "analysis.json")
+            if not isinstance(analysis_artifact, dict):
+                continue
+            result = analysis_artifact.get("result")
+            if not isinstance(result, dict):
+                continue
+
+            manifest = _read_json_file(run_dir / "run.json") or {}
+            if not isinstance(manifest, dict):
+                manifest = {}
+            material_stats = analysis_artifact.get("material_stats")
+            if not isinstance(material_stats, dict):
+                material_stats = {}
+            lang_prefs = analysis_artifact.get("language_preferences")
+            if not isinstance(lang_prefs, dict):
+                lang_prefs = {}
+
+            row = {
+                "ai_run_id": run_id,
+                "phase": manifest.get("phase") or "analyzed",
+                "created_at": analysis_artifact.get("created_at") or manifest.get("created_at"),
+                "updated_at": manifest.get("updated_at") or analysis_artifact.get("created_at"),
+                "provider_used": analysis_artifact.get("provider_used") or manifest.get("provider_used"),
+                "provider_model": analysis_artifact.get("provider_model") or manifest.get("provider_model"),
+                "material_language": material_stats.get("language") or manifest.get("material_language"),
+                "material_word_count": material_stats.get("word_count") or manifest.get("material_word_count"),
+                "material_char_count": material_stats.get("char_count"),
+                "output_language_mode": lang_prefs.get("mode") or manifest.get("output_language_mode"),
+                "effective_output_language": (
+                    lang_prefs.get("effective") or manifest.get("effective_output_language")
+                ),
+                "requested_output_language": (
+                    lang_prefs.get("requested") or manifest.get("requested_output_language")
+                ),
+                "source_file_name": (
+                    manifest.get("source_file_name")
+                    or ((manifest.get("source_file_info") or {}).get("name") if isinstance(manifest.get("source_file_info"), dict) else None)
+                ),
+                "has_analysis": True,
+                "analysis_schema_version": result.get("analysis_schema_version"),
+                "report_blocks_version": result.get("report_blocks_version"),
+                "units_count": len(result.get("educational_units") or []),
+                "recommendations_count": len(result.get("recommendations") or []),
+                "learning_chunks_count": len(result.get("learning_chunks") or []),
+                "authoring_routes_count": len(result.get("authoring_routes") or []),
+                "future_capabilities_count": len(result.get("future_capabilities") or []),
+                "microcards_candidates_count": len(result.get("microcards_candidates") or []),
+                "warnings_count": len(result.get("warnings") or []),
+                "human_summary": result.get("human_summary"),
+            }
+            sort_key = str(row.get("updated_at") or row.get("created_at") or "")
+            rows.append((sort_key, row))
+
+        rows.sort(key=lambda item: (item[0], item[1].get("ai_run_id") or ""), reverse=True)
+        return jsonify({"ok": True, "items": [row for _, row in rows[:limit]]})
+    except Exception as exc:
+        logger.exception("[HTTP] ai/analyses list error: %s", exc)
+        return jsonify({"ok": False, "error": "ai_runs_list_failed"}), 500
+
+
+@app.route("/api/editor/ai/analyses/<run_id>", methods=["GET"])
+def ai_get_analysis_run(run_id: str) -> Any:
+    """Reopen a persisted theory analysis by ai_run_id."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+    if not _is_valid_ai_run_id(run_id):
+        return jsonify({"ok": False, "error": "invalid_ai_run_id"}), 400
+
+    try:
+        payload = _ai_run_build_reopen_analysis_response(run_id)
+        if payload is None:
+            return jsonify({"ok": False, "error": "analysis_not_found"}), 404
+        _emit_theory_rollout_telemetry(
+            "analysis_payload_served",
+            ai_run_id=run_id,
+            source="reopen",
+            **_analysis_rollout_quality_fields(payload),
+        )
+        return jsonify(payload)
+    except Exception as exc:
+        logger.exception("[HTTP] ai/analyses open error run_id=%s: %s", run_id, exc)
+        return jsonify({"ok": False, "error": "analysis_reopen_failed"}), 500
+
+
+@app.route("/api/editor/ai/analyses/<run_id>/coverage", methods=["GET"])
+def ai_get_analysis_topic_coverage(run_id: str) -> Any:
+    """Coverage + grounding summary for one editor topic against a selected ai_run analysis."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+    if not _is_editor_feature_enabled("analysis_coverage_in_editor"):
+        return _feature_disabled_json("analysis_coverage_disabled", status_code=404)
+    if not _is_valid_ai_run_id(run_id):
+        return jsonify({"ok": False, "error": "invalid_ai_run_id"}), 400
+
+    module_id = str(request.args.get("module_id") or "").strip()
+    topic_id = str(request.args.get("topic_id") or "").strip()
+    if not module_id:
+        return jsonify({"ok": False, "error": "module_id_required"}), 400
+    if not topic_id:
+        return jsonify({"ok": False, "error": "topic_id_required"}), 400
+
+    try:
+        payload = _build_ai_analysis_topic_coverage_response(run_id, module_id, topic_id)
+        if payload is None:
+            return jsonify({"ok": False, "error": "analysis_not_found"}), 404
+        summary = payload.get("summary") if isinstance(payload.get("summary"), dict) else {}
+        _emit_theory_rollout_telemetry(
+            "analysis_coverage_served",
+            ai_run_id=run_id,
+            module_id=module_id,
+            topic_id=topic_id,
+            tasks_total=summary.get("tasks_total"),
+            tasks_linked_in_scope=summary.get("tasks_linked_in_scope"),
+            must_cover_units_uncovered=summary.get("must_cover_units_uncovered"),
+            weak_grounding_tasks=summary.get("weak_grounding_tasks"),
+        )
+        return jsonify(payload)
+    except ValueError as exc:
+        # StorageService may raise on invalid ids.
+        logger.warning("[HTTP] ai/analyses coverage invalid ids run_id=%s: %s", run_id, exc)
+        return jsonify({"ok": False, "error": "invalid_topic_ref"}), 400
+    except LookupError as exc:
+        if str(exc) == "topic_not_found":
+            return jsonify({"ok": False, "error": "topic_not_found"}), 404
+        logger.warning("[HTTP] ai/analyses coverage lookup failed run_id=%s: %s", run_id, exc)
+        return jsonify({"ok": False, "error": "coverage_lookup_failed"}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] ai/analyses coverage error run_id=%s: %s", run_id, exc)
+        return jsonify({"ok": False, "error": "analysis_coverage_failed"}), 500
+
+
+@app.route("/api/editor/theory/rollout/status", methods=["GET"])
+def theory_rollout_status() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+    include_telemetry = str(request.args.get("include_telemetry") or "").strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        telemetry_limit = max(1, min(int(request.args.get("telemetry_limit") or 5000), 20000))
+    except Exception:
+        telemetry_limit = 5000
+    payload = _build_theory_rollout_status_payload(
+        include_inventory=True,
+        include_telemetry=include_telemetry,
+        telemetry_limit=telemetry_limit,
+    )
+    return jsonify({"ok": True, "rollout": payload})
+
+
+@app.route("/api/editor/theory/rollout/telemetry", methods=["GET"])
+def theory_rollout_telemetry() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
+    try:
+        limit = max(1, min(int(request.args.get("limit") or 5000), 20000))
+    except Exception:
+        limit = 5000
+    telemetry = _build_theory_rollout_telemetry_summary(limit=limit)
+    rollout = _build_theory_rollout_status_payload(include_inventory=False, include_telemetry=False)
+    return jsonify({"ok": True, "rollout": rollout, "telemetry": telemetry})
+
+
+# ── M14: Microcards Productization Rollout endpoints ──────────────────
+
+
+@app.route("/api/microcards/rollout/status", methods=["GET"])
+def microcards_prod_rollout_status() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    include_telemetry = str(request.args.get("include_telemetry") or "").strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        telemetry_limit = max(1, min(int(request.args.get("telemetry_limit") or 5000), 20000))
+    except Exception:
+        telemetry_limit = 5000
+    payload = _build_microcards_prod_rollout_status_payload(
+        include_telemetry=include_telemetry,
+        telemetry_limit=telemetry_limit,
+    )
+    return jsonify({"ok": True, "rollout": payload})
+
+
+@app.route("/api/microcards/rollout/telemetry", methods=["GET"])
+def microcards_prod_rollout_telemetry() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    try:
+        limit = max(1, min(int(request.args.get("limit") or 5000), 20000))
+    except Exception:
+        limit = 5000
+    telemetry = _build_microcards_prod_telemetry_summary(limit=limit)
+    rollout = _build_microcards_prod_rollout_status_payload(include_telemetry=False)
+    return jsonify({"ok": True, "rollout": rollout, "telemetry": telemetry})
+
+
+@app.route("/api/microcards/runtime/telemetry", methods=["POST"])
+def microcards_runtime_telemetry() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    payload = request.get_json(silent=True) or {}
+    event_name = str(payload.get("event") or "").strip()
+    allowed_events = {
+        "microcards_runtime_opened",
+        "microcards_runtime_session_started",
+        "microcards_runtime_session_completed",
+    }
+    if event_name not in allowed_events:
+        return jsonify({"ok": False, "error": "invalid_event"}), 400
+    fields = payload.get("fields") if isinstance(payload.get("fields"), dict) else {}
+    _emit_microcards_prod_telemetry(event_name, **fields)
+    return jsonify({"ok": True, "event": event_name})
+
+
+@app.route("/api/microcards/summary", methods=["GET"])
+def microcards_summary() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+
+    include_dynamics = str(request.args.get("include_dynamics") or "").strip().lower() in {"1", "true", "yes", "on"}
+    force_refresh = str(request.args.get("force_refresh") or "").strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        dynamics_days = max(1, min(int(request.args.get("days") or 30), 3650))
+    except Exception:
+        dynamics_days = 30
+
+    try:
+        user_id = _headless_app_ctx.user_id or "default_user"
+        svc = _microcards_analytics_service()
+        payload = svc.get_summary(
+            user_id=user_id,
+            force_refresh=force_refresh,
+            include_dynamics=include_dynamics,
+            dynamics_days=dynamics_days,
+        )
+        payload["microcards_feature_flags"] = _get_microcards_prod_feature_flags()
+        return jsonify({"ok": True, **payload})
+    except Exception as exc:
+        logger.exception("[HTTP] microcards summary failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_summary_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks", methods=["GET"])
+def microcards_list_decks() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    try:
+        limit = max(1, min(int(request.args.get("limit") or 50), 200))
+    except Exception:
+        limit = 50
+    try:
+        svc = _microcards_service()
+        items = svc.list_decks(limit=limit)
+        _emit_theory_rollout_telemetry(
+            "microcards_decks_listed",
+            items_count=len(items),
+            limit=limit,
+        )
+        return jsonify({"ok": True, "items": items, "user_id": _headless_app_ctx.user_id})
+    except Exception as exc:
+        logger.exception("[HTTP] microcards/decks list failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_list_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>", methods=["GET"])
+def microcards_get_deck(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    try:
+        svc = _microcards_service()
+        deck = svc.get_deck(deck_id)
+        if not isinstance(deck, dict):
+            return jsonify({"ok": False, "error": "deck_not_found"}), 404
+        _emit_theory_rollout_telemetry(
+            "microcards_deck_opened",
+            deck_id=deck_id,
+            cards_total=len(deck.get("cards") or []) if isinstance(deck.get("cards"), list) else 0,
+        )
+        return jsonify({"ok": True, "deck": deck, "user_id": _headless_app_ctx.user_id})
+    except Exception as exc:
+        logger.exception("[HTTP] microcards/decks/%s get failed: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_get_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/from-analysis", methods=["POST"])
+def microcards_create_deck_from_analysis() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    run_id = str(payload.get("ai_run_id") or "").strip()
+    if not run_id:
+        return jsonify({"ok": False, "error": "ai_run_id_required"}), 400
+    if not _is_valid_ai_run_id(run_id):
+        return jsonify({"ok": False, "error": "invalid_ai_run_id"}), 400
+
+    try:
+        analysis_payload = _ai_run_build_reopen_analysis_response(run_id, apply_feature_flags=False)
+        if analysis_payload is None:
+            return jsonify({"ok": False, "error": "analysis_not_found"}), 404
+        selector = payload.get("selector") if isinstance(payload.get("selector"), dict) else {}
+        if bool(selector.get("pair_match_only")) and not _is_editor_feature_enabled("microcards_pair_match"):
+            return _feature_disabled_json("microcards_pair_match_disabled", status_code=400)
+        deck_name = payload.get("name")
+        analysis_payload = _sanitize_analysis_for_microcards_backend(analysis_payload)
+        svc = _microcards_service()
+        deck = svc.create_deck_from_analysis(
+            analysis_payload,
+            ai_run_id=run_id,
+            selector=selector,
+            deck_name=str(deck_name).strip() if isinstance(deck_name, str) else None,
+        )
+        _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+        cards = deck.get("cards") if isinstance(deck.get("cards"), list) else []
+        pair_match_cards = sum(
+            1
+            for c in cards
+            if isinstance(c, dict) and str(c.get("card_type") or "").strip().lower() == "pair_match"
+        )
+        _emit_theory_rollout_telemetry(
+            "microcards_deck_created_from_analysis",
+            ai_run_id=run_id,
+            deck_id=deck.get("id"),
+            cards_total=len(cards),
+            pair_match_cards=pair_match_cards,
+            selector_scope=(selector.get("scope") if isinstance(selector, dict) else None),
+            pair_match_only=bool(selector.get("pair_match_only")) if isinstance(selector, dict) else False,
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "deck": deck,
+                "deck_summary": {
+                    "id": deck.get("id"),
+                    "name": deck.get("name"),
+                    "cards_total": len(deck.get("cards") or []),
+                    "selector": deck.get("selector") or {},
+                },
+                "user_id": _headless_app_ctx.user_id,
+            }
+        )
+    except Exception as exc:
+        logger.exception("[HTTP] microcards/decks/from-analysis failed run_id=%s: %s", run_id, exc)
+        return jsonify({"ok": False, "error": "microcards_create_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/append-from-analysis", methods=["POST"])
+def microcards_append_to_deck_from_analysis(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    run_id = str(payload.get("ai_run_id") or "").strip()
+    if not run_id:
+        return jsonify({"ok": False, "error": "ai_run_id_required"}), 400
+    if not _is_valid_ai_run_id(run_id):
+        return jsonify({"ok": False, "error": "invalid_ai_run_id"}), 400
+    try:
+        analysis_payload = _ai_run_build_reopen_analysis_response(run_id, apply_feature_flags=False)
+        if analysis_payload is None:
+            return jsonify({"ok": False, "error": "analysis_not_found"}), 404
+        selector = payload.get("selector") if isinstance(payload.get("selector"), dict) else {}
+        if bool(selector.get("pair_match_only")) and not _is_editor_feature_enabled("microcards_pair_match"):
+            return _feature_disabled_json("microcards_pair_match_disabled", status_code=400)
+        analysis_payload = _sanitize_analysis_for_microcards_backend(analysis_payload)
+        svc = _microcards_service()
+        result = svc.append_cards_from_analysis_to_deck(
+            deck_id=deck_id,
+            analysis_payload=analysis_payload,
+            ai_run_id=run_id,
+            selector=selector,
+        )
+        _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+        deck = result.get("deck") if isinstance(result.get("deck"), dict) else {}
+        _emit_theory_rollout_telemetry(
+            "microcards_deck_appended_from_analysis",
+            ai_run_id=run_id,
+            deck_id=deck_id,
+            added_cards=int(result.get("added_cards") or 0),
+            skipped_duplicates=int(result.get("skipped_duplicates") or 0),
+            selector_scope=(selector.get("scope") if isinstance(selector, dict) else None),
+            pair_match_only=bool(selector.get("pair_match_only")) if isinstance(selector, dict) else False,
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "deck": deck,
+                "deck_summary": {
+                    "id": deck.get("id"),
+                    "name": deck.get("name"),
+                    "cards_total": len(deck.get("cards") or []),
+                    "selector": deck.get("selector") or {},
+                },
+                "added_cards": int(result.get("added_cards") or 0),
+                "skipped_duplicates": int(result.get("skipped_duplicates") or 0),
+                "user_id": _headless_app_ctx.user_id,
+            }
+        )
+    except LookupError as exc:
+        if str(exc) == "deck_not_found":
+            return jsonify({"ok": False, "error": "deck_not_found"}), 404
+        logger.warning("[HTTP] microcards append lookup failed deck_id=%s: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_append_lookup_failed"}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] microcards append failed deck_id=%s run_id=%s: %s", deck_id, run_id, exc)
+        return jsonify({"ok": False, "error": "microcards_append_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/queue", methods=["GET"])
+def microcards_get_deck_queue(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    try:
+        limit = max(1, min(int(request.args.get("limit") or 20), 100))
+    except Exception:
+        limit = 20
+    restart = str(request.args.get("restart") or "").strip().lower() in {"1", "true", "yes", "on"}
+    try:
+        svc = _microcards_service()
+        queue_payload = svc.get_due_queue(deck_id, limit=limit, resume=True, restart=restart)
+        session = queue_payload.get("session") if isinstance(queue_payload.get("session"), dict) else {}
+        cursor_val = int(queue_payload.get("cursor") or 0)
+        _emit_theory_rollout_telemetry(
+            "microcards_queue_opened",
+            deck_id=deck_id,
+            limit=limit,
+            restart=restart,
+            resumed_session=bool(session.get("id")) and not restart and cursor_val > 0,
+            cursor=cursor_val,
+            queue_count=int(queue_payload.get("queue_count") or 0),
+            current_card_type=(
+                (queue_payload.get("current_card") or {}).get("card_type")
+                if isinstance(queue_payload.get("current_card"), dict)
+                else None
+            ),
+        )
+        return jsonify({"ok": True, **queue_payload, "user_id": _headless_app_ctx.user_id})
+    except LookupError as exc:
+        if str(exc) == "deck_not_found":
+            return jsonify({"ok": False, "error": "deck_not_found"}), 404
+        logger.warning("[HTTP] microcards queue lookup failed deck_id=%s: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_queue_lookup_failed"}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] microcards/decks/%s/queue failed: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_queue_failed"}), 500
+
+
+@app.route("/api/editor/microcards/review/submit", methods=["POST"])
+def microcards_submit_review() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    deck_id = str(payload.get("deck_id") or "").strip()
+    card_id = str(payload.get("card_id") or "").strip()
+    rating = str(payload.get("rating") or "").strip().lower()
+    session_id = str(payload.get("session_id") or "").strip() or None
+    if not deck_id:
+        return jsonify({"ok": False, "error": "deck_id_required"}), 400
+    if not card_id:
+        return jsonify({"ok": False, "error": "card_id_required"}), 400
+    if rating not in {"again", "hard", "good", "easy"}:
+        return jsonify({"ok": False, "error": "invalid_rating"}), 400
+
+    try:
+        svc = _microcards_service()
+        result = svc.submit_review(
+            deck_id=deck_id,
+            card_id=card_id,
+            rating=rating,
+            session_id=session_id,
+            response=payload.get("response"),
+            response_time_ms=payload.get("response_time_ms") if isinstance(payload.get("response_time_ms"), int) else None,
+        )
+        try:
+            _orchestrate_microcards_review_post_submit(
+                deck_id=deck_id,
+                card_id=card_id,
+                review_result=result if isinstance(result, dict) else {},
+            )
+        except Exception as orchestration_exc:
+            logger.warning(
+                "[HTTP] M1 microcards post-submit orchestration failed (non-fatal): %s",
+                orchestration_exc,
+            )
+        review_event = result.get("review_event") if isinstance(result.get("review_event"), dict) else {}
+        details = review_event.get("details") if isinstance(review_event.get("details"), dict) else {}
+        _emit_theory_rollout_telemetry(
+            "microcards_review_submitted",
+            deck_id=deck_id,
+            card_id=card_id,
+            rating=rating,
+            card_type=details.get("card_type"),
+            was_correct=review_event.get("was_correct"),
+            partial_score=details.get("partial_score"),
+            session_id=review_event.get("session_id"),
+        )
+        return jsonify({"ok": True, **result, "user_id": _headless_app_ctx.user_id})
+    except LookupError as exc:
+        if str(exc) == "deck_not_found":
+            return jsonify({"ok": False, "error": "deck_not_found"}), 404
+        if str(exc) == "card_not_found":
+            return jsonify({"ok": False, "error": "card_not_found"}), 404
+        if str(exc) == "session_not_found":
+            return jsonify({"ok": False, "error": "session_not_found"}), 404
+        logger.warning("[HTTP] microcards review lookup failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_review_lookup_failed"}), 404
+    except ValueError as exc:
+        err = str(exc)
+        if err in {
+            "session_deck_mismatch",
+            "session_completed",
+            "session_queue_exhausted",
+            "session_card_mismatch",
+        }:
+            return jsonify({"ok": False, "error": err}), 409
+        logger.warning("[HTTP] microcards review invalid submit: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_review_invalid_submit"}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] microcards review submit failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_review_submit_failed"}), 500
+
+
+# ── M11: Manual deck/card CRUD endpoints ──────────────────────────────
+
+
+@app.route("/api/editor/microcards/decks/create-manual", methods=["POST"])
+def microcards_create_deck_manual() -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    name = str(payload.get("name") or "").strip()
+    if not name:
+        return jsonify({"ok": False, "error": "name_required"}), 400
+    tags = payload.get("tags") if isinstance(payload.get("tags"), list) else []
+    target_language = str(payload.get("target_language") or "unknown").strip()
+    try:
+        svc = _microcards_service()
+        deck = svc.create_deck_manual(name=name, tags=tags, target_language=target_language)
+        _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+        _emit_theory_rollout_telemetry(
+            "microcards_manual_deck_created",
+            deck_id=deck.get("id"),
+            name=name,
+        )
+        _emit_microcards_prod_telemetry(
+            "microcards_manual_deck_created",
+            deck_id=deck.get("id"),
+            name=name,
+        )
+        return jsonify({"ok": True, "deck": deck, "user_id": _headless_app_ctx.user_id})
+    except Exception as exc:
+        logger.exception("[HTTP] microcards create-manual failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_create_manual_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/rename", methods=["POST"])
+def microcards_rename_deck(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    new_name = str(payload.get("name") or "").strip()
+    if not new_name:
+        return jsonify({"ok": False, "error": "name_required"}), 400
+    try:
+        svc = _microcards_service()
+        deck = svc.rename_deck(deck_id, new_name)
+        return jsonify({"ok": True, "deck": deck, "user_id": _headless_app_ctx.user_id})
+    except LookupError:
+        return jsonify({"ok": False, "error": "deck_not_found"}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] microcards rename failed deck_id=%s: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_rename_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/archive", methods=["POST"])
+def microcards_archive_deck(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    archive = payload.get("archive", True)
+    try:
+        svc = _microcards_service()
+        deck = svc.archive_deck(deck_id, archive=bool(archive))
+        _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+        return jsonify({"ok": True, "deck": deck, "user_id": _headless_app_ctx.user_id})
+    except LookupError:
+        return jsonify({"ok": False, "error": "deck_not_found"}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] microcards archive failed deck_id=%s: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_archive_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>", methods=["DELETE"])
+def microcards_delete_deck(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    try:
+        svc = _microcards_service()
+        deleted = svc.delete_deck(deck_id)
+        if not deleted:
+            return jsonify({"ok": False, "error": "deck_not_found"}), 404
+        _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+        return jsonify({"ok": True, "deleted": True, "user_id": _headless_app_ctx.user_id})
+    except Exception as exc:
+        logger.exception("[HTTP] microcards delete failed deck_id=%s: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_delete_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/cards", methods=["POST"])
+def microcards_create_card(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    card_type = str(payload.get("card_type") or "fact_recall").strip().lower()
+    front_text = str(payload.get("front_text") or "").strip()
+    tags = payload.get("tags") if isinstance(payload.get("tags"), list) else []
+    difficulty_hint = str(payload.get("difficulty_hint") or "medium").strip()
+    if not front_text:
+        return jsonify({"ok": False, "error": "front_text_required"}), 400
+    try:
+        svc = _microcards_service()
+        if card_type == "pair_match":
+            # M15: pair_match card creation
+            pairs = payload.get("pairs")
+            if not isinstance(pairs, list):
+                return jsonify({"ok": False, "error": "pairs_required"}), 400
+            card = svc.create_pair_match_card_manual(
+                deck_id=deck_id,
+                front_text=front_text,
+                pairs=pairs,
+                tags=tags,
+                difficulty_hint=difficulty_hint,
+            )
+            _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+            _emit_theory_rollout_telemetry(
+                "microcards_pair_match_card_created",
+                deck_id=deck_id,
+                card_id=card.get("id"),
+            )
+        else:
+            back_text = str(payload.get("back_text") or "").strip()
+            if not back_text:
+                return jsonify({"ok": False, "error": "back_text_required"}), 400
+            card = svc.create_card_manual(
+                deck_id=deck_id,
+                front_text=front_text,
+                back_text=back_text,
+                tags=tags,
+                difficulty_hint=difficulty_hint,
+            )
+            _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+            _emit_theory_rollout_telemetry(
+                "microcards_manual_card_created",
+                deck_id=deck_id,
+                card_id=card.get("id"),
+            )
+        return jsonify({"ok": True, "card": card, "user_id": _headless_app_ctx.user_id})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        err = str(exc)
+        status = 409 if err == "duplicate_card" else 400
+        return jsonify({"ok": False, "error": err}), status
+    except Exception as exc:
+        logger.exception("[HTTP] microcards create card failed deck_id=%s: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_create_card_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/cards/<string:card_id>", methods=["PUT"])
+def microcards_update_card(deck_id: str, card_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    card_type = str(payload.get("card_type") or "").strip().lower()
+    try:
+        svc = _microcards_service()
+        # M15: pair_match card update with structured pairs
+        if card_type == "pair_match" or "pairs" in payload:
+            pm_kwargs: dict = {}
+            if "front_text" in payload:
+                pm_kwargs["front_text"] = str(payload["front_text"] or "").strip() or None
+            if "pairs" in payload:
+                pm_kwargs["pairs"] = payload["pairs"] if isinstance(payload["pairs"], list) else None
+            if "tags" in payload:
+                pm_kwargs["tags"] = payload["tags"] if isinstance(payload["tags"], list) else None
+            if "difficulty_hint" in payload:
+                pm_kwargs["difficulty_hint"] = str(payload["difficulty_hint"] or "").strip() or None
+            if "status" in payload:
+                pm_kwargs["status"] = str(payload["status"] or "").strip() or None
+            card = svc.update_pair_match_card(deck_id=deck_id, card_id=card_id, **pm_kwargs)
+            _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+            _emit_theory_rollout_telemetry(
+                "microcards_pair_match_card_updated",
+                deck_id=deck_id,
+                card_id=card_id,
+            )
+        else:
+            kwargs: dict = {}
+            if "front_text" in payload:
+                kwargs["front_text"] = str(payload["front_text"] or "").strip() or None
+            if "back_text" in payload:
+                kwargs["back_text"] = str(payload["back_text"] or "").strip() or None
+            if "tags" in payload:
+                kwargs["tags"] = payload["tags"] if isinstance(payload["tags"], list) else None
+            if "difficulty_hint" in payload:
+                kwargs["difficulty_hint"] = str(payload["difficulty_hint"] or "").strip() or None
+            if "status" in payload:
+                kwargs["status"] = str(payload["status"] or "").strip() or None
+            card = svc.update_card(deck_id=deck_id, card_id=card_id, **kwargs)
+            _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+        return jsonify({"ok": True, "card": card, "user_id": _headless_app_ctx.user_id})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        err = str(exc)
+        status = 409 if err == "duplicate_card" else 400
+        return jsonify({"ok": False, "error": err}), status
+    except Exception as exc:
+        logger.exception("[HTTP] microcards update card failed deck=%s card=%s: %s", deck_id, card_id, exc)
+        return jsonify({"ok": False, "error": "microcards_update_card_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/cards/<string:card_id>", methods=["DELETE"])
+def microcards_delete_card(deck_id: str, card_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    try:
+        svc = _microcards_service()
+        svc.delete_card(deck_id, card_id)
+        _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+        return jsonify({"ok": True, "deleted": True, "user_id": _headless_app_ctx.user_id})
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] microcards delete card failed deck=%s card=%s: %s", deck_id, card_id, exc)
+        return jsonify({"ok": False, "error": "microcards_delete_card_failed"}), 500
+
+
+@app.route("/api/editor/microcards/decks/<string:deck_id>/reorder-cards", methods=["POST"])
+def microcards_reorder_cards(deck_id: str) -> Any:
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_manual_editor"):
+        return _microcards_prod_feature_disabled_json("microcards_manual_editor_disabled", status_code=404)
+    payload = request.get_json(silent=True) or {}
+    card_ids = payload.get("card_ids")
+    if not isinstance(card_ids, list) or not card_ids:
+        return jsonify({"ok": False, "error": "card_ids_required"}), 400
+    try:
+        svc = _microcards_service()
+        deck = svc.reorder_cards(deck_id, card_ids)
+        return jsonify({
+            "ok": True,
+            "deck_summary": {
+                "id": deck.get("id"),
+                "name": deck.get("name"),
+                "cards_total": len(deck.get("cards") or []),
+            },
+            "user_id": _headless_app_ctx.user_id,
+        })
+    except LookupError:
+        return jsonify({"ok": False, "error": "deck_not_found"}), 404
+    except Exception as exc:
+        logger.exception("[HTTP] microcards reorder failed deck_id=%s: %s", deck_id, exc)
+        return jsonify({"ok": False, "error": "microcards_reorder_failed"}), 500
+
+
+# ── M12: Microcards text import endpoints ──────────────────────────────
+
+
+@app.route("/api/editor/microcards/import/parse-text", methods=["POST"])
+def microcards_import_parse_text() -> Any:
+    """Parse @MICROCARD text and return preview payload."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_text_import"):
+        return _microcards_prod_feature_disabled_json("microcards_text_import_disabled", status_code=404)
+    if not PARSERS_AVAILABLE:
+        return jsonify({"ok": False, "error": "parsers_not_available"}), 500
+
+    payload = request.get_json(silent=True) or {}
+    text = payload.get("text", "")
+    if not text or not isinstance(text, str):
+        return jsonify({"ok": False, "error": "text_required"}), 400
+
+    try:
+        parser = MicrocardParser()
+        result = parser.parse_text(text)
+
+        _emit_theory_rollout_telemetry(
+            "microcards_text_import_parsed",
+            total=result.get("summary", {}).get("total", 0),
+            valid=result.get("summary", {}).get("valid", 0),
+            errors=result.get("summary", {}).get("errors", 0),
+        )
+        _emit_microcards_prod_telemetry(
+            "microcards_text_import_parsed",
+            total=result.get("summary", {}).get("total", 0),
+            valid=result.get("summary", {}).get("valid", 0),
+            errors=result.get("summary", {}).get("errors", 0),
+        )
+
+        logger.info(
+            "[HTTP] microcards/import/parse-text: total=%s valid=%s errors=%s",
+            result.get("summary", {}).get("total", 0),
+            result.get("summary", {}).get("valid", 0),
+            result.get("summary", {}).get("errors", 0),
+        )
+        return jsonify(result)
+
+    except Exception as exc:
+        logger.exception("[HTTP] microcards import parse-text failed: %s", exc)
+        _emit_theory_rollout_telemetry(
+            "microcards_text_import_parse_error",
+            error=str(exc)[:200],
+        )
+        _emit_microcards_prod_telemetry(
+            "microcards_text_import_parse_error",
+            error=str(exc)[:200],
+        )
+        return jsonify({"ok": False, "error": "microcards_parse_failed"}), 500
+
+
+@app.route("/api/editor/microcards/import/execute-text", methods=["POST"])
+def microcards_import_execute_text() -> Any:
+    """Execute microcards text import — create or append to deck."""
+    if _headless_app_ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not _is_editor_feature_enabled("microcards_mode"):
+        return _feature_disabled_json("microcards_mode_disabled", status_code=404)
+    if not _is_microcards_prod_feature_enabled("microcards_text_import"):
+        return _microcards_prod_feature_disabled_json("microcards_text_import_disabled", status_code=404)
+
+    payload = request.get_json(silent=True) or {}
+    items = payload.get("items")
+    mode = str(payload.get("mode", "create_deck")).strip()
+    target_deck_id = str(payload.get("target_deck_id") or "").strip() or None
+    deck_name = str(payload.get("deck_name") or "").strip() or None
+    target_language = str(payload.get("target_language") or "unknown").strip()
+
+    if not isinstance(items, list) or not items:
+        return jsonify({"ok": False, "error": "items_required"}), 400
+    if mode not in ("create_deck", "append_to_deck"):
+        return jsonify({"ok": False, "error": "invalid_mode"}), 400
+    if mode == "append_to_deck" and not target_deck_id:
+        return jsonify({"ok": False, "error": "target_deck_id_required"}), 400
+
+    try:
+        svc = _microcards_service()
+        result = svc.import_cards_from_parsed(
+            parsed_items=items,
+            mode=mode,
+            target_deck_id=target_deck_id,
+            deck_name=deck_name,
+            target_language=target_language,
+        )
+        _invalidate_microcards_analytics_cache(_headless_app_ctx.user_id or "default_user")
+
+        deck = result.get("deck") if isinstance(result.get("deck"), dict) else {}
+        _emit_theory_rollout_telemetry(
+            "microcards_text_import_executed",
+            mode=mode,
+            deck_id=deck.get("id"),
+            added_cards=result.get("added_cards", 0),
+            skipped_duplicates=result.get("skipped_duplicates", 0),
+            skipped_errors=result.get("skipped_errors", 0),
+        )
+        _emit_microcards_prod_telemetry(
+            "microcards_text_import_executed",
+            mode=mode,
+            deck_id=deck.get("id"),
+            added_cards=result.get("added_cards", 0),
+            skipped_duplicates=result.get("skipped_duplicates", 0),
+            skipped_errors=result.get("skipped_errors", 0),
+        )
+
+        logger.info(
+            "[HTTP] microcards/import/execute-text: mode=%s deck=%s added=%s dupes=%s errors=%s",
+            mode,
+            deck.get("id"),
+            result.get("added_cards", 0),
+            result.get("skipped_duplicates", 0),
+            result.get("skipped_errors", 0),
+        )
+        return jsonify({
+            "ok": True,
+            "mode": mode,
+            "deck_id": deck.get("id"),
+            "deck_name": deck.get("name"),
+            "added_cards": result.get("added_cards", 0),
+            "skipped_duplicates": result.get("skipped_duplicates", 0),
+            "skipped_errors": result.get("skipped_errors", 0),
+            "user_id": _headless_app_ctx.user_id,
+        })
+
+    except LookupError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] microcards import execute-text failed: %s", exc)
+        return jsonify({"ok": False, "error": "microcards_execute_failed"}), 500
 
 
 @app.route("/api/editor/ai/generate", methods=["POST"])
@@ -7536,6 +8553,11 @@ def _safe_ai_run_id(value: Optional[str] = None) -> str:
     return f"ai_run_{ts}_{uuid.uuid4().hex[:10]}"
 
 
+def _is_valid_ai_run_id(value: Optional[str]) -> bool:
+    raw = str(value or "").strip()
+    return bool(raw and re.fullmatch(r"[A-Za-z0-9._-]{6,128}", raw))
+
+
 def _ai_runs_root() -> Path:
     root = _headless_app_ctx.data_dir / "ai_runs"
     root.mkdir(parents=True, exist_ok=True)
@@ -7568,6 +8590,1049 @@ def _write_json_file(path: Path, payload: Dict[str, Any]) -> None:
     tmp.replace(path)
 
 
+_EDITOR_FEATURE_FLAG_DEFAULTS: Dict[str, bool] = {
+    "analysis_v2_schema": True,
+    "analysis_report_blocks_v1": True,
+    "analysis_report_renderer_v1": True,
+    "editor_analysis_report_link": True,
+    "analysis_coverage_in_editor": True,
+    "microcards_mode": True,
+    "microcards_pair_match": True,
+}
+_ENV_BOOL_TRUE = {"1", "true", "yes", "on", "enable", "enabled"}
+_ENV_BOOL_FALSE = {"0", "false", "no", "off", "disable", "disabled"}
+_THEORY_ROLLOUT_STAGE_ENV_KEY = "RP_THEORY_ROLLOUT_STAGE"
+_THEORY_ROLLOUT_STAGE_SEQUENCE = [
+    "legacy",
+    "analysis_v2",
+    "report_blocks",
+    "report_renderer",
+    "editor_link",
+    "coverage",
+    "microcards",
+    "pair_match",
+    "full",
+]
+_THEORY_ROLLOUT_STAGE_ALIASES = {
+    "baseline": "legacy",
+    "legacy_only": "legacy",
+    "analysis": "analysis_v2",
+    "v2": "analysis_v2",
+    "analysis_v2_schema": "analysis_v2",
+    "analysis_report_blocks_v1": "report_blocks",
+    "reports": "report_renderer",
+    "renderer": "report_renderer",
+    "analysis_report_renderer_v1": "report_renderer",
+    "editor_analysis_report_link": "editor_link",
+    "analysis_coverage_in_editor": "coverage",
+    "microcards_mode": "microcards",
+    "microcards_pair_match": "pair_match",
+    "all": "full",
+    "complete": "full",
+}
+_THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
+    "legacy": {
+        "analysis_v2_schema": False,
+        "analysis_report_blocks_v1": False,
+        "analysis_report_renderer_v1": False,
+        "editor_analysis_report_link": False,
+        "analysis_coverage_in_editor": False,
+        "microcards_mode": False,
+        "microcards_pair_match": False,
+    },
+    "analysis_v2": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": False,
+        "analysis_report_renderer_v1": False,
+        "editor_analysis_report_link": False,
+        "analysis_coverage_in_editor": False,
+        "microcards_mode": False,
+        "microcards_pair_match": False,
+    },
+    "report_blocks": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": True,
+        "analysis_report_renderer_v1": False,
+        "editor_analysis_report_link": False,
+        "analysis_coverage_in_editor": False,
+        "microcards_mode": False,
+        "microcards_pair_match": False,
+    },
+    "report_renderer": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": True,
+        "analysis_report_renderer_v1": True,
+        "editor_analysis_report_link": False,
+        "analysis_coverage_in_editor": False,
+        "microcards_mode": False,
+        "microcards_pair_match": False,
+    },
+    "editor_link": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": True,
+        "analysis_report_renderer_v1": True,
+        "editor_analysis_report_link": True,
+        "analysis_coverage_in_editor": False,
+        "microcards_mode": False,
+        "microcards_pair_match": False,
+    },
+    "coverage": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": True,
+        "analysis_report_renderer_v1": True,
+        "editor_analysis_report_link": True,
+        "analysis_coverage_in_editor": True,
+        "microcards_mode": False,
+        "microcards_pair_match": False,
+    },
+    "microcards": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": True,
+        "analysis_report_renderer_v1": True,
+        "editor_analysis_report_link": True,
+        "analysis_coverage_in_editor": True,
+        "microcards_mode": True,
+        "microcards_pair_match": False,
+    },
+    "pair_match": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": True,
+        "analysis_report_renderer_v1": True,
+        "editor_analysis_report_link": True,
+        "analysis_coverage_in_editor": True,
+        "microcards_mode": True,
+        "microcards_pair_match": True,
+    },
+    "full": {
+        "analysis_v2_schema": True,
+        "analysis_report_blocks_v1": True,
+        "analysis_report_renderer_v1": True,
+        "editor_analysis_report_link": True,
+        "analysis_coverage_in_editor": True,
+        "microcards_mode": True,
+        "microcards_pair_match": True,
+    },
+}
+_ANALYSIS_V2_CLIENT_FIELDS = {
+    "analysis_schema_version",
+    "capability_matrix_version",
+    "capability_matrix_validation",
+    "learning_chunks",
+    "type_progression_suitability",
+    "authoring_routes",
+    "coverage_plan",
+    "future_capabilities",
+    "microcards_candidates",
+    "report_blocks_version",
+    "report_blocks",
+    "report_lint",
+}
+_REPORT_BLOCKS_CLIENT_FIELDS = {"report_blocks_version", "report_blocks", "report_lint"}
+
+
+def _get_theory_rollout_stage() -> str:
+    raw = str(os.environ.get(_THEORY_ROLLOUT_STAGE_ENV_KEY, "") or "").strip().lower()
+    if not raw:
+        return "full"
+    stage = _THEORY_ROLLOUT_STAGE_ALIASES.get(raw, raw)
+    if stage not in _THEORY_ROLLOUT_STAGE_FLAG_CAPS:
+        return "full"
+    return stage
+
+
+def _get_theory_rollout_stage_caps(stage: Optional[str] = None) -> Dict[str, bool]:
+    resolved = stage or _get_theory_rollout_stage()
+    caps = _THEORY_ROLLOUT_STAGE_FLAG_CAPS.get(resolved) or _THEORY_ROLLOUT_STAGE_FLAG_CAPS["full"]
+    return {name: bool(caps.get(name, True)) for name in _EDITOR_FEATURE_FLAG_DEFAULTS.keys()}
+
+
+def _apply_theory_rollout_stage_caps(flags: Dict[str, bool]) -> Dict[str, bool]:
+    caps = _get_theory_rollout_stage_caps()
+    out = {name: bool(flags.get(name, default)) for name, default in _EDITOR_FEATURE_FLAG_DEFAULTS.items()}
+    for name in out.keys():
+        out[name] = bool(out[name] and caps.get(name, True))
+    return out
+
+
+def _theory_rollout_prev_next(stage: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
+    current = stage or _get_theory_rollout_stage()
+    try:
+        idx = _THEORY_ROLLOUT_STAGE_SEQUENCE.index(current)
+    except ValueError:
+        idx = _THEORY_ROLLOUT_STAGE_SEQUENCE.index("full")
+    prev_stage = _THEORY_ROLLOUT_STAGE_SEQUENCE[idx - 1] if idx > 0 else None
+    next_stage = _THEORY_ROLLOUT_STAGE_SEQUENCE[idx + 1] if idx + 1 < len(_THEORY_ROLLOUT_STAGE_SEQUENCE) else None
+    return prev_stage, next_stage
+
+
+def _editor_feature_flag_env_key(flag_name: str) -> str:
+    return f"RP_EDITOR_FF_{str(flag_name or '').strip().upper()}"
+
+
+def _parse_env_bool(raw_value: Optional[str], default: bool) -> bool:
+    if raw_value is None:
+        return bool(default)
+    low = str(raw_value).strip().lower()
+    if low in _ENV_BOOL_TRUE:
+        return True
+    if low in _ENV_BOOL_FALSE:
+        return False
+    return bool(default)
+
+
+def _get_editor_feature_flags() -> Dict[str, bool]:
+    flags = {
+        name: _parse_env_bool(os.environ.get(_editor_feature_flag_env_key(name)), default)
+        for name, default in _EDITOR_FEATURE_FLAG_DEFAULTS.items()
+    }
+    flags = _apply_theory_rollout_stage_caps(flags)
+    if not flags.get("analysis_v2_schema", True):
+        flags["analysis_report_blocks_v1"] = False
+        flags["analysis_report_renderer_v1"] = False
+    if not flags.get("analysis_report_blocks_v1", True):
+        flags["analysis_report_renderer_v1"] = False
+    if not flags.get("microcards_mode", True):
+        flags["microcards_pair_match"] = False
+    return flags
+
+
+def _is_editor_feature_enabled(flag_name: str) -> bool:
+    return bool(_get_editor_feature_flags().get(str(flag_name or "").strip(), True))
+
+
+def _feature_disabled_json(error_code: str, *, status_code: int = 404) -> Tuple[Any, int]:
+    _emit_theory_rollout_telemetry(
+        "feature_flag_blocked",
+        error_code=str(error_code or "").strip() or "feature_disabled",
+        status_code=int(status_code),
+    )
+    return jsonify({"ok": False, "error": error_code, "feature_flags": _get_editor_feature_flags()}), status_code
+
+
+def _attach_editor_feature_flags(payload: Dict[str, Any]) -> Dict[str, Any]:
+    out = dict(payload or {})
+    out["feature_flags"] = _get_editor_feature_flags()
+    return out
+
+
+_THEORY_ROLLOUT_TELEMETRY_LOCK = threading.Lock()
+_THEORY_ROLLOUT_TELEMETRY_SCHEMA_VERSION = "1.0"
+
+
+def _theory_rollout_telemetry_root() -> Path:
+    root = Path(_headless_app_ctx.data_dir) / "telemetry"
+    root.mkdir(parents=True, exist_ok=True)
+    return root
+
+
+def _theory_rollout_telemetry_events_path() -> Path:
+    return _theory_rollout_telemetry_root() / "theory_rollout_events.jsonl"
+
+
+def _telemetry_safe_value(value: Any, *, depth: int = 0) -> Any:
+    if depth >= 3:
+        return None
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        return value[:512]
+    if isinstance(value, Path):
+        return str(value)[:512]
+    if isinstance(value, dict):
+        out: Dict[str, Any] = {}
+        for idx, (k, v) in enumerate(value.items()):
+            if idx >= 48:
+                out["__truncated__"] = True
+                break
+            key = str(k)[:96]
+            out[key] = _telemetry_safe_value(v, depth=depth + 1)
+        return out
+    if isinstance(value, (list, tuple, set)):
+        out_list: List[Any] = []
+        for idx, item in enumerate(value):
+            if idx >= 64:
+                out_list.append("__truncated__")
+                break
+            out_list.append(_telemetry_safe_value(item, depth=depth + 1))
+        return out_list
+    return str(value)[:512]
+
+
+def _emit_theory_rollout_telemetry(event_name: str, **fields: Any) -> None:
+    name = str(event_name or "").strip()
+    if not name:
+        return
+    try:
+        feature_flags = _get_editor_feature_flags()
+        stage = _get_theory_rollout_stage()
+        payload = {
+            "schema_version": _THEORY_ROLLOUT_TELEMETRY_SCHEMA_VERSION,
+            "id": f"trtevt_{uuid.uuid4().hex[:12]}",
+            "event": name,
+            "created_at": _utc_now_iso(),
+            "rollout_stage": stage,
+            "user_id": _headless_app_ctx.user_id or "guest",
+            "feature_flags": feature_flags,
+            "request_path": (request.path if has_request_context() else None),
+            "request_method": (request.method if has_request_context() else None),
+            "fields": _telemetry_safe_value(fields, depth=0),
+        }
+        line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        with _THEORY_ROLLOUT_TELEMETRY_LOCK:
+            path = _theory_rollout_telemetry_events_path()
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+    except Exception as exc:
+        logger.debug("[HTTP] theory rollout telemetry emit failed: %s", exc)
+
+
+def _analysis_rollout_quality_fields(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        return {}
+    report_blocks = payload.get("report_blocks") if isinstance(payload.get("report_blocks"), list) else []
+    report_lint = payload.get("report_lint") if isinstance(payload.get("report_lint"), dict) else {}
+    future_capabilities = payload.get("future_capabilities") if isinstance(payload.get("future_capabilities"), list) else []
+    duplicate_signals = report_lint.get("duplicate_content_signals")
+    try:
+        duplicate_signals_val = int(duplicate_signals) if duplicate_signals is not None else None
+    except (TypeError, ValueError):
+        duplicate_signals_val = None
+    has_pair_matching_capability = any(
+        isinstance(item, dict) and str(item.get("capability_id") or "").strip().lower() == "pair_matching"
+        for item in future_capabilities
+    )
+    schema_version = payload.get("analysis_schema_version")
+    return {
+        "analysis_schema_version": (str(schema_version).strip() if schema_version is not None else None) or None,
+        "report_blocks_version": (str(payload.get("report_blocks_version")).strip() if payload.get("report_blocks_version") is not None else None) or None,
+        "report_blocks_count": len(report_blocks),
+        "fallback_renderer_recommended": bool(report_lint.get("fallback_renderer_recommended")),
+        "duplicate_content_signals": duplicate_signals_val,
+        "future_capabilities_count": len(future_capabilities),
+        "microcards_candidates_count": len(payload.get("microcards_candidates") or []) if isinstance(payload.get("microcards_candidates"), list) else 0,
+        "learning_chunks_count": len(payload.get("learning_chunks") or []) if isinstance(payload.get("learning_chunks"), list) else 0,
+        "authoring_routes_count": len(payload.get("authoring_routes") or []) if isinstance(payload.get("authoring_routes"), list) else 0,
+        "warnings_count": len(payload.get("warnings") or []) if isinstance(payload.get("warnings"), list) else 0,
+        "has_pair_matching_capability": has_pair_matching_capability,
+        "analysis_v2_valid": str(schema_version or "").strip() == "2.0",
+    }
+
+
+def _read_theory_rollout_telemetry_events(limit: int = 5000) -> List[Dict[str, Any]]:
+    path = _theory_rollout_telemetry_events_path()
+    if not path.exists():
+        return []
+    max_items = max(1, min(int(limit or 5000), 20000))
+    recent_lines: deque[str] = deque(maxlen=max_items)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    recent_lines.append(line)
+    except Exception:
+        logger.exception("[HTTP] Failed to read theory rollout telemetry events: %s", path)
+        return []
+    out: List[Dict[str, Any]] = []
+    for line in recent_lines:
+        try:
+            item = json.loads(line)
+            if isinstance(item, dict):
+                out.append(item)
+        except Exception:
+            continue
+    return out
+
+
+def _ratio_payload(numerator: int, denominator: int) -> Dict[str, Any]:
+    value = None
+    if denominator > 0:
+        value = round(float(numerator) / float(denominator), 4)
+    return {"numerator": int(numerator), "denominator": int(denominator), "value": value}
+
+
+def _duplicate_signal_bucket(value: Optional[int]) -> str:
+    if value is None:
+        return "unknown"
+    if value >= 5:
+        return "5+"
+    if value < 0:
+        return "0"
+    return str(int(value))
+
+
+def _build_theory_rollout_telemetry_summary(limit: int = 5000) -> Dict[str, Any]:
+    events = _read_theory_rollout_telemetry_events(limit=limit)
+    by_event: Dict[str, int] = {}
+    by_stage: Dict[str, int] = {}
+    quality_samples = 0
+    valid_v2_samples = 0
+    fallback_recommended_samples = 0
+    report_blocks_total = 0
+    report_blocks_samples = 0
+    duplicate_distribution: Dict[str, int] = {}
+    pair_matching_capability_samples = 0
+    analyses_with_pair_matching = 0
+    deck_creations_from_analysis = 0
+    deck_appends_from_analysis = 0
+    pair_match_deck_creations = 0
+    microcards_queue_opens = 0
+    resumed_queue_sessions = 0
+    microcards_reviews = 0
+    pair_match_reviews = 0
+    feature_flag_blocks = 0
+    first_event_at = events[0].get("created_at") if events else None
+    last_event_at = events[-1].get("created_at") if events else None
+
+    for evt in events:
+        event_name = str(evt.get("event") or "").strip() or "unknown"
+        stage = str(evt.get("rollout_stage") or "").strip() or "unknown"
+        by_event[event_name] = by_event.get(event_name, 0) + 1
+        by_stage[stage] = by_stage.get(stage, 0) + 1
+        fields = evt.get("fields") if isinstance(evt.get("fields"), dict) else {}
+
+        schema_version = str(fields.get("analysis_schema_version") or "").strip() or None
+        if schema_version:
+            quality_samples += 1
+            if schema_version == "2.0" and bool(fields.get("analysis_v2_valid", False)):
+                valid_v2_samples += 1
+            if bool(fields.get("fallback_renderer_recommended")):
+                fallback_recommended_samples += 1
+            rb_count = fields.get("report_blocks_count")
+            try:
+                if rb_count is not None:
+                    rb_count_int = max(0, int(rb_count))
+                    report_blocks_total += rb_count_int
+                    report_blocks_samples += 1
+            except (TypeError, ValueError):
+                pass
+            dup = fields.get("duplicate_content_signals")
+            try:
+                dup_int = int(dup) if dup is not None else None
+            except (TypeError, ValueError):
+                dup_int = None
+            bucket = _duplicate_signal_bucket(dup_int)
+            duplicate_distribution[bucket] = duplicate_distribution.get(bucket, 0) + 1
+            pair_matching_capability_samples += 1
+            if bool(fields.get("has_pair_matching_capability")):
+                analyses_with_pair_matching += 1
+
+        if event_name == "microcards_deck_created_from_analysis":
+            deck_creations_from_analysis += 1
+            try:
+                if int(fields.get("pair_match_cards") or 0) > 0:
+                    pair_match_deck_creations += 1
+            except (TypeError, ValueError):
+                pass
+        elif event_name == "microcards_deck_appended_from_analysis":
+            deck_appends_from_analysis += 1
+        elif event_name == "microcards_queue_opened":
+            microcards_queue_opens += 1
+            if bool(fields.get("resumed_session")):
+                resumed_queue_sessions += 1
+        elif event_name == "microcards_review_submitted":
+            microcards_reviews += 1
+            if str(fields.get("card_type") or "").strip().lower() == "pair_match":
+                pair_match_reviews += 1
+        elif event_name == "feature_flag_blocked":
+            feature_flag_blocks += 1
+
+    avg_report_blocks = None
+    if report_blocks_samples > 0:
+        avg_report_blocks = round(report_blocks_total / report_blocks_samples, 2)
+
+    return {
+        "schema_version": "1.0",
+        "events_window": len(events),
+        "events_first_at": first_event_at,
+        "events_last_at": last_event_at,
+        "by_event": by_event,
+        "by_rollout_stage": by_stage,
+        "metrics": {
+            "analysis_v2_valid_ratio": _ratio_payload(valid_v2_samples, quality_samples),
+            "fallback_renderer_recommended_ratio": _ratio_payload(fallback_recommended_samples, quality_samples),
+            "avg_report_blocks_size": avg_report_blocks,
+            "duplicate_content_signals_distribution": duplicate_distribution,
+            "analyses_with_pair_matching_ratio": _ratio_payload(analyses_with_pair_matching, pair_matching_capability_samples),
+            "microdeck_creations_from_analysis": int(deck_creations_from_analysis),
+            "microdeck_appends_from_analysis": int(deck_appends_from_analysis),
+            "pair_match_deck_creations": int(pair_match_deck_creations),
+            "microcards_queue_opens": int(microcards_queue_opens),
+            "resumed_queue_sessions": int(resumed_queue_sessions),
+            "pair_match_reviews": int(pair_match_reviews),
+            "microcards_reviews_total": int(microcards_reviews),
+            "feature_flag_blocks": int(feature_flag_blocks),
+        },
+    }
+
+
+def _build_theory_rollout_migration_inventory() -> Dict[str, Any]:
+    inventory: Dict[str, Any] = {
+        "scan_status": "ok",
+        "ai_runs": {
+            "total_dirs": 0,
+            "with_analysis_artifact": 0,
+            "legacy_or_unknown": 0,
+            "analysis_v2": 0,
+            "with_report_blocks_v1": 0,
+        },
+        "microcards": {
+            "decks_total": 0,
+            "decks_by_schema_version": {},
+            "user_review_states_files": 0,
+            "user_review_events_files": 0,
+            "user_review_sessions_files": 0,
+        },
+    }
+    try:
+        ai_root = _ai_runs_root()
+        for run_dir in ai_root.iterdir():
+            if not run_dir.is_dir():
+                continue
+            inventory["ai_runs"]["total_dirs"] += 1
+            analysis_artifact = _read_json_file(run_dir / "analysis.json")
+            if not isinstance(analysis_artifact, dict):
+                continue
+            inventory["ai_runs"]["with_analysis_artifact"] += 1
+            result = analysis_artifact.get("result") if isinstance(analysis_artifact.get("result"), dict) else {}
+            schema_version = str(result.get("analysis_schema_version") or "").strip()
+            if schema_version == "2.0":
+                inventory["ai_runs"]["analysis_v2"] += 1
+            else:
+                inventory["ai_runs"]["legacy_or_unknown"] += 1
+            if str(result.get("report_blocks_version") or "").strip() == "1.0":
+                inventory["ai_runs"]["with_report_blocks_v1"] += 1
+    except Exception:
+        logger.exception("[HTTP] theory rollout migration inventory ai_runs scan failed")
+        inventory["scan_status"] = "partial_error"
+
+    try:
+        mc_root = Path(_headless_app_ctx.data_dir) / "microcards" / "decks"
+        if mc_root.exists():
+            for path in mc_root.glob("*.json"):
+                deck = _read_json_file(path)
+                if not isinstance(deck, dict):
+                    continue
+                inventory["microcards"]["decks_total"] += 1
+                schema_version = str(deck.get("schema_version") or "unknown").strip() or "unknown"
+                versions = inventory["microcards"]["decks_by_schema_version"]
+                versions[schema_version] = int(versions.get(schema_version, 0)) + 1
+        users_root = Path(_headless_app_ctx.data_dir) / "users"
+        if users_root.exists():
+            for user_dir in users_root.iterdir():
+                if not user_dir.is_dir():
+                    continue
+                mc_user_root = user_dir / "microcards"
+                if not mc_user_root.exists():
+                    continue
+                if (mc_user_root / "review_states.json").exists():
+                    inventory["microcards"]["user_review_states_files"] += 1
+                if (mc_user_root / "review_events.json").exists():
+                    inventory["microcards"]["user_review_events_files"] += 1
+                if (mc_user_root / "review_sessions.json").exists():
+                    inventory["microcards"]["user_review_sessions_files"] += 1
+    except Exception:
+        logger.exception("[HTTP] theory rollout migration inventory microcards scan failed")
+        inventory["scan_status"] = "partial_error"
+    return inventory
+
+
+def _build_theory_rollout_status_payload(*, include_inventory: bool = False, include_telemetry: bool = False, telemetry_limit: int = 5000) -> Dict[str, Any]:
+    stage = _get_theory_rollout_stage()
+    prev_stage, next_stage = _theory_rollout_prev_next(stage)
+    flags = _get_editor_feature_flags()
+    payload: Dict[str, Any] = {
+        "stage": stage,
+        "stage_env_key": _THEORY_ROLLOUT_STAGE_ENV_KEY,
+        "available_stages": list(_THEORY_ROLLOUT_STAGE_SEQUENCE),
+        "previous_stage": prev_stage,
+        "next_stage": next_stage,
+        "effective_feature_flags": flags,
+        "stage_caps": _get_theory_rollout_stage_caps(stage),
+        "rollback_guarantees": [
+            "Rollout stage only gates feature exposure via flags; lowering stage does not delete ai_run or microcards data.",
+            "analysis_json v2/report_blocks are additive and versioned; legacy clients continue reading legacy fields.",
+            "Microdeck content is shared and review progress is user-scoped, so disabling microcards UI does not merge/erase progress data.",
+            "Raw ai_run artifacts are persisted separately from derived UI rendering and can be reopened after re-enable.",
+        ],
+    }
+    if include_inventory:
+        payload["migration_inventory"] = _build_theory_rollout_migration_inventory()
+    if include_telemetry:
+        payload["telemetry"] = _build_theory_rollout_telemetry_summary(limit=telemetry_limit)
+    return payload
+
+
+def _route_steps_with_feature_flags(steps: Any, flags: Dict[str, bool]) -> List[Dict[str, Any]]:
+    if not isinstance(steps, list):
+        return []
+    allow_microcards = bool(flags.get("microcards_mode", True))
+    allow_pair_match = bool(flags.get("microcards_pair_match", True))
+    normalized_steps: List[Dict[str, Any]] = []
+    for step in steps:
+        if not isinstance(step, dict):
+            continue
+        action_type = str(step.get("action_type") or "").strip().lower()
+        microcard_mode = str(step.get("microcard_mode") or "").strip().lower()
+        if action_type == "add_microcards":
+            if not allow_microcards:
+                continue
+            if microcard_mode == "pair_match" and not allow_pair_match:
+                continue
+        normalized_steps.append(dict(step))
+    return normalized_steps
+
+
+def _sanitize_authoring_routes_for_client(routes: Any, flags: Dict[str, bool]) -> List[Dict[str, Any]]:
+    if not isinstance(routes, list):
+        return []
+    sanitized: List[Dict[str, Any]] = []
+    for route in routes:
+        if not isinstance(route, dict):
+            continue
+        route_copy = dict(route)
+        raw_steps = route.get("steps")
+        if isinstance(raw_steps, list):
+            route_copy["steps"] = _route_steps_with_feature_flags(raw_steps, flags)
+        steps = route_copy.get("steps") if isinstance(route_copy.get("steps"), list) else []
+        has_steps = len(steps) > 0
+        has_micro_step = any(str(s.get("action_type") or "").strip().lower() == "add_microcards" for s in steps if isinstance(s, dict))
+        has_progression_step = any(
+            str(s.get("action_type") or "").strip().lower() == "use_task_type_progression" for s in steps if isinstance(s, dict)
+        )
+
+        original_steps = raw_steps if isinstance(raw_steps, list) else []
+        if original_steps and not has_steps:
+            continue
+
+        target_surface = str(route_copy.get("target_surface") or "").strip().lower()
+        route_kind = str(route_copy.get("route_kind") or "").strip().lower()
+        if target_surface in {"microcards", "mixed"} and not has_micro_step:
+            if target_surface == "microcards" and not has_progression_step:
+                continue
+            if target_surface == "microcards":
+                route_copy["target_surface"] = "complexes" if has_progression_step else "editor_manual"
+            elif target_surface == "mixed":
+                route_copy["target_surface"] = "complexes" if has_progression_step else "editor_manual"
+
+            if route_kind == "hybrid" and not has_micro_step and has_progression_step:
+                route_copy["route_kind"] = "complex_progression"
+            elif route_kind == "microcards_support" and not has_micro_step:
+                route_copy["route_kind"] = "complex_progression" if has_progression_step else "manual_practice"
+
+        sanitized.append(route_copy)
+    return sanitized
+
+
+def _sanitize_future_capabilities_for_client(future_caps: Any, flags: Dict[str, bool]) -> List[Dict[str, Any]]:
+    if not isinstance(future_caps, list):
+        return []
+    allow_pair_match = bool(flags.get("microcards_mode", True) and flags.get("microcards_pair_match", True))
+    out: List[Dict[str, Any]] = []
+    for item in future_caps:
+        if not isinstance(item, dict):
+            continue
+        capability_id = str(item.get("capability_id") or "").strip().lower()
+        if capability_id == "pair_matching" and not allow_pair_match:
+            continue
+        out.append(dict(item))
+    return out
+
+
+def _sanitize_microcards_candidates_for_client(candidates: Any, flags: Dict[str, bool]) -> List[Dict[str, Any]]:
+    if not isinstance(candidates, list):
+        return []
+    if not flags.get("microcards_mode", True):
+        return []
+    allow_pair_match = bool(flags.get("microcards_pair_match", True))
+    out: List[Dict[str, Any]] = []
+    for item in candidates:
+        if not isinstance(item, dict):
+            continue
+        card_type = str(item.get("card_type") or "").strip().lower()
+        if card_type == "pair_match" and not allow_pair_match:
+            continue
+        out.append(dict(item))
+    return out
+
+
+def _sanitize_analysis_response_for_client(payload: Dict[str, Any], *, flags: Optional[Dict[str, bool]] = None) -> Dict[str, Any]:
+    out = dict(payload or {})
+    ff = dict(flags or _get_editor_feature_flags())
+    if not ff.get("analysis_v2_schema", True):
+        for key in _ANALYSIS_V2_CLIENT_FIELDS:
+            out.pop(key, None)
+        out["feature_flags"] = ff
+        return out
+
+    if isinstance(out.get("authoring_routes"), list):
+        out["authoring_routes"] = _sanitize_authoring_routes_for_client(out.get("authoring_routes"), ff)
+    if isinstance(out.get("future_capabilities"), list):
+        out["future_capabilities"] = _sanitize_future_capabilities_for_client(out.get("future_capabilities"), ff)
+    if isinstance(out.get("microcards_candidates"), list):
+        out["microcards_candidates"] = _sanitize_microcards_candidates_for_client(out.get("microcards_candidates"), ff)
+
+    if not ff.get("analysis_report_blocks_v1", True):
+        for key in _REPORT_BLOCKS_CLIENT_FIELDS:
+            out.pop(key, None)
+
+    out["feature_flags"] = ff
+    return out
+
+
+def _sanitize_analysis_for_microcards_backend(payload: Dict[str, Any], *, flags: Optional[Dict[str, bool]] = None) -> Dict[str, Any]:
+    out = dict(payload or {})
+    ff = dict(flags or _get_editor_feature_flags())
+    if not ff.get("microcards_pair_match", True):
+        if isinstance(out.get("future_capabilities"), list):
+            out["future_capabilities"] = _sanitize_future_capabilities_for_client(out.get("future_capabilities"), ff)
+        if isinstance(out.get("microcards_candidates"), list):
+            out["microcards_candidates"] = _sanitize_microcards_candidates_for_client(out.get("microcards_candidates"), ff)
+    return out
+
+
+# ── M14: Microcards Productization Rollout Layer (independent from P13 theory rollout) ──
+
+_MICROCARDS_PROD_FEATURE_FLAG_DEFAULTS: Dict[str, bool] = {
+    "microcards_runtime_ui": True,
+    "microcards_home_entry": True,
+    "microcards_calendar_integration": True,
+    "microcards_statistics_integration": True,
+    "microcards_manual_editor": True,
+    "microcards_text_import": True,
+    "microcards_review_fx": True,
+    "microcards_pair_match_runtime": True,
+}
+
+_MICROCARDS_ROLLOUT_STAGE_ENV_KEY = "RP_MICROCARDS_ROLLOUT_STAGE"
+
+_MICROCARDS_ROLLOUT_STAGE_SEQUENCE = [
+    "disabled",
+    "runtime_hidden",
+    "calendar_stats_only",
+    "runtime_ui",
+    "home_entry",
+    "manual_editor",
+    "text_import",
+    "full",
+]
+
+_MICROCARDS_ROLLOUT_STAGE_ALIASES: Dict[str, str] = {
+    "off": "disabled",
+    "none": "disabled",
+    "backend_only": "runtime_hidden",
+    "hidden": "runtime_hidden",
+    "cal_stats": "calendar_stats_only",
+    "calendar": "calendar_stats_only",
+    "runtime": "runtime_ui",
+    "home": "home_entry",
+    "manual": "manual_editor",
+    "import": "text_import",
+    "all": "full",
+    "complete": "full",
+    "enabled": "full",
+}
+
+_MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
+    "disabled": {
+        "microcards_runtime_ui": False,
+        "microcards_home_entry": False,
+        "microcards_calendar_integration": False,
+        "microcards_statistics_integration": False,
+        "microcards_manual_editor": False,
+        "microcards_text_import": False,
+        "microcards_review_fx": False,
+        "microcards_pair_match_runtime": False,
+    },
+    "runtime_hidden": {
+        "microcards_runtime_ui": False,
+        "microcards_home_entry": False,
+        "microcards_calendar_integration": False,
+        "microcards_statistics_integration": False,
+        "microcards_manual_editor": False,
+        "microcards_text_import": False,
+        "microcards_review_fx": False,
+        "microcards_pair_match_runtime": False,
+    },
+    "calendar_stats_only": {
+        "microcards_runtime_ui": False,
+        "microcards_home_entry": False,
+        "microcards_calendar_integration": True,
+        "microcards_statistics_integration": True,
+        "microcards_manual_editor": False,
+        "microcards_text_import": False,
+        "microcards_review_fx": False,
+        "microcards_pair_match_runtime": False,
+    },
+    "runtime_ui": {
+        "microcards_runtime_ui": True,
+        "microcards_home_entry": False,
+        "microcards_calendar_integration": True,
+        "microcards_statistics_integration": True,
+        "microcards_manual_editor": False,
+        "microcards_text_import": False,
+        "microcards_review_fx": True,
+        "microcards_pair_match_runtime": True,
+    },
+    "home_entry": {
+        "microcards_runtime_ui": True,
+        "microcards_home_entry": True,
+        "microcards_calendar_integration": True,
+        "microcards_statistics_integration": True,
+        "microcards_manual_editor": False,
+        "microcards_text_import": False,
+        "microcards_review_fx": True,
+        "microcards_pair_match_runtime": True,
+    },
+    "manual_editor": {
+        "microcards_runtime_ui": True,
+        "microcards_home_entry": True,
+        "microcards_calendar_integration": True,
+        "microcards_statistics_integration": True,
+        "microcards_manual_editor": True,
+        "microcards_text_import": False,
+        "microcards_review_fx": True,
+        "microcards_pair_match_runtime": True,
+    },
+    "text_import": {
+        "microcards_runtime_ui": True,
+        "microcards_home_entry": True,
+        "microcards_calendar_integration": True,
+        "microcards_statistics_integration": True,
+        "microcards_manual_editor": True,
+        "microcards_text_import": True,
+        "microcards_review_fx": True,
+        "microcards_pair_match_runtime": True,
+    },
+    "full": {
+        "microcards_runtime_ui": True,
+        "microcards_home_entry": True,
+        "microcards_calendar_integration": True,
+        "microcards_statistics_integration": True,
+        "microcards_manual_editor": True,
+        "microcards_text_import": True,
+        "microcards_review_fx": True,
+        "microcards_pair_match_runtime": True,
+    },
+}
+
+
+def _get_microcards_rollout_stage() -> str:
+    raw = str(os.environ.get(_MICROCARDS_ROLLOUT_STAGE_ENV_KEY, "") or "").strip().lower()
+    if not raw:
+        return "full"
+    stage = _MICROCARDS_ROLLOUT_STAGE_ALIASES.get(raw, raw)
+    if stage not in _MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS:
+        return "full"
+    return stage
+
+
+def _get_microcards_rollout_stage_caps(stage: Optional[str] = None) -> Dict[str, bool]:
+    resolved = stage or _get_microcards_rollout_stage()
+    caps = _MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS.get(resolved) or _MICROCARDS_ROLLOUT_STAGE_FLAG_CAPS["full"]
+    return {name: bool(caps.get(name, True)) for name in _MICROCARDS_PROD_FEATURE_FLAG_DEFAULTS.keys()}
+
+
+def _get_microcards_prod_feature_flags() -> Dict[str, bool]:
+    flags: Dict[str, bool] = {}
+    for name, default in _MICROCARDS_PROD_FEATURE_FLAG_DEFAULTS.items():
+        env_key = f"RP_MICROCARDS_FF_{str(name).strip().upper()}"
+        flags[name] = _parse_env_bool(os.environ.get(env_key), default)
+    caps = _get_microcards_rollout_stage_caps()
+    for name in flags:
+        flags[name] = bool(flags[name] and caps.get(name, True))
+    if not flags.get("microcards_runtime_ui", True):
+        flags["microcards_review_fx"] = False
+        flags["microcards_pair_match_runtime"] = False
+    return flags
+
+
+def _is_microcards_prod_feature_enabled(flag_name: str) -> bool:
+    return bool(_get_microcards_prod_feature_flags().get(str(flag_name or "").strip(), True))
+
+
+def _microcards_prod_feature_disabled_json(error_code: str, *, status_code: int = 404) -> Tuple[Any, int]:
+    _emit_microcards_prod_telemetry(
+        "microcards_prod_feature_blocked",
+        error_code=str(error_code or "").strip() or "feature_disabled",
+        status_code=int(status_code),
+    )
+    return jsonify({"ok": False, "error": error_code, "microcards_feature_flags": _get_microcards_prod_feature_flags()}), status_code
+
+
+def _microcards_rollout_prev_next(stage: Optional[str] = None) -> Tuple[Optional[str], Optional[str]]:
+    current = stage or _get_microcards_rollout_stage()
+    try:
+        idx = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE.index(current)
+    except ValueError:
+        idx = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE.index("full")
+    prev_stage = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE[idx - 1] if idx > 0 else None
+    next_stage = _MICROCARDS_ROLLOUT_STAGE_SEQUENCE[idx + 1] if idx + 1 < len(_MICROCARDS_ROLLOUT_STAGE_SEQUENCE) else None
+    return prev_stage, next_stage
+
+
+_MICROCARDS_PROD_TELEMETRY_LOCK = threading.Lock()
+_MICROCARDS_PROD_TELEMETRY_SCHEMA_VERSION = "1.0"
+
+
+def _microcards_prod_telemetry_events_path() -> Path:
+    root = Path(_headless_app_ctx.data_dir) / "telemetry"
+    root.mkdir(parents=True, exist_ok=True)
+    return root / "microcards_prod_rollout_events.jsonl"
+
+
+def _emit_microcards_prod_telemetry(event_name: str, **fields: Any) -> None:
+    name = str(event_name or "").strip()
+    if not name:
+        return
+    try:
+        mc_flags = _get_microcards_prod_feature_flags()
+        stage = _get_microcards_rollout_stage()
+        payload = {
+            "schema_version": _MICROCARDS_PROD_TELEMETRY_SCHEMA_VERSION,
+            "id": f"mcpevt_{uuid.uuid4().hex[:12]}",
+            "event": name,
+            "created_at": _utc_now_iso(),
+            "rollout_stage": stage,
+            "user_id": _headless_app_ctx.user_id or "guest",
+            "microcards_feature_flags": mc_flags,
+            "request_path": (request.path if has_request_context() else None),
+            "request_method": (request.method if has_request_context() else None),
+            "fields": _telemetry_safe_value(fields, depth=0),
+        }
+        line = json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        with _MICROCARDS_PROD_TELEMETRY_LOCK:
+            path = _microcards_prod_telemetry_events_path()
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(line + "\n")
+    except Exception as exc:
+        logger.debug("[HTTP] microcards prod telemetry emit failed: %s", exc)
+
+
+def _read_microcards_prod_telemetry_events(limit: int = 5000) -> List[Dict[str, Any]]:
+    path = _microcards_prod_telemetry_events_path()
+    if not path.exists():
+        return []
+    max_items = max(1, min(int(limit or 5000), 20000))
+    recent_lines: deque[str] = deque(maxlen=max_items)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line:
+                    recent_lines.append(line)
+    except Exception:
+        logger.exception("[HTTP] Failed to read microcards prod telemetry events: %s", path)
+        return []
+    out: List[Dict[str, Any]] = []
+    for line in recent_lines:
+        try:
+            item = json.loads(line)
+            if isinstance(item, dict):
+                out.append(item)
+        except Exception:
+            continue
+    return out
+
+
+def _build_microcards_prod_telemetry_summary(limit: int = 5000) -> Dict[str, Any]:
+    events = _read_microcards_prod_telemetry_events(limit=limit)
+    by_event: Dict[str, int] = {}
+    by_stage: Dict[str, int] = {}
+    runtime_opens = 0
+    runtime_sessions_started = 0
+    runtime_sessions_completed = 0
+    manual_deck_creates = 0
+    manual_card_creates = 0
+    text_import_parses = 0
+    text_import_executes = 0
+    text_import_errors = 0
+    backfill_runs = 0
+    backfill_verify_failures = 0
+    feature_blocks = 0
+    first_event_at = events[0].get("created_at") if events else None
+    last_event_at = events[-1].get("created_at") if events else None
+
+    for evt in events:
+        event_name = str(evt.get("event") or "").strip() or "unknown"
+        stage = str(evt.get("rollout_stage") or "").strip() or "unknown"
+        by_event[event_name] = by_event.get(event_name, 0) + 1
+        by_stage[stage] = by_stage.get(stage, 0) + 1
+
+        if event_name == "microcards_runtime_opened":
+            runtime_opens += 1
+        elif event_name == "microcards_runtime_session_started":
+            runtime_sessions_started += 1
+        elif event_name == "microcards_runtime_session_completed":
+            runtime_sessions_completed += 1
+        elif event_name == "microcards_manual_deck_created":
+            manual_deck_creates += 1
+        elif event_name == "microcards_manual_card_created":
+            manual_card_creates += 1
+        elif event_name == "microcards_text_import_parsed":
+            text_import_parses += 1
+        elif event_name == "microcards_text_import_executed":
+            text_import_executes += 1
+        elif event_name == "microcards_text_import_parse_error":
+            text_import_errors += 1
+        elif event_name == "microcards_backfill_run":
+            backfill_runs += 1
+        elif event_name == "microcards_backfill_verify_failed":
+            backfill_verify_failures += 1
+        elif event_name == "microcards_prod_feature_blocked":
+            feature_blocks += 1
+
+    return {
+        "schema_version": "1.0",
+        "events_window": len(events),
+        "events_first_at": first_event_at,
+        "events_last_at": last_event_at,
+        "by_event": by_event,
+        "by_rollout_stage": by_stage,
+        "metrics": {
+            "runtime_opens": runtime_opens,
+            "runtime_sessions_started": runtime_sessions_started,
+            "runtime_sessions_completed": runtime_sessions_completed,
+            "manual_deck_creates": manual_deck_creates,
+            "manual_card_creates": manual_card_creates,
+            "text_import_parses": text_import_parses,
+            "text_import_executes": text_import_executes,
+            "text_import_errors": text_import_errors,
+            "backfill_runs": backfill_runs,
+            "backfill_verify_failures": backfill_verify_failures,
+            "feature_blocks": feature_blocks,
+        },
+    }
+
+
+def _build_microcards_prod_rollout_status_payload(*, include_telemetry: bool = False, telemetry_limit: int = 5000) -> Dict[str, Any]:
+    stage = _get_microcards_rollout_stage()
+    prev_stage, next_stage = _microcards_rollout_prev_next(stage)
+    mc_flags = _get_microcards_prod_feature_flags()
+    theory_flags = _get_editor_feature_flags()
+    payload: Dict[str, Any] = {
+        "stage": stage,
+        "stage_env_key": _MICROCARDS_ROLLOUT_STAGE_ENV_KEY,
+        "available_stages": list(_MICROCARDS_ROLLOUT_STAGE_SEQUENCE),
+        "previous_stage": prev_stage,
+        "next_stage": next_stage,
+        "effective_feature_flags": mc_flags,
+        "stage_caps": _get_microcards_rollout_stage_caps(stage),
+        "theory_rollout_stage": _get_theory_rollout_stage(),
+        "theory_feature_flags": theory_flags,
+        "rollback_guarantees": [
+            "Microcards prod rollout stage only gates feature exposure via flags; lowering stage does not delete deck/review/calendar data.",
+            "Backend data (decks, review_events, activity.json) persists across all stage transitions.",
+            "Disabling calendar/statistics integration hides mixed-activity fields in UI but does not revert backfill data.",
+            "Re-enabling a stage restores full functionality without data loss.",
+            "Backfill can be re-run safely (idempotent) after any stage change.",
+        ],
+    }
+    if include_telemetry:
+        payload["telemetry"] = _build_microcards_prod_telemetry_summary(limit=telemetry_limit)
+    return payload
+
+
 def _ai_run_merge_manifest(run_id: str, patch_data: Dict[str, Any]) -> None:
     run_dir = _ai_run_dir(run_id)
     manifest_path = run_dir / "run.json"
@@ -7584,6 +9649,716 @@ def _ai_run_write_artifact(run_id: str, artifact_name: str, payload: Dict[str, A
     run_dir = _ai_run_dir(run_id)
     artifact_path = run_dir / f"{artifact_name}.json"
     _write_json_file(artifact_path, payload)
+
+
+def _ai_run_build_reopen_analysis_response(run_id: str, *, apply_feature_flags: bool = True) -> Optional[Dict[str, Any]]:
+    if not _is_valid_ai_run_id(run_id):
+        return None
+    run_dir = _ai_runs_root() / run_id
+    if not run_dir.exists() or not run_dir.is_dir():
+        return None
+
+    manifest = _read_json_file(run_dir / "run.json") or {}
+    if not isinstance(manifest, dict):
+        manifest = {}
+    analysis_artifact = _read_json_file(run_dir / "analysis.json") or {}
+    if not isinstance(analysis_artifact, dict):
+        return None
+
+    result = analysis_artifact.get("result")
+    if not isinstance(result, dict):
+        return None
+
+    material_stats = analysis_artifact.get("material_stats")
+    if not isinstance(material_stats, dict):
+        material_stats = {}
+    lang_prefs = analysis_artifact.get("language_preferences")
+    if not isinstance(lang_prefs, dict):
+        lang_prefs = {}
+    provider_chain_attempts = analysis_artifact.get("provider_chain_attempts")
+    if not isinstance(provider_chain_attempts, list):
+        provider_chain_attempts = manifest.get("provider_chain_attempts")
+    if not isinstance(provider_chain_attempts, list):
+        provider_chain_attempts = []
+
+    source_file_info = manifest.get("source_file_info")
+    if not isinstance(source_file_info, dict):
+        source_file_info = None
+
+    response: Dict[str, Any] = {
+        "ok": True,
+        "ai_run_id": run_id,
+        "provider_used": analysis_artifact.get("provider_used") or manifest.get("provider_used"),
+        "provider_model": analysis_artifact.get("provider_model") or manifest.get("provider_model"),
+        "provider_chain_attempts": provider_chain_attempts,
+        "material_language": material_stats.get("language") or manifest.get("material_language"),
+        "output_language_mode": lang_prefs.get("mode") or manifest.get("output_language_mode"),
+        "requested_output_language": lang_prefs.get("requested") or manifest.get("requested_output_language"),
+        "effective_output_language": lang_prefs.get("effective") or manifest.get("effective_output_language"),
+        "output_language_warning": lang_prefs.get("translation_warning"),
+        "analysis_created_at": analysis_artifact.get("created_at"),
+        "material_stats": material_stats,
+        "source_file_info": source_file_info,
+        "source_file_name": (
+            manifest.get("source_file_name")
+            or ((source_file_info or {}).get("name") if isinstance(source_file_info, dict) else None)
+        ),
+        "run_manifest": {
+            "phase": manifest.get("phase"),
+            "created_at": manifest.get("created_at"),
+            "updated_at": manifest.get("updated_at"),
+            "material_word_count": manifest.get("material_word_count"),
+        },
+    }
+    response.update(result)
+    if not apply_feature_flags:
+        return response
+    return _sanitize_analysis_response_for_client(response)
+
+
+def _microcards_service() -> MicrocardsService:
+    user_id = _headless_app_ctx.user_id or "default_user"
+    return MicrocardsService(str(_headless_app_ctx.data_dir), user_id=user_id)
+
+
+def _microcards_analytics_service() -> MicrocardsAnalyticsService:
+    current_data_dir = str(_headless_app_ctx.data_dir)
+    cached = getattr(_headless_app_ctx, "microcards_analytics_service", None)
+    if isinstance(cached, MicrocardsAnalyticsService) and str(cached.data_dir) == current_data_dir:
+        return cached
+    service = MicrocardsAnalyticsService(current_data_dir)
+    setattr(_headless_app_ctx, "microcards_analytics_service", service)
+    return service
+
+
+def _invalidate_microcards_analytics_cache(user_id: Optional[str] = None) -> bool:
+    resolved_user_id = str(user_id or _headless_app_ctx.user_id or "default_user").strip() or "default_user"
+    try:
+        _microcards_analytics_service().clear_cache(resolved_user_id)
+        return True
+    except Exception as exc:
+        logger.warning("[HTTP] M5 microcards analytics cache invalidation failed for user=%s: %s", resolved_user_id, exc)
+        return False
+
+
+_MICROCARDS_REVIEW_LIVE_INTEGRATION_LOCK = threading.Lock()
+_MICROCARDS_REVIEW_LIVE_INTEGRATION_SCHEMA = "1.0"
+_MICROCARDS_REVIEW_LIVE_INTEGRATION_HISTORY_LIMIT = 5000
+
+
+def _microcards_review_live_integration_state_path(user_id: Optional[str] = None) -> Path:
+    resolved_user_id = str(user_id or _headless_app_ctx.user_id or "default_user").strip() or "default_user"
+    return Path(_headless_app_ctx.data_dir) / "users" / resolved_user_id / "microcards" / "live_integration_state.json"
+
+
+def _microcards_review_live_integration_key(review_event: Dict[str, Any]) -> str:
+    event_id = str(review_event.get("id") or "").strip()
+    if event_id:
+        return f"review_event:{event_id}"
+    # Fallback for defensive compatibility if event id is missing/corrupted.
+    fingerprint = {
+        "card_id": review_event.get("card_id"),
+        "session_id": review_event.get("session_id"),
+        "reviewed_at": review_event.get("reviewed_at"),
+        "rating": review_event.get("rating"),
+    }
+    return f"review_event_hash:{_stable_json_hash(fingerprint)}"
+
+
+def _load_microcards_review_live_integration_state(user_id: str) -> Dict[str, Any]:
+    payload = _read_json_file(_microcards_review_live_integration_state_path(user_id)) or {}
+    keys_raw = payload.get("calendar_review_event_keys")
+    if not isinstance(keys_raw, list):
+        keys_raw = []
+
+    normalized_keys: List[str] = []
+    seen = set()
+    for raw in keys_raw:
+        key = str(raw or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        normalized_keys.append(key)
+
+    return {
+        "schema_version": str(payload.get("schema_version") or _MICROCARDS_REVIEW_LIVE_INTEGRATION_SCHEMA),
+        "user_id": str(payload.get("user_id") or user_id).strip() or user_id,
+        "calendar_review_event_keys": normalized_keys[-_MICROCARDS_REVIEW_LIVE_INTEGRATION_HISTORY_LIMIT:],
+        "updated_at": payload.get("updated_at"),
+        "applied_total": int(payload.get("applied_total") or 0),
+    }
+
+
+def _save_microcards_review_live_integration_state(user_id: str, state: Dict[str, Any]) -> None:
+    payload = {
+        "schema_version": _MICROCARDS_REVIEW_LIVE_INTEGRATION_SCHEMA,
+        "user_id": str(user_id or "default_user"),
+        "calendar_review_event_keys": list(
+            (state.get("calendar_review_event_keys") if isinstance(state, dict) else []) or []
+        )[-_MICROCARDS_REVIEW_LIVE_INTEGRATION_HISTORY_LIMIT:],
+        "updated_at": datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "applied_total": int((state or {}).get("applied_total") or 0),
+    }
+    _write_json_file(_microcards_review_live_integration_state_path(user_id), payload)
+
+
+def _apply_microcards_review_calendar_integration(
+    *,
+    user_id: str,
+    deck_id: str,
+    card_id: str,
+    review_event: Dict[str, Any],
+) -> Dict[str, Any]:
+    if not CALENDAR_AVAILABLE or CalendarService is None:
+        return {"applied": False, "skipped": True, "reason": "calendar_service_unavailable"}
+
+    try:
+        calendar_svc = CalendarService(
+            data_dir=str(_headless_app_ctx.data_dir),
+            user_id=user_id,
+        )
+    except Exception as exc:
+        logger.warning("[HTTP] M1 microcards calendar integration init failed: %s", exc)
+        return {"applied": False, "skipped": False, "reason": "calendar_service_init_failed"}
+
+    record_review = getattr(calendar_svc, "record_microcards_review", None)
+    if not callable(record_review):
+        return {"applied": False, "skipped": True, "reason": "calendar_method_unavailable"}
+
+    try:
+        record_review(
+            deck_id=str(deck_id or "").strip(),
+            card_id=str(card_id or "").strip(),
+            review_event=review_event,
+        )
+        return {"applied": True, "method": "record_microcards_review"}
+    except Exception as exc:
+        logger.warning("[HTTP] M1 microcards calendar integration failed: %s", exc)
+        return {"applied": False, "skipped": False, "reason": "calendar_integration_failed"}
+
+
+def _orchestrate_microcards_review_post_submit(
+    *,
+    deck_id: str,
+    card_id: str,
+    review_result: Dict[str, Any],
+) -> Dict[str, Any]:
+    user_id = str(_headless_app_ctx.user_id or "default_user").strip() or "default_user"
+    review_event = review_result.get("review_event") if isinstance(review_result, dict) else None
+    review_event = review_event if isinstance(review_event, dict) else {}
+    integration_key = _microcards_review_live_integration_key(review_event) if review_event else ""
+
+    calendar_status: Dict[str, Any] = {"applied": False, "skipped": True, "reason": "missing_review_event"}
+    if integration_key:
+        with _MICROCARDS_REVIEW_LIVE_INTEGRATION_LOCK:
+            state = _load_microcards_review_live_integration_state(user_id)
+            applied_keys = state.get("calendar_review_event_keys")
+            if not isinstance(applied_keys, list):
+                applied_keys = []
+                state["calendar_review_event_keys"] = applied_keys
+            applied_set = {str(v or "").strip() for v in applied_keys if str(v or "").strip()}
+
+            if integration_key in applied_set:
+                calendar_status = {
+                    "applied": False,
+                    "skipped": True,
+                    "idempotent_skip": True,
+                    "reason": "already_applied",
+                    "integration_key": integration_key,
+                }
+            else:
+                calendar_status = _apply_microcards_review_calendar_integration(
+                    user_id=user_id,
+                    deck_id=deck_id,
+                    card_id=card_id,
+                    review_event=review_event,
+                )
+                if bool(calendar_status.get("applied")):
+                    applied_keys.append(integration_key)
+                    state["calendar_review_event_keys"] = applied_keys[
+                        -_MICROCARDS_REVIEW_LIVE_INTEGRATION_HISTORY_LIMIT:
+                    ]
+                    state["applied_total"] = int(state.get("applied_total") or 0) + 1
+                    _save_microcards_review_live_integration_state(user_id, state)
+
+    stats_cache_cleared = False
+    stats_svc = getattr(_headless_app_ctx, "statistics_service", None)
+    if stats_svc is not None and hasattr(stats_svc, "clear_cache"):
+        try:
+            stats_svc.clear_cache(user_id)
+            stats_cache_cleared = True
+        except Exception as exc:
+            logger.warning("[HTTP] M1 microcards stats cache invalidation failed: %s", exc)
+    analytics_cache_cleared = _invalidate_microcards_analytics_cache(user_id)
+
+    if bool(calendar_status.get("idempotent_skip")):
+        logger.debug(
+            "[HTTP] M1 microcards review live integration idempotent skip user_id=%s key=%s",
+            user_id,
+            calendar_status.get("integration_key"),
+        )
+    elif bool(calendar_status.get("applied")):
+        logger.debug(
+            "[HTTP] M1 microcards review live integration applied user_id=%s deck_id=%s card_id=%s",
+            user_id,
+            deck_id,
+            card_id,
+        )
+    elif not bool(calendar_status.get("skipped", True)):
+        logger.warning(
+            "[HTTP] M1 microcards review live integration not applied user_id=%s reason=%s",
+            user_id,
+            calendar_status.get("reason"),
+        )
+
+    return {
+        "calendar_integration": calendar_status,
+        "statistics_cache_cleared": stats_cache_cleared,
+        "microcards_analytics_cache_cleared": analytics_cache_cleared,
+    }
+
+
+def _normalize_int_id_list(values: Any) -> List[int]:
+    out: List[int] = []
+    seen = set()
+    if not isinstance(values, list):
+        return out
+    for raw in values:
+        try:
+            value = int(raw)
+        except (TypeError, ValueError):
+            continue
+        if value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _normalize_str_id_list(values: Any) -> List[str]:
+    out: List[str] = []
+    seen = set()
+    if not isinstance(values, list):
+        return out
+    for raw in values:
+        value = str(raw or "").strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        out.append(value)
+    return out
+
+
+def _sanitize_source_grounding_meta(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, dict):
+        return None
+    out: Dict[str, Any] = {}
+    if value.get("primary_unit_id") is not None:
+        out["primary_unit_id"] = value.get("primary_unit_id")
+    if value.get("primary_unit_title"):
+        out["primary_unit_title"] = value.get("primary_unit_title")
+    if isinstance(value.get("score"), (int, float)):
+        out["score"] = float(value.get("score"))
+    if isinstance(value.get("shared_token_count"), int):
+        out["shared_token_count"] = int(value.get("shared_token_count"))
+    if isinstance(value.get("shared_number_count"), int):
+        out["shared_number_count"] = int(value.get("shared_number_count"))
+    if isinstance(value.get("weak"), bool):
+        out["weak"] = bool(value.get("weak"))
+    return out or None
+
+
+def _saved_task_to_grounding_preview(task_data: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(task_data, dict):
+        return {}
+    content = task_data.get("content")
+    if not isinstance(content, dict):
+        content = {}
+    prompt = (
+        task_data.get("prompt")
+        or content.get("prompt")
+        or content.get("question")
+        or ""
+    )
+    preview: Dict[str, Any] = {
+        "type": task_data.get("type"),
+        "name": task_data.get("name") or task_data.get("id"),
+        "prompt": prompt,
+        "data": content,
+    }
+    subtype = task_data.get("subtype")
+    if subtype:
+        preview["subtype"] = subtype
+    return preview
+
+
+def _build_ai_analysis_topic_coverage_response(
+    run_id: str,
+    module_id: str,
+    topic_id: str,
+) -> Optional[Dict[str, Any]]:
+    analysis_payload = _ai_run_build_reopen_analysis_response(run_id, apply_feature_flags=False)
+    if analysis_payload is None:
+        return None
+
+    storage = _headless_app_ctx.storage_service
+    topic = storage.get_topic(module_id, topic_id)
+    if not topic:
+        raise LookupError("topic_not_found")
+
+    units = analysis_payload.get("educational_units") if isinstance(analysis_payload.get("educational_units"), list) else []
+    chunks = analysis_payload.get("learning_chunks") if isinstance(analysis_payload.get("learning_chunks"), list) else []
+    coverage_plan = analysis_payload.get("coverage_plan") if isinstance(analysis_payload.get("coverage_plan"), dict) else {}
+
+    valid_unit_ids = {
+        int(u.get("id"))
+        for u in units
+        if isinstance(u, dict) and isinstance(u.get("id"), (int, str)) and str(u.get("id")).strip().lstrip("-").isdigit()
+    }
+    valid_chunk_ids = {
+        str(c.get("id")).strip()
+        for c in chunks
+        if isinstance(c, dict) and str(c.get("id") or "").strip()
+    }
+
+    unit_by_id: Dict[int, Dict[str, Any]] = {}
+    for unit in units:
+        if not isinstance(unit, dict):
+            continue
+        try:
+            uid = int(unit.get("id"))
+        except (TypeError, ValueError):
+            continue
+        unit_by_id[uid] = unit
+
+    chunk_by_id: Dict[str, Dict[str, Any]] = {}
+    chunk_units_map: Dict[str, set] = {}
+    for chunk in chunks:
+        if not isinstance(chunk, dict):
+            continue
+        cid = str(chunk.get("id") or "").strip()
+        if not cid:
+            continue
+        chunk_by_id[cid] = chunk
+        chunk_units_map[cid] = {
+            uid for uid in _normalize_int_id_list(chunk.get("unit_ids")) if uid in valid_unit_ids
+        }
+
+    unit_targets = coverage_plan.get("unit_targets") if isinstance(coverage_plan.get("unit_targets"), list) else []
+    unit_target_by_id: Dict[int, Dict[str, Any]] = {}
+    for target in unit_targets:
+        if not isinstance(target, dict):
+            continue
+        try:
+            uid = int(target.get("unit_id"))
+        except (TypeError, ValueError):
+            continue
+        unit_target_by_id[uid] = target
+
+    chunk_targets = coverage_plan.get("chunk_targets") if isinstance(coverage_plan.get("chunk_targets"), list) else []
+    chunk_target_by_id: Dict[str, Dict[str, Any]] = {}
+    for target in chunk_targets:
+        if not isinstance(target, dict):
+            continue
+        cid = str(target.get("chunk_id") or "").strip()
+        if not cid:
+            continue
+        chunk_target_by_id[cid] = target
+
+    unit_contexts_all = _compact_ai_unit_contexts(units, max_units=max(1, len(units) or 1))
+    unit_context_by_id = {
+        int(ctx.get("id")): ctx
+        for ctx in unit_contexts_all
+        if isinstance(ctx, dict) and isinstance(ctx.get("id"), (int, str)) and str(ctx.get("id")).strip().lstrip("-").isdigit()
+    }
+
+    unit_counts: Dict[int, int] = {uid: 0 for uid in unit_by_id.keys()}
+    chunk_counts: Dict[str, int] = {cid: 0 for cid in chunk_by_id.keys()}
+    unit_task_refs: Dict[int, List[Dict[str, Any]]] = {uid: [] for uid in unit_by_id.keys()}
+    chunk_task_refs: Dict[str, List[Dict[str, Any]]] = {cid: [] for cid in chunk_by_id.keys()}
+
+    tasks_summary: List[Dict[str, Any]] = []
+    tasks_index: List[Dict[str, Any]] = storage.get_tasks(module_id, topic_id) or []
+
+    tasks_total = 0
+    tasks_linked_in_scope = 0
+    tasks_without_links = 0
+    tasks_foreign_run = 0
+    weak_grounding_tasks = 0
+
+    for task_ref in tasks_index:
+        if not isinstance(task_ref, dict):
+            continue
+        task_id = str(task_ref.get("id") or "").strip()
+        if not task_id:
+            continue
+        tasks_total += 1
+
+        loaded = storage.load_task(module_id, topic_id, task_id)
+        if not isinstance(loaded, dict):
+            continue
+        task_data = loaded.get("task_data")
+        if not isinstance(task_data, dict):
+            continue
+        meta = task_data.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+
+        task_name = str(task_data.get("name") or task_ref.get("name") or task_id)
+        task_type = str(task_data.get("type") or task_ref.get("type") or "unknown")
+        task_subtype = task_data.get("subtype") or task_ref.get("subtype")
+        task_ai_run_id = str(meta.get("ai_run_id") or "").strip() or None
+
+        scope = "legacy_unscoped"
+        if task_ai_run_id:
+            scope = "match" if task_ai_run_id == run_id else "foreign_run"
+        if scope == "foreign_run":
+            tasks_foreign_run += 1
+
+        linked_unit_ids = [uid for uid in _normalize_int_id_list(meta.get("educational_unit_ids")) if uid in valid_unit_ids]
+        explicit_chunk_ids = [
+            cid
+            for cid in _normalize_str_id_list(meta.get("analysis_chunk_ids") or meta.get("chunk_ids"))
+            if cid in valid_chunk_ids
+        ]
+
+        inferred_chunk_ids: List[str] = []
+        if linked_unit_ids:
+            linked_units_set = set(linked_unit_ids)
+            for cid, chunk_unit_ids in chunk_units_map.items():
+                if not chunk_unit_ids:
+                    continue
+                if linked_units_set.intersection(chunk_unit_ids):
+                    inferred_chunk_ids.append(cid)
+
+        seen_chunk_ids = set()
+        linked_chunk_ids: List[str] = []
+        for cid in explicit_chunk_ids + inferred_chunk_ids:
+            if cid in seen_chunk_ids:
+                continue
+            seen_chunk_ids.add(cid)
+            linked_chunk_ids.append(cid)
+
+        chunk_link_mode = "none"
+        if explicit_chunk_ids and inferred_chunk_ids:
+            chunk_link_mode = "mixed"
+        elif explicit_chunk_ids:
+            chunk_link_mode = "explicit"
+        elif linked_chunk_ids:
+            chunk_link_mode = "inferred_from_units"
+
+        in_selected_scope = scope != "foreign_run"
+        has_links = bool(linked_unit_ids or linked_chunk_ids)
+        if in_selected_scope and has_links:
+            tasks_linked_in_scope += 1
+        elif in_selected_scope and not has_links:
+            tasks_without_links += 1
+
+        grounding = None
+        grounding_source = None
+        if in_selected_scope:
+            grounding = _sanitize_source_grounding_meta(meta.get("source_grounding"))
+            if grounding:
+                grounding_source = "meta"
+            elif linked_unit_ids:
+                preview = _saved_task_to_grounding_preview(task_data)
+                linked_contexts = [unit_context_by_id[uid] for uid in linked_unit_ids if uid in unit_context_by_id]
+                if linked_contexts:
+                    computed_grounding = _evaluate_task_source_grounding(
+                        preview,
+                        linked_contexts,
+                        task_type=str(task_type or ""),
+                    )
+                    if isinstance(computed_grounding, dict):
+                        grounding = _sanitize_source_grounding_meta(computed_grounding)
+                        grounding_source = "recomputed"
+
+        weak_grounding = bool(isinstance(grounding, dict) and grounding.get("weak"))
+        if in_selected_scope and weak_grounding:
+            weak_grounding_tasks += 1
+
+        task_warnings: List[str] = []
+        if scope == "foreign_run":
+            task_warnings.append("linked_to_other_ai_run")
+        elif not has_links:
+            task_warnings.append("no_analysis_links")
+        if in_selected_scope and weak_grounding:
+            task_warnings.append("weak_source_grounding")
+
+        if in_selected_scope and has_links:
+            ref_stub = {
+                "task_id": task_id,
+                "name": task_name,
+                "type": task_type,
+                "weak_grounding": weak_grounding,
+            }
+            for uid in linked_unit_ids:
+                unit_counts[uid] = unit_counts.get(uid, 0) + 1
+                unit_task_refs.setdefault(uid, []).append(ref_stub)
+            for cid in linked_chunk_ids:
+                chunk_counts[cid] = chunk_counts.get(cid, 0) + 1
+                chunk_task_refs.setdefault(cid, []).append(ref_stub)
+
+        tasks_summary.append(
+            {
+                "task_id": task_id,
+                "name": task_name,
+                "type": task_type,
+                "subtype": task_subtype,
+                "analysis_scope": scope,
+                "analysis_ai_run_id": task_ai_run_id,
+                "educational_unit_ids": linked_unit_ids,
+                "analysis_chunk_ids": linked_chunk_ids,
+                "analysis_chunk_ids_explicit": explicit_chunk_ids,
+                "chunk_link_mode": chunk_link_mode,
+                "source_grounding": grounding,
+                "source_grounding_source": grounding_source,
+                "weak_grounding": weak_grounding,
+                "warnings": task_warnings,
+            }
+        )
+
+    duplicate_unit_threshold_default = 3
+    duplicate_chunk_threshold_default = 3
+
+    unit_rows: List[Dict[str, Any]] = []
+    units_overcovered = 0
+    units_uncovered = 0
+    must_cover_units_total = 0
+    must_cover_units_uncovered = 0
+    for uid in sorted(unit_by_id.keys()):
+        unit = unit_by_id.get(uid) or {}
+        target = unit_target_by_id.get(uid) or {}
+        count = int(unit_counts.get(uid, 0) or 0)
+        must_cover = bool(target.get("must_cover")) if target else False
+        if must_cover:
+            must_cover_units_total += 1
+        is_gap = count == 0
+        is_must_cover_gap = must_cover and is_gap
+        if is_gap:
+            units_uncovered += 1
+        if is_must_cover_gap:
+            must_cover_units_uncovered += 1
+        is_duplicate = count >= duplicate_unit_threshold_default
+        if is_duplicate:
+            units_overcovered += 1
+        unit_rows.append(
+            {
+                "unit_id": uid,
+                "title": unit.get("title"),
+                "type": unit.get("type"),
+                "assessment_risk": unit.get("assessment_risk"),
+                "must_cover": must_cover,
+                "coverage_count": count,
+                "is_gap": is_gap,
+                "is_must_cover_gap": is_must_cover_gap,
+                "is_duplicate": is_duplicate,
+                "duplicate_threshold": duplicate_unit_threshold_default,
+                "task_refs": (unit_task_refs.get(uid) or [])[:10],
+                "recommended_surfaces": (
+                    target.get("recommended_surfaces") if isinstance(target.get("recommended_surfaces"), list) else []
+                ),
+                "preferred_task_types": (
+                    target.get("preferred_task_types") if isinstance(target.get("preferred_task_types"), list) else []
+                ),
+                "avoid_overtesting_with": (
+                    target.get("avoid_overtesting_with") if isinstance(target.get("avoid_overtesting_with"), list) else []
+                ),
+            }
+        )
+
+    chunk_rows: List[Dict[str, Any]] = []
+    chunks_overcovered = 0
+    chunks_uncovered = 0
+    for cid in sorted(chunk_by_id.keys()):
+        chunk = chunk_by_id.get(cid) or {}
+        target = chunk_target_by_id.get(cid) or {}
+        count = int(chunk_counts.get(cid, 0) or 0)
+        threshold_raw = target.get("max_primary_tasks_recommended")
+        try:
+            threshold = int(threshold_raw) if threshold_raw is not None else duplicate_chunk_threshold_default
+        except (TypeError, ValueError):
+            threshold = duplicate_chunk_threshold_default
+        if threshold <= 0:
+            threshold = duplicate_chunk_threshold_default
+        is_gap = count == 0
+        if is_gap:
+            chunks_uncovered += 1
+        is_duplicate = count > threshold
+        if is_duplicate:
+            chunks_overcovered += 1
+        chunk_rows.append(
+            {
+                "chunk_id": cid,
+                "title": chunk.get("title"),
+                "chunk_type": chunk.get("chunk_type"),
+                "coverage_count": count,
+                "is_gap": is_gap,
+                "is_duplicate": is_duplicate,
+                "duplicate_threshold": threshold,
+                "task_refs": (chunk_task_refs.get(cid) or [])[:10],
+                "unit_ids": _normalize_int_id_list(chunk.get("unit_ids")),
+                "route_ids": _normalize_str_id_list(
+                    (target.get("route_ids") if isinstance(target, dict) else None) or chunk.get("route_ids")
+                ),
+                "max_primary_tasks_recommended": target.get("max_primary_tasks_recommended"),
+            }
+        )
+
+    tasks_summary.sort(
+        key=lambda row: (
+            1 if row.get("analysis_scope") == "foreign_run" else 0,
+            1 if row.get("warnings") else 0,
+            str(row.get("name") or row.get("task_id") or "").lower(),
+        )
+    )
+
+    warnings_out: List[str] = []
+    if tasks_without_links > 0:
+        warnings_out.append(
+            f"{tasks_without_links} task(s) in selected topic have no unit/chunk links for this analysis."
+        )
+    if weak_grounding_tasks > 0:
+        warnings_out.append(
+            f"{weak_grounding_tasks} linked task(s) have weak source grounding and should be reviewed."
+        )
+    if tasks_foreign_run > 0:
+        warnings_out.append(
+            f"{tasks_foreign_run} task(s) are linked to a different ai_run and were excluded from this coverage view."
+        )
+
+    return {
+        "ok": True,
+        "ai_run_id": run_id,
+        "module_id": module_id,
+        "topic_id": topic_id,
+        "topic_name": topic.get("name") if isinstance(topic, dict) else None,
+        "analysis_schema_version": analysis_payload.get("analysis_schema_version"),
+        "coverage_plan_version": (
+            coverage_plan.get("coverage_plan_version") if isinstance(coverage_plan, dict) else None
+        ),
+        "summary": {
+            "tasks_total": tasks_total,
+            "tasks_linked_in_scope": tasks_linked_in_scope,
+            "tasks_without_links": tasks_without_links,
+            "tasks_foreign_run": tasks_foreign_run,
+            "weak_grounding_tasks": weak_grounding_tasks,
+            "units_total": len(unit_rows),
+            "units_covered": len([r for r in unit_rows if int(r.get("coverage_count") or 0) > 0]),
+            "units_uncovered": units_uncovered,
+            "units_overcovered": units_overcovered,
+            "must_cover_units_total": must_cover_units_total,
+            "must_cover_units_uncovered": must_cover_units_uncovered,
+            "chunks_total": len(chunk_rows),
+            "chunks_covered": len([r for r in chunk_rows if int(r.get("coverage_count") or 0) > 0]),
+            "chunks_uncovered": chunks_uncovered,
+            "chunks_overcovered": chunks_overcovered,
+        },
+        "unit_coverage": unit_rows,
+        "chunk_coverage": chunk_rows,
+        "tasks": tasks_summary,
+        "warnings": warnings_out,
+    }
 
 
 def _guess_language_code(text: str) -> str:

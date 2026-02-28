@@ -164,14 +164,17 @@
     transform: translateX(-50%);
     background: var(--color-text-main);
     color: var(--color-text-contrast);
-    padding: 4px 8px;
-    border-radius: 4px;
+    padding: 6px 10px;
+    border-radius: 6px;
     font-size: 11px;
-    white-space: nowrap;
+    line-height: 1.4;
+    white-space: pre-line;
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
     margin-bottom: 4px;
+    min-width: 100px;
+    text-align: left;
     z-index: 50;
 }
 

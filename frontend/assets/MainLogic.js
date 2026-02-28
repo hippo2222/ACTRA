@@ -588,6 +588,7 @@
                 loadQuickAccess(),
                 loadUserSettings(), // Renamed from loadStatsSettings
                 loadCalendarWidget(),
+                loadMicrocardsWidget(),
                 syncUpdatesConfiguredState(false),
             ]);
             window.checkForAppUpdates(false);
@@ -1110,7 +1111,10 @@
             document.getElementById('statSuccessRate').textContent = `${Math.round((s.success_rate || 0) * 100)}%`;
             document.getElementById('statTodayCount').textContent = s.completed_complexes_today || 0;
 
-            const mins = Math.round((s.total_time_spent || 0) / 60);
+            const combinedSeconds = (s.learning_sources && s.learning_sources.combined)
+                ? (s.learning_sources.combined.time_spent_seconds || 0)
+                : (s.total_time_spent || 0);
+            const mins = Math.round(combinedSeconds / 60);
             const h = Math.floor(mins / 60);
             const m = mins % 60;
             document.getElementById('statTimeSpent').textContent = `${h}ч ${m}м`;
@@ -1225,6 +1229,110 @@
         });
     }
 
+    // --- Microcards Widget (M9) ---
+    async function loadMicrocardsWidget() {
+        const loadingState = document.getElementById('microcardsLoadingState');
+        const emptyState = document.getElementById('microcardsEmptyState');
+        const contentState = document.getElementById('microcardsContentState');
+        const disabledState = document.getElementById('microcardsDisabledState');
+        const cardEl = document.getElementById('microcardsCard');
+
+        if (!cardEl) return;
+
+        const { ok, data } = await apiFetch('/api/microcards/summary');
+        if (loadingState) loadingState.classList.add('hidden');
+
+        if (!ok) {
+            const isDisabled = data && (data.error === 'microcards_mode_disabled' || data.error === 'guest_cannot_use_microcards');
+            if (isDisabled) {
+                if (disabledState) disabledState.classList.remove('hidden');
+                if (emptyState) emptyState.classList.add('hidden');
+                if (contentState) contentState.classList.add('hidden');
+                const cta = document.getElementById('microcardsCTA');
+                if (cta) cta.disabled = true;
+            } else {
+                if (emptyState) {
+                    emptyState.classList.remove('hidden');
+                    const titleEl = emptyState.querySelector('p.text-sm');
+                    if (titleEl) titleEl.textContent = 'Не удалось загрузить';
+                }
+            }
+            return;
+        }
+
+        const queue = data.queue_summary || {};
+        const today = data.today || {};
+        const totals = data.totals || {};
+        const dueTotal = queue.cards_due_total || 0;
+        const newTotal = queue.cards_new_total || 0;
+        const decksActive = totals.decks_active || 0;
+        const todayReviews = today.reviews || 0;
+        const todayCorrectRate = today.correct_rate;
+
+        const hasDecks = decksActive > 0 || dueTotal > 0 || newTotal > 0 || todayReviews > 0 || (totals.reviews || 0) > 0;
+
+        if (!hasDecks) {
+            if (emptyState) emptyState.classList.remove('hidden');
+            if (contentState) contentState.classList.add('hidden');
+            return;
+        }
+
+        if (emptyState) emptyState.classList.add('hidden');
+        if (contentState) {
+            contentState.classList.remove('hidden');
+            contentState.classList.add('flex');
+        }
+
+        // Due badge in header
+        const dueBadgeCount = document.getElementById('microcardsDueCount');
+        if (dueBadgeCount) dueBadgeCount.textContent = dueTotal > 0 ? String(dueTotal) : '0';
+
+        // Queue metrics
+        const dueEl = document.getElementById('microcardsDueCards');
+        const newEl = document.getElementById('microcardsNewCards');
+        if (dueEl) dueEl.textContent = String(dueTotal);
+        if (newEl) newEl.textContent = String(newTotal);
+
+        // Today's reviews
+        const todayEl = document.getElementById('microcardsTodayReviews');
+        if (todayEl) {
+            const word = _pluralizeReviews(todayReviews);
+            todayEl.textContent = `${todayReviews} ${word}`;
+        }
+
+        // Today accuracy
+        const accuracyEl = document.getElementById('microcardsTodayAccuracy');
+        if (accuracyEl) {
+            if (todayReviews > 0 && todayCorrectRate != null) {
+                accuracyEl.textContent = `${Math.round(todayCorrectRate * 100)}%`;
+            } else {
+                accuracyEl.textContent = '';
+            }
+        }
+
+        // CTA text
+        const ctaText = document.getElementById('microcardsCTAText');
+        const ctaIcon = document.getElementById('microcardsCTAIcon');
+        if (ctaText && ctaIcon) {
+            if (dueTotal > 0) {
+                ctaText.textContent = 'Продолжить повторение';
+                ctaIcon.textContent = 'play_arrow';
+            } else {
+                ctaText.textContent = 'Открыть микрокарточки';
+                ctaIcon.textContent = 'arrow_forward';
+            }
+        }
+    }
+
+    function _pluralizeReviews(n) {
+        const abs = Math.abs(n) % 100;
+        const lastDigit = abs % 10;
+        if (abs > 10 && abs < 20) return 'повторений';
+        if (lastDigit > 1 && lastDigit < 5) return 'повторения';
+        if (lastDigit === 1) return 'повторение';
+        return 'повторений';
+    }
+
     // --- Calendar Widget (enhanced) ---
     async function loadCalendarWidget() {
         const loadingState = document.getElementById('calendarLoadingState');
@@ -1249,7 +1357,7 @@
 
         // WEAK-1 fix: only fetch time-dynamics for heatmap (removed duplicate /api/statistics/overall)
         const { ok: statsOk, data: statsData } = await apiFetch('/api/statistics/time-dynamics?days=14');
-        const hasActivity = statsOk && statsData?.dynamics?.some(d => d.tasks_attempted > 0);
+        const hasActivity = statsOk && statsData?.dynamics?.some(d => (d.tasks_attempted > 0) || (d.microcards_reviews > 0) || (d.activity_attempts_total > 0));
         const criticalHealth = (data?.health_summary?.complexes || []).filter(c => c.health_percent < 80).length > 0;
         hasData = hasData || hasActivity || criticalHealth;
 
@@ -1310,10 +1418,14 @@
             d.setDate(d.getDate() - i);
             const dateStr = d.toISOString().split('T')[0];
             const data = activityMap.get(dateStr);
+            const hasMC = (data?.microcards_reviews || 0) > 0;
+            const hasTasks = (data?.tasks_attempted || 0) > 0;
             days.push({
                 date: dateStr,
                 completion_percent: data ? (data.success_rate || 0) * 100 : 0,
-                has_activity: data?.tasks_attempted > 0,
+                has_activity: hasTasks || hasMC,
+                has_microcards: hasMC,
+                has_tasks: hasTasks,
                 is_today: dateStr === todayStr
             });
         }
@@ -1330,7 +1442,15 @@
                 else if (day.completion_percent > 0) bgClass = 'bg-primary-light';
                 else bgClass = 'bg-primary-light';
             }
-            const statusText = day.is_today ? 'Сегодня' : (day.has_activity ? `Активность: ${Math.round(day.completion_percent)}%` : 'Нет активности');
+            let statusText = 'Нет активности';
+            if (day.is_today) {
+                statusText = 'Сегодня';
+            } else if (day.has_activity) {
+                const parts = [];
+                if (day.has_tasks) parts.push(`задания: ${Math.round(day.completion_percent)}%`);
+                if (day.has_microcards) parts.push('микрокарточки');
+                statusText = parts.length ? parts.join(', ') : 'Активность';
+            }
             const tooltip = `${day.date}\n${statusText}`;
             return `<div class="w-3 h-3 rounded-[2px] ${bgClass}" style="${style}" title="${tooltip}"></div>`;
         }).join('');

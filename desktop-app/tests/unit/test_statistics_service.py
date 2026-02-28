@@ -12,6 +12,7 @@ import unittest
 import tempfile
 import shutil
 import time
+import json
 import sys
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -39,7 +40,8 @@ class TestStatisticsService(unittest.TestCase):
         
         # Создаём StatisticsService
         self.statistics_service = StatisticsService(
-            progress_service=self.progress_service
+            progress_service=self.progress_service,
+            data_dir=self.test_dir
         )
         
         # Добавляем тестовые данные
@@ -110,6 +112,10 @@ class TestStatisticsService(unittest.TestCase):
             score=75.0,
             time_spent=150
         )
+
+    def _write_json(self, path: Path, payload: dict) -> None:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     
     def test_aggregate_statistics(self):
         """Тест агрегации статистики"""
@@ -310,6 +316,149 @@ class TestStatisticsService(unittest.TestCase):
             self.assertIn("study_minutes", dynamics[0])
             self.assertIn("total_attempts", dynamics[0])
             self.assertIn("events", dynamics[0])
+
+    def test_m6_aggregate_statistics_additive_mixed_contract(self):
+        """M6: overall statistics should include additive mixed microcards/activity fields."""
+        now_local = datetime.now().replace(microsecond=0)
+        today = now_local.date()
+        day_old_1 = (today - timedelta(days=4)).isoformat()
+        day_old_2 = (today - timedelta(days=3)).isoformat()
+        day_recent_1 = (today - timedelta(days=1)).isoformat()
+        day_recent_2 = today.isoformat()
+
+        self._write_json(
+            Path(self.test_dir) / "user_calendar" / self.user_id / "activity.json",
+            {
+                day_old_1: {"activity_attempts_total": 1, "completion_percent": 20},
+                day_old_2: {"activity_attempts_total": 1, "completion_percent": 20},
+                day_recent_1: {"activity_attempts_total": 1, "completion_percent": 20},
+                day_recent_2: {"activity_attempts_total": 1, "completion_percent": 20},
+            },
+        )
+
+        self._write_json(
+            Path(self.test_dir) / "microcards" / "decks" / "deck_m6.json",
+            {
+                "id": "deck_m6",
+                "cards": [{"id": "card_1", "card_type": "fact_recall", "status": "active"}],
+            },
+        )
+        self._write_json(
+            Path(self.test_dir) / "users" / self.user_id / "microcards" / "review_states.json",
+            {
+                "schema_version": "1.0",
+                "user_id": self.user_id,
+                "items": {"card_1": {"status": "new"}},
+            },
+        )
+        self._write_json(
+            Path(self.test_dir) / "users" / self.user_id / "microcards" / "review_events.json",
+            {
+                "schema_version": "1.0",
+                "user_id": self.user_id,
+                "items": [
+                    {
+                        "id": "evt_m6_1",
+                        "reviewed_at": now_local.isoformat(timespec="seconds"),
+                        "rating": "good",
+                        "response_time_ms": 2000,
+                        "was_correct": True,
+                        "details": {"card_type": "fact_recall"},
+                    },
+                    {
+                        "id": "evt_m6_2",
+                        "reviewed_at": (now_local - timedelta(days=1)).isoformat(timespec="seconds"),
+                        "rating": "again",
+                        "response_time_ms": 1000,
+                        "was_correct": False,
+                        "details": {"card_type": "pair_match", "is_perfect": False},
+                    },
+                ],
+            },
+        )
+
+        stats = self.statistics_service.aggregate_statistics(self.user_id, force_refresh=True)
+
+        self.assertIn("activity_streak_days", stats)
+        self.assertIn("activity_streak_best", stats)
+        self.assertEqual(stats["activity_streak_days"], 2)
+        self.assertEqual(stats["activity_streak_best"], 2)
+
+        self.assertIn("microcards", stats)
+        self.assertEqual(stats["microcards"]["reviews_total"], 2)
+        self.assertAlmostEqual(stats["microcards"]["correct_rate"], 0.5, places=3)
+        self.assertEqual(stats["microcards"]["time_spent_seconds"], 3)
+        self.assertEqual(stats["microcards"]["decks_active"], 1)
+        self.assertIn("fact_recall", stats["microcards"]["by_card_type"])
+        self.assertIn("pair_match", stats["microcards"]["by_card_type"])
+        self.assertEqual(stats["microcards"]["ratings_distribution"]["good"], 1)
+        self.assertEqual(stats["microcards"]["ratings_distribution"]["again"], 1)
+
+        self.assertIn("learning_sources", stats)
+        self.assertEqual(stats["learning_sources"]["tasks"]["attempts"], stats["total_tasks_attempted"])
+        self.assertEqual(stats["learning_sources"]["tasks"]["time_spent_seconds"], stats["total_time_spent"])
+        self.assertEqual(stats["learning_sources"]["microcards"]["attempts"], 2)
+        self.assertEqual(stats["learning_sources"]["microcards"]["time_spent_seconds"], 3)
+        self.assertEqual(
+            stats["learning_sources"]["combined"]["attempts"],
+            stats["learning_sources"]["tasks"]["attempts"] + stats["learning_sources"]["microcards"]["attempts"],
+        )
+        self.assertEqual(
+            stats["learning_sources"]["combined"]["time_spent_seconds"],
+            stats["learning_sources"]["tasks"]["time_spent_seconds"]
+            + stats["learning_sources"]["microcards"]["time_spent_seconds"],
+        )
+
+    def test_m6_time_dynamics_mixed_fields(self):
+        """M6: time dynamics should expose daily microcards + combined breakdown fields."""
+        today_iso = datetime.now().date().isoformat()
+        yesterday_iso = (datetime.now().date() - timedelta(days=1)).isoformat()
+
+        self._write_json(
+            Path(self.test_dir) / "user_calendar" / self.user_id / "activity.json",
+            {
+                yesterday_iso: {
+                    "microcards_reviews": 4,
+                    "microcards_correct": 2,
+                    "microcards_seconds_spent": 240,
+                    "activity_attempts_total": 4,
+                    "completion_percent": 0,
+                },
+                today_iso: {
+                    "microcards_reviews": 1,
+                    "microcards_correct": 1,
+                    "microcards_seconds_spent": 120,
+                    "activity_attempts_total": 1,
+                    "completion_percent": 0,
+                },
+            },
+        )
+
+        dynamics = self.statistics_service.get_time_dynamics(self.user_id, days=2, force_refresh=True)
+        self.assertEqual(len(dynamics), 2)
+        by_date = {row["date"]: row for row in dynamics}
+
+        yesterday = by_date.get(yesterday_iso)
+        self.assertIsNotNone(yesterday)
+        self.assertEqual(yesterday["attempts"], 0)  # legacy unique-task semantics stays unchanged
+        self.assertEqual(yesterday["total_attempts"], 0)
+        self.assertEqual(yesterday["microcards_reviews"], 4)
+        self.assertAlmostEqual(yesterday["microcards_correct_rate"], 0.5, places=3)
+        self.assertEqual(yesterday["microcards_study_minutes"], 4)
+        self.assertEqual(yesterday["combined_study_minutes"], 4)
+        self.assertEqual(yesterday["source_breakdown"]["tasks"]["attempts"], 0)
+        self.assertEqual(yesterday["source_breakdown"]["microcards"]["attempts"], 4)
+        self.assertEqual(yesterday["activity_attempts_total"], 4)
+
+        today = by_date.get(today_iso)
+        self.assertIsNotNone(today)
+        self.assertIn("source_breakdown", today)
+        self.assertIn("microcards_reviews", today)
+        self.assertEqual(today["source_breakdown"]["tasks"]["attempts"], today["total_attempts"])
+        self.assertEqual(
+            today["activity_attempts_total"],
+            today["source_breakdown"]["tasks"]["attempts"] + today["source_breakdown"]["microcards"]["attempts"],
+        )
     
     def test_get_time_dynamics_empty(self):
         """Тест динамики по времени при отсутствии данных"""

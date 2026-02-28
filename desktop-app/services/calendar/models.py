@@ -501,6 +501,20 @@ class ActivityDay:
     tasks_attempted: int = 0
     seconds_spent: int = 0
     target_minutes: int = 30
+    microcards_reviews: int = 0
+    microcards_correct: int = 0
+    microcards_seconds_spent: int = 0
+    microcards_pair_match_reviews: int = 0
+    microcards_pair_match_perfect: int = 0
+    activity_attempts_total: int = 0
+    activity_success_total: int = 0
+    activity_seconds_spent_total: int = 0
+    activity_sources: Dict[str, Dict[str, int]] = field(
+        default_factory=lambda: {
+            "tasks": {"attempts": 0, "successes": 0, "seconds_spent": 0},
+            "microcards": {"attempts": 0, "successes": 0, "seconds_spent": 0},
+        }
+    )
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -514,4 +528,13 @@ class ActivityDay:
             "tasks_attempted": self.tasks_attempted,
             "seconds_spent": self.seconds_spent,
             "target_minutes": self.target_minutes,
+            "microcards_reviews": self.microcards_reviews,
+            "microcards_correct": self.microcards_correct,
+            "microcards_seconds_spent": self.microcards_seconds_spent,
+            "microcards_pair_match_reviews": self.microcards_pair_match_reviews,
+            "microcards_pair_match_perfect": self.microcards_pair_match_perfect,
+            "activity_attempts_total": self.activity_attempts_total,
+            "activity_success_total": self.activity_success_total,
+            "activity_seconds_spent_total": self.activity_seconds_spent_total,
+            "activity_sources": self.activity_sources,
         }

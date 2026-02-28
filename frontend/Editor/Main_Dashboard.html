@@ -42,6 +42,7 @@
             }
         })();
     </script>
+    <script src="ai_ux_messages.js?v=1"></script>
     <script src="import_manager.js?v=1" defer></script>
     <script src="dashboard.js?v=8" defer></script>
 
@@ -82,6 +83,14 @@
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">upload_file</span>
                     <span class="text-xs font-bold uppercase tracking-wider">Импорт заданий</span>
+                </button>
+            </div>
+            <div class="px-4 mb-4">
+                <button onclick="dashboard.showTheoryAnalysisModal()"
+                    class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
+                    <span
+                        class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">analytics</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">РђРЅР°Р»РёР· С‚РµРѕСЂРёРё</span>
                 </button>
             </div>
             <!-- Dynamic Module List Container -->
@@ -353,7 +362,7 @@
                 </button>
             </div>
             <!-- Progress Steps -->
-            <div class="px-6 py-4 border-b border-border-subtle shrink-0">
+            <div class="px-6 py-4 border-b border-border-subtle shrink-0" data-role="import-steps-panel">
                 <div class="flex items-center justify-between" data-role="import-steps">
                     <!-- Step 1 -->
                     <div class="flex flex-col items-center gap-2 flex-1" data-step="1">
@@ -401,7 +410,7 @@
                 <div class="text-center text-text-disabled">Загрузка...</div>
             </div>
             <!-- Footer -->
-            <div class="px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0">
+            <div class="px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0" data-role="import-footer">
                 <button onclick="dashboard.importPrevStep()" data-role="import-prev"
                     class="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled>

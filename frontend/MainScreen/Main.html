@@ -66,6 +66,10 @@
             animation-delay: 0.16s;
         }
 
+        .main-side-enter:nth-child(3) {
+            animation-delay: 0.24s;
+        }
+
         .blurred {
             filter: blur(5px);
             transition: filter 0.3s ease;
@@ -275,7 +279,89 @@
                                         class="material-symbols-outlined text-[16px]">arrow_forward</span>Открыть
                                     календарь </button>
                             </div>
-                        </div><a href="/ui/statistics"
+                        </div>
+                        <!-- Microcards Card (M9) -->
+                        <div class="bg-surface-1 rounded-xl shadow-sm border border-border-strong p-3 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
+                            id="microcardsCard" role="link" tabindex="0" data-nav="/ui/microcards">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-bold text-text-main flex items-center gap-2">
+                                    <span
+                                        class="material-symbols-outlined text-primary text-[20px]">style</span>Микрокарточки
+                                </h3>
+                                <div class="flex items-center gap-1 px-2 py-0.5 bg-primary-lighter rounded-full"
+                                    id="microcardsDueBadge">
+                                    <span
+                                        class="material-symbols-outlined text-primary text-[14px]">pending_actions</span>
+                                    <span class="text-[11px] font-bold text-text-main"
+                                        id="microcardsDueCount">&mdash;</span>
+                                </div>
+                            </div>
+                            <!-- Loading State -->
+                            <div id="microcardsLoadingState"
+                                class="flex-1 flex flex-col items-center justify-center py-2 gap-1.5">
+                                <div
+                                    class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary">
+                                </div>
+                                <p class="text-[10px] text-text-muted">Загрузка...</p>
+                            </div>
+                            <!-- Empty State -->
+                            <div id="microcardsEmptyState"
+                                class="hidden flex-1 flex flex-col items-center justify-center py-2 text-center">
+                                <span
+                                    class="material-symbols-outlined text-border-strong text-[32px] mb-2">style</span>
+                                <p class="text-sm font-medium text-text-muted">Нет колод</p>
+                                <p class="text-[10px] text-text-muted mt-1">Создайте колоду в редакторе
+                                    или из анализа</p>
+                            </div>
+                            <!-- Content State -->
+                            <div id="microcardsContentState" class="hidden flex-col gap-1.5">
+                                <div class="flex gap-1.5">
+                                    <div class="flex-1 flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                        <span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">К
+                                            повтору</span>
+                                        <span class="text-lg font-black text-text-main leading-tight"
+                                            id="microcardsDueCards">0</span>
+                                    </div>
+                                    <div class="flex-1 flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                        <span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Новых</span>
+                                        <span class="text-lg font-black text-text-main leading-tight"
+                                            id="microcardsNewCards">0</span>
+                                    </div>
+                                </div>
+                                <div
+                                    class="flex items-center justify-between px-2 py-1 bg-surface-2 rounded-lg">
+                                    <div class="flex flex-col">
+                                        <span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Сегодня</span>
+                                        <span class="text-base font-black text-text-main leading-tight"
+                                            id="microcardsTodayReviews">0 повторений</span>
+                                    </div>
+                                    <span class="text-xs font-bold text-success"
+                                        id="microcardsTodayAccuracy"></span>
+                                </div>
+                            </div>
+                            <!-- Disabled State -->
+                            <div id="microcardsDisabledState"
+                                class="hidden flex-1 flex flex-col items-center justify-center py-2 text-center">
+                                <span
+                                    class="material-symbols-outlined text-border-strong text-[28px] mb-1">block</span>
+                                <p class="text-[10px] text-text-muted">Режим недоступен</p>
+                            </div>
+                            <!-- CTA Footer -->
+                            <div class="mt-auto pt-1.5 border-t border-border-subtle">
+                                <button
+                                    class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-primary-fg text-xs font-bold py-1.5 px-3 rounded-lg transition-all shadow-sm shadow-primary-light"
+                                    id="microcardsCTA"
+                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/microcards');"><span
+                                        class="material-symbols-outlined text-[16px]"
+                                        id="microcardsCTAIcon">play_arrow</span><span
+                                        id="microcardsCTAText">Открыть микрокарточки</span>
+                                </button>
+                            </div>
+                        </div>
+                        <a href="/ui/statistics"
                             class="block bg-surface-1 rounded-xl shadow-sm border border-border-strong p-3 interactive-card cursor-pointer hover:border-primary hover:shadow-md transition-all main-side-enter"
                             id="statsCard">
                             <div class="flex items-center justify-between mb-2">
@@ -314,7 +400,7 @@
                                 </div>
                                 <div class="flex items-center justify-between px-2 py-1 bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
-                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Время</span><span
+                                            class="text-[10px] text-text-secondary font-bold uppercase tracking-wider">Время обучения</span><span
                                             class="text-base font-black text-text-main leading-tight"
                                             id="statTimeSpent">0ч 0м</span>
                                     </div><span class="material-symbols-outlined text-info text-[20px]">schedule</span>

@@ -42,6 +42,20 @@
     .s1-btn:active {
       transform: scale(0.97);
     }
+
+    html[data-theme="neutral-b"] body {
+      --color-surface-1: #fefcff;
+      --color-surface-2: #fefcff;
+    }
+
+    html.dark #pause-confirm-modal,
+    html.dark #resume-modal {
+      background-color: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    html[data-theme="dark-b"] #pause-confirm-discard {
+      color: var(--color-error-text) !important;
+    }
   </style>
 
   <link href="/assets/tailwind.css" rel="stylesheet" />
@@ -118,9 +132,9 @@
             </div>
             <!-- Pause confirmation modal -->
             <div id="pause-confirm-modal"
-              class="fixed inset-0 z-50 hidden items-center justify-center bg-scrim-weak px-4 py-6" role="dialog"
+              class="fixed inset-0 z-50 hidden items-center justify-center bg-scrim-weak dark:bg-scrim px-4 py-6" role="dialog"
               aria-modal="true" aria-labelledby="pause-confirm-title">
-              <div class="w-full max-w-md rounded-xl bg-surface-1 p-6 shadow-xl ring-1 ring-border-strong">
+              <div class="w-full max-w-md rounded-xl bg-surface-1 dark:bg-surface-2 p-6 shadow-xl ring-1 ring-border-strong">
                 <div class="mb-4 flex items-start gap-3">
                   <div
                     class="flex size-10 items-center justify-center rounded-full border border-border-strong bg-surface-2 text-text-secondary">
@@ -149,16 +163,16 @@
                   </button>
 
                   <button id="pause-confirm-discard" type="button"
-                    class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-error-dark px-4 py-2 text-sm font-semibold text-error-lighter transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
+                    class="inline-flex items-center justify-center rounded-lg border-2 border-border-strong bg-error-dark px-4 py-2 text-sm font-semibold text-text-on-dark transition hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-error focus-visible:ring-offset-2 focus-visible:ring-offset-surface-1 disabled:cursor-not-allowed disabled:opacity-70 s1-btn">
                     Выйти без сохранения
                   </button>
                 </div>
               </div>
             </div>
             <!-- Resume prompt modal -->
-            <div id="resume-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-scrim-weak px-4 py-6"
+            <div id="resume-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-scrim-weak dark:bg-scrim px-4 py-6"
               role="dialog" aria-modal="true" aria-labelledby="resume-modal-title">
-              <div class="w-full max-w-md rounded-xl bg-surface-1 p-6 shadow-xl ring-1 ring-border-strong">
+              <div class="w-full max-w-md rounded-xl bg-surface-1 dark:bg-surface-2 p-6 shadow-xl ring-1 ring-border-strong">
                 <div class="mb-4 flex items-start gap-3">
                   <div
                     class="flex size-10 items-center justify-center rounded-full border border-border-strong bg-surface-2 text-text-secondary">

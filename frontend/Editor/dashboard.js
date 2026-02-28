@@ -1753,11 +1753,30 @@ class EditorDashboard {
         modal.classList.remove('hidden');
 
         if (this.importManager) {
+            this.importManager.enterImportModalMode();
             // Preset module/topic from current location before going to step 1
             this.importManager.presetFromCurrentLocation();
             this.importManager.goToStep(1);
             // Preload AI status in background (for faster AI mode switch)
             this.importManager.aiCheckStatus().catch(() => {});
+        } else {
+            console.error('[Dashboard] ImportManager not initialized');
+        }
+    }
+
+    showTheoryAnalysisModal() {
+        const modal = document.getElementById('import-modal');
+        if (!modal) {
+            console.error('[Dashboard] Theory analysis modal not found');
+            return;
+        }
+
+        modal.classList.remove('hidden');
+
+        if (this.importManager) {
+            this.importManager.openTheoryAnalysisMode().catch((e) => {
+                console.error('[Dashboard] Failed to open theory analysis mode:', e);
+            });
         } else {
             console.error('[Dashboard] ImportManager not initialized');
         }
@@ -1771,6 +1790,25 @@ class EditorDashboard {
 
         // Reset import manager state
         if (this.importManager) {
+            if (this.importManager.modalPurpose === 'theory_analysis') {
+                this.importManager.setModalPurpose('import');
+                this.importManager.materialText = '';
+                this.importManager.aiUploadedFile = null;
+                this.importManager.aiFileInfo = null;
+                this.importManager.analysisResult = null;
+                this.importManager.generationResult = null;
+                this.importManager.aiProvider = null;
+                this.importManager.aiProviderModel = null;
+                this.importManager.aiRunId = null;
+                this.importManager.aiSelectedRecs.clear();
+                this.importManager.aiGenerating = false;
+                this.importManager.aiAnalyzing = false;
+                this.importManager.theoryOpeningRunId = null;
+                this.importManager.importRequestKey = null;
+                return;
+            }
+
+            this.importManager.setModalPurpose('import');
             this.importManager.currentStep = 1;
             this.importManager.selectedModule = null;
             this.importManager.selectedTopic = null;
@@ -1793,6 +1831,8 @@ class EditorDashboard {
             this.importManager.analysisResult = null;
             this.importManager.generationResult = null;
             this.importManager.aiProvider = null;
+            this.importManager.aiProviderModel = null;
+            this.importManager.aiRunId = null;
             this.importManager.aiSelectedRecs.clear();
             this.importManager.aiGenerating = false;
             this.importManager.aiAnalyzing = false;

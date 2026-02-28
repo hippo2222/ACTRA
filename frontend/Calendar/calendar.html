@@ -161,7 +161,7 @@
 
             line-height: 1.4;
 
-            white-space: pre-wrap;
+            white-space: pre-line;
 
             opacity: 0;
 
@@ -171,9 +171,9 @@
 
             margin-bottom: 4px;
 
-            min-width: 160px;
+            min-width: 100px;
 
-            text-align: center;
+            text-align: left;
 
             z-index: 50;
 
@@ -321,7 +321,7 @@
 
                 <!-- Cards Container -->
 
-                <div class="lg:col-span-10 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div class="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-3">
 
                     <!-- Daily Mix Card -->
 
@@ -447,34 +447,39 @@
 
                 <!-- Time Controller (vertical, right side) -->
 
-                <div class="lg:col-span-2 flex flex-col">
+                <div class="lg:col-span-3 flex flex-col">
 
-                    <div
-                        class="bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm h-full flex flex-col items-center justify-center">
+                    <div class="bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm h-full flex flex-col justify-between gap-4">
 
-                        <span
-                            class="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-3 text-center">Времени
+                        <div class="flex flex-col items-center">
 
-                            сегодня</span>
+                            <span
+                                class="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-3 text-center">Времени
 
-                        <div id="time-controller" class="flex flex-col gap-2 w-full">
+                                сегодня</span>
 
-                            <button onclick="setTimeLimit(20)" data-time="20"
-                                class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">20
+                            <div id="time-controller" class="flex flex-col gap-2 w-full">
 
-                                мин</button>
+                                <button onclick="setTimeLimit(20)" data-time="20"
+                                    class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">20
 
-                            <button onclick="setTimeLimit(30)" data-time="30"
-                                class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">30
+                                    мин</button>
 
-                                мин</button>
+                                <button onclick="setTimeLimit(30)" data-time="30"
+                                    class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">30
 
-                            <button onclick="setTimeLimit(45)" data-time="45"
-                                class="time-btn py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center">45
+                                    мин</button>
 
-                                мин</button>
+                                <button onclick="setTimeLimit(45)" data-time="45"
+                                    class="time-btn py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center">45
+
+                                    мин</button>
+
+                            </div>
 
                         </div>
+
+                        <div id="microcards-today-summary" class="border-t border-border-subtle pt-3"></div>
 
                     </div>
 
@@ -673,6 +678,8 @@
             complexes: [], // Available complexes from API
 
             restDays: {}, // Rest days marked by user
+
+            microcardsSummary: null, // Microcards summary from /api/microcards/summary
 
             ui: {
 
@@ -904,6 +911,10 @@
 
                     statsData.dynamics.forEach(d => {
 
+                        const mcReviews = d.microcards_reviews || 0;
+
+                        const activityTotal = d.activity_attempts_total || ((d.total_attempts || 0) + mcReviews);
+
                         statsMap.set(d.date, {
 
                             date: d.date,
@@ -912,7 +923,19 @@
 
                             tasks_count: d.tasks_attempted || 0,
 
-                            is_missed: d.tasks_attempted === 0,
+                            microcards_reviews: mcReviews,
+
+                            microcards_correct_rate: d.microcards_correct_rate || 0,
+
+                            microcards_study_minutes: d.microcards_study_minutes || 0,
+
+                            combined_study_minutes: d.combined_study_minutes || 0,
+
+                            activity_attempts_total: activityTotal,
+
+                            source_breakdown: d.source_breakdown || null,
+
+                            is_missed: activityTotal === 0,
 
                             is_today: d.date === new Date().toISOString().split('T')[0],
 
@@ -940,15 +963,27 @@
 
                             const completion = Math.max(day.completion_percent || 0, stat.completion_percent || 0);
 
+                            const actTotal = Math.max(day.activity_attempts_total || 0, stat.activity_attempts_total || 0);
+
                             return {
 
                                 ...day,
 
                                 completion_percent: completion,
 
-                                is_missed: (stat.tasks_count || 0) === 0 ? day.is_missed : false,
+                                is_missed: actTotal === 0 ? day.is_missed : false,
 
                                 tasks_count: stat.tasks_count ?? day.tasks_count,
+
+                                microcards_reviews: Math.max(day.microcards_reviews || 0, stat.microcards_reviews || 0),
+
+                                microcards_correct_rate: stat.microcards_correct_rate || day.microcards_correct_rate || 0,
+
+                                combined_study_minutes: Math.max(day.combined_study_minutes || 0, stat.combined_study_minutes || 0),
+
+                                activity_attempts_total: actTotal,
+
+                                source_breakdown: stat.source_breakdown || day.source_breakdown || null,
 
                             };
 
@@ -958,7 +993,7 @@
 
                     // Check if user has any activity
 
-                    state.hasData = state.hasData || statsData.dynamics.some(d => d.tasks_attempted > 0);
+                    state.hasData = state.hasData || statsData.dynamics.some(d => (d.tasks_attempted > 0) || (d.microcards_reviews > 0) || (d.activity_attempts_total > 0));
 
                 }
 
@@ -970,12 +1005,28 @@
 
                 if (overallData.ok && overallData.stats) {
 
+                    const activityStreak = overallData.stats.activity_streak_days || 0;
+
                     const overallStreak = overallData.stats.streak_days || 0;
 
                     const calendarStreak = state.settings.streak_days || 0;
 
-                    state.settings.streak_days = Math.max(calendarStreak, overallStreak);
+                    state.settings.streak_days = Math.max(activityStreak, calendarStreak, overallStreak);
 
+                }
+
+                // Fetch microcards summary for today section CTA
+                try {
+                    const mcSummaryRes = await fetch(`${API_BASE}/microcards/summary`);
+                    if (mcSummaryRes.ok) {
+                        const mcSummaryData = await mcSummaryRes.json();
+                        if (mcSummaryData.ok) {
+                            state.microcardsSummary = mcSummaryData;
+                            state.hasData = state.hasData || (mcSummaryData.totals && mcSummaryData.totals.reviews > 0);
+                        }
+                    }
+                } catch (mcErr) {
+                    console.debug('[calendar] microcards summary not available:', mcErr);
                 }
 
             } catch (e) {
@@ -1336,6 +1387,8 @@
 
             renderRecipeCards();
 
+            renderMicrocardsTodaySummary();
+
             renderScheduleStrip();
 
             renderHeatmap();
@@ -1582,6 +1635,64 @@
 
             }
 
+        }
+
+        function renderMicrocardsTodaySummary() {
+            const container = document.getElementById('microcards-today-summary');
+            if (!container) return;
+
+            const mc = state.microcardsSummary;
+            if (!mc || !mc.queue_summary) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+                return;
+            }
+
+            const queue = mc.queue_summary || {};
+            const todayData = mc.today || {};
+            const cardsDue = queue.cards_due_total || 0;
+            const cardsNew = queue.cards_new_total || 0;
+            const todayReviews = todayData.reviews || 0;
+            const hasDue = cardsDue > 0 || cardsNew > 0;
+
+            if (!hasDue && todayReviews === 0) {
+                container.innerHTML = '';
+                container.classList.add('hidden');
+                return;
+            }
+
+            container.classList.remove('hidden');
+
+            let statusLine = '';
+            if (hasDue) {
+                const parts = [];
+                if (cardsDue > 0) parts.push(`${cardsDue} к повтору`);
+                if (cardsNew > 0) parts.push(`${cardsNew} новых`);
+                statusLine = parts.join(', ');
+            } else {
+                statusLine = 'Всё повторено!';
+            }
+
+            let todayLine = '';
+            if (todayReviews > 0) {
+                const correctRate = todayData.correct_rate != null ? Math.round(todayData.correct_rate * 100) : null;
+                todayLine = `Сегодня: ${todayReviews} карт${correctRate != null ? ` · ${correctRate}%` : ''}`;
+            }
+
+            container.innerHTML = `
+                <div class="flex flex-col gap-1.5">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-secondary text-[16px]">style</span>
+                        <span class="text-[11px] font-bold text-text-main uppercase tracking-wider">Микрокарточки</span>
+                    </div>
+                    <p class="text-xs text-text-secondary">${statusLine}</p>
+                    ${todayLine ? `<p class="text-[10px] text-text-secondary">${todayLine}</p>` : ''}
+                    ${hasDue ? `<a href="/ui/microcards" class="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary-dark transition-colors mt-0.5">
+                        Повторить
+                        <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+                    </a>` : ''}
+                </div>
+            `;
         }
 
         function renderScheduleStrip() {
@@ -1994,15 +2105,23 @@
 
                 let extraClass = '';
 
-                // Данные могут быть undefined, если пришли пустыми
-
                 const tasksSolved = day.tasks_solved || 0;
 
                 const tasksAttempted = day.tasks_attempted || 0;
 
                 const secondsSpent = day.seconds_spent || 0;
 
-                const minutesSpent = Math.round(secondsSpent / 60);
+                const mcReviews = day.microcards_reviews || 0;
+
+                const mcCorrect = day.microcards_correct || 0;
+
+                const mcSeconds = day.microcards_seconds_spent || 0;
+
+                const actTotal = day.activity_attempts_total || (tasksAttempted + mcReviews);
+
+                const totalSeconds = day.activity_seconds_spent_total || (secondsSpent + mcSeconds);
+
+                const minutesSpent = Math.round(totalSeconds / 60);
 
                 if (day.is_future) {
 
@@ -2018,25 +2137,25 @@
 
                     extraClass = 'border border-border-subtle';
 
-                } else if (day.is_missed) {
+                } else if (day.is_missed && actTotal === 0) {
 
                     bgClass = 'bg-error-lighter';
 
                     extraClass = 'border border-dashed border-error-light';
 
-                } else if (tasksSolved >= 5) {
+                } else if (actTotal >= 10) {
 
                     bgClass = 'bg-primary-dark ring-1 ring-primary';
 
-                } else if (tasksSolved >= 4) {
+                } else if (actTotal >= 6) {
 
                     bgClass = 'bg-primary';
 
-                } else if (tasksSolved >= 2) {
+                } else if (actTotal >= 3) {
 
                     bgClass = 'bg-primary-light';
 
-                } else if (tasksSolved > 0) {
+                } else if (actTotal > 0) {
 
                     bgClass = 'bg-primary-lighter';
 
@@ -2050,13 +2169,15 @@
 
                 })();
 
-                // Улучшенный tooltip с деталями
-
                 let tooltip = '';
 
                 if (day.is_today) {
 
-                    tooltip = `Сегодня: ${tasksSolved} задач${minutesSpent > 0 ? `, ${minutesSpent} мин` : ''} (${dateLabel})`;
+                    const parts = [dateLabel];
+                    if (tasksSolved > 0) parts.push(`Задачи: ${tasksSolved}`);
+                    if (mcReviews > 0) parts.push(`Карточки: ${mcReviews}`);
+                    if (minutesSpent > 0) parts.push(`${minutesSpent} мин`);
+                    tooltip = `Сегодня\n${parts.join('\n')}`;
 
                 } else if (day.is_future) {
 
@@ -2066,23 +2187,27 @@
 
                     tooltip = `Выходной (${dateLabel})`;
 
-                } else if (day.is_missed) {
+                } else if (actTotal === 0) {
 
-                    tooltip = `Пропуск: 0 задач (${dateLabel})`;
-
-                } else if (tasksSolved > 0) {
-
-                    const accuracy = tasksAttempted > 0 ? Math.round((tasksSolved / tasksAttempted) * 100) : 0;
-
-                    tooltip = `${tasksSolved} задач${minutesSpent > 0 ? `, ${minutesSpent} мин` : ''}${accuracy > 0 ? `, ${accuracy}%` : ''} (${dateLabel})`;
+                    tooltip = day.is_missed ? `Пропуск (${dateLabel})` : `Нет активности (${dateLabel})`;
 
                 } else {
 
-                    tooltip = `0 задач (${dateLabel})`;
+                    const parts = [dateLabel];
+                    if (tasksSolved > 0) {
+                        const accuracy = tasksAttempted > 0 ? Math.round((tasksSolved / tasksAttempted) * 100) : 0;
+                        parts.push(`Задачи: ${tasksSolved}${accuracy > 0 ? ` (${accuracy}%)` : ''}`);
+                    }
+                    if (mcReviews > 0) {
+                        const mcAcc = mcReviews > 0 ? Math.round((mcCorrect / mcReviews) * 100) : 0;
+                        parts.push(`Карточки: ${mcReviews}${mcAcc > 0 ? ` (${mcAcc}%)` : ''}`);
+                    }
+                    if (minutesSpent > 0) parts.push(`${minutesSpent} мин`);
+                    tooltip = parts.join('\n');
 
                 }
 
-                return `<div class="aspect-square rounded ${bgClass} ${extraClass} tooltip" data-tooltip="${tooltip}"></div>`;
+                return `<div class="aspect-square rounded ${bgClass} ${extraClass} heatmap-cell tooltip" data-tooltip="${tooltip}"></div>`;
 
             }).join('');
 
@@ -2094,7 +2219,7 @@
 
             const streak = state.settings.streak_days;
 
-            const hasActivity = state.activity.some(d => d.completion_percent > 0 || d.tasks_count > 0);
+            const hasActivity = state.activity.some(d => d.completion_percent > 0 || d.tasks_count > 0 || d.microcards_reviews > 0 || d.activity_attempts_total > 0);
 
             const hasMissed = state.activity.some(d => d.is_missed);
 

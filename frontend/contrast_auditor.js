@@ -13,6 +13,9 @@
         const simulateStates = options && options.simulateStates === true;
         const strictAA = options && options.strictAA === true;
         const uiGuideStrict = options && options.uiGuideStrict === true;
+        const warnExcessiveTextContrast = !(options && options.warnExcessiveTextContrast === false);
+        const ignoreModalBackdropPanelWarnings = options && options.ignoreModalBackdropPanelWarnings === true;
+        const ignoreNativeToggleBorderWarnings = options && options.ignoreNativeToggleBorderWarnings === true;
         const minTextContrast = options && Number.isFinite(options.minTextContrast) ? Number(options.minTextContrast) : 4.5;
         const selectedOptionMinContrast = options && Number.isFinite(options.selectedOptionMinContrast)
             ? Number(options.selectedOptionMinContrast)
@@ -419,7 +422,7 @@
                 });
             }
 
-            if (ratio > 18.0) {
+            if (warnExcessiveTextContrast && ratio > 18.0) {
                 const type = isDisabled ? `Disabled Contrast (EXCESSIVE)${stateSuffix}` : `Text Contrast (EXCESSIVE)${stateSuffix}`;
                 warnings.push({
                     type,
@@ -475,7 +478,12 @@
         // 1.5 CHECK UI PANEL CONTRAST (Sidebar, cards, panels vs background)
         // Check if element has significant background and could be a panel/container
         const elBgColor = getEffectiveElementBackground(el);
-        if (elBgColor && !el.closest('.task-chip') && !isInteractiveElement(el)) {
+        if (
+            elBgColor &&
+            !el.closest('.task-chip') &&
+            !isInteractiveElement(el) &&
+            !(ignoreModalBackdropPanelWarnings && el.classList && el.classList.contains('modal-backdrop'))
+        ) {
             // Get parent background to compare panels
             const parentEl = el.parentElement;
             if (parentEl) {
@@ -517,7 +525,15 @@
 
         // 2. CHECK BADGE/BUTTON BORDERS (UI Components 3:1)
         // Heuristic: if element has a border width > 0
-        if (parseInt(style.borderWidth) > 0 && style.borderColor !== 'transparent') {
+        const inputType = el.tagName === 'INPUT'
+            ? String(el.getAttribute('type') || '').toLowerCase()
+            : '';
+        const isNativeToggle = inputType === 'radio' || inputType === 'checkbox';
+        if (
+            parseInt(style.borderWidth) > 0 &&
+            style.borderColor !== 'transparent' &&
+            !(ignoreNativeToggleBorderWarnings && isNativeToggle)
+        ) {
             const borderColor = parseColor(style.borderColor);
             const bgColor = getEffectiveBackgroundColor(el.parentElement || document.body); // Border contrasts against PARENT bg usually
 
@@ -747,6 +763,24 @@
             console.log("%c PASS ✓", "background: #008000; color: #fff; padding: 2px 5px;", "All scanned elements meet WCAG requirements and guideline thresholds.");
         }
         report = `\n# Contrast Audit Report - ${new Date().toLocaleString()}\n\n**Total Issues Found: 0**\n\n`;
+        if (warnings.length > 0) {
+            report += `**Warnings Found: ${warnings.length}**\n\n`;
+            const warnByType = {};
+            warnings.forEach(i => {
+                if (!warnByType[i.type]) warnByType[i.type] = [];
+                warnByType[i.type].push(i);
+            });
+            Object.entries(warnByType).forEach(([type, typeIssues]) => {
+                report += `## ${type} (${typeIssues.length} warnings)\n\n`;
+                report += `| Ratio | Required | Element | Text |\n|---|---|---|---|\n`;
+                typeIssues.forEach(i => {
+                    const elStr = formatElementLabel(i.el);
+                    const cleanText = (i.text || '').replace(/\n/g, ' ').substring(0, 50);
+                    report += `| **${i.ratio}** | ${i.required} | \`${elStr}\` | "${cleanText}" |\n`;
+                });
+                report += `\n`;
+            });
+        }
     } else {
         if (!silent) {
             console.log(`%c FOUND ISSUES `, "background: #ff6b35; color: #fff; padding: 2px 5px;", `Detected ${issues.length} contrast problems:`);

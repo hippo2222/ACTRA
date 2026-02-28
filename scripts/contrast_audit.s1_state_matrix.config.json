@@ -20,6 +20,7 @@
       "url": "/ui/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
         "requireNotPaused": true,
         "minTotalTasks": 1,
         "autoCreateWhenEmpty": true,
@@ -56,6 +57,7 @@
       "url": "/ui/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
         "requireNotPaused": true,
         "minTotalTasks": 1,
         "autoCreateWhenEmpty": true,
@@ -92,6 +94,7 @@
       "url": "/ui/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
         "requireNotPaused": true,
         "minTotalTasks": 1,
         "autoCreateWhenEmpty": true,
@@ -128,6 +131,7 @@
       "url": "/ui/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
         "requireNotPaused": true,
         "minTotalTasks": 1,
         "autoCreateWhenEmpty": true,
@@ -163,6 +167,7 @@
       "url": "/ui/session/session_auto_placeholder",
       "autoSession": {
         "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
         "requireNotPaused": true,
         "minTotalTasks": 1,
         "autoCreateWhenEmpty": true,
