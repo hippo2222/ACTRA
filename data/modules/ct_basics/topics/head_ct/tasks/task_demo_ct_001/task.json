@@ -1,0 +1,10 @@
+{
+  "id": "task_demo_ct_001",
+  "question": "Demo CT task 1",
+  "type": "single_choice",
+  "options": [
+    {"id": "a", "text": "Option A"},
+    {"id": "b", "text": "Option B"}
+  ],
+  "correct_answer": "a"
+}
