@@ -649,7 +649,7 @@ class MicrocardsService:
                     "chunk_ids": [chunk_id] if chunk_id != "chunk_unscoped" else [],
                     "card_type": "pair_match",
                     "front": {
-                        "text": f"Сопоставьте элементы{f' ({_s((chunk_by_id.get(chunk_id) or {}).get('title'))})' if chunk_id in chunk_by_id else ''}",
+                        "text": "Сопоставьте элементы" + (f" ({_s((chunk_by_id.get(chunk_id) or {}).get('title'))})" if chunk_id in chunk_by_id else ""),
                         "payload": {"mode": "pair_match", "left_items": left_items, "right_items": shuffled_right, "shuffle_right": True},
                     },
                     "back": {

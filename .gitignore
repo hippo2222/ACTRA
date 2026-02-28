@@ -29,6 +29,7 @@ node_modules/
 # Build artifacts
 dist/
 build/
+ACTRA.spec
 
 # Coverage & test artifacts
 .coverage
@@ -70,40 +71,3 @@ data/feedback/
 
 # AI config with API keys — never commit
 data/ai_config.json
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
