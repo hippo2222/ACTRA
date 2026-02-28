@@ -12,9 +12,11 @@
     "lint:frontend": "node scripts/lint_frontend.js",
     "build:css": "npx tailwindcss -i ./frontend/assets/input.css -o ./frontend/assets/tailwind.css --minify",
     "audit:contrast": "node scripts/contrast_audit.js",
-    "audit:contrast:s1-matrix": "node scripts/contrast_audit.js --config scripts/contrast_audit.s1_state_matrix.config.json",
-    "audit:contrast:full": "npm run build:css && node scripts/contrast_audit.js --config scripts/contrast_audit.config.json && node scripts/contrast_audit.js --config scripts/contrast_audit.s1_state_matrix.config.json",
+    "audit:contrast:s1-matrix": "node scripts/ensure_contrast_s1_seed.js && node scripts/contrast_audit.js --config scripts/contrast_audit.s1_state_matrix.config.json",
+    "audit:contrast:editor-theory-p6": "node scripts/contrast_audit.js --config scripts/contrast_audit.editor_theory_p6.config.json",
+    "audit:contrast:full": "npm run build:css && node scripts/contrast_audit.js --config scripts/contrast_audit.config.json && node scripts/ensure_contrast_s1_seed.js && node scripts/contrast_audit.js --config scripts/contrast_audit.s1_state_matrix.config.json",
     "audit:contrast:auto": "node scripts/run_contrast_suite.js",
+    "smoke:theory-p10": "node scripts/theory_p10_smoke.js",
     "validate:themes": "node scripts/validate_theme_vars.js"
   },
   "keywords": [],

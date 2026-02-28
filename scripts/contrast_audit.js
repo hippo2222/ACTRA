@@ -90,6 +90,27 @@ function loadConfig(cli = {}) {
   return { config, configPath };
 }
 
+function resolveReportRetentionPolicy(config) {
+  const raw = isPlainObject(config && config.reportRetention) ? config.reportRetention : {};
+  return {
+    clearOutputDirBeforeRun: raw.clearOutputDirBeforeRun !== false,
+    deleteOutputDirOnCleanRun: raw.deleteOutputDirOnCleanRun !== false,
+  };
+}
+
+function resetDirectory(dirPath) {
+  try {
+    if (fs.existsSync(dirPath)) {
+      fs.rmSync(dirPath, { recursive: true, force: true });
+    }
+  } catch (err) {
+    console.warn(
+      `[contrast_audit] failed to clear output dir ${dirPath}: ${err && err.message ? err.message : err}`
+    );
+  }
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
 function slugify(value) {
   return String(value || "page")
     .replace(/https?:\/\//g, "")
@@ -1866,7 +1887,12 @@ async function main() {
   }
 
   const outputDir = path.resolve(process.cwd(), config.outputDir || "reports/contrast");
-  fs.mkdirSync(outputDir, { recursive: true });
+  const reportRetention = resolveReportRetentionPolicy(config);
+  if (reportRetention.clearOutputDirBeforeRun) {
+    resetDirectory(outputDir);
+  } else {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
   const globalAfterThemeWaitMs = Number.isFinite(Number(config.afterThemeWaitMs))
     ? Math.max(0, Number(config.afterThemeWaitMs))
     : null;
@@ -2097,6 +2123,10 @@ async function main() {
     (row) => !row.coverage && Number.isFinite(Number(row.issues)) && Number(row.issues) > 0
   );
   const totalIssues = issueRows.reduce((acc, row) => acc + Number(row.issues || 0), 0);
+  const warningRows = summary.filter(
+    (row) => !row.coverage && Number.isFinite(Number(row.warnings)) && Number(row.warnings) > 0
+  );
+  const totalWarnings = warningRows.reduce((acc, row) => acc + Number(row.warnings || 0), 0);
 
   const coverageRows = summary.filter((row) => row.coverage);
   const coverageMissingRows = coverageRows.filter(
@@ -2116,6 +2146,8 @@ async function main() {
       rows: summary.length,
       issueRows: issueRows.length,
       issues: totalIssues,
+      warningRows: warningRows.length,
+      warnings: totalWarnings,
       coverageRows: coverageRows.length,
       missingCoverageRows: coverageMissingRows.length,
       missingCoverage: totalMissingCoverage,
@@ -2128,6 +2160,19 @@ async function main() {
   );
   fs.writeFileSync(summaryArtifactPath, JSON.stringify(summaryArtifact, null, 2), "utf8");
   console.log(`[contrast_audit] summary json: ${summaryArtifactPath}`);
+
+  const cleanRun =
+    totalIssues === 0 && totalWarnings === 0 && totalMissingCoverage === 0;
+  if (cleanRun && reportRetention.deleteOutputDirOnCleanRun) {
+    try {
+      fs.rmSync(outputDir, { recursive: true, force: true });
+      console.log(`[contrast_audit] clean run: removed output dir ${outputDir}`);
+    } catch (err) {
+      console.warn(
+        `[contrast_audit] clean run: failed to remove output dir ${outputDir}: ${err && err.message ? err.message : err}`
+      );
+    }
+  }
 
   const failOnIssues = config.failOnIssues === true;
   const failOnCoverageMissing = config.failOnCoverageMissing === true;

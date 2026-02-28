@@ -223,10 +223,9 @@ class TestEnhanceTaskForLevel(unittest.TestCase):
         enhanced = self.manager.enhance_task_for_level(task_data, level=1)
         
         content = enhanced.get('content', {})
-        self.assertTrue(content.get('show_level_labels', False))
-        self.assertTrue(content.get('show_block_labels', False))
-        self.assertFalse(content.get('requires_level_names', True))
-        self.assertFalse(content.get('requires_block_names', True))
+        self.assertEqual(content.get('mode'), 'multiple_choice')
+        self.assertTrue(content.get('show_options', False))
+        self.assertFalse(content.get('requires_text_input', True))
     
     def test_enhance_test_task_level_2(self):
         """Тест модификации test задания для уровня 2"""
@@ -241,13 +240,12 @@ class TestEnhanceTaskForLevel(unittest.TestCase):
         enhanced = self.manager.enhance_task_for_level(task_data, level=2)
         
         content = enhanced.get('content', {})
-        self.assertFalse(content.get('show_level_labels', True))
-        self.assertTrue(content.get('show_block_labels', False))
-        self.assertTrue(content.get('requires_level_names', False))
-        self.assertFalse(content.get('requires_block_names', True))
+        self.assertEqual(content.get('mode'), 'open_question')
+        self.assertFalse(content.get('show_options', True))
+        self.assertTrue(content.get('requires_text_input', False))
     
     def test_enhance_sequence_task_level_1(self):
-        """Тест: sequence_assembly падает в fallback (_enhance_sequence_task не реализован)"""
+        """Тест: sequence_assembly level 1 корректно включает все подсказки"""
         task_data = {
             "type": "sequence_assembly",
             "content": {
@@ -257,11 +255,16 @@ class TestEnhanceTaskForLevel(unittest.TestCase):
         
         enhanced = self.manager.enhance_task_for_level(task_data, level=1)
         
-        # _enhance_sequence_task не реализован → exception handler → _difficulty_enhanced=False
-        self.assertFalse(enhanced.get('_difficulty_enhanced', True))
+        # После P0 sequence_assembly должен модифицироваться без fallback
+        self.assertTrue(enhanced.get('_difficulty_enhanced'))
+        content = enhanced.get('content', {})
+        self.assertTrue(content.get('show_level_labels', False))
+        self.assertTrue(content.get('show_block_labels', False))
+        self.assertFalse(content.get('requires_level_names', True))
+        self.assertFalse(content.get('requires_block_names', True))
     
     def test_enhance_sequence_task_level_2(self):
-        """Тест: sequence_assembly падает в fallback (_enhance_sequence_task не реализован)"""
+        """Тест: sequence_assembly level 2 требует названия уровней"""
         task_data = {
             "type": "sequence_assembly",
             "content": {
@@ -271,10 +274,15 @@ class TestEnhanceTaskForLevel(unittest.TestCase):
         
         enhanced = self.manager.enhance_task_for_level(task_data, level=2)
         
-        self.assertFalse(enhanced.get('_difficulty_enhanced', True))
+        self.assertTrue(enhanced.get('_difficulty_enhanced'))
+        content = enhanced.get('content', {})
+        self.assertFalse(content.get('show_level_labels', True))
+        self.assertTrue(content.get('show_block_labels', False))
+        self.assertTrue(content.get('requires_level_names', False))
+        self.assertFalse(content.get('requires_block_names', True))
     
     def test_enhance_sequence_task_level_3(self):
-        """Тест: sequence_assembly падает в fallback (_enhance_sequence_task не реализован)"""
+        """Тест: sequence_assembly level 3 требует названия уровней и блоков"""
         task_data = {
             "type": "sequence_assembly",
             "content": {
@@ -284,7 +292,12 @@ class TestEnhanceTaskForLevel(unittest.TestCase):
         
         enhanced = self.manager.enhance_task_for_level(task_data, level=3)
         
-        self.assertFalse(enhanced.get('_difficulty_enhanced', True))
+        self.assertTrue(enhanced.get('_difficulty_enhanced'))
+        content = enhanced.get('content', {})
+        self.assertFalse(content.get('show_level_labels', True))
+        self.assertFalse(content.get('show_block_labels', True))
+        self.assertTrue(content.get('requires_level_names', False))
+        self.assertTrue(content.get('requires_block_names', False))
     
     def test_enhance_open_answer_task(self):
         """Тест: Open Answer задание не модифицируется (только уровень 1)"""
@@ -534,7 +547,7 @@ class TestDifficultyManagerAdditional(unittest.TestCase):
         self.assertIn('связь', content.get('prompt', '').lower())
     
     def test_enhance_sequence_task_level_2_detailed(self):
-        """Тест: sequence_assembly level 2 падает в fallback"""
+        """Тест: sequence_assembly level 2 сохраняет данные и выставляет корректные флаги"""
         task_data = {
             "type": "sequence_assembly",
             "content": {
@@ -548,11 +561,17 @@ class TestDifficultyManagerAdditional(unittest.TestCase):
         
         enhanced = self.manager.enhance_task_for_level(task_data, level=2)
         
-        # _enhance_sequence_task не реализован → exception handler
-        self.assertFalse(enhanced.get('_difficulty_enhanced', True))
+        # После P0 sequence_assembly level 2 должен успешно модифицироваться
+        self.assertTrue(enhanced.get('_difficulty_enhanced'))
+        content = enhanced.get('content', {})
+        self.assertFalse(content.get('show_level_labels', True))
+        self.assertTrue(content.get('show_block_labels', False))
+        self.assertTrue(content.get('requires_level_names', False))
+        self.assertFalse(content.get('requires_block_names', True))
+        self.assertEqual(len(content.get('levels', [])), 2)
     
     def test_enhance_sequence_task_level_3_detailed(self):
-        """Тест: sequence_assembly level 3 падает в fallback"""
+        """Тест: sequence_assembly level 3 сохраняет данные и выставляет корректные флаги"""
         task_data = {
             "type": "sequence_assembly",
             "content": {
@@ -566,8 +585,14 @@ class TestDifficultyManagerAdditional(unittest.TestCase):
         
         enhanced = self.manager.enhance_task_for_level(task_data, level=3)
         
-        # _enhance_sequence_task не реализован → exception handler
-        self.assertFalse(enhanced.get('_difficulty_enhanced', True))
+        # После P0 sequence_assembly level 3 должен успешно модифицироваться
+        self.assertTrue(enhanced.get('_difficulty_enhanced'))
+        content = enhanced.get('content', {})
+        self.assertFalse(content.get('show_level_labels', True))
+        self.assertFalse(content.get('show_block_labels', True))
+        self.assertTrue(content.get('requires_level_names', False))
+        self.assertTrue(content.get('requires_block_names', False))
+        self.assertEqual(len(content.get('levels', [])), 2)
     
     def test_enhance_task_preserves_original_data(self):
         """Тест: модификация сохраняет все исходные данные задания"""

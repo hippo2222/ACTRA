@@ -36,6 +36,8 @@ coverage.xml
 htmlcov/
 .pytest_cache/
 .pytest_tmp/
+.pytest_tmp_*/
+.mypy_cache/
 test_output.txt
 
 # Logs
@@ -55,7 +57,8 @@ logs/
 Thumbs.db
 
 # Runtime user data — do not commit dev/test user profiles or progress
-data/users/user_*/
+data/users/
+data/telemetry/
 data/user_calendar/user_*/
 data/app_state.json
 
@@ -67,10 +70,6 @@ data/feedback/
 
 # AI config with API keys — never commit
 data/ai_config.json
-
-
-
-
 
 
 

@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="../assets/ThemeManager.js"></script>
+    <script src="/assets/AppConfig.js"></script>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>Микрокарточки — ACTRA</title>
+    <link href="/assets/tailwind.css" rel="stylesheet" />
+    <link href="/assets/fonts.css" rel="stylesheet" />
+    <link href="/assets/lightB-variables.css" rel="stylesheet" />
+    <link href="/assets/lightB-components.css" rel="stylesheet" />
+    <link href="/assets/animations.css" rel="stylesheet" />
+    <script src="/assets/celebration-effects.js"></script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--color-border-normal); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--color-border-strong); }
+
+        .mc-page-enter { animation: a-slide-up 0.4s ease-out both; }
+        .mc-card-flip { animation: mc-flip 0.25s ease-out; }
+        @keyframes mc-flip {
+            0% { opacity: 0; transform: translateY(8px) scale(0.98); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ── Success / Failure glow (theme-aware via --_glow) ── */
+        .mc-glow-correct { --_glow: var(--color-success-light); animation: a-result-glow 0.7s ease-out; }
+        .mc-glow-incorrect { --_glow: var(--color-error-light); animation: a-result-glow 0.7s ease-out; }
+
+        /* ── Pair match result highlighting ── */
+        .mc-pair-correct {
+            background-color: var(--color-success-lighter) !important;
+            border-color: var(--color-success) !important;
+            animation: mc-pair-pop 0.3s ease-out both;
+        }
+        .mc-pair-incorrect {
+            background-color: var(--color-error-lighter) !important;
+            border-color: var(--color-error) !important;
+            animation: mc-pair-pop 0.3s ease-out both, a-shake 0.4s ease 0.15s;
+        }
+        @keyframes mc-pair-pop {
+            0% { transform: scale(1); }
+            40% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+
+        /* ── Streak badge tiers ── */
+        .mc-streak-warm { background: linear-gradient(135deg, rgba(251,191,36,0.15), rgba(245,158,11,0.2)); border-color: rgba(245,158,11,0.3); }
+        .mc-streak-hot { background: linear-gradient(135deg, rgba(249,115,22,0.2), rgba(239,68,68,0.15)); border-color: rgba(249,115,22,0.4); }
+        .mc-streak-epic {
+            background: linear-gradient(135deg, rgba(239,68,68,0.2), rgba(168,85,247,0.2));
+            border-color: rgba(239,68,68,0.4);
+            animation: a-streak-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) both, a-streak-pulse 1.5s ease-in-out 0.4s 2;
+        }
+
+        /* ── Focus-visible rings for keyboard nav ── */
+        button:focus-visible, a:focus-visible, select:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        /* ── Rating button keyboard-active highlight ── */
+        .mc-rating-active {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 3px var(--color-primary-light);
+        }
+
+        /* ── Session summary stat entrance stagger ── */
+        .mc-sum-stat { animation: a-count-up 0.4s ease-out both; }
+        .mc-sum-stat:nth-child(1) { animation-delay: 0.05s; }
+        .mc-sum-stat:nth-child(2) { animation-delay: 0.12s; }
+        .mc-sum-stat:nth-child(3) { animation-delay: 0.19s; }
+        .mc-sum-stat:nth-child(4) { animation-delay: 0.26s; }
+
+        /* ── Reduced motion: disable mc-specific animations ── */
+        @media (prefers-reduced-motion: reduce) {
+            .mc-page-enter, .mc-card-flip, .mc-glow-correct, .mc-glow-incorrect,
+            .mc-pair-correct, .mc-pair-incorrect, .mc-streak-epic, .mc-sum-stat,
+            .mc-rating-active { animation: none !important; }
+            .mc-rating-active { transform: none; }
+        }
+    </style>
+</head>
+
+<body class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
+    <!-- Header -->
+    <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-4 md:px-6 py-2.5">
+        <div class="flex items-center justify-between max-w-[1280px] mx-auto">
+            <div class="flex items-center gap-3">
+                <a href="/ui/main"
+                    class="flex items-center justify-center size-8 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
+                    title="На главную">
+                    <span class="material-symbols-outlined">arrow_back</span>
+                </a>
+                <div class="flex items-center gap-3">
+                    <span class="brand-logo size-8" style="color:var(--color-primary)" aria-hidden="true"></span>
+                    <div class="flex flex-col">
+                        <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main">Микрокарточки</h1>
+                        <p class="text-xs text-text-secondary" id="mcHeaderSubtitle">Повторение и обучение</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Session progress (visible during review) -->
+                <div id="mcHeaderProgress" class="hidden items-center gap-2 px-3 py-1 bg-surface-2 rounded-full border border-border-subtle">
+                    <span class="text-[11px] font-bold text-text-secondary" id="mcHeaderProgressText">0/0</span>
+                    <div class="w-16 h-1.5 bg-bg-secondary rounded-full overflow-hidden">
+                        <div id="mcHeaderProgressBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width:0%"></div>
+                    </div>
+                </div>
+                <!-- Streak badge -->
+                <div class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-primary-light transition-all" id="mcStreakBadge" role="status" aria-label="Серия активности">
+                    <span class="material-symbols-outlined text-primary text-[14px]" aria-hidden="true">local_fire_department</span>
+                    <span class="text-[11px] font-bold text-text-main" id="mcStreakDays">—</span>
+                </div>
+                <a href="/ui/editor"
+                    class="hidden md:flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-text-secondary rounded-lg border border-border-strong hover:bg-bg-hover hover:text-primary transition-colors"
+                    title="Открыть в редакторе">
+                    <span class="material-symbols-outlined text-[16px]">edit_note</span>
+                    Редактор
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main id="mcMain" class="flex-1 min-h-0 overflow-y-auto">
+        <div class="max-w-[1280px] mx-auto p-3 md:p-4 lg:p-6 mc-page-enter">
+
+            <!-- View: Deck List -->
+            <div id="mcViewDeckList" class="hidden">
+                <!-- Summary strip -->
+                <div class="flex flex-wrap items-center gap-3 mb-4">
+                    <div class="flex items-center gap-2 px-3 py-2 bg-surface-1 rounded-xl border border-border-strong">
+                        <span class="material-symbols-outlined text-primary text-[18px]">pending_actions</span>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">К повтору</span>
+                            <span class="text-base font-black text-text-main leading-tight" id="mcSummaryDue">—</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-2 bg-surface-1 rounded-xl border border-border-strong">
+                        <span class="material-symbols-outlined text-info text-[18px]">fiber_new</span>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Новых</span>
+                            <span class="text-base font-black text-text-main leading-tight" id="mcSummaryNew">—</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 px-3 py-2 bg-surface-1 rounded-xl border border-border-strong">
+                        <span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Сегодня</span>
+                            <span class="text-base font-black text-text-main leading-tight" id="mcSummaryToday">—</span>
+                        </div>
+                    </div>
+                    <button type="button" onclick="mcApp.refreshDecks()"
+                        class="ml-auto flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-text-secondary rounded-lg border border-border-strong hover:bg-bg-hover transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">refresh</span>
+                        Обновить
+                    </button>
+                </div>
+
+                <!-- Deck grid -->
+                <div id="mcDeckGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    <!-- Rendered by JS -->
+                </div>
+                <!-- Loading state -->
+                <div id="mcDeckLoading" class="hidden flex flex-col items-center justify-center py-12 gap-2">
+                    <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary-light border-t-primary"></div>
+                    <p class="text-sm text-text-muted">Загрузка колод...</p>
+                </div>
+                <!-- Empty state -->
+                <div id="mcDeckEmpty" class="hidden flex flex-col items-center justify-center py-16 text-center">
+                    <span class="material-symbols-outlined text-border-strong text-[48px] mb-3">style</span>
+                    <p class="text-base font-bold text-text-main mb-1">Нет колод микрокарточек</p>
+                    <p class="text-sm text-text-secondary max-w-md">Создайте колоду из анализа теории в редакторе или воспользуйтесь ручным созданием.</p>
+                    <a href="/ui/editor"
+                        class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-fg rounded-lg text-sm font-bold hover:bg-primary-hover transition-colors">
+                        <span class="material-symbols-outlined text-[18px]">edit_note</span>
+                        Открыть редактор
+                    </a>
+                </div>
+                <!-- Error state -->
+                <div id="mcDeckError" class="hidden flex flex-col items-center justify-center py-12 text-center">
+                    <span class="material-symbols-outlined text-error text-[36px] mb-2">error_outline</span>
+                    <p class="text-sm font-semibold text-error-text" id="mcDeckErrorText">Ошибка загрузки</p>
+                    <button type="button" onclick="mcApp.refreshDecks()"
+                        class="mt-3 px-4 py-2 text-xs font-semibold text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
+                        Повторить
+                    </button>
+                </div>
+            </div>
+
+            <!-- View: Review Session -->
+            <div id="mcViewReview" class="hidden">
+                <div class="max-w-2xl mx-auto">
+                    <!-- Deck info bar -->
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <button type="button" onclick="mcApp.backToDecks()"
+                            class="flex items-center gap-1.5 text-sm font-semibold text-text-secondary hover:text-primary transition-colors">
+                            <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                            К колодам
+                        </button>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="mcApp.restartSession()"
+                                class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold text-warning-text bg-warning-lighter border border-warning-light rounded-lg hover:bg-warning-light transition-colors"
+                                title="Начать сессию заново">
+                                <span class="material-symbols-outlined text-[14px]">restart_alt</span>
+                                Заново
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar -->
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-1">
+                            <span class="text-[11px] font-bold text-text-secondary" id="mcReviewDeckName">Колода</span>
+                            <span class="text-[11px] font-bold text-text-secondary" id="mcReviewProgress">0/0</span>
+                        </div>
+                        <div class="w-full h-2 bg-bg-secondary rounded-full overflow-hidden">
+                            <div id="mcReviewProgressBar" class="h-full bg-primary rounded-full transition-all duration-300" style="width:0%"></div>
+                        </div>
+                        <div id="mcReviewRequeueInfo" class="hidden mt-1">
+                            <span class="text-[10px] font-semibold text-warning-text">
+                                <span class="material-symbols-outlined text-[12px] align-middle">replay</span>
+                                Ошибки в очереди: <span id="mcReviewRequeueCount">0</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Card area -->
+                    <div id="mcCardArea" class="rounded-2xl border border-border-strong bg-surface-1 shadow-sm overflow-hidden" role="region" aria-label="Карточка" aria-live="polite">
+                        <!-- Card loading -->
+                        <div id="mcCardLoading" class="hidden flex items-center justify-center py-16">
+                            <div class="h-6 w-6 animate-spin rounded-full border-2 border-primary-light border-t-primary"></div>
+                        </div>
+
+                        <!-- Card content -->
+                        <div id="mcCardContent" class="hidden">
+                            <!-- Card type badge -->
+                            <div class="flex items-center gap-2 px-5 pt-4 pb-2">
+                                <span id="mcCardTypeBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-strong bg-surface-2 text-text-secondary uppercase tracking-wider">fact_recall</span>
+                                <span id="mcCardRequeueBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold border border-warning-light bg-warning-lighter text-warning-text">
+                                    <span class="material-symbols-outlined text-[10px] align-middle">replay</span> повтор
+                                </span>
+                            </div>
+
+                            <!-- Front -->
+                            <div class="px-5 pb-4">
+                                <div id="mcCardFront" class="text-base font-semibold text-text-main leading-relaxed whitespace-pre-line"></div>
+                            </div>
+
+                            <!-- Pair match UI (hidden for fact_recall) -->
+                            <div id="mcPairMatchArea" class="hidden px-5 pb-4">
+                                <div id="mcPairMatchGrid" class="space-y-2"></div>
+                            </div>
+
+                            <!-- Reveal area -->
+                            <div id="mcRevealArea" class="hidden border-t border-border-subtle mc-card-flip">
+                                <!-- Back (fact_recall) -->
+                                <div id="mcCardBack" class="hidden px-5 py-4">
+                                    <div class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Ответ</div>
+                                    <div id="mcCardBackText" class="text-base text-text-main leading-relaxed whitespace-pre-line"></div>
+                                </div>
+                                <!-- Pair match result -->
+                                <div id="mcPairResult" class="hidden px-5 py-4">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Результат</span>
+                                        <span id="mcPairScoreBadge" class="px-2 py-0.5 rounded-full text-[10px] font-bold border"></span>
+                                    </div>
+                                    <div id="mcPairResultGrid" class="space-y-1"></div>
+                                </div>
+                            </div>
+
+                            <!-- Action buttons -->
+                            <div class="px-5 py-4 border-t border-border-subtle bg-surface-2">
+                                <!-- Pre-reveal -->
+                                <div id="mcActionsPreReveal" class="flex justify-center">
+                                    <button type="button" id="mcBtnReveal" onclick="mcApp.reveal()"
+                                        class="px-6 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary-light transition-all active:scale-[0.98]">
+                                        Показать ответ
+                                    </button>
+                                </div>
+                                <!-- Post-reveal: rating buttons -->
+                                <div id="mcActionsPostReveal" class="hidden">
+                                    <div class="text-[10px] font-bold text-text-secondary text-center mb-2 uppercase tracking-wider">Оцените знание</div>
+                                    <div class="grid grid-cols-4 gap-2" role="group" aria-label="Оценка знания">
+                                        <button type="button" onclick="mcApp.submitRating('again')"
+                                            class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-error-light bg-error-lighter text-error-text hover:bg-error-light transition-all active:scale-[0.97] disabled:opacity-50"
+                                            id="mcBtnAgain" aria-label="Again — не знаю (клавиша 1)">
+                                            <span class="text-sm font-bold">Again</span>
+                                            <span class="text-[10px]">1</span>
+                                        </button>
+                                        <button type="button" onclick="mcApp.submitRating('hard')"
+                                            class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-warning-light bg-warning-lighter text-warning-text hover:bg-warning-light transition-all active:scale-[0.97] disabled:opacity-50"
+                                            id="mcBtnHard" aria-label="Hard — сложно (клавиша 2)">
+                                            <span class="text-sm font-bold">Hard</span>
+                                            <span class="text-[10px]">2</span>
+                                        </button>
+                                        <button type="button" onclick="mcApp.submitRating('good')"
+                                            class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-success-light bg-success-lighter text-success-text hover:bg-success-light transition-all active:scale-[0.97] disabled:opacity-50"
+                                            id="mcBtnGood" aria-label="Good — знаю (клавиша 3)">
+                                            <span class="text-sm font-bold">Good</span>
+                                            <span class="text-[10px]">3</span>
+                                        </button>
+                                        <button type="button" onclick="mcApp.submitRating('easy')"
+                                            class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-all active:scale-[0.97] disabled:opacity-50"
+                                            id="mcBtnEasy" aria-label="Easy — легко (клавиша 4)">
+                                            <span class="text-sm font-bold">Easy</span>
+                                            <span class="text-[10px]">4</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Queue empty / session complete (shown after last card) -->
+                        <div id="mcCardEmpty" class="hidden px-5 py-10 text-center">
+                            <span class="material-symbols-outlined text-border-strong text-[40px] mb-2">check_circle</span>
+                            <p class="text-sm font-semibold text-text-main">Нет карточек к повторению</p>
+                            <p class="text-xs text-text-secondary mt-1">В этой колоде сейчас нет доступных карточек.</p>
+                        </div>
+                    </div>
+
+                    <!-- Keyboard hint -->
+                    <div class="mt-3 text-center">
+                        <p class="text-[10px] text-text-muted">
+                            <kbd class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">Space</kbd> показать ответ
+                            &nbsp;&middot;&nbsp;
+                            <kbd class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">1</kbd>
+                            <kbd class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">2</kbd>
+                            <kbd class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">3</kbd>
+                            <kbd class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">4</kbd> оценка
+                            &nbsp;&middot;&nbsp;
+                            <kbd class="px-1.5 py-0.5 rounded border border-border-strong bg-surface-2 text-[10px] font-mono">Esc</kbd> назад
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View: Session Summary -->
+            <div id="mcViewSummary" class="hidden">
+                <div class="max-w-lg mx-auto text-center">
+                    <div class="rounded-2xl border border-border-strong bg-surface-1 shadow-sm p-6 md:p-8 mc-card-flip">
+                        <div class="mb-4">
+                            <span class="material-symbols-outlined text-success text-[48px]">celebration</span>
+                        </div>
+                        <h2 class="text-xl font-black text-text-main mb-1">Сессия завершена!</h2>
+                        <p class="text-sm text-text-secondary mb-5" id="mcSummaryDeckName">Колода</p>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                            <div class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-surface-2 rounded-xl border border-border-subtle">
+                                <span class="text-2xl font-black text-text-main" id="mcSumTotal">0</span>
+                                <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Всего</span>
+                            </div>
+                            <div class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-success-lighter rounded-xl border border-success-light">
+                                <span class="text-2xl font-black text-success-text" id="mcSumCorrect">0</span>
+                                <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Верно</span>
+                            </div>
+                            <div class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-error-lighter rounded-xl border border-error-light">
+                                <span class="text-2xl font-black text-error-text" id="mcSumErrors">0</span>
+                                <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Ошибок</span>
+                            </div>
+                            <div class="mc-sum-stat flex flex-col items-center px-3 py-3 bg-surface-2 rounded-xl border border-border-subtle">
+                                <span class="text-2xl font-black text-text-main" id="mcSumTime">0:00</span>
+                                <span class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mt-1">Время</span>
+                            </div>
+                        </div>
+
+                        <!-- Ratings breakdown -->
+                        <div class="flex justify-center gap-3 mb-6">
+                            <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-error-lighter border border-error-light">
+                                <span class="text-xs font-bold text-error-text" id="mcSumRAgain">0</span>
+                                <span class="text-[10px] text-error-text">Again</span>
+                            </div>
+                            <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-warning-lighter border border-warning-light">
+                                <span class="text-xs font-bold text-warning-text" id="mcSumRHard">0</span>
+                                <span class="text-[10px] text-warning-text">Hard</span>
+                            </div>
+                            <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-success-lighter border border-success-light">
+                                <span class="text-xs font-bold text-success-text" id="mcSumRGood">0</span>
+                                <span class="text-[10px] text-success-text">Good</span>
+                            </div>
+                            <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-info-lighter border border-info-light">
+                                <span class="text-xs font-bold text-info-text" id="mcSumREasy">0</span>
+                                <span class="text-[10px] text-info-text">Easy</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-2">
+                            <button type="button" onclick="mcApp.backToDecks()"
+                                class="px-5 py-2.5 text-sm font-bold rounded-xl border border-border-strong text-text-main hover:bg-bg-hover transition-colors">
+                                К колодам
+                            </button>
+                            <button type="button" onclick="mcApp.restartSession()"
+                                class="px-5 py-2.5 text-sm font-bold rounded-xl bg-primary text-primary-fg hover:bg-primary-hover shadow-sm shadow-primary-light transition-colors">
+                                Повторить колоду
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Toast container -->
+    <div id="mcToastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
+
+    <script src="/ui/microcards/microcards.js"></script>
+</body>
+
+</html>

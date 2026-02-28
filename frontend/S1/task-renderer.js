@@ -260,8 +260,8 @@
             inner.className =
                 "flex flex-col rounded-xl border-l-4 border overflow-hidden shadow-sm " +
                 (success
-                    ? "border-l-success border-border-subtle bg-surface-1"
-                    : "border-l-error border-border-subtle bg-surface-1");
+                    ? "border-l-success border-border-strong bg-surface-2"
+                    : "border-l-error border-border-strong bg-surface-2");
         }
 
         if (header) {
@@ -274,10 +274,10 @@
 
         if (iconWrap) {
             iconWrap.className =
-                "flex items-center justify-center size-9 rounded-full shrink-0 " +
+                "flex items-center justify-center size-9 rounded-full shrink-0 border border-border-strong " +
                 (success
-                    ? "bg-success-light text-success-dark"
-                    : "bg-error-light text-error-dark");
+                    ? "bg-surface-1 text-success-dark"
+                    : "bg-surface-1 text-error-dark");
         }
 
         // Animated SVG icons via SuccessEffects

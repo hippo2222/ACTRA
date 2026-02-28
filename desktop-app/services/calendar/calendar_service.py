@@ -51,16 +51,50 @@ def _normalize_activity_entry(raw: Any) -> Dict[str, Any]:
         "session_ids": [],
         "streak_active": False,
         "rest_day": False,
+        "microcards_reviews": 0,
+        "microcards_correct": 0,
+        "microcards_seconds_spent": 0,
+        "microcards_pair_match_reviews": 0,
+        "microcards_pair_match_perfect": 0,
+        "activity_attempts_total": 0,
+        "activity_success_total": 0,
+        "activity_seconds_spent_total": 0,
+        "activity_sources": {
+            "tasks": {"attempts": 0, "successes": 0, "seconds_spent": 0},
+            "microcards": {"attempts": 0, "successes": 0, "seconds_spent": 0},
+        },
     }
 
     if isinstance(raw, dict):
         base.update(raw)
+    elif isinstance(raw, (int, float)):
+        # Legacy numeric entries are treated as invalid payloads and sanitized to defaults.
+        # completion_percent intentionally stays at 0 for these records.
+        pass
 
-    for key in ("tasks_attempted", "tasks_solved", "seconds_spent", "completion_percent"):
+    for key in (
+        "tasks_attempted",
+        "tasks_solved",
+        "seconds_spent",
+        "microcards_reviews",
+        "microcards_correct",
+        "microcards_seconds_spent",
+        "microcards_pair_match_reviews",
+        "microcards_pair_match_perfect",
+    ):
         try:
             base[key] = int(base.get(key, 0) or 0)
         except Exception:
             base[key] = 0
+        if base[key] < 0:
+            base[key] = 0
+
+    try:
+        base["completion_percent"] = int(base.get("completion_percent", 0) or 0)
+    except Exception:
+        base["completion_percent"] = 0
+    if base["completion_percent"] < 0:
+        base["completion_percent"] = 0
 
     session_ids = base.get("session_ids", [])
     if not isinstance(session_ids, list):
@@ -69,7 +103,36 @@ def _normalize_activity_entry(raw: Any) -> Dict[str, Any]:
     base["streak_active"] = bool(base.get("streak_active", False))
     base["rest_day"] = bool(base.get("rest_day", False))
 
+    tasks_attempted = int(base.get("tasks_attempted", 0) or 0)
+    tasks_solved = int(base.get("tasks_solved", 0) or 0)
+    tasks_seconds_spent = int(base.get("seconds_spent", 0) or 0)
+    microcards_reviews = int(base.get("microcards_reviews", 0) or 0)
+    microcards_correct = int(base.get("microcards_correct", 0) or 0)
+    microcards_seconds_spent = int(base.get("microcards_seconds_spent", 0) or 0)
+
+    # Keep mixed totals/source breakdown deterministic and derived from primitive counters.
+    base["activity_attempts_total"] = tasks_attempted + microcards_reviews
+    base["activity_success_total"] = tasks_solved + microcards_correct
+    base["activity_seconds_spent_total"] = tasks_seconds_spent + microcards_seconds_spent
+    base["activity_sources"] = {
+        "tasks": {
+            "attempts": tasks_attempted,
+            "successes": tasks_solved,
+            "seconds_spent": tasks_seconds_spent,
+        },
+        "microcards": {
+            "attempts": microcards_reviews,
+            "successes": microcards_correct,
+            "seconds_spent": microcards_seconds_spent,
+        },
+    }
+
     return base
+
+
+def _empty_activity_entry() -> Dict[str, Any]:
+    """Create a normalized activity entry with additive M2 fields present."""
+    return _normalize_activity_entry({})
 
 
 class CalendarService:
@@ -153,7 +216,76 @@ class CalendarService:
         except Exception as e:
             self.logger.error(f"Error saving {path}: {e}")
             return False
-    
+
+    def _activity_date_from_microcards_review_event(self, review_event: Dict[str, Any]) -> date:
+        """
+        Convert microcards review_event timestamp to local calendar date.
+
+        Semantics:
+        - preferred source: review_event["reviewed_at"] (ISO8601, usually UTC with 'Z')
+        - bucket into local machine date to match CalendarService date.today() semantics
+        - fallback: date.today() if timestamp is missing/corrupted
+        """
+        reviewed_at_raw = ""
+        if isinstance(review_event, dict):
+            reviewed_at_raw = str(review_event.get("reviewed_at") or "").strip()
+
+        if reviewed_at_raw:
+            try:
+                parsed = datetime.fromisoformat(reviewed_at_raw.replace("Z", "+00:00"))
+                if parsed.tzinfo is None:
+                    return parsed.date()
+                return parsed.astimezone().date()
+            except Exception:
+                self.logger.warning(
+                    "record_microcards_review: invalid reviewed_at for user_id=%s value=%r",
+                    self.user_id,
+                    reviewed_at_raw,
+                )
+
+        return date.today()
+
+    def _apply_activity_streak_for_date(
+        self,
+        *,
+        settings: UserCalendarSettings,
+        activity: Dict[str, Any],
+        activity_date: date,
+    ) -> Dict[str, Any]:
+        """
+        Shared streak update helper for activity-producing flows.
+
+        Keeps current completion-session streak behavior for tasks and is reused by
+        microcards live integration (M3).
+        """
+        day_iso = activity_date.isoformat()
+        activity[day_iso] = _normalize_activity_entry(activity.get(day_iso, {}))
+
+        streak_changed = False
+        if settings.last_activity_date != activity_date:
+            if settings.last_activity_date == activity_date - timedelta(days=1):
+                settings.streak_days += 1
+            elif settings.last_activity_date is None:
+                settings.streak_days = 1
+            else:
+                # Пропуск > 1 дня — сбрасываем streak
+                settings.streak_days = 1
+
+            settings.last_activity_date = activity_date
+            streak_changed = True
+            self.save_settings(settings)
+
+        # Day is considered active for streak semantics when this helper is called.
+        activity[day_iso]["streak_active"] = True
+        activity[day_iso] = _normalize_activity_entry(activity[day_iso])
+
+        return {
+            "success": True,
+            "activity_date": day_iso,
+            "streak_days": settings.streak_days,
+            "streak_changed": streak_changed,
+        }
+
     def get_settings(self) -> UserCalendarSettings:
         """Получить настройки календаря."""
         data = self._load_json(self.settings_path)
@@ -250,30 +382,16 @@ class CalendarService:
         
         # Гарантируем что запись существует и это словарь
         if date_iso not in data:
-            data[date_iso] = {
-                "tasks_attempted": 0,
-                "tasks_solved": 0,
-                "seconds_spent": 0,
-                "completion_percent": 0,
-                "session_ids": [],
-                "streak_active": False,
-                "rest_day": False,
-            }
+            data[date_iso] = _empty_activity_entry()
         elif not isinstance(data[date_iso], dict):
             # МИГРАЦИЯ: старые данные (число)
-            old_completion = data[date_iso]
-            data[date_iso] = {
-                "tasks_attempted": 0,
-                "tasks_solved": 0,
-                "seconds_spent": 0,
-                "completion_percent": old_completion,
-                "session_ids": [],
-                "streak_active": False,
-                "rest_day": False,
-            }
+            data[date_iso] = _normalize_activity_entry(data[date_iso])
+        else:
+            data[date_iso] = _normalize_activity_entry(data[date_iso])
         
         # Обновляем completion_percent
         data[date_iso]["completion_percent"] = max(0, min(completion_percent, 200))
+        data[date_iso] = _normalize_activity_entry(data[date_iso])
         
         return self._save_json(self.activity_path, data)
     
@@ -653,31 +771,17 @@ class CalendarService:
         
         # Гарантируем, что запись за сегодня существует и это словарь
         if today_iso not in activity:
-            activity[today_iso] = {
-                "tasks_attempted": 0,
-                "tasks_solved": 0,
-                "seconds_spent": 0,
-                "completion_percent": 0,
-                "session_ids": [],
-                "streak_active": False,
-                "rest_day": False,
-            }
+            activity[today_iso] = _empty_activity_entry()
         elif not isinstance(activity[today_iso], dict):
             # МИГРАЦИЯ: если остались старые данные (число)
             old_completion = activity[today_iso]
-            activity[today_iso] = {
-                "tasks_attempted": 0,
-                "tasks_solved": 0,
-                "seconds_spent": 0,
-                "completion_percent": old_completion,
-                "session_ids": [],
-                "streak_active": False,
-                "rest_day": False,
-            }
+            activity[today_iso] = _normalize_activity_entry(old_completion)
             self.logger.warning(
                 f"Migrated old activity format for {self.user_id}",
                 extra={"date": today_iso, "old_value": old_completion}
             )
+        else:
+            activity[today_iso] = _normalize_activity_entry(activity[today_iso])
         
         # Рассчитываем процент выполнения
         target_seconds = settings.daily_time_limit_minutes * 60
@@ -695,7 +799,14 @@ class CalendarService:
         # Добавляем session_id если его ещё нет
         if session_id not in activity[today_iso]["session_ids"]:
             activity[today_iso]["session_ids"].append(session_id)
-        
+
+        # M3: unified streak helper (tasks flow updates streak only on complete_session)
+        activity[today_iso] = _normalize_activity_entry(activity[today_iso])
+        self._apply_activity_streak_for_date(
+            settings=settings,
+            activity=activity,
+            activity_date=today,
+        )
         self._save_json(self.activity_path, activity)
         
         # ИСПРАВЛЕНИЕ 6.4.1: Пересчитаем здоровье для всех комплексов
@@ -704,20 +815,6 @@ class CalendarService:
         for progress in all_progress:
             self.health_service.update_progress_health(progress)
         self.save_all_progress(all_progress)
-        
-        # Обновляем streak
-        if settings.last_activity_date != today:
-            if settings.last_activity_date == today - timedelta(days=1):
-                settings.streak_days += 1
-            elif settings.last_activity_date is None:
-                settings.streak_days = 1
-            else:
-                # Пропуск > 1 дня — сбрасываем streak (не полагаемся на get_today_plan)
-                settings.streak_days = 1
-            
-            settings.last_activity_date = today
-            activity[today_iso]["streak_active"] = True
-            self.save_settings(settings)
         
         # Проверяем уведомление о времени
         notifications = []
@@ -827,10 +924,16 @@ class CalendarService:
         has_any_activity = False
         for day_data in activity.values():
             if isinstance(day_data, dict):
-                if day_data.get("tasks_solved", 0) > 0 or day_data.get("tasks_attempted", 0) > 0:
+                normalized_day = _normalize_activity_entry(day_data)
+                if (
+                    int(normalized_day.get("activity_attempts_total", 0) or 0) > 0
+                    or int(normalized_day.get("completion_percent", 0) or 0) > 0
+                ):
                     has_any_activity = True
                     break
             elif isinstance(day_data, int) and day_data > 0:
+                # Legacy compatibility (pre-normalized int completion payloads)
+                # Note: get_activity_history() usually normalizes to dicts, but keep this guard.
                 # Обратная совместимость со старым форматом (просто процент)
                 has_any_activity = True
                 break
@@ -839,31 +942,62 @@ class CalendarService:
             current_date = today - timedelta(days=i)
             date_iso = current_date.isoformat()
             
-            day_data = activity.get(date_iso, {})
+            raw_day_data = activity.get(date_iso, {})
+            day_data = _normalize_activity_entry(raw_day_data)
             is_rest = date_iso in rest_days
             
             # Поддержка старого формата (int) и нового (dict)
-            if isinstance(day_data, dict):
+            if isinstance(raw_day_data, dict):
                 tasks_solved = day_data.get("tasks_solved", 0)
                 tasks_attempted = day_data.get("tasks_attempted", 0)
                 seconds_spent = day_data.get("seconds_spent", 0)
             else:
                 # Старый формат: просто процент, конвертируем в примерные задачи
-                tasks_solved = day_data // 20 if day_data > 0 else 0
+                legacy_completion = int(raw_day_data or 0)
+                tasks_solved = legacy_completion // 20 if legacy_completion > 0 else 0
                 tasks_attempted = tasks_solved
                 seconds_spent = 0
+
+            microcards_reviews = day_data.get("microcards_reviews", 0)
+            microcards_correct = day_data.get("microcards_correct", 0)
+            microcards_seconds_spent = day_data.get("microcards_seconds_spent", 0)
+            microcards_pair_match_reviews = day_data.get("microcards_pair_match_reviews", 0)
+            microcards_pair_match_perfect = day_data.get("microcards_pair_match_perfect", 0)
+            activity_attempts_total = day_data.get("activity_attempts_total", tasks_attempted + microcards_reviews)
+            activity_success_total = day_data.get("activity_success_total", tasks_solved + microcards_correct)
+            activity_seconds_spent_total = day_data.get(
+                "activity_seconds_spent_total",
+                seconds_spent + microcards_seconds_spent,
+            )
+            activity_sources = day_data.get(
+                "activity_sources",
+                {
+                    "tasks": {
+                        "attempts": tasks_attempted,
+                        "successes": tasks_solved,
+                        "seconds_spent": seconds_spent,
+                    },
+                    "microcards": {
+                        "attempts": microcards_reviews,
+                        "successes": microcards_correct,
+                        "seconds_spent": microcards_seconds_spent,
+                    },
+                },
+            )
             
             # Используем сохранённый completion_percent (основан на времени);
             # если его нет или 0, а задачи решены — fallback на tasks_solved * 20
-            if isinstance(day_data, dict):
+            if isinstance(raw_day_data, dict):
                 stored_pct = day_data.get("completion_percent", 0)
                 completion_percent = stored_pct if stored_pct > 0 else min(tasks_solved * 20, 200)
             else:
                 completion_percent = min(tasks_solved * 20, 200)
+
+            day_has_learning_activity = (activity_attempts_total > 0) or (completion_percent > 0)
             
             # Если нет ни одной активности в истории, не подсвечиваем дни как пропуски
             is_missed = (
-                tasks_solved == 0
+                not day_has_learning_activity
                 and current_date < today
                 and not is_rest
                 and has_any_activity
@@ -880,6 +1014,15 @@ class CalendarService:
                 tasks_attempted=tasks_attempted,
                 seconds_spent=seconds_spent,
                 target_minutes=target_minutes,
+                microcards_reviews=microcards_reviews,
+                microcards_correct=microcards_correct,
+                microcards_seconds_spent=microcards_seconds_spent,
+                microcards_pair_match_reviews=microcards_pair_match_reviews,
+                microcards_pair_match_perfect=microcards_pair_match_perfect,
+                activity_attempts_total=activity_attempts_total,
+                activity_success_total=activity_success_total,
+                activity_seconds_spent_total=activity_seconds_spent_total,
+                activity_sources=activity_sources,
             ).to_dict())
         
         # Добавляем 1 будущий день
@@ -987,31 +1130,17 @@ class CalendarService:
         
         # Получаем или создаём запись за сегодня (ВСЕГДА СЛОВАРЬ!)
         if today_iso not in activity:
-            activity[today_iso] = {
-                "tasks_attempted": 0,
-                "tasks_solved": 0,
-                "seconds_spent": 0,
-                "completion_percent": 0,
-                "session_ids": [],
-                "streak_active": False,
-                "rest_day": False,
-            }
+            activity[today_iso] = _empty_activity_entry()
         elif not isinstance(activity[today_iso], dict):
             # МИГРАЦИЯ: если остались старые данные (число)
             old_completion = activity[today_iso]
-            activity[today_iso] = {
-                "tasks_attempted": 0,
-                "tasks_solved": 0,
-                "seconds_spent": 0,
-                "completion_percent": old_completion,
-                "session_ids": [],
-                "streak_active": False,
-                "rest_day": False,
-            }
+            activity[today_iso] = _normalize_activity_entry(old_completion)
             self.logger.warning(
                 f"Migrated old activity format for {self.user_id}",
                 extra={"date": today_iso, "old_value": old_completion}
             )
+        else:
+            activity[today_iso] = _normalize_activity_entry(activity[today_iso])
         
         # Инкрементируем счётчики
         activity[today_iso]["tasks_attempted"] += 1
@@ -1019,10 +1148,97 @@ class CalendarService:
             activity[today_iso]["tasks_solved"] += 1
         activity[today_iso]["seconds_spent"] += int(response_time_seconds)
         
+        activity[today_iso] = _normalize_activity_entry(activity[today_iso])
         self._save_json(self.activity_path, activity)
         
         return {
             "success": True,
             "attempt": attempt.to_dict(),
             "progress": progress.to_dict(),
+        }
+
+    # =========================================================================
+    # MICROCARD REVIEW ACTIVITY RECORDING (M3)
+    # =========================================================================
+
+    def record_microcards_review(
+        self,
+        *,
+        deck_id: str,
+        card_id: str,
+        review_event: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        """
+        Record one microcards review_event into calendar activity (mixed activity schema).
+
+        This method is called by M1 orchestration in server.py after successful review submit.
+        Idempotency is handled by server-side live integration state (M1), not here.
+        """
+        _ = deck_id  # Reserved for future per-deck analytics hooks
+        _ = card_id
+
+        settings = self.get_settings()
+        activity = self.get_activity_history()
+
+        event = review_event if isinstance(review_event, dict) else {}
+        activity_date = self._activity_date_from_microcards_review_event(event)
+        date_iso = activity_date.isoformat()
+
+        if date_iso not in activity:
+            activity[date_iso] = _empty_activity_entry()
+        elif not isinstance(activity[date_iso], dict):
+            old_completion = activity[date_iso]
+            activity[date_iso] = _normalize_activity_entry(old_completion)
+            self.logger.warning(
+                "record_microcards_review: migrated old activity format for %s",
+                self.user_id,
+                extra={"date": date_iso, "old_value": old_completion},
+            )
+        else:
+            activity[date_iso] = _normalize_activity_entry(activity[date_iso])
+
+        day = activity[date_iso]
+
+        # Primitive event fields
+        was_correct = bool(event.get("was_correct"))
+        details = event.get("details") if isinstance(event.get("details"), dict) else {}
+        card_type = str(details.get("card_type") or "").strip().lower()
+
+        raw_response_time_ms = event.get("response_time_ms")
+        if isinstance(raw_response_time_ms, bool):
+            response_time_ms = 0
+        else:
+            try:
+                response_time_ms = int(raw_response_time_ms or 0)
+            except Exception:
+                response_time_ms = 0
+        if response_time_ms < 0:
+            response_time_ms = 0
+        response_time_seconds = response_time_ms // 1000
+
+        # Update microcards counters
+        day["microcards_reviews"] += 1
+        if was_correct:
+            day["microcards_correct"] += 1
+        day["microcards_seconds_spent"] += response_time_seconds
+
+        if card_type == "pair_match":
+            day["microcards_pair_match_reviews"] += 1
+            if bool(details.get("is_perfect")):
+                day["microcards_pair_match_perfect"] += 1
+
+        activity[date_iso] = _normalize_activity_entry(day)
+        streak_meta = self._apply_activity_streak_for_date(
+            settings=settings,
+            activity=activity,
+            activity_date=activity_date,
+        )
+        self._save_json(self.activity_path, activity)
+
+        return {
+            "success": True,
+            "activity_date": date_iso,
+            "streak_days": int(streak_meta.get("streak_days") or 0),
+            "microcards_reviews": int(activity[date_iso].get("microcards_reviews") or 0),
+            "activity_attempts_total": int(activity[date_iso].get("activity_attempts_total") or 0),
         }

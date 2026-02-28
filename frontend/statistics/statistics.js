@@ -25,30 +25,31 @@ const StatisticsApp = {
     metricOptions: {
         attempts: {
             id: 'attempts',
-            title: 'Решено задач',
-            shortLabel: 'Задачи',
-            legendPrimary: 'Количество задач',
+            title: 'Учебная активность',
+            shortLabel: 'Активность',
+            legendPrimary: 'Все действия',
             legendTrend: 'Средний темп',
             aggregator: 'sum',
             valueType: 'count',
-            // Показываем суммарные попытки за день (total_attempts), если нет — количество уникальных задач (attempts)
-            accessor: (day) => (day.total_attempts ?? day.attempts ?? 0),
+            // M8: combined activity (tasks + microcards)
+            accessor: (day) => (day.activity_attempts_total ?? ((day.total_attempts ?? day.attempts ?? 0) + (day.microcards_reviews ?? 0))),
             fallbackMax: 10,
             min: 0,
-            activeCondition: (day) => ((day.total_attempts ?? day.attempts ?? 0) > 0)
+            activeCondition: (day) => ((day.activity_attempts_total ?? ((day.total_attempts ?? day.attempts ?? 0) + (day.microcards_reviews ?? 0))) > 0)
         },
         study: {
             id: 'study',
-            title: 'Минуты обучения',
+            title: 'Время обучения',
             shortLabel: 'Время',
             legendPrimary: 'Минуты обучения',
             legendTrend: 'Средний темп',
             aggregator: 'sum',
             valueType: 'minutes',
-            accessor: (day) => day.study_minutes || 0,
+            // M8: combined study time (tasks + microcards)
+            accessor: (day) => day.combined_study_minutes ?? day.study_minutes ?? 0,
             fallbackMax: 60,
             min: 0,
-            activeCondition: (day) => (day.study_minutes || 0) > 0
+            activeCondition: (day) => (day.combined_study_minutes ?? day.study_minutes ?? 0) > 0
         }
     },
 
@@ -147,7 +148,7 @@ const StatisticsApp = {
             const isToday = i === days - 1;
 
             if (existing) {
-                const hasActivity = (existing.attempts || 0) > 0 || (existing.study_minutes || 0) > 0;
+                const hasActivity = (existing.activity_attempts_total || 0) > 0 || (existing.attempts || 0) > 0 || (existing.study_minutes || 0) > 0 || (existing.microcards_reviews || 0) > 0 || (existing.combined_study_minutes || 0) > 0;
                 if (hasActivity || isToday) {
                     result.push({ ...existing, _isSynthetic: false });
                 }
@@ -299,27 +300,27 @@ const StatisticsApp = {
                 message = `${totalMinutes} мин за ${activeDays} дн.`;
             }
         } else {
-            // Для метрики attempts
-            const totalAttempts = Math.round(totalValue);
+            // M8: для метрики attempts (комбинированная активность)
+            const totalActions = Math.round(totalValue);
 
-            if (totalAttempts === 0) {
-                message = 'Начни решать задачи, чтобы увидеть прогресс';
+            if (totalActions === 0) {
+                message = 'Начни заниматься, чтобы увидеть прогресс';
             } else if (activeDays === 0) {
-                message = `${totalAttempts} попыток — нет активных дней`;
-            } else if (totalAttempts < attemptsThreshold) {
-                message = `${totalAttempts} попыток за ${activeDays} дн. — попробуй решать чаще`;
+                message = `${totalActions} действий — нет активных дней`;
+            } else if (totalActions < attemptsThreshold) {
+                message = `${totalActions} действий за ${activeDays} дн. — попробуй заниматься чаще`;
             } else if (activeRatio <= 0.3) {
-                message = `${totalAttempts} попыток за ${activeDays} дн. — хорошее начало, занимайся регулярнее`;
-            } else if (totalAttempts >= attemptsThreshold * 1.5 && activeRatio >= 0.7) {
-                message = `${totalAttempts} попыток за ${activeDays} дн. — отличный результат! 🔥`;
+                message = `${totalActions} действий за ${activeDays} дн. — хорошее начало, занимайся регулярнее`;
+            } else if (totalActions >= attemptsThreshold * 1.5 && activeRatio >= 0.7) {
+                message = `${totalActions} действий за ${activeDays} дн. — отличный результат! 🔥`;
             } else if (activeDays === period) {
-                message = `${totalAttempts} попыток за ${activeDays} дн. — ты занимаешься каждый день! 🔥`;
+                message = `${totalActions} действий за ${activeDays} дн. — ты занимаешься каждый день! 🔥`;
             } else if (activeDays >= period * 0.7) {
-                message = `${totalAttempts} попыток за ${activeDays} дн. — отличная активность!`;
+                message = `${totalActions} действий за ${activeDays} дн. — отличная активность!`;
             } else if (activeDays > 0) {
-                message = `${totalAttempts} попыток за ${activeDays} дн.`;
+                message = `${totalActions} действий за ${activeDays} дн.`;
             } else {
-                message = `${totalAttempts} попыток`;
+                message = `${totalActions} действий`;
             }
         }
 
@@ -447,9 +448,9 @@ const StatisticsApp = {
             }
         }
 
-        // Update streak badge (dim if gap=1, hide flame if gap>1)
+        // Update streak badge — use canonical activity_streak_days (mixed activity)
         if (streakBadge) {
-            const streak = this.state.stats?.streak_days || 0;
+            const streak = this.state.stats?.activity_streak_days || this.state.stats?.streak_days || 0;
             const streakGap = this.state.stats?.streak_gap || 0;
             const flameOpacity = streakGap === 1 ? 0.4 : 1;
             const hideFlame = streakGap > 1;
@@ -561,7 +562,9 @@ const StatisticsApp = {
                     if (c.id && c.name) this.state.complexNames[c.id] = c.name;
                 }
             }
-            const statsHasData = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0));
+            const mcReviews = this.state.stats?.microcards?.reviews_total || 0;
+            const combinedAttempts = this.state.stats?.learning_sources?.combined?.attempts || 0;
+            const statsHasData = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0 || mcReviews > 0 || combinedAttempts > 0));
             const dynamicsHasData = (this.state.dynamics?.length || 0) > 0;
             this.state.hasData = statsHasData || dynamicsHasData;
 
@@ -625,7 +628,9 @@ const StatisticsApp = {
         this.state.previousDynamics = this.normalizeDynamics(previous, days);
         this.state.dynamicsCache[days] = this.state.dynamics;
         this.state.previousDynamicsCache[days] = this.state.previousDynamics;
-        const statsHasData = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0));
+        const mcReviews = this.state.stats?.microcards?.reviews_total || 0;
+        const combinedAttempts = this.state.stats?.learning_sources?.combined?.attempts || 0;
+        const statsHasData = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0 || mcReviews > 0 || combinedAttempts > 0));
         const dynamicsHasData = (this.state.dynamics?.length || 0) > 0;
         this.state.hasData = statsHasData || dynamicsHasData;
 
@@ -647,10 +652,12 @@ const StatisticsApp = {
     renderMetrics() {
         const stats = this.state.stats || {};
         const hasData = this.state.hasData;
-        const hasStatsData = !!(
-            (stats.total_tasks_attempted || 0) > 0 ||
-            (stats.total_time_spent || 0) > 0
-        );
+        const mcStats = stats.microcards || {};
+        const learningSources = stats.learning_sources || {};
+        const mcReviewsTotal = mcStats.reviews_total || 0;
+        const hasTasksData = (stats.total_tasks_attempted || 0) > 0 || (stats.total_time_spent || 0) > 0;
+        const hasMcData = mcReviewsTotal > 0;
+        const hasStatsData = hasTasksData || hasMcData;
 
         console.log('[Statistics] renderMetrics - stats:', stats, 'hasData:', hasData);
 
@@ -667,49 +674,96 @@ const StatisticsApp = {
             }
         };
 
-        // Always show actual values from API (even if 0)
+        // Tasks mastered (task-centric, stays as-is per spec)
         const tasksMastered = stats.tasks_mastered ?? 0;
         const totalTasks = stats.total_tasks_available || 0;
         document.getElementById('tasks-mastered').textContent = tasksMastered;
         document.getElementById('tasks-total').textContent = `/ ${totalTasks}`;
 
-        const totalTime = stats.total_time_spent || 0;
-        const hours = Math.floor(totalTime / 3600);
-        const minutes = Math.floor((totalTime % 3600) / 60);
+        // Time: combined (tasks + microcards) via learning_sources
+        const combinedTimeSec = learningSources.combined?.time_spent_seconds || stats.total_time_spent || 0;
+        const hours = Math.floor(combinedTimeSec / 3600);
+        const minutes = Math.floor((combinedTimeSec % 3600) / 60);
         document.getElementById('time-hours').textContent = hours;
         document.getElementById('time-minutes').textContent = String(minutes).padStart(2, '0');
 
-        const streakDays = stats.streak_days || 0;
-        const streakBest = stats.streak_best || 0;
-        const streakGap = stats.streak_gap || 0;
+        // Time source hint (show breakdown if both sources have data)
+        const timeHint = document.getElementById('time-source-hint');
+        if (timeHint) {
+            const taskTimeSec = learningSources.tasks?.time_spent_seconds || stats.total_time_spent || 0;
+            const mcTimeSec = learningSources.microcards?.time_spent_seconds || 0;
+            if (taskTimeSec > 0 && mcTimeSec > 0) {
+                const taskMin = Math.round(taskTimeSec / 60);
+                const mcMin = Math.round(mcTimeSec / 60);
+                timeHint.textContent = `(${taskMin} + ${mcMin} мин)`;
+            } else {
+                timeHint.textContent = '';
+            }
+        }
+
+        // Streak: canonical activity_streak (mixed activity)
+        const streakDays = stats.activity_streak_days || stats.streak_days || 0;
+        const streakBest = stats.activity_streak_best || stats.streak_best || 0;
         document.getElementById('streak-days').textContent = streakDays;
         const bestEl = document.getElementById('streak-best');
         if (bestEl) bestEl.textContent = streakBest;
 
-        const hasMetricData = hasStatsData;
-        toggleMetricEmpty('metric-tasks-value', 'metric-tasks-empty', hasMetricData);
-        toggleMetricEmpty('metric-time-value', 'metric-time-empty', hasMetricData);
-        toggleMetricEmpty('metric-streak-value', 'metric-streak-empty', hasMetricData);
+        // Microcards card
+        const mcReviewsEl = document.getElementById('microcards-reviews-count');
+        const mcRateEl = document.getElementById('microcards-correct-rate');
+        const mcBadge = document.getElementById('microcards-correct-badge');
+        if (mcReviewsEl) mcReviewsEl.textContent = mcReviewsTotal;
+        if (mcRateEl) {
+            const rate = mcStats.correct_rate || 0;
+            mcRateEl.textContent = mcReviewsTotal > 0 ? `${Math.round(rate * 100)}%` : '';
+        }
+        if (mcBadge) {
+            if (hasMcData) {
+                const rate = mcStats.correct_rate || 0;
+                const pct = Math.round(rate * 100);
+                mcBadge.textContent = `${mcStats.decks_active || 0} колод`;
+                mcBadge.classList.remove('hidden');
+                mcBadge.className = mcBadge.className.replace(/bg-\S+/g, '').replace(/text-\S+/g, '').trim();
+                mcBadge.classList.add('text-xs', 'px-2', 'py-1', 'rounded-full', 'font-bold',
+                    pct >= 80 ? 'bg-success-light' : pct >= 50 ? 'bg-warning-light' : 'bg-error-light',
+                    pct >= 80 ? 'text-success-dark' : pct >= 50 ? 'text-warning-dark' : 'text-error-dark'
+                );
+            } else {
+                mcBadge.classList.add('hidden');
+            }
+        }
 
-        ['metric-tasks', 'metric-time', 'metric-streak'].forEach((id) => {
+        // Toggle empty states per card
+        toggleMetricEmpty('metric-tasks-value', 'metric-tasks-empty', hasTasksData);
+        toggleMetricEmpty('metric-time-value', 'metric-time-empty', hasStatsData);
+        toggleMetricEmpty('metric-microcards-value', 'metric-microcards-empty', hasMcData);
+        toggleMetricEmpty('metric-streak-value', 'metric-streak-empty', hasStatsData);
+
+        ['metric-tasks', 'metric-time', 'metric-microcards', 'metric-streak'].forEach((id) => {
             const card = document.getElementById(id);
             if (!card) return;
-            card.classList.toggle('metric-card--empty', !hasMetricData);
+            const isEmpty = (id === 'metric-tasks') ? !hasTasksData
+                : (id === 'metric-microcards') ? !hasMcData
+                : !hasStatsData;
+            card.classList.toggle('metric-card--empty', isEmpty);
         });
 
-        this.updateMetricStyles(hasMetricData);
+        this.updateMetricStyles(hasStatsData, hasMcData);
     },
 
-    updateMetricStyles(hasData) {
+    updateMetricStyles(hasData, hasMcData) {
         const metricConfigs = [
-            { id: 'metric-tasks', iconId: 'metric-tasks-icon', color: 'info', icon: 'school' },
-            { id: 'metric-time', iconId: 'metric-time-icon', color: 'secondary', icon: 'schedule' },
-            { id: 'metric-streak', iconId: 'metric-streak-icon', color: 'accent', icon: 'local_fire_department' }
+            { id: 'metric-tasks', iconId: 'metric-tasks-icon', color: 'info', useHasData: true },
+            { id: 'metric-time', iconId: 'metric-time-icon', color: 'secondary', useHasData: true },
+            { id: 'metric-microcards', iconId: 'metric-microcards-icon', color: 'success', useHasMc: true },
+            { id: 'metric-streak', iconId: 'metric-streak-icon', color: 'accent', useHasData: true }
         ];
 
         metricConfigs.forEach(config => {
             const iconEl = document.getElementById(config.iconId);
-            if (hasData) {
+            if (!iconEl) return;
+            const active = config.useHasMc ? hasMcData : hasData;
+            if (active) {
                 iconEl.classList.remove('bg-bg-secondary', 'text-text-muted');
                 iconEl.classList.add(`bg-${config.color}-light`, `text-${config.color}-dark`);
             } else {
@@ -1154,28 +1208,33 @@ const StatisticsApp = {
         }, 200);
     },
 
-    // Упрощенный tooltip - только факты
+    // M8: mixed tooltip with microcards breakdown
     buildTooltipHtml(day) {
         const attempts = day.attempts ?? 0;
         const totalAttempts = day.total_attempts ?? attempts;
-        const study = day.study_minutes ?? 0;
+        const taskStudy = day.study_minutes ?? 0;
+        const mcReviews = day.microcards_reviews ?? 0;
+        const mcStudy = day.microcards_study_minutes ?? 0;
+        const combinedStudy = day.combined_study_minutes ?? (taskStudy + mcStudy);
+        const activityTotal = day.activity_attempts_total ?? (totalAttempts + mcReviews);
         const labelInfo = this.getDayLabelInfo(day.date);
 
-        return `
-            <div class="chart-tooltip-date">${this.formatFullDate(day.date)}${labelInfo.isToday ? ' · Сегодня' : ''}</div>
-            <div class="chart-tooltip-row">
-                <span>Решено задач:</span>
-                <span>${attempts}</span>
-            </div>
-            <div class="chart-tooltip-row">
-                <span>Всего попыток:</span>
-                <span>${totalAttempts}</span>
-            </div>
-            <div class="chart-tooltip-row">
-                <span>Время учёбы:</span>
-                <span>${study} мин</span>
-            </div>
-        `;
+        let html = `<div class="chart-tooltip-date">${this.formatFullDate(day.date)}${labelInfo.isToday ? ' \u00b7 \u0421\u0435\u0433\u043e\u0434\u043d\u044f' : ''}</div>`;
+
+        if (totalAttempts > 0 || mcReviews > 0) {
+            html += `<div class="chart-tooltip-row"><span>\u0412\u0441\u0435\u0433\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0439:</span><span>${activityTotal}</span></div>`;
+        }
+        if (totalAttempts > 0) {
+            html += `<div class="chart-tooltip-row"><span>\u0417\u0430\u0434\u0430\u0447\u0438:</span><span>${attempts} \u0443\u043d\u0438\u043a. / ${totalAttempts} \u043f\u043e\u043f.</span></div>`;
+        }
+        if (mcReviews > 0) {
+            const mcRate = day.microcards_correct_rate ?? 0;
+            const ratePct = Math.round(mcRate * 100);
+            html += `<div class="chart-tooltip-row"><span>\u041a\u0430\u0440\u0442\u043e\u0447\u043a\u0438:</span><span>${mcReviews} (${ratePct}%)</span></div>`;
+        }
+        html += `<div class="chart-tooltip-row"><span>\u0412\u0440\u0435\u043c\u044f:</span><span>${combinedStudy} \u043c\u0438\u043d</span></div>`;
+
+        return html;
     },
 
     updateChartLayoutState(hasData) {
@@ -1228,6 +1287,9 @@ const StatisticsApp = {
             const label = type.replace(/_/g, ' ');
             return label.replace(/\b\w/g, char => char.toUpperCase());
         };
+
+        // M8: Also render microcards performance section
+        this.renderMicrocardsPerformance();
 
         if (!hasAnyAttempts) {
             container.innerHTML = '<p class="text-sm text-text-muted text-center py-3">Пока нет данных по типам задач. Пройдите несколько заданий, чтобы увидеть статистику.</p>';
@@ -1374,13 +1436,107 @@ const StatisticsApp = {
         }).join('');
     },
 
+    // M8: Render microcards by_card_type breakdown in performance section
+    renderMicrocardsPerformance() {
+        const section = document.getElementById('microcards-performance');
+        const container = document.getElementById('microcards-performance-bars');
+        if (!section || !container) return;
+
+        const mcStats = this.state.stats?.microcards || {};
+        const byCardType = mcStats.by_card_type || {};
+        const hasMcData = (mcStats.reviews_total || 0) > 0;
+
+        if (!hasMcData) {
+            section.classList.add('hidden');
+            return;
+        }
+
+        section.classList.remove('hidden');
+
+        const typeConfig = {
+            fact_recall: { name: 'Вопрос-ответ', color: 'indigo', order: 1 },
+            pair_match: { name: 'Сопоставление', color: 'cyan', order: 2 }
+        };
+
+        const types = Object.keys(byCardType)
+            .sort((a, b) => (typeConfig[a]?.order ?? 50) - (typeConfig[b]?.order ?? 50));
+
+        if (types.length === 0) {
+            // Show overall rate if no by_card_type breakdown
+            const overallRate = Math.round((mcStats.correct_rate || 0) * 100);
+            container.innerHTML = `
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="text-text-main font-medium">Точность</span>
+                        <span class="text-text-main font-bold">${overallRate}%</span>
+                    </div>
+                    <div class="h-2 w-full bg-bg-secondary rounded-full overflow-hidden">
+                        <div class="h-full bg-success rounded-full transition-all duration-500" style="width: ${overallRate}%"></div>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = types.map(type => {
+            const config = typeConfig[type] || { name: type, color: 'slate' };
+            const data = byCardType[type] || {};
+            const reviews = data.reviews || 0;
+            const rate = Math.round((data.correct_rate || 0) * 100);
+            const perfectRate = data.perfect_rate != null ? Math.round(data.perfect_rate * 100) : null;
+
+            let rateLabel = `${rate}%`;
+            if (perfectRate != null && type === 'pair_match') {
+                rateLabel += ` (ид. ${perfectRate}%)`;
+            }
+
+            return `
+                <div>
+                    <div class="flex justify-between text-sm mb-1">
+                        <span class="${reviews > 0 ? 'text-text-main' : 'text-text-muted'} font-medium">${config.name}</span>
+                        <span class="${reviews > 0 ? 'text-text-main' : 'text-text-muted'} font-bold">${reviews > 0 ? rateLabel : '—'}</span>
+                    </div>
+                    <div class="h-2 w-full bg-bg-secondary rounded-full overflow-hidden">
+                        <div class="h-full bg-success rounded-full transition-all duration-500" style="width: ${rate}%"></div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        // Ratings distribution mini-bar
+        const ratings = mcStats.ratings_distribution || {};
+        const totalRatings = (ratings.again || 0) + (ratings.hard || 0) + (ratings.good || 0) + (ratings.easy || 0);
+        if (totalRatings > 0) {
+            const pct = (key) => Math.round(((ratings[key] || 0) / totalRatings) * 100);
+            container.innerHTML += `
+                <div class="mt-2">
+                    <div class="flex justify-between text-[10px] font-semibold text-text-secondary mb-1">
+                        <span>Распределение оценок</span>
+                    </div>
+                    <div class="flex h-2 w-full rounded-full overflow-hidden">
+                        <div class="bg-error h-full" style="width:${pct('again')}%" title="Снова: ${ratings.again || 0}"></div>
+                        <div class="bg-warning h-full" style="width:${pct('hard')}%" title="Трудно: ${ratings.hard || 0}"></div>
+                        <div class="bg-success h-full" style="width:${pct('good')}%" title="Хорошо: ${ratings.good || 0}"></div>
+                        <div class="bg-info h-full" style="width:${pct('easy')}%" title="Легко: ${ratings.easy || 0}"></div>
+                    </div>
+                    <div class="flex justify-between text-[9px] text-text-muted mt-0.5">
+                        <span>Снова</span>
+                        <span>Трудно</span>
+                        <span>Хорошо</span>
+                        <span>Легко</span>
+                    </div>
+                </div>
+            `;
+        }
+    },
+
     updateEmptyState() {
         const rightColumn = document.getElementById('right-column');
         const chartHeader = document.getElementById('chart-header');
 
-        // Check if we have ANY data at all for the right column (Performance & Complexes)
-        // We use state.stats which usually contains overall metrics and complex stats
-        const hasOverallStats = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0));
+        // M8: Check mixed data for right column visibility
+        const mcReviews = this.state.stats?.microcards?.reviews_total || 0;
+        const hasOverallStats = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0 || mcReviews > 0));
         const hasComplexData = Object.keys(this.state.complexStats || {}).length > 0;
 
         const rightColumnHasData = hasOverallStats || hasComplexData;

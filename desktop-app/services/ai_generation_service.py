@@ -19,6 +19,9 @@ from typing import Any, Dict, List, Optional, Tuple
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+from services.analysis_capability_matrix import apply_capability_matrix_v1_annotations
+from services.analysis_schema_v2 import normalize_analysis_schema_v2
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -39,6 +42,18 @@ class AnalysisResult:
     warnings: List[str] = field(default_factory=list)
     material_volume: str = "medium"
     target_language: Optional[str] = None
+    analysis_schema_version: Optional[str] = None
+    capability_matrix_version: Optional[str] = None
+    capability_matrix_validation: Optional[Dict[str, Any]] = None
+    learning_chunks: List[Dict[str, Any]] = field(default_factory=list)
+    type_progression_suitability: List[Dict[str, Any]] = field(default_factory=list)
+    authoring_routes: List[Dict[str, Any]] = field(default_factory=list)
+    coverage_plan: Dict[str, Any] = field(default_factory=dict)
+    future_capabilities: List[Dict[str, Any]] = field(default_factory=list)
+    microcards_candidates: List[Dict[str, Any]] = field(default_factory=list)
+    report_blocks_version: Optional[str] = None
+    report_blocks: List[Dict[str, Any]] = field(default_factory=list)
+    report_lint: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -51,6 +66,18 @@ class AnalysisResult:
             "warnings": self.warnings,
             "material_volume": self.material_volume,
             "target_language": self.target_language,
+            "analysis_schema_version": self.analysis_schema_version,
+            "capability_matrix_version": self.capability_matrix_version,
+            "capability_matrix_validation": self.capability_matrix_validation,
+            "learning_chunks": self.learning_chunks,
+            "type_progression_suitability": self.type_progression_suitability,
+            "authoring_routes": self.authoring_routes,
+            "coverage_plan": self.coverage_plan,
+            "future_capabilities": self.future_capabilities,
+            "microcards_candidates": self.microcards_candidates,
+            "report_blocks_version": self.report_blocks_version,
+            "report_blocks": self.report_blocks,
+            "report_lint": self.report_lint,
         }
 
 
@@ -522,7 +549,7 @@ ANALYSIS_PROMPT_ADDENDUM = r"""
 - Add `target_language` to top-level JSON (usually `ru`, `en`, or `mixed`) and keep generated task content in that language.
 - For each educational unit, MUST add `explicitness`, `evidence`, `modality`, and `assessment_risk` (do not omit these keys).
 - Prefer broad coverage and avoid recommending many tasks that test the same paragraph/fact repeatedly.
-- Recommend `SEQUENCE` only when the source explicitly defines an order/ranking; otherwise prefer `TEST` or `CLICK_TEXT`.
+- Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology).
 - In `not_recommended`, include short user-oriented guidance for unsupported/poor-fit task types: whether the material is suitable in principle and whether manual authoring is recommended (especially image-based tasks when illustrations are present).
 - If `illustrations_detected=true`, explicitly tell the user that image-based tasks are not auto-generated here and should be created manually if visual recognition matters.
 - Treat CLICK_WORDS as suitable when the material contains facts that can be intentionally distorted (numbers, dates, thresholds, terminology), even if the source text itself has no mistakes.
@@ -534,6 +561,27 @@ ANALYSIS_PROMPT_ADDENDUM = r"""
 - Use enum values exactly as requested: `explicitness` = `explicit|inferred`, `modality` = `text|visual|mixed`, `assessment_risk` = `low|medium|high`.
 - Keep `title` short, `description` concise (1 sentence), `evidence` brief (short phrase or citation clue).
 </analysis_strictness_addendum>
+"""
+
+ANALYSIS_V2_ROUTES_ADDENDUM = r"""
+
+<analysis_v2_routes_mode>
+- Output `analysis_schema_version` = `2.0` and keep legacy compatibility fields (`educational_units`, `recommendations`, `not_recommended`, `warnings`).
+- Also include practical v2 fields when possible: `learning_chunks`, `type_progression_suitability`, `authoring_routes`, `coverage_plan`, `future_capabilities`, `microcards_candidates`.
+- Build the analysis as practical routes and progression semantics, not only a flat list of task types.
+- Treat fixed progressions as fixed: do NOT present levels as arbitrary user choices for implemented complex task types.
+- In `type_progression_suitability`, describe level roles in `level_role_map`; for fixed progressions explain why each level matters for this material.
+- `SEQUENCE` is a universal structuring type (ordering, classification, hierarchy, ranking, grouping), not only chronology.
+- If `SEQUENCE` is suitable or recommended, set `sequence_intents` using only: `ordering`, `classification`, `hierarchy`, `ranking`, `grouping`.
+- When a route step uses `SEQUENCE`, include route-step `sequence_intent` with the same enum when relevant.
+- In `authoring_routes`, use concrete steps and target surfaces (`complexes`, `editor_manual`, `microcards`) instead of abstract advice.
+- For fixed progression route steps, use `progression_policy` = `full_fixed_progression` and never `pick_only_level`.
+- Do NOT invent new implemented task types such as `MATCH` or `CLASSIFY`.
+- `CLICK_TEXT` and `CLICK_WORDS` are error-detection/discrimination variants and must NOT be presented as `MATCH`.
+- Represent pair matching as a future capability: add `future_capabilities` entry with `capability_id` = `pair_matching`, truthful status (usually `planned`), `recommended_surface` = `microcards`, and `fallback_now`.
+- Do NOT claim `pair_matching` is an implemented complex task type; the first target implementation is microcards mode `pair_match`.
+- In `type_progression_suitability`, mark `availability` truthfully (`implemented`, `planned`, `microcards_only`, `unsupported`) and never present planned items as implemented.
+</analysis_v2_routes_mode>
 """
 
 ANALYSIS_COMPACT_RECOVERY_ADDENDUM = r"""
@@ -1060,7 +1108,8 @@ def _ensure_analysis_quality(
     data["recommendations"] = recommendations
     data["not_recommended"] = not_recommended
     data["warnings"] = warnings
-    return data
+    data = apply_capability_matrix_v1_annotations(data)
+    return normalize_analysis_schema_v2(data, material=material)
 
 
 def _guess_target_language(material: str) -> str:
@@ -2165,6 +2214,7 @@ class AIGenerationService:
         base_prompt = (
             STRUCTURED_ANALYSIS_PROMPT
             + ANALYSIS_PROMPT_ADDENDUM
+            + ANALYSIS_V2_ROUTES_ADDENDUM
             + ANALYSIS_CHUNK_FALLBACK_ADDENDUM
             + ANALYSIS_FORMAT_RECOVERY_ADDENDUM
             + ANALYSIS_COMPACT_RECOVERY_ADDENDUM
@@ -2263,6 +2313,7 @@ class AIGenerationService:
         analysis_prompt = (
             STRUCTURED_ANALYSIS_PROMPT
             + ANALYSIS_PROMPT_ADDENDUM
+            + ANALYSIS_V2_ROUTES_ADDENDUM
             + f"\n\n<target_language>{target_language}</target_language>"
         )
 
@@ -2369,6 +2420,7 @@ class AIGenerationService:
                 recovery_analysis_prompt = (
                     STRUCTURED_ANALYSIS_PROMPT
                     + ANALYSIS_PROMPT_ADDENDUM
+                    + ANALYSIS_V2_ROUTES_ADDENDUM
                     + recovery_addendum
                     + f"\n\n<target_language>{target_language}</target_language>"
                 )
@@ -2440,6 +2492,18 @@ class AIGenerationService:
                 warnings=analysis_data.get("warnings", []),
                 material_volume=analysis_data.get("material_volume", "medium"),
                 target_language=analysis_data.get("target_language", target_language),
+                analysis_schema_version=analysis_data.get("analysis_schema_version"),
+                capability_matrix_version=analysis_data.get("capability_matrix_version"),
+                capability_matrix_validation=analysis_data.get("capability_matrix_validation"),
+                learning_chunks=analysis_data.get("learning_chunks", []),
+                type_progression_suitability=analysis_data.get("type_progression_suitability", []),
+                authoring_routes=analysis_data.get("authoring_routes", []),
+                coverage_plan=analysis_data.get("coverage_plan", {}),
+                future_capabilities=analysis_data.get("future_capabilities", []),
+                microcards_candidates=analysis_data.get("microcards_candidates", []),
+                report_blocks_version=analysis_data.get("report_blocks_version"),
+                report_blocks=analysis_data.get("report_blocks", []),
+                report_lint=analysis_data.get("report_lint", {}),
             )
 
             return result, provider_name

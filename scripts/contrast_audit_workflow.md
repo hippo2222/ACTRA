@@ -28,6 +28,12 @@ S1 state matrix only:
 node scripts/contrast_audit.js --config scripts/contrast_audit.s1_state_matrix.config.json
 ```
 
+Editor P6 ("Анализ теории" report open/collapse) across themes:
+
+```bash
+npm run audit:contrast:editor-theory-p6
+```
+
 ## S1 state matrix scenarios
 
 Configured in `scripts/contrast_audit.s1_state_matrix.config.json`:

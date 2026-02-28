@@ -17,13 +17,42 @@ import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, date
 
 from services.progress_service import ProgressService
 from task_system.core.models.complex_models import (
     ExtendedSessionResultSummary,
     RecentSessionSummary
 )
+
+
+def _safe_int(value: Any, *, minimum: int = 0) -> int:
+    """Best-effort integer cast with lower-bound clamp."""
+    try:
+        parsed = int(value or 0)
+    except Exception:
+        parsed = 0
+    if parsed < minimum:
+        return minimum
+    return parsed
+
+
+def _safe_float(value: Any, *, minimum: float = 0.0) -> float:
+    """Best-effort float cast with lower-bound clamp."""
+    try:
+        parsed = float(value or 0.0)
+    except Exception:
+        parsed = 0.0
+    if parsed < minimum:
+        return minimum
+    return parsed
+
+
+def _safe_rate(numerator: int, denominator: int) -> float:
+    """Return rounded safe rate for non-negative counters."""
+    if denominator <= 0:
+        return 0.0
+    return round(float(numerator) / float(denominator), 3)
 
 
 class StatisticsService:
@@ -77,6 +106,9 @@ class StatisticsService:
         # Кэш динамики: {(user_id, days): (data, timestamp)}
         self._time_dynamics_cache: Dict[tuple, tuple] = {}
         self._time_dynamics_cache_ttl = 180  # 3 минуты достаточно для графика
+
+        # Lazy microcards analytics bridge (M6)
+        self._microcards_analytics_service: Optional[Any] = None
         
         # Подписываемся на события обновления прогресса для автоматической инвалидации кэша
         if event_bus:
@@ -93,6 +125,177 @@ class StatisticsService:
         self.module_repository = module_repository
         # Очищаем кэш при обновлении репозитория
         self._cache.clear()
+
+    def _get_microcards_analytics_service(self) -> Optional[Any]:
+        """
+        Lazily create microcards analytics service and reuse it across requests.
+
+        Uses a sentinel `False` value when initialization failed to avoid
+        repeated import/init attempts on every statistics call.
+        """
+        if self._microcards_analytics_service is False:
+            return None
+        if self._microcards_analytics_service is not None:
+            return self._microcards_analytics_service
+        try:
+            from services.microcards_analytics_service import MicrocardsAnalyticsService
+            self._microcards_analytics_service = MicrocardsAnalyticsService(str(self.data_dir))
+            return self._microcards_analytics_service
+        except Exception as exc:
+            self.logger.warning("Failed to initialize MicrocardsAnalyticsService bridge: %s", exc)
+            self._microcards_analytics_service = False
+            return None
+
+    def _read_json_file(self, path: Path, default: Any) -> Any:
+        if not path.exists():
+            return default
+        try:
+            with open(path, "r", encoding="utf-8") as fh:
+                return json.load(fh)
+        except Exception as exc:
+            self.logger.warning("Failed to read JSON file %s: %s", path, exc)
+            return default
+
+    def _normalize_ratings_distribution(self, raw: Any) -> Dict[str, int]:
+        payload = raw if isinstance(raw, dict) else {}
+        return {
+            "again": _safe_int(payload.get("again"), minimum=0),
+            "hard": _safe_int(payload.get("hard"), minimum=0),
+            "good": _safe_int(payload.get("good"), minimum=0),
+            "easy": _safe_int(payload.get("easy"), minimum=0),
+        }
+
+    def _empty_microcards_overall_payload(self) -> Dict[str, Any]:
+        return {
+            "reviews_total": 0,
+            "correct_rate": 0.0,
+            "time_spent_seconds": 0,
+            "decks_active": 0,
+            "by_card_type": {},
+            "ratings_distribution": self._normalize_ratings_distribution({}),
+        }
+
+    def _build_microcards_overall_payload(self, user_id: str) -> Dict[str, Any]:
+        """
+        Build additive microcards block for /api/statistics/overall.
+
+        Reads from M5 analytics summary so runtime/home/stats use one source.
+        """
+        svc = self._get_microcards_analytics_service()
+        if svc is None:
+            return self._empty_microcards_overall_payload()
+
+        try:
+            summary = svc.get_summary(user_id=user_id)
+            totals = summary.get("totals") if isinstance(summary.get("totals"), dict) else {}
+            by_card_type = summary.get("by_card_type") if isinstance(summary.get("by_card_type"), dict) else {}
+            ratings_distribution = self._normalize_ratings_distribution(summary.get("ratings_distribution"))
+            return {
+                "reviews_total": _safe_int(totals.get("reviews"), minimum=0),
+                "correct_rate": round(_safe_float(totals.get("correct_rate"), minimum=0.0), 3),
+                "time_spent_seconds": _safe_int(totals.get("time_spent_seconds"), minimum=0),
+                "decks_active": _safe_int(totals.get("decks_active"), minimum=0),
+                "by_card_type": by_card_type,
+                "ratings_distribution": ratings_distribution,
+            }
+        except Exception as exc:
+            self.logger.warning("Failed to build microcards overall payload for user %s: %s", user_id, exc)
+            return self._empty_microcards_overall_payload()
+
+    def _load_calendar_activity(self, user_id: str) -> Dict[str, Any]:
+        payload = self._read_json_file(
+            self.data_dir / "user_calendar" / user_id / "activity.json",
+            {},
+        )
+        if isinstance(payload, dict):
+            return payload
+        return {}
+
+    def _has_learning_activity(self, day_payload: Any) -> bool:
+        if isinstance(day_payload, dict):
+            attempts = _safe_int(day_payload.get("activity_attempts_total"), minimum=0)
+            if attempts <= 0:
+                # Legacy fallback: old payloads may not have mixed totals yet.
+                attempts = (
+                    _safe_int(day_payload.get("tasks_attempted"), minimum=0)
+                    + _safe_int(day_payload.get("microcards_reviews"), minimum=0)
+                )
+            completion = _safe_int(day_payload.get("completion_percent"), minimum=0)
+            return attempts > 0 or completion > 0
+        if isinstance(day_payload, (int, float)):
+            return int(day_payload) > 0
+        return False
+
+    def _extract_microcards_day_metrics(self, day_payload: Any) -> Dict[str, int]:
+        if not isinstance(day_payload, dict):
+            return {
+                "reviews": 0,
+                "correct_reviews": 0,
+                "time_spent_seconds": 0,
+            }
+        return {
+            "reviews": _safe_int(day_payload.get("microcards_reviews"), minimum=0),
+            "correct_reviews": _safe_int(day_payload.get("microcards_correct"), minimum=0),
+            "time_spent_seconds": _safe_int(day_payload.get("microcards_seconds_spent"), minimum=0),
+        }
+
+    def _compute_activity_streak_metrics(self, user_id: str) -> Dict[str, int]:
+        """
+        Compute mixed activity streak metrics from calendar activity history.
+
+        `activity_streak_days` is the current streak (active today or yesterday),
+        `activity_streak_best` is the best consecutive run in history.
+        """
+        activity = self._load_calendar_activity(user_id)
+        active_dates: List[date] = []
+        for day_iso, day_payload in activity.items():
+            try:
+                day_obj = date.fromisoformat(str(day_iso))
+            except Exception:
+                continue
+            if self._has_learning_activity(day_payload):
+                active_dates.append(day_obj)
+
+        if not active_dates:
+            return {"activity_streak_days": 0, "activity_streak_best": 0}
+
+        active_dates = sorted(set(active_dates))
+        today = date.today()
+        active_dates = [item for item in active_dates if item <= today]
+        if not active_dates:
+            return {"activity_streak_days": 0, "activity_streak_best": 0}
+
+        best_streak = 0
+        run = 0
+        prev_day: Optional[date] = None
+        for day_obj in active_dates:
+            if prev_day is None:
+                run = 1
+            else:
+                gap = (day_obj - prev_day).days
+                if gap == 1:
+                    run += 1
+                else:
+                    run = 1
+            best_streak = max(best_streak, run)
+            prev_day = day_obj
+
+        current_streak = 0
+        last_day = active_dates[-1]
+        if (today - last_day).days <= 1:
+            current_streak = 1
+            prev_cursor = last_day
+            for day_obj in reversed(active_dates[:-1]):
+                if (prev_cursor - day_obj).days == 1:
+                    current_streak += 1
+                    prev_cursor = day_obj
+                else:
+                    break
+
+        return {
+            "activity_streak_days": current_streak,
+            "activity_streak_best": best_streak,
+        }
     
     def aggregate_statistics(
         self,
@@ -360,6 +563,27 @@ class StatisticsService:
                     total_tasks_available = repo_stats.get("tasks", 0)
                 except Exception as e:
                     self.logger.warning(f"Failed to get total tasks count: {e}")
+
+            # M6: mixed-aware additive fields (legacy task-centric fields stay unchanged)
+            microcards_stats = self._build_microcards_overall_payload(user_id=user_id)
+            activity_streak = self._compute_activity_streak_metrics(user_id=user_id)
+            learning_sources = {
+                "tasks": {
+                    "attempts": total_attempts,
+                    "time_spent_seconds": total_time_spent,
+                },
+                "microcards": {
+                    "attempts": _safe_int(microcards_stats.get("reviews_total"), minimum=0),
+                    "time_spent_seconds": _safe_int(microcards_stats.get("time_spent_seconds"), minimum=0),
+                },
+            }
+            learning_sources["combined"] = {
+                "attempts": learning_sources["tasks"]["attempts"] + learning_sources["microcards"]["attempts"],
+                "time_spent_seconds": (
+                    learning_sources["tasks"]["time_spent_seconds"]
+                    + learning_sources["microcards"]["time_spent_seconds"]
+                ),
+            }
             
             # Логируем детальную информацию для отладки
             self.logger.debug(
@@ -387,6 +611,10 @@ class StatisticsService:
                 "streak_best": best_streak,
                 "streak_gap": streak_gap,
                 "completed_complexes_today": completed_complexes_today,
+                "activity_streak_days": _safe_int(activity_streak.get("activity_streak_days"), minimum=0),
+                "activity_streak_best": _safe_int(activity_streak.get("activity_streak_best"), minimum=0),
+                "microcards": microcards_stats,
+                "learning_sources": learning_sources,
             }
             
             # Сохраняем в кэш
@@ -410,7 +638,15 @@ class StatisticsService:
                 "success_rate": 0.0,
                 "total_time_spent": 0,
                 "by_task_type": {},
-                "last_updated": time.strftime("%Y-%m-%d %H:%M:%S")
+                "last_updated": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "activity_streak_days": 0,
+                "activity_streak_best": 0,
+                "microcards": self._empty_microcards_overall_payload(),
+                "learning_sources": {
+                    "tasks": {"attempts": 0, "time_spent_seconds": 0},
+                    "microcards": {"attempts": 0, "time_spent_seconds": 0},
+                    "combined": {"attempts": 0, "time_spent_seconds": 0},
+                },
             }
     
     def get_weak_areas(self, user_id: str, threshold: Optional[float] = None) -> List[Dict[str, Any]]:
@@ -578,6 +814,7 @@ class StatisticsService:
         try:
             progress_data = self.progress_service.progress_manager.get_progress_data()
             task_history = progress_data.get("task_history", {})
+            activity_map = self._load_calendar_activity(user_id)
             completion_dates_set = set(
                 (entry or {}).get("date")
                 for entry in progress_data.get("complex_completions", []) or []
@@ -751,6 +988,12 @@ class StatisticsService:
                     if "score" in attempt
                 ]
                 avg_score = sum(scores_end) / len(scores_end) if scores_end else 0.0
+                task_study_minutes = int(round(stats["study_seconds"] / 60))
+                microcards_day = self._extract_microcards_day_metrics(activity_map.get(date_key))
+                microcards_reviews = _safe_int(microcards_day.get("reviews"), minimum=0)
+                microcards_correct_reviews = _safe_int(microcards_day.get("correct_reviews"), minimum=0)
+                microcards_time_spent_seconds = _safe_int(microcards_day.get("time_spent_seconds"), minimum=0)
+                microcards_study_minutes = int(round(microcards_time_spent_seconds / 60))
                 
                 result.append({
                     "date": date_key,
@@ -760,7 +1003,22 @@ class StatisticsService:
                     "success_rate_start": round(success_rate_start, 3),
                     "success_rate_delta": round(success_delta, 3),
                     "average_score": round(avg_score, 3),
-                    "study_minutes": int(round(stats["study_seconds"] / 60)),
+                    "study_minutes": task_study_minutes,
+                    "microcards_reviews": microcards_reviews,
+                    "microcards_correct_rate": _safe_rate(microcards_correct_reviews, microcards_reviews),
+                    "microcards_study_minutes": microcards_study_minutes,
+                    "combined_study_minutes": task_study_minutes + microcards_study_minutes,
+                    "activity_attempts_total": _safe_int(stats["total_attempts"], minimum=0) + microcards_reviews,
+                    "source_breakdown": {
+                        "tasks": {
+                            "attempts": _safe_int(stats["total_attempts"], minimum=0),
+                            "study_minutes": task_study_minutes,
+                        },
+                        "microcards": {
+                            "attempts": microcards_reviews,
+                            "study_minutes": microcards_study_minutes,
+                        },
+                    },
                     "streak_gap": 0,
                     "streak_break": False,
                     "events": []
@@ -866,9 +1124,22 @@ class StatisticsService:
             keys_to_delete = [key for key in self._time_dynamics_cache if key[0] == user_id]
             for key in keys_to_delete:
                 del self._time_dynamics_cache[key]
+
+            microcards_service = self._microcards_analytics_service
+            if microcards_service not in (None, False) and hasattr(microcards_service, "clear_cache"):
+                try:
+                    microcards_service.clear_cache(user_id)
+                except Exception as exc:
+                    self.logger.warning("Failed to clear microcards analytics cache for user %s: %s", user_id, exc)
         else:
             self._cache.clear()
             self._time_dynamics_cache.clear()
+            microcards_service = self._microcards_analytics_service
+            if microcards_service not in (None, False) and hasattr(microcards_service, "clear_cache"):
+                try:
+                    microcards_service.clear_cache()
+                except Exception as exc:
+                    self.logger.warning("Failed to clear microcards analytics cache: %s", exc)
             self.logger.debug("Cleared all statistics cache")
     
     def _on_progress_updated(self, user_id: str) -> None:

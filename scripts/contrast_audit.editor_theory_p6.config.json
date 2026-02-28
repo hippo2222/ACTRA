@@ -1,0 +1,104 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_editor_theory_p6",
+  "headless": true,
+  "afterThemeWaitMs": 400,
+  "failOnIssues": true,
+  "failOnCoverageMissing": false,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "warnExcessiveTextContrast": false,
+    "ignoreModalBackdropPanelWarnings": true,
+    "ignoreNativeToggleBorderWarnings": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "Editor Theory Analysis P6 (report open)",
+      "url": "/ui/editor",
+      "waitFor": "#import-modal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "waitForFunction",
+          "timeout": 20000,
+          "script": "return !!(window.dashboard && window.dashboard.importManager);"
+        },
+        {
+          "type": "evaluate",
+          "script": "const im=window.dashboard&&window.dashboard.importManager; if(!im) return {ok:false,error:'import_manager_missing'}; im.aiCheckStatus=async function(){ this.aiStatus={ai_available:true}; return {ok:true, ai_available:true}; }; im.loadTheoryAnalysisRuns=async function(){ this.theoryRuns=[]; this.theoryRunsLoading=false; this.theoryRunsError=''; return {ok:true, items:[]}; }; if(window.dashboard&&typeof window.dashboard.showTheoryAnalysisModal==='function'){ window.dashboard.showTheoryAnalysisModal(); } for(const el of Array.from(document.body.children)){ if(el && el.id!=='import-modal'){ el.style.display='none'; } } return {ok:true};",
+          "waitMs": 250
+        },
+        {
+          "type": "waitForFunction",
+          "timeout": 20000,
+          "script": "const m=document.getElementById('import-modal'); const im=window.dashboard&&window.dashboard.importManager; return !!(m && !m.classList.contains('hidden') && im && im.modalPurpose==='theory_analysis');"
+        },
+        {
+          "type": "evaluate",
+          "arg": {
+            "collapsed": false,
+            "unitCount": 16,
+            "reportScrollTop": 180
+          },
+          "script": "const im=window.dashboard&&window.dashboard.importManager; if(!im) return {ok:false,error:'import_manager_missing'}; const argObj=arg||{}; const unitCount=Math.max(8, Number(argObj.unitCount||14)); const makeUnits=()=>Array.from({length:unitCount}, (_,i)=>({ id:i+1, title:'Единица '+(i+1), type:['concept','process','fact','term','classification'][i%5], description:'Краткое описание единицы '+(i+1)+' для проверки контрастности и плотности контента.' })); const units=makeUnits(); const chunks=[ {id:'chunk_1', title:'Блок 1', chunk_type:'classification', unit_ids:[1,2,3,4]}, {id:'chunk_2', title:'Блок 2', chunk_type:'process', unit_ids:[5,6,7,8]}, {id:'chunk_3', title:'Блок 3', chunk_type:'hierarchy', unit_ids:[9,10,11,12]}, {id:'chunk_4', title:'Блок 4', chunk_type:'contrast', unit_ids:[13,14,15,16].filter((n)=>n<=units.length)} ]; const suitability=[ {task_type:'SEQUENCE', availability:'implemented', progression_is_fixed:true, complex_role:'core', suitability:'high', priority:'high', why:'Подходит для структурирования и классификации материала.'}, {task_type:'TEST', availability:'implemented', progression_is_fixed:true, complex_role:'core', suitability:'high', priority:'high', why:'Закрывает распознавание и воспроизведение терминов.'}, {task_type:'OPEN_ANSWER', availability:'implemented', progression_is_fixed:true, complex_role:'core', suitability:'medium', priority:'medium', why:'Полезен для объяснения причинно-следственных связей.'}, {task_type:'CLICK', subtype:'error_detection', availability:'implemented', progression_is_fixed:true, complex_role:'finisher_special', suitability:'medium', priority:'low', why:'Подходит как финализатор на различение ошибок.'} ]; const routes=[ {id:'route_1', title:'Быстрый путь через SEQUENCE', route_kind:'complex_progression', target_surface:'complexes', effort_estimate:'medium', steps:[{step_id:'r1s1'},{step_id:'r1s2'}]}, {id:'route_2', title:'Гибрид: TEST + OPEN_ANSWER', route_kind:'hybrid', target_surface:'mixed', effort_estimate:'high', steps:[{step_id:'r2s1'},{step_id:'r2s2'},{step_id:'r2s3'}]}, {id:'route_3', title:'Поддержка повторения микрокарточками', route_kind:'microcards_support', target_surface:'microcards', effort_estimate:'low', steps:[{step_id:'r3s1'}]} ]; const recs=[ {task_type:'SEQUENCE', count:4, priority:'high', rationale:'Использовать как базовый тип для структурирования.', covers_units:[1,2,3,4,5,6]}, {task_type:'TEST', count:6, priority:'high', rationale:'Проверка терминов и фактов.', covers_units:[2,4,6,8,10,12]}, {task_type:'OPEN_ANSWER', count:2, priority:'medium', rationale:'Проверка объяснения механизма.', covers_units:[5,7,11]}, {task_type:'CLICK_WORDS', count:2, priority:'low', rationale:'Точечное различение ошибок и формулировок.', covers_units:[9,13]} ]; const futureCaps=[ {capability_id:'pair_matching', display_name:'MATCH (сопоставление пар)', status:'microcards_mvp', suitability:'high', why:'Есть много терминов и определений для сопоставления.'}, {capability_id:'explanation_drill', display_name:'EXPLAIN drill', status:'planned', suitability:'medium', why:'Можно усилить тренировку объяснений короткими карточками.'} ]; const microcards=Array.from({length:6}, (_,i)=>({ candidate_id:'mc_'+(i+1), unit_id:(i%units.length)+1, chunk_id:chunks[i%chunks.length].id, card_type:['pair_match','term_definition','fact_recall','numeric_anchor','contrast_pair','cloze'][i%6], priority:i<3?'high':'medium', prompt_seed:'Заготовка вопроса '+(i+1) })); const notRec=[ {task_type:'DRAW', reason:'В исходном материале нет визуальных опор для качественного задания.'}, {task_type:'CLICK_TEXT', reason:'Низкая добавочная ценность относительно TEST для этого объёма.'} ]; const a={ ok:true, ai_run_id:'audit_p6_demo_run', analysis_created_at:'2026-02-25T12:00:00Z', material_language:'ru', target_language:'ru', effective_output_language:'ru', provider_used:'fixture', provider_model:'contrast-audit', analysis_schema_version:'2.0', report_blocks_version:'1.0', human_summary:'Фикстурный результат для проверки контрастности и UX P6 (open/collapse report) в режиме анализа теории.', warnings:['Проверочный warning #1', 'Проверочный warning #2'], educational_units:units, learning_chunks:chunks, recommendations:recs, not_recommended:notRec, type_progression_suitability:suitability, authoring_routes:routes, future_capabilities:futureCaps, microcards_candidates:microcards }; im.materialText=Array.from({length:120}, (_,i)=>'слово'+(i+1)).join(' '); im.aiStatus={ai_available:true}; im.analysisResult=a; im.aiRunId=a.ai_run_id; im.aiAnalyzing=false; im.theoryReportPanelOpen=!(argObj.collapsed===true); im.theoryReportScrollTop=0; im.skipTheoryViewStateCaptureOnce=true; im.renderTheoryAnalysisMode(); const toggle=document.querySelector('[data-role=\"theory-report-toggle-btn\"]'); if(!toggle) return {ok:false,error:'toggle_missing'}; if(argObj.collapsed===true){ im.toggleTheoryAnalysisReportPanel(false); } const reportBody=document.querySelector('[data-role=\"theory-analysis-report-body\"]'); if(reportBody && argObj.collapsed!==true){ reportBody.scrollTop=Math.max(0, Number(argObj.reportScrollTop||120)); im.theoryReportScrollTop=reportBody.scrollTop; } return {ok:true, collapsed:im.theoryReportPanelOpen===false, units:units.length};",
+          "waitMs": 200
+        },
+        {
+          "type": "waitFor",
+          "selector": "[data-role='theory-analysis-report-panel']"
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-role='theory-report-toggle-btn']", "waitMs": 80 },
+        { "type": "focus", "selector": "[data-role='theory-report-toggle-btn']", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Editor Theory Analysis P6 (report collapsed)",
+      "url": "/ui/editor",
+      "waitFor": "#import-modal",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "waitForFunction",
+          "timeout": 20000,
+          "script": "return !!(window.dashboard && window.dashboard.importManager);"
+        },
+        {
+          "type": "evaluate",
+          "script": "const im=window.dashboard&&window.dashboard.importManager; if(!im) return {ok:false,error:'import_manager_missing'}; im.aiCheckStatus=async function(){ this.aiStatus={ai_available:true}; return {ok:true, ai_available:true}; }; im.loadTheoryAnalysisRuns=async function(){ this.theoryRuns=[]; this.theoryRunsLoading=false; this.theoryRunsError=''; return {ok:true, items:[]}; }; if(window.dashboard&&typeof window.dashboard.showTheoryAnalysisModal==='function'){ window.dashboard.showTheoryAnalysisModal(); } for(const el of Array.from(document.body.children)){ if(el && el.id!=='import-modal'){ el.style.display='none'; } } return {ok:true};",
+          "waitMs": 250
+        },
+        {
+          "type": "waitForFunction",
+          "timeout": 20000,
+          "script": "const m=document.getElementById('import-modal'); const im=window.dashboard&&window.dashboard.importManager; return !!(m && !m.classList.contains('hidden') && im && im.modalPurpose==='theory_analysis');"
+        },
+        {
+          "type": "evaluate",
+          "arg": {
+            "collapsed": true,
+            "unitCount": 16
+          },
+          "script": "const im=window.dashboard&&window.dashboard.importManager; if(!im) return {ok:false,error:'import_manager_missing'}; const argObj=arg||{}; const unitCount=Math.max(8, Number(argObj.unitCount||14)); const units=Array.from({length:unitCount}, (_,i)=>({ id:i+1, title:'Единица '+(i+1), type:['concept','process','fact','term','classification'][i%5], description:'Краткое описание единицы '+(i+1)+' для проверки контрастности и плотности контента.' })); const chunks=[ {id:'chunk_1', title:'Блок 1', chunk_type:'classification', unit_ids:[1,2,3,4]}, {id:'chunk_2', title:'Блок 2', chunk_type:'process', unit_ids:[5,6,7,8]} ]; const a={ ok:true, ai_run_id:'audit_p6_demo_run_collapsed', analysis_created_at:'2026-02-25T12:00:00Z', material_language:'ru', target_language:'ru', effective_output_language:'ru', provider_used:'fixture', provider_model:'contrast-audit', analysis_schema_version:'2.0', report_blocks_version:'1.0', human_summary:'Фикстурный результат для проверки состояния свёрнутого отчёта P6.', warnings:['Проверочный warning'], educational_units:units, learning_chunks:chunks, recommendations:[{task_type:'SEQUENCE',count:4,priority:'high',rationale:'Базовое структурирование.',covers_units:[1,2,3,4]}], not_recommended:[{task_type:'DRAW', reason:'Нет визуального материала.'}], type_progression_suitability:[{task_type:'SEQUENCE',suitability:'high',why:'Структура и классификация.'}], authoring_routes:[{id:'route_1', title:'Короткий маршрут', route_kind:'complex_progression', target_surface:'complexes', effort_estimate:'low', steps:[{step_id:'s1'}]}], future_capabilities:[{capability_id:'pair_matching', display_name:'MATCH (сопоставление пар)', status:'microcards_mvp', suitability:'high', why:'Подходит для терминов.'}], microcards_candidates:[{candidate_id:'mc_1', unit_id:1, chunk_id:'chunk_1', card_type:'pair_match', priority:'high', prompt_seed:'Термин — определение'}] }; im.materialText=Array.from({length:100}, (_,i)=>'текст'+(i+1)).join(' '); im.aiStatus={ai_available:true}; im.analysisResult=a; im.aiRunId=a.ai_run_id; im.aiAnalyzing=false; im.theoryReportPanelOpen=false; im.theoryReportScrollTop=0; im.skipTheoryViewStateCaptureOnce=true; im.renderTheoryAnalysisMode(); const toggle=document.querySelector('[data-role=\"theory-report-toggle-btn\"]'); const collapsedNote=document.querySelector('[data-role=\"theory-analysis-report-collapsed\"]'); if(!toggle || !collapsedNote || collapsedNote.classList.contains('hidden')) return {ok:false,error:'collapsed_state_not_rendered'}; return {ok:true};",
+          "waitMs": 150
+        },
+        {
+          "type": "waitFor",
+          "selector": "[data-role='theory-analysis-report-collapsed']"
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-role='theory-report-toggle-btn']", "waitMs": 80 },
+        { "type": "focus", "selector": "[data-role='theory-report-toggle-btn']", "waitMs": 80 }
+      ]
+    }
+  ]
+}

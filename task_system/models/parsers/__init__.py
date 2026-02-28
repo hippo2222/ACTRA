@@ -7,11 +7,13 @@ from .sequence_parser import SequenceParser
 from .click_text_parser import ClickTextParser
 from .click_words_parser import ClickWordsParser
 from .test_import_parser import TestImportParser
+from .microcard_parser import MicrocardParser
 
 __all__ = [
     'OpenAnswerParser',
     'SequenceParser',
     'ClickTextParser',
     'ClickWordsParser',
-    'TestImportParser'
+    'TestImportParser',
+    'MicrocardParser',
 ]

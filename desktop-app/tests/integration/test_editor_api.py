@@ -300,6 +300,36 @@ def test_editor_save_copies_images(client, temp_test_task):
     assert copied.exists()
 
 
+def test_editor_save_preserves_analysis_grounding_meta(client, temp_test_task):
+    module_id, topic_id, task_id, task_dir = temp_test_task
+    task_json = task_dir / "task.json"
+    payload = json.loads(task_json.read_text(encoding="utf-8"))
+
+    payload.setdefault("meta", {})
+    payload["meta"]["ai_run_id"] = "ai_run_20260225T170000Z_meta555"
+    payload["meta"]["educational_unit_ids"] = [1, 2]
+    payload["meta"]["analysis_chunk_ids"] = ["chunk_1", "chunk_2"]
+    payload["meta"]["source_grounding"] = {"score": 0.42, "weak": True}
+
+    resp = client.post(f"/api/editor/task/{module_id}/{topic_id}/{task_id}", json=payload)
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
+
+    saved = json.loads(task_json.read_text(encoding="utf-8"))
+    meta = saved["meta"]
+    assert meta["ai_run_id"] == "ai_run_20260225T170000Z_meta555"
+    assert meta["educational_unit_ids"] == [1, 2]
+    assert meta["analysis_chunk_ids"] == ["chunk_1", "chunk_2"]
+    assert meta["source_grounding"]["weak"] is True
+
+    get_resp = client.get(f"/api/editor/task/{module_id}/{topic_id}/{task_id}")
+    assert get_resp.status_code == 200
+    loaded_meta = get_resp.get_json()["task"]["task_data"]["meta"]
+    assert loaded_meta["ai_run_id"] == "ai_run_20260225T170000Z_meta555"
+    assert loaded_meta["educational_unit_ids"] == [1, 2]
+    assert loaded_meta["analysis_chunk_ids"] == ["chunk_1", "chunk_2"]
+
+
 def test_editor_delete_task_endpoint(client, temp_test_task):
     module_id, topic_id, task_id, task_dir = temp_test_task
     assert task_dir.exists()

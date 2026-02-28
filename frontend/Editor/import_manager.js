@@ -38,6 +38,159 @@ class ImportManager {
         this.aiAnalyzing = false;
         this.importInProgress = false;
         this.importRequestKey = null;
+
+        // Shared modal can run in classic import mode or standalone theory analysis mode (P5)
+        this.modalPurpose = 'import'; // 'import' | 'theory_analysis'
+        this.theoryRuns = [];
+        this.theoryRunsLoading = false;
+        this.theoryRunsError = '';
+        this.theoryRunsRequestToken = 0;
+        this.theoryOpeningRunId = null;
+        this.theoryReportPanelOpen = true; // P6: quick open/collapse report instead of persistent panel
+        this.theoryReportScrollTop = 0;
+        this.theoryComposerViewState = null;
+        this.skipTheoryViewStateCaptureOnce = false;
+        this.theoryReportBlockCollapseState = new Map(); // P7: per-block collapse state in report_blocks renderer
+        this.theoryReportActiveAnchor = null;
+        this.theoryReportAnchorHighlightTimer = null;
+        this.theorySubMode = 'analysis'; // 'analysis' | 'microcards'
+
+        // P9 microcards mode state (separate mode inside theory analysis modal)
+        this.microcardsDecks = [];
+        this.microcardsDecksLoading = false;
+        this.microcardsDecksError = '';
+        this.microcardsActiveDeck = null;
+        this.microcardsSession = null;
+        this.microcardsQueue = [];
+        this.microcardsQueueIndex = 0;
+        this.microcardsQueueLoading = false;
+        this.microcardsReviewSubmitting = false;
+        this.microcardsReviewReveal = false;
+        this.microcardsReviewEvaluation = null;
+        this.microcardsReviewStartedAt = 0;
+        this.microcardsPairSelections = {};
+        this.microcardsCreateLoading = false;
+
+        // M11 manual editor state
+        this.manualEditorDeck = null;         // full deck object with cards for editing
+        this.manualEditorDeckLoading = false;
+        this.manualEditorCardForm = null;     // { mode: 'create'|'edit', card_id?, front_text, back_text, tags, difficulty_hint }
+        this.manualEditorSaving = false;
+        this.manualEditorRenamingDeckId = null;
+        this.manualEditorPreviewCard = null;  // card object for review-like preview
+
+        // M12 text import state
+        this.mcImportText = '';
+        this.mcImportParsing = false;
+        this.mcImportParsedResult = null;     // result from parse-text endpoint
+        this.mcImportExecuting = false;
+        this.mcImportExecuteResult = null;    // result from execute-text endpoint
+        this.mcImportMode = 'create_deck';    // 'create_deck' | 'append_to_deck'
+        this.mcImportTargetDeckId = '';
+        this.mcImportDeckName = '';
+        this.mcImportTemplateType = 'qa_short'; // active prompt template key
+
+        // P8 bridge: shared context between theory report and manual editors
+        this.editorTheoryBridgeStorageKey = 'rp_editor_theory_bridge_v1';
+
+        // P12 quality gates: server-provided theory feature flags (defaults keep legacy behavior unchanged)
+        this.theoryFeatureFlags = {
+            analysis_v2_schema: true,
+            analysis_report_blocks_v1: true,
+            analysis_report_renderer_v1: true,
+            editor_analysis_report_link: true,
+            analysis_coverage_in_editor: true,
+            microcards_mode: true,
+            microcards_pair_match: true,
+        };
+    }
+
+    updateTheoryFeatureFlagsFromPayload(payload) {
+        const src = payload && typeof payload === 'object' && payload.feature_flags && typeof payload.feature_flags === 'object'
+            ? payload.feature_flags
+            : null;
+        if (!src) return this.theoryFeatureFlags;
+        const next = { ...(this.theoryFeatureFlags || {}) };
+        Object.keys(next).forEach((key) => {
+            if (Object.prototype.hasOwnProperty.call(src, key)) {
+                next[key] = !!src[key];
+            }
+        });
+        if (next.analysis_v2_schema === false) {
+            next.analysis_report_blocks_v1 = false;
+            next.analysis_report_renderer_v1 = false;
+        }
+        if (next.analysis_report_blocks_v1 === false) {
+            next.analysis_report_renderer_v1 = false;
+        }
+        if (next.microcards_mode === false) {
+            next.microcards_pair_match = false;
+        }
+        this.theoryFeatureFlags = next;
+        return next;
+    }
+
+    isTheoryFeatureEnabled(flagName, defaultValue = true) {
+        const key = String(flagName || '').trim();
+        if (!key) return !!defaultValue;
+        const flags = (this.theoryFeatureFlags && typeof this.theoryFeatureFlags === 'object') ? this.theoryFeatureFlags : {};
+        if (!Object.prototype.hasOwnProperty.call(flags, key)) return !!defaultValue;
+        return !!flags[key];
+    }
+
+    ensureTheoryFeatureEnabled(flagName, message, level = 'warning') {
+        if (this.isTheoryFeatureEnabled(flagName, true)) return true;
+        if (message) this.showToast(message, level);
+        return false;
+    }
+
+    setModalPurpose(purpose) {
+        this.modalPurpose = purpose === 'theory_analysis' ? 'theory_analysis' : 'import';
+        const modal = document.getElementById('import-modal');
+        if (!modal) return;
+
+        const titleEl = modal.querySelector('[data-role="import-modal-title"]')
+            || modal.querySelector('h2.text-xl.font-bold.text-text-main');
+        const stepsPanel = modal.querySelector('[data-role="import-steps-panel"]');
+        const footer = modal.querySelector('[data-role="import-footer"]');
+        const content = modal.querySelector('[data-role="import-content"]');
+
+        if (titleEl) {
+            titleEl.textContent = this.modalPurpose === 'theory_analysis' ? 'Анализ теории' : 'Импорт заданий';
+        }
+        if (stepsPanel) {
+            stepsPanel.classList.toggle('hidden', this.modalPurpose === 'theory_analysis');
+        }
+        if (footer) {
+            footer.classList.toggle('hidden', this.modalPurpose === 'theory_analysis');
+        }
+        if (content) {
+            content.classList.toggle('p-6', this.modalPurpose !== 'theory_analysis');
+            content.classList.toggle('p-5', this.modalPurpose === 'theory_analysis');
+        }
+        modal.style.background = this.modalPurpose === 'theory_analysis' ? 'rgba(0, 0, 0, 0.52)' : '';
+    }
+
+    enterImportModalMode() {
+        this.setModalPurpose('import');
+    }
+
+    async openTheoryAnalysisMode() {
+        this.setModalPurpose('theory_analysis');
+        this.theorySubMode = 'analysis';
+        this.currentStep = 1;
+        this.generationResult = null;
+        this.parsedResult = null;
+        this.excludedTasks.clear();
+        this.selectedTasks.clear();
+        this.importRequestKey = null;
+        this.aiSelectedRecs.clear();
+        this.aiGenerating = false;
+        this.aiAnalyzing = false;
+        this.theoryOpeningRunId = null;
+        this.renderTheoryAnalysisMode();
+        this.aiCheckStatus().then(() => this.renderTheoryAnalysisMode()).catch(() => {});
+        this.loadTheoryAnalysisRuns().catch(() => {});
     }
 
     // =========================================================================
@@ -45,6 +198,10 @@ class ImportManager {
     // =========================================================================
 
     goToStep(step) {
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+            return;
+        }
         this.currentStep = step;
         this.updateStepUI();
         this.renderCurrentStep();
@@ -94,18 +251,21 @@ class ImportManager {
     }
 
     nextStep() {
+        if (this.modalPurpose === 'theory_analysis') return;
         if (this.currentStep < 4) {
             this.goToStep(this.currentStep + 1);
         }
     }
 
     prevStep() {
+        if (this.modalPurpose === 'theory_analysis') return;
         if (this.currentStep > 1) {
             this.goToStep(this.currentStep - 1);
         }
     }
 
     updateStepUI() {
+        if (this.modalPurpose === 'theory_analysis') return;
         const steps = document.querySelectorAll('[data-role="import-steps"] [data-step]');
         steps.forEach(stepEl => {
             const stepNum = parseInt(stepEl.dataset.step);
@@ -142,6 +302,9 @@ class ImportManager {
         const prevBtn = document.querySelector('[data-role="import-prev"]');
         const nextBtn = document.querySelector('[data-role="import-next"]');
         if (!prevBtn || !nextBtn) return;
+        if (this.modalPurpose === 'theory_analysis') {
+            return;
+        }
 
         // Prev button
         prevBtn.disabled = this.currentStep === 1;
@@ -167,7 +330,12 @@ class ImportManager {
     // =========================================================================
 
     renderCurrentStep() {
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+            return;
+        }
         const contentArea = document.querySelector('[data-role="import-content"]');
+        if (!contentArea) return;
 
         // Add fade-out class for smooth transition
         contentArea.classList.add('step-transitioning-out');
@@ -866,6 +1034,167 @@ class ImportManager {
         return div.innerHTML;
     }
 
+    aiUxMessage(key, fallback = '', params = {}) {
+        try {
+            const t = window?.RP_AI_UX?.t;
+            if (typeof t === 'function') {
+                return t.call(window.RP_AI_UX, key, params, fallback);
+            }
+        } catch (_) { }
+        return fallback || key;
+    }
+
+    readEditorTheoryBridgeContext() {
+        try {
+            const raw = window.localStorage.getItem(this.editorTheoryBridgeStorageKey);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            return (parsed && typeof parsed === 'object') ? parsed : null;
+        } catch (_) {
+            return null;
+        }
+    }
+
+    writeEditorTheoryBridgeContext(payload) {
+        try {
+            if (!payload || typeof payload !== 'object') return false;
+            window.localStorage.setItem(this.editorTheoryBridgeStorageKey, JSON.stringify(payload));
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    _normalizeTheoryBridgeRefs(refs) {
+        if (!refs || typeof refs !== 'object') return null;
+        const normalizeIntList = (value) => {
+            if (!Array.isArray(value)) return [];
+            const seen = new Set();
+            const out = [];
+            value.forEach((raw) => {
+                const num = Number.parseInt(raw, 10);
+                if (!Number.isFinite(num) || seen.has(num)) return;
+                seen.add(num);
+                out.push(num);
+            });
+            return out;
+        };
+        const normalizeStrList = (value) => {
+            if (!Array.isArray(value)) return [];
+            const seen = new Set();
+            const out = [];
+            value.forEach((raw) => {
+                const text = String(raw || '').trim();
+                if (!text || seen.has(text)) return;
+                seen.add(text);
+                out.push(text);
+            });
+            return out;
+        };
+        const normalized = {
+            unit_ids: normalizeIntList(refs.unit_ids),
+            chunk_ids: normalizeStrList(refs.chunk_ids),
+            route_ids: normalizeStrList(refs.route_ids),
+        };
+        return (normalized.unit_ids.length || normalized.chunk_ids.length || normalized.route_ids.length) ? normalized : null;
+    }
+
+    syncEditorTheoryBridgeContext({ refs = null, sourceBlock = null, showToast = false } = {}) {
+        if (!this.isTheoryFeatureEnabled('editor_analysis_report_link')) {
+            if (showToast) this.showToast('Связка отчёта с редактором отключена (feature flag).', 'warning');
+            return false;
+        }
+        const aiRunId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
+        if (!aiRunId) {
+            if (showToast) this.showToast(this.aiUxMessage('theory_report.bridge.no_ai_run', 'Сначала откройте анализ, чтобы передать контекст в редактор.'), 'warning');
+            return false;
+        }
+        const a = this.analysisResult && typeof this.analysisResult === 'object' ? this.analysisResult : {};
+        const normalizedRefs = this._normalizeTheoryBridgeRefs(refs);
+        const payload = {
+            version: 1,
+            source: 'theory_report',
+            ai_run_id: aiRunId,
+            saved_at: new Date().toISOString(),
+            analysis_summary: {
+                analysis_schema_version: a.analysis_schema_version || null,
+                report_blocks_version: a.report_blocks_version || null,
+                units_count: Array.isArray(a.educational_units) ? a.educational_units.length : 0,
+                chunks_count: Array.isArray(a.learning_chunks) ? a.learning_chunks.length : 0,
+                routes_count: Array.isArray(a.authoring_routes) ? a.authoring_routes.length : 0,
+            },
+            refs: normalizedRefs,
+            source_block: sourceBlock && typeof sourceBlock === 'object' ? {
+                id: sourceBlock.id || null,
+                title: sourceBlock.title || null,
+                anchor: sourceBlock.anchor || null,
+                type: sourceBlock.type || null,
+            } : null,
+        };
+        const ok = this.writeEditorTheoryBridgeContext(payload);
+        if (ok && showToast) {
+            const msgKey = normalizedRefs ? 'theory_report.bridge.saved_block_context' : 'theory_report.bridge.saved_context';
+            this.showToast(this.aiUxMessage(msgKey, normalizedRefs ? 'Контекст блока отчёта сохранён для редактора.' : 'Контекст анализа сохранён для редактора.'), 'success');
+        }
+        return ok;
+    }
+
+    pushTheoryAnalysisContextForEditor() {
+        return this.syncEditorTheoryBridgeContext({ showToast: true });
+    }
+
+    pushTheoryReportBlockContextForEditor(blockId) {
+        const id = String(blockId || '').trim();
+        if (!id) {
+            this.pushTheoryAnalysisContextForEditor();
+            return;
+        }
+        const blocks = Array.isArray(this.analysisResult?.report_blocks) ? this.analysisResult.report_blocks : [];
+        const block = blocks.find((b) => String(b?.id || '') === id);
+        if (!block || typeof block !== 'object') {
+            this.showToast(this.aiUxMessage('theory_report.bridge.block_not_found', 'Не удалось найти выбранный блок отчёта. Попробуйте сохранить контекст анализа целиком.'), 'warning');
+            return;
+        }
+        this.syncEditorTheoryBridgeContext({
+            refs: block.refs,
+            sourceBlock: {
+                id: block.id,
+                title: block.title,
+                anchor: block.anchor,
+                type: block.type,
+            },
+            showToast: true,
+        });
+    }
+
+    pushTheoryAuthoringRouteContextForEditor(routeId) {
+        const id = String(routeId || '').trim();
+        if (!id) {
+            this.pushTheoryAnalysisContextForEditor();
+            return;
+        }
+        const routes = Array.isArray(this.analysisResult?.authoring_routes) ? this.analysisResult.authoring_routes : [];
+        const route = routes.find((r) => String(r?.id || '') === id);
+        if (!route || typeof route !== 'object') {
+            this.showToast(this.aiUxMessage('theory_report.bridge.route_not_found', 'Не удалось найти маршрут автора. Попробуйте сохранить контекст анализа целиком.'), 'warning');
+            return;
+        }
+        this.syncEditorTheoryBridgeContext({
+            refs: {
+                unit_ids: Array.isArray(route.unit_ids) ? route.unit_ids : [],
+                chunk_ids: Array.isArray(route.chunk_ids) ? route.chunk_ids : [],
+                route_ids: [id],
+            },
+            sourceBlock: {
+                id: `route:${id}`,
+                title: route.title || id,
+                anchor: null,
+                type: 'authoring_route',
+            },
+            showToast: true,
+        });
+    }
+
     showTaskDetails(index) {
         const task = this.parsedResult?.tasks?.[index];
         if (!task) return;
@@ -1055,48 +1384,7 @@ class ImportManager {
 
             // AI mode: file upload + drag-drop + textarea
             if (this.importMode === 'ai') {
-                const aiFileInput = document.getElementById('ai-file-input');
-                const aiDropZone = document.getElementById('ai-drop-zone');
-                const aiTextarea = document.getElementById('ai-material-textarea');
-
-                if (aiFileInput) {
-                    aiFileInput.addEventListener('change', (e) => this._handleAIFileSelected(e.target.files[0]));
-                }
-
-                if (aiDropZone) {
-                    aiDropZone.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        aiDropZone.classList.add('border-primary', 'bg-primary-lighter');
-                    });
-                    aiDropZone.addEventListener('dragleave', (e) => {
-                        e.preventDefault();
-                        aiDropZone.classList.remove('border-primary', 'bg-primary-lighter');
-                    });
-                    aiDropZone.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        aiDropZone.classList.remove('border-primary', 'bg-primary-lighter');
-                        const file = e.dataTransfer?.files?.[0];
-                        this._handleAIFileSelected(file);
-                    });
-                }
-
-                if (aiTextarea) {
-                    aiTextarea.addEventListener('input', (e) => {
-                        this.materialText = e.target.value;
-                        const wc = e.target.value.split(/\s+/).filter(Boolean).length;
-                        const wcEl = document.getElementById('ai-word-count');
-                        if (wcEl) wcEl.textContent = wc > 0 ? `${wc} слов` : '';
-                    });
-                }
-
-                const langModeInputs = document.querySelectorAll('input[name="ai-output-language-mode"]');
-                langModeInputs.forEach((input) => {
-                    input.addEventListener('change', (e) => this.setAIOutputLanguageMode(e.target.value));
-                });
-                const langSelect = document.getElementById('ai-output-language-select');
-                if (langSelect) {
-                    langSelect.addEventListener('change', (e) => this.setAIOutputLanguage(e.target.value));
-                }
+                this.attachAIComposerEventListeners();
             }
         }
 
@@ -1132,6 +1420,51 @@ class ImportManager {
                 this._updateLiveCounter(this.sourceText);
             }
             this.updateAIAgentPromptTextarea();
+        }
+    }
+
+    attachAIComposerEventListeners() {
+        const aiFileInput = document.getElementById('ai-file-input');
+        const aiDropZone = document.getElementById('ai-drop-zone');
+        const aiTextarea = document.getElementById('ai-material-textarea');
+
+        if (aiFileInput) {
+            aiFileInput.addEventListener('change', (e) => this._handleAIFileSelected(e.target.files[0]));
+        }
+
+        if (aiDropZone) {
+            aiDropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                aiDropZone.classList.add('border-primary', 'bg-primary-lighter');
+            });
+            aiDropZone.addEventListener('dragleave', (e) => {
+                e.preventDefault();
+                aiDropZone.classList.remove('border-primary', 'bg-primary-lighter');
+            });
+            aiDropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                aiDropZone.classList.remove('border-primary', 'bg-primary-lighter');
+                const file = e.dataTransfer?.files?.[0];
+                this._handleAIFileSelected(file);
+            });
+        }
+
+        if (aiTextarea) {
+            aiTextarea.addEventListener('input', (e) => {
+                this.materialText = e.target.value;
+                const wc = e.target.value.split(/\s+/).filter(Boolean).length;
+                const wcEl = document.getElementById('ai-word-count');
+                if (wcEl) wcEl.textContent = wc > 0 ? `${wc} слов` : '';
+            });
+        }
+
+        const langModeInputs = document.querySelectorAll('input[name="ai-output-language-mode"]');
+        langModeInputs.forEach((input) => {
+            input.addEventListener('change', (e) => this.setAIOutputLanguageMode(e.target.value));
+        });
+        const langSelect = document.getElementById('ai-output-language-select');
+        if (langSelect) {
+            langSelect.addEventListener('change', (e) => this.setAIOutputLanguage(e.target.value));
         }
     }
 
@@ -2020,6 +2353,3996 @@ text: Сердце человека состоит из [трёх] камер. �
     // AI Generation Mode
     // =========================================================================
 
+    renderTheoryAnalysisMode() {
+        const contentArea = document.querySelector('[data-role="import-content"]');
+        if (!contentArea) return;
+        const shouldCapture = !this.skipTheoryViewStateCaptureOnce;
+        this.skipTheoryViewStateCaptureOnce = false;
+        if (shouldCapture) {
+            this.captureTheoryAnalysisViewState();
+        }
+        contentArea.innerHTML = this.renderTheoryAnalysisLayout();
+        this.attachAIComposerEventListeners();
+        this.applyTheoryReportPanelState();
+        this.restoreTheoryAnalysisViewState();
+    }
+
+    captureTheoryAnalysisViewState() {
+        if (this.modalPurpose !== 'theory_analysis') return;
+
+        const textarea = document.getElementById('ai-material-textarea');
+        if (textarea) {
+            this.theoryComposerViewState = {
+                scrollTop: textarea.scrollTop || 0,
+                selectionStart: typeof textarea.selectionStart === 'number' ? textarea.selectionStart : null,
+                selectionEnd: typeof textarea.selectionEnd === 'number' ? textarea.selectionEnd : null,
+                wasFocused: document.activeElement === textarea,
+            };
+        }
+
+        const reportBody = document.querySelector('[data-role="theory-analysis-report-body"]');
+        if (reportBody) {
+            this.theoryReportScrollTop = reportBody.scrollTop || 0;
+        }
+    }
+
+    restoreTheoryAnalysisViewState() {
+        if (this.modalPurpose !== 'theory_analysis') return;
+
+        const textarea = document.getElementById('ai-material-textarea');
+        const state = this.theoryComposerViewState;
+        if (textarea && state) {
+            if (typeof state.scrollTop === 'number') {
+                textarea.scrollTop = state.scrollTop;
+            }
+            if (typeof state.selectionStart === 'number' && typeof state.selectionEnd === 'number') {
+                try {
+                    textarea.selectionStart = state.selectionStart;
+                    textarea.selectionEnd = state.selectionEnd;
+                } catch (_) { }
+            }
+            if (state.wasFocused) {
+                try {
+                    textarea.focus({ preventScroll: true });
+                } catch (_) {
+                    textarea.focus();
+                }
+            }
+        }
+
+        const reportBody = document.querySelector('[data-role="theory-analysis-report-body"]');
+        if (reportBody && this.theoryReportPanelOpen) {
+            reportBody.scrollTop = this.theoryReportScrollTop || 0;
+        }
+    }
+
+    applyTheoryReportPanelState() {
+        const panel = document.querySelector('[data-role="theory-analysis-report-panel"]');
+        if (!panel) return;
+
+        const isOpen = this.theoryReportPanelOpen !== false;
+        const body = panel.querySelector('[data-role="theory-analysis-report-body"]');
+        const collapsedNote = panel.querySelector('[data-role="theory-analysis-report-collapsed"]');
+        const toggleBtn = panel.querySelector('[data-role="theory-report-toggle-btn"]');
+        const toggleLabel = panel.querySelector('[data-role="theory-report-toggle-label"]');
+        const toggleIcon = panel.querySelector('[data-role="theory-report-toggle-icon"]');
+
+        if (body) body.classList.toggle('hidden', !isOpen);
+        if (collapsedNote) collapsedNote.classList.toggle('hidden', isOpen);
+        if (toggleBtn) toggleBtn.setAttribute('aria-expanded', String(isOpen));
+        if (toggleLabel) toggleLabel.textContent = isOpen ? 'Свернуть отчёт' : 'Открыть отчёт';
+        if (toggleIcon) toggleIcon.textContent = isOpen ? 'expand_less' : 'expand_more';
+        panel.classList.toggle('ring-1', isOpen);
+        panel.classList.toggle('ring-primary/20', isOpen);
+
+        if (isOpen && body) {
+            body.scrollTop = this.theoryReportScrollTop || 0;
+        }
+    }
+
+    toggleTheoryAnalysisReportPanel(forceOpen = null) {
+        const body = document.querySelector('[data-role="theory-analysis-report-body"]');
+        if (body) {
+            this.theoryReportScrollTop = body.scrollTop || 0;
+        }
+
+        if (typeof forceOpen === 'boolean') {
+            this.theoryReportPanelOpen = forceOpen;
+        } else {
+            this.theoryReportPanelOpen = !(this.theoryReportPanelOpen !== false);
+        }
+
+        this.applyTheoryReportPanelState();
+    }
+
+    renderTheoryAnalysisLayout() {
+        const isMicrocardsMode = this.theorySubMode === 'microcards';
+        const isManualEditor = this.theorySubMode === 'manual_editor';
+        const isTextImport = this.theorySubMode === 'text_import';
+        const titles = {
+            microcards: 'Режим микрокарточек (P9)',
+            manual_editor: 'Редактор микрокарточек',
+            text_import: 'Импорт микрокарточек из текста',
+            analysis: 'Отдельный режим анализа теории',
+        };
+        const subtitles = {
+            microcards: 'Повторение по колодам из анализа. Колоды общие на устройстве, прогресс — персональный.',
+            manual_editor: 'Создание и редактирование колод и карточек вручную.',
+            text_import: 'Создание карточек из текстового формата @MICROCARD или ответа внешнего ИИ-агента.',
+            analysis: 'Запуск анализа без генерации и импорта. История сохраняется по <code class="font-mono">ai_run_id</code>.',
+        };
+        const currentMode = isTextImport ? 'text_import' : (isManualEditor ? 'manual_editor' : (isMicrocardsMode ? 'microcards' : 'analysis'));
+        const isMcSubMode = isMicrocardsMode || isManualEditor || isTextImport;
+
+        const mcNavButtons = (activeMode) => {
+            const modes = [
+                { key: 'microcards', label: 'Повторение', fn: 'openTheoryMicrocardsMode()' },
+                { key: 'manual_editor', label: 'Редактор', fn: 'openManualMicrocardsEditor()' },
+                { key: 'text_import', label: 'Текстовый импорт', fn: 'openMicrocardsTextImport()' },
+            ];
+            return modes.filter(m => m.key !== activeMode).map(m =>
+                `<button onclick="dashboard.importManager.${m.fn}"
+                    class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                    ${m.label}
+                </button>`
+            ).join('');
+        };
+
+        return `
+            <div class="w-full animate-slide-up-fade">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-text-main">${titles[currentMode]}</h3>
+                        <p class="text-sm text-text-muted">${subtitles[currentMode]}</p>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${isMcSubMode ? `
+                            <button onclick="dashboard.importManager.enterTheorySubMode('analysis')"
+                                class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                                К анализу
+                            </button>
+                            ${mcNavButtons(currentMode)}
+                            <button onclick="dashboard.importManager.loadMicrocardsDecks()"
+                                class="px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
+                                Обновить колоды
+                            </button>
+                        ` : `
+                            <button onclick="dashboard.importManager.openTheoryMicrocardsMode()"
+                                class="px-3 py-2 text-sm font-medium text-primary-fg bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm">
+                                Микрокарточки
+                            </button>
+                            <button onclick="dashboard.importManager.openManualMicrocardsEditor()"
+                                class="px-3 py-2 text-sm font-medium text-info-text border border-info-light rounded-lg hover:bg-info-lighter transition-colors">
+                                Редактор карточек
+                            </button>
+                            <button onclick="dashboard.importManager.openMicrocardsTextImport()"
+                                class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                                Импорт из текста
+                            </button>
+                            <button onclick="dashboard.importManager.theoryResetDraft()"
+                                class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                                Новый анализ
+                            </button>
+                            <button onclick="dashboard.importManager.loadTheoryAnalysisRuns()"
+                                class="px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
+                                Обновить список
+                            </button>
+                        `}
+                    </div>
+                </div>
+
+                ${isTextImport ? this.renderMicrocardsTextImport() : (isManualEditor ? this.renderManualMicrocardsEditor() : `
+                    <div class="grid grid-cols-1 xl:grid-cols-[1.35fr_0.85fr] gap-5">
+                        <div class="space-y-4">
+                            ${isMicrocardsMode ? this.renderTheoryMicrocardsMode() : `${this.renderTheoryAnalysisComposer()}${this.renderTheoryAnalysisResultPanel()}`}
+                        </div>
+                        <div>
+                            ${this.renderTheoryAnalysisRunsPanel()}
+                        </div>
+                    </div>
+                `)}
+            </div>
+        `;
+    }
+
+    enterTheorySubMode(mode) {
+        const validModes = ['microcards', 'manual_editor', 'text_import', 'analysis'];
+        const nextMode = validModes.includes(mode) ? mode : 'analysis';
+        if ((nextMode === 'microcards' || nextMode === 'manual_editor' || nextMode === 'text_import') && !this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+            return;
+        }
+        this.theorySubMode = nextMode;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    async openTheoryMicrocardsMode(initialDeckId = null) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+            return { ok: false, error: 'microcards_mode_disabled' };
+        }
+        this.theorySubMode = 'microcards';
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        await this.loadMicrocardsDecks();
+        if (initialDeckId) {
+            await this.openMicrocardsDeckQueue(initialDeckId);
+        }
+    }
+
+    async loadMicrocardsDecks() {
+        this.microcardsDecksLoading = true;
+        this.microcardsDecksError = '';
+        if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch('/api/editor/microcards/decks?limit=100');
+            const data = await resp.json();
+            if (data.ok) {
+                this.microcardsDecks = Array.isArray(data.items) ? data.items : [];
+                this.microcardsDecksError = '';
+            } else {
+                this.microcardsDecks = [];
+                this.microcardsDecksError = data.message || data.error || 'Не удалось загрузить колоды';
+            }
+            return data;
+        } catch (e) {
+            console.error('[Microcards] load decks failed:', e);
+            this.microcardsDecks = [];
+            this.microcardsDecksError = 'Ошибка сети при загрузке колод';
+            return { ok: false, error: 'network_error' };
+        } finally {
+            this.microcardsDecksLoading = false;
+            if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    async createMicrocardsDeckFromCurrentAnalysis(selector = {}, opts = {}) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+            return { ok: false, error: 'microcards_mode_disabled' };
+        }
+        if (selector?.pair_match_only && !this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+            return { ok: false, error: 'microcards_pair_match_disabled' };
+        }
+        const runId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
+        if (!runId) {
+            this.showToast('Сначала откройте анализ (ai_run_id)', 'warning');
+            return { ok: false, error: 'ai_run_id_required' };
+        }
+        this.microcardsCreateLoading = true;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch('/api/editor/microcards/decks/from-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ai_run_id: runId, selector }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast(`Колода создана: ${data.deck_summary?.cards_total || 0} карточек`, 'success');
+                await this.loadMicrocardsDecks();
+                if (opts?.open !== false && data.deck?.id) {
+                    await this.openTheoryMicrocardsMode(data.deck.id);
+                }
+            } else {
+                this.showToast(data.message || data.error || 'Не удалось создать колоду', 'error');
+            }
+            return data;
+        } catch (e) {
+            console.error('[Microcards] create deck failed:', e);
+            this.showToast('Ошибка сети при создании колоды', 'error');
+            return { ok: false, error: 'network_error' };
+        } finally {
+            this.microcardsCreateLoading = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    createTheoryMicrocardsDeckAll() {
+        return this.createMicrocardsDeckFromCurrentAnalysis({ scope: 'all' }, { open: true });
+    }
+
+    createTheoryMicrocardsDeckForChunk(chunkId) {
+        const cid = String(chunkId || '').trim();
+        if (!cid) return Promise.resolve({ ok: false, error: 'chunk_id_required' });
+        return this.createMicrocardsDeckFromCurrentAnalysis({ scope: 'chunk', chunk_id: cid }, { open: true });
+    }
+
+    createTheoryMicrocardsDeckForUnit(unitId, chunkId = null) {
+        const uid = Number(unitId);
+        if (!Number.isFinite(uid)) return Promise.resolve({ ok: false, error: 'unit_id_required' });
+        const selector = { scope: 'unit', unit_id: uid };
+        if (chunkId) selector.chunk_id = String(chunkId);
+        return this.createMicrocardsDeckFromCurrentAnalysis(selector, { open: true });
+    }
+
+    createTheoryMicrocardsPairMatchDeck() {
+        if (!this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+            return Promise.resolve({ ok: false, error: 'microcards_pair_match_disabled' });
+        }
+        return this.createMicrocardsDeckFromCurrentAnalysis({ scope: 'all', pair_match_only: true }, { open: true });
+    }
+
+    async pickExistingMicrocardsDeckId() {
+        if (!Array.isArray(this.microcardsDecks) || this.microcardsDecks.length === 0) {
+            await this.loadMicrocardsDecks();
+        }
+        const decks = Array.isArray(this.microcardsDecks) ? this.microcardsDecks : [];
+        if (!decks.length) {
+            this.showToast('Нет существующих колод. Сначала создайте новую.', 'warning');
+            return null;
+        }
+        const defaultId = String(this.microcardsActiveDeck?.id || decks[0]?.id || '').trim();
+        const preview = decks.slice(0, 8).map((d) => `${d.id} — ${d.name || d.id}`).join('\n');
+        const raw = window.prompt(`Введите ID колоды для добавления карточек:\n\n${preview}${decks.length > 8 ? `\n... и ещё ${decks.length - 8}` : ''}`, defaultId);
+        if (raw == null) return null;
+        const picked = String(raw || '').trim();
+        if (!picked) return null;
+        return picked;
+    }
+
+    async appendMicrocardsToExistingDeckFromCurrentAnalysis(selector = {}, opts = {}) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+            return { ok: false, error: 'microcards_mode_disabled' };
+        }
+        if (selector?.pair_match_only && !this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+            return { ok: false, error: 'microcards_pair_match_disabled' };
+        }
+        const runId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
+        if (!runId) {
+            this.showToast('Сначала откройте анализ (ai_run_id)', 'warning');
+            return { ok: false, error: 'ai_run_id_required' };
+        }
+        const deckId = String(opts.deckId || '').trim() || await this.pickExistingMicrocardsDeckId();
+        if (!deckId) return { ok: false, error: 'deck_id_required' };
+        this.microcardsCreateLoading = true;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/append-from-analysis`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ai_run_id: runId, selector }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast(`Добавлено: ${data.added_cards || 0}, пропущено дублей: ${data.skipped_duplicates || 0}`, 'success');
+                await this.loadMicrocardsDecks();
+                if (opts?.open !== false) {
+                    await this.openTheoryMicrocardsMode(deckId);
+                }
+            } else {
+                this.showToast(data.message || data.error || 'Не удалось добавить карточки в колоду', 'error');
+            }
+            return data;
+        } catch (e) {
+            console.error('[Microcards] append to deck failed:', e);
+            this.showToast('Ошибка сети при добавлении карточек в колоду', 'error');
+            return { ok: false, error: 'network_error' };
+        } finally {
+            this.microcardsCreateLoading = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    appendTheoryMicrocardsDeckAll() {
+        return this.appendMicrocardsToExistingDeckFromCurrentAnalysis({ scope: 'all' }, { open: true });
+    }
+
+    appendTheoryMicrocardsDeckForChunk(chunkId) {
+        const cid = String(chunkId || '').trim();
+        if (!cid) return Promise.resolve({ ok: false, error: 'chunk_id_required' });
+        return this.appendMicrocardsToExistingDeckFromCurrentAnalysis({ scope: 'chunk', chunk_id: cid }, { open: true });
+    }
+
+    appendTheoryMicrocardsDeckForUnit(unitId, chunkId = null) {
+        const uid = Number(unitId);
+        if (!Number.isFinite(uid)) return Promise.resolve({ ok: false, error: 'unit_id_required' });
+        const selector = { scope: 'unit', unit_id: uid };
+        if (chunkId) selector.chunk_id = String(chunkId);
+        return this.appendMicrocardsToExistingDeckFromCurrentAnalysis(selector, { open: true });
+    }
+
+    appendTheoryMicrocardsPairMatchDeck() {
+        if (!this.ensureTheoryFeatureEnabled('microcards_pair_match', 'pair_match отключён (feature flag).')) {
+            return Promise.resolve({ ok: false, error: 'microcards_pair_match_disabled' });
+        }
+        return this.appendMicrocardsToExistingDeckFromCurrentAnalysis({ scope: 'all', pair_match_only: true }, { open: true });
+    }
+
+    async openMicrocardsDeckQueue(deckId, options = {}) {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+            return { ok: false, error: 'microcards_mode_disabled' };
+        }
+        const id = String(deckId || '').trim();
+        if (!id) return { ok: false, error: 'deck_id_required' };
+        const restart = !!options?.restart;
+        this.theorySubMode = 'microcards';
+        this.microcardsQueueLoading = true;
+        this.microcardsReviewReveal = false;
+        this.microcardsReviewEvaluation = null;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const params = new URLSearchParams({ limit: '50' });
+            if (restart) params.set('restart', '1');
+            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(id)}/queue?${params.toString()}`);
+            const data = await resp.json();
+            if (data.ok) {
+                this.microcardsActiveDeck = data.deck || { id };
+                this.microcardsSession = data.session || null;
+                if (Array.isArray(this.microcardsDecks)) {
+                    const summary = this.microcardsDecks.find(d => String(d?.id || '') === id);
+                    if (summary) {
+                        this.microcardsActiveDeck.selector = summary.selector || this.microcardsActiveDeck.selector;
+                        this.microcardsActiveDeck.meta = summary.meta || this.microcardsActiveDeck.meta;
+                        this.microcardsActiveDeck.stats = data.stats || summary.stats;
+                    }
+                }
+                this.microcardsQueue = Array.isArray(data.queue) ? data.queue : [];
+                this.microcardsQueueIndex = Math.max(0, Number(data.cursor) || 0);
+                this.microcardsReviewReveal = false;
+                this.microcardsReviewEvaluation = null;
+                this.microcardsReviewStartedAt = Date.now();
+            } else {
+                this.showToast(data.message || data.error || 'Не удалось открыть очередь колоды', 'error');
+            }
+            return data;
+        } catch (e) {
+            console.error('[Microcards] open queue failed:', e);
+            this.showToast('Ошибка сети при открытии колоды', 'error');
+            return { ok: false, error: 'network_error' };
+        } finally {
+            this.microcardsQueueLoading = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    getCurrentMicrocard() {
+        if (!Array.isArray(this.microcardsQueue)) return null;
+        if (this.microcardsQueueIndex < 0 || this.microcardsQueueIndex >= this.microcardsQueue.length) return null;
+        return this.microcardsQueue[this.microcardsQueueIndex] || null;
+    }
+
+    renderTheoryMicrocardsMode() {
+        const decks = Array.isArray(this.microcardsDecks) ? this.microcardsDecks : [];
+        const current = this.getCurrentMicrocard();
+        const activeDeck = this.microcardsActiveDeck || null;
+        const queueCount = Array.isArray(this.microcardsQueue) ? this.microcardsQueue.length : 0;
+        const doneCount = Math.min(this.microcardsQueueIndex, queueCount);
+        const remainingCount = Math.max(0, queueCount - doneCount);
+
+        const deckListHtml = this.microcardsDecksLoading
+            ? `<div class="text-sm text-text-secondary">Загрузка колод...</div>`
+            : (decks.length ? `
+                <div class="space-y-2">
+                    ${decks.map((deck) => {
+                        const isActive = String(deck?.id || '') === String(activeDeck?.id || '');
+                        const stats = deck?.stats || {};
+                        return `
+                            <div class="rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} p-3">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <div class="text-xs font-semibold text-text-main truncate">${this.escapeHtml(String(deck?.name || deck?.id || 'Deck'))}</div>
+                                        <div class="text-[11px] text-text-secondary mt-1 font-mono truncate">${this.escapeHtml(String(deck?.id || ''))}</div>
+                                        <div class="text-[11px] text-text-secondary mt-1">
+                                            due ${this.escapeHtml(String(stats.cards_due ?? 0))} · new ${this.escapeHtml(String(stats.cards_new ?? 0))} · total ${this.escapeHtml(String(stats.cards_total ?? 0))}
+                                        </div>
+                                    </div>
+                                    <button type="button"
+                                        onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeHtml(String(deck?.id || ''))}')"
+                                        class="px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'}">
+                                        Повторять
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            ` : `<div class="text-sm text-text-secondary">Колод пока нет. Создайте их из отчёта анализа.</div>`);
+
+        return `
+            <div class="space-y-4">
+                <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+                        <div>
+                            <div class="text-sm font-semibold text-text-main">Колоды микрокарточек</div>
+                            <div class="text-xs text-text-secondary mt-1">Контент колод общий на устройстве; прогресс повторения считается отдельно для каждого пользователя.</div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button type="button"
+                                onclick="dashboard.importManager.createTheoryMicrocardsDeckAll()"
+                                ${this.microcardsCreateLoading ? 'disabled' : ''}
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg disabled:opacity-60">
+                                ${this.microcardsCreateLoading ? 'Создание...' : 'Колода из анализа'}
+                            </button>
+                            <button type="button"
+                                onclick="dashboard.importManager.appendTheoryMicrocardsDeckAll()"
+                                ${this.microcardsCreateLoading ? 'disabled' : ''}
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
+                                Добавить в колоду...
+                            </button>
+                            <button type="button"
+                                onclick="dashboard.importManager.createTheoryMicrocardsPairMatchDeck()"
+                                ${this.microcardsCreateLoading ? 'disabled' : ''}
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-info-light text-info-text bg-info-lighter hover:bg-info-light disabled:opacity-60">
+                                pair_match колода
+                            </button>
+                            <button type="button"
+                                onclick="dashboard.importManager.appendTheoryMicrocardsPairMatchDeck()"
+                                ${this.microcardsCreateLoading ? 'disabled' : ''}
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
+                                pair_match → в колоду...
+                            </button>
+                        </div>
+                    </div>
+                    ${this.microcardsDecksError ? `<div class="mt-3 text-xs text-error-text">${this.escapeHtml(this.microcardsDecksError)}</div>` : ''}
+                    <div class="mt-4">${deckListHtml}</div>
+                </div>
+
+                <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                        <div>
+                            <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(activeDeck?.name || 'Сессия повторения'))}</div>
+                            <div class="text-xs text-text-secondary mt-1">
+                                ${activeDeck?.id ? `<span class="font-mono">${this.escapeHtml(String(activeDeck.id))}</span>` : 'Выберите колоду слева'}
+                                ${queueCount ? ` · ${doneCount}/${queueCount} пройдено` : ''}
+                                ${remainingCount ? ` · осталось ${remainingCount}` : ''}
+                            </div>
+                        </div>
+                        ${activeDeck?.id ? `
+                            <button type="button"
+                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeHtml(String(activeDeck.id))}')"
+                                ${this.microcardsQueueLoading ? 'disabled' : ''}
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
+                                ${this.microcardsQueueLoading ? 'Обновление...' : 'Resume / обновить'}
+                            </button>
+                            <button type="button"
+                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeHtml(String(activeDeck.id))}', { restart: true })"
+                                ${this.microcardsQueueLoading ? 'disabled' : ''}
+                                class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
+                                Новая сессия
+                            </button>
+                        ` : ''}
+                    </div>
+                    ${this.renderMicrocardsReviewArea(current)}
+                </div>
+            </div>
+        `;
+    }
+
+    renderMicrocardsReviewArea(card) {
+        if (this.microcardsQueueLoading) {
+            return '<div class="text-sm text-text-secondary">Загрузка очереди повторения...</div>';
+        }
+        if (!this.microcardsActiveDeck?.id) {
+            return '<div class="text-sm text-text-secondary">Откройте колоду, чтобы начать повторение.</div>';
+        }
+        if (!card) {
+            return '<div class="text-sm text-text-secondary">На сейчас нет карточек к повторению в выбранной колоде.</div>';
+        }
+
+        const cardType = String(card?.card_type || 'fact_recall');
+        const front = (card && typeof card.front === 'object') ? card.front : {};
+        const back = (card && typeof card.back === 'object') ? card.back : {};
+        const frontText = String(front.text || '').trim() || 'Карточка';
+        const backText = String(back.text || '').trim() || 'Ответ';
+        const isPair = cardType === 'pair_match';
+        const evalData = this.microcardsReviewEvaluation || null;
+
+        return `
+            <div class="space-y-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="px-2 py-0.5 rounded-full text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(cardType)}</span>
+                    ${isPair ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-info-light bg-info-lighter text-info-text">MATCH</span>` : ''}
+                    <span class="text-[11px] text-text-secondary font-mono">${this.escapeHtml(String(card?.id || ''))}</span>
+                </div>
+
+                <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
+                    <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Front</div>
+                    <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(frontText)}</div>
+                </div>
+
+                ${isPair ? this.renderMicrocardsPairMatchUI(card) : ''}
+
+                ${(!isPair && this.microcardsReviewReveal) ? `
+                    <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
+                        <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Back</div>
+                        <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(backText)}</div>
+                    </div>
+                ` : ''}
+
+                ${(isPair && this.microcardsReviewReveal) ? this.renderMicrocardsPairMatchResult(card, evalData) : ''}
+
+                <div class="flex flex-wrap gap-2">
+                    ${!this.microcardsReviewReveal ? (isPair ? `
+                        <button type="button" onclick="dashboard.importManager.revealCurrentMicrocardPairMatch()"
+                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg">
+                            Проверить пары
+                        </button>
+                    ` : `
+                        <button type="button" onclick="dashboard.importManager.revealCurrentMicrocard()"
+                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg">
+                            Показать ответ
+                        </button>
+                    `) : `
+                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('again')"
+                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
+                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-error-light text-error-text bg-error-lighter hover:bg-error-light disabled:opacity-60">
+                            Again
+                        </button>
+                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('hard')"
+                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
+                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
+                            Hard
+                        </button>
+                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('good')"
+                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
+                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-success-light text-success-text bg-success-lighter hover:bg-success-light disabled:opacity-60">
+                            Good
+                        </button>
+                        <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('easy')"
+                            ${this.microcardsReviewSubmitting ? 'disabled' : ''}
+                            class="px-3 py-1.5 text-xs font-medium rounded-lg border border-info-light text-info-text bg-info-lighter hover:bg-info-light disabled:opacity-60">
+                            Easy
+                        </button>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
+    renderMicrocardsPairMatchUI(card) {
+        const frontPayload = (card?.front && typeof card.front.payload === 'object') ? card.front.payload : {};
+        const leftItems = Array.isArray(frontPayload.left_items) ? frontPayload.left_items : [];
+        const rightItems = Array.isArray(frontPayload.right_items) ? frontPayload.right_items : [];
+        if (!leftItems.length || !rightItems.length) {
+            return '<div class="text-xs text-text-secondary">pair_match payload пустой.</div>';
+        }
+        const cardId = String(card?.id || '');
+        const saved = (this.microcardsPairSelections && this.microcardsPairSelections[cardId]) ? this.microcardsPairSelections[cardId] : {};
+        return `
+            <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
+                <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-2">Pair match</div>
+                <div class="space-y-2">
+                    ${leftItems.map((left) => {
+                        const leftId = String(left?.id || '');
+                        const currentVal = String(saved?.[leftId] || '');
+                        return `
+                            <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-2 items-center">
+                                <div class="text-xs text-text-main p-2 rounded-md border border-border-strong bg-surface-1">${this.escapeHtml(String(left?.text || leftId))}</div>
+                                <select onchange="dashboard.importManager.setMicrocardsPairSelection('${this.escapeHtml(cardId)}','${this.escapeHtml(leftId)}', this.value)"
+                                    class="rounded-md border border-border-strong bg-surface-1 px-2 py-2 text-xs text-text-main">
+                                    <option value="">Выберите соответствие...</option>
+                                    ${rightItems.map((right) => {
+                                        const rid = String(right?.id || '');
+                                        return `<option value="${this.escapeHtml(rid)}" ${currentVal === rid ? 'selected' : ''}>${this.escapeHtml(String(right?.text || rid))}</option>`;
+                                    }).join('')}
+                                </select>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderMicrocardsPairMatchResult(card, evalData) {
+        const backPayload = (card?.back && typeof card.back.payload === 'object') ? card.back.payload : {};
+        const pairs = Array.isArray(backPayload.pairs) ? backPayload.pairs : [];
+        const exps = Array.isArray(backPayload.explanations) ? backPayload.explanations : [];
+        const expByLeft = new Map(exps.map(e => [String(e?.left_id || ''), String(e?.text || '')]));
+        const score = Number(evalData?.partial_score);
+        return `
+            <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
+                <div class="flex flex-wrap items-center gap-2 mb-2">
+                    <div class="text-[11px] uppercase tracking-wide text-text-secondary">Результат</div>
+                    ${Number.isFinite(score) ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(score))}%</span>` : ''}
+                </div>
+                <div class="space-y-1">
+                    ${pairs.map((p) => `
+                        <div class="text-xs text-text-main">
+                            <span class="font-mono text-text-secondary">${this.escapeHtml(String(p?.left_id || '?'))}</span>
+                            →
+                            <span class="font-mono text-text-secondary">${this.escapeHtml(String(p?.right_id || '?'))}</span>
+                            ${expByLeft.get(String(p?.left_id || '')) ? `<span class="text-text-secondary"> · ${this.escapeHtml(expByLeft.get(String(p?.left_id || '')))}</span>` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    setMicrocardsPairSelection(cardId, leftId, rightId) {
+        const cid = String(cardId || '');
+        const lid = String(leftId || '');
+        if (!cid || !lid) return;
+        if (!this.microcardsPairSelections || typeof this.microcardsPairSelections !== 'object') {
+            this.microcardsPairSelections = {};
+        }
+        if (!this.microcardsPairSelections[cid]) this.microcardsPairSelections[cid] = {};
+        this.microcardsPairSelections[cid][lid] = String(rightId || '');
+    }
+
+    revealCurrentMicrocard() {
+        this.microcardsReviewReveal = true;
+        this.microcardsReviewEvaluation = null;
+        if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
+    }
+
+    revealCurrentMicrocardPairMatch() {
+        const card = this.getCurrentMicrocard();
+        if (!card) return;
+        const cardId = String(card?.id || '');
+        const saved = (this.microcardsPairSelections && this.microcardsPairSelections[cardId]) ? this.microcardsPairSelections[cardId] : {};
+        const response = { mapping: saved || {} };
+        const backPayload = (card?.back && typeof card.back.payload === 'object') ? card.back.payload : {};
+        const pairs = Array.isArray(backPayload.pairs) ? backPayload.pairs : [];
+        let total = 0;
+        let correct = 0;
+        for (const p of pairs) {
+            const lid = String(p?.left_id || '');
+            const rid = String(p?.right_id || '');
+            if (!lid || !rid) continue;
+            total += 1;
+            if (String(saved?.[lid] || '') === rid) correct += 1;
+        }
+        this.microcardsReviewEvaluation = {
+            partial_score: total ? Math.round((correct / total) * 10000) / 100 : 0,
+            correct_pairs: correct,
+            total_pairs: total,
+        };
+        this.microcardsReviewReveal = true;
+        if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
+    }
+
+    async submitCurrentMicrocardRating(rating) {
+        const card = this.getCurrentMicrocard();
+        const deckId = String(this.microcardsActiveDeck?.id || '');
+        if (!card || !deckId) return { ok: false, error: 'no_active_card' };
+        if (!this.microcardsReviewReveal) {
+            this.showToast('Сначала откройте ответ / проверьте пары', 'warning');
+            return { ok: false, error: 'reveal_required' };
+        }
+        this.microcardsReviewSubmitting = true;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        const startedAt = Number(this.microcardsReviewStartedAt || Date.now());
+        const responseTimeMs = Math.max(0, Date.now() - startedAt);
+        const responsePayload = String(card?.card_type || '') === 'pair_match'
+            ? { mapping: (this.microcardsPairSelections && this.microcardsPairSelections[String(card.id || '')]) ? this.microcardsPairSelections[String(card.id || '')] : {} }
+            : null;
+        try {
+            const resp = await fetch('/api/editor/microcards/review/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    deck_id: deckId,
+                    card_id: card.id,
+                    rating: String(rating || 'good').toLowerCase(),
+                    session_id: this.microcardsSession?.id || null,
+                    response: responsePayload,
+                    response_time_ms: responseTimeMs,
+                }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                if (data.session && typeof data.session === 'object') {
+                    this.microcardsSession = data.session;
+                }
+                if (this.microcardsActiveDeck && data.deck_stats) {
+                    this.microcardsActiveDeck.stats = data.deck_stats;
+                }
+                if (Number.isFinite(Number(data?.session?.cursor))) {
+                    this.microcardsQueueIndex = Math.max(0, Number(data.session.cursor));
+                } else {
+                    this.microcardsQueueIndex += 1;
+                }
+                this.microcardsReviewReveal = false;
+                this.microcardsReviewEvaluation = null;
+                this.microcardsReviewStartedAt = Date.now();
+                if (this.microcardsQueueIndex >= this.microcardsQueue.length) {
+                    this.showToast('Сессия повторения завершена', 'success');
+                    this.microcardsSession = null;
+                    await this.loadMicrocardsDecks();
+                }
+            } else {
+                const err = String(data.error || '');
+                if (err.startsWith('session_')) {
+                    this.showToast('Сессия устарела. Откройте очередь колоды заново.', 'warning');
+                } else {
+                    this.showToast(data.message || data.error || 'Не удалось сохранить review', 'error');
+                }
+            }
+            return data;
+        } catch (e) {
+            console.error('[Microcards] submit review failed:', e);
+            this.showToast('Ошибка сети при сохранении review', 'error');
+            return { ok: false, error: 'network_error' };
+        } finally {
+            this.microcardsReviewSubmitting = false;
+            if (this.modalPurpose === 'theory_analysis' && this.theorySubMode === 'microcards') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    // ── M11: Manual Microcards Editor ────────────────────────────────
+
+    async openManualMicrocardsEditor() {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+            return;
+        }
+        this.theorySubMode = 'manual_editor';
+        this.manualEditorCardForm = null;
+        this.manualEditorPreviewCard = null;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        await this.loadMicrocardsDecks();
+    }
+
+    async manualEditorOpenDeck(deckId) {
+        const id = String(deckId || '').trim();
+        if (!id) return;
+        this.manualEditorDeckLoading = true;
+        this.manualEditorCardForm = null;
+        this.manualEditorPreviewCard = null;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(id)}`);
+            const data = await resp.json();
+            if (data.ok && data.deck) {
+                this.manualEditorDeck = data.deck;
+            } else {
+                this.showToast(data.error || 'Не удалось загрузить колоду', 'error');
+            }
+        } catch (e) {
+            console.error('[M11] load deck failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        } finally {
+            this.manualEditorDeckLoading = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    async manualEditorCreateDeck() {
+        const nameEl = document.getElementById('m11DeckNameInput');
+        const name = String(nameEl?.value || '').trim();
+        if (!name) { this.showToast('Введите название колоды', 'warning'); return; }
+        this.manualEditorSaving = true;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch('/api/editor/microcards/decks/create-manual', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast('Колода создана', 'success');
+                await this.loadMicrocardsDecks();
+                if (data.deck?.id) await this.manualEditorOpenDeck(data.deck.id);
+            } else {
+                this.showToast(data.error || 'Не удалось создать колоду', 'error');
+            }
+        } catch (e) {
+            console.error('[M11] create deck failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        } finally {
+            this.manualEditorSaving = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    async manualEditorRenameDeck(deckId) {
+        const nameEl = document.getElementById('m11RenameInput');
+        const name = String(nameEl?.value || '').trim();
+        if (!name) { this.showToast('Введите новое название', 'warning'); return; }
+        this.manualEditorSaving = true;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/rename`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast('Колода переименована', 'success');
+                this.manualEditorRenamingDeckId = null;
+                await this.loadMicrocardsDecks();
+                if (this.manualEditorDeck?.id === deckId) {
+                    this.manualEditorDeck.name = name;
+                }
+            } else {
+                this.showToast(data.error || 'Не удалось переименовать', 'error');
+            }
+        } catch (e) {
+            console.error('[M11] rename deck failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        } finally {
+            this.manualEditorSaving = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    async manualEditorArchiveDeck(deckId, archive = true) {
+        try {
+            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/archive`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ archive }),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast(archive ? 'Колода архивирована' : 'Колода восстановлена', 'success');
+                await this.loadMicrocardsDecks();
+                if (this.manualEditorDeck?.id === deckId) {
+                    this.manualEditorDeck = null;
+                }
+            } else {
+                this.showToast(data.error || 'Ошибка', 'error');
+            }
+        } catch (e) {
+            console.error('[M11] archive deck failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        }
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    async manualEditorDeleteDeck(deckId) {
+        if (!confirm('Удалить колоду? Это действие необратимо.')) return;
+        try {
+            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}`, { method: 'DELETE' });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast('Колода удалена', 'success');
+                if (this.manualEditorDeck?.id === deckId) this.manualEditorDeck = null;
+                await this.loadMicrocardsDecks();
+            } else {
+                this.showToast(data.error || 'Не удалось удалить', 'error');
+            }
+        } catch (e) {
+            console.error('[M11] delete deck failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        }
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    manualEditorShowCardForm(mode = 'create', card = null) {
+        // M15: detect pair_match card type and extract pairs for editing
+        const cardType = String(card?.card_type || 'fact_recall');
+        let pairs = [{ left: '', right: '' }, { left: '', right: '' }];
+        if (cardType === 'pair_match' && card) {
+            const frontPayload = (card.front && typeof card.front.payload === 'object') ? card.front.payload : {};
+            const backPayload = (card.back && typeof card.back.payload === 'object') ? card.back.payload : {};
+            const leftItems = Array.isArray(frontPayload.left_items) ? frontPayload.left_items : [];
+            const pairLinks = Array.isArray(backPayload.pairs) ? backPayload.pairs : [];
+            const rightById = {};
+            if (Array.isArray(frontPayload.right_items)) {
+                for (const ri of frontPayload.right_items) rightById[String(ri.id || '')] = String(ri.text || '');
+            }
+            const extracted = [];
+            for (const pl of pairLinks) {
+                const lid = String(pl.left_id || '');
+                const rid = String(pl.right_id || '');
+                const leftObj = leftItems.find(l => String(l.id || '') === lid);
+                const leftText = leftObj ? String(leftObj.text || '') : '';
+                const rightText = rightById[rid] || '';
+                if (leftText || rightText) extracted.push({ left: leftText, right: rightText });
+            }
+            if (extracted.length >= 2) pairs = extracted;
+        }
+        this.manualEditorCardForm = {
+            mode,
+            card_id: card?.id || null,
+            card_type: cardType,
+            front_text: (card?.front?.text || ''),
+            back_text: (card?.back?.text || ''),
+            pairs: pairs,
+            tags: Array.isArray(card?.tags) ? card.tags.join(', ') : '',
+            difficulty_hint: card?.difficulty_hint || 'medium',
+        };
+        this.manualEditorPreviewCard = null;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    manualEditorCancelCardForm() {
+        this.manualEditorCardForm = null;
+        this.manualEditorPreviewCard = null;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    manualEditorPreviewCurrentCard() {
+        const form = this.manualEditorCardForm;
+        const isPairMatch = form && form.card_type === 'pair_match';
+        const frontEl = document.getElementById('m11CardFront');
+        const ft = String(frontEl?.value || '').trim();
+
+        if (isPairMatch) {
+            // M15: pair_match preview — read pairs from DOM
+            if (!ft) { this.showToast('Заполните инструкцию (лицевая сторона)', 'warning'); return; }
+            const pairs = this._m15ReadPairsFromDOM();
+            const validPairs = pairs.filter(p => p.left && p.right);
+            if (validPairs.length < 2) { this.showToast('Заполните минимум 2 пары (левая и правая часть)', 'warning'); return; }
+            const leftItems = validPairs.map((p, i) => ({ id: `l${i + 1}`, text: p.left }));
+            const rightItems = validPairs.map((p, i) => ({ id: `r${i + 1}`, text: p.right }));
+            const pairLinks = validPairs.map((_, i) => ({ left_id: `l${i + 1}`, right_id: `r${i + 1}` }));
+            this.manualEditorPreviewCard = {
+                card_type: 'pair_match',
+                front: { text: ft, payload: { mode: 'pair_match', left_items: leftItems, right_items: rightItems, shuffle_right: true } },
+                back: { text: 'Правильные соответствия', payload: { mode: 'pair_match_solution', pairs: pairLinks, explanations: [] } },
+            };
+        } else {
+            const backEl = document.getElementById('m11CardBack');
+            const bt = String(backEl?.value || '').trim();
+            if (!ft || !bt) { this.showToast('Заполните лицевую и обратную стороны', 'warning'); return; }
+            this.manualEditorPreviewCard = {
+                card_type: 'fact_recall',
+                front: { text: ft },
+                back: { text: bt },
+            };
+        }
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    _m15ReadPairsFromDOM() {
+        const pairs = [];
+        let idx = 0;
+        while (true) {
+            const leftEl = document.getElementById(`m15PairLeft_${idx}`);
+            const rightEl = document.getElementById(`m15PairRight_${idx}`);
+            if (!leftEl && !rightEl) break;
+            pairs.push({
+                left: String(leftEl?.value || '').trim(),
+                right: String(rightEl?.value || '').trim(),
+            });
+            idx++;
+        }
+        return pairs;
+    }
+
+    _m15AddPair() {
+        const form = this.manualEditorCardForm;
+        if (!form) return;
+        // Sync current DOM values into form state before mutating
+        form.pairs = this._m15ReadPairsFromDOM();
+        if (form.pairs.length >= 5) return;
+        // Preserve front_text from DOM
+        const frontEl = document.getElementById('m11CardFront');
+        if (frontEl) form.front_text = frontEl.value;
+        form.pairs.push({ left: '', right: '' });
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    _m15RemovePair(index) {
+        const form = this.manualEditorCardForm;
+        if (!form) return;
+        form.pairs = this._m15ReadPairsFromDOM();
+        if (form.pairs.length <= 2) return;
+        const frontEl = document.getElementById('m11CardFront');
+        if (frontEl) form.front_text = frontEl.value;
+        form.pairs.splice(index, 1);
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    async manualEditorSaveCard() {
+        const form = this.manualEditorCardForm;
+        if (!form) return;
+        const deckId = String(this.manualEditorDeck?.id || '').trim();
+        if (!deckId) { this.showToast('Колода не выбрана', 'warning'); return; }
+
+        const frontEl = document.getElementById('m11CardFront');
+        const backEl = document.getElementById('m11CardBack');
+        const tagsEl = document.getElementById('m11CardTags');
+        const diffEl = document.getElementById('m11CardDifficulty');
+
+        const front_text = String(frontEl?.value || '').trim();
+        if (!front_text) { this.showToast('Заполните лицевую сторону', 'warning'); return; }
+
+        const tagsRaw = String(tagsEl?.value || '').trim();
+        const tags = tagsRaw ? tagsRaw.split(',').map(t => t.trim()).filter(Boolean) : [];
+        const difficulty_hint = String(diffEl?.value || 'medium');
+
+        const isPairMatch = form.card_type === 'pair_match';
+
+        // M15: pair_match validation
+        let pairs = null;
+        let back_text = '';
+        if (isPairMatch) {
+            pairs = this._m15ReadPairsFromDOM().filter(p => p.left && p.right);
+            if (pairs.length < 2) { this.showToast('Заполните минимум 2 пары (левая и правая часть)', 'warning'); return; }
+            if (pairs.length > 5) { this.showToast('Максимум 5 пар', 'warning'); return; }
+            const lefts = pairs.map(p => p.left);
+            const rights = pairs.map(p => p.right);
+            if (new Set(lefts).size !== lefts.length) { this.showToast('Левые элементы пар не должны повторяться', 'warning'); return; }
+            if (new Set(rights).size !== rights.length) { this.showToast('Правые элементы пар не должны повторяться', 'warning'); return; }
+        } else {
+            back_text = String(backEl?.value || '').trim();
+            if (!back_text) { this.showToast('Заполните обратную сторону', 'warning'); return; }
+        }
+
+        this.manualEditorSaving = true;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+
+        try {
+            let url, method, body;
+            if (form.mode === 'edit' && form.card_id) {
+                url = `/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(form.card_id)}`;
+                method = 'PUT';
+                body = isPairMatch
+                    ? { card_type: 'pair_match', front_text, pairs, tags, difficulty_hint }
+                    : { front_text, back_text, tags, difficulty_hint };
+            } else {
+                url = `/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards`;
+                method = 'POST';
+                body = isPairMatch
+                    ? { card_type: 'pair_match', front_text, pairs, tags, difficulty_hint }
+                    : { front_text, back_text, tags, difficulty_hint };
+            }
+            const resp = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body),
+            });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast(form.mode === 'edit' ? 'Карточка обновлена' : 'Карточка создана', 'success');
+                this.manualEditorCardForm = null;
+                this.manualEditorPreviewCard = null;
+                await this.manualEditorOpenDeck(deckId);
+            } else {
+                const errMap = {
+                    duplicate_card: 'Такая карточка уже существует (дубликат)',
+                    pair_match_min_2_pairs: 'Минимум 2 пары',
+                    pair_match_max_5_pairs: 'Максимум 5 пар',
+                    pair_match_duplicate_left: 'Левые элементы пар не должны повторяться',
+                    pair_match_duplicate_right: 'Правые элементы пар не должны повторяться',
+                    not_pair_match_card: 'Эта карточка не является pair_match',
+                };
+                const msg = errMap[data.error] || data.error || 'Ошибка сохранения';
+                this.showToast(msg, 'error');
+            }
+        } catch (e) {
+            console.error('[M15] save card failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        } finally {
+            this.manualEditorSaving = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    async manualEditorDeleteCard(cardId) {
+        const deckId = String(this.manualEditorDeck?.id || '').trim();
+        if (!deckId || !cardId) return;
+        if (!confirm('Удалить карточку?')) return;
+        try {
+            const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
+            const data = await resp.json();
+            if (data.ok) {
+                this.showToast('Карточка удалена', 'success');
+                await this.manualEditorOpenDeck(deckId);
+            } else {
+                this.showToast(data.error || 'Ошибка удаления', 'error');
+            }
+        } catch (e) {
+            console.error('[M11] delete card failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        }
+    }
+
+    async manualEditorMoveCard(cardId, direction) {
+        const deck = this.manualEditorDeck;
+        if (!deck?.cards?.length) return;
+        const ids = deck.cards.map(c => c?.id).filter(Boolean);
+        const idx = ids.indexOf(cardId);
+        if (idx < 0) return;
+        const targetIdx = idx + direction;
+        if (targetIdx < 0 || targetIdx >= ids.length) return;
+        [ids[idx], ids[targetIdx]] = [ids[targetIdx], ids[idx]];
+        try {
+            await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deck.id)}/reorder-cards`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ card_ids: ids }),
+            });
+            await this.manualEditorOpenDeck(deck.id);
+        } catch (e) {
+            console.error('[M11] reorder failed:', e);
+            this.showToast('Ошибка сети', 'error');
+        }
+    }
+
+    // ── M12: Microcards Text Import ────────────────────────────────
+
+    async openMicrocardsTextImport() {
+        if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
+            return;
+        }
+        this.theorySubMode = 'text_import';
+        this.mcImportParsedResult = null;
+        this.mcImportExecuteResult = null;
+        this.mcImportExecuting = false;
+        this.mcImportParsing = false;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        await this.loadMicrocardsDecks();
+    }
+
+    getMcImportPromptTemplates() {
+        return {
+            qa_short: {
+                title: 'Q/A короткие (@MICROCARD)',
+                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
+2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
+3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+
+<task_context>
+Микрокарточки — это карточки для интервального повторения (spaced repetition). На лицевой стороне — короткий вопрос, на обратной — краткий точный ответ. Цель — быстрое запоминание фактов, определений и ключевых связей.
+</task_context>
+
+<task>
+Преобразуй предоставленный материал в микрокарточки формата @MICROCARD. Извлеки ключевые факты, определения, числовые данные и важные связи. Каждая карточка должна проверять одну конкретную единицу знания.
+</task>
+
+<quality_criteria>
+- Вопрос (#) — краткий, однозначный, проверяет одну единицу знания.
+- Ответ (=) — точный, лаконичный, не длиннее 1–2 предложений.
+- Карточки самодостаточны — понятны без контекста других карточек.
+- Без дублирования — каждый факт покрывается одной карточкой.
+- Фактологическая точность — только то, что явно следует из материала.
+</quality_criteria>
+
+<output_format>
+Каждый блок начинается с маркера @MICROCARD на отдельной строке. Между блоками — одна пустая строка. Ответ содержит только блоки карточек, без пояснений, Markdown и комментариев.
+
+@MICROCARD
+@ tags: тег1, тег2
+@ difficulty: 2
+# <вопрос>
+= <ответ>
+</output_format>
+
+<metadata_rules>
+- @ tags: — теги через запятую (опционально)
+- @ difficulty: 1 (лёгкая), 2 (средняя), 3 (сложная) — опционально
+- @ deck: — название колоды (опционально, для группировки)
+</metadata_rules>
+
+<example>
+@MICROCARD
+@ tags: кардиология, ритм
+@ difficulty: 1
+# Что такое синусовый ритм?
+= Ритм сердца, при котором импульсы исходят из синусового узла.
+
+@MICROCARD
+@ tags: кардиология
+@ difficulty: 2
+# Какова нормальная ЧСС у взрослого в покое?
+= 60–100 ударов в минуту.
+</example>`
+            },
+            term_definition: {
+                title: 'Термин → определение (@MICROCARD)',
+                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
+2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
+3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+
+<task>
+Извлеки из предоставленного материала все ключевые термины и создай микрокарточки формата «Термин → Определение». На лицевой стороне — термин или понятие (в форме вопроса «Что такое…?»). На обратной — точное, краткое определение.
+</task>
+
+<quality_criteria>
+- Термин формулируется как вопрос: «Что такое ...?», «Что означает ...?»
+- Определение — точное, краткое, 1–2 предложения максимум.
+- Только явные термины из материала, не общеизвестные понятия.
+- Без дублирования и синонимичных карточек.
+</quality_criteria>
+
+<output_format>
+@MICROCARD
+@ tags: <тема>
+# Что такое <термин>?
+= <определение>
+
+Между блоками — одна пустая строка. Без Markdown, без пояснений, только блоки @MICROCARD.
+</output_format>
+
+<example>
+@MICROCARD
+@ tags: гематология
+# Что такое гемоглобин?
+= Белок эритроцитов, осуществляющий транспорт кислорода от лёгких к тканям и углекислого газа обратно.
+
+@MICROCARD
+@ tags: гематология
+# Что такое гематокрит?
+= Объёмная доля эритроцитов в общем объёме крови, выражаемая в процентах.
+</example>`
+            },
+            definition_term: {
+                title: 'Определение → термин (@MICROCARD)',
+                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
+2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
+3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+
+<task>
+Извлеки из предоставленного материала ключевые термины и создай микрокарточки в формате «Определение → Термин» (обратное направление). На лицевой стороне — описание или определение понятия. На обратной — сам термин. Это развивает узнавание термина по описанию.
+</task>
+
+<quality_criteria>
+- Описание на лицевой стороне не содержит самого термина (иначе задача тривиальна).
+- Ответ — только термин, без лишних слов.
+- Описание достаточно точное, чтобы ответ был однозначным.
+- Без дублирования с карточками «Термин → Определение» в той же колоде.
+</quality_criteria>
+
+<output_format>
+@MICROCARD
+@ tags: <тема>
+# <описание понятия без упоминания термина>
+= <термин>
+
+Между блоками — одна пустая строка. Без Markdown, без пояснений, только блоки @MICROCARD.
+</output_format>
+
+<example>
+@MICROCARD
+@ tags: гематология
+# Белок эритроцитов, транспортирующий кислород к тканям и углекислый газ обратно
+= Гемоглобин
+
+@MICROCARD
+@ tags: гематология
+# Объёмная доля эритроцитов в общем объёме крови, выраженная в процентах
+= Гематокрит
+</example>`
+            },
+            material_cards: {
+                title: 'Карточки по тезисам материала (@MICROCARD)',
+                instructions: `1. Скопируйте промпт и отправьте его ИИ-агенту вместе с учебным материалом.
+2. Скопируйте ответ ИИ без изменений и вставьте в поле ниже.
+3. Нажмите «Распарсить» для предпросмотра карточек.`,
+                prompt: `Ты — генератор микрокарточек для образовательной платформы.
+
+<task>
+Проанализируй предоставленный материал и создай микрокарточки по ключевым тезисам. Каждая карточка должна проверять понимание одного тезиса, факта или связи из материала. Используй разнообразные формулировки вопросов: «Почему…?», «Как…?», «В чём отличие…?», «Каков механизм…?», «Назовите…».
+</task>
+
+<calibration>
+Ориентиры количества карточек:
+- ~300 слов → 3–6 карточек
+- ~1000 слов → 10–20 карточек
+- ~3000+ слов → 25–50 карточек
+Лучше меньше качественных, чем много тривиальных.
+</calibration>
+
+<quality_criteria>
+- Разнообразие формулировок: не только «Что такое…?», но и «Почему…?», «Каков механизм…?», «В чём разница между…?».
+- Проверяется понимание, а не только запоминание.
+- Карточки независимы друг от друга.
+- Фактологическая точность — строго по материалу.
+- Ответ краткий: 1–3 предложения максимум.
+</quality_criteria>
+
+<output_format>
+@MICROCARD
+@ tags: <тема>
+@ difficulty: <1|2|3>
+# <вопрос>
+= <ответ>
+
+Между блоками — одна пустая строка. Без Markdown, без пояснений, только блоки @MICROCARD.
+</output_format>
+
+<example>
+@MICROCARD
+@ tags: пульмонология
+@ difficulty: 2
+# Почему при пневмонии возникает одышка?
+= Воспаление в лёгочной ткани нарушает газообмен в альвеолах, снижая оксигенацию крови, что компенсаторно увеличивает частоту дыхания.
+
+@MICROCARD
+@ tags: пульмонология
+@ difficulty: 3
+# В чём различие между крупозной и очаговой пневмонией?
+= Крупозная поражает целую долю лёгкого и имеет стадийное течение, очаговая — захватывает отдельные дольки и часто развивается как осложнение бронхита.
+</example>`
+            },
+        };
+    }
+
+    renderMicrocardsTextImport() {
+        const parsed = this.mcImportParsedResult;
+        const executed = this.mcImportExecuteResult;
+        const templates = this.getMcImportPromptTemplates();
+        const activeTemplate = templates[this.mcImportTemplateType] || templates.qa_short;
+        const decks = Array.isArray(this.microcardsDecks) ? this.microcardsDecks : [];
+
+        // Step 1: Input + prompt template (no parsed result yet)
+        // Step 2: Preview parsed items + mode/deck selection + execute
+        // Step 3: Execute result summary
+
+        if (executed) {
+            return this._renderMcImportExecuteResult(executed);
+        }
+
+        if (parsed && parsed.ok) {
+            return this._renderMcImportPreview(parsed, decks);
+        }
+
+        // Default: input step
+        const parsingErrors = parsed?.parsing_errors || [];
+        const hasErrors = parsingErrors.length > 0;
+
+        return `
+            <div class="grid grid-cols-1 xl:grid-cols-[1fr_1fr] gap-5">
+                <div class="space-y-4">
+                    <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
+                        <div class="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                                <h4 class="text-sm font-bold text-text-main">Шаблон промпта для ИИ-агента</h4>
+                                <p class="text-xs text-text-secondary mt-1">Скопируйте шаблон, передайте его ИИ-агенту и вставьте результат справа.</p>
+                            </div>
+                            <button onclick="dashboard.importManager.mcImportCopyPrompt()"
+                                class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-primary-fg transition-colors shrink-0">
+                                Скопировать
+                            </button>
+                        </div>
+                        <div class="mb-3">
+                            <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Тип карточек</label>
+                            <select id="mcImportTemplateType"
+                                onchange="dashboard.importManager.mcImportChangeTemplate(this.value)"
+                                class="block w-full rounded-lg border border-border-strong bg-surface-1 py-2 px-3 text-sm text-text-main focus:ring-2 focus:ring-primary">
+                                ${Object.entries(templates).map(([key, t]) => `
+                                    <option value="${key}" ${this.mcImportTemplateType === key ? 'selected' : ''}>${this.escapeHtml(t.title)}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                        <div class="mb-3 p-3 bg-info-lighter border border-info-light rounded-lg">
+                            <div class="flex items-start gap-2">
+                                <span class="material-symbols-outlined text-info text-[18px] mt-0.5">lightbulb</span>
+                                <div class="text-xs text-info-text whitespace-pre-line">${this.escapeHtml(activeTemplate.instructions)}</div>
+                            </div>
+                        </div>
+                        <textarea id="mcImportPromptTextarea" rows="10" readonly
+                            class="block w-full rounded-lg border border-border-strong bg-surface-2 p-3 text-xs text-text-main font-mono">${this.escapeHtml(activeTemplate.prompt)}</textarea>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
+                        <h4 class="text-sm font-bold text-text-main mb-2">Вставьте текст с микрокарточками</h4>
+                        ${hasErrors ? `
+                            <div class="mb-3 p-3 bg-error-lighter border border-error-light rounded-lg">
+                                <div class="flex items-start gap-2">
+                                    <span class="material-symbols-outlined text-error text-[18px]">error</span>
+                                    <div class="text-xs text-error-text space-y-1">
+                                        ${parsingErrors.map(e => `<p>${this.escapeHtml(e)}</p>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        <div class="flex justify-end mb-2">
+                            <button onclick="dashboard.importManager.mcImportPasteClipboard()"
+                                class="px-3 py-1.5 text-xs font-semibold text-text-secondary border border-border-subtle rounded hover:bg-bg-hover transition-colors">
+                                Вставить из буфера
+                            </button>
+                        </div>
+                        <textarea id="mcImportTextArea"
+                            class="block w-full rounded-lg border ${hasErrors ? 'border-error' : 'border-border-strong'} bg-surface-2 p-3 text-sm text-text-main font-mono placeholder:text-text-disabled focus:ring-2 focus:ring-primary resize-y"
+                            rows="14"
+                            placeholder="@MICROCARD&#10;@ tags: кардиология&#10;# Что такое синусовый ритм?&#10;= Ритм сердца, при котором импульсы исходят из синусового узла.&#10;&#10;@MICROCARD&#10;# Норма ЧСС у взрослого&#10;= 60–100 уд/мин."
+                            oninput="dashboard.importManager.mcImportText = this.value">${this.escapeHtml(this.mcImportText)}</textarea>
+                        <div id="mcImportLiveCounter" class="mt-2 flex flex-wrap gap-2 text-xs min-h-[20px]"></div>
+                        <div class="mt-3 flex items-center gap-3">
+                            <button onclick="dashboard.importManager.mcImportParseText()"
+                                class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shadow-sm"
+                                ${this.mcImportParsing ? 'disabled' : ''}>
+                                ${this.mcImportParsing ? 'Парсинг...' : 'Распарсить'}
+                            </button>
+                        </div>
+                        <div class="mt-3 flex items-start gap-2 p-3 bg-info-lighter border border-info-light rounded-lg">
+                            <span class="material-symbols-outlined text-info text-[18px]">info</span>
+                            <div class="text-xs text-info-text">
+                                <p class="font-medium mb-1">Формат:</p>
+                                <p>@MICROCARD — простая карточка (вопрос/ответ)</p>
+                                <p class="mt-1 text-text-muted">@PAIR_MATCH — сопоставления (v1.1, запланировано)</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    _renderMcImportPreview(parsed, decks) {
+        const summary = parsed.summary || {};
+        const items = parsed.items || [];
+        const notes = Array.isArray(parsed.notes) ? parsed.notes.filter(n => typeof n === 'string' && n.trim()) : [];
+
+        return `
+            <div class="space-y-4 animate-slide-up-fade">
+                <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+                        <h4 class="text-sm font-bold text-text-main">Предпросмотр: ${summary.total || 0} карточек</h4>
+                        <div class="flex items-center gap-2 text-xs">
+                            <span class="px-2 py-1 rounded-md bg-success-lighter text-success-text border border-success-light font-bold">${summary.valid || 0} ок</span>
+                            ${summary.warnings ? `<span class="px-2 py-1 rounded-md bg-warning-lighter text-warning-text border border-warning-light font-bold">${summary.warnings} предупр.</span>` : ''}
+                            ${summary.errors ? `<span class="px-2 py-1 rounded-md bg-error-lighter text-error-text border border-error-light font-bold">${summary.errors} ошибок</span>` : ''}
+                        </div>
+                    </div>
+                    ${notes.length ? `
+                        <div class="mb-3 p-2.5 bg-info-lighter border border-info-light rounded-lg">
+                            <div class="text-xs text-info-text space-y-0.5">
+                                ${notes.map(n => `<p>${this.escapeHtml(n)}</p>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    <div class="space-y-2 max-h-[320px] overflow-y-auto pr-1">
+                        ${items.map((item, idx) => {
+                            const cp = item.card_preview || {};
+                            const meta = item.metadata || {};
+                            const issues = item.validation_issues || [];
+                            const st = item.status || 'valid';
+                            const borderCls = st === 'error' ? 'border-error-light bg-error-lighter/20' : (st === 'warning' ? 'border-warning-light bg-warning-lighter/20' : 'border-border-strong bg-surface-2');
+                            return `
+                                <div class="rounded-lg border ${borderCls} p-3">
+                                    <div class="flex items-center gap-2 mb-1.5">
+                                        <span class="text-[10px] font-bold text-text-muted">#${idx + 1}</span>
+                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase">${this.escapeHtml(cp.card_type || 'fact_recall')}</span>
+                                        ${meta.tags?.length ? `<span class="text-[10px] text-text-secondary">${meta.tags.map(t => this.escapeHtml(t)).join(', ')}</span>` : ''}
+                                        ${st !== 'valid' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${st === 'error' ? 'bg-error-lighter text-error-text border border-error-light' : 'bg-warning-lighter text-warning-text border border-warning-light'}">${st}</span>` : ''}
+                                    </div>
+                                    <div class="text-xs font-semibold text-text-main mb-0.5">${this.escapeHtml(String(cp.front || '').slice(0, 120))}</div>
+                                    <div class="text-[11px] text-text-secondary">${this.escapeHtml(String(cp.back || '').slice(0, 150))}</div>
+                                    ${issues.length ? `<div class="mt-1.5 space-y-0.5">${issues.map(i => `<div class="text-[10px] ${i.severity === 'error' ? 'text-error-text' : 'text-warning-text'}">${this.escapeHtml(i.message || '')}</div>`).join('')}</div>` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-primary-light bg-primary-lighter/10 p-4">
+                    <h4 class="text-sm font-bold text-text-main mb-3">Импорт карточек</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Режим</label>
+                            <select id="mcImportModeSelect"
+                                onchange="dashboard.importManager.mcImportMode = this.value; dashboard.importManager.renderTheoryAnalysisMode()"
+                                class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
+                                <option value="create_deck" ${this.mcImportMode === 'create_deck' ? 'selected' : ''}>Создать новую колоду</option>
+                                <option value="append_to_deck" ${this.mcImportMode === 'append_to_deck' ? 'selected' : ''}>Добавить в существующую</option>
+                            </select>
+                        </div>
+                        ${this.mcImportMode === 'create_deck' ? `
+                            <div>
+                                <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Название колоды</label>
+                                <input id="mcImportDeckName" type="text"
+                                    value="${this.escapeHtml(this.mcImportDeckName || (items[0]?.metadata?.deck || ''))}"
+                                    oninput="dashboard.importManager.mcImportDeckName = this.value"
+                                    placeholder="Из метаданных или укажите вручную"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
+                            </div>
+                        ` : `
+                            <div>
+                                <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Целевая колода</label>
+                                <select id="mcImportTargetDeck"
+                                    onchange="dashboard.importManager.mcImportTargetDeckId = this.value"
+                                    class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
+                                    <option value="">— выберите колоду —</option>
+                                    ${decks.filter(d => !d?.meta?.archived).map(d => `
+                                        <option value="${this.escapeHtml(String(d?.id || ''))}" ${this.mcImportTargetDeckId === String(d?.id) ? 'selected' : ''}>${this.escapeHtml(String(d?.name || d?.id || 'Колода'))} (${d?.stats?.cards_total ?? 0} карт.)</option>
+                                    `).join('')}
+                                </select>
+                            </div>
+                        `}
+                    </div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button onclick="dashboard.importManager.mcImportExecute()"
+                            class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shadow-sm"
+                            ${this.mcImportExecuting || !(summary.valid > 0) ? 'disabled' : ''}>
+                            ${this.mcImportExecuting ? 'Импорт...' : `Импортировать ${summary.valid || 0} карточек`}
+                        </button>
+                        <button onclick="dashboard.importManager.mcImportReset()"
+                            class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                            Назад к вводу
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    _renderMcImportExecuteResult(result) {
+        const ok = result.ok;
+        return `
+            <div class="space-y-4 animate-slide-up-fade">
+                <div class="rounded-xl border ${ok ? 'border-success-light bg-success-lighter/20' : 'border-error-light bg-error-lighter/20'} p-6 text-center">
+                    <span class="material-symbols-outlined ${ok ? 'text-success' : 'text-error'} text-[40px] mb-2">${ok ? 'check_circle' : 'error'}</span>
+                    <h4 class="text-base font-bold ${ok ? 'text-success-text' : 'text-error-text'} mb-2">
+                        ${ok ? 'Импорт завершён' : 'Ошибка импорта'}
+                    </h4>
+                    ${ok ? `
+                        <div class="flex flex-wrap justify-center gap-4 text-sm mb-3">
+                            <div><span class="font-bold text-text-main">${result.added_cards || 0}</span> <span class="text-text-secondary">добавлено</span></div>
+                            ${result.skipped_duplicates ? `<div><span class="font-bold text-warning-text">${result.skipped_duplicates}</span> <span class="text-text-secondary">дубликатов</span></div>` : ''}
+                            ${result.skipped_errors ? `<div><span class="font-bold text-error-text">${result.skipped_errors}</span> <span class="text-text-secondary">ошибок</span></div>` : ''}
+                        </div>
+                        <p class="text-xs text-text-secondary mb-1">Колода: <span class="font-semibold text-text-main">${this.escapeHtml(result.deck_name || result.deck_id || '')}</span></p>
+                    ` : `
+                        <p class="text-sm text-error-text">${this.escapeHtml(result.error || 'Неизвестная ошибка')}</p>
+                    `}
+                </div>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button onclick="dashboard.importManager.mcImportReset()"
+                        class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors shadow-sm">
+                        Новый импорт
+                    </button>
+                    ${ok && result.deck_id ? `
+                        <button onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeHtml(String(result.deck_id))}'); dashboard.importManager.enterTheorySubMode('manual_editor')"
+                            class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                            Открыть в редакторе
+                        </button>
+                        <button onclick="dashboard.importManager.openTheoryMicrocardsMode('${this.escapeHtml(String(result.deck_id))}')"
+                            class="px-4 py-2 text-sm font-semibold rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
+                            Начать повторение
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    mcImportChangeTemplate(key) {
+        const templates = this.getMcImportPromptTemplates();
+        if (templates[key]) {
+            this.mcImportTemplateType = key;
+        }
+        const textarea = document.getElementById('mcImportPromptTextarea');
+        if (textarea) {
+            const active = templates[this.mcImportTemplateType] || templates.qa_short;
+            textarea.value = active.prompt;
+        }
+        const instrEl = document.getElementById('mcImportPromptTextarea')?.closest('.rounded-xl')?.querySelector('.bg-info-lighter .text-info-text');
+        if (instrEl) {
+            const active = templates[this.mcImportTemplateType] || templates.qa_short;
+            instrEl.textContent = active.instructions;
+        }
+    }
+
+    async mcImportCopyPrompt() {
+        try {
+            const templates = this.getMcImportPromptTemplates();
+            const active = templates[this.mcImportTemplateType] || templates.qa_short;
+            await this.writeToClipboard(active.prompt);
+            this.showToast('Промпт скопирован в буфер обмена.', 'success');
+        } catch (e) {
+            this.showToast('Не удалось скопировать промпт.', 'error');
+        }
+    }
+
+    async mcImportPasteClipboard() {
+        try {
+            const text = await navigator.clipboard.readText();
+            const textarea = document.getElementById('mcImportTextArea');
+            if (textarea && text) {
+                textarea.value = text;
+                this.mcImportText = text;
+            }
+        } catch (e) {
+            this.showToast('Не удалось прочитать буфер обмена.', 'warning');
+        }
+    }
+
+    async mcImportParseText() {
+        const textarea = document.getElementById('mcImportTextArea');
+        if (textarea) this.mcImportText = textarea.value;
+        if (!this.mcImportText.trim()) {
+            this.showToast('Вставьте текст с микрокарточками.', 'warning');
+            return;
+        }
+        this.mcImportParsing = true;
+        this.mcImportParsedResult = null;
+        this.mcImportExecuteResult = null;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch('/api/editor/microcards/import/parse-text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text: this.mcImportText }),
+            });
+            const data = await resp.json();
+            this.mcImportParsedResult = data;
+            if (!data.ok && !data.items?.length) {
+                this.showToast(data.error || 'Ошибка парсинга', 'error');
+            } else if (data.summary?.total === 0) {
+                this.showToast('Не найдено блоков @MICROCARD в тексте.', 'warning');
+            }
+        } catch (e) {
+            console.error('[M12] parse failed:', e);
+            this.showToast('Ошибка сети при парсинге.', 'error');
+        } finally {
+            this.mcImportParsing = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    async mcImportExecute() {
+        const parsed = this.mcImportParsedResult;
+        if (!parsed?.items?.length) return;
+        if (this.mcImportMode === 'append_to_deck' && !this.mcImportTargetDeckId) {
+            this.showToast('Выберите целевую колоду.', 'warning');
+            return;
+        }
+        const deckNameEl = document.getElementById('mcImportDeckName');
+        if (deckNameEl) this.mcImportDeckName = deckNameEl.value;
+        this.mcImportExecuting = true;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        try {
+            const resp = await fetch('/api/editor/microcards/import/execute-text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    items: parsed.items,
+                    mode: this.mcImportMode,
+                    target_deck_id: this.mcImportMode === 'append_to_deck' ? this.mcImportTargetDeckId : undefined,
+                    deck_name: this.mcImportMode === 'create_deck' ? (this.mcImportDeckName || undefined) : undefined,
+                }),
+            });
+            const data = await resp.json();
+            this.mcImportExecuteResult = data;
+            if (data.ok) {
+                this.showToast(`Импортировано ${data.added_cards || 0} карточек.`, 'success');
+                this.loadMicrocardsDecks();
+            } else {
+                this.showToast(data.error || 'Ошибка импорта', 'error');
+            }
+        } catch (e) {
+            console.error('[M12] execute failed:', e);
+            this.mcImportExecuteResult = { ok: false, error: 'network_error' };
+            this.showToast('Ошибка сети при импорте.', 'error');
+        } finally {
+            this.mcImportExecuting = false;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
+    mcImportReset() {
+        this.mcImportParsedResult = null;
+        this.mcImportExecuteResult = null;
+        this.mcImportExecuting = false;
+        this.mcImportDeckName = '';
+        this.mcImportTargetDeckId = '';
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    renderManualMicrocardsEditor() {
+        const decks = Array.isArray(this.microcardsDecks) ? this.microcardsDecks : [];
+        const deck = this.manualEditorDeck;
+        const cards = (deck && Array.isArray(deck.cards)) ? deck.cards : [];
+        const form = this.manualEditorCardForm;
+        const preview = this.manualEditorPreviewCard;
+        const isArchived = deck?.meta?.archived === true;
+
+        const deckListHtml = this.microcardsDecksLoading
+            ? '<div class="text-sm text-text-secondary py-4 text-center">Загрузка колод...</div>'
+            : (decks.length ? decks.map(d => {
+                const isActive = deck && String(d?.id) === String(deck?.id);
+                const archived = d?.meta?.archived === true;
+                const stats = d?.stats || {};
+                return `
+                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} ${archived ? 'opacity-60' : ''} cursor-pointer hover:bg-bg-hover transition-colors"
+                         onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeHtml(String(d?.id || ''))}')">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-xs font-semibold text-text-main truncate">${this.escapeHtml(String(d?.name || d?.id || 'Колода'))}${archived ? ' <span class="text-text-muted">(архив)</span>' : ''}</div>
+                            <div class="text-[10px] text-text-secondary mt-0.5">${stats.cards_total ?? 0} карт.</div>
+                        </div>
+                        ${this.manualEditorRenamingDeckId === String(d?.id) ? '' : `
+                            <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorRenamingDeckId='${this.escapeHtml(String(d?.id))}'; dashboard.importManager.renderTheoryAnalysisMode();"
+                                class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Переименовать">
+                                <span class="material-symbols-outlined text-[14px]">edit</span>
+                            </button>
+                        `}
+                    </div>
+                    ${this.manualEditorRenamingDeckId === String(d?.id) ? `
+                        <div class="flex gap-1 mt-1 mb-1" onclick="event.stopPropagation()">
+                            <input id="m11RenameInput" type="text" value="${this.escapeHtml(String(d?.name || ''))}"
+                                class="flex-1 min-w-0 px-2 py-1.5 text-xs rounded-md border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
+                            <button onclick="dashboard.importManager.manualEditorRenameDeck('${this.escapeHtml(String(d?.id))}')"
+                                class="px-2 py-1 text-[10px] font-bold rounded-md bg-primary text-primary-fg hover:bg-primary-hover" ${this.manualEditorSaving ? 'disabled' : ''}>OK</button>
+                            <button onclick="dashboard.importManager.manualEditorRenamingDeckId=null; dashboard.importManager.renderTheoryAnalysisMode();"
+                                class="px-2 py-1 text-[10px] font-bold rounded-md border border-border-strong text-text-secondary hover:bg-bg-hover">✕</button>
+                        </div>
+                    ` : ''}
+                `;
+            }).join('') : '<div class="text-sm text-text-secondary py-4 text-center">Нет колод. Создайте новую.</div>');
+
+        const isPairMatch = form && form.card_type === 'pair_match';
+        const formPairs = (form && Array.isArray(form.pairs)) ? form.pairs : [{ left: '', right: '' }, { left: '', right: '' }];
+
+        const cardFormHtml = form ? `
+            <div class="rounded-xl border border-primary-light bg-primary-lighter/10 p-4 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="text-xs font-bold text-text-main">${form.mode === 'edit' ? 'Редактирование карточки' : 'Новая карточка'}</div>
+                    ${form.mode !== 'edit' ? `
+                        <div class="flex rounded-lg border border-border-strong overflow-hidden text-[10px] font-bold">
+                            <button onclick="dashboard.importManager.manualEditorCardForm.card_type='fact_recall'; dashboard.importManager.renderTheoryAnalysisMode();"
+                                class="px-3 py-1.5 transition-colors ${!isPairMatch ? 'bg-primary text-primary-fg' : 'bg-surface-1 text-text-secondary hover:bg-bg-hover'}">
+                                Вопрос/Ответ
+                            </button>
+                            <button onclick="dashboard.importManager.manualEditorCardForm.card_type='pair_match'; if(!dashboard.importManager.manualEditorCardForm.pairs||dashboard.importManager.manualEditorCardForm.pairs.length<2) dashboard.importManager.manualEditorCardForm.pairs=[{left:'',right:''},{left:'',right:''}]; dashboard.importManager.renderTheoryAnalysisMode();"
+                                class="px-3 py-1.5 transition-colors ${isPairMatch ? 'bg-primary text-primary-fg' : 'bg-surface-1 text-text-secondary hover:bg-bg-hover'}">
+                                Сопоставление
+                            </button>
+                        </div>
+                    ` : (isPairMatch ? '<span class="px-2 py-0.5 rounded text-[9px] font-bold border border-primary-light bg-primary-lighter text-primary uppercase">pair_match</span>' : '')}
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">${isPairMatch ? 'Инструкция (лицевая сторона)' : 'Лицевая сторона (вопрос)'}</label>
+                    <textarea id="m11CardFront" rows="2"
+                        class="w-full px-3 py-2 text-sm rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+                        placeholder="${isPairMatch ? 'Сопоставьте термин и определение' : 'Что такое синусовый ритм?'}">${this.escapeHtml(form.front_text)}</textarea>
+                </div>
+                ${isPairMatch ? `
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Пары (2–5)</label>
+                        <div class="space-y-2" id="m15PairsContainer">
+                            ${formPairs.map((p, i) => `
+                                <div class="flex items-center gap-2">
+                                    <span class="text-[10px] text-text-muted font-mono w-4 text-right shrink-0">${i + 1}.</span>
+                                    <input id="m15PairLeft_${i}" type="text" value="${this.escapeHtml(String(p.left || ''))}"
+                                        class="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
+                                        placeholder="Левый элемент" />
+                                    <span class="text-text-muted text-xs shrink-0">\u2192</span>
+                                    <input id="m15PairRight_${i}" type="text" value="${this.escapeHtml(String(p.right || ''))}"
+                                        class="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
+                                        placeholder="Правый элемент" />
+                                    ${formPairs.length > 2 ? `
+                                        <button onclick="dashboard.importManager._m15RemovePair(${i})"
+                                            class="p-1 rounded text-text-muted hover:text-error transition-colors shrink-0" title="Удалить пару">
+                                            <span class="material-symbols-outlined text-[14px]">close</span>
+                                        </button>
+                                    ` : '<div class="w-6 shrink-0"></div>'}
+                                </div>
+                            `).join('')}
+                        </div>
+                        ${formPairs.length < 5 ? `
+                            <button onclick="dashboard.importManager._m15AddPair()"
+                                class="mt-2 flex items-center gap-1 px-3 py-1.5 text-[10px] font-bold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                                <span class="material-symbols-outlined text-[14px]">add</span> Добавить пару
+                            </button>
+                        ` : ''}
+                        <div class="text-[10px] text-text-muted mt-1">Каждый левый и правый элемент должен быть уникальным. Минимум 2, максимум 5 пар.</div>
+                    </div>
+                ` : `
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Обратная сторона (ответ)</label>
+                        <textarea id="m11CardBack" rows="2"
+                            class="w-full px-3 py-2 text-sm rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary resize-y"
+                            placeholder="Ритм сердца, при котором импульсы исходят из синусового узла.">${this.escapeHtml(form.back_text)}</textarea>
+                    </div>
+                `}
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Теги (через запятую)</label>
+                        <input id="m11CardTags" type="text" value="${this.escapeHtml(form.tags)}"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
+                            placeholder="кардиология, ритм" />
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Сложность</label>
+                        <select id="m11CardDifficulty"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
+                            <option value="low" ${form.difficulty_hint === 'low' ? 'selected' : ''}>Низкая</option>
+                            <option value="medium" ${form.difficulty_hint === 'medium' ? 'selected' : ''}>Средняя</option>
+                            <option value="high" ${form.difficulty_hint === 'high' ? 'selected' : ''}>Высокая</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex flex-wrap gap-2 pt-1">
+                    <button onclick="dashboard.importManager.manualEditorSaveCard()"
+                        class="px-4 py-2 text-xs font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50"
+                        ${this.manualEditorSaving ? 'disabled' : ''}>
+                        ${this.manualEditorSaving ? 'Сохранение...' : (form.mode === 'edit' ? 'Сохранить' : 'Создать карточку')}
+                    </button>
+                    <button onclick="dashboard.importManager.manualEditorPreviewCurrentCard()"
+                        class="px-4 py-2 text-xs font-bold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                        Предпросмотр
+                    </button>
+                    <button onclick="dashboard.importManager.manualEditorCancelCardForm()"
+                        class="px-4 py-2 text-xs font-bold rounded-lg border border-border-strong text-text-muted hover:bg-bg-hover transition-colors">
+                        Отмена
+                    </button>
+                </div>
+            </div>
+            ${preview ? `
+                <div class="rounded-xl border border-info-light bg-info-lighter/30 p-4">
+                    <div class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2">Предпросмотр карточки</div>
+                    <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2">
+                        <div class="text-[10px] uppercase tracking-wide text-text-secondary mb-1">Front</div>
+                        <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(String(preview.front?.text || ''))}</div>
+                    </div>
+                    ${preview.card_type === 'pair_match' && preview.front?.payload?.left_items ? `
+                        <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2">
+                            <div class="text-[10px] uppercase tracking-wide text-text-secondary mb-2">Пары</div>
+                            <div class="space-y-1.5">
+                                ${(Array.isArray(preview.back?.payload?.pairs) ? preview.back.payload.pairs : []).map(pl => {
+                                    const li = (preview.front.payload.left_items || []).find(x => x.id === pl.left_id);
+                                    const ri = (preview.front.payload.right_items || []).find(x => x.id === pl.right_id);
+                                    return `<div class="flex items-center gap-2 text-xs">
+                                        <span class="flex-1 px-2 py-1 rounded border border-border-strong bg-surface-2 text-text-main">${this.escapeHtml(String(li?.text || ''))}</span>
+                                        <span class="text-text-muted">\u2192</span>
+                                        <span class="flex-1 px-2 py-1 rounded border border-border-strong bg-surface-2 text-text-main">${this.escapeHtml(String(ri?.text || ''))}</span>
+                                    </div>`;
+                                }).join('')}
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="rounded-lg border border-border-strong bg-surface-1 p-3">
+                            <div class="text-[10px] uppercase tracking-wide text-text-secondary mb-1">Back</div>
+                            <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(String(preview.back?.text || ''))}</div>
+                        </div>
+                    `}
+                </div>
+            ` : ''}
+        ` : '';
+
+        const cardListHtml = deck ? (cards.length ? `
+            <div class="space-y-2">
+                ${cards.map((card, idx) => {
+                    const cid = String(card?.id || '');
+                    const ft = String(card?.front?.text || '').slice(0, 80);
+                    const bt = String(card?.back?.text || '').slice(0, 80);
+                    const ctype = String(card?.card_type || 'fact_recall');
+                    const isManual = card?.created_by === 'manual_editor';
+                    const cstatus = String(card?.status || 'active');
+                    return `
+                        <div class="flex items-start gap-2 px-3 py-2.5 rounded-lg border border-border-strong bg-surface-2 group ${cstatus !== 'active' ? 'opacity-60' : ''}">
+                            <div class="min-w-0 flex-1">
+                                <div class="flex items-center gap-1.5 mb-1">
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase">${this.escapeHtml(ctype)}</span>
+                                    ${isManual ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text">manual</span>' : ''}
+                                    ${cstatus !== 'active' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text">${this.escapeHtml(cstatus)}</span>` : ''}
+                                </div>
+                                <div class="text-xs font-semibold text-text-main truncate">${this.escapeHtml(ft || 'Без текста')}</div>
+                                <div class="text-[11px] text-text-secondary truncate mt-0.5">${this.escapeHtml(bt || '')}</div>
+                            </div>
+                            <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                ${idx > 0 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeHtml(cid)}', -1)"
+                                    class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Вверх">
+                                    <span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+                                </button>` : ''}
+                                ${idx < cards.length - 1 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeHtml(cid)}', 1)"
+                                    class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Вниз">
+                                    <span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+                                </button>` : ''}
+                                <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorShowCardForm('edit', ${JSON.stringify(card).replace(/</g, '\\u003c').replace(/'/g, '\\u0027')})"
+                                    class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Редактировать">
+                                    <span class="material-symbols-outlined text-[14px]">edit</span>
+                                </button>
+                                <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorDeleteCard('${this.escapeHtml(cid)}')"
+                                    class="p-1 rounded text-text-muted hover:text-error transition-colors" title="Удалить">
+                                    <span class="material-symbols-outlined text-[14px]">delete</span>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        ` : '<div class="text-sm text-text-secondary py-6 text-center">Карточек пока нет. Добавьте первую.</div>') : '';
+
+        return `
+            <div class="grid grid-cols-1 xl:grid-cols-[0.85fr_1.35fr] gap-5">
+                <div class="space-y-3">
+                    <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
+                        <div class="text-xs font-bold text-text-main mb-3">Колоды</div>
+                        <div class="flex gap-2 mb-3">
+                            <input id="m11DeckNameInput" type="text" placeholder="Название новой колоды"
+                                class="flex-1 min-w-0 px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
+                            <button onclick="dashboard.importManager.manualEditorCreateDeck()"
+                                class="px-3 py-2 text-xs font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shrink-0"
+                                ${this.manualEditorSaving ? 'disabled' : ''}>
+                                <span class="material-symbols-outlined text-[14px] align-middle">add</span> Создать
+                            </button>
+                        </div>
+                        <div class="space-y-1 max-h-[340px] overflow-y-auto">${deckListHtml}</div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    ${deck ? `
+                        <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
+                            <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                <div class="min-w-0">
+                                    <div class="text-sm font-bold text-text-main truncate">${this.escapeHtml(String(deck.name || deck.id || 'Колода'))}</div>
+                                    <div class="text-[10px] text-text-secondary font-mono mt-0.5">${this.escapeHtml(String(deck.id || ''))}</div>
+                                </div>
+                                <div class="flex gap-1.5 shrink-0">
+                                    ${!isArchived ? `
+                                        <button onclick="dashboard.importManager.manualEditorShowCardForm('create')"
+                                            class="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors">
+                                            <span class="material-symbols-outlined text-[14px]">add</span> Карточка
+                                        </button>
+                                    ` : ''}
+                                    <button onclick="dashboard.importManager.manualEditorArchiveDeck('${this.escapeHtml(String(deck.id))}', ${!isArchived})"
+                                        class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors"
+                                        title="${isArchived ? 'Разархивировать' : 'Архивировать'}">
+                                        <span class="material-symbols-outlined text-[14px]">${isArchived ? 'unarchive' : 'archive'}</span>
+                                    </button>
+                                    <button onclick="dashboard.importManager.manualEditorDeleteDeck('${this.escapeHtml(String(deck.id))}')"
+                                        class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-error-light text-error-text hover:bg-error-lighter transition-colors"
+                                        title="Удалить колоду">
+                                        <span class="material-symbols-outlined text-[14px]">delete</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-3 text-[11px] text-text-secondary mb-3">
+                                <span>${cards.length} карт.</span>
+                                ${deck.meta?.source === 'manual_editor' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text">manual</span>' : ''}
+                                ${isArchived ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text">архив</span>' : ''}
+                            </div>
+                            ${cardFormHtml}
+                            ${this.manualEditorDeckLoading ? '<div class="text-sm text-text-secondary py-4 text-center">Загрузка карточек...</div>' : cardListHtml}
+                        </div>
+                    ` : `
+                        <div class="rounded-xl border border-border-strong bg-surface-1 p-8 text-center">
+                            <span class="material-symbols-outlined text-border-strong text-[40px] mb-2">style</span>
+                            <p class="text-sm font-semibold text-text-main">Выберите колоду</p>
+                            <p class="text-xs text-text-secondary mt-1">Выберите колоду слева для просмотра и редактирования карточек, или создайте новую.</p>
+                        </div>
+                    `}
+                </div>
+            </div>
+        `;
+    }
+
+    renderTheoryAnalysisReportBody(a, vm = {}) {
+        let structuredHtml = '';
+        let rendererError = null;
+        try {
+            structuredHtml = this.renderTheoryAnalysisStructuredReport(a);
+        } catch (e) {
+            rendererError = e;
+            console.error('[TheoryReport][renderer] report_blocks render failed, using fallback:', e);
+        }
+
+        if (structuredHtml) {
+            return structuredHtml;
+        }
+
+        const blocks = Array.isArray(a?.report_blocks) ? a.report_blocks : [];
+        const lint = (a && typeof a === 'object' && a.report_lint && typeof a.report_lint === 'object') ? a.report_lint : {};
+        let reasonText = '';
+        if (rendererError) {
+            reasonText = this.aiUxMessage('theory_report.fallback.renderer_error', 'Структурный renderer отчёта завершился ошибкой. Показан fallback-отчёт из analysis_json.');
+        } else if (!blocks.length) {
+            reasonText = this.aiUxMessage('theory_report.fallback.missing_blocks', 'Структурные report_blocks отсутствуют. Показан fallback-отчёт из analysis_json.');
+        } else if (lint.fallback_renderer_recommended) {
+            reasonText = this.aiUxMessage('theory_report.fallback.lint_recommended', 'Backend пометил layout как рискованный/частично невалидный. Показан fallback-отчёт из analysis_json.');
+        }
+
+        const noteHtml = reasonText ? `
+            <div class="mb-3 p-3 rounded-lg bg-surface-2 shadow-sm">
+                <div class="flex items-start gap-2">
+                    <span class="material-symbols-outlined text-[18px] text-text-secondary mt-0.5">info</span>
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold text-text-main">Fallback renderer</p>
+                        <p class="text-xs text-text-secondary mt-1">${this.escapeHtml(reasonText)}</p>
+                    </div>
+                </div>
+            </div>
+        ` : '';
+        return `${noteHtml}${this.renderTheoryAnalysisFallbackReportGrid(a, vm)}`;
+    }
+
+    renderTheoryAnalysisStructuredReport(a) {
+        if (!this.isTheoryFeatureEnabled('analysis_report_renderer_v1')) return '';
+        const rawBlocks = Array.isArray(a?.report_blocks) ? a.report_blocks.filter(b => b && typeof b === 'object') : [];
+        if (!rawBlocks.length) return '';
+        if (a?.report_lint?.fallback_renderer_recommended) return '';
+
+        const blocks = this.sortTheoryReportBlocks(rawBlocks);
+        const nonTocBlocks = blocks.filter(block => (block.type || '').toLowerCase() !== 'toc');
+        if (!nonTocBlocks.length) return '';
+
+        const compactMode = (a?.report_lint?.verbosity_risk || '').toLowerCase() === 'high';
+        const ctx = this.buildTheoryReportRenderContext(a, blocks);
+        const tocBlocks = blocks.filter(block => (block.type || '').toLowerCase() === 'toc');
+        const fixedProgressionsSectionHtml = this.renderTheoryReportFixedProgressionsSection(ctx, blocks);
+
+        const metaCards = [
+            this.renderTheoryReportMetaCard(a, compactMode),
+            this.renderTheoryReportWarningsCard(a),
+        ].filter(Boolean).join('');
+
+        const sidebarHtml = tocBlocks.length ? `
+            <aside class="2xl:sticky 2xl:top-0 self-start space-y-3">
+                ${metaCards}
+                ${tocBlocks.map(block => this.renderTheoryReportBlock(block, ctx)).join('')}
+            </aside>
+        ` : '';
+
+        const mainHtml = `
+            <div class="min-w-0 space-y-3">
+                ${!tocBlocks.length ? metaCards : ''}
+                ${compactMode ? `
+                    <div class="p-3 rounded-lg border border-warning-light bg-warning-lighter">
+                        <div class="flex items-start gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-warning-text mt-0.5">compress</span>
+                            <div class="min-w-0">
+                                <p class="text-xs font-semibold text-text-main">Compact mode</p>
+                                <p class="text-xs text-text-secondary mt-1">
+                                    report_lint: verbosity_risk=${this.escapeHtml(String(a?.report_lint?.verbosity_risk || 'unknown'))},
+                                    duplicates=${this.escapeHtml(String(a?.report_lint?.duplicate_content_signals ?? 0))}.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+                ${fixedProgressionsSectionHtml}
+                ${nonTocBlocks.map(block => this.renderTheoryReportBlock(block, ctx)).join('')}
+            </div>
+        `;
+
+        if (!tocBlocks.length) {
+            return mainHtml;
+        }
+
+        return `
+            <div class="grid grid-cols-1 2xl:grid-cols-[18rem_minmax(0,1fr)] gap-4">
+                ${sidebarHtml}
+                ${mainHtml}
+            </div>
+        `;
+    }
+
+    sortTheoryReportBlocks(blocks) {
+        return [...(Array.isArray(blocks) ? blocks : [])]
+            .map((block, index) => ({ block, index }))
+            .sort((a, b) => {
+                const pa = Number.isFinite(Number(a.block?.priority)) ? Number(a.block.priority) : 0;
+                const pb = Number.isFinite(Number(b.block?.priority)) ? Number(b.block.priority) : 0;
+                if (pb !== pa) return pb - pa;
+                const ta = (a.block?.type || '').toLowerCase();
+                const tb = (b.block?.type || '').toLowerCase();
+                if (ta === 'toc' && tb !== 'toc') return -1;
+                if (tb === 'toc' && ta !== 'toc') return 1;
+                return a.index - b.index;
+            })
+            .map(item => item.block);
+    }
+
+    buildTheoryReportRenderContext(a, blocks) {
+        const units = Array.isArray(a?.educational_units) ? a.educational_units : [];
+        const chunks = Array.isArray(a?.learning_chunks) ? a.learning_chunks : [];
+        const routes = Array.isArray(a?.authoring_routes) ? a.authoring_routes : [];
+        const typeEntries = Array.isArray(a?.type_progression_suitability) ? a.type_progression_suitability : [];
+        const microcards = Array.isArray(a?.microcards_candidates) ? a.microcards_candidates : [];
+        const futureCaps = Array.isArray(a?.future_capabilities) ? a.future_capabilities : [];
+        const coveragePlan = (a && typeof a === 'object' && a.coverage_plan && typeof a.coverage_plan === 'object') ? a.coverage_plan : {};
+
+        const unitById = new Map(units.map(unit => [String(unit?.id ?? ''), unit]));
+        const chunkById = new Map(chunks.map(chunk => [String(chunk?.id ?? ''), chunk]));
+        const routeById = new Map(routes.map(route => [String(route?.id ?? ''), route]));
+        const typeEntriesByTaskType = new Map();
+        typeEntries.forEach((entry) => {
+            const key = String(entry?.task_type || '').toUpperCase();
+            if (!key) return;
+            const list = typeEntriesByTaskType.get(key) || [];
+            list.push(entry);
+            typeEntriesByTaskType.set(key, list);
+        });
+
+        const routeBlockAnchorById = new Map();
+        const chunkBlockAnchorById = new Map();
+        (Array.isArray(blocks) ? blocks : []).forEach((block) => {
+            if (!block || typeof block !== 'object' || !block.anchor || !block.body || typeof block.body !== 'object') return;
+            if (String(block.type || '').toLowerCase() === 'route_card' && block.body.route_id) {
+                routeBlockAnchorById.set(String(block.body.route_id), String(block.anchor));
+            }
+            if (String(block.type || '').toLowerCase() === 'chunk_card' && block.body.chunk_id) {
+                chunkBlockAnchorById.set(String(block.body.chunk_id), String(block.anchor));
+            }
+        });
+
+        return {
+            units,
+            chunks,
+            routes,
+            typeEntries,
+            microcards,
+            futureCaps,
+            coveragePlan,
+            unitById,
+            chunkById,
+            routeById,
+            typeEntriesByTaskType,
+            routeBlockAnchorById,
+            chunkBlockAnchorById,
+        };
+    }
+
+    renderTheoryReportMetaCard(a, compactMode = false) {
+        const units = Array.isArray(a?.educational_units) ? a.educational_units.length : 0;
+        const chunks = Array.isArray(a?.learning_chunks) ? a.learning_chunks.length : 0;
+        const routes = Array.isArray(a?.authoring_routes) ? a.authoring_routes.length : 0;
+        const materialLang = a?.material_language || a?.material_stats?.language || a?.target_language || 'unknown';
+        const outputLang = a?.effective_output_language || a?.target_language || 'unknown';
+        const lint = (a && typeof a === 'object' && a.report_lint && typeof a.report_lint === 'object') ? a.report_lint : {};
+        return `
+            <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
+                <div class="flex items-start justify-between gap-2">
+                    <div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Report meta</div>
+                        <div class="text-[11px] text-text-secondary mt-1">
+                            ${a?.report_blocks_version ? `report_blocks v${this.escapeHtml(String(a.report_blocks_version))}` : 'legacy'}
+                            ${a?.analysis_schema_version ? ` · schema ${this.escapeHtml(String(a.analysis_schema_version))}` : ''}
+                        </div>
+                    </div>
+                    ${compactMode ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-warning-light bg-warning-lighter text-warning-text">compact</span>` : ''}
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
+                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Units <span class="font-semibold text-text-main">${units}</span></div>
+                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Chunks <span class="font-semibold text-text-main">${chunks}</span></div>
+                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Routes <span class="font-semibold text-text-main">${routes}</span></div>
+                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Lint dup <span class="font-semibold text-text-main">${this.escapeHtml(String(lint.duplicate_content_signals ?? 0))}</span></div>
+                </div>
+                <div class="mt-3 text-[11px] text-text-secondary space-y-1">
+                    <p>Материал: <span class="text-text-main">${this.escapeHtml(String(materialLang))}</span></p>
+                    <p>Анализ: <span class="text-text-main">${this.escapeHtml(String(outputLang))}</span></p>
+                    ${a?.provider_used ? `<p>Провайдер: <span class="text-text-main">${this.escapeHtml(String(a.provider_used))}${a?.provider_model ? ` (${this.escapeHtml(String(a.provider_model))})` : ''}</span></p>` : ''}
+                </div>
+                ${a?.human_summary ? `<p class="text-xs text-text-main mt-3 leading-relaxed">${this.escapeHtml(String(a.human_summary))}</p>` : ''}
+            </section>
+        `;
+    }
+
+    renderTheoryReportWarningsCard(a) {
+        const warnings = Array.isArray(a?.warnings) ? a.warnings.filter(Boolean) : [];
+        if (!warnings.length) return '';
+        return `
+            <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
+                <div class="flex items-center gap-1.5 mb-2">
+                    <span class="material-symbols-outlined text-[16px] text-text-secondary">warning</span>
+                    <div class="text-xs font-semibold uppercase tracking-wide text-text-main">Warnings</div>
+                </div>
+                <div class="space-y-1">
+                    ${warnings.slice(0, 8).map(w => `<p class="text-xs text-text-main">${this.escapeHtml(String(w))}</p>`).join('')}
+                    ${warnings.length > 8 ? `<p class="text-[11px] text-text-secondary">Показаны первые 8 из ${warnings.length}</p>` : ''}
+                </div>
+            </section>
+        `;
+    }
+
+    theoryReportToneStyles(tone) {
+        const t = String(tone || 'neutral').toLowerCase();
+        const map = {
+            neutral: { wrapper: 'border-border-strong bg-surface-2', badge: 'border-border-strong bg-surface-1 text-text-secondary' },
+            info: { wrapper: 'border-info-light bg-info-lighter', badge: 'border-info-light bg-surface-1 text-text-main' },
+            success: { wrapper: 'border-success-light bg-success-lighter', badge: 'border-success-light bg-surface-1 text-text-main' },
+            warning: { wrapper: 'border-warning-light bg-warning-lighter', badge: 'border-warning-light bg-surface-1 text-text-main' },
+            risk: { wrapper: 'border-error-light bg-error-lighter', badge: 'border-error-light bg-surface-1 text-text-main' },
+        };
+        return map[t] || map.neutral;
+    }
+
+    theoryReportSuitabilityBadgeClass(suitability) {
+        const value = String(suitability || 'medium').toLowerCase();
+        if (value === 'high') return 'border-success-light bg-success-lighter text-text-main';
+        if (value === 'medium') return 'border-info-light bg-info-lighter text-text-main';
+        if (value === 'low') return 'border-warning-light bg-warning-lighter text-text-main';
+        return 'border-error-light bg-error-lighter text-text-main';
+    }
+
+    theoryReportPriorityBadgeClass(priority) {
+        const value = String(priority || 'medium').toLowerCase();
+        if (value === 'high') return 'border-success-light bg-success-lighter text-text-main';
+        if (value === 'low') return 'border-border-strong bg-surface-1 text-text-secondary';
+        return 'border-info-light bg-info-lighter text-text-main';
+    }
+
+    theoryReportSortedTypeEntries(entries) {
+        const priorityRank = { high: 2, medium: 1, low: 0 };
+        const suitabilityRank = { high: 3, medium: 2, low: 1, not_recommended: 0 };
+        return [...(Array.isArray(entries) ? entries : [])].sort((a, b) => {
+            const pa = priorityRank[String(a?.priority || 'medium').toLowerCase()] ?? 1;
+            const pb = priorityRank[String(b?.priority || 'medium').toLowerCase()] ?? 1;
+            if (pb !== pa) return pb - pa;
+            const sa = suitabilityRank[String(a?.suitability || 'medium').toLowerCase()] ?? 1;
+            const sb = suitabilityRank[String(b?.suitability || 'medium').toLowerCase()] ?? 1;
+            if (sb !== sa) return sb - sa;
+            return String(a?.task_type || '').localeCompare(String(b?.task_type || ''));
+        });
+    }
+
+    theoryReportLevelRoleMapToHtml(levelRoleMap, { max = 4, lineClass = 'text-[11px] text-text-secondary', emptyText = 'Роли уровней не указаны.' } = {}) {
+        const rows = Array.isArray(levelRoleMap)
+            ? levelRoleMap
+                .filter((row) => row && Number.isFinite(Number(row.level)) && String(row.role || '').trim())
+                .sort((a, b) => Number(a.level) - Number(b.level))
+                .slice(0, max)
+            : [];
+        if (!rows.length) return `<div class="${lineClass}">${this.escapeHtml(String(emptyText))}</div>`;
+        return `
+            <div class="space-y-1">
+                ${rows.map((row) => `
+                    <div>
+                        <div class="${lineClass}"><span class="font-semibold text-text-main">L${this.escapeHtml(String(row.level))}</span>: ${this.escapeHtml(String(row.role || ''))}</div>
+                        ${row?.value_for_material ? `<div class="text-[11px] text-text-secondary/90">${this.escapeHtml(String(row.value_for_material))}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderTheoryReportFixedProgressionPolicyNote(typeEntries, { compact = false } = {}) {
+        const entries = Array.isArray(typeEntries) ? typeEntries : [];
+        const fixedEntries = entries.filter(entry => entry?.progression_is_fixed);
+        if (!fixedEntries.length) return '';
+        const coreFixedCount = fixedEntries.filter(entry => String(entry?.complex_role || '').toLowerCase() === 'core').length;
+        const matrixSuffix = compact ? '' : ' Ниже уровни показаны как роли внутри progression каждого типа.';
+        return `
+            <div class="p-3 rounded-lg border border-border-strong bg-surface-1">
+                <div class="flex items-start gap-2">
+                    <span class="material-symbols-outlined text-[18px] text-text-secondary mt-0.5">schema</span>
+                    <div class="min-w-0">
+                        <p class="text-xs font-semibold text-text-main uppercase tracking-wide">Как читать уровни</p>
+                        <p class="text-xs text-text-main mt-1">
+                            Для типов с <strong class="font-semibold">fixed progression</strong> уровни не выбираются как отдельная ручная опция.
+                            В комплексах это части одной progression; пользователь выбирает сам тип и приоритетные units/chunks.${matrixSuffix}
+                        </p>
+                        <div class="flex flex-wrap gap-1 mt-2">
+                            <span class="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-text-main">fixed types: ${this.escapeHtml(String(fixedEntries.length))}</span>
+                            ${coreFixedCount ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] font-medium text-text-secondary">core in complexes: ${this.escapeHtml(String(coreFixedCount))}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTheoryReportProgressionSummaryCards(ctx, { maxItems = 6 } = {}) {
+        const allEntries = Array.isArray(ctx?.typeEntries) ? ctx.typeEntries : [];
+        const entries = this.theoryReportSortedTypeEntries(allEntries)
+            .filter(entry => entry?.progression_is_fixed)
+            .slice(0, Math.max(1, maxItems));
+        if (!entries.length) return '';
+
+        return `
+            <div class="space-y-2">
+                ${entries.map((entry) => {
+                    const taskType = String(entry?.task_type || 'UNKNOWN').toUpperCase();
+                    const subtypeText = String(entry?.subtype || '').trim();
+                    const suitability = String(entry?.suitability || 'medium').toLowerCase();
+                    const priority = String(entry?.priority || 'medium').toLowerCase();
+                    const role = String(entry?.complex_role || 'none').toLowerCase();
+                    const availability = String(entry?.availability || '').trim();
+                    const levelRoleMap = Array.isArray(entry?.level_role_map) ? entry.level_role_map : [];
+                    const levelLabels = levelRoleMap
+                        .map(row => Number(row?.level))
+                        .filter(Number.isFinite)
+                        .sort((a, b) => a - b)
+                        .map(level => `L${level}`);
+                    const seqIntents = Array.isArray(entry?.sequence_intents) ? entry.sequence_intents : [];
+                    const iterativeNotes = Array.isArray(entry?.iterative_system_notes) ? entry.iterative_system_notes.filter(Boolean) : [];
+
+                    return `
+                        <div class="rounded-lg border border-border-strong bg-surface-1 p-2">
+                            <div class="flex flex-wrap items-center gap-1.5">
+                                <span class="text-xs font-semibold text-text-main">${this.escapeHtml(taskType)}${subtypeText ? ` / ${this.escapeHtml(subtypeText)}` : ''}</span>
+                                <span class="px-1 py-0.5 rounded-md text-[10px] font-medium text-text-main">${this.escapeHtml(suitability)}</span>
+                                <span class="px-1 py-0.5 rounded-md text-[10px] font-medium text-text-secondary">${this.escapeHtml(priority)}</span>
+                                ${availability ? `<span class="px-1 py-0.5 rounded-md text-[10px] text-text-secondary">${this.escapeHtml(availability)}</span>` : ''}
+                                ${role && role !== 'none' ? `<span class="px-1 py-0.5 rounded-md text-[10px] text-text-secondary">${this.escapeHtml(role)}</span>` : ''}
+                            </div>
+                            ${levelLabels.length ? `<div class="text-[11px] text-text-secondary mt-1">Уровни в progression: ${this.escapeHtml(levelLabels.join(', '))}</div>` : ''}
+                            <div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: 'Роли уровней не указаны в анализе.' })}</div>
+                            ${iterativeNotes.length ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(iterativeNotes[0]))}</p>` : ''}
+                            ${entry?.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(entry.why))}</p>` : ''}
+                            ${seqIntents.length ? `<div class="flex flex-wrap gap-1 mt-2">${seqIntents.slice(0, 5).map(intent => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(intent))}</span>`).join('')}</div>` : ''}
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    }
+
+    renderTheoryReportFixedProgressionsSection(ctx, blocks = []) {
+        const typeEntries = Array.isArray(ctx?.typeEntries) ? ctx.typeEntries : [];
+        if (!typeEntries.some(entry => entry?.progression_is_fixed)) return '';
+        const progressionMatrixBlock = (Array.isArray(blocks) ? blocks : []).find(
+            block => String(block?.type || '').toLowerCase() === 'progression_matrix'
+        );
+        const matrixAnchor = String(progressionMatrixBlock?.anchor || '').trim();
+        const summaryCardsHtml = this.renderTheoryReportProgressionSummaryCards(ctx, { maxItems: 5 });
+        return `
+            <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
+                <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
+                    <div class="min-w-0">
+                        <div class="text-xs font-semibold uppercase tracking-wide text-text-main">Типы как progressions</div>
+                        <div class="text-[11px] text-text-secondary mt-1">Детерминированное объяснение fixed progression уровней (P10), независимо от AI-layout.</div>
+                    </div>
+                    ${matrixAnchor ? this.renderTheoryReportJumpButton('К матрице уровней', matrixAnchor) : ''}
+                </div>
+                ${this.renderTheoryReportFixedProgressionPolicyNote(typeEntries)}
+                ${summaryCardsHtml ? `<div class="mt-3">${summaryCardsHtml}</div>` : ''}
+            </section>
+        `;
+    }
+
+    theoryReportListToHtml(items, { max = 8, className = 'text-xs text-text-secondary', bulletClass = 'text-text-muted' } = {}) {
+        const values = Array.isArray(items) ? items.filter(Boolean).slice(0, max) : [];
+        if (!values.length) return '';
+        return `
+            <ul class="space-y-1">
+                ${values.map(item => `
+                    <li class="flex items-start gap-2">
+                        <span class="mt-[2px] text-[10px] ${bulletClass}">•</span>
+                        <span class="${className}">${this.escapeHtml(String(item))}</span>
+                    </li>
+                `).join('')}
+            </ul>
+        `;
+    }
+
+    theoryReportRefsMeta(refs) {
+        if (!refs || typeof refs !== 'object') return '';
+        const parts = [];
+        const unitIds = Array.isArray(refs.unit_ids) ? refs.unit_ids : [];
+        const chunkIds = Array.isArray(refs.chunk_ids) ? refs.chunk_ids : [];
+        const routeIds = Array.isArray(refs.route_ids) ? refs.route_ids : [];
+        if (unitIds.length) parts.push(`units ${unitIds.length}`);
+        if (chunkIds.length) parts.push(`chunks ${chunkIds.length}`);
+        if (routeIds.length) parts.push(`routes ${routeIds.length}`);
+        if (!parts.length) return '';
+        return `
+            <div class="flex flex-wrap gap-1">
+                ${parts.map(part => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(part)}</span>`).join('')}
+            </div>
+        `;
+    }
+
+    isTheoryReportBlockCollapsed(block) {
+        const id = String(block?.id || '').trim();
+        if (!id) return false;
+        if (this.theoryReportBlockCollapseState.has(id)) {
+            return !!this.theoryReportBlockCollapseState.get(id);
+        }
+        return !!block?.collapsed_by_default;
+    }
+
+    prefersReducedMotion() {
+        try {
+            return !!(window?.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+        } catch (_) {
+            return false;
+        }
+    }
+
+    toggleTheoryReportBlockCollapse(blockId) {
+        const id = String(blockId || '').trim();
+        if (!id) return;
+        const blocks = Array.isArray(this.analysisResult?.report_blocks) ? this.analysisResult.report_blocks : [];
+        const block = blocks.find(item => String(item?.id || '') === id);
+        const current = block ? this.isTheoryReportBlockCollapsed(block) : !!this.theoryReportBlockCollapseState.get(id);
+        const nextCollapsed = !current;
+        this.theoryReportBlockCollapseState.set(id, nextCollapsed);
+
+        const section = Array.from(document.querySelectorAll('[data-report-block-id]'))
+            .find(el => String(el?.getAttribute('data-report-block-id') || '') === id);
+        const content = section?.querySelector(`[data-role="theory-report-block-content"][data-block-id="${id}"]`);
+        const header = section?.querySelector('[data-role="theory-report-block-header"]');
+        const toggleBtn = section?.querySelector('[data-role="theory-report-block-toggle-btn"]');
+        const toggleIcon = toggleBtn?.querySelector('[data-role="theory-report-block-toggle-icon"]');
+        const toggleLabel = toggleBtn?.querySelector('[data-role="theory-report-block-toggle-label"]');
+
+        if (!section || !content || !toggleBtn) {
+            if (this.modalPurpose === 'theory_analysis') {
+                this.renderTheoryAnalysisMode();
+            } else {
+                this.renderCurrentStep();
+            }
+            return;
+        }
+
+        const setHeaderCollapsedSpacing = (isCollapsedState) => {
+            if (!header) return;
+            header.classList.toggle('mb-3', !isCollapsedState);
+        };
+        toggleBtn.setAttribute('aria-expanded', String(!nextCollapsed));
+        if (toggleIcon) toggleIcon.textContent = nextCollapsed ? 'expand_more' : 'expand_less';
+        if (toggleLabel) toggleLabel.textContent = nextCollapsed ? 'Открыть' : 'Свернуть';
+
+        if (content.__rpHideTimer) {
+            window.clearTimeout(content.__rpHideTimer);
+            content.__rpHideTimer = null;
+        }
+
+        const setExpandedClasses = () => {
+            content.classList.remove('hidden', 'opacity-0', 'translate-y-1', 'pointer-events-none');
+            content.classList.add('opacity-100', 'translate-y-0');
+        };
+        const setCollapsedClasses = () => {
+            content.classList.add('hidden', 'opacity-0', 'translate-y-1', 'pointer-events-none');
+            content.classList.remove('opacity-100', 'translate-y-0');
+        };
+        const raf = (cb) => {
+            if (window?.requestAnimationFrame) {
+                window.requestAnimationFrame(cb);
+            } else {
+                window.setTimeout(cb, 0);
+            }
+        };
+
+        if (this.prefersReducedMotion()) {
+            setHeaderCollapsedSpacing(nextCollapsed);
+            if (nextCollapsed) setCollapsedClasses();
+            else setExpandedClasses();
+            return;
+        }
+
+        if (nextCollapsed) {
+            setHeaderCollapsedSpacing(false);
+            content.classList.remove('hidden', 'pointer-events-none');
+            content.classList.remove('opacity-0', 'translate-y-1');
+            content.classList.add('opacity-100', 'translate-y-0');
+            raf(() => {
+                content.classList.remove('opacity-100', 'translate-y-0');
+                content.classList.add('opacity-0', 'translate-y-1');
+                content.__rpHideTimer = window.setTimeout(() => {
+                    setCollapsedClasses();
+                    setHeaderCollapsedSpacing(true);
+                    content.__rpHideTimer = null;
+                }, 140);
+            });
+            return;
+        }
+
+        setHeaderCollapsedSpacing(false);
+        content.classList.remove('hidden', 'pointer-events-none');
+        content.classList.remove('opacity-100', 'translate-y-0');
+        content.classList.add('opacity-0', 'translate-y-1');
+        raf(() => {
+            content.classList.remove('opacity-0', 'translate-y-1');
+            content.classList.add('opacity-100', 'translate-y-0');
+        });
+    }
+
+    scrollTheoryReportToAnchor(anchor) {
+        const targetAnchor = String(anchor || '').trim().toLowerCase();
+        if (!targetAnchor) return;
+        this.theoryReportActiveAnchor = targetAnchor;
+        if (this.theoryReportPanelOpen === false) {
+            this.toggleTheoryAnalysisReportPanel(true);
+        }
+
+        const body = document.querySelector('[data-role="theory-analysis-report-body"]');
+        if (!body) return;
+        const candidates = body.querySelectorAll('[data-report-anchor]');
+        let targetEl = null;
+        for (const el of candidates) {
+            if ((el.dataset?.reportAnchor || '').toLowerCase() === targetAnchor) {
+                targetEl = el;
+                break;
+            }
+        }
+        if (!targetEl) return;
+
+        const bodyRect = body.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
+        const nextTop = Math.max(0, body.scrollTop + (targetRect.top - bodyRect.top) - 10);
+        const reduceMotion = this.prefersReducedMotion();
+        try {
+            body.scrollTo({ top: nextTop, behavior: reduceMotion ? 'auto' : 'smooth' });
+        } catch (_) {
+            body.scrollTop = nextTop;
+        }
+        if (reduceMotion) return;
+
+        if (this.theoryReportAnchorHighlightTimer) {
+            window.clearTimeout(this.theoryReportAnchorHighlightTimer);
+            this.theoryReportAnchorHighlightTimer = null;
+        }
+        candidates.forEach((el) => el.classList.remove('ring-2', 'ring-primary/30'));
+        targetEl.classList.add('ring-2', 'ring-primary/30');
+        this.theoryReportAnchorHighlightTimer = window.setTimeout(() => {
+            targetEl.classList.remove('ring-2', 'ring-primary/30');
+            this.theoryReportAnchorHighlightTimer = null;
+        }, 900);
+    }
+
+    renderTheoryReportJumpButton(label, anchor, { compact = false } = {}) {
+        const anchorText = String(anchor || '').trim();
+        if (!anchorText) return `<span class="text-xs text-text-secondary">${this.escapeHtml(String(label || ''))}</span>`;
+        const isActive = String(this.theoryReportActiveAnchor || '').toLowerCase() === anchorText.toLowerCase();
+        const baseClass = compact
+            ? 'w-full text-left px-2 py-1.5 rounded-md text-xs border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40'
+            : 'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40';
+        const stateClass = isActive
+            ? 'border-primary bg-primary-lighter text-primary'
+            : 'border-border-strong bg-surface-1 text-text-secondary hover:bg-bg-hover';
+        return `
+            <button type="button"
+                onclick="dashboard.importManager.scrollTheoryReportToAnchor('${this.escapeHtml(anchorText)}')"
+                class="${baseClass} ${stateClass}">
+                ${!compact ? '<span class="material-symbols-outlined text-[14px]">link</span>' : ''}
+                <span class="truncate">${this.escapeHtml(String(label || anchorText))}</span>
+            </button>
+        `;
+    }
+
+    renderTheoryReportBlock(block, ctx) {
+        const btype = String(block?.type || '').toLowerCase();
+        if (!btype) return '';
+        if (btype === 'divider') {
+            return this.renderTheoryReportDividerBlock(block);
+        }
+
+        let contentHtml = '';
+        let toneOverride = null;
+        if (btype === 'toc') {
+            contentHtml = this.renderTheoryReportTocBlock(block);
+            toneOverride = 'info';
+        } else if (btype === 'section') {
+            contentHtml = this.renderTheoryReportSectionBlock(block);
+        } else if (btype === 'callout') {
+            const rendered = this.renderTheoryReportCalloutBlock(block);
+            contentHtml = rendered.html;
+            toneOverride = rendered.tone;
+        } else if (btype === 'list') {
+            contentHtml = this.renderTheoryReportListBlock(block);
+        } else if (btype === 'chunk_card') {
+            contentHtml = this.renderTheoryReportChunkCardBlock(block, ctx);
+            toneOverride = 'info';
+        } else if (btype === 'progression_matrix') {
+            contentHtml = this.renderTheoryReportProgressionMatrixBlock(block, ctx);
+            toneOverride = 'success';
+        } else if (btype === 'route_card') {
+            contentHtml = this.renderTheoryReportRouteCardBlock(block, ctx);
+            toneOverride = 'success';
+        } else if (btype === 'coverage_table') {
+            contentHtml = this.renderTheoryReportCoverageTableBlock(block, ctx);
+            toneOverride = 'warning';
+        } else if (btype === 'microcards_preview') {
+            contentHtml = this.renderTheoryReportMicrocardsPreviewBlock(block, ctx);
+            toneOverride = 'info';
+        } else {
+            return '';
+        }
+
+        if (!contentHtml) return '';
+        return this.renderTheoryReportBlockShell(block, contentHtml, { toneOverride });
+    }
+
+    renderTheoryReportBlockShell(block, contentHtml, { toneOverride = null } = {}) {
+        const tone = String(toneOverride || block?.tone || 'neutral').toLowerCase();
+        const styles = this.theoryReportToneStyles(tone);
+        const collapsible = !!block?.collapsible;
+        const collapsed = collapsible && this.isTheoryReportBlockCollapsed(block);
+        const blockId = String(block?.id || '').trim();
+        const title = String(block?.title || '').trim();
+        const anchor = String(block?.anchor || '').trim();
+        const refsHtml = this.theoryReportRefsMeta(block?.refs);
+        const blockRefs = (block && typeof block.refs === 'object') ? block.refs : null;
+        const linkableUnitRefs = Array.isArray(blockRefs?.unit_ids) ? blockRefs.unit_ids.filter(v => v != null) : [];
+        const linkableChunkRefs = Array.isArray(blockRefs?.chunk_ids) ? blockRefs.chunk_ids.filter(Boolean) : [];
+        const canSendToEditor = !!(this.aiRunId && (linkableUnitRefs.length || linkableChunkRefs.length));
+        const anchorAttr = anchor ? ` data-report-anchor="${this.escapeHtml(anchor)}"` : '';
+        const activeClass = anchor && String(this.theoryReportActiveAnchor || '').toLowerCase() === anchor.toLowerCase()
+            ? ' ring-2 ring-primary/25'
+            : '';
+
+        return `
+            <section class="rounded-xl border ${styles.wrapper} p-3${activeClass}" data-report-block-id="${this.escapeHtml(blockId)}"${anchorAttr}>
+                ${(title || collapsible || refsHtml) ? `
+                    <div data-role="theory-report-block-header" class="flex items-start justify-between gap-2 ${collapsed ? '' : 'mb-3'}">
+                        <div class="min-w-0 flex-1">
+                            ${title ? `<h5 class="text-sm font-semibold text-text-main">${this.escapeHtml(title)}</h5>` : ''}
+                            <div class="flex flex-wrap items-center gap-1.5 mt-1">
+                                ${tone !== 'neutral' ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border ${styles.badge}">${this.escapeHtml(tone)}</span>` : ''}
+                                ${anchor ? this.renderTheoryReportJumpButton(anchor, anchor) : ''}
+                                ${canSendToEditor ? `
+                                    <button type="button"
+                                        onclick="dashboard.importManager.pushTheoryReportBlockContextForEditor('${this.escapeHtml(blockId)}')"
+                                        class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-colors">
+                                        <span class="material-symbols-outlined text-[12px]">open_in_new</span>
+                                        <span>В редактор</span>
+                                    </button>
+                                ` : ''}
+                                ${refsHtml}
+                            </div>
+                        </div>
+                        ${collapsible ? `
+                            <button type="button"
+                                data-role="theory-report-block-toggle-btn"
+                                aria-expanded="${collapsed ? 'false' : 'true'}"
+                                onclick="dashboard.importManager.toggleTheoryReportBlockCollapse('${this.escapeHtml(blockId)}')"
+                                class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border-strong bg-surface-1 text-text-secondary hover:bg-bg-hover text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
+                                <span data-role="theory-report-block-toggle-icon" class="material-symbols-outlined text-[15px] transition-transform duration-150 ease-out">${collapsed ? 'expand_more' : 'expand_less'}</span>
+                                <span data-role="theory-report-block-toggle-label">${collapsed ? 'Открыть' : 'Свернуть'}</span>
+                            </button>
+                        ` : ''}
+                    </div>
+                ` : ''}
+                <div
+                    data-role="theory-report-block-content"
+                    data-block-id="${this.escapeHtml(blockId)}"
+                    class="min-w-0 transition-opacity transition-transform duration-150 ease-out ${collapsed ? 'hidden opacity-0 translate-y-1 pointer-events-none' : 'opacity-100 translate-y-0'}">
+                    ${contentHtml}
+                </div>
+            </section>
+        `;
+    }
+
+    renderTheoryReportDividerBlock(block) {
+        const anchor = String(block?.anchor || '').trim();
+        const title = String(block?.title || '').trim();
+        const anchorAttr = anchor ? ` data-report-anchor="${this.escapeHtml(anchor)}"` : '';
+        return `
+            <div class="py-1"${anchorAttr}>
+                ${title ? `<div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">${this.escapeHtml(title)}</div>` : ''}
+                <div class="h-px bg-border-strong"></div>
+            </div>
+        `;
+    }
+
+    renderTheoryReportTocBlock(block) {
+        const items = Array.isArray(block?.body?.items) ? block.body.items : [];
+        if (!items.length) return '<div class="text-xs text-text-secondary">Пустое оглавление.</div>';
+        return `
+            <div class="space-y-1">
+                ${items.map(item => this.renderTheoryReportJumpButton(item?.label || item?.anchor || 'section', item?.anchor, { compact: true })).join('')}
+            </div>
+        `;
+    }
+
+    renderTheoryReportSectionBlock(block) {
+        const summary = String(block?.body?.summary || '').trim();
+        const subanchors = Array.isArray(block?.body?.subanchors) ? block.body.subanchors : [];
+        const summaryHtml = summary
+            ? `<p class="text-sm text-text-main leading-relaxed whitespace-pre-line">${this.escapeHtml(summary)}</p>`
+            : '<p class="text-xs text-text-secondary">Раздел без описания.</p>';
+        const subanchorsHtml = subanchors.length ? `
+            <div class="mt-3">
+                <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-2">Подразделы</div>
+                <div class="flex flex-wrap gap-2">
+                    ${subanchors.map(anchor => this.renderTheoryReportJumpButton(anchor, anchor)).join('')}
+                </div>
+            </div>
+        ` : '';
+        return `${summaryHtml}${subanchorsHtml}`;
+    }
+
+    renderTheoryReportCalloutBlock(block) {
+        const variant = String(block?.body?.variant || 'note').toLowerCase();
+        const text = String(block?.body?.text || '').trim();
+        const bullets = Array.isArray(block?.body?.bullets) ? block.body.bullets : [];
+        const toneMap = { tip: 'info', warning: 'warning', risk: 'risk', note: 'neutral' };
+        const tone = toneMap[variant] || 'neutral';
+        const bodyHtml = `
+            ${text ? `<p class="text-sm text-text-main leading-relaxed">${this.escapeHtml(text)}</p>` : ''}
+            ${bullets.length ? `<div class="${text ? 'mt-3' : ''}">${this.theoryReportListToHtml(bullets, { max: 3, className: 'text-xs text-text-main' })}</div>` : ''}
+            ${!text && !bullets.length ? `<p class="text-xs text-text-secondary">Пустой callout.</p>` : ''}
+        `;
+        return { html: bodyHtml, tone };
+    }
+
+    renderTheoryReportListBlock(block) {
+        const items = Array.isArray(block?.body?.items) ? block.body.items : [];
+        if (!items.length) return '<div class="text-xs text-text-secondary">Список пуст.</div>';
+        return `
+            <ul class="space-y-2">
+                ${items.map((item) => {
+                    const text = typeof item === 'object' ? String(item?.text || item?.label || '').trim() : String(item || '').trim();
+                    const anchor = typeof item === 'object' ? String(item?.anchor || '').trim() : '';
+                    if (!text) return '';
+                    return `
+                        <li class="flex items-start gap-2">
+                            <span class="mt-[2px] text-[10px] text-text-muted">•</span>
+                            <div class="min-w-0 flex-1">
+                                <span class="text-xs text-text-main">${this.escapeHtml(text)}</span>
+                                ${anchor ? `<div class="mt-1">${this.renderTheoryReportJumpButton(anchor, anchor)}</div>` : ''}
+                            </div>
+                        </li>
+                    `;
+                }).join('')}
+            </ul>
+        `;
+    }
+
+    renderTheoryReportChunkCardBlock(block, ctx) {
+        const body = (block && typeof block.body === 'object') ? block.body : {};
+        const chunkId = String(body.chunk_id || '').trim();
+        const chunk = ctx?.chunkById?.get(chunkId);
+        if (!chunk) return '<div class="text-xs text-text-secondary">Chunk не найден.</div>';
+
+        const unitIds = Array.isArray(chunk.unit_ids) ? chunk.unit_ids : [];
+        const routeIds = Array.isArray(chunk.route_ids) ? chunk.route_ids : [];
+        const anchors = Array.isArray(chunk.factual_anchors) ? chunk.factual_anchors : [];
+        const confusions = Array.isArray(chunk.common_confusions) ? chunk.common_confusions : [];
+        const notes = Array.isArray(chunk.notes_for_author) ? chunk.notes_for_author : [];
+
+        return `
+            <div class="space-y-3">
+                <div>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="text-sm font-semibold text-text-main">${this.escapeHtml(chunk.title || chunkId)}</div>
+                        ${chunk.chunk_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(chunk.chunk_type)}</span>` : ''}
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${unitIds.length} units</span>
+                        <button type="button"
+                            onclick="dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkId)}')"
+                            class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
+                            Колода по chunk
+                        </button>
+                        <button type="button"
+                            onclick="dashboard.importManager.appendTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkId)}')"
+                            class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                            + в колоду...
+                        </button>
+                    </div>
+                    ${chunk.goal ? `<p class="text-xs text-text-secondary mt-1 leading-relaxed">${this.escapeHtml(chunk.goal)}</p>` : ''}
+                </div>
+
+                ${body.show_units !== false ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Units</div>
+                        ${unitIds.length ? `
+                            <div class="space-y-1">
+                                ${unitIds.slice(0, 10).map((unitId) => {
+                                    const unit = ctx?.unitById?.get(String(unitId));
+                                    return `
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <div class="text-xs text-text-main">#${this.escapeHtml(String(unitId))} ${this.escapeHtml(unit?.title || 'Unit')}</div>
+                                            <button type="button"
+                                                onclick="dashboard.importManager.createTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitId))}','${this.escapeHtml(chunkId)}')"
+                                                class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-info-light text-info-text bg-info-lighter hover:bg-info-light transition-colors">
+                                                Колода по unit
+                                            </button>
+                                            <button type="button"
+                                                onclick="dashboard.importManager.appendTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitId))}','${this.escapeHtml(chunkId)}')"
+                                                class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                                                + в колоду...
+                                            </button>
+                                        </div>
+                                    `;
+                                }).join('')}
+                                ${unitIds.length > 10 ? `<div class="text-[11px] text-text-secondary">Показаны первые 10 из ${unitIds.length}</div>` : ''}
+                            </div>
+                        ` : `<div class="text-xs text-text-secondary">Нет связанных units.</div>`}
+                    </div>
+                ` : ''}
+
+                ${body.show_confusions !== false && confusions.length ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Common confusions</div>
+                        ${this.theoryReportListToHtml(confusions, { max: 6, className: 'text-xs text-text-main' })}
+                    </div>
+                ` : ''}
+
+                ${anchors.length ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Factual anchors</div>
+                        <div class="flex flex-wrap gap-1">
+                            ${anchors.slice(0, 8).map((anchorItem) => {
+                                const kind = typeof anchorItem === 'object' ? String(anchorItem?.kind || '') : '';
+                                const value = typeof anchorItem === 'object' ? String(anchorItem?.value || '') : String(anchorItem || '');
+                                if (!value) return '';
+                                return `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${kind ? `${this.escapeHtml(kind)}: ` : ''}${this.escapeHtml(value)}</span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${body.show_route_links !== false && routeIds.length ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Маршруты</div>
+                        <div class="flex flex-wrap gap-2">
+                            ${routeIds.map((routeId) => {
+                                const route = ctx?.routeById?.get(String(routeId));
+                                const anchor = ctx?.routeBlockAnchorById?.get(String(routeId)) || '';
+                                const label = route?.title || routeId;
+                                return anchor
+                                    ? this.renderTheoryReportJumpButton(label, anchor)
+                                    : `<span class="px-2 py-1 rounded-md text-xs border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(label))}</span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${notes.length ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Notes for author</div>
+                        ${this.theoryReportListToHtml(notes, { max: 8, className: 'text-xs text-text-main' })}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    renderTheoryReportProgressionMatrixBlock(block, ctx) {
+        const rows = Array.isArray(block?.body?.rows) ? block.body.rows : [];
+        if (!rows.length) return '<div class="text-xs text-text-secondary">Матрица пустая.</div>';
+        const typeEntries = Array.isArray(ctx?.typeEntries) ? ctx.typeEntries : [];
+        const policyNoteHtml = this.renderTheoryReportFixedProgressionPolicyNote(typeEntries, { compact: true });
+
+        const tableRows = rows.map((row) => {
+            const taskType = String(row?.task_type || '').toUpperCase();
+            const entryCandidates = ctx?.typeEntriesByTaskType?.get(taskType) || [];
+            const entry = entryCandidates[0] || null;
+            const suitability = String(row?.suitability || entry?.suitability || 'medium').toLowerCase();
+            const levelRoles = (row?.show_level_roles !== false && Array.isArray(entry?.level_role_map)) ? entry.level_role_map : [];
+            const iterativeNotes = (row?.show_iterative_notes !== false && Array.isArray(entry?.iterative_system_notes)) ? entry.iterative_system_notes : [];
+            const seqIntents = Array.isArray(entry?.sequence_intents) ? entry.sequence_intents : [];
+            const levelList = levelRoles
+                .map(item => Number(item?.level))
+                .filter(Number.isFinite)
+                .sort((a, b) => a - b);
+
+            const levelsHtml = levelRoles.length
+                ? `
+                    ${levelList.length ? `<div class="text-[11px] text-text-secondary mb-1">Уровни в progression: ${this.escapeHtml(levelList.map(level => `L${level}`).join(', '))}</div>` : ''}
+                    ${this.theoryReportLevelRoleMapToHtml(levelRoles, { max: 4, emptyText: 'Роли уровней не указаны.' })}
+                `
+                : (entry?.progression_is_fixed
+                    ? '<div class="text-[11px] text-text-secondary">Уровни у этого типа трактуются как fixed progression; отдельный выбор уровня не предлагается.</div>'
+                    : '<span class="text-[11px] text-text-secondary">—</span>');
+            const notesHtml = iterativeNotes.length
+                ? `<div class="space-y-1">${iterativeNotes.slice(0, 3).map(note => `<div class="text-[11px] text-text-secondary">${this.escapeHtml(String(note))}</div>`).join('')}</div>`
+                : '<span class="text-[11px] text-text-secondary">—</span>';
+
+            return `
+                <tr class="align-top border-t border-border-subtle">
+                    <td class="px-2 py-2">
+                        <div class="text-xs font-semibold text-text-main">${this.escapeHtml(taskType || 'UNKNOWN')}${entry?.subtype ? ` / ${this.escapeHtml(String(entry.subtype))}` : ''}</div>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            <span class="px-1.5 py-0.5 rounded-md text-[10px] border ${this.theoryReportSuitabilityBadgeClass(suitability)}">${this.escapeHtml(suitability)}</span>
+                            ${entry?.availability ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(entry.availability))}</span>` : ''}
+                            ${entry?.progression_is_fixed ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-text-main">fixed progression</span>` : ''}
+                            ${entry?.complex_role ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(entry.complex_role))}</span>` : ''}
+                        </div>
+                        ${seqIntents.length ? `<div class="flex flex-wrap gap-1 mt-1">${seqIntents.slice(0, 5).map(intent => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(intent))}</span>`).join('')}</div>` : ''}
+                        ${entry?.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(entry.why))}</p>` : ''}
+                    </td>
+                    <td class="px-2 py-2 min-w-[220px]">${levelsHtml}</td>
+                    <td class="px-2 py-2 min-w-[180px]">${notesHtml}</td>
+                </tr>
+            `;
+        }).join('');
+
+        return `
+            <div class="space-y-3">
+                ${policyNoteHtml}
+                <div class="overflow-x-auto rounded-lg border border-border-strong bg-surface-1">
+                    <table class="min-w-full text-xs">
+                        <thead class="bg-surface-2">
+                            <tr>
+                                <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Тип / роль</th>
+                                <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Уровни в progression</th>
+                                <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Iterative notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTheoryRouteQuickActions(route, { compact = false } = {}) {
+        const r = route && typeof route === 'object' ? route : null;
+        if (!r) return '';
+        const reportLinkEnabled = this.isTheoryFeatureEnabled('editor_analysis_report_link');
+        const microcardsModeEnabled = this.isTheoryFeatureEnabled('microcards_mode');
+        const pairMatchEnabled = this.isTheoryFeatureEnabled('microcards_pair_match');
+        const routeId = String(r.id || '').trim();
+        const targetSurface = String(r.target_surface || '').toLowerCase();
+        const chunkIds = Array.isArray(r.chunk_ids) ? r.chunk_ids.filter(Boolean).map((id) => String(id)) : [];
+        const unitIds = Array.isArray(r.unit_ids) ? r.unit_ids.filter((id) => Number.isFinite(Number(id))) : [];
+        const steps = Array.isArray(r.steps) ? r.steps : [];
+        const hasPairMatchStep = steps.some((step) => String(step?.action_type || '').toLowerCase() === 'add_microcards'
+            && String(step?.microcard_mode || '').toLowerCase() === 'pair_match');
+        const canPushEditorContext = reportLinkEnabled && !!(routeId && (chunkIds.length || unitIds.length));
+        const showMicrocardsActions = microcardsModeEnabled && (
+            (hasPairMatchStep && pairMatchEnabled) || (!hasPairMatchStep && (targetSurface === 'microcards' || targetSurface === 'mixed'))
+        );
+        const showMicrocardsOpen = microcardsModeEnabled && (targetSurface === 'microcards' || targetSurface === 'mixed');
+        const small = compact ? 'px-2 py-0.5 text-[10px]' : 'px-2.5 py-1 text-xs';
+
+        const createAction = hasPairMatchStep
+            ? "dashboard.importManager.createTheoryMicrocardsPairMatchDeck()"
+            : (chunkIds.length === 1
+                ? `dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkIds[0])}')`
+                : (unitIds.length === 1
+                    ? `dashboard.importManager.createTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitIds[0]))}','${this.escapeHtml(String(chunkIds[0] || ''))}')`
+                    : "dashboard.importManager.createTheoryMicrocardsDeckAll()"));
+        const appendAction = hasPairMatchStep
+            ? "dashboard.importManager.appendTheoryMicrocardsPairMatchDeck()"
+            : (chunkIds.length === 1
+                ? `dashboard.importManager.appendTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkIds[0])}')`
+                : (unitIds.length === 1
+                    ? `dashboard.importManager.appendTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitIds[0]))}','${this.escapeHtml(String(chunkIds[0] || ''))}')`
+                    : "dashboard.importManager.appendTheoryMicrocardsDeckAll()"));
+
+        const buttons = [
+            canPushEditorContext ? `
+                <button type="button"
+                    onclick="dashboard.importManager.pushTheoryAuthoringRouteContextForEditor('${this.escapeHtml(routeId)}')"
+                    class="${small} rounded-md font-medium border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-colors">
+                    В редактор (маршрут)
+                </button>
+            ` : '',
+            showMicrocardsActions ? `
+                <button type="button"
+                    onclick="${createAction}"
+                    ${this.microcardsCreateLoading ? 'disabled' : ''}
+                    class="${small} rounded-md font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors disabled:opacity-60">
+                    ${hasPairMatchStep ? 'pair_match колода' : 'Колода по маршруту'}
+                </button>
+            ` : '',
+            showMicrocardsActions ? `
+                <button type="button"
+                    onclick="${appendAction}"
+                    ${this.microcardsCreateLoading ? 'disabled' : ''}
+                    class="${small} rounded-md font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors disabled:opacity-60">
+                    ${compact ? '+ в колоду...' : 'Добавить в колоду...'}
+                </button>
+            ` : '',
+            showMicrocardsOpen ? `
+                <button type="button"
+                    onclick="dashboard.importManager.openTheoryMicrocardsMode()"
+                    class="${small} rounded-md font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                    Открыть микрокарточки
+                </button>
+            ` : '',
+        ].filter(Boolean).join('');
+
+        if (!buttons) return '';
+        return `
+            <div class="flex flex-wrap gap-1.5">
+                ${buttons}
+            </div>
+        `;
+    }
+
+    renderTheoryReportRouteCardBlock(block, ctx) {
+        const body = (block && typeof block.body === 'object') ? block.body : {};
+        const routeId = String(body.route_id || '').trim();
+        const route = ctx?.routeById?.get(routeId);
+        if (!route) return '<div class="text-xs text-text-secondary">Route не найден.</div>';
+
+        const steps = Array.isArray(route.steps) ? route.steps : [];
+        const chunkIds = Array.isArray(route.chunk_ids) ? route.chunk_ids : [];
+        const unitIds = Array.isArray(route.unit_ids) ? route.unit_ids : [];
+
+        return `
+            <div class="space-y-3">
+                <div>
+                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(route.title || routeId)}</div>
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        ${route.route_kind ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(route.route_kind))}</span>` : ''}
+                        ${route.target_surface ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(route.target_surface))}</span>` : ''}
+                        ${route.effort_estimate ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border ${this.theoryReportPriorityBadgeClass(route.effort_estimate)}">${this.escapeHtml(String(route.effort_estimate))} effort</span>` : ''}
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${steps.length} steps</span>
+                    </div>
+                    ${route.expected_effect ? `<p class="text-xs text-text-secondary mt-2 leading-relaxed">${this.escapeHtml(String(route.expected_effect))}</p>` : ''}
+                    <div class="mt-2">${this.renderTheoryRouteQuickActions(route)}</div>
+                </div>
+
+                ${chunkIds.length ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Chunks</div>
+                        <div class="flex flex-wrap gap-2">
+                            ${chunkIds.map((chunkId) => {
+                                const chunk = ctx?.chunkById?.get(String(chunkId));
+                                const anchor = ctx?.chunkBlockAnchorById?.get(String(chunkId)) || '';
+                                const label = chunk?.title || chunkId;
+                                return anchor
+                                    ? this.renderTheoryReportJumpButton(label, anchor)
+                                    : `<span class="px-2 py-1 rounded-md text-xs border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(label))}</span>`;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${unitIds.length ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Units</div>
+                        <div class="text-xs text-text-secondary">${unitIds.slice(0, 12).map((unitId) => {
+                            const unit = ctx?.unitById?.get(String(unitId));
+                            return `#${this.escapeHtml(String(unitId))} ${this.escapeHtml(unit?.title || 'Unit')}`;
+                        }).join(' · ')}</div>
+                        ${unitIds.length > 12 ? `<div class="text-[11px] text-text-secondary mt-1">Показаны первые 12 из ${unitIds.length}</div>` : ''}
+                    </div>
+                ` : ''}
+
+                <div>
+                    <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-2">Шаги</div>
+                    <div class="space-y-2">
+                        ${steps.map((step, idx) => {
+                            const checklist = Array.isArray(step?.authoring_checklist) ? step.authoring_checklist : [];
+                            return `
+                                <div class="rounded-lg border border-border-strong bg-surface-1 p-2">
+                                    <div class="flex flex-wrap items-center gap-1">
+                                        <span class="text-xs font-semibold text-text-main">${idx + 1}. ${this.escapeHtml(String(step?.action_type || 'step'))}</span>
+                                        ${step?.task_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.task_type))}</span>` : ''}
+                                        ${step?.microcard_mode ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.microcard_mode))}</span>` : ''}
+                                        ${step?.progression_policy ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(step.progression_policy))}</span>` : ''}
+                                        ${step?.sequence_intent ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(step.sequence_intent))}</span>` : ''}
+                                    </div>
+                                    ${step?.purpose ? `<p class="text-xs text-text-secondary mt-1">${this.escapeHtml(String(step.purpose))}</p>` : ''}
+                                    ${(body.show_checklists !== false && checklist.length) ? `
+                                        <div class="mt-2">
+                                            <div class="text-[11px] font-semibold text-text-secondary mb-1">Checklist</div>
+                                            ${this.theoryReportListToHtml(checklist, { max: 8, className: 'text-xs text-text-main' })}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                ${(body.show_anti_patterns !== false && Array.isArray(route.anti_patterns) && route.anti_patterns.length) ? `
+                    <div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Anti-patterns</div>
+                        ${this.theoryReportListToHtml(route.anti_patterns, { max: 8, className: 'text-xs text-text-main', bulletClass: 'text-warning-text' })}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    renderTheoryReportCoverageTableBlock(block, ctx) {
+        const body = (block && typeof block.body === 'object') ? block.body : {};
+        const mode = String(body.mode || 'mixed').toLowerCase();
+        const coverage = (ctx && typeof ctx.coveragePlan === 'object' && ctx.coveragePlan) ? ctx.coveragePlan : {};
+        const targetCoverage = (coverage.target_coverage && typeof coverage.target_coverage === 'object') ? coverage.target_coverage : {};
+        const unitTargets = Array.isArray(coverage.unit_targets) ? coverage.unit_targets : [];
+        const chunkTargets = Array.isArray(coverage.chunk_targets) ? coverage.chunk_targets : [];
+        const showUnits = mode !== 'chunks';
+        const showChunks = mode !== 'units';
+
+        const unitTable = showUnits ? `
+            <div class="rounded-lg border border-border-strong bg-surface-1 overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-surface-2">
+                        <tr>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Unit</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Surface / Types</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Signals</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${unitTargets.slice(0, 20).map((target) => {
+                            const unit = ctx?.unitById?.get(String(target?.unit_id));
+                            const surfaces = Array.isArray(target?.recommended_surfaces) ? target.recommended_surfaces : [];
+                            const preferredTypes = Array.isArray(target?.preferred_task_types) ? target.preferred_task_types : [];
+                            const avoidTypes = Array.isArray(target?.avoid_overtesting_with) ? target.avoid_overtesting_with : [];
+                            const isGap = body.highlight_gaps !== false && !!target?.must_cover && surfaces.length === 0 && preferredTypes.length === 0;
+                            return `
+                                <tr class="align-top border-t border-border-subtle ${isGap ? 'bg-warning-lighter' : ''}">
+                                    <td class="px-2 py-2">
+                                        <div class="text-xs font-semibold text-text-main">#${this.escapeHtml(String(target?.unit_id ?? '?'))} ${this.escapeHtml(unit?.title || 'Unit')}</div>
+                                        <div class="text-[11px] text-text-secondary mt-1">
+                                            ${target?.must_cover ? 'must_cover' : 'optional'}
+                                            ${unit?.assessment_risk ? ` · risk=${this.escapeHtml(String(unit.assessment_risk))}` : ''}
+                                        </div>
+                                    </td>
+                                    <td class="px-2 py-2">
+                                        ${surfaces.length ? `<div class="flex flex-wrap gap-1 mb-1">${surfaces.map(s => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(s))}</span>`).join('')}</div>` : '<div class="text-[11px] text-text-secondary">surfaces: —</div>'}
+                                        ${preferredTypes.length ? `<div class="flex flex-wrap gap-1">${preferredTypes.map(t => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(t))}</span>`).join('')}</div>` : '<div class="text-[11px] text-text-secondary">preferred types: —</div>'}
+                                    </td>
+                                    <td class="px-2 py-2">
+                                        ${avoidTypes.length ? `<div class="text-[11px] text-text-secondary">avoid: ${avoidTypes.map(t => this.escapeHtml(String(t))).join(', ')}</div>` : '<div class="text-[11px] text-text-secondary">avoid: —</div>'}
+                                        ${isGap ? `<div class="text-[11px] text-warning-text mt-1">gap: must_cover без surface/type подсказок</div>` : ''}
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                ${unitTargets.length > 20 ? `<div class="px-2 py-2 text-[11px] text-text-secondary border-t border-border-subtle">Показаны первые 20 unit_targets из ${unitTargets.length}</div>` : ''}
+            </div>
+        ` : '';
+
+        const chunkTable = showChunks ? `
+            <div class="rounded-lg border border-border-strong bg-surface-1 overflow-x-auto">
+                <table class="min-w-full text-xs">
+                    <thead class="bg-surface-2">
+                        <tr>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Chunk</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Routes</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Limits</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${chunkTargets.slice(0, 20).map((target) => {
+                            const chunk = ctx?.chunkById?.get(String(target?.chunk_id));
+                            const routeIds = Array.isArray(target?.route_ids) ? target.route_ids : [];
+                            const hasGap = body.highlight_gaps !== false && routeIds.length === 0;
+                            const hasOverlap = body.highlight_overlaps !== false && routeIds.length > 1;
+                            return `
+                                <tr class="align-top border-t border-border-subtle ${hasGap ? 'bg-warning-lighter' : (hasOverlap ? 'bg-info-lighter' : '')}">
+                                    <td class="px-2 py-2">
+                                        <div class="text-xs font-semibold text-text-main">${this.escapeHtml(chunk?.title || String(target?.chunk_id || 'chunk'))}</div>
+                                        <div class="text-[11px] text-text-secondary mt-1">${chunk?.chunk_type ? this.escapeHtml(String(chunk.chunk_type)) : ''}</div>
+                                    </td>
+                                    <td class="px-2 py-2">
+                                        ${routeIds.length ? `
+                                            <div class="flex flex-wrap gap-1">
+                                                ${routeIds.map((routeId) => {
+                                                    const route = ctx?.routeById?.get(String(routeId));
+                                                    const anchor = ctx?.routeBlockAnchorById?.get(String(routeId)) || '';
+                                                    const label = route?.title || routeId;
+                                                    return anchor
+                                                        ? this.renderTheoryReportJumpButton(label, anchor)
+                                                        : `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(label))}</span>`;
+                                                }).join('')}
+                                            </div>
+                                        ` : `<div class="text-[11px] text-text-secondary">Нет route_ids</div>`}
+                                        ${hasGap ? `<div class="text-[11px] text-warning-text mt-1">gap: chunk без маршрута</div>` : ''}
+                                        ${hasOverlap ? `<div class="text-[11px] text-info-text mt-1">overlap: ${routeIds.length} маршрута(ов)</div>` : ''}
+                                    </td>
+                                    <td class="px-2 py-2">
+                                        <div class="text-[11px] text-text-secondary">max_primary_tasks: ${this.escapeHtml(String(target?.max_primary_tasks_recommended ?? '—'))}</div>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+                ${chunkTargets.length > 20 ? `<div class="px-2 py-2 text-[11px] text-text-secondary border-t border-border-subtle">Показаны первые 20 chunk_targets из ${chunkTargets.length}</div>` : ''}
+            </div>
+        ` : '';
+
+        return `
+            <div class="space-y-3">
+                <div class="flex flex-wrap gap-2">
+                    ${targetCoverage.all_units_min_once ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">all_units_min_once</span>` : ''}
+                    ${targetCoverage.high_risk_units_priority ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-warning-light bg-warning-lighter text-warning-text">high_risk_units_priority</span>` : ''}
+                    <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">mode: ${this.escapeHtml(mode)}</span>
+                </div>
+                <div class="grid grid-cols-1 ${showUnits && showChunks ? 'xl:grid-cols-2' : ''} gap-3">
+                    ${unitTable}
+                    ${chunkTable}
+                </div>
+                ${!unitTable && !chunkTable ? `<div class="text-xs text-text-secondary">Нет данных coverage_plan.</div>` : ''}
+            </div>
+        `;
+    }
+
+    renderTheoryReportMicrocardsPreviewBlock(block, ctx) {
+        if (!this.isTheoryFeatureEnabled('microcards_mode')) {
+            return '<div class="text-xs text-text-secondary">Режим микрокарточек отключён (feature flag).</div>';
+        }
+        const body = (block && typeof block.body === 'object') ? block.body : {};
+        const maxItems = Math.max(1, Math.min(20, Number(body.max_items) || 8));
+        const groupBy = String(body.group_by || 'card_type').toLowerCase() === 'chunk' ? 'chunk' : 'card_type';
+        const allowPairMatch = this.isTheoryFeatureEnabled('microcards_pair_match') && body.show_pair_match_candidates !== false;
+        let candidates = Array.isArray(ctx?.microcards) ? [...ctx.microcards] : [];
+        if (!allowPairMatch) {
+            candidates = candidates.filter(item => String(item?.card_type || '').toLowerCase() !== 'pair_match');
+        }
+        const totalBeforeLimit = candidates.length;
+        candidates = candidates.slice(0, maxItems);
+        if (!candidates.length) {
+            return '<div class="text-xs text-text-secondary">Нет кандидатов микрокарточек для текущего фильтра.</div>';
+        }
+
+        const groups = new Map();
+        candidates.forEach((item) => {
+            const key = groupBy === 'chunk'
+                ? String(ctx?.chunkById?.get(String(item?.chunk_id))?.title || item?.chunk_id || 'chunk')
+                : String(item?.card_type || 'card');
+            const list = groups.get(key) || [];
+            list.push(item);
+            groups.set(key, list);
+        });
+
+        return `
+            <div class="space-y-3">
+                <div class="flex flex-wrap gap-2">
+                    <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">group_by: ${this.escapeHtml(groupBy)}</span>
+                    <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">shown: ${candidates.length}/${totalBeforeLimit}</span>
+                    ${allowPairMatch ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">pair_match on</span>` : `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">pair_match hidden</span>`}
+                    ${allowPairMatch ? `
+                        <button type="button"
+                            onclick="dashboard.importManager.createTheoryMicrocardsPairMatchDeck()"
+                            class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
+                            Создать pair_match колоду
+                        </button>
+                        <button type="button"
+                            onclick="dashboard.importManager.appendTheoryMicrocardsPairMatchDeck()"
+                            class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
+                            pair_match + в колоду...
+                        </button>
+                    ` : ''}
+                </div>
+                ${[...groups.entries()].map(([groupKey, items]) => `
+                    <div class="rounded-lg border border-border-strong bg-surface-1 p-2">
+                        <div class="flex items-center justify-between gap-2 mb-2">
+                            <div class="text-xs font-semibold text-text-main">${this.escapeHtml(groupKey)}</div>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded-md border border-border-strong bg-surface-2 text-text-secondary">${items.length}</span>
+                        </div>
+                        <div class="space-y-2">
+                            ${items.map((item) => {
+                                const unit = ctx?.unitById?.get(String(item?.unit_id));
+                                const chunk = ctx?.chunkById?.get(String(item?.chunk_id));
+                                const anchors = Array.isArray(item?.anchors) ? item.anchors : [];
+                                return `
+                                    <div class="rounded-md border border-border-strong bg-surface-2 p-2">
+                                        <div class="flex flex-wrap items-center gap-1">
+                                            <span class="text-xs font-semibold text-text-main">${this.escapeHtml(String(item?.card_type || 'card'))}</span>
+                                            ${item?.priority ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border ${this.theoryReportPriorityBadgeClass(item.priority)}">${this.escapeHtml(String(item.priority))}</span>` : ''}
+                                            ${item?.card_type === 'pair_match' ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">MATCH</span>` : ''}
+                                        </div>
+                                        <div class="text-[11px] text-text-secondary mt-1">
+                                            ${unit ? `#${this.escapeHtml(String(unit.id))} ${this.escapeHtml(unit.title || 'Unit')}` : `unit ${this.escapeHtml(String(item?.unit_id || '?'))}`}
+                                            ${chunk ? ` · ${this.escapeHtml(chunk.title || String(item?.chunk_id || 'chunk'))}` : ''}
+                                        </div>
+                                        ${item?.prompt_seed ? `<p class="text-xs text-text-main mt-1">${this.escapeHtml(String(item.prompt_seed))}</p>` : ''}
+                                        ${item?.answer_seed ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(String(item.answer_seed))}</p>` : ''}
+                                        ${anchors.length ? `<div class="flex flex-wrap gap-1 mt-1">${anchors.slice(0, 4).map(a => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(a))}</span>`).join('')}</div>` : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+
+    renderTheoryAnalysisFallbackReportGrid(a, vm = {}) {
+        const units = Array.isArray(vm.units) ? vm.units : [];
+        const recs = Array.isArray(vm.recs) ? vm.recs : [];
+        const warnings = Array.isArray(vm.warnings) ? vm.warnings : [];
+        const futureCaps = Array.isArray(vm.futureCaps) ? vm.futureCaps : [];
+        const microcards = Array.isArray(vm.microcards) ? vm.microcards : [];
+        const notRec = Array.isArray(vm.notRec) ? vm.notRec : [];
+        const materialLang = vm.materialLang || 'unknown';
+        const outputLang = vm.outputLang || 'unknown';
+        const suitabilityRows = vm.suitabilityRows || '';
+        const routeRows = vm.routeRows || '';
+        const futureRows = vm.futureRows || '';
+        const progressionPolicyHtml = vm.progressionPolicyHtml || '';
+
+        return `
+            <div class="grid grid-cols-1 xl:grid-cols-[1.05fr_0.95fr] gap-4">
+                <div class="space-y-4">
+                    <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
+                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Сводка</div>
+                        <div class="text-xs text-text-secondary space-y-1">
+                            <p><strong class="text-text-main">Язык материала:</strong> ${this.escapeHtml(materialLang)}</p>
+                            <p><strong class="text-text-main">Язык анализа:</strong> ${this.escapeHtml(outputLang)}</p>
+                            ${a.provider_used ? `<p><strong class="text-text-main">Провайдер:</strong> ${this.escapeHtml(a.provider_used)}${a.provider_model ? ` (${this.escapeHtml(a.provider_model)})` : ''}</p>` : ''}
+                            ${a.analysis_schema_version ? `<p><strong class="text-text-main">Schema:</strong> ${this.escapeHtml(a.analysis_schema_version)}</p>` : ''}
+                            ${a.report_blocks_version ? `<p><strong class="text-text-main">Report blocks:</strong> ${this.escapeHtml(a.report_blocks_version)}</p>` : ''}
+                        </div>
+                        ${a.human_summary ? `<p class="text-sm text-text-main mt-3 leading-relaxed">${this.escapeHtml(a.human_summary)}</p>` : ''}
+                    </div>
+
+                    ${warnings.length ? `
+                        <div class="p-3 bg-surface-2 border border-border-strong rounded-lg">
+                            <div class="text-xs font-semibold text-text-main uppercase tracking-wide mb-2">Warnings</div>
+                            <div class="space-y-1">
+                                ${warnings.slice(0, 8).map(w => `<p class="text-xs text-text-main">${this.escapeHtml(w)}</p>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${suitabilityRows ? `
+                        <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
+                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Типы как progression</div>
+                            ${progressionPolicyHtml ? `<div class="mb-2">${progressionPolicyHtml}</div>` : ''}
+                            <div class="space-y-2">${suitabilityRows}</div>
+                        </div>
+                    ` : ''}
+
+                    ${routeRows ? `
+                        <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
+                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Маршруты автора</div>
+                            <div class="space-y-2">${routeRows}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="space-y-4">
+                    <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
+                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Образовательные единицы</div>
+                        ${units.length ? `
+                            <div class="space-y-2">
+                                ${units.slice(0, 12).map(unit => `
+                                    <div class="p-2 rounded-md bg-surface-1 border border-border-strong">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div class="text-xs font-semibold text-text-main">#${this.escapeHtml(String(unit.id ?? '?'))} ${this.escapeHtml(unit.title || 'Unit')}</div>
+                                            ${unit.type ? `<span class="text-[10px] px-1.5 py-0.5 rounded bg-surface-2 text-text-secondary">${this.escapeHtml(unit.type)}</span>` : ''}
+                                        </div>
+                                        ${unit.description ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(unit.description)}</p>` : ''}
+                                    </div>
+                                `).join('')}
+                                ${units.length > 12 ? `<div class="text-[11px] text-text-secondary">Показаны первые 12 из ${units.length}</div>` : ''}
+                            </div>
+                        ` : `<div class="text-xs text-text-secondary">Нет данных по educational_units.</div>`}
+                    </div>
+
+                    ${recs.length ? `
+                        <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
+                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Recommendations</div>
+                            <div class="space-y-2">
+                                ${recs.slice(0, 10).map(rec => `
+                                    <div class="p-2 rounded-md bg-surface-1 border border-border-strong">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <div class="text-xs font-semibold text-text-main">${this.escapeHtml(rec.task_type || 'UNKNOWN')}</div>
+                                            <div class="text-[10px] text-text-secondary">count: ${this.escapeHtml(String(rec.count ?? 0))}${rec.priority ? ` · ${this.escapeHtml(rec.priority)}` : ''}</div>
+                                        </div>
+                                        ${rec.rationale ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(rec.rationale)}</p>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${(futureRows || microcards.length || notRec.length) ? `
+                        <div class="p-3 bg-surface-2 rounded-lg border border-border-strong">
+                            <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Дополнительно</div>
+                            ${futureRows ? `
+                                <div class="mb-3">
+                                    <div class="text-[11px] font-semibold text-text-main mb-1">Future capabilities (${futureCaps.length})</div>
+                                    <div class="space-y-2">${futureRows}</div>
+                                </div>
+                            ` : ''}
+                            ${microcards.length ? `
+                                <div class="mb-3">
+                                    <div class="text-[11px] font-semibold text-text-main mb-1">Microcards candidates (${microcards.length})</div>
+                                    <div class="space-y-1">
+                                        ${microcards.slice(0, 6).map(mc => `<p class="text-[11px] text-text-secondary">${this.escapeHtml(mc.card_type || 'card')} · ${this.escapeHtml(mc.priority || 'priority')}${mc.prompt_seed ? ` · ${this.escapeHtml(mc.prompt_seed)}` : ''}</p>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                            ${notRec.length ? `
+                                <div>
+                                    <div class="text-[11px] font-semibold text-text-main mb-1">Not recommended</div>
+                                    <div class="space-y-1">
+                                        ${notRec.slice(0, 8).map(nr => `<p class="text-[11px] text-text-secondary"><strong>${this.escapeHtml(nr.task_type || 'UNKNOWN')}:</strong> ${this.escapeHtml(nr.reason || '')}</p>`).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    renderTheoryAnalysisComposer() {
+        const limitInfo = this.dailyLimit;
+        const aiUnavailable = this.aiStatus && this.aiStatus.ai_available === false;
+        const wordCount = (this.materialText || '').split(/\s+/).filter(Boolean).length;
+        const limitHtml = limitInfo ? `
+            <div class="flex items-center gap-2 text-xs text-text-muted mt-2">
+                <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
+                <span>Загрузок файлов сегодня: <strong class="${limitInfo.files_remaining === 0 ? 'text-error' : 'text-text-main'}">${limitInfo.max_files_per_day - limitInfo.files_remaining}</strong> из ${limitInfo.max_files_per_day}</span>
+            </div>` : '';
+
+        return `
+            <div class="border border-border-strong rounded-xl bg-surface-1 p-4">
+                <div class="flex items-start gap-3 mb-4">
+                    <div class="w-9 h-9 rounded-lg bg-surface-2 border border-border-strong text-primary flex items-center justify-center shrink-0">
+                        <span class="material-symbols-outlined text-[20px]">analytics</span>
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-sm font-bold text-text-main">Новый анализ</div>
+                        <div class="text-xs text-text-secondary mt-1">Вставьте материал или загрузите файл. Анализ сохранится и будет доступен в истории справа.</div>
+                    </div>
+                </div>
+
+                ${aiUnavailable ? `
+                    <div class="mb-4 p-3 bg-surface-2 border border-border-strong rounded-lg text-xs text-text-main">
+                        AI-сервис сейчас недоступен. Повторное открытие ранее сохранённых анализов остаётся доступным.
+                    </div>
+                ` : ''}
+
+                <div class="p-4 border border-border-strong rounded-lg bg-surface-2 mb-4">
+                    <div class="flex items-start gap-2 mb-3">
+                        <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">translate</span>
+                        <div>
+                            <div class="text-sm font-semibold text-text-main">Язык анализа/рекомендаций</div>
+                            <div class="text-xs text-text-secondary">Можно оставить язык материала или запросить другой язык (с риском качества перевода).</div>
+                        </div>
+                    </div>
+                    <div class="space-y-2">
+                        <label class="flex items-start gap-2 p-2 rounded-lg border border-border-strong bg-surface-1 cursor-pointer">
+                            <input type="radio" name="ai-output-language-mode" value="same_as_material"
+                                class="mt-0.5 text-primary border-border-strong bg-surface-1 focus:ring-primary"
+                                ${this.aiOutputLanguageMode !== 'custom' ? 'checked' : ''}>
+                            <div class="min-w-0">
+                                <div class="text-sm font-medium text-text-main">Как в материале (рекомендуется)</div>
+                                <div class="text-xs text-text-muted">Лучше для точности терминов и меньше ручной правки.</div>
+                            </div>
+                        </label>
+                        <label class="flex items-start gap-2 p-2 rounded-lg border border-border-strong bg-surface-1 cursor-pointer">
+                            <input type="radio" name="ai-output-language-mode" value="custom"
+                                class="mt-0.5 text-primary border-border-strong bg-surface-1 focus:ring-primary"
+                                ${this.aiOutputLanguageMode === 'custom' ? 'checked' : ''}>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-sm font-medium text-text-main">Другой язык</div>
+                                <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+                                    <select id="ai-output-language-select"
+                                        class="rounded-lg border-border-subtle bg-surface-2 py-2 px-2 text-sm text-text-main focus:ring-2 focus:ring-primary ${this.aiOutputLanguageMode !== 'custom' ? 'opacity-60' : ''}"
+                                        ${this.aiOutputLanguageMode !== 'custom' ? 'disabled' : ''}>
+                                        <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>Русский</option>
+                                        <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>English</option>
+                                    </select>
+                                    <span class="text-[11px] text-text-secondary ${this.aiOutputLanguageMode === 'custom' ? '' : 'hidden'}">
+                                        Перевод может ухудшить качество анализа.
+                                    </span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-semibold text-text-secondary mb-2">Загрузка материала</label>
+                    <div id="ai-drop-zone" class="border-2 border-dashed border-border-subtle rounded-lg p-6 text-center bg-surface-2 hover:bg-bg-hover hover:border-primary transition-all cursor-pointer relative">
+                        <input type="file" id="ai-file-input" accept=".pdf,.docx,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="pointer-events-none">
+                            ${this.aiUploadedFile ? `
+                                <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
+                                <p class="text-sm font-bold text-success-text" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
+                                <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : 'Загружено'}</p>
+                            ` : `
+                                <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
+                                <p class="text-sm font-medium text-text-secondary" id="ai-file-name">Перетащите PDF, DOCX или TXT</p>
+                                <p class="text-xs text-text-secondary mt-1">Максимум 18 МБ</p>
+                            `}
+                        </div>
+                    </div>
+                    ${limitHtml}
+                </div>
+
+                <div class="mb-4">
+                    <div class="flex items-center gap-3 mb-2">
+                        <div class="flex-1 h-px bg-border-subtle"></div>
+                        <span class="text-xs text-text-secondary font-medium">или вставьте текст</span>
+                        <div class="flex-1 h-px bg-border-subtle"></div>
+                    </div>
+                    <textarea id="ai-material-textarea" rows="8"
+                        class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary resize-y"
+                        placeholder="Вставьте учебный материал сюда...">${this.escapeHtml(this.materialText)}</textarea>
+                    <div class="flex justify-between mt-1">
+                        <span class="text-xs text-text-secondary" id="ai-word-count">${wordCount ? `${wordCount} слов` : ''}</span>
+                        <span class="text-xs text-text-secondary">Минимум 50 слов</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="dashboard.importManager.theoryAnalyze()" ${this.aiAnalyzing || aiUnavailable ? 'disabled' : ''}
+                        class="px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        ${this.aiAnalyzing ? 'Анализ...' : 'Запустить анализ'}
+                    </button>
+                    <span class="text-xs text-text-secondary">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : 'Результат будет сохранён в истории анализов.'}</span>
+                </div>
+            </div>
+        `;
+    }
+
+    renderTheoryAnalysisRunsPanel() {
+        const rows = Array.isArray(this.theoryRuns) ? this.theoryRuns : [];
+        return `
+            <div class="border border-border-strong rounded-xl bg-surface-1 p-4 sticky top-0">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <div>
+                        <div class="text-sm font-bold text-text-main">Сохранённые анализы</div>
+                        <div class="text-xs text-text-secondary">Повторное открытие по <code class="font-mono">ai_run_id</code></div>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-xs bg-surface-2 text-text-secondary">${rows.length}</span>
+                </div>
+
+                ${this.theoryRunsLoading ? `
+                    <div class="py-6 text-center text-sm text-text-muted">
+                        <span class="material-symbols-outlined animate-spin text-[18px] align-middle mr-1">progress_activity</span>
+                        Загрузка списка...
+                    </div>
+                ` : ''}
+
+                ${!this.theoryRunsLoading && this.theoryRunsError ? `
+                    <div class="p-3 bg-error-lighter border border-error-light rounded-lg text-xs text-error-text">
+                        ${this.escapeHtml(this.theoryRunsError)}
+                    </div>
+                ` : ''}
+
+                ${!this.theoryRunsLoading && !this.theoryRunsError && rows.length === 0 ? `
+                    <div class="p-3 bg-surface-2 rounded-lg text-xs text-text-secondary">
+                        Пока нет сохранённых анализов.
+                    </div>
+                ` : ''}
+
+                ${!this.theoryRunsLoading && !this.theoryRunsError && rows.length > 0 ? `
+                    <div class="space-y-2 max-h-[70vh] overflow-y-auto pr-1">
+                        ${rows.map((row) => {
+            const isActive = row.ai_run_id === this.aiRunId;
+            const isOpening = row.ai_run_id === this.theoryOpeningRunId;
+            const updatedAt = row.updated_at || row.created_at || '';
+            const stats = [
+                row.material_word_count ? `${row.material_word_count} слов` : null,
+                row.material_language ? `язык: ${row.material_language}` : null,
+                row.effective_output_language ? `вывод: ${row.effective_output_language}` : null,
+            ].filter(Boolean).join(' · ');
+            const counts = [
+                Number.isFinite(row.units_count) ? `units ${row.units_count}` : null,
+                Number.isFinite(row.recommendations_count) ? `recs ${row.recommendations_count}` : null,
+            ].filter(Boolean).join(' · ');
+            return `
+                                <div class="rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} p-3">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="min-w-0">
+                                            <div class="text-[11px] font-mono text-text-secondary truncate" title="${this.escapeHtml(row.ai_run_id)}">${this.escapeHtml(row.ai_run_id)}</div>
+                                            <div class="text-xs font-semibold text-text-main mt-1 truncate">${this.escapeHtml(row.source_file_name || row.human_summary || 'Анализ без имени')}</div>
+                                            ${updatedAt ? `<div class="text-[10px] text-text-secondary mt-1">${this.escapeHtml(updatedAt)}</div>` : ''}
+                                            ${stats ? `<div class="text-[10px] text-text-secondary mt-1">${this.escapeHtml(stats)}</div>` : ''}
+                                            ${counts ? `<div class="text-[10px] text-text-secondary mt-0.5">${this.escapeHtml(counts)}</div>` : ''}
+                                        </div>
+                                        <button onclick="dashboard.importManager.openTheoryAnalysisRun('${this.escapeHtml(row.ai_run_id)}')" ${isOpening ? 'disabled' : ''}
+                                            class="px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'} disabled:opacity-60 disabled:cursor-not-allowed">
+                                            ${isOpening ? 'Открытие...' : (isActive ? 'Открыт' : 'Открыть')}
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+        }).join('')}
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    renderTheoryAnalysisResultPanel() {
+        if (this.aiAnalyzing) {
+            return `
+                <div class="border border-border-subtle rounded-xl bg-surface-1 p-8 flex flex-col items-center justify-center text-center">
+                    <img src="/assets/logo_animated.svg" alt="AI Analyzing" class="w-14 h-14 mb-4 drop-shadow-md" />
+                    <h4 class="text-lg font-bold text-text-main">Анализ материала...</h4>
+                    <p class="text-sm text-text-muted mt-2">ИИ разбирает структуру материала и формирует рекомендации.</p>
+                </div>
+            `;
+        }
+
+        const a = this.analysisResult;
+        if (!a) {
+            return `
+                <div class="border border-border-subtle rounded-xl bg-surface-1 p-6">
+                    <div class="text-sm font-semibold text-text-main mb-1">Результат анализа</div>
+                    <div class="text-xs text-text-muted">После запуска или открытия анализа здесь появится структурированный результат.</div>
+                </div>
+            `;
+        }
+
+        const units = Array.isArray(a.educational_units) ? a.educational_units : [];
+        const recs = Array.isArray(a.recommendations) ? a.recommendations : [];
+        const warnings = Array.isArray(a.warnings) ? a.warnings : [];
+        const chunks = Array.isArray(a.learning_chunks) ? a.learning_chunks : [];
+        const routes = Array.isArray(a.authoring_routes) ? a.authoring_routes : [];
+        const suitability = Array.isArray(a.type_progression_suitability) ? a.type_progression_suitability : [];
+        const futureCaps = Array.isArray(a.future_capabilities) ? a.future_capabilities : [];
+        const microcards = Array.isArray(a.microcards_candidates) ? a.microcards_candidates : [];
+        const notRec = Array.isArray(a.not_recommended) ? a.not_recommended : [];
+        const createdAt = a.analysis_created_at || a.run_manifest?.updated_at || a.run_manifest?.created_at || '';
+        const materialLang = a.material_language || a.material_stats?.language || a.target_language || 'unknown';
+        const outputLang = a.effective_output_language || a.target_language || 'unknown';
+        const reportOpen = this.theoryReportPanelOpen !== false;
+        const progressionPolicyHtml = this.renderTheoryReportFixedProgressionPolicyNote(suitability, { compact: true });
+
+        const suitabilityRows = this.theoryReportSortedTypeEntries(suitability).slice(0, 8).map((item) => {
+            const levelRoleMap = Array.isArray(item?.level_role_map) ? item.level_role_map : [];
+            const iterativeNotes = Array.isArray(item?.iterative_system_notes) ? item.iterative_system_notes.filter(Boolean) : [];
+            const seqIntents = Array.isArray(item?.sequence_intents) ? item.sequence_intents : [];
+            const levelLabels = levelRoleMap
+                .map(row => Number(row?.level))
+                .filter(Number.isFinite)
+                .sort((a, b) => a - b)
+                .map(level => `L${level}`);
+            return `
+                <div class="p-2 rounded-md bg-surface-1 border border-border-strong">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="text-xs font-semibold text-text-main">${this.escapeHtml(item.task_type || 'UNKNOWN')}${item.subtype ? ` / ${this.escapeHtml(item.subtype)}` : ''}</div>
+                        <div class="flex flex-wrap gap-1">
+                            <span class="text-[10px] px-1 py-0.5 rounded font-medium text-text-main">${this.escapeHtml(item.suitability || 'n/a')}</span>
+                            ${item?.progression_is_fixed ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">fixed progression</span>` : ''}
+                            ${item?.complex_role && item.complex_role !== 'none' ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">${this.escapeHtml(String(item.complex_role))}</span>` : ''}
+                        </div>
+                    </div>
+                    ${item?.progression_is_fixed ? `<p class="text-[11px] text-text-secondary mt-2">Уровни показываются как роли внутри progression, а не как произвольный выбор.</p>` : ''}
+                    ${levelLabels.length ? `<p class="text-[11px] text-text-secondary mt-1">Уровни в progression: ${this.escapeHtml(levelLabels.join(', '))}</p>` : ''}
+                    ${levelRoleMap.length ? `<div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: 'Роли уровней не указаны.' })}</div>` : ''}
+                    ${iterativeNotes.length ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(iterativeNotes[0]))}</p>` : ''}
+                    ${item.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(item.why)}</p>` : ''}
+                    ${seqIntents.length ? `<div class="flex flex-wrap gap-1 mt-2">${seqIntents.slice(0, 5).map(intent => `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(String(intent))}</span>`).join('')}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+
+        const routeRows = routes.slice(0, 6).map((route) => {
+            const steps = Array.isArray(route?.steps) ? route.steps : [];
+            const antiPatterns = Array.isArray(route?.anti_patterns) ? route.anti_patterns.filter(Boolean) : [];
+            const chunkIds = Array.isArray(route?.chunk_ids) ? route.chunk_ids.filter(Boolean) : [];
+            const unitIds = Array.isArray(route?.unit_ids) ? route.unit_ids.filter((v) => v != null) : [];
+            return `
+                <div class="p-2 rounded-md bg-surface-1 border border-border-strong">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="text-xs font-semibold text-text-main">${this.escapeHtml(route.title || route.id || 'Route')}</div>
+                            <div class="text-[10px] text-text-muted mt-1">
+                                ${this.escapeHtml([route.route_kind, route.target_surface, route.effort_estimate].filter(Boolean).join(' · ') || 'Без метаданных')}
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${steps.length} steps</span>
+                            ${chunkIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${chunkIds.length} chunks</span>` : ''}
+                            ${unitIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${unitIds.length} units</span>` : ''}
+                        </div>
+                    </div>
+                    ${route?.expected_effect ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(route.expected_effect))}</p>` : ''}
+                    <div class="mt-2 space-y-2">
+                        ${steps.slice(0, 3).map((step, idx) => {
+                            const checklist = Array.isArray(step?.authoring_checklist) ? step.authoring_checklist.filter(Boolean) : [];
+                            return `
+                                <div class="rounded-md border border-border-strong bg-surface-2 p-2">
+                                    <div class="flex flex-wrap items-center gap-1">
+                                        <span class="text-[11px] font-semibold text-text-main">${idx + 1}. ${this.escapeHtml(String(step?.action_type || 'step'))}</span>
+                                        ${step?.task_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.task_type))}</span>` : ''}
+                                        ${step?.microcard_mode ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.microcard_mode))}</span>` : ''}
+                                        ${step?.progression_policy ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(step.progression_policy))}</span>` : ''}
+                                        ${step?.sequence_intent ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(step.sequence_intent))}</span>` : ''}
+                                    </div>
+                                    ${step?.purpose ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(String(step.purpose))}</p>` : ''}
+                                    ${checklist.length ? `
+                                        <div class="mt-1.5">
+                                            <div class="text-[10px] font-semibold text-text-secondary mb-1">Checklist</div>
+                                            ${this.theoryReportListToHtml(checklist, { max: 4, className: 'text-[11px] text-text-main' })}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `;
+                        }).join('')}
+                        ${steps.length > 3 ? `<div class="text-[10px] text-text-secondary">Показаны первые 3 шага из ${steps.length}</div>` : ''}
+                    </div>
+                    ${antiPatterns.length ? `
+                        <div class="mt-2">
+                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-wide">Anti-patterns</div>
+                            ${this.theoryReportListToHtml(antiPatterns, { max: 4, className: 'text-[11px] text-text-main', bulletClass: 'text-warning-text' })}
+                        </div>
+                    ` : ''}
+                    <div class="mt-2">${this.renderTheoryRouteQuickActions(route, { compact: true })}</div>
+                </div>
+            `;
+        }).join('');
+
+        const futureRows = futureCaps.slice(0, 6).map((fc) => `
+            <div class="p-2 rounded-md bg-surface-1 border border-border-strong">
+                <div class="text-xs font-semibold text-text-main">${this.escapeHtml(fc.display_name || fc.capability_id || 'Capability')}</div>
+                <div class="text-[10px] text-text-muted mt-1">${this.escapeHtml([fc.status, fc.suitability].filter(Boolean).join(' · '))}</div>
+                ${fc.why ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(fc.why)}</p>` : ''}
+            </div>
+        `).join('');
+        const reportBodyHtml = this.renderTheoryAnalysisReportBody(a, {
+            units,
+            recs,
+            warnings,
+            chunks,
+            routes,
+            futureCaps,
+            microcards,
+            notRec,
+            materialLang,
+            outputLang,
+            suitabilityRows,
+            progressionPolicyHtml,
+            routeRows,
+            futureRows,
+        });
+
+        return `
+            <div class="border border-border-strong rounded-xl bg-surface-1 p-4" data-role="theory-analysis-report-panel">
+                <div class="flex flex-col xl:flex-row xl:items-start xl:justify-between gap-3 mb-4">
+                    <div class="min-w-0">
+                        <h4 class="text-lg font-bold text-text-main">Результат анализа</h4>
+                        <div class="text-xs text-text-secondary mt-1">
+                            ${this.aiRunId ? `<span class="font-mono">${this.escapeHtml(this.aiRunId)}</span>` : ''}
+                            ${createdAt ? ` · ${this.escapeHtml(createdAt)}` : ''}
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-2 xl:items-end">
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Units: <span class="font-bold text-text-main">${units.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Recs: <span class="font-bold text-text-main">${recs.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Chunks: <span class="font-bold text-text-main">${chunks.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Routes: <span class="font-bold text-text-main">${routes.length}</span></div>
+                        </div>
+                        <button type="button"
+                            onclick="dashboard.importManager.pushTheoryAnalysisContextForEditor()"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-primary-fg bg-primary hover:bg-primary-dark transition-colors shadow-sm self-start xl:self-auto">
+                            <span class="material-symbols-outlined text-[16px]">open_in_new</span>
+                            <span>В редактор (P8)</span>
+                        </button>
+                        <button type="button"
+                            onclick="dashboard.importManager.createTheoryMicrocardsDeckAll()"
+                            ${this.microcardsCreateLoading ? 'disabled' : ''}
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-primary text-primary bg-primary-lighter hover:bg-primary hover:text-primary-fg transition-colors self-start xl:self-auto disabled:opacity-60">
+                            <span class="material-symbols-outlined text-[16px]">style</span>
+                            <span>${this.microcardsCreateLoading ? 'Создание колоды...' : 'Колода из анализа (P9)'}</span>
+                        </button>
+                        <button type="button"
+                            onclick="dashboard.importManager.appendTheoryMicrocardsDeckAll()"
+                            ${this.microcardsCreateLoading ? 'disabled' : ''}
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary bg-surface-2 hover:bg-bg-hover transition-colors self-start xl:self-auto disabled:opacity-60">
+                            <span class="material-symbols-outlined text-[16px]">playlist_add</span>
+                            <span>Добавить в колоду...</span>
+                        </button>
+                        <button type="button"
+                            onclick="dashboard.importManager.openTheoryMicrocardsMode()"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary bg-surface-2 hover:bg-bg-hover transition-colors self-start xl:self-auto">
+                            <span class="material-symbols-outlined text-[16px]">school</span>
+                            <span>Открыть микрокарточки</span>
+                        </button>
+                        <button type="button"
+                            data-role="theory-report-toggle-btn"
+                            aria-expanded="${reportOpen ? 'true' : 'false'}"
+                            onclick="dashboard.importManager.toggleTheoryAnalysisReportPanel()"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary bg-surface-2 hover:bg-bg-hover transition-colors self-start xl:self-auto">
+                            <span class="material-symbols-outlined text-[16px]" data-role="theory-report-toggle-icon">${reportOpen ? 'expand_less' : 'expand_more'}</span>
+                            <span data-role="theory-report-toggle-label">${reportOpen ? 'Свернуть отчёт' : 'Открыть отчёт'}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div data-role="theory-analysis-report-collapsed" class="${reportOpen ? 'hidden ' : ''}mb-2 p-3 rounded-lg border border-border-strong bg-surface-2">
+                    <div class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-text-muted mt-0.5">article</span>
+                        <div class="min-w-0">
+                            <p class="text-xs font-semibold text-text-main">Отчёт свёрнут</p>
+                            <p class="text-xs text-text-secondary mt-1">Быстро откройте его кнопкой выше. Позиция прокрутки отчёта сохраняется.</p>
+                            ${a.human_summary ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(a.human_summary)}</p>` : ''}
+                        </div>
+                    </div>
+                </div>
+
+                <div data-role="theory-analysis-report-body" class="${reportOpen ? '' : 'hidden '}max-h-[70vh] overflow-y-auto pr-1">
+                ${reportBodyHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    async theoryAnalyze() {
+        const textarea = document.getElementById('ai-material-textarea');
+        if (textarea) this.materialText = textarea.value;
+
+        if (!this.materialText || this.materialText.split(/\s+/).filter(Boolean).length < 50) {
+            this.showToast('Загрузите файл или вставьте текст (минимум 50 слов)', 'warning');
+            return { ok: false, error: 'material_too_short' };
+        }
+        if (this.aiOutputLanguageMode === 'custom' && !this.aiOutputLanguage) {
+            this.showToast('Выберите язык анализа', 'warning');
+            return { ok: false, error: 'output_language_required' };
+        }
+        if (this.aiStatus && this.aiStatus.ai_available === false) {
+            this.showToast('AI-сервис недоступен. Можно открыть сохранённые анализы из списка.', 'warning');
+            return { ok: false, error: 'ai_unavailable' };
+        }
+
+        const result = await this.aiAnalyze();
+        if (result?.ok) {
+            this.loadTheoryAnalysisRuns().catch(() => {});
+        }
+        return result;
+    }
+
+    theoryResetDraft() {
+        this.materialText = '';
+        this.aiUploadedFile = null;
+        this.aiFileInfo = null;
+        this.analysisResult = null;
+        this.generationResult = null;
+        this.aiProvider = null;
+        this.aiProviderModel = null;
+        this.aiRunId = null;
+        this.aiSelectedRecs.clear();
+        this.aiAnalyzing = false;
+        this.aiGenerating = false;
+        this.theoryOpeningRunId = null;
+        this.importRequestKey = null;
+        this.theoryReportPanelOpen = true;
+        this.theoryReportScrollTop = 0;
+        this.theoryReportBlockCollapseState.clear();
+        this.theoryReportActiveAnchor = null;
+        this.theorySubMode = 'analysis';
+        this.microcardsActiveDeck = null;
+        this.microcardsSession = null;
+        this.microcardsQueue = [];
+        this.microcardsQueueIndex = 0;
+        this.microcardsReviewReveal = false;
+        this.microcardsReviewEvaluation = null;
+        if (this.theoryReportAnchorHighlightTimer) {
+            window.clearTimeout(this.theoryReportAnchorHighlightTimer);
+            this.theoryReportAnchorHighlightTimer = null;
+        }
+        this.skipTheoryViewStateCaptureOnce = true;
+        this.renderTheoryAnalysisMode();
+    }
+
+    async loadTheoryAnalysisRuns() {
+        const requestToken = ++this.theoryRunsRequestToken;
+        this.theoryRunsLoading = true;
+        this.theoryRunsError = '';
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+
+        try {
+            const resp = await fetch('/api/editor/ai/analyses?limit=50');
+            const data = await resp.json();
+            if (requestToken !== this.theoryRunsRequestToken) return data;
+
+            if (data.ok) {
+                this.theoryRuns = Array.isArray(data.items) ? data.items : [];
+                this.theoryRunsError = '';
+            } else {
+                this.theoryRuns = [];
+                this.theoryRunsError = data.message || data.error || 'Не удалось загрузить список анализов';
+            }
+            return data;
+        } catch (e) {
+            console.error('[AI] theory analyses list failed:', e);
+            if (requestToken === this.theoryRunsRequestToken) {
+                this.theoryRuns = [];
+                this.theoryRunsError = 'Ошибка сети при загрузке списка анализов';
+            }
+            return { ok: false, error: 'network_error' };
+        } finally {
+            if (requestToken === this.theoryRunsRequestToken) {
+                this.theoryRunsLoading = false;
+                if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+            }
+        }
+    }
+
+    async openTheoryAnalysisRun(aiRunId) {
+        const runId = (aiRunId || '').trim();
+        if (!runId) return { ok: false, error: 'ai_run_id_required' };
+
+        this.theoryOpeningRunId = runId;
+        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+
+        try {
+            const resp = await fetch(`/api/editor/ai/analyses/${encodeURIComponent(runId)}`);
+            const data = await resp.json();
+            if (data.ok) {
+                this.updateTheoryFeatureFlagsFromPayload(data);
+                this.analysisResult = data;
+                this.aiRunId = data.ai_run_id || runId;
+                this.aiProvider = data.provider_used || null;
+                this.aiProviderModel = data.provider_model || null;
+                this.syncEditorTheoryBridgeContext();
+                this.theoryReportPanelOpen = true;
+                this.theoryReportScrollTop = 0;
+                this.theoryReportBlockCollapseState.clear();
+                this.theoryReportActiveAnchor = null;
+                if (this.theoryReportAnchorHighlightTimer) {
+                    window.clearTimeout(this.theoryReportAnchorHighlightTimer);
+                    this.theoryReportAnchorHighlightTimer = null;
+                }
+                this.skipTheoryViewStateCaptureOnce = true;
+                this.generationResult = null;
+                this.aiSelectedRecs.clear();
+                this.importRequestKey = null;
+            } else {
+                this.showToast(data.message || data.error || 'Не удалось открыть анализ', 'error');
+            }
+            return data;
+        } catch (e) {
+            console.error('[AI] theory analysis open failed:', e);
+            this.showToast('Ошибка сети при открытии анализа', 'error');
+            return { ok: false, error: 'network_error' };
+        } finally {
+            this.theoryOpeningRunId = null;
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        }
+    }
+
     renderStep1AI(modules) {
         const limitInfo = this.dailyLimit;
         const limitHtml = limitInfo ? `
@@ -2188,6 +6511,15 @@ text: Сердце человека состоит из [трёх] камер. �
             'medium': '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-warning-light text-warning-dark">Средний</span>',
             'low': '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-surface-2 text-text-muted">Низкий</span>',
         };
+        const _SEQUENCE_INTENT_LABELS = {
+            ordering: 'порядок',
+            classification: 'классификация',
+            hierarchy: 'иерархия',
+            ranking: 'ранжирование',
+            grouping: 'группировка',
+        };
+        const futureCapabilities = Array.isArray(a.future_capabilities) ? a.future_capabilities : [];
+        const pairMatchingFuture = futureCapabilities.find(fc => fc?.capability_id === 'pair_matching') || null;
 
         let totalSelected = 0;
         this.aiSelectedRecs.forEach(v => { if (v.enabled) totalSelected += v.count; });
@@ -2238,6 +6570,17 @@ text: Сердце человека состоит из [трёх] камер. �
                             </div>
                         ` : ''}
 
+                        ${pairMatchingFuture ? `
+                            <div class="p-3 bg-info-lighter border border-info-light rounded-lg">
+                                <div class="text-xs font-semibold text-info-text uppercase tracking-wide mb-2">Planned capability</div>
+                                <div class="text-xs text-info-text space-y-1">
+                                    <p><strong class="text-text-main">${this.escapeHtml(pairMatchingFuture.display_name || 'MATCH (сопоставление пар)')}</strong> · статус: ${this.escapeHtml(pairMatchingFuture.status || 'planned')}</p>
+                                    ${pairMatchingFuture.suitability ? `<p>Пригодность: ${this.escapeHtml(pairMatchingFuture.suitability)}</p>` : ''}
+                                    ${pairMatchingFuture.why ? `<p>${this.escapeHtml(pairMatchingFuture.why)}</p>` : ''}
+                                </div>
+                            </div>
+                        ` : ''}
+
                         ${notRec.length ? `
                             <div>
                                 <p class="text-xs font-semibold text-text-muted mb-2 uppercase tracking-wide">Не рекомендуется:</p>
@@ -2260,6 +6603,26 @@ text: Сердце человека состоит из [трёх] камер. �
                 const u = units.find(u => u.id === id);
                 return u ? u.title : `#${id}`;
             });
+            const levelRoleMap = Array.isArray(rec.level_role_map) ? rec.level_role_map : [];
+            const supportedLevels = Array.isArray(rec.supported_levels) ? rec.supported_levels : [];
+            const sequenceIntentOptions = Array.isArray(rec.sequence_intent_options) ? rec.sequence_intent_options : [];
+            const sequenceIntentLabels = sequenceIntentOptions.map(i => _SEQUENCE_INTENT_LABELS[i] || i);
+            const progressionMetaHtml = rec.progression_is_fixed ? `
+                <div class="mt-2 p-2 rounded-md bg-surface-2 border border-border-subtle">
+                    <p class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Fixed progression</p>
+                    <p class="text-[11px] text-text-secondary leading-relaxed mt-1">${this.escapeHtml(rec.fixed_progression_note || 'Уровни этого типа рассматриваются как часть progression.')}</p>
+                    ${supportedLevels.length ? `<p class="text-[10px] text-text-disabled mt-1">Поддерживаемые уровни: ${supportedLevels.map(l => `L${l}`).join(', ')}</p>` : ''}
+                    ${levelRoleMap.length ? `
+                        <div class="mt-2 space-y-1">
+                            ${levelRoleMap.map(item => `<p class="text-[10px] text-text-secondary"><strong class="text-text-main">L${item.level}:</strong> ${this.escapeHtml(item.role || '')}</p>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            ` : '';
+            const sequenceIntentsHtml = sequenceIntentLabels.length ? `<p class="text-[10px] text-text-disabled mt-2">SEQUENCE-интенты: ${this.escapeHtml(sequenceIntentLabels.join(', '))}</p>` : '';
+            const specialRoleHtml = rec.complex_role === 'finisher_special'
+                ? `<p class="text-[10px] text-text-disabled mt-2">Роль в системе: специальный финализатор (${this.escapeHtml(rec.error_detection_mode || 'error_detection')})</p>`
+                : '';
 
             return `
                                 <div class="border-2 rounded-lg overflow-hidden transition-all ${sel.enabled ? 'border-primary bg-primary-lighter/30' : 'border-border-subtle opacity-70'}">
@@ -2277,6 +6640,9 @@ text: Сердце человека состоит из [трёх] камер. �
                                             </div>
                                             <!-- Truncate class removed below for full visibility -->
                                             <p class="text-xs text-text-muted leading-relaxed">${this.escapeHtml(rec.rationale || '')}</p>
+                                            ${progressionMetaHtml}
+                                            ${sequenceIntentsHtml}
+                                            ${specialRoleHtml}
                                             ${coveredUnits.length ? `<p class="text-[10px] text-text-disabled mt-2">Единицы: ${coveredUnits.join(', ')}</p>` : ''}
                                         </div>
                                         <div class="flex items-center gap-1 flex-shrink-0 mt-0.5 ml-2">
@@ -2552,6 +6918,7 @@ text: Сердце человека состоит из [трёх] камер. �
             const resp = await fetch('/api/editor/ai/status');
             const data = await resp.json();
             this.aiStatus = data;
+            this.updateTheoryFeatureFlagsFromPayload(data);
             this.dailyLimit = data.daily_limit || null;
             return data;
         } catch (e) {
@@ -2590,6 +6957,12 @@ text: Сердце человека состоит из [трёх] камер. �
         this.analysisResult = null;
         this.aiRunId = null;
         this.importRequestKey = null;
+        this.theoryReportBlockCollapseState.clear();
+        this.theoryReportActiveAnchor = null;
+        if (this.theoryReportAnchorHighlightTimer) {
+            window.clearTimeout(this.theoryReportAnchorHighlightTimer);
+            this.theoryReportAnchorHighlightTimer = null;
+        }
         this.renderCurrentStep();
 
         try {
@@ -2608,10 +6981,20 @@ text: Сердце человека состоит из [трёх] камер. �
             this.aiAnalyzing = false;
 
             if (data.ok) {
+                this.updateTheoryFeatureFlagsFromPayload(data);
                 this.analysisResult = data;
                 this.aiProvider = data.provider_used;
                 this.aiProviderModel = data.provider_model || null;
                 this.aiRunId = data.ai_run_id || this.aiRunId;
+                this.syncEditorTheoryBridgeContext();
+                this.theoryReportPanelOpen = true;
+                this.theoryReportScrollTop = 0;
+                this.theoryReportBlockCollapseState.clear();
+                this.theoryReportActiveAnchor = null;
+                if (this.theoryReportAnchorHighlightTimer) {
+                    window.clearTimeout(this.theoryReportAnchorHighlightTimer);
+                    this.theoryReportAnchorHighlightTimer = null;
+                }
                 this.aiSelectedRecs.clear();
                 this.importRequestKey = null;
             } else {

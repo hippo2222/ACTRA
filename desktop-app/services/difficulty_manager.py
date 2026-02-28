@@ -372,7 +372,41 @@ class DifficultyManager:
             Модифицированное задание
         """
         content = task_data.get('content', {})
-        
+
+        # P0 fix: test task must not inherit sequence_assembly flags.
+        content.pop('show_level_labels', None)
+        content.pop('show_block_labels', None)
+        content.pop('requires_level_names', None)
+        content.pop('requires_block_names', None)
+
+        if level == 1:
+            # TEST L1: multiple choice
+            content['mode'] = 'multiple_choice'
+            content['show_options'] = True
+            content['requires_text_input'] = False
+        elif level >= 2:
+            # TEST supports only two levels; 2+ maps to open-text mode.
+            content['mode'] = 'open_question'
+            content['show_options'] = False
+            content['requires_text_input'] = True
+
+        task_data['content'] = content
+        return task_data
+
+    def _enhance_sequence_task(self, task_data: Dict[str, Any], level: int) -> Dict[str, Any]:
+        """
+        Sequence Assembly difficulty progression flags.
+
+        L1: show level/block labels
+        L2: require level names
+        L3: require level names and block names
+        """
+        content = task_data.get('content', {})
+
+        # Remove unrelated test flags if they leaked into content.
+        content.pop('show_options', None)
+        content.pop('requires_text_input', None)
+
         if level == 1:
             content['show_level_labels'] = True
             content['show_block_labels'] = True
@@ -388,7 +422,7 @@ class DifficultyManager:
             content['show_block_labels'] = False
             content['requires_level_names'] = True
             content['requires_block_names'] = True
-        
+
         task_data['content'] = content
         return task_data
     
