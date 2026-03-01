@@ -1,10 +1,27 @@
 {
   "id": "task_demo_001",
-  "question": "Demo mammography task 3",
-  "type": "single_choice",
-  "options": [
-    {"id": "a", "text": "Option A"},
-    {"id": "b", "text": "Option B"}
-  ],
-  "correct_answer": "a"
+  "type": "test",
+  "meta": {
+    "name": "Demo mammography task 3"
+  },
+  "content": {
+    "test_type": "single_choice",
+    "questions": [
+      {
+        "text": "Demo mammography task 3",
+        "options": [
+          {
+            "id": "a",
+            "text": "Option A",
+            "is_correct": true
+          },
+          {
+            "id": "b",
+            "text": "Option B",
+            "is_correct": false
+          }
+        ]
+      }
+    ]
+  }
 }
