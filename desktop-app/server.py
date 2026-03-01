@@ -629,6 +629,7 @@ from routes.quick_access_routes import quick_access_bp
 from routes.microcards_routes import microcards_bp
 from routes.ai_routes import ai_bp
 from routes.import_routes import import_bp
+from routes.misc_routes import misc_bp
 
 init_context(
     _headless_app_ctx,
@@ -670,6 +671,7 @@ app.register_blueprint(quick_access_bp)
 app.register_blueprint(microcards_bp)
 app.register_blueprint(ai_bp)
 app.register_blueprint(import_bp)
+app.register_blueprint(misc_bp)
 
 # Register Calendar routes if available
 if calendar_service:
@@ -1969,6 +1971,33 @@ def _send_feedback_test_email(
     }
 
 
+# ── Register misc helpers for routes/misc_routes.py ───────────────────
+from routes._context import set_extra as _set_extra_misc  # noqa: E402
+_set_extra_misc("misc_helpers", {
+    "user_service": user_service,
+    "load_legal_manifest": _load_legal_manifest,
+    "legal_doc_path": _legal_doc_path,
+    "get_consent_status": _get_consent_status,
+    "extract_consent_payload": _extract_consent_payload,
+    "validate_consent_payload": _validate_consent_payload,
+    "write_user_consent": _write_user_consent,
+    "get_cached_internet_connectivity": _get_cached_internet_connectivity,
+    "feedback_email_settings": _feedback_email_settings,
+    "validate_feedback_email_settings": _validate_feedback_email_settings,
+    "update_manifest_url": _update_manifest_url,
+    "manifest_url_requires_internet": _manifest_url_requires_internet,
+    "env_bool": _env_bool,
+    "build_update_status": _build_update_status,
+    "FEEDBACK_TYPES": FEEDBACK_TYPES,
+    "FEEDBACK_SEVERITIES": FEEDBACK_SEVERITIES,
+    "send_feedback_test_email": _send_feedback_test_email,
+    "retry_pending_feedback_notifications": _retry_pending_feedback_notifications,
+    "build_feedback_ticket": _build_feedback_ticket,
+    "save_feedback_ticket": _save_feedback_ticket,
+    "notify_feedback_via_email": _notify_feedback_via_email,
+    "update_feedback_delivery_fields": _update_feedback_delivery_fields,
+})
+
 
 # _normalize_complex_id, _enrich_complex_with_theory_link, _get_complex_by_id moved to routes/_helpers.py
 
@@ -2061,297 +2090,9 @@ def health() -> Any:
 # NOTE: /ui/complexes, /ui/welcome, /Welcome/<path> routes moved to routes/static_routes.py
 
 
-@app.route("/api/users/should-welcome", methods=["GET"])
-def should_welcome() -> Any:
-    """Determine whether the Welcome Screen should be shown and in which mode."""
-    try:
-        users = user_service.get_all_users()
-        items = [u.to_api_dict() for u in users]
 
-        if len(users) == 0:
-            return jsonify(
-                {
-                    "ok": True,
-                    "show_welcome": True,
-                    "mode": "onboarding",
-                    "profiles": [],
-                }
-            )
-
-        if len(users) == 1:
-            user = users[0]
-            api_dict = user.to_api_dict()
-            has_login_password = api_dict.get("has_password") and api_dict.get(
-                "security_settings", {}
-            ).get("require_password_on_login")
-            if has_login_password:
-                return jsonify(
-                    {
-                        "ok": True,
-                        "show_welcome": True,
-                        "mode": "login",
-                        "profiles": [api_dict],
-                    }
-                )
-            else:
-                return jsonify(
-                    {
-                        "ok": True,
-                        "show_welcome": False,
-                        "auto_select_user_id": user.user_id,
-                    }
-                )
-
-        return jsonify(
-            {
-                "ok": True,
-                "show_welcome": True,
-                "mode": "select",
-                "profiles": items,
-            }
-        )
-    except Exception as exc:
-        logger.exception("[HTTP] should-welcome failed: %s", exc)
-        return jsonify({"ok": False, "error": "should_welcome_failed"}), 500
-
-
-@app.route("/api/legal/current", methods=["GET"])
-def legal_current() -> Any:
-    """Return current versions of legal documents."""
-    try:
-        manifest = _load_legal_manifest()
-        return jsonify({"ok": True, "documents": manifest})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to load legal current manifest: %s", exc)
-        return jsonify({"ok": False, "error": "legal_load_failed"}), 500
-
-
-@app.route("/api/legal/document/<string:doc_type>", methods=["GET"])
-def legal_document(doc_type: str) -> Any:
-    """Return legal document content and metadata."""
-    if doc_type not in ("terms", "privacy"):
-        return jsonify({"ok": False, "error": "document_not_found"}), 404
-
-    try:
-        manifest = _load_legal_manifest()
-        meta = manifest.get(doc_type) or {}
-        path = _legal_doc_path(doc_type, manifest=manifest)
-        if path is None or not path.exists():
-            return jsonify({"ok": False, "error": "document_not_found"}), 404
-
-        content = path.read_text(encoding="utf-8")
-        return jsonify(
-            {
-                "ok": True,
-                "document": {
-                    "doc_type": doc_type,
-                    "title": meta.get("title"),
-                    "version": meta.get("version"),
-                    "effective_at": meta.get("effective_at"),
-                    "format": meta.get("format"),
-                    "content": content,
-                },
-            }
-        )
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to load legal document %s: %s", doc_type, exc)
-        return jsonify({"ok": False, "error": "document_load_failed"}), 500
-
-
-@app.route("/api/consent/status", methods=["GET"])
-def consent_status() -> Any:
-    """Return current consent status for user (missing/outdated/up_to_date)."""
-    try:
-        user_id = request.args.get("user_id") or _headless_app_ctx.user_id
-        if not user_id:
-            return jsonify({"ok": False, "error": "user_id_required"}), 400
-        user = user_service.get_user(user_id)
-        if not user:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-        status = _get_consent_status(user_id)
-        return jsonify({"ok": True, **status})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to load consent status: %s", exc)
-        return jsonify({"ok": False, "error": "consent_status_failed"}), 500
-
-
-@app.route("/api/consent/accept", methods=["POST"])
-def consent_accept() -> Any:
-    """Persist user consent for current legal versions."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id") or _headless_app_ctx.user_id
-        if not user_id:
-            return jsonify({"ok": False, "error": "user_id_required"}), 400
-        user = user_service.get_user(user_id)
-        if not user:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-        consent_payload = _extract_consent_payload(payload)
-        validation = _validate_consent_payload(consent_payload)
-        if not validation.get("ok"):
-            body: Dict[str, Any] = {"ok": False, "error": validation.get("error")}
-            if validation.get("error") == "version_mismatch":
-                body["required"] = validation.get("required")
-                body["provided"] = validation.get("provided")
-            return jsonify(body), int(validation.get("status_code", 400))
-
-        saved = _write_user_consent(
-            user_id,
-            consent_payload["terms_version"],
-            consent_payload["privacy_version"],
-            source=str(payload.get("source") or "user_action"),
-        )
-        return jsonify(
-            {
-                "ok": True,
-                "consent_id": saved.get("consent_id"),
-                "accepted_at": saved.get("accepted_at"),
-            }
-        )
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to accept consent: %s", exc)
-        return jsonify({"ok": False, "error": "consent_accept_failed"}), 500
-
-
-@app.route("/api/network/status", methods=["GET"])
-def network_status() -> Any:
-    """Return connectivity info for offline-first UX hints."""
-    try:
-        internet_online = _get_cached_internet_connectivity(force=False)
-        feedback_settings = _feedback_email_settings()
-        feedback_missing = _validate_feedback_email_settings(
-            feedback_settings, require_recipients=True
-        )
-        feedback_delivery_configured = (
-            bool(feedback_settings.get("enabled")) and not feedback_missing
-        )
-        manifest_url = _update_manifest_url()
-        updates_configured = bool(_env_bool("ACTRA_UPDATE_CHECK_ENABLED", True) and manifest_url)
-        updates_requires_internet = (
-            bool(updates_configured) and _manifest_url_requires_internet(manifest_url)
-        )
-
-        return jsonify(
-            {
-                "ok": True,
-                "offline_first": True,
-                "internet_online": internet_online,
-                "feedback_delivery": {
-                    "configured": feedback_delivery_configured,
-                    "available_now": feedback_delivery_configured and internet_online,
-                    "requires_internet": True,
-                    "missing_config": feedback_missing,
-                },
-                "updates": {
-                    "configured": updates_configured,
-                    "available_now": updates_configured
-                    and (internet_online or not updates_requires_internet),
-                    "requires_internet": updates_requires_internet,
-                },
-            }
-        )
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to resolve network status: %s", exc)
-        return jsonify({"ok": False, "error": "network_status_failed"}), 500
-
-
-@app.route("/api/update/check", methods=["GET"])
-def update_check() -> Any:
-    """Check whether a newer app version is available."""
-    try:
-        force_raw = str(request.args.get("force") or "").strip().lower()
-        force = force_raw in {"1", "true", "yes", "on"}
-        result = _build_update_status(force=force)
-        return jsonify({"ok": True, **result})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to check updates: %s", exc)
-        return jsonify({"ok": False, "error": "update_check_failed"}), 500
-
-
-@app.route("/api/feedback/options", methods=["GET"])
-def feedback_options() -> Any:
-    return jsonify(
-        {"ok": True, "types": list(FEEDBACK_TYPES), "severity": list(FEEDBACK_SEVERITIES)}
-    )
-
-
-@app.route("/api/feedback/test-email", methods=["POST"])
-def feedback_test_email() -> Any:
-    """Send test email for feedback SMTP channel."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        to_email = str(payload.get("to_email") or "").strip() or None
-        subject = str(payload.get("subject") or "").strip() or None
-        body = str(payload.get("body") or "").strip() or None
-
-        status = _send_feedback_test_email(to_email=to_email, subject=subject, body=body)
-        if status.get("sent"):
-            return jsonify({"ok": True, **status})
-
-        reason = str(status.get("reason") or "send_failed")
-        status_code = 400 if reason in {"disabled", "not_configured"} else 502
-        return jsonify({"ok": False, **status}), status_code
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to send feedback test email: %s", exc)
-        return jsonify({"ok": False, "error": "feedback_test_email_failed"}), 500
-
-
-@app.route("/api/feedback/retry-pending", methods=["POST"])
-def feedback_retry_pending() -> Any:
-    """Retry email delivery for previously queued feedback tickets."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        requested_limit = payload.get("limit", 5)
-        try:
-            limit = int(requested_limit)
-        except Exception:
-            limit = 5
-        limit = max(1, min(limit, 50))
-
-        summary = _retry_pending_feedback_notifications(limit=limit)
-        return jsonify({"ok": True, **summary})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to retry pending feedback notifications: %s", exc)
-        return jsonify({"ok": False, "error": "feedback_retry_failed"}), 500
-
-
-@app.route("/api/feedback", methods=["POST"])
-def feedback_submit() -> Any:
-    """Submit feedback ticket from active/existing user."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id") or _headless_app_ctx.user_id
-        if not user_id:
-            return jsonify({"ok": False, "error": "user_id_required"}), 400
-        user = user_service.get_user(user_id)
-        if not user:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-        ticket = _build_feedback_ticket(payload, user_id=user_id)
-        _save_feedback_ticket(ticket)
-        if _get_cached_internet_connectivity(force=False):
-            email_status = _notify_feedback_via_email(ticket, user)
-        else:
-            email_status = {"sent": False, "reason": "offline"}
-        _update_feedback_delivery_fields(ticket, email_status)
-        _save_feedback_ticket(ticket)
-        return (
-            jsonify(
-                {
-                    "ok": True,
-                    "ticket_id": ticket["ticket_id"],
-                    "email_notification": email_status,
-                }
-            ),
-            201,
-        )
-    except ValueError as ve:
-        return jsonify({"ok": False, "error": str(ve)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to save feedback: %s", exc)
-        return jsonify({"ok": False, "error": "feedback_submit_failed"}), 500
+# NOTE: /api/users/should-welcome, /api/legal/*, /api/consent/*, /api/network/status,
+# /api/update/check, /api/feedback/* routes moved to routes/misc_routes.py
 
 
 
@@ -2359,12 +2100,8 @@ def feedback_submit() -> Any:
 # routes moved to routes/static_routes.py
 
 
-@app.route("/api/evaluation/messages", methods=["GET"])
-def get_evaluation_messages() -> Any:
-    """Return all evaluation messages for frontend usage."""
-    from services.evaluation_messages import MESSAGES
 
-    return jsonify(MESSAGES)
+# NOTE: /api/evaluation/messages route moved to routes/misc_routes.py
 
 
 
