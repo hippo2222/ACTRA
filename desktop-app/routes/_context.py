@@ -14,12 +14,13 @@ Usage in any Blueprint module:
     ctx.storage_service.load_modules()
 """
 
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
 _app_ctx: Any = None
 _ai_service: Any = None
 _file_processor: Any = None
+_extra: Dict[str, Any] = {}
 
 
 def init_context(
@@ -27,12 +28,14 @@ def init_context(
     *,
     ai_service: Any = None,
     file_processor: Any = None,
+    **kwargs: Any,
 ) -> None:
     """Initialize the shared context.  Called once from server.py."""
-    global _app_ctx, _ai_service, _file_processor
+    global _app_ctx, _ai_service, _file_processor, _extra
     _app_ctx = app_ctx
     _ai_service = ai_service
     _file_processor = file_processor
+    _extra = dict(kwargs)
 
 
 def get_ctx() -> Any:
@@ -48,3 +51,8 @@ def get_ai_service() -> Optional[Any]:
 def get_file_processor() -> Optional[Any]:
     """Return the FileProcessor instance (or None)."""
     return _file_processor
+
+
+def get_extra(key: str, default: Any = None) -> Any:
+    """Return an extra value stored during init_context."""
+    return _extra.get(key, default)

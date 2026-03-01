@@ -616,6 +616,37 @@ watchdog = WatchdogService(check_interval=2.0, hang_threshold=10.0, heartbeat_in
 app = Flask(__name__, static_folder=str(EDITOR_UI_DIR), static_url_path="/ui/editor")
 app.secret_key = secrets.token_hex(32)
 
+# Initialize shared route context and register Blueprints
+from routes._context import init_context
+from routes.static_routes import static_bp
+
+init_context(
+    _headless_app_ctx,
+    ai_service=_ai_service,
+    file_processor=_file_processor,
+    ui_dirs={
+        "FRONTEND_ROOT": FRONTEND_ROOT,
+        "S1_UI_DIR": S1_UI_DIR,
+        "S2_UI_DIR": S2_UI_DIR,
+        "S3_UI_DIR": S3_UI_DIR,
+        "MAINSCREEN_UI_DIR": MAINSCREEN_UI_DIR,
+        "WELCOME_UI_DIR": WELCOME_UI_DIR,
+        "COMPLEXES_UI_DIR": COMPLEXES_UI_DIR,
+        "TESTUI_DIR": TESTUI_DIR,
+        "SEQUENCEUI_DIR": SEQUENCEUI_DIR,
+        "CLICKUI_DIR": CLICKUI_DIR,
+        "DRAWUI_DIR": DRAWUI_DIR,
+        "OPENANSWERUI_DIR": OPENANSWERUI_DIR,
+        "MISTAKESUI_DIR": MISTAKESUI_DIR,
+        "EDITOR_UI_DIR": EDITOR_UI_DIR,
+        "CALENDAR_UI_DIR": CALENDAR_UI_DIR,
+        "STATISTICS_UI_DIR": STATISTICS_UI_DIR,
+        "MICROCARDS_UI_DIR": MICROCARDS_UI_DIR,
+        "ASSETS_DIR": ASSETS_DIR,
+    },
+)
+app.register_blueprint(static_bp)
+
 # Register Calendar routes if available
 if calendar_service:
     try:
@@ -2122,41 +2153,8 @@ def health() -> Any:
     return jsonify({"status": "ok"})
 
 
-@app.route("/ui/complexes", methods=["GET"])
-def serve_complexes_ui() -> Any:
-    """Serve the complexes list HTML UI (S0)."""
-    if not COMPLEXES_UI_DIR.exists():
-        logger.error("[HTTP] COMPLEXES_UI_DIR does not exist: %s", COMPLEXES_UI_DIR)
-        return jsonify({"ok": False, "error": "complexes_ui_not_found"}), 500
 
-    resp = send_from_directory(COMPLEXES_UI_DIR, "index.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-@app.route("/ui/welcome", methods=["GET"])
-def serve_welcome_ui() -> Any:
-    """Serve the Welcome / onboarding screen."""
-    if not WELCOME_UI_DIR.exists():
-        logger.error("[HTTP] WELCOME_UI_DIR does not exist: %s", WELCOME_UI_DIR)
-        return jsonify({"ok": False, "error": "welcome_ui_not_found"}), 500
-    resp = send_from_directory(WELCOME_UI_DIR, "welcome.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-@app.route("/Welcome/<path:filename>", methods=["GET"])
-def serve_welcome_static(filename: str) -> Any:
-    """Serve static files (JS/CSS) for the Welcome screen."""
-    if not WELCOME_UI_DIR.exists():
-        return jsonify({"ok": False, "error": "welcome_ui_not_found"}), 500
-    return send_from_directory(WELCOME_UI_DIR, filename)
+# NOTE: /ui/complexes, /ui/welcome, /Welcome/<path> routes moved to routes/static_routes.py
 
 
 @app.route("/api/users/should-welcome", methods=["GET"])
@@ -2452,84 +2450,9 @@ def feedback_submit() -> Any:
         return jsonify({"ok": False, "error": "feedback_submit_failed"}), 500
 
 
-@app.route("/ui", methods=["GET"])
-@app.route("/ui/main", methods=["GET"])
-def serve_main_ui() -> Any:
-    if not MAINSCREEN_UI_DIR.exists():
-        logger.error("[HTTP] MAINSCREEN_UI_DIR does not exist: %s", MAINSCREEN_UI_DIR)
-        return jsonify({"ok": False, "error": "mainscreen_ui_not_found"}), 500
 
-    main_path = MAINSCREEN_UI_DIR / "Main.html"
-    try:
-        meta = _file_debug_meta(main_path)
-        logger.info("[HTTP][UI_MAIN] serve %s", json.dumps(meta, ensure_ascii=False))
-        _flush_log_handlers()
-    except Exception:
-        pass
-
-    resp = send_from_directory(MAINSCREEN_UI_DIR, "Main.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-if FLASK_DEBUG_ENABLED:
-
-    @app.route("/api/debug/ui-main", methods=["GET"])
-    def debug_ui_main() -> Any:
-        logger.debug(f"[DEBUG_UI_MAIN][pid={os.getpid()}] debug_ui_main endpoint called")
-        main_path = MAINSCREEN_UI_DIR / "Main.html"
-        result = {"ok": True, "pid": os.getpid(), "main": _file_debug_meta(main_path)}
-        logger.debug(f"[DEBUG_UI_MAIN][pid={os.getpid()}] returning result: {result}")
-        return result
-
-
-@app.route("/ui/complexes/create", methods=["GET"])
-def serve_complexes_create_ui() -> Any:
-    if not COMPLEXES_UI_DIR.exists():
-        logger.error("[HTTP] COMPLEXES_UI_DIR does not exist: %s", COMPLEXES_UI_DIR)
-        return jsonify({"ok": False, "error": "complexes_ui_not_found"}), 500
-
-    resp = send_from_directory(COMPLEXES_UI_DIR, "create.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-@app.route("/ui/TestUI/<path:filename>", methods=["GET"])
-def serve_testui_static(filename: str) -> Any:
-    """Serve static JS/CSS/assets for the TestUI module used by S1.
-
-    This allows paths like ../TestUI/TestUI.web.js in S1/index.html to be resolved
-    as /ui/TestUI/TestUI.web.js.
-    """
-    if not TESTUI_DIR.exists():
-        logger.error("[HTTP] TESTUI_DIR does not exist: %s", TESTUI_DIR)
-        return jsonify({"ok": False, "error": "testui_not_found"}), 500
-
-    return send_from_directory(TESTUI_DIR, filename)
-
-
-@app.route("/ui/SequenceUI/<path:filename>", methods=["GET"])
-def serve_sequenceui_static(filename: str) -> Any:
-    if not SEQUENCEUI_DIR.exists():
-        logger.error("[HTTP] SEQUENCEUI_DIR does not exist: %s", SEQUENCEUI_DIR)
-        return jsonify({"ok": False, "error": "sequenceui_not_found"}), 500
-
-    return send_from_directory(SEQUENCEUI_DIR, filename)
-
-
-@app.route("/ui/ClickUI/<path:filename>", methods=["GET"])
-def serve_clickui_static(filename: str) -> Any:
-    if not CLICKUI_DIR.exists():
-        logger.error("[HTTP] CLICKUI_DIR does not exist: %s", CLICKUI_DIR)
-        return jsonify({"ok": False, "error": "clickui_not_found"}), 500
-
-    return send_from_directory(CLICKUI_DIR, filename)
+# NOTE: /ui, /ui/main, /ui/complexes/create, /ui/TestUI, /ui/SequenceUI, /ui/ClickUI
+# routes moved to routes/static_routes.py
 
 
 @app.route("/api/evaluation/messages", methods=["GET"])
@@ -2540,174 +2463,9 @@ def get_evaluation_messages() -> Any:
     return jsonify(MESSAGES)
 
 
-@app.route("/ui/DrawUI/<path:filename>", methods=["GET"])
-def serve_drawui_static(filename: str) -> Any:
-    if not DRAWUI_DIR.exists():
-        logger.error("[HTTP] DRAWUI_DIR does not exist: %s", DRAWUI_DIR)
-        return jsonify({"ok": False, "error": "drawui_not_found"}), 500
 
-    return send_from_directory(DRAWUI_DIR, filename)
-
-
-@app.route("/ui/OpenAnswerUI/<path:filename>", methods=["GET"])
-def serve_openanswerui_static(filename: str) -> Any:
-    if not OPENANSWERUI_DIR.exists():
-        logger.error("[HTTP] OPENANSWERUI_DIR does not exist: %s", OPENANSWERUI_DIR)
-        return jsonify({"ok": False, "error": "openanswerui_not_found"}), 500
-
-    return send_from_directory(OPENANSWERUI_DIR, filename)
-
-
-@app.route("/ui/MistakesUI/<path:filename>", methods=["GET"])
-def serve_mistakesui_static(filename: str) -> Any:
-    if not MISTAKESUI_DIR.exists():
-        logger.error("[HTTP] MISTAKESUI_DIR does not exist: %s", MISTAKESUI_DIR)
-        return jsonify({"ok": False, "error": "mistakesui_not_found"}), 500
-
-    return send_from_directory(MISTAKESUI_DIR, filename)
-
-
-@app.route("/ui/editor", methods=["GET"])
-@app.route("/ui/editor/", methods=["GET"])
-def serve_editor_dashboard() -> Any:
-    """Serve the Editor Main Dashboard."""
-    if not EDITOR_UI_DIR.exists():
-        logger.error("[HTTP] EDITOR_UI_DIR does not exist: %s", EDITOR_UI_DIR)
-        return jsonify({"ok": False, "error": "editor_ui_not_found"}), 500
-
-    resp = send_from_directory(EDITOR_UI_DIR, "Main_Dashboard.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-@app.route("/ui/editor/<path:filename>", methods=["GET"])
-def serve_editor_file(filename: str) -> Any:
-    """Serve any file (HTML, CSS, JS) from the Editor directory."""
-    if not EDITOR_UI_DIR.exists():
-        return jsonify({"ok": False, "error": "editor_ui_not_found"}), 500
-
-    return send_from_directory(EDITOR_UI_DIR, filename)
-
-
-# ---------------------------------------------------------------------------
-# Calendar UI Routes
-# ---------------------------------------------------------------------------
-
-
-@app.route("/ui/calendar.css", methods=["GET"])
-def serve_calendar_css_direct() -> Any:
-    """Serve calendar.css specifically."""
-    if not CALENDAR_UI_DIR.exists():
-        return jsonify({"ok": False, "error": "calendar_ui_not_found"}), 500
-    return send_from_directory(CALENDAR_UI_DIR, "calendar.css")
-
-
-@app.route("/ui/calendar", methods=["GET"])
-@app.route("/ui/calendar/", methods=["GET"])
-def serve_calendar_ui() -> Any:
-    """Serve the Calendar page."""
-    if not CALENDAR_UI_DIR.exists():
-        logger.error("[HTTP] CALENDAR_UI_DIR does not exist: %s", CALENDAR_UI_DIR)
-        return jsonify({"ok": False, "error": "calendar_ui_not_found"}), 500
-
-    resp = send_from_directory(CALENDAR_UI_DIR, "calendar.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-@app.route("/ui/calendar/<path:filename>", methods=["GET"])
-def serve_calendar_file(filename: str) -> Any:
-    """Serve Calendar static files (CSS, JS)."""
-    if not CALENDAR_UI_DIR.exists():
-        return jsonify({"ok": False, "error": "calendar_ui_not_found"}), 500
-    return send_from_directory(CALENDAR_UI_DIR, filename)
-
-
-# ---------------------------------------------------------------------------
-# Statistics UI Routes
-# ---------------------------------------------------------------------------
-
-
-@app.route("/ui/statistics", methods=["GET"])
-@app.route("/ui/statistics/", methods=["GET"])
-def serve_statistics_ui() -> Any:
-    """Serve the Statistics page."""
-    if not STATISTICS_UI_DIR.exists():
-        logger.error("[HTTP] STATISTICS_UI_DIR does not exist: %s", STATISTICS_UI_DIR)
-        return jsonify({"ok": False, "error": "statistics_ui_not_found"}), 500
-
-    resp = send_from_directory(STATISTICS_UI_DIR, "statistics.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-@app.route("/ui/statistics/<path:filename>", methods=["GET"])
-def serve_statistics_file(filename: str) -> Any:
-    """Serve Statistics static files (CSS, JS)."""
-    if not STATISTICS_UI_DIR.exists():
-        return jsonify({"ok": False, "error": "statistics_ui_not_found"}), 500
-    return send_from_directory(STATISTICS_UI_DIR, filename)
-
-
-# ---------------------------------------------------------------------------
-# Microcards Runtime UI Routes (M10)
-# ---------------------------------------------------------------------------
-
-
-@app.route("/ui/microcards", methods=["GET"])
-@app.route("/ui/microcards/", methods=["GET"])
-def serve_microcards_ui() -> Any:
-    """Serve the Microcards runtime review page (M10)."""
-    if not MICROCARDS_UI_DIR.exists():
-        logger.error("[HTTP] MICROCARDS_UI_DIR does not exist: %s", MICROCARDS_UI_DIR)
-        return jsonify({"ok": False, "error": "microcards_ui_not_found"}), 500
-
-    resp = send_from_directory(MICROCARDS_UI_DIR, "microcards.html")
-    try:
-        resp.headers["Cache-Control"] = "no-store"
-    except Exception:
-        pass
-    return resp
-
-
-@app.route("/ui/microcards/<path:filename>", methods=["GET"])
-def serve_microcards_file(filename: str) -> Any:
-    """Serve Microcards static files (CSS, JS)."""
-    if not MICROCARDS_UI_DIR.exists():
-        return jsonify({"ok": False, "error": "microcards_ui_not_found"}), 500
-    return send_from_directory(MICROCARDS_UI_DIR, filename)
-
-
-@app.route("/assets/<path:filename>", methods=["GET"])
-def serve_assets(filename: str) -> Any:
-    """Serve global static assets (CSS, fonts)."""
-    if not ASSETS_DIR.exists():
-        logger.error("[HTTP] ASSETS_DIR does not exist: %s", ASSETS_DIR)
-        return jsonify({"ok": False, "error": "assets_dir_not_found"}), 500
-    return send_from_directory(ASSETS_DIR, filename)
-
-
-@app.route("/ui/assets/<path:filename>", methods=["GET"])
-def serve_ui_assets(filename: str) -> Any:
-    """Serve global static assets via /ui/assets for relative links."""
-    if not ASSETS_DIR.exists():
-        logger.error("[HTTP] ASSETS_DIR does not exist: %s", ASSETS_DIR)
-        return jsonify({"ok": False, "error": "assets_dir_not_found"}), 500
-    return send_from_directory(ASSETS_DIR, filename)
-
-
-@app.route("/favicon.ico")
-def favicon() -> Any:
-    return "", 204
+# NOTE: /ui/DrawUI, /ui/OpenAnswerUI, /ui/MistakesUI, /ui/editor, /ui/calendar,
+# /ui/statistics, /ui/microcards, /assets, /favicon.ico routes moved to routes/static_routes.py
 
 
 # ---------------------------------------------------------------------------
@@ -3569,55 +3327,9 @@ def serve_editor_image() -> Any:
     return resp
 
 
-@app.route("/ui/session/<string:session_id>", methods=["GET"])
-def serve_session_ui(session_id: str) -> Any:
-    """Serve the S1 HTML UI for a given session.
 
-    The page itself reads sessionId from the URL (path or query),
-    so here we only need to return index.html.
-    """
-    if not S1_UI_DIR.exists():
-        logger.error("[HTTP] S1_UI_DIR does not exist: %s", S1_UI_DIR)
-        return jsonify({"ok": False, "error": "s1_ui_not_found"}), 500
-
-    # index.html reads sessionId from URL (last path segment or ?sessionId=)
-    return send_from_directory(S1_UI_DIR, "index.html")
-
-
-@app.route("/ui/S1/<path:filename>", methods=["GET"])
-def serve_session_static(filename: str) -> Any:
-    """Serve static assets for S1 (JS/CSS)."""
-    if not S1_UI_DIR.exists():
-        logger.error("[HTTP] S1_UI_DIR does not exist: %s", S1_UI_DIR)
-        return jsonify({"ok": False, "error": "s1_ui_not_found"}), 500
-    target = S1_UI_DIR / filename
-    if not target.exists():
-        logger.warning("[HTTP] S1 static not found: %s", target)
-        return jsonify({"ok": False, "error": "file_not_found"}), 404
-    return send_from_directory(S1_UI_DIR, filename)
-
-
-@app.route("/ui/session/<string:session_id>/iteration/<string:iteration_id>", methods=["GET"])
-def serve_iteration_results_ui(session_id: str, iteration_id: str) -> Any:
-    """Serve the S2 HTML UI for iteration results.
-
-    The page reads session/iteration from the URL, here только отдаём index.html.
-    """
-    if not S2_UI_DIR.exists():
-        logger.error("[HTTP] S2_UI_DIR does not exist: %s", S2_UI_DIR)
-        return jsonify({"ok": False, "error": "s2_ui_not_found"}), 500
-
-    return send_from_directory(S2_UI_DIR, "index.html")
-
-
-@app.route("/ui/session/<string:session_id>/results", methods=["GET"])
-def serve_session_results_ui(session_id: str) -> Any:
-    """Serve the S3 HTML UI for final session results."""
-    if not S3_UI_DIR.exists():
-        logger.error("[HTTP] S3_UI_DIR does not exist: %s", S3_UI_DIR)
-        return jsonify({"ok": False, "error": "s3_ui_not_found"}), 500
-
-    return send_from_directory(S3_UI_DIR, "index.html")
+# NOTE: /ui/session/<id>, /ui/S1/<path>, /ui/session/<id>/iteration/<id>,
+# /ui/session/<id>/results routes moved to routes/static_routes.py
 
 
 @app.route(
