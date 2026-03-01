@@ -1,6 +1,7 @@
 """Shared helper functions used by multiple route modules."""
 
 import logging
+import uuid as _uuid
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -8,6 +9,64 @@ from typing import Any, Optional
 from routes._context import get_ctx
 
 logger = logging.getLogger(__name__)
+
+
+def _make_safe_id(name: str) -> str:
+    """Create a filesystem-safe ID from a (possibly Cyrillic) name.
+
+    Unlike ``secure_filename`` which strips all non-ASCII chars, this helper
+    keeps Cyrillic letters by doing a lightweight transliteration first.
+    Falls back to a short UUID prefix when transliteration yields nothing.
+    """
+    _CYRILLIC_MAP = {
+        "а": "a",
+        "б": "b",
+        "в": "v",
+        "г": "g",
+        "д": "d",
+        "е": "e",
+        "ё": "yo",
+        "ж": "zh",
+        "з": "z",
+        "и": "i",
+        "й": "j",
+        "к": "k",
+        "л": "l",
+        "м": "m",
+        "н": "n",
+        "о": "o",
+        "п": "p",
+        "р": "r",
+        "с": "s",
+        "т": "t",
+        "у": "u",
+        "ф": "f",
+        "х": "kh",
+        "ц": "ts",
+        "ч": "ch",
+        "ш": "sh",
+        "щ": "sch",
+        "ъ": "",
+        "ы": "y",
+        "ь": "",
+        "э": "e",
+        "ю": "yu",
+        "я": "ya",
+    }
+    lowered = name.strip().lower()
+    chars = []
+    for ch in lowered:
+        if ch in _CYRILLIC_MAP:
+            chars.append(_CYRILLIC_MAP[ch])
+        elif ch.isascii() and (ch.isalnum() or ch in "_-"):
+            chars.append(ch)
+        elif ch in (" ", ".", "/", "\\"):
+            chars.append("_")
+        # else: skip
+    result = "_".join(part for part in "".join(chars).split("_") if part)
+    if not result:
+        result = "item_" + _uuid.uuid4().hex[:8]
+    return result
 
 
 def _json_safe(obj: Any) -> Any:
