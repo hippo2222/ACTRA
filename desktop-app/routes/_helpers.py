@@ -1,12 +1,38 @@
 """Shared helper functions used by multiple route modules."""
 
 import logging
+from datetime import date, datetime
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from routes._context import get_ctx
 
 logger = logging.getLogger(__name__)
+
+
+def _json_safe(obj: Any) -> Any:
+    if obj is None:
+        return None
+
+    if isinstance(obj, (datetime, date)):
+        try:
+            return obj.isoformat()
+        except Exception:
+            return str(obj)
+
+    obj_module = type(obj).__module__
+    if obj_module and obj_module.split(".", 1)[0] == "numpy" and hasattr(obj, "item"):
+        try:
+            return obj.item()
+        except Exception:
+            pass
+
+    if isinstance(obj, dict):
+        return {str(k): _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+
+    return obj
 
 
 def _is_within_data_dir(candidate: Path) -> bool:
