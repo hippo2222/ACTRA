@@ -6630,6 +6630,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                         <input type="checkbox" 
                                             class="w-4 h-4 mt-1 text-primary rounded focus:ring-primary flex-shrink-0"
                                             data-ai-rec-type="${rec.task_type}"
+                                            data-testid="ai-rec-toggle-${rec.task_type}"
                                             ${sel.enabled ? 'checked' : ''}
                                             onchange="dashboard.importManager.toggleAIRec('${rec.task_type}', this.checked)">
                                         <span class="material-symbols-outlined ${typeInfo.color} rounded-lg p-1.5 text-[18px] mt-0.5">${typeInfo.icon}</span>

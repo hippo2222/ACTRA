@@ -78,15 +78,50 @@ jobs:
         run: |
           flake8 .
 
-      - name: Run Background API Server
+      - name: Start backend server
         run: |
-          python desktop-app/server.py &
-          # Wait for server and API to be ready
-          timeout 30 bash -c 'until curl -s http://127.0.0.1:8000/api/health > /dev/null; do sleep 1; done'
+          python desktop-app/server.py > server.log 2>&1 &
+          echo $! > server.pid
+          echo "Started server with PID: $(cat server.pid)"
+          # Wait for server and API to be ready with timeout
+          timeout 30 bash -c 'until curl -f -s http://127.0.0.1:8000/api/health > /dev/null 2>&1; do sleep 1; echo "Waiting for server..."; done' || {
+            echo "Server failed to start. Log output:"
+            cat server.log
+            exit 1
+          }
+          echo "Server is ready"
 
       - name: Run tests with coverage
         run: |
           pytest
+
+      - name: Stop backend server
+        if: always()
+        run: |
+          if [ -f server.pid ]; then
+            SERVER_PID=$(cat server.pid)
+            echo "Stopping server (PID: $SERVER_PID)"
+            kill $SERVER_PID 2>/dev/null || true
+            # Wait for graceful shutdown
+            for i in {1..10}; do
+              if ! kill -0 $SERVER_PID 2>/dev/null; then
+                echo "Server stopped gracefully"
+                break
+              fi
+              sleep 1
+            done
+            # Force kill if still running
+            kill -9 $SERVER_PID 2>/dev/null || true
+            rm -f server.pid
+          fi
+
+      - name: Upload server logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs-${{ matrix.python-version }}
+          path: server.log
+          if-no-files-found: ignore
 
       - name: Upload coverage to artifacts
         if: always()
