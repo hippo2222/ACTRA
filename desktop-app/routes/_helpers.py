@@ -94,6 +94,71 @@ def _json_safe(obj: Any) -> Any:
     return obj
 
 
+def _normalize_complex_id(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    v = value.strip()
+    return v or None
+
+
+def _enrich_complex_with_theory_link(obj: dict) -> dict:
+    """Attach cached theory metadata to complex payload for UI convenience."""
+    from services.theory_service import TheoryNotFoundError  # type: ignore
+
+    theory_link = obj.get("theory_link")
+    if not isinstance(theory_link, dict):
+        obj["has_theory"] = False
+        return obj
+
+    theory_id = theory_link.get("theory_id")
+    if not isinstance(theory_id, str) or not theory_id.strip():
+        obj["has_theory"] = False
+        return obj
+
+    try:
+        theory_item = get_ctx().theory_service.get_theory(
+            theory_id.strip(), include_delta=False
+        )
+        theory_link["title_cache"] = theory_item.get("title", "")
+        theory_link["updated_at"] = theory_item.get("updated_at")
+        obj["has_theory"] = True
+    except TheoryNotFoundError:
+        theory_link["missing"] = True
+        obj["has_theory"] = False
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.warning("[HTTP] Failed to enrich theory link for complex %s: %s", obj.get("id"), exc)
+        obj["has_theory"] = False
+    return obj
+
+
+def _get_complex_by_id(complex_id: str) -> Optional[dict]:
+    try:
+        complexes = get_ctx().complex_service.get_all_complexes()
+        for c in complexes:
+            obj = c.dict()
+            if obj.get("id") == complex_id:
+                created_at = obj.get("created_at")
+                updated_at = obj.get("updated_at")
+                if created_at is not None:
+                    obj["created_at"] = (
+                        created_at.isoformat()
+                        if hasattr(created_at, "isoformat")
+                        else str(created_at)
+                    )
+                if updated_at is not None:
+                    obj["updated_at"] = (
+                        updated_at.isoformat()
+                        if hasattr(updated_at, "isoformat")
+                        else str(updated_at)
+                    )
+                obj = _enrich_complex_with_theory_link(obj)
+                return obj
+        return None
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to resolve complex by id %s: %s", complex_id, exc)
+        return None
+
+
 def _is_within_data_dir(candidate: Path) -> bool:
     data_dir = get_ctx().data_dir.resolve()
     try:
