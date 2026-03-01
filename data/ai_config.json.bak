@@ -1,0 +1,34 @@
+{
+    "timeout_seconds": 60,
+    "max_retries": 1,
+    "fallback_order": [
+        "openrouter",
+        "gemini",
+        "groq"
+    ],
+    "providers": {
+        "openrouter": {
+            "enabled": true,
+            "api_key": "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",
+            "model": "z-ai/glm-4.5-air:free",
+            "fallback_models": [
+                "stepfun/step-3.5-flash:free",
+                "arcee-ai/trinity-large-preview:free"
+            ]
+        },
+        "gemini": {
+            "enabled": false,
+            "api_key": "AIzaSyAyS8ZQA2JyI4Ca2yDaP2bvAy3UQ_E1MR8",
+            "model": "gemini-2.0-flash-lite"
+        },
+        "groq": {
+            "enabled": false,
+            "api_key": "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",
+            "model": "llama-3.1-70b-versatile"
+        },
+        "mock": {
+            "enabled": false,
+            "api_key": "test"
+        }
+    }
+}

@@ -68,7 +68,8 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
         # 5. Step 2: Wait for Analysis
         # It shows a loader then the analysis results checkboxes.
         # We wait for at least one AI recommendation checkbox to appear.
-        page.wait_for_selector("input[data-ai-rec-type]", timeout=90000)
+        # Using data-testid for stable selector (not affected by UI changes)
+        page.wait_for_selector("[data-testid^='ai-rec-toggle-']", timeout=90000)
 
         # Force a short wait for animations
         page.wait_for_timeout(500)
