@@ -1,10 +1,27 @@
 {
   "id": "task_demo_ct_002",
-  "question": "Demo CT task 2",
-  "type": "single_choice",
-  "options": [
-    {"id": "a", "text": "Option A"},
-    {"id": "b", "text": "Option B"}
-  ],
-  "correct_answer": "b"
+  "type": "test",
+  "meta": {
+    "name": "Demo CT task 2"
+  },
+  "content": {
+    "test_type": "single_choice",
+    "questions": [
+      {
+        "text": "Demo CT task 2",
+        "options": [
+          {
+            "id": "a",
+            "text": "Option A",
+            "is_correct": false
+          },
+          {
+            "id": "b",
+            "text": "Option B",
+            "is_correct": true
+          }
+        ]
+      }
+    ]
+  }
 }
