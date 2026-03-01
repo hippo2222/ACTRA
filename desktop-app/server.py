@@ -619,6 +619,7 @@ app.secret_key = secrets.token_hex(32)
 # Initialize shared route context and register Blueprints
 from routes._context import init_context
 from routes.static_routes import static_bp
+from routes.users_routes import users_bp
 
 init_context(
     _headless_app_ctx,
@@ -646,6 +647,7 @@ init_context(
     },
 )
 app.register_blueprint(static_bp)
+app.register_blueprint(users_bp)
 
 # Register Calendar routes if available
 if calendar_service:
@@ -1187,6 +1189,18 @@ def _get_consent_status(user_id: str) -> Dict[str, Any]:
             "accepted_at": accepted.get("accepted_at"),
         },
     }
+
+
+# Deferred registration of consent helpers for routes/users_routes.py
+from routes._context import set_extra as _set_extra
+_set_extra("server_helpers", {
+    "extract_consent_payload": _extract_consent_payload,
+    "has_explicit_consent_payload": _has_explicit_consent_payload,
+    "required_consent_versions": _required_consent_versions,
+    "validate_consent_payload": _validate_consent_payload,
+    "write_user_consent": _write_user_consent,
+    "get_consent_status": _get_consent_status,
+})
 
 
 def _check_internet_connectivity(timeout_sec: float) -> bool:
@@ -3658,455 +3672,19 @@ def get_complex(complex_id: str) -> Any:
 # ---------------------------------------------------------------------------
 
 
-@app.route("/api/users", methods=["GET"])
-def list_users() -> Any:
-    """List all available user profiles."""
-    try:
-        users = user_service.get_all_users()
-        items = [u.to_api_dict() for u in users]
-        return jsonify({"ok": True, "items": items})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to list users: %s", exc)
-        return jsonify({"ok": False, "error": "list_users_failed"}), 500
 
+# NOTE: GET /api/users moved to routes/users_routes.py
 
-def _is_within_data_dir(candidate: Path) -> bool:
-    data_dir = _headless_app_ctx.data_dir.resolve()
-    try:
-        candidate.resolve().relative_to(data_dir)
-        return True
-    except (ValueError, FileNotFoundError):
-        return False
+# _is_within_data_dir and _resolve_editor_image_path moved to routes/_helpers.py
+from routes._helpers import _is_within_data_dir, _resolve_editor_image_path
 
 
-def _resolve_editor_image_path(
-    path_str: str,
-    *,
-    module_id: Optional[str] = None,
-    topic_id: Optional[str] = None,
-    task_id: Optional[str] = None,
-) -> Optional[Path]:
-    """
-    Try to resolve editor image path similarly to legacy Tkinter logic:
-    - accept absolute paths under data_dir
-    - allow relative paths inside task directory (if provided)
-    - allow relative paths inside data_dir (modules/, images/, etc.)
-    - handle ../data/images and data/images prefixes
-    - fallback to data/images/<filename>
-    """
-    if not path_str:
-        return None
 
-    data_dir = _headless_app_ctx.data_dir.resolve()
-    modules_dir = _headless_app_ctx.storage_service.modules_dir.resolve()
-    raw_path = Path(path_str.strip())
 
-    candidate_paths: list[Path] = []
 
-    # 1. Absolute path as-is
-    if raw_path.is_absolute():
-        candidate_paths.append(raw_path)
-
-    # Prepare task directory if module/topic/task specified
-    task_dir: Optional[Path] = None
-    if module_id and topic_id and task_id:
-        task_dir = modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
-        # Relative to task json directory
-        candidate_paths.append(task_dir / raw_path)
-        # Allow referencing by filename inside task dir and task images subdir
-        if raw_path.name:
-            candidate_paths.append(task_dir / raw_path.name)
-            candidate_paths.append(task_dir / "images" / raw_path.name)
-
-    # 2. Relative to data_dir root
-    candidate_paths.append(data_dir / raw_path)
-
-    normalized_str = str(raw_path).replace("\\", "/")
-    # 3. Handle explicit data/images prefixes
-    if normalized_str.startswith("../data/images/") or normalized_str.startswith("data/images/"):
-        rel_part = normalized_str.split("data/images/", 1)[-1]
-        candidate_paths.append(data_dir / "images" / rel_part)
-
-    # 4. data/images/<filename>
-    if raw_path.name:
-        candidate_paths.append(data_dir / "images" / raw_path.name)
-
-    seen: set[str] = set()
-    for candidate in candidate_paths:
-        try:
-            resolved = candidate.resolve()
-        except FileNotFoundError:
-            resolved = candidate
-
-        key = resolved.as_posix().lower()
-        if key in seen:
-            continue
-        seen.add(key)
-
-        if not resolved.exists() or not resolved.is_file():
-            continue
-
-        if not _is_within_data_dir(resolved):
-            logger.warning("[HTTP] serve_editor_image rejected path outside data_dir: %s", resolved)
-            continue
-
-        return resolved
-
-    return None
-
-
-@app.route("/api/users", methods=["POST"])
-def create_user() -> Any:
-    """Create a new user profile."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        name = payload.get("name")
-        if not name or not name.strip():
-            return (
-                jsonify(
-                    {"ok": False, "error": "name_required", "message": "Имя не может быть пустым"}
-                ),
-                400,
-            )
-
-        consent_payload = _extract_consent_payload(payload)
-        legacy_implicit_consent = not _has_explicit_consent_payload(payload)
-        if legacy_implicit_consent:
-            # Backward compatibility: old clients/tests send only `name`.
-            required_versions = _required_consent_versions()
-            consent_payload = {
-                "accepted": True,
-                "terms_version": required_versions["terms_version"],
-                "privacy_version": required_versions["privacy_version"],
-            }
-        validation = _validate_consent_payload(consent_payload)
-        if not validation.get("ok"):
-            body: Dict[str, Any] = {"ok": False, "error": validation.get("error")}
-            if validation.get("error") == "version_mismatch":
-                body["required"] = validation.get("required")
-                body["provided"] = validation.get("provided")
-            return jsonify(body), int(validation.get("status_code", 400))
-
-        avatar_seed = payload.get("avatar_seed")
-
-        user = user_service.create_user(name.strip())
-
-        # Apply requested avatar (if provided) after profile creation.
-        if isinstance(avatar_seed, str) and avatar_seed.strip():
-            user.avatar_seed = avatar_seed.strip()
-            user_service.update_user(user)
-
-        _write_user_consent(
-            user.user_id,
-            consent_payload["terms_version"],
-            consent_payload["privacy_version"],
-            source=(
-                "profile_create_legacy_implicit" if legacy_implicit_consent else "profile_create"
-            ),
-        )
-        return jsonify({"ok": True, "user": user.to_api_dict()})
-    except ValueError as ve:
-        # Ошибки валидации
-        logger.warning(f"[HTTP] User creation validation error: {ve}")
-        return jsonify({"ok": False, "error": "validation_error", "message": str(ve)}), 400
-    except Exception as exc:
-        # Системные ошибки
-        logger.exception(f"[HTTP] Failed to create user: {exc}")
-        return (
-            jsonify(
-                {
-                    "ok": False,
-                    "error": "user_creation_failed",
-                    "message": "Внутренняя ошибка сервера",
-                }
-            ),
-            500,
-        )
-
-
-def _get_user_info_dict(user_id: str) -> Optional[Dict[str, Any]]:
-    """Helper to return a flat user dict for an existing profile."""
-    user = user_service.get_user(user_id)
-    return user.to_api_dict() if user else None
-
-
-@app.route("/api/users/current", methods=["GET"])
-def get_current_user() -> Any:
-    """Get the currently active user profile."""
-    try:
-        user_info = _get_user_info_dict(_headless_app_ctx.user_id)
-        if not user_info:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-        return jsonify({"ok": True, "user": user_info})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to get current user: %s", exc)
-        return jsonify({"ok": False, "error": "user_get_failed"}), 500
-
-
-@app.route("/api/users/select", methods=["POST"])
-def select_user() -> Any:
-    """Switch the current active user."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id")
-        if not user_id:
-            return jsonify({"ok": False, "error": "user_id_required"}), 400
-        if user_id == "guest":
-            return jsonify({"ok": False, "error": "guest_mode_removed"}), 400
-
-        success = _headless_app_ctx.switch_user(user_id)
-        if not success:
-            return jsonify({"ok": False, "error": "user_switch_failed"}), 404
-
-        user_info = _get_user_info_dict(_headless_app_ctx.user_id)
-        return jsonify({"ok": True, "user": user_info})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to switch user: %s", exc)
-        return jsonify({"ok": False, "error": "user_switch_failed"}), 500
-
-
-@app.route("/api/users/update", methods=["POST"])
-def update_user_profile() -> Any:
-    """Update user profile details (name, avatar, password, etc.)."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id") or _headless_app_ctx.user_id
-
-        user = user_service.get_user(user_id)
-        if not user:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-        # Check for password if required by current security settings
-        if user.password_hash and user.security_settings.get("require_password_on_edit"):
-            password = payload.get("verification_password")
-            if not password:
-                return jsonify({"ok": False, "error": "password_required_for_edit"}), 401
-
-            if not user_service.verify_password(user_id, password):
-                return jsonify({"ok": False, "error": "invalid_password"}), 401
-
-        # Apply updates
-        if "name" in payload:
-            name = payload["name"].strip()
-            # Validate name
-            if not name or len(name) < 2 or len(name) > 50:
-                return (
-                    jsonify(
-                        {
-                            "ok": False,
-                            "error": "invalid_name_length",
-                            "message": "Имя должно содержать от 2 до 50 символов",
-                        }
-                    ),
-                    400,
-                )
-
-            # Check forbidden characters
-            forbidden_chars = ["/", "\\", "<", ">", ":", '"', "|", "?", "*"]
-            if any(char in name for char in forbidden_chars):
-                return (
-                    jsonify(
-                        {
-                            "ok": False,
-                            "error": "invalid_name_chars",
-                            "message": f"Имя содержит недопустимые символы",
-                        }
-                    ),
-                    400,
-                )
-
-            # Check duplicate name (only if name is actually changing)
-            if name.lower() != user.name.lower() and user_service._check_duplicate_name(name):
-                return (
-                    jsonify(
-                        {
-                            "ok": False,
-                            "error": "duplicate_name",
-                            "message": "Пользователь с таким именем уже существует",
-                        }
-                    ),
-                    400,
-                )
-
-            user.name = name
-        if "avatar_seed" in payload:
-            user.avatar_seed = payload["avatar_seed"]
-        if "password" in payload:
-            # Empty password means remove password
-            pwd = payload["password"]
-            if pwd:
-                # Use bcrypt for new passwords
-                user.password_hash = bcrypt.hashpw(pwd.encode("utf-8"), bcrypt.gensalt()).decode(
-                    "utf-8"
-                )
-            else:
-                user.password_hash = None
-        if "security_settings" in payload:
-            user.security_settings.update(payload["security_settings"])
-
-        success = user_service.update_user(user)
-        if not success:
-            return jsonify({"ok": False, "error": "update_failed"}), 500
-
-        return jsonify({"ok": True, "user": user.to_api_dict()})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to update user profile: %s", exc)
-        return jsonify({"ok": False, "error": "user_update_failed"}), 500
-
-
-@app.route("/api/users/verify-password", methods=["POST"])
-def verify_user_password() -> Any:
-    """Verify a user password without switching or updating."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id")
-        password = payload.get("password")
-
-        if not user_id or not password:
-            return jsonify({"ok": False, "error": "params_missing"}), 400
-
-        user = user_service.get_user(user_id)
-        if not user:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-        if not user.password_hash:
-            return jsonify({"ok": True, "verified": True})
-
-        is_valid = user_service.verify_password(user_id, password)
-        return jsonify({"ok": True, "verified": is_valid})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to verify password: %s", exc)
-        return jsonify({"ok": False, "error": "verify_failed"}), 500
-
-
-@app.route("/api/users/delete", methods=["POST"])
-def delete_user_profile() -> Any:
-    """Delete user profile and all its data."""
-    try:
-        payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id")
-
-        if not user_id:
-            return jsonify({"ok": False, "error": "user_id_required"}), 400
-
-        # Verify password if set
-        user = user_service.get_user(user_id)
-        if user and user.password_hash:
-            password = payload.get("verification_password")
-            if not password:
-                return jsonify({"ok": False, "error": "password_required_for_delete"}), 401
-
-            if not user_service.verify_password(user_id, password):
-                return jsonify({"ok": False, "error": "invalid_password"}), 401
-
-        success = user_service.delete_user(user_id)
-        if not success:
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
-
-        # If deleted user was current, switch to another existing user if possible.
-        if _headless_app_ctx.user_id == user_id:
-            remaining = user_service.get_all_users()
-            if remaining:
-                _headless_app_ctx.switch_user(remaining[0].user_id)
-            else:
-                _headless_app_ctx.user_id = ""
-                _headless_app_ctx.session_api.default_user_id = ""
-                user_service.save_last_user_id("")
-
-        return jsonify({"ok": True})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to delete user profile: %s", exc)
-        return jsonify({"ok": False, "error": "delete_failed"}), 500
-
-
-@app.route("/api/assets/avatars", methods=["GET"])
-def list_avatars() -> Any:
-    """List available custom avatar files."""
-    try:
-        avatar_dir = Path(_headless_app_ctx.data_dir) / "avatars"
-        if not avatar_dir.exists():
-            avatar_dir.mkdir(parents=True, exist_ok=True)
-
-        extensions = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
-        files = [f.name for f in avatar_dir.iterdir() if f.suffix.lower() in extensions]
-        return jsonify({"ok": True, "files": sorted(files)})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to list avatars: %s", exc)
-        return jsonify({"ok": False, "error": "list_failed"}), 500
-
-
-@app.route("/api/assets/avatars/<path:filename>")
-def serve_avatar(filename: str) -> Any:
-    """Serve custom user avatars from the data/avatars folder."""
-    avatar_dir = Path(_headless_app_ctx.data_dir) / "avatars"
-    if not avatar_dir.exists():
-        avatar_dir.mkdir(parents=True, exist_ok=True)
-    trim_param = str(request.args.get("trim") or "").strip().lower()
-    trim_enabled = trim_param in {"1", "true", "yes", "on"}
-
-    if not trim_enabled:
-        return send_from_directory(str(avatar_dir), filename)
-
-    try:
-        base_dir = avatar_dir.resolve()
-        target = (base_dir / filename).resolve()
-        if not target.exists() or not target.is_file():
-            return jsonify({"ok": False, "error": "avatar_not_found"}), 404
-        try:
-            target.relative_to(base_dir)
-        except ValueError:
-            return jsonify({"ok": False, "error": "avatar_path_invalid"}), 400
-
-        # Keep SVG/raw files untouched; trim is useful for raster avatars with white margins.
-        if target.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp"}:
-            return send_file(str(target))
-
-        try:
-            requested_size = int(str(request.args.get("size") or "256"))
-        except Exception:
-            requested_size = 256
-        requested_size = max(64, min(1024, requested_size))
-
-        from PIL import Image  # type: ignore
-
-        with Image.open(target) as src:
-            img = src.convert("RGBA")
-            pixels = img.load()
-            w, h = img.size
-
-            # Convert near-white pixels to transparent so outer white paddings disappear.
-            for y in range(h):
-                for x in range(w):
-                    r, g, b, a = pixels[x, y]
-                    if a > 0 and r >= 245 and g >= 245 and b >= 245:
-                        pixels[x, y] = (r, g, b, 0)
-
-            bbox = img.getbbox()
-            if bbox:
-                img = img.crop(bbox)
-
-            iw, ih = img.size
-            side = max(iw, ih, 1)
-            square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
-            square.paste(img, ((side - iw) // 2, (side - ih) // 2))
-
-            if side != requested_size:
-                resampling = getattr(Image, "Resampling", Image)
-                square = square.resize((requested_size, requested_size), resampling.LANCZOS)
-
-            out = io.BytesIO()
-            square.save(out, format="PNG", optimize=True)
-            out.seek(0)
-
-        resp = send_file(out, mimetype="image/png")
-        try:
-            resp.headers["Cache-Control"] = "public, max-age=300"
-        except Exception:
-            pass
-        return resp
-    except Exception as exc:
-        logger.warning("[HTTP] Avatar trim failed for %s: %s", filename, exc)
-        return send_from_directory(str(avatar_dir), filename)
+# NOTE: POST /api/users, GET /api/users/current, POST /api/users/select,
+# POST /api/users/update, POST /api/users/verify-password, POST /api/users/delete,
+# GET /api/assets/avatars, GET /api/assets/avatars/<path> moved to routes/users_routes.py
 
 
 # ---------------------------------------------------------------------------

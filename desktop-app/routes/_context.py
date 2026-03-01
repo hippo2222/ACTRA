@@ -56,3 +56,8 @@ def get_file_processor() -> Optional[Any]:
 def get_extra(key: str, default: Any = None) -> Any:
     """Return an extra value stored during init_context."""
     return _extra.get(key, default)
+
+
+def set_extra(key: str, value: Any) -> None:
+    """Store an extra value after init_context has been called."""
+    _extra[key] = value
