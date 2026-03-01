@@ -621,6 +621,7 @@ from routes._context import init_context
 from routes.static_routes import static_bp
 from routes.users_routes import users_bp
 from routes.statistics_routes import statistics_bp
+from routes.theories_routes import theories_bp
 
 init_context(
     _headless_app_ctx,
@@ -650,6 +651,7 @@ init_context(
 app.register_blueprint(static_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(statistics_bp)
+app.register_blueprint(theories_bp)
 
 # Register Calendar routes if available
 if calendar_service:
@@ -3698,164 +3700,8 @@ from routes._helpers import _is_within_data_dir, _resolve_editor_image_path
 # NOTE: /api/statistics/*, /api/task-catalog moved to routes/statistics_routes.py
 
 
-@app.route("/api/theories", methods=["GET"])
-def list_theories() -> Any:
-    query = request.args.get("query")
-    try:
-        items = _headless_app_ctx.theory_service.list_theories(query=query)
-        return jsonify({"ok": True, "items": items})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to list theories: %s", exc)
-        return jsonify({"ok": False, "error": "theories_load_failed"}), 500
 
-
-@app.route("/api/theories", methods=["POST"])
-def create_theory() -> Any:
-    if _headless_app_ctx.user_id == "guest":
-        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
-
-    payload = request.get_json(silent=True) or {}
-    try:
-        item = _headless_app_ctx.theory_service.create_theory(payload)
-        return jsonify({"ok": True, "item": item}), 200
-    except TheoryValidationError as exc:
-        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to create theory: %s", exc)
-        return jsonify({"ok": False, "error": "theory_create_failed"}), 500
-
-
-@app.route("/api/theories/<string:theory_id>", methods=["GET"])
-def get_theory(theory_id: str) -> Any:
-    try:
-        item = _headless_app_ctx.theory_service.get_theory(theory_id, include_delta=True)
-        return jsonify({"ok": True, "item": item})
-    except TheoryNotFoundError:
-        return jsonify({"ok": False, "error": "theory_not_found"}), 404
-    except TheoryValidationError as exc:
-        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to get theory %s: %s", theory_id, exc)
-        return jsonify({"ok": False, "error": "theory_load_failed"}), 500
-
-
-@app.route("/api/theories/<string:theory_id>/copy", methods=["POST"])
-def copy_theory(theory_id: str) -> Any:
-    if _headless_app_ctx.user_id == "guest":
-        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
-
-    payload = request.get_json(silent=True) or {}
-    title = payload.get("title")
-    try:
-        item = _headless_app_ctx.theory_service.clone_theory(theory_id, title=title)
-        return jsonify({"ok": True, "item": item})
-    except TheoryNotFoundError:
-        return jsonify({"ok": False, "error": "theory_not_found"}), 404
-    except TheoryValidationError as exc:
-        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to copy theory %s: %s", theory_id, exc)
-        return jsonify({"ok": False, "error": "theory_copy_failed"}), 500
-
-
-@app.route("/api/theories/<string:theory_id>", methods=["PUT"])
-def update_theory(theory_id: str) -> Any:
-    if _headless_app_ctx.user_id == "guest":
-        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
-
-    payload = request.get_json(silent=True) or {}
-    expected_version = payload.get("expected_version")
-    updates: Dict[str, Any] = {}
-    for field in ("title", "delta", "images"):
-        if field in payload:
-            updates[field] = payload.get(field)
-
-    try:
-        if not updates:
-            item = _headless_app_ctx.theory_service.get_theory(theory_id, include_delta=True)
-        else:
-            item = _headless_app_ctx.theory_service.update_theory(
-                theory_id,
-                updates,
-                expected_version=expected_version,
-            )
-        return jsonify({"ok": True, "item": item})
-    except TheoryConflictError as exc:
-        return (
-            jsonify(
-                {
-                    "ok": False,
-                    "error": "version_conflict",
-                    "details": {
-                        "message": str(exc),
-                        "current_version": exc.current_version,
-                        "expected_version": exc.expected_version,
-                    },
-                }
-            ),
-            409,
-        )
-    except TheoryNotFoundError:
-        return jsonify({"ok": False, "error": "theory_not_found"}), 404
-    except TheoryValidationError as exc:
-        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to update theory %s: %s", theory_id, exc)
-        return jsonify({"ok": False, "error": "theory_update_failed"}), 500
-
-
-@app.route("/api/theories/<string:theory_id>/upload-image", methods=["POST"])
-def upload_theory_image(theory_id: str) -> Any:
-    if _headless_app_ctx.user_id == "guest":
-        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
-
-    if "file" not in request.files:
-        return jsonify({"ok": False, "error": "file_required"}), 400
-
-    try:
-        result = _headless_app_ctx.theory_service.add_image(theory_id, request.files["file"])
-        return jsonify({"ok": True, **result}), 200
-    except TheoryNotFoundError:
-        return jsonify({"ok": False, "error": "theory_not_found"}), 404
-    except TheoryValidationError as exc:
-        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to upload theory image %s: %s", theory_id, exc)
-        return jsonify({"ok": False, "error": "theory_image_upload_failed"}), 500
-
-
-@app.route("/api/theories/<string:theory_id>/history", methods=["GET"])
-def get_theory_history(theory_id: str) -> Any:
-    try:
-        history = _headless_app_ctx.theory_service.get_history(theory_id)
-        return jsonify({"ok": True, "history": history})
-    except TheoryValidationError as exc:
-        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to load theory history %s: %s", theory_id, exc)
-        return jsonify({"ok": False, "error": "theory_history_failed"}), 500
-
-
-@app.route("/api/theories/<string:theory_id>/restore/<string:snapshot_timestamp>", methods=["POST"])
-def restore_theory(theory_id: str, snapshot_timestamp: str) -> Any:
-    if _headless_app_ctx.user_id == "guest":
-        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
-
-    try:
-        item = _headless_app_ctx.theory_service.restore_from_history(theory_id, snapshot_timestamp)
-        return jsonify({"ok": True, "item": item})
-    except TheoryNotFoundError as exc:
-        return jsonify({"ok": False, "error": str(exc)}), 404
-    except TheoryValidationError as exc:
-        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
-    except Exception as exc:
-        logger.exception(
-            "[HTTP] Failed to restore theory %s from %s: %s",
-            theory_id,
-            snapshot_timestamp,
-            exc,
-        )
-        return jsonify({"ok": False, "error": "theory_restore_failed"}), 500
+# NOTE: /api/theories/* routes moved to routes/theories_routes.py
 
 
 @app.route("/api/complexes", methods=["POST"])
