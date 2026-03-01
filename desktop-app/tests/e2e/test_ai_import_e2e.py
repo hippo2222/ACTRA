@@ -83,7 +83,7 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
         # Verify that at least one group of tasks appeared
         # We can check for a common badge or the task title element
         assert page.locator("text='Сгенерированные задания'").count() > 0
-        assert page.locator("input[data-task-checkbox]").count() > 0
+        assert page.locator("input[type='checkbox']").count() > 0
 
         # 7. Complete the import
         # Click "К импорту" (Next)
