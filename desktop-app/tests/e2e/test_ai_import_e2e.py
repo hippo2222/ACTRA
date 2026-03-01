@@ -67,8 +67,8 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
 
         # 5. Step 2: Wait for Analysis
         # It shows a loader then the analysis results checkboxes.
-        # We can wait for at least one checkbox input to appear.
-        page.wait_for_selector("input[type='checkbox']", timeout=90000)
+        # We wait for at least one AI recommendation checkbox to appear.
+        page.wait_for_selector("input[data-ai-rec-type]", timeout=90000)
 
         # Force a short wait for animations
         page.wait_for_timeout(500)
@@ -83,7 +83,7 @@ def test_ai_generation_full_cycle_e2e(page, local_server):
         # Verify that at least one group of tasks appeared
         # We can check for a common badge or the task title element
         assert page.locator("text='Сгенерированные задания'").count() > 0
-        assert page.locator("input[type='checkbox']").count() > 0
+        assert page.locator("input[data-task-checkbox]").count() > 0
 
         # 7. Complete the import
         # Click "К импорту" (Next)
