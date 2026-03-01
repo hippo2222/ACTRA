@@ -9,7 +9,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, PropertyMock
 
 # Import the Flask app and services
 import sys
@@ -17,13 +17,21 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from server import app, _ai_service, _file_processor
 
-
 @pytest.fixture
 def client():
     """Create a test client for the Flask app."""
     app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
+
+@pytest.fixture(autouse=True)
+def mock_ai_service_defaults():
+    """Default mocks for AI service to pass basic validation checks."""
+    service_class = type(_ai_service)
+    with patch.object(service_class, 'is_configured', new_callable=PropertyMock, return_value=True), \
+         patch.object(_ai_service, 'check_daily_limit', return_value=(True, 10, 10)), \
+         patch.object(_ai_service, 'increment_daily_usage'):
+        yield
 
 
 @pytest.fixture
