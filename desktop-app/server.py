@@ -620,6 +620,7 @@ app.secret_key = secrets.token_hex(32)
 from routes._context import init_context
 from routes.static_routes import static_bp
 from routes.users_routes import users_bp
+from routes.statistics_routes import statistics_bp
 
 init_context(
     _headless_app_ctx,
@@ -648,6 +649,7 @@ init_context(
 )
 app.register_blueprint(static_bp)
 app.register_blueprint(users_bp)
+app.register_blueprint(statistics_bp)
 
 # Register Calendar routes if available
 if calendar_service:
@@ -3692,114 +3694,8 @@ from routes._helpers import _is_within_data_dir, _resolve_editor_image_path
 # ---------------------------------------------------------------------------
 
 
-@app.route("/api/statistics/overall", methods=["GET"])
-def get_overall_stats() -> Any:
-    """Get overall statistics for the current user."""
-    user_id = request.args.get("user_id") or _headless_app_ctx.user_id
-    days_arg = request.args.get("days")
-    days = int(days_arg) if days_arg and days_arg.isdigit() else None
-    if days == 0:
-        days = None
 
-    try:
-        stats = statistics_service.aggregate_statistics(user_id, days=days)
-        return jsonify({"ok": True, "stats": stats})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to get overall stats: %s", exc)
-        return jsonify({"ok": False, "error": "stats_load_failed"}), 500
-
-
-@app.route("/api/statistics/time-dynamics", methods=["GET"])
-def get_time_dynamics() -> Any:
-    """Get time dynamics for the activity calendar."""
-    user_id = request.args.get("user_id") or _headless_app_ctx.user_id
-    days = int(request.args.get("days", 30))
-    smoothing_window = int(request.args.get("smooth", 3))
-    smoothing_window = max(1, min(10, smoothing_window))
-    try:
-        dynamics = statistics_service.get_time_dynamics(
-            user_id, days=days, smoothing_window=smoothing_window
-        )
-        return jsonify({"ok": True, "dynamics": dynamics})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to get time dynamics: %s", exc)
-        return jsonify({"ok": False, "error": "dynamics_load_failed"}), 500
-
-
-@app.route("/api/statistics/complexes", methods=["GET"])
-def get_complex_statistics() -> Any:
-    """Get complex statistics for the current user."""
-    user_id = request.args.get("user_id") or _headless_app_ctx.user_id
-    try:
-        stats = statistics_service.get_complex_statistics(user_id)
-        return jsonify({"ok": True, "complexes": stats})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to get complex statistics: %s", exc)
-        return jsonify({"ok": False, "error": "complex_stats_load_failed"}), 500
-
-
-@app.route("/api/statistics/sessions", methods=["GET"])
-def get_recent_sessions() -> Any:
-    """Get recent sessions for the current user."""
-    user_id = request.args.get("user_id") or _headless_app_ctx.user_id
-    limit = int(request.args.get("limit", 10))
-    try:
-        sessions = statistics_service.get_recent_sessions(user_id, limit=limit)
-        return jsonify({"ok": True, "sessions": sessions})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to get recent sessions: %s", exc)
-        return jsonify({"ok": False, "error": "sessions_load_failed"}), 500
-
-
-@app.route("/api/task-catalog", methods=["GET"])
-def task_catalog() -> Any:
-    try:
-        modules = _headless_app_ctx.storage_service.load_modules()
-        items = []
-        for m in modules or []:
-            if not isinstance(m, dict):
-                continue
-            module_id = m.get("id")
-            module_name = m.get("name")
-            topics = m.get("topics") or []
-            for t in topics:
-                if not isinstance(t, dict):
-                    continue
-                topic_id = t.get("id")
-                topic_name = t.get("name")
-                tasks = t.get("tasks") or []
-                for task in tasks:
-                    if not isinstance(task, dict):
-                        continue
-                    task_id = task.get("id") or task.get("task_id")
-                    if not module_id or not topic_id or not task_id:
-                        continue
-                    ref = f"{module_id}/{topic_id}/{task_id}"
-                    items.append(
-                        {
-                            "ref": ref,
-                            "module_id": module_id,
-                            "module_name": module_name or module_id,
-                            "topic_id": topic_id,
-                            "topic_name": topic_name or topic_id,
-                            "task_id": task_id,
-                            "task_name": task.get("name") or task_id,
-                            "task_type": task.get("type") or "unknown",
-                            "subtype": task.get("subtype"),
-                        }
-                    )
-
-        items.sort(
-            key=lambda x: (
-                str(x.get("module_name") or ""),
-                str(x.get("topic_name") or ""),
-                str(x.get("task_name") or ""),
-            )
-        )
-        return jsonify({"ok": True, "items": items})
-    except Exception as exc:
-        logger.exception("[HTTP] Failed to build task catalog: %s", exc)
-        return jsonify({"ok": False, "error": "task_catalog_failed"}), 500
+# NOTE: /api/statistics/*, /api/task-catalog moved to routes/statistics_routes.py
 
 
 @app.route("/api/theories", methods=["GET"])
