@@ -28,6 +28,10 @@ jobs:
           pip install -e ".[dev]"
           python -m pip install requests
 
+      - name: Install Playwright Browsers
+        run: |
+          playwright install --with-deps
+
       - name: Python syntax check
         run: |
           python - <<'PY'
@@ -73,6 +77,12 @@ jobs:
       - name: Flake8 (critical baseline)
         run: |
           flake8 .
+
+      - name: Run Background API Server
+        run: |
+          python desktop-app/server.py &
+          # Wait for server and API to be ready
+          timeout 30 bash -c 'until curl -s http://127.0.0.1:8000/api/health > /dev/null; do sleep 1; done'
 
       - name: Run tests with coverage
         run: |
