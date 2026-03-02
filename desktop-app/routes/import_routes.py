@@ -136,13 +136,45 @@ def _normalize_click_import_data(task_data: Dict[str, Any]) -> Dict[str, Any]:
     data = dict(task_data or {})
     mode = str(data.get("mode") or "").strip().lower()
     if mode == "word_errors":
-        data["mode"] = "text_errors"
         mode = "text_errors"
+    data["mode"] = mode
+    data["subtype"] = data.get("subtype") or "error_detection"
+
+    if mode == "text_choice":
+        normalized_options = []
+        raw_options = data.get("options", [])
+        if isinstance(raw_options, list):
+            for idx, opt in enumerate(raw_options):
+                if not isinstance(opt, dict):
+                    continue
+                normalized_options.append(
+                    {
+                        "id": str(opt.get("id") or f"option_{idx + 1}"),
+                        "text": str(opt.get("text", "")),
+                        "is_correct": bool(opt.get("is_correct", opt.get("correct", False))),
+                    }
+                )
+        data["options"] = normalized_options
+
     if mode == "text_errors":
-        text = str(data.get("text") or "")
-        spans = data.get("error_spans", [])
-        if not isinstance(spans, list):
-            spans = []
+        text = str(data.get("text", ""))
+        spans = []
+        raw_spans = data.get("error_spans")
+        if isinstance(raw_spans, list):
+            for span in raw_spans:
+                if not isinstance(span, dict):
+                    continue
+                start = span.get("start")
+                end = span.get("end")
+                if not isinstance(start, int) or not isinstance(end, int):
+                    continue
+                spans.append(
+                    {
+                        "start": start,
+                        "end": end,
+                        "is_correct": bool(span.get("is_correct", False)),
+                    }
+                )
         if not spans:
             raw_indices = data.get("error_indices", [])
             if isinstance(raw_indices, list):
@@ -150,13 +182,13 @@ def _normalize_click_import_data(task_data: Dict[str, Any]) -> Dict[str, Any]:
                 for raw_idx in raw_indices:
                     if not isinstance(raw_idx, int):
                         continue
-                    if 0 <= raw_idx < len(ranges):
-                        start, end = ranges[raw_idx]
-                        spans.append({"start": start, "end": end})
-                data["error_spans"] = spans
-        data.setdefault("subtype", "error_detection")
-    elif mode == "text_choice":
-        data.setdefault("subtype", "error_detection")
+                    if raw_idx < 0 or raw_idx >= len(ranges):
+                        continue
+                    start, end = ranges[raw_idx]
+                    spans.append({"start": start, "end": end, "is_correct": False})
+        data["error_spans"] = spans
+        data.pop("error_indices", None)
+
     return data
 
 
