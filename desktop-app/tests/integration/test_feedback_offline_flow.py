@@ -37,6 +37,7 @@ def _mock_misc_helpers(monkeypatch):
     
     # Storage for tickets (used by save/build helpers)
     tickets_storage = {}
+    feedback_dir_ref = [Path("./data/feedback")]  # Mutable reference for tests to update
     
     def build_ticket(payload, user_id):
         import uuid
@@ -53,7 +54,13 @@ def _mock_misc_helpers(monkeypatch):
         }
     
     def save_ticket(ticket):
+        import json
         tickets_storage[ticket["ticket_id"]] = ticket
+        # Write to disk like real implementation
+        feedback_path = feedback_dir_ref[0]
+        feedback_path.mkdir(parents=True, exist_ok=True)
+        ticket_file = feedback_path / f"{ticket['ticket_id']}.json"
+        ticket_file.write_text(json.dumps(ticket, indent=2), encoding="utf-8")
     
     def update_delivery(ticket, email_status):
         ticket["delivery"]["email_sent"] = email_status.get("sent", False)
@@ -66,7 +73,7 @@ def _mock_misc_helpers(monkeypatch):
     # Default mocks for all tests
     misc_helpers = {
         "get_cached_internet_connectivity": lambda **kwargs: True,
-        "feedback_dir": lambda: Path("./data/feedback"),
+        "feedback_dir": lambda: feedback_dir_ref[0],
         "notify_feedback_via_email": lambda *args, **kwargs: {"sent": True},
         # Additional helpers for network_status route
         "feedback_email_settings": lambda: {"enabled": True, "recipients": ["test@example.com"]},
@@ -80,6 +87,8 @@ def _mock_misc_helpers(monkeypatch):
         "build_feedback_ticket": build_ticket,
         "save_feedback_ticket": save_ticket,
         "update_feedback_delivery_fields": update_delivery,
+        # Internal reference for tests to update feedback_dir
+        "_feedback_dir_ref": feedback_dir_ref,
     }
     
     existing_extra = getattr(ctx_module, "_extra", {})
@@ -142,7 +151,10 @@ def test_network_status_endpoint_returns_expected_shape(client):
 def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monkeypatch, tmp_path, _mock_misc_helpers):
     user_id = _get_current_user_id(client)
     # After refactoring, update misc_helpers in context
-    _mock_misc_helpers["feedback_dir"] = lambda: tmp_path
+    # Update the feedback_dir reference used by save_ticket
+    import routes._context as ctx_module
+    feedback_dir_ref = ctx_module._extra["misc_helpers"]["_feedback_dir_ref"]
+    feedback_dir_ref[0] = tmp_path
     _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
     _mock_misc_helpers["notify_feedback_via_email"] = lambda *_args, **_kwargs: {"sent": False, "reason": "send_failed"}
 
@@ -178,7 +190,8 @@ def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monke
 def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_path, _mock_misc_helpers):
     user_id = _get_current_user_id(client)
     # After refactoring, update misc_helpers in context
-    _mock_misc_helpers["feedback_dir"] = lambda: tmp_path
+    feedback_dir_ref = _mock_misc_helpers["_feedback_dir_ref"]
+    feedback_dir_ref[0] = tmp_path
     _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
 
     ticket = server._build_feedback_ticket(  # type: ignore[attr-defined]
@@ -213,7 +226,8 @@ def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_pat
 def test_feedback_submit_short_circuits_when_offline(client, monkeypatch, tmp_path, _mock_misc_helpers):
     user_id = _get_current_user_id(client)
     # After refactoring, update misc_helpers in context
-    _mock_misc_helpers["feedback_dir"] = lambda: tmp_path
+    feedback_dir_ref = _mock_misc_helpers["_feedback_dir_ref"]
+    feedback_dir_ref[0] = tmp_path
     _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: False
 
     called = {"value": False}
