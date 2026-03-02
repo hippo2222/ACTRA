@@ -13,6 +13,31 @@ if str(DESKTOP_APP_PATH) not in sys.path:
 import server  # type: ignore
 
 
+@pytest.fixture(autouse=True)
+def _mock_misc_helpers(monkeypatch):
+    """Mock misc_helpers for network/feedback routes after refactoring."""
+    import routes._context as ctx_module
+    
+    # Default mocks for all tests
+    misc_helpers = {
+        "get_cached_internet_connectivity": lambda **kwargs: True,
+        "feedback_dir": lambda: Path("./data/feedback"),
+        "notify_feedback_via_email": lambda *args, **kwargs: {"sent": True},
+        # Additional helpers for network_status route
+        "feedback_email_settings": lambda: {"enabled": True, "recipients": ["test@example.com"]},
+        "validate_feedback_email_settings": lambda settings, **kwargs: [],
+        "update_manifest_url": lambda: "https://example.com/manifest.json",
+        "env_bool": lambda key, default: default,
+        "manifest_url_requires_internet": lambda url: True,
+    }
+    
+    existing_extra = getattr(ctx_module, "_extra", {})
+    existing_extra["misc_helpers"] = misc_helpers
+    monkeypatch.setattr(ctx_module, "_extra", existing_extra)
+    
+    return misc_helpers
+
+
 @pytest.fixture
 def client():
     server.app.config["TESTING"] = True
@@ -63,15 +88,12 @@ def test_network_status_endpoint_returns_expected_shape(client):
     assert isinstance(payload.get("updates"), dict)
 
 
-def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monkeypatch, tmp_path):
+def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monkeypatch, tmp_path, _mock_misc_helpers):
     user_id = _get_current_user_id(client)
-    monkeypatch.setattr(server, "_feedback_dir", lambda: tmp_path)
-    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: True)
-    monkeypatch.setattr(
-        server,
-        "_notify_feedback_via_email",
-        lambda *_args, **_kwargs: {"sent": False, "reason": "send_failed"},
-    )
+    # After refactoring, update misc_helpers in context
+    _mock_misc_helpers["feedback_dir"] = lambda: tmp_path
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
+    _mock_misc_helpers["notify_feedback_via_email"] = lambda *_args, **_kwargs: {"sent": False, "reason": "send_failed"}
 
     resp = client.post(
         "/api/feedback",
@@ -102,10 +124,11 @@ def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monke
     assert delivery.get("email_reason") == "send_failed"
 
 
-def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_path):
+def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_path, _mock_misc_helpers):
     user_id = _get_current_user_id(client)
-    monkeypatch.setattr(server, "_feedback_dir", lambda: tmp_path)
-    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: True)
+    # After refactoring, update misc_helpers in context
+    _mock_misc_helpers["feedback_dir"] = lambda: tmp_path
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
 
     ticket = server._build_feedback_ticket(  # type: ignore[attr-defined]
         {
@@ -120,9 +143,7 @@ def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_pat
     )
     server._save_feedback_ticket(ticket)  # type: ignore[attr-defined]
 
-    monkeypatch.setattr(
-        server, "_notify_feedback_via_email", lambda *_args, **_kwargs: {"sent": True}
-    )
+    _mock_misc_helpers["notify_feedback_via_email"] = lambda *_args, **_kwargs: {"sent": True}
 
     resp = client.post("/api/feedback/retry-pending", json={"limit": 10})
     assert resp.status_code == 200
@@ -138,10 +159,11 @@ def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_pat
     assert delivery.get("email_sent") is True
 
 
-def test_feedback_submit_short_circuits_when_offline(client, monkeypatch, tmp_path):
+def test_feedback_submit_short_circuits_when_offline(client, monkeypatch, tmp_path, _mock_misc_helpers):
     user_id = _get_current_user_id(client)
-    monkeypatch.setattr(server, "_feedback_dir", lambda: tmp_path)
-    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: False)
+    # After refactoring, update misc_helpers in context
+    _mock_misc_helpers["feedback_dir"] = lambda: tmp_path
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: False
 
     called = {"value": False}
 
@@ -149,7 +171,7 @@ def test_feedback_submit_short_circuits_when_offline(client, monkeypatch, tmp_pa
         called["value"] = True
         return {"sent": True}
 
-    monkeypatch.setattr(server, "_notify_feedback_via_email", _fake_notify)
+    _mock_misc_helpers["notify_feedback_via_email"] = _fake_notify
 
     resp = client.post(
         "/api/feedback",
