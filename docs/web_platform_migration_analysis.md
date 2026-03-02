@@ -68,7 +68,7 @@
 |---------|-----------------|---------------------|
 | **Edge Requests** | 4.2K / 1M | ✅ Достаточно для MVP (100 req/день) |
 | **Fast Data Transfer** | 175 MB / 100 GB | ⚠️ Может не хватить (PDF + изображения) |
-| **Fluid Active CPU** | 6s / 4h | ❌ **КРИТИЧНО: AI-генерация невозможна** |
+| **Fluid Active CPU** | 6s / 4h | ⚠️ **PDF parsing проблематичен** (PyMuPDF тяжёлый) |
 | **Function Invocations** | 77 / 1M | ✅ Достаточно |
 | **ISR Reads** | 242 / 1M | ✅ Достаточно (если используем ISR) |
 | **Image Optimization** | 2 / 5K | ⚠️ Мало для image-heavy проекта |
@@ -287,11 +287,13 @@ class handler(BaseHTTPRequestHandler):
 ⚠️ **AI генерация** — вынос на отдельный сервис  
 ⚠️ **Image processing** — использовать Vercel Blob  
 
-### 6.3 Что невозможно на Vercel Free
+### 6.3 Что невозможно/проблематично на Vercel Free
 
-❌ **PDF processing с PyMuPDF** (bundle size + CPU time)  
-❌ **Long-running AI tasks** (>10s timeout)  
-❌ **Большие объёмы изображений** (только 2 optimizations/month)  
+❌ **PDF parsing с PyMuPDF** (bundle size ~50MB + cold start overhead)  
+⚠️ **AI-генерация работает** (API запросы не потребляют CPU), но зависит от PDF parsing  
+❌ **Большие объёмы изображений** (только 2 optimizations/month)
+
+**Уточнение:** AI-инференс происходит через внешние API (OpenRouter/Gemini/Groq) и НЕ потребляет Vercel CPU. Проблема в локальной обработке PDF через PyMuPDF для извлечения текста перед отправкой в AI.  
 
 ---
 
