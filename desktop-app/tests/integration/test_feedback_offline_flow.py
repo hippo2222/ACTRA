@@ -13,6 +13,23 @@ if str(DESKTOP_APP_PATH) not in sys.path:
 import server  # type: ignore
 
 
+class _DummyUser:
+    def __init__(self, user_id: str):
+        self.user_id = user_id
+        self.name = f"TestUser_{user_id[:8]}"
+    
+    def to_api_dict(self):
+        return {"user_id": self.user_id, "name": self.name}
+
+
+class _DummyUserService:
+    def get_user(self, user_id: str):
+        return _DummyUser(user_id)
+    
+    def get_all_users(self):
+        return []
+
+
 @pytest.fixture(autouse=True)
 def _mock_misc_helpers(monkeypatch):
     """Mock misc_helpers for network/feedback routes after refactoring."""
@@ -29,6 +46,8 @@ def _mock_misc_helpers(monkeypatch):
         "update_manifest_url": lambda: "https://example.com/manifest.json",
         "env_bool": lambda key, default: default,
         "manifest_url_requires_internet": lambda url: True,
+        # user_service for feedback routes
+        "user_service": _DummyUserService(),
     }
     
     existing_extra = getattr(ctx_module, "_extra", {})
