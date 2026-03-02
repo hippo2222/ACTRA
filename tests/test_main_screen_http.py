@@ -45,7 +45,13 @@ def test_ui_main_serves_current_mainscreen_html(client, tmp_path, monkeypatch):
     mainscreen_dir.mkdir(parents=True, exist_ok=True)
     html = "<!doctype html><html><body><h1>MainScreen Test</h1></body></html>"
     (mainscreen_dir / "Main.html").write_text(html, encoding="utf-8")
-    monkeypatch.setattr(server, "MAINSCREEN_UI_DIR", mainscreen_dir)
+    
+    # After refactoring, routes use context to get ui_dirs
+    import routes._context as ctx_module
+    ui_dirs = {"MAINSCREEN_UI_DIR": mainscreen_dir}
+    existing_extra = getattr(ctx_module, "_extra", {})
+    existing_extra["ui_dirs"] = ui_dirs
+    monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/ui/main")
     assert response.status_code == 200
