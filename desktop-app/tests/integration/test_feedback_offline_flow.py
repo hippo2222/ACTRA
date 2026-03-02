@@ -35,6 +35,34 @@ def _mock_misc_helpers(monkeypatch):
     """Mock misc_helpers for network/feedback routes after refactoring."""
     import routes._context as ctx_module
     
+    # Storage for tickets (used by save/build helpers)
+    tickets_storage = {}
+    
+    def build_ticket(payload, user_id):
+        import uuid
+        ticket_id = f"ticket_{uuid.uuid4().hex[:12]}"
+        return {
+            "ticket_id": ticket_id,
+            "user_id": user_id,
+            "type": payload.get("type"),
+            "severity": payload.get("severity"),
+            "title": payload.get("title"),
+            "description": payload.get("description"),
+            "status": "pending",
+            "delivery": {},
+        }
+    
+    def save_ticket(ticket):
+        tickets_storage[ticket["ticket_id"]] = ticket
+    
+    def update_delivery(ticket, email_status):
+        ticket["delivery"]["email_sent"] = email_status.get("sent", False)
+        ticket["delivery"]["email_reason"] = email_status.get("reason", "")
+        if email_status.get("sent"):
+            ticket["status"] = "delivered"
+        else:
+            ticket["status"] = "queued"
+    
     # Default mocks for all tests
     misc_helpers = {
         "get_cached_internet_connectivity": lambda **kwargs: True,
@@ -48,6 +76,10 @@ def _mock_misc_helpers(monkeypatch):
         "manifest_url_requires_internet": lambda url: True,
         # user_service for feedback routes
         "user_service": _DummyUserService(),
+        # feedback ticket helpers
+        "build_feedback_ticket": build_ticket,
+        "save_feedback_ticket": save_ticket,
+        "update_feedback_delivery_fields": update_delivery,
     }
     
     existing_extra = getattr(ctx_module, "_extra", {})
