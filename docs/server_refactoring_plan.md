@@ -331,8 +331,8 @@ static_bp = Blueprint("static", __name__)
 
 ## Текущий статус рефакторинга (2026-03-02)
 
-**Ветка:** `refactor/split-server` (14 коммитов)
-**server.py:** 6 672 строки (было 12 478) — **сокращение на 46%**
+**Ветка:** `refactor/split-server` (15 коммитов)
+**server.py:** 5 314 строк (было 12 478) — **сокращение на 57%**
 
 ### Выполненные фазы
 
@@ -348,11 +348,12 @@ static_bp = Blueprint("static", __name__)
 | 7 | `452db2f` | `editor_routes.py` | 928 |
 | 8 | `1f854a5` | `quick_access_routes.py` | 454 |
 | 9 | `3063acd` | `microcards_routes.py` | 902 |
-| 10a | `77db0e1` | `ai_routes.py` | 501 |
+| 10a | `77db0e1` | `ai_routes.py` (smaller endpoints) | 501 |
+| 10b | `3d980dc` | `ai_routes.py` + `ai_generate` route | 1 934 |
 | 11 | `6d0528f` | `import_routes.py` | 1 176 |
 | 12a | `ef6d907` | `misc_routes.py` | 342 |
 
-**Итого в Blueprint-модулях:** ~6 925 строк (12 Blueprint-файлов + `_context.py` + `_helpers.py`)
+**Итого в Blueprint-модулях:** ~8 359 строк (12 Blueprint-файлов + `_context.py` + `_helpers.py`)
 
 ### Оставшееся в server.py
 
@@ -360,22 +361,26 @@ static_bp = Blueprint("static", __name__)
 |------|--------|--------|
 | Imports + path setup | ~200 | ✅ Останется (orchestrator) |
 | `AppContextHeadless` | ~253 | ✅ Останется (DI-контейнер) |
-| Helper functions (legal, consent, feedback, network, update, AI) | ~1 700 | ⚠️ Функции-хелперы остаются, передаются через `set_extra` |
+| Helper functions (shared across blueprints via `set_extra`) | ~3 100 | ⚠️ Функции-хелперы остаются, передаются через `set_extra` |
 | Flask app + middleware + health/debug routes | ~100 | ✅ Останется (orchestrator) |
-| Blueprint registration | ~30 | ✅ Останется |
-| **`ai_generate` + ~40 nested helpers** | **~4 484** | 🔴 **Phase 10b — deferred** |
+| Blueprint registration + `set_extra` calls | ~80 | ✅ Останется |
 | `if __name__` | ~12 | ✅ Останется |
 
-### Phase 10b — Deferred
+### Phase 10b — Completed ✅
 
-Маршрут `POST /api/editor/ai/generate` (~4 484 строк) не был вынесен из-за:
-1. Содержит ~10 вложенных функций (closures) с замыканиями на локальные переменные.
-2. Зависит от ~40 helper-функций (source grounding, semantic duplicates, generation planning, postprocessing).
-3. Helpers взаимозависимы — перенос требует переноса группами.
+Маршрут `POST /api/editor/ai/generate` (~1 390 строк, ~10 вложенных closures) успешно перенесён в `routes/ai_routes.py`.
+Подход: зависимости (`_ai_service`, parser-классы, ~20 helper-функций) переданы через `set_extra("ai_generate_helpers", ...)` и привязаны к локальным переменным в начале функции, что сохраняет замыкания без изменений.
 
-**Рекомендация:** Вынести в 2 подфазы:
-- **10b-i:** Перенос helper-функций в `routes/_ai_helpers.py` (~3 000 строк).
-- **10b-ii:** Перенос `ai_generate` route в `routes/ai_routes.py` (~1 400 строк).
+### Следующие шаги
+
+Все маршруты извлечены в Blueprint-модули. `server.py` (~5 314 строк) теперь содержит только:
+- DI-контейнер (`AppContextHeadless`)
+- Helper-функции, используемые несколькими Blueprint-ами через `set_extra`
+- Flask-приложение, middleware, регистрацию Blueprint-ов
+
+Для дальнейшего уменьшения `server.py` можно:
+- Вынести helper-функции в отдельные модули по группам (source grounding, semantic duplicates, feature flags, telemetry, etc.)
+- Вынести `AppContextHeadless` в `app_context.py`
 
 ---
 
