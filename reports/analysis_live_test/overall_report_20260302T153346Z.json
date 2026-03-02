@@ -1,0 +1,2045 @@
+{
+  "timestamp": "20260302T153346Z",
+  "files_tested": [
+    "25-343.pdf",
+    "Nephr.pdf",
+    "VMleuko.docx"
+  ],
+  "results": [
+    {
+      "file": "25-343.pdf",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\25-343.pdf",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 1222,
+        "file_info": {
+          "original_name": "25-343.pdf",
+          "format": "pdf",
+          "size_mb": 0.46,
+          "has_text_layer": true,
+          "pages": 10,
+          "word_count": 1222
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "gemini",
+        "elapsed_sec": 45.25,
+        "provider_chain_attempts": [
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "25-343.pdf",
+        "word_count": 1222,
+        "elapsed_sec": 45.25,
+        "pass": true,
+        "issues": [
+          "[WARN] Chunk lc_1: no unit_ids linked",
+          "[WARN] Chunk lc_2: no unit_ids linked",
+          "[WARN] Chunk lc_3: no unit_ids linked",
+          "[WARN] TPS TEST: implemented but progression_is_fixed=False",
+          "[WARN] TPS TEST: implemented but no level_role_map",
+          "[WARN] TPS OPEN_ANSWER: implemented but progression_is_fixed=False",
+          "[WARN] TPS OPEN_ANSWER: implemented but no level_role_map",
+          "[WARN] TPS SEQUENCE: implemented but progression_is_fixed=False",
+          "[WARN] TPS SEQUENCE: implemented but no level_role_map",
+          "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_TEXT: implemented but no level_role_map",
+          "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_WORDS: implemented but no level_role_map",
+          "[WARN] No report_blocks"
+        ],
+        "warnings_from_analysis": [
+          "The material includes significant visual content (16 figures) illustrating breast density categories. The current analysis and task generation focus on text-based content. To fully assess understanding, especially visual recognition of breast density, manual authoring of image-based tasks is highly recommended.",
+          "Visual content detected: text-only AI generation will not fully cover image recognition skills; add manual image tasks.",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~19-23).",
+          "analysis_json v2 normalizer: created fallback chunk for unlinked units.",
+          "analysis_json v2 normalizer: supplemented authoring_routes with practical surface routes."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "en",
+            "illustrations_detected": true,
+            "illustrations_note": "The material contains 16 figures illustrating different BI-RADS breast composition categories (A, B, C, D) using various mammographic views (SM, DM). These images are crucial for visual recognition and understanding of breast density. Image-based tasks are not auto-generated and should be created manually in the editor to assess visual interpretation skills.",
+            "human_summary_length": 500
+          },
+          "educational_units": {
+            "count": 8,
+            "details": [
+              {
+                "id": 1,
+                "title": "BI-RADS Mammography Lexicon: Breast Tissue Terms (Density Categories A-D)",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 3,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 2,
+                "title": "BI-RADS Mammography Lexicon: Findings Terms (Masses, Calcifications, Architectural Distortion, Asymmetries)",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 3,
+                "title": "BI-RADS Mammography Lexicon: Other Findings & Special Cases",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 4,
+                "title": "Definition and Mammographic Characteristics of Breast Density",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 5,
+                "title": "Regulatory and Reporting Requirements for Breast Density",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 6,
+                "title": "Clinical Significance: Impact of Breast Density on Mammographic Accuracy",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 7,
+                "title": "Clinical Significance: Increased Breast Cancer Risk with Dense Breasts",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 8,
+                "title": "Factors Affecting Breast Density Assessment and Variability",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              }
+            ]
+          },
+          "recommendations": {
+            "count": 5,
+            "types": {
+              "TEST": {
+                "count": 6,
+                "priority": "high",
+                "covers_units": [
+                  1,
+                  7
+                ],
+                "rationale": "Multiple-choice questions are ideal for testing recall of specific breast density categories and their descriptions, as well as factual data like breast cancer risk odds ratios."
+              },
+              "CLICK_TEXT": {
+                "count": 6,
+                "priority": "medium",
+                "covers_units": [
+                  6,
+                  8
+                ],
+                "rationale": "This task is suitable for identifying correct statements about complex concepts like the masking effect, technological advancements, and factors influencing density assessment and variability."
+              },
+              "OPEN_ANSWER": {
+                "count": 3,
+                "priority": "medium",
+                "covers_units": [
+                  4
+                ],
+                "rationale": "An open-ended question allows students to articulate their understanding of a core concept in their own words, demonstrating comprehensive grasp."
+              },
+              "CLICK_WORDS": {
+                "count": 3,
+                "priority": "medium",
+                "covers_units": [
+                  5,
+                  1,
+                  2,
+                  3,
+                  7,
+                  8
+                ],
+                "rationale": "This task effectively checks attention to detail and factual accuracy regarding specific regulatory requirements, dates, and phrasing related to breast density reporting."
+              },
+              "SEQUENCE": {
+                "count": 1,
+                "priority": "high",
+                "covers_units": [
+                  2,
+                  3
+                ],
+                "rationale": "This task effectively assesses the understanding of the hierarchical structure and detailed sub-classifications within the BI-RADS lexicon for findings and other categories."
+              }
+            },
+            "total_tasks": 19,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 1,
+            "types": [
+              "IMAGE_TASKS (manual)"
+            ],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 4,
+            "chunk_ids": [
+              "chunk_4",
+              "lc_1",
+              "lc_2",
+              "lc_3"
+            ]
+          },
+          "type_progression_suitability": {
+            "count": 5,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "SEQUENCE",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [
+                  "hierarchy",
+                  "classification",
+                  "ordering"
+                ],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 4,
+            "summaries": [
+              {
+                "id": "route_1_2",
+                "title": "Complexes route: CLICK_TEXT progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 1,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_3",
+                "title": "Microcards route: pair_match reinforcement",
+                "route_kind": "microcards_support",
+                "target_surface": "microcards",
+                "steps_count": 1,
+                "effort_estimate": "low",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_4",
+                "title": "Hybrid route: progression + microcards",
+                "route_kind": "hybrid",
+                "target_surface": "mixed",
+                "steps_count": 2,
+                "effort_estimate": "high",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": true,
+            "has_chunk_targets": true,
+            "unit_targets_count": 8,
+            "chunk_targets_count": 4
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 4,
+            "card_types": [
+              "fact_recall"
+            ]
+          },
+          "report_blocks": {
+            "count": 0,
+            "report_blocks_version": "1.0"
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "low",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 14,
+          "hard_fails": 0,
+          "soft_warnings": 14,
+          "v2_completeness_pct": 88.9,
+          "v2_field_checks": {
+            "learning_chunks": true,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": true,
+            "report_blocks": false,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 8,
+          "total_recommended_tasks": 19,
+          "recommendation_types_count": 5
+        }
+      }
+    },
+    {
+      "file": "Nephr.pdf",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\Nephr.pdf",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 1595,
+        "file_info": {
+          "original_name": "Nephr.pdf",
+          "format": "pdf",
+          "size_mb": 0.08,
+          "has_text_layer": true,
+          "pages": 6,
+          "word_count": 1595
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "gemini",
+        "elapsed_sec": 190.44,
+        "provider_chain_attempts": [
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          },
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_recovery"
+          },
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_chunk",
+            "chunk_index": 1,
+            "chunk_count": 2
+          },
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_chunk",
+            "chunk_index": 2,
+            "chunk_count": 2
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "Nephr.pdf",
+        "word_count": 1595,
+        "elapsed_sec": 190.44,
+        "pass": true,
+        "issues": [
+          "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_TEXT: implemented but no level_role_map",
+          "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_WORDS: implemented but no level_role_map",
+          "[WARN] No report_blocks"
+        ],
+        "warnings_from_analysis": [
+          "Heuristic adjustment: 2 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~25-31).",
+          "analysis_json v2 normalizer: created fallback chunk for unlinked units.",
+          "analysis_json v2 normalizer: supplemented authoring_routes with practical surface routes.",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~26-32).",
+          "AI recommended a high total task count (51); trim low-priority items if authoring time is limited (rough target ~32-40).",
+          "SEQUENCE recommendation count was capped at 2 to avoid forcing implicit rankings.",
+          "Chunked analysis fallback used: merged 2 chunk analyses to reduce output-limit risk.",
+          "Chunked fallback reason: truncation."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "ru",
+            "illustrations_detected": false,
+            "illustrations_note": null,
+            "human_summary_length": 726
+          },
+          "educational_units": {
+            "count": 33,
+            "details": [
+              {
+                "id": 1,
+                "title": "Определение Нефротического Синдрома (НС)",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 2,
+                "title": "Критерии массивной протеинурии",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 5,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 3,
+                "title": "Основные нарушения обмена при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 4,
+                "title": "Классификация этиологии НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 5,
+                "title": "Примеры первичных заболеваний почек",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 6,
+                "title": "Группы вторичных заболеваний почек",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 3,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 7,
+                "title": "Концепции патогенеза НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 8,
+                "title": "Клинические проявления НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 9,
+                "title": "Основной метод диагностики НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 10,
+                "title": "Характеристика гипопротеинемии при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 11,
+                "title": "Характеристика диспротеинемии при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 12,
+                "title": "Характеристика гиперлипидемии при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 13,
+                "title": "Липидурия при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 14,
+                "title": "Нарушения фосфорно-кальциевого обмена",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 15,
+                "title": "Изменения свертывающей системы крови",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 16,
+                "title": "Изменения системы иммунитета",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 17,
+                "title": "Изменения в периферической крови при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 18,
+                "title": "Изменения в моче при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 19,
+                "title": "Функции почек при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 20,
+                "title": "Диагностические пробы и методы при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 21,
+                "title": "Уровни креатинина и азота мочевины при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 22,
+                "title": "Осложнения НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 23,
+                "title": "Факторы прогноза при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 24,
+                "title": "Общие принципы лечения НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 25,
+                "title": "Диета при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 26,
+                "title": "Коррекция доз медикаментов при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 27,
+                "title": "Кортикостероиды при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 28,
+                "title": "Цитостатические препараты при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 29,
+                "title": "Антикоагулянты при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 30,
+                "title": "Антиагреганты при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 31,
+                "title": "Противовоспалительные средства при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 32,
+                "title": "Мембранотропные средства при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 33,
+                "title": "Симптоматические средства (диуретики) при НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              }
+            ]
+          },
+          "recommendations": {
+            "count": 5,
+            "types": {
+              "TEST": {
+                "count": 16,
+                "priority": "high",
+                "covers_units": [
+                  1,
+                  2,
+                  3,
+                  9,
+                  16,
+                  17,
+                  18,
+                  19,
+                  21,
+                  22,
+                  23,
+                  26
+                ],
+                "rationale": "Тест эффективно проверяет знание определения НС и его ключевых количественных и качественных характеристик."
+              },
+              "CLICK_TEXT": {
+                "count": 14,
+                "priority": "medium",
+                "covers_units": [
+                  8,
+                  12,
+                  14,
+                  27
+                ],
+                "rationale": "Выбор верных утверждений помогает студентам различать корректные описания клинических и лабораторных проявлений."
+              },
+              "OPEN_ANSWER": {
+                "count": 10,
+                "priority": "medium",
+                "covers_units": [
+                  7,
+                  10,
+                  24,
+                  25
+                ],
+                "rationale": "Свободный ответ позволяет студенту сформулировать и объяснить сложные концепции патогенеза и причины гипопротеинемии."
+              },
+              "CLICK_WORDS": {
+                "count": 8,
+                "priority": "medium",
+                "covers_units": [
+                  11,
+                  13,
+                  15,
+                  2,
+                  6,
+                  8,
+                  17,
+                  18,
+                  21,
+                  28,
+                  29,
+                  30,
+                  31,
+                  32,
+                  33,
+                  25
+                ],
+                "rationale": "Поиск ошибок в тексте развивает внимательность и точность понимания специфических лабораторных изменений."
+              },
+              "SEQUENCE": {
+                "count": 2,
+                "priority": "high",
+                "covers_units": [
+                  4,
+                  5,
+                  6,
+                  20,
+                  27,
+                  28,
+                  29,
+                  30,
+                  31,
+                  32,
+                  33
+                ],
+                "rationale": "Задание на последовательность идеально подходит для закрепления классификации этиологических факторов НС."
+              }
+            },
+            "total_tasks": 50,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 0,
+            "types": [],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 11,
+            "chunk_ids": [
+              "chunk_1",
+              "chunk_10",
+              "chunk_11",
+              "chunk_2",
+              "chunk_3",
+              "chunk_4",
+              "chunk_5",
+              "chunk_6",
+              "chunk_7",
+              "chunk_8",
+              "chunk_9"
+            ]
+          },
+          "type_progression_suitability": {
+            "count": 5,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 2,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 12,
+                "covers_chunk_ids_count": 8
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 4,
+                "covers_chunk_ids_count": 5
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 1,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 4,
+                "covers_chunk_ids_count": 5
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 16,
+                "covers_chunk_ids_count": 10
+              },
+              {
+                "task_type": "SEQUENCE",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 3,
+                "sequence_intents": [
+                  "ordering",
+                  "classification",
+                  "hierarchy",
+                  "ranking",
+                  "grouping"
+                ],
+                "covers_unit_ids_count": 11,
+                "covers_chunk_ids_count": 8
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 4,
+            "summaries": [
+              {
+                "id": "route_1",
+                "title": "Complexes route: SEQUENCE progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_3",
+                "title": "Microcards route: pair_match reinforcement",
+                "route_kind": "microcards_support",
+                "target_surface": "microcards",
+                "steps_count": 1,
+                "effort_estimate": "low",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_4",
+                "title": "Hybrid route: progression + microcards",
+                "route_kind": "hybrid",
+                "target_surface": "mixed",
+                "steps_count": 2,
+                "effort_estimate": "high",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": true,
+            "has_chunk_targets": true,
+            "unit_targets_count": 33,
+            "chunk_targets_count": 11
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 10,
+            "card_types": [
+              "cloze",
+              "fact_recall",
+              "pair_match"
+            ]
+          },
+          "report_blocks": {
+            "count": 0,
+            "report_blocks_version": "1.0"
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "low",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 5,
+          "hard_fails": 0,
+          "soft_warnings": 5,
+          "v2_completeness_pct": 88.9,
+          "v2_field_checks": {
+            "learning_chunks": true,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": true,
+            "report_blocks": false,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 33,
+          "total_recommended_tasks": 50,
+          "recommendation_types_count": 5
+        }
+      }
+    },
+    {
+      "file": "VMleuko.docx",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\VMleuko.docx",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 2289,
+        "file_info": {
+          "original_name": "VMleuko.docx",
+          "format": "docx",
+          "size_mb": 0.03,
+          "word_count": 2289
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "gemini",
+        "elapsed_sec": 125.5,
+        "provider_chain_attempts": [
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          },
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_recovery"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "VMleuko.docx",
+        "word_count": 2289,
+        "elapsed_sec": 125.5,
+        "pass": true,
+        "issues": [
+          "[WARN] Chunk chunk_1_hematopoiesis: no unit_ids linked",
+          "[WARN] Chunk chunk_2_leukemia_general: no unit_ids linked",
+          "[WARN] Chunk chunk_3_leukemia_clinical_diag: no unit_ids linked",
+          "[WARN] Chunk chunk_4_leukemia_treatment_prog: no unit_ids linked",
+          "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_TEXT: implemented but no level_role_map",
+          "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_WORDS: implemented but no level_role_map",
+          "[WARN] No report_blocks"
+        ],
+        "warnings_from_analysis": [
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~26-32).",
+          "SEQUENCE recommendation count was capped at 2 to avoid forcing implicit rankings.",
+          "analysis_json v2 normalizer: created fallback chunk for unlinked units.",
+          "analysis_json v2 normalizer: supplemented authoring_routes with practical surface routes."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "ru",
+            "illustrations_detected": false,
+            "illustrations_note": null,
+            "human_summary_length": 625
+          },
+          "educational_units": {
+            "count": 17,
+            "details": [
+              {
+                "id": 1,
+                "title": "Органы гемопоэза",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 2,
+                "title": "Строение и регуляция костного мозга",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 3,
+                "title": "Классификация и функции лейкоцитов",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 4,
+                "title": "Этапы дифференцировки гемопоэтических клеток",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 5,
+                "title": "Определение миелопоэза и лимфопоэза",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 6,
+                "title": "Острая лейкемия: определение и общие типы",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 7,
+                "title": "Этиология и патогенез острых лейкозов",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 8,
+                "title": "FAB классификация острых лейкозов",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 9,
+                "title": "Клиническая картина острых лейкозов",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 10,
+                "title": "Клинические особенности ОЛЛ и ОМЛ",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 11,
+                "title": "Лабораторная диагностика острых лейкозов",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 12,
+                "title": "Инструментальная и дифференциальная диагностика",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 13,
+                "title": "Осложнения острых лейкозов",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 14,
+                "title": "Общие принципы и этапы цитостатической терапии",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 15,
+                "title": "Специализированные методы лечения и поддерживающая терапия",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 16,
+                "title": "Трансплантация костного мозга",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 17,
+                "title": "Прогноз и профилактика острых лейкозов",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              }
+            ]
+          },
+          "recommendations": {
+            "count": 5,
+            "types": {
+              "TEST": {
+                "count": 8,
+                "priority": "high",
+                "covers_units": [
+                  1,
+                  3,
+                  5,
+                  6,
+                  8,
+                  9,
+                  12,
+                  13,
+                  16,
+                  17
+                ],
+                "rationale": "Тесты эффективны для проверки усвоения фактов, определений, классификаций и ключевых характеристик, охватывая широкий спектр материала."
+              },
+              "CLICK_TEXT": {
+                "count": 6,
+                "priority": "medium",
+                "covers_units": [
+                  10
+                ],
+                "rationale": "Этот тип задания полезен для различения тонких клинических особенностей и утверждений, помогая студентам выявлять верные и неверные утверждения."
+              },
+              "OPEN_ANSWER": {
+                "count": 5,
+                "priority": "medium",
+                "covers_units": [
+                  2,
+                  7,
+                  15
+                ],
+                "rationale": "Открытые вопросы стимулируют глубокое понимание концепций, механизмов и требуют формулирования ответов своими словами."
+              },
+              "CLICK_WORDS": {
+                "count": 4,
+                "priority": "medium",
+                "covers_units": [
+                  11,
+                  17,
+                  4
+                ],
+                "rationale": "Задания на поиск ошибок в тексте развивают внимательность к деталям и точность воспроизведения фактических данных, таких как лабораторные показатели или прогностические факторы."
+              },
+              "SEQUENCE": {
+                "count": 2,
+                "priority": "high",
+                "covers_units": [
+                  4,
+                  9,
+                  14
+                ],
+                "rationale": "Задания на последовательность идеально подходят для проверки понимания многоступенчатых процессов, стадий развития заболеваний и этапов лечения."
+              }
+            },
+            "total_tasks": 25,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 1,
+            "types": [
+              "MATCH"
+            ],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 5,
+            "chunk_ids": [
+              "chunk_1_hematopoiesis",
+              "chunk_2_leukemia_general",
+              "chunk_3_leukemia_clinical_diag",
+              "chunk_4_leukemia_treatment_prog",
+              "chunk_5"
+            ]
+          },
+          "type_progression_suitability": {
+            "count": 5,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 2,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 10,
+                "covers_chunk_ids_count": 1
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 1,
+                "covers_chunk_ids_count": 1
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 1,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 3,
+                "covers_chunk_ids_count": 1
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 3,
+                "covers_chunk_ids_count": 1
+              },
+              {
+                "task_type": "SEQUENCE",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 3,
+                "sequence_intents": [
+                  "ordering",
+                  "classification",
+                  "hierarchy",
+                  "ranking",
+                  "grouping"
+                ],
+                "covers_unit_ids_count": 3,
+                "covers_chunk_ids_count": 1
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 4,
+            "summaries": [
+              {
+                "id": "route_1_2",
+                "title": "Complexes route: SEQUENCE progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_3_2",
+                "title": "Microcards route: pair_match reinforcement",
+                "route_kind": "microcards_support",
+                "target_surface": "microcards",
+                "steps_count": 1,
+                "effort_estimate": "low",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_4_2",
+                "title": "Hybrid route: progression + microcards",
+                "route_kind": "hybrid",
+                "target_surface": "mixed",
+                "steps_count": 2,
+                "effort_estimate": "high",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": true,
+            "has_chunk_targets": true,
+            "unit_targets_count": 17,
+            "chunk_targets_count": 5
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 8,
+            "card_types": [
+              "fact_recall"
+            ]
+          },
+          "report_blocks": {
+            "count": 0,
+            "report_blocks_version": "1.0"
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "low",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 9,
+          "hard_fails": 0,
+          "soft_warnings": 9,
+          "v2_completeness_pct": 88.9,
+          "v2_field_checks": {
+            "learning_chunks": true,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": true,
+            "report_blocks": false,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 17,
+          "total_recommended_tasks": 25,
+          "recommendation_types_count": 5
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "total_files": 3,
+    "analyzed_ok": 3,
+    "failed": 0,
+    "failed_files": [],
+    "avg_v2_completeness_pct": 88.9,
+    "total_hard_fails": 0,
+    "total_soft_warnings": 28,
+    "cross_cutting_issues": {
+      "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] TPS CLICK_TEXT: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] TPS CLICK_WORDS: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] No report_blocks": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] Chunk lc_1: no unit_ids linked": [
+        "25-343.pdf"
+      ],
+      "[WARN] Chunk lc_2: no unit_ids linked": [
+        "25-343.pdf"
+      ],
+      "[WARN] Chunk lc_3: no unit_ids linked": [
+        "25-343.pdf"
+      ],
+      "[WARN] TPS TEST: implemented but progression_is_fixed=False": [
+        "25-343.pdf"
+      ],
+      "[WARN] TPS TEST: implemented but no level_role_map": [
+        "25-343.pdf"
+      ],
+      "[WARN] TPS OPEN_ANSWER: implemented but progression_is_fixed=False": [
+        "25-343.pdf"
+      ],
+      "[WARN] TPS OPEN_ANSWER: implemented but no level_role_map": [
+        "25-343.pdf"
+      ],
+      "[WARN] TPS SEQUENCE: implemented but progression_is_fixed=False": [
+        "25-343.pdf"
+      ],
+      "[WARN] TPS SEQUENCE: implemented but no level_role_map": [
+        "25-343.pdf"
+      ],
+      "[WARN] Chunk chunk_1_hematopoiesis: no unit_ids linked": [
+        "VMleuko.docx"
+      ],
+      "[WARN] Chunk chunk_2_leukemia_general: no unit_ids linked": [
+        "VMleuko.docx"
+      ],
+      "[WARN] Chunk chunk_3_leukemia_clinical_diag: no unit_ids linked": [
+        "VMleuko.docx"
+      ],
+      "[WARN] Chunk chunk_4_leukemia_treatment_prog: no unit_ids linked": [
+        "VMleuko.docx"
+      ]
+    }
+  }
+}

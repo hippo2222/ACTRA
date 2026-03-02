@@ -178,7 +178,7 @@ class OpenRouterProvider(AIProviderBase):
 
     API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
-    def __init__(self, api_key: str, model: str = "deepseek/deepseek-chat:free", timeout: int = 60):
+    def __init__(self, api_key: str, model: str = "google/gemma-3-27b-it:free", timeout: int = 60):
         super().__init__("openrouter", api_key, model, timeout)
 
     def _build_request(self, prompt: str, material: str) -> Request:
@@ -189,7 +189,7 @@ class OpenRouterProvider(AIProviderBase):
                 {"role": "user", "content": material},
             ],
             "temperature": 0.3,
-            "max_tokens": 4096,
+            "max_tokens": 8192,
         }).encode("utf-8")
         req = Request(self.API_URL, data=body, method="POST")
         req.add_header("Content-Type", "application/json")
@@ -227,7 +227,7 @@ class GeminiProvider(AIProviderBase):
             }],
             "generationConfig": {
                 "temperature": 0.3,
-                "maxOutputTokens": 4096,
+                "maxOutputTokens": 16384,
             },
         }).encode("utf-8")
         req = Request(url, data=body, method="POST")
@@ -258,7 +258,7 @@ class GroqProvider(AIProviderBase):
                 {"role": "user", "content": material},
             ],
             "temperature": 0.3,
-            "max_tokens": 4096,
+            "max_tokens": 8192,
         }).encode("utf-8")
         req = Request(self.API_URL, data=body, method="POST")
         req.add_header("Content-Type", "application/json")
@@ -348,6 +348,14 @@ CLICK_TEXT — выбор верных/неверных утверждений �
 
 CLICK_WORDS — поиск фактических ошибок в тексте.
   Подходит для: проверки внимательности и понимания материала. Сам исходный текст не обязан содержать ошибок. Задача состоит в том, чтобы впоследствии на основе этих фактов сгенерировать похожий на правду текст с намеренными искажениями, которые студент будет находить и исправлять.
+
+CLICK — нахождение элементов на изображении. Студент кликает по нужным элементам.
+  Подходит для: визуального распознавания, нахождения анатомических структур, указания на элементы схем.
+  ВАЖНО: задания этого типа создаются ТОЛЬКО вручную в редакторе (требуются изображения). Не включай в recommendations, но укажи пригодность в type_progression_suitability.
+
+DRAW — обводка элементов на изображении. Студент обводит нужные области.
+  Подходит для: пространственного распознавания, выделения зон, обводки анатомических структур.
+  ВАЖНО: задания этого типа создаются ТОЛЬКО вручную в редакторе (требуются изображения). Не включай в recommendations, но укажи пригодность в type_progression_suitability.
 </available_task_types>
 
 <calibration>
@@ -546,7 +554,7 @@ text: <связный текст, где ошибочные фрагменты �
 ANALYSIS_PROMPT_ADDENDUM = r"""
 
 <analysis_strictness_addendum>
-- Add `target_language` to top-level JSON (usually `ru`, `en`, or `mixed`) and keep generated task content in that language.
+- Add `target_language` to top-level JSON (`ru`, `uk`, `en`, or `mixed`) and keep generated task content in that language.
 - For each educational unit, MUST add `explicitness`, `evidence`, `modality`, and `assessment_risk` (do not omit these keys).
 - Prefer broad coverage and avoid recommending many tasks that test the same paragraph/fact repeatedly.
 - Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology).
@@ -565,22 +573,64 @@ ANALYSIS_PROMPT_ADDENDUM = r"""
 
 ANALYSIS_V2_ROUTES_ADDENDUM = r"""
 
+<capability_matrix_v1>
+Use this matrix as the ONLY normative source for type_progression_suitability. Do not invent types, levels, or roles not listed here.
+[
+  {"task_type":"TEST","status":"implemented","progression_is_fixed":true,"levels":[1,2],"complex_role":"core",
+   "level_roles":{"1":"Multiple choice — recognition/fact check","2":"Text answer — recall/extraction"}},
+  {"task_type":"OPEN_ANSWER","status":"implemented","progression_is_fixed":true,"levels":[1],"complex_role":"core",
+   "level_roles":{"1":"Free-form answer — explanation, cause-effect, mechanisms"}},
+  {"task_type":"SEQUENCE","status":"implemented","progression_is_fixed":true,"levels":[1,2,3],"complex_role":"core",
+   "intents":["ordering","classification","hierarchy","ranking","grouping"],
+   "level_roles":{"1":"Assemble structure / distribute elements","2":"Assemble + name levels","3":"Assemble + name levels and blocks"}},
+  {"task_type":"CLICK","status":"implemented","progression_is_fixed":true,"levels":[1,2,3],"complex_role":"core",
+   "note":"Visual tasks — requires images, manual authoring only",
+   "level_roles":{"1":"Find/recognize on image","2":"Find + name","3":"Outline + name"}},
+  {"task_type":"DRAW","status":"implemented","progression_is_fixed":true,"levels":[1,2],"complex_role":"core",
+   "note":"Visual tasks — requires images, manual authoring only",
+   "level_roles":{"1":"Outline / spatial recognition","2":"Outline + name"}},
+  {"task_type":"CLICK_TEXT","status":"implemented","complex_role":"finisher_special",
+   "note":"Error detection — classify statements as true/false. No fixed progression, no level_role_map."},
+  {"task_type":"CLICK_WORDS","status":"implemented","complex_role":"finisher_special",
+   "note":"Error detection — find factual errors in text. No fixed progression, no level_role_map."},
+  {"capability_id":"pair_matching","status":"planned","first_target":"microcards.pair_match","complex_role":"none",
+   "note":"Not an implemented task type. Represent as future_capabilities entry."}
+]
+</capability_matrix_v1>
+
 <analysis_v2_routes_mode>
 - Output `analysis_schema_version` = `2.0` and keep legacy compatibility fields (`educational_units`, `recommendations`, `not_recommended`, `warnings`).
-- Also include practical v2 fields when possible: `learning_chunks`, `type_progression_suitability`, `authoring_routes`, `coverage_plan`, `future_capabilities`, `microcards_candidates`.
+- Also include practical v2 fields: `learning_chunks`, `type_progression_suitability`, `authoring_routes`, `future_capabilities`, `microcards_candidates`.
+- `coverage_plan` is built by backend — do not generate it. Instead ensure `covers_unit_ids` and `covers_chunk_ids` are populated in `type_progression_suitability`.
 - Build the analysis as practical routes and progression semantics, not only a flat list of task types.
-- Treat fixed progressions as fixed: do NOT present levels as arbitrary user choices for implemented complex task types.
-- In `type_progression_suitability`, describe level roles in `level_role_map`; for fixed progressions explain why each level matters for this material.
-- `SEQUENCE` is a universal structuring type (ordering, classification, hierarchy, ranking, grouping), not only chronology.
-- If `SEQUENCE` is suitable or recommended, set `sequence_intents` using only: `ordering`, `classification`, `hierarchy`, `ranking`, `grouping`.
-- When a route step uses `SEQUENCE`, include route-step `sequence_intent` with the same enum when relevant.
+- In `type_progression_suitability`, use the capability_matrix_v1 above as the normative source:
+  - Copy `progression_is_fixed`, `levels`, `complex_role`, and `level_roles` from the matrix.
+  - Add material-specific `suitability` (high/medium/low/none) and `rationale`.
+  - For SEQUENCE, set `sequence_intents` from: `ordering`, `classification`, `hierarchy`, `ranking`, `grouping`.
+  - For CLICK and DRAW, set suitability based on whether material has visual content (illustrations_detected).
+  - For CLICK_TEXT and CLICK_WORDS (finisher_special): do NOT set `progression_is_fixed` or `level_role_map`.
+  - Mark `availability` truthfully (`implemented`, `planned`, `microcards_only`, `unsupported`).
+- In `learning_chunks`:
+  - Use `unit_ids` (array of integer unit IDs) to link chunks to educational units. Do NOT use `units_covered`.
+  - Populate `common_confusions` (what students typically mix up) and `notes_for_author` (practical tips for task creation) when inferable from the material.
 - In `authoring_routes`, use concrete steps and target surfaces (`complexes`, `editor_manual`, `microcards`) instead of abstract advice.
-- For fixed progression route steps, use `progression_policy` = `full_fixed_progression` and never `pick_only_level`.
+  - For fixed progression route steps, use `progression_policy` = `full_fixed_progression` and never `pick_only_level`.
+  - When a route step uses SEQUENCE, include `sequence_intent`.
 - Do NOT invent new implemented task types such as `MATCH` or `CLASSIFY`.
 - `CLICK_TEXT` and `CLICK_WORDS` are error-detection/discrimination variants and must NOT be presented as `MATCH`.
 - Represent pair matching as a future capability: add `future_capabilities` entry with `capability_id` = `pair_matching`, truthful status (usually `planned`), `recommended_surface` = `microcards`, and `fallback_now`.
-- Do NOT claim `pair_matching` is an implemented complex task type; the first target implementation is microcards mode `pair_match`.
-- In `type_progression_suitability`, mark `availability` truthfully (`implemented`, `planned`, `microcards_only`, `unsupported`) and never present planned items as implemented.
+- Include `microcards_candidates` (array) — seeds for flashcard generation:
+  - Each: {"candidate_id":"mc_1","unit_id":<int>,"chunk_id":"chunk_N","card_type":"fact_recall|term_definition|cloze|pair_match|numeric_anchor|contrast_pair","priority":"high|medium|low","prompt_seed":"short question","answer_seed":"short answer","anchors":["key term"],"why":"why useful"}
+  - Aim for 5-15 candidates. Prioritize pair_match for contrast/classification, numeric_anchor for data-heavy, cloze for definitions.
+- Include `report_blocks` (array) — AST-like structure for rendering the report. Minimal example:
+  [
+    {"type":"toc","anchor":"toc","title":"Contents","body":{"entries":[{"anchor":"units","label":"Units"},{"anchor":"progression","label":"Progression"},{"anchor":"routes","label":"Routes"}]}},
+    {"type":"section","anchor":"units","title":"Educational Units Overview","body":{"prose":"Brief summary of units found."},"refs":{"unit_ids":[1,2,3]}},
+    {"type":"progression_matrix","anchor":"progression","title":"Task Type Progression","body":{"rows":[{"task_type":"TEST","suitability":"high","show_level_roles":true}]}},
+    {"type":"section","anchor":"routes","title":"Authoring Routes","body":{"prose":"Practical routes for creating tasks."}},
+    {"type":"callout","anchor":"note-visual","title":"Visual Content","body":{"variant":"tip","text":"This material contains images. Consider CLICK/DRAW tasks via manual editor."}}
+  ]
+  - Keep prose concise (max 3 sentences per block). If you cannot generate full report_blocks, return at least `toc` + 1 `section`.
 </analysis_v2_routes_mode>
 """
 
@@ -616,6 +666,9 @@ ANALYSIS_CHUNK_FALLBACK_ADDENDUM = r"""
 - Keep output compact and structured.
 - Recommendations may be minimal and local to this chunk; global balancing will be done later.
 - Avoid listing every micro-detail separately if they belong to one assessable cluster.
+- DO include these v2 fields for this chunk: `learning_chunks`, `type_progression_suitability`, `microcards_candidates`, `future_capabilities`.
+- Do NOT include `report_blocks` or `authoring_routes` for chunks — they will be built after merging all chunks.
+- Do NOT include `coverage_plan` — it is built by backend after merge.
 </analysis_chunk_fallback_mode>
 """
 
@@ -1115,9 +1168,14 @@ def _ensure_analysis_quality(
 def _guess_target_language(material: str) -> str:
     if not isinstance(material, str) or not material.strip():
         return "unknown"
-    cyr = sum(1 for ch in material if "а" <= ch.lower() <= "я" or ch.lower() == "ё")
+    cyr = sum(1 for ch in material if "а" <= ch.lower() <= "я" or ch.lower() == "ё"
+              or ch.lower() in "іїєґ")
     lat = sum(1 for ch in material if "a" <= ch.lower() <= "z")
     if cyr > lat * 1.3:
+        ua_markers = sum(1 for ch in material if ch.lower() in "іїєґ")
+        ru_markers = sum(1 for ch in material if ch.lower() in "ыэёъ")
+        if ua_markers > ru_markers * 1.5 and ua_markers >= 3:
+            return "uk"
         return "ru"
     if lat > cyr * 1.3:
         return "en"
@@ -1759,6 +1817,23 @@ def _merge_chunk_analysis_payloads(
                 }
             )
 
+    # --- Normalize merged recommendation counts (chunked inflation fix) ---
+    total_words = len((material or "").split())
+    if total_words <= 400:
+        target_tasks = max(2, min(5, len(merged_units)))
+    elif total_words <= 1200:
+        target_tasks = max(8, min(15, len(merged_units) + 2))
+    elif total_words <= 3000:
+        target_tasks = max(12, min(25, len(merged_units) + 3))
+    else:
+        target_tasks = max(20, min(40, len(merged_units) + 5))
+    total_count = sum(int(r.get("count") or 1) for r in merged_recommendations)
+    if total_count > target_tasks * 1.3 and total_count > 0:
+        scale = target_tasks / total_count
+        for rec in merged_recommendations:
+            old_c = int(rec.get("count") or 1)
+            rec["count"] = max(1, round(old_c * scale))
+
     merged_not_recommended: List[Dict[str, Any]] = []
     seen_notrec = set()
     for chunk_data in chunk_analyses:
@@ -1787,6 +1862,87 @@ def _merge_chunk_analysis_payloads(
         if note and note not in note_parts:
             note_parts.append(note)
 
+    # --- Merge v2 fields ---
+    def _remap_unit_ids(ids: Any, local_map: Dict[int, int]) -> List[int]:
+        out = []
+        if not isinstance(ids, list):
+            return out
+        for raw in ids:
+            try:
+                mapped = local_map.get(int(raw))
+            except Exception:
+                mapped = None
+            if mapped is not None:
+                out.append(mapped)
+        return out
+
+    merged_learning_chunks: List[Dict[str, Any]] = []
+    chunk_id_counter = 0
+    for chunk_idx, chunk_data in enumerate(chunk_analyses):
+        local_map = chunk_local_to_global[chunk_idx] if chunk_idx < len(chunk_local_to_global) else {}
+        for lc in (chunk_data.get("learning_chunks") or []):
+            if not isinstance(lc, dict):
+                continue
+            lc = dict(lc)
+            chunk_id_counter += 1
+            lc["chunk_id"] = f"chunk_{chunk_id_counter}"
+            raw_uids = lc.get("unit_ids") or lc.get("units_covered") or []
+            lc["unit_ids"] = _remap_unit_ids(raw_uids, local_map)
+            lc.pop("units_covered", None)
+            merged_learning_chunks.append(lc)
+
+    merged_tps: List[Dict[str, Any]] = []
+    tps_by_type: Dict[str, Dict[str, Any]] = {}
+    suitability_rank = {"high": 3, "medium": 2, "low": 1, "none": 0}
+    for chunk_idx, chunk_data in enumerate(chunk_analyses):
+        local_map = chunk_local_to_global[chunk_idx] if chunk_idx < len(chunk_local_to_global) else {}
+        for entry in (chunk_data.get("type_progression_suitability") or []):
+            if not isinstance(entry, dict):
+                continue
+            tt = str(entry.get("task_type") or "").strip().upper()
+            if not tt:
+                continue
+            existing = tps_by_type.get(tt)
+            new_suit = str(entry.get("suitability") or "none").lower()
+            if existing is None:
+                tps_by_type[tt] = dict(entry)
+                tps_by_type[tt]["task_type"] = tt
+            else:
+                old_suit = str(existing.get("suitability") or "none").lower()
+                if suitability_rank.get(new_suit, 0) > suitability_rank.get(old_suit, 0):
+                    tps_by_type[tt] = dict(entry)
+                    tps_by_type[tt]["task_type"] = tt
+    merged_tps = list(tps_by_type.values())
+
+    merged_future_caps: List[Dict[str, Any]] = []
+    seen_cap_ids: set = set()
+    for chunk_data in chunk_analyses:
+        for fc in (chunk_data.get("future_capabilities") or []):
+            if not isinstance(fc, dict):
+                continue
+            cap_id = str(fc.get("capability_id") or "").strip()
+            if cap_id and cap_id not in seen_cap_ids:
+                seen_cap_ids.add(cap_id)
+                merged_future_caps.append(fc)
+
+    merged_microcards: List[Dict[str, Any]] = []
+    mc_counter = 0
+    for chunk_idx, chunk_data in enumerate(chunk_analyses):
+        local_map = chunk_local_to_global[chunk_idx] if chunk_idx < len(chunk_local_to_global) else {}
+        for mc in (chunk_data.get("microcards_candidates") or []):
+            if not isinstance(mc, dict):
+                continue
+            mc = dict(mc)
+            mc_counter += 1
+            mc["candidate_id"] = f"mc_{mc_counter}"
+            raw_uid = mc.get("unit_id")
+            if raw_uid is not None:
+                try:
+                    mc["unit_id"] = local_map.get(int(raw_uid), int(raw_uid))
+                except Exception:
+                    pass
+            merged_microcards.append(mc)
+
     merged_raw = {
         "target_language": fallback_target_language,
         "material_volume": "large" if len((material or "").split()) >= _ANALYSIS_CHUNK_TRIGGER_WORDS else "medium",
@@ -1796,6 +1952,10 @@ def _merge_chunk_analysis_payloads(
         "illustrations_detected": illustrations_detected,
         "illustrations_note": " ".join(note_parts[:2]).strip() or None,
         "warnings": warnings,
+        "learning_chunks": merged_learning_chunks,
+        "type_progression_suitability": merged_tps,
+        "future_capabilities": merged_future_caps,
+        "microcards_candidates": merged_microcards,
     }
     merged_normalized = _ensure_analysis_quality(merged_raw, material, fallback_target_language)
     _append_unique(

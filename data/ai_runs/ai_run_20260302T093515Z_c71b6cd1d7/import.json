@@ -1,0 +1,21 @@
+{
+  "run_id": "ai_run_20260302T093515Z_c71b6cd1d7",
+  "created_at": "2026-03-02T09:35:23Z",
+  "module_id": "ct_basics",
+  "topic_id": "head_ct",
+  "imported_count": 5,
+  "task_ids": [
+    "task_31be06b6ace2",
+    "task_f292cdbd2005",
+    "task_86c2cbc19d96",
+    "task_93fb562c5153",
+    "task_a65f89397478"
+  ],
+  "errors": [],
+  "idempotency_key": "import-868f1b78-1578-43c4-aef9-71f5e9d689ca",
+  "source_context": {
+    "source": "ai",
+    "ai_provider": "mock",
+    "source_file_name": "e2e_test_material.txt"
+  }
+}

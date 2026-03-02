@@ -1,0 +1,1399 @@
+{
+  "human_summary": "Учебный материал представляет собой подробное медицинское руководство по нефротическому синдрому (НС) объёмом ~3000 слов. Ключевые выводы для преподавателя: материал структурирован по классическим разделам (определение, этиология, патогенез, клиника, диагностика, лечение) и содержит значительный объём фактических данных, классификаций, числовых критериев и противопоказаний. Основная сложность для студента — усвоение объёмных списков (этиология, препараты), понимание двух конкурирующих концепций патогенеза и запоминание специфических дозировок и показаний к терапии. Для эффективного закрепления требуется разнообразие интерактивных форматов, проверяющих как факты, так и структурное понимание.",
+  "recommendations": [
+    {
+      "task_type": "TEST",
+      "count": 7,
+      "priority": "high",
+      "covers_units": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ],
+      "rationale": "Тест идеален для проверки знания конкретных фактов, числовых критериев (3.5 г/сут, дозировки), классификаций (этиология, группы препаратов) и простых определений.",
+      "capability_matrix_entry_id": "test_core",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": true,
+      "supported_levels": [
+        1,
+        2
+      ],
+      "complex_role": "core",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Multiple choice: распознавание и объективная проверка фактов"
+        },
+        {
+          "level": 2,
+          "role": "Text answer: воспроизведение и извлечение ответа"
+        }
+      ],
+      "capability_ids": [
+        "fact_recall",
+        "recognition_check"
+      ],
+      "canonical_task_type": "TEST",
+      "fixed_progression_note": "Уровни L1, L2 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 3,
+      "priority": "medium",
+      "covers_units": [
+        6
+      ],
+      "rationale": "Выбор верных/неверных утверждений эффективен для выявления типичных клинических ошибок и заблуждений в сложном разделе о лечении (показания, дозы, риски).",
+      "capability_matrix_entry_id": "click_error_detection",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": false,
+      "supported_levels": [],
+      "complex_role": "finisher_special",
+      "level_role_map": [],
+      "capability_ids": [
+        "error_detection",
+        "discrimination"
+      ],
+      "canonical_task_type": "CLICK",
+      "canonical_subtype": "error_detection",
+      "error_detection_mode": "text_choice"
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 2,
+      "priority": "high",
+      "covers_units": [
+        3
+      ],
+      "rationale": "Свободный ответ необходим для проверки понимания причинно-следственных связей и объяснения двух концепций патогенеза своими словами.",
+      "capability_matrix_entry_id": "open_answer_core",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": true,
+      "supported_levels": [
+        1
+      ],
+      "complex_role": "core",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Развернутый ответ: объяснение и причинно-следственные связи"
+        }
+      ],
+      "capability_ids": [
+        "explanation",
+        "causal_reasoning"
+      ],
+      "canonical_task_type": "OPEN_ANSWER",
+      "fixed_progression_note": "Уровни L1 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 3,
+      "priority": "high",
+      "covers_units": [
+        5,
+        6
+      ],
+      "rationale": "Поиск фактических ошибок в тексте с искажёнными цифрами (пороги протеинурии, дозировки препаратов) или противопоказаниями тренирует внимание к деталям и запоминание точных данных.",
+      "capability_matrix_entry_id": "click_error_detection",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": false,
+      "supported_levels": [],
+      "complex_role": "finisher_special",
+      "level_role_map": [],
+      "capability_ids": [
+        "error_detection",
+        "discrimination"
+      ],
+      "canonical_task_type": "CLICK",
+      "canonical_subtype": "error_detection",
+      "error_detection_mode": "text_errors"
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 2,
+      "priority": "high",
+      "covers_units": [
+        2,
+        6
+      ],
+      "rationale": "Восстановление порядка и структуры оптимально для упорядочивания классификаций: 1) этиология (первичное/вторичное -> инфекционное/неинфекционное); 2) алгоритм диагностики; 3) иерархия групп лекарств по приоритету/механизму.",
+      "capability_matrix_entry_id": "sequence_structuring",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": true,
+      "supported_levels": [
+        1,
+        2,
+        3
+      ],
+      "complex_role": "core",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Сборка структуры / распределение элементов"
+        },
+        {
+          "level": 2,
+          "role": "Сборка + называние уровней"
+        },
+        {
+          "level": 3,
+          "role": "Сборка + называние уровней и блоков"
+        }
+      ],
+      "capability_ids": [
+        "sequence_structuring",
+        "ordering",
+        "classification",
+        "hierarchy_building"
+      ],
+      "canonical_task_type": "SEQUENCE",
+      "sequence_intent_options": [
+        "ordering",
+        "classification",
+        "hierarchy",
+        "ranking",
+        "grouping"
+      ],
+      "fixed_progression_note": "Уровни L1, L2, L3 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+    }
+  ],
+  "educational_units": [
+    {
+      "id": 1,
+      "title": "Определение и критерии нефротического синдрома",
+      "type": "concept",
+      "description": "Клинико-лабораторный симптомокомплекс, включающий протеинурию (>3.5 г/сут), гипопротеинемию, гиперлипидемию и отеки.",
+      "explicitness": "explicit",
+      "evidence": "Первые два абзаца главы",
+      "modality": "text",
+      "assessment_risk": "low",
+      "cognitive_ops": [
+        "recognize",
+        "recall",
+        "explain"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Определение и критерии нефротического синдрома"
+        },
+        {
+          "kind": "threshold",
+          "value": ">3.5 г/сут"
+        },
+        {
+          "kind": "number",
+          "value": "3.5"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_1"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Классификация этиологии НС",
+      "type": "classification",
+      "description": "Разделение причин на первичные (заболевания почек) и вторичные (инфекционные и неинфекционные системные заболевания).",
+      "explicitness": "explicit",
+      "evidence": "Раздел 'Этиология' с двумя подпунктами I и II",
+      "modality": "text",
+      "assessment_risk": "medium",
+      "cognitive_ops": [
+        "recognize",
+        "classify",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Классификация этиологии НС"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_2"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Концепции патогенеза протеинурии",
+      "type": "concept",
+      "description": "Две основные теории: иммунная (осаждение комплексов) и метаболическая (потеря заряда базальной мембраны).",
+      "explicitness": "explicit",
+      "evidence": "Раздел 'Патогенез'",
+      "modality": "text",
+      "assessment_risk": "medium",
+      "cognitive_ops": [
+        "recognize",
+        "recall",
+        "explain"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Концепции патогенеза протеинурии"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_3"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Клинические проявления и осложнения НС",
+      "type": "fact",
+      "description": "Неспецифические жалобы, характер отека (anasarca), возможные транссудаты и список осложнений (отек мозга, тромбозы и др.).",
+      "explicitness": "explicit",
+      "evidence": "Раздел 'Клиника и лабораторная диагностика'",
+      "modality": "text",
+      "assessment_risk": "low",
+      "cognitive_ops": [
+        "recognize",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Клинические проявления и осложнения НС"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_6"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Лабораторные критерии НС",
+      "type": "fact",
+      "description": "Конкретные пороговые значения: протеинурия (>3.5 г/сут), гипопротеинемия (<40 г/л), гиперхолестеринемия (до 52 ммоль/л), плотность мочи (1,030–1,050).",
+      "explicitness": "explicit",
+      "evidence": "Раздел 'Клиника и лабораторная диагностика', подразделы по каждому показателю",
+      "modality": "text",
+      "assessment_risk": "high",
+      "cognitive_ops": [
+        "recognize",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Лабораторные критерии НС"
+        },
+        {
+          "kind": "threshold",
+          "value": ">3.5 г/сут"
+        },
+        {
+          "kind": "threshold",
+          "value": "<40 г/л"
+        },
+        {
+          "kind": "number",
+          "value": "3.5"
+        },
+        {
+          "kind": "number",
+          "value": "40"
+        },
+        {
+          "kind": "number",
+          "value": "52"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_4"
+      ]
+    },
+    {
+      "id": 6,
+      "title": "Принципы и схемы медикаментозного лечения",
+      "type": "classification",
+      "description": "Группы препаратов (кортикостероиды, цитостатические, антикоагулянты, антиагреганты, ПВС, мембранотропные, диуретики), их дозировки, показания и противопоказания.",
+      "explicitness": "explicit",
+      "evidence": "Раздел 'Медикаментозное лечение'",
+      "modality": "text",
+      "assessment_risk": "high",
+      "cognitive_ops": [
+        "recognize",
+        "classify",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Принципы и схемы медикаментозного лечения"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_5"
+      ]
+    },
+    {
+      "id": 7,
+      "title": "Диета и немедикаментозное лечение НС",
+      "type": "fact",
+      "description": "Бессолевая диета с нормальной функцией почек, норма белка (1 г/кг), запрет белковых нагрузок, ЛФК, режим.",
+      "explicitness": "explicit",
+      "evidence": "Разделы 'Принципы лечения' и 'Диета'",
+      "modality": "text",
+      "assessment_risk": "low",
+      "cognitive_ops": [
+        "recognize",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Диета и немедикаментозное лечение НС"
+        },
+        {
+          "kind": "number",
+          "value": "1"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_6"
+      ]
+    }
+  ],
+  "not_recommended": [
+    {
+      "task_type": "CLICK",
+      "reason": "В материале отсутствуют изображения, схемы или диаграммы, поэтому задание на поиск элементов на изображении не имеет содержательной основы и не может быть создано автоматически."
+    },
+    {
+      "task_type": "DRAW",
+      "reason": "Аналогично CLICK, для заданий на обводку требуются визуальные материалы (анатомические схемы почек), которые в тексте отсутствуют."
+    }
+  ],
+  "illustrations_detected": false,
+  "illustrations_note": "В тексте нет ни одного упоминания об изображениях, схемах или диаграммах. Весь материал представлен в виде сплошного текста. Задания CLICK и DRAW принципиально неприменимы без ручного создания визуальных материалов в редакторе.",
+  "warnings": [
+    "Материал содержит большое количество числовых данных (дозировки, пороги, концентрации). Рекомендуется активно использовать задания CLICK_WORDS для их закрепления.",
+    "Раздел по лечению (единица 6) очень плотный. Не стоит создавать отдельное задание на каждый препарат — лучше группировать их по классам или принципу действия (SEQUENCE, TEST с группировкой).",
+    "В тексте есть потенциальные ловушки для CLICK_TEXT: утверждения вроде 'Кортикостероиды показаны при амилоидозе' (ложь) или 'Гепарин назначают только подкожно' (ложь, есть внутривенное введение).",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22).",
+    "SEQUENCE recommendation count was capped at 2 to avoid forcing implicit rankings.",
+    "analysis_json v2 normalizer: created fallback chunk for unlinked units.",
+    "analysis_json v2 normalizer: supplemented authoring_routes with practical surface routes.",
+    "analysis_json v2 report_blocks validator: invalid or unsupported blocks were dropped/sanitized."
+  ],
+  "material_volume": "large",
+  "target_language": "ru",
+  "analysis_schema_version": "2.0",
+  "capability_matrix_version": "1.0",
+  "capability_matrix_validation": {
+    "matrix_version": "1.0",
+    "validated_recommendations": 5,
+    "fixed_progression_annotated": 3,
+    "issues": [],
+    "valid": true
+  },
+  "learning_chunks": [
+    {
+      "chunk_id": "chunk_1",
+      "title": "Ядро определения НС",
+      "unit_ids": [
+        1
+      ],
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_1",
+      "chunk_type": "mechanism",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Ядро определения НС"
+        }
+      ],
+      "route_ids": [
+        "route_2_2",
+        "route_3_2",
+        "route_4"
+      ]
+    },
+    {
+      "chunk_id": "chunk_2",
+      "title": "Этиологическая структура",
+      "unit_ids": [
+        2
+      ],
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_2",
+      "chunk_type": "classification",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Этиологическая структура"
+        }
+      ],
+      "route_ids": [
+        "route_2_2",
+        "route_3_2",
+        "route_4"
+      ]
+    },
+    {
+      "chunk_id": "chunk_3",
+      "title": "Патогенез протеинурии",
+      "unit_ids": [
+        3
+      ],
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_3",
+      "chunk_type": "mechanism",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Патогенез протеинурии"
+        }
+      ],
+      "route_ids": [
+        "route_1_2",
+        "route_2_2",
+        "route_3_2",
+        "route_4"
+      ]
+    },
+    {
+      "chunk_id": "chunk_4",
+      "title": "Лабораторная диагностика: цифры и пороги",
+      "unit_ids": [
+        5
+      ],
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_4",
+      "chunk_type": "factual_set",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Лабораторная диагностика: цифры и пороги"
+        }
+      ],
+      "route_ids": [
+        "route_1_2",
+        "route_2_2",
+        "route_3_2",
+        "route_4"
+      ]
+    },
+    {
+      "chunk_id": "chunk_5",
+      "title": "Терапевтические схемы и противопоказания",
+      "unit_ids": [
+        6
+      ],
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_5",
+      "chunk_type": "classification",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Терапевтические схемы и противопоказания"
+        }
+      ],
+      "route_ids": [
+        "route_1_2",
+        "route_2_2",
+        "route_3_2",
+        "route_4"
+      ]
+    },
+    {
+      "id": "chunk_6",
+      "title": "Remaining units",
+      "chunk_type": "other",
+      "goal": "Fallback chunk for units without links.",
+      "unit_ids": [
+        4,
+        7
+      ],
+      "common_confusions": [],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Клинические проявления и осложнения НС"
+        },
+        {
+          "kind": "term",
+          "value": "Диета и немедикаментозное лечение НС"
+        },
+        {
+          "kind": "number",
+          "value": "1"
+        }
+      ],
+      "route_ids": [
+        "route_3_2",
+        "route_4"
+      ],
+      "notes_for_author": []
+    }
+  ],
+  "type_progression_suitability": [
+    {
+      "task_type": "TEST",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "high",
+      "priority": "medium",
+      "covers_chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_4",
+        "chunk_5"
+      ],
+      "covers_unit_ids": [
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ],
+      "why": "Normalized suitability entry.",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Multiple choice — recognition/fact check",
+          "value_for_material": ""
+        },
+        {
+          "level": 2,
+          "role": "Text answer — recall/extraction",
+          "value_for_material": ""
+        }
+      ],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "high",
+      "priority": "medium",
+      "covers_chunk_ids": [
+        "chunk_3"
+      ],
+      "covers_unit_ids": [
+        3
+      ],
+      "why": "Normalized suitability entry.",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Free-form answer — explanation, cause-effect, mechanisms",
+          "value_for_material": ""
+        }
+      ],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "SEQUENCE",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "high",
+      "priority": "medium",
+      "covers_chunk_ids": [
+        "chunk_2",
+        "chunk_5"
+      ],
+      "covers_unit_ids": [
+        2,
+        6
+      ],
+      "why": "Normalized suitability entry.",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Assemble structure / distribute elements",
+          "value_for_material": ""
+        },
+        {
+          "level": 2,
+          "role": "Assemble + name levels",
+          "value_for_material": ""
+        },
+        {
+          "level": 3,
+          "role": "Assemble + name levels and blocks",
+          "value_for_material": ""
+        }
+      ],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": false,
+      "complex_role": "finisher_special",
+      "suitability": "medium",
+      "priority": "medium",
+      "covers_chunk_ids": [
+        "chunk_5"
+      ],
+      "covers_unit_ids": [
+        6
+      ],
+      "why": "Normalized suitability entry.",
+      "level_role_map": [],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": false,
+      "complex_role": "finisher_special",
+      "suitability": "high",
+      "priority": "medium",
+      "covers_chunk_ids": [
+        "chunk_4",
+        "chunk_5"
+      ],
+      "covers_unit_ids": [
+        5,
+        6
+      ],
+      "why": "Normalized suitability entry.",
+      "level_role_map": [],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "CLICK",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "medium",
+      "priority": "medium",
+      "covers_chunk_ids": [],
+      "covers_unit_ids": [],
+      "why": "Normalized suitability entry.",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Find/recognize on image",
+          "value_for_material": ""
+        },
+        {
+          "level": 2,
+          "role": "Find + name",
+          "value_for_material": ""
+        },
+        {
+          "level": 3,
+          "role": "Outline + name",
+          "value_for_material": ""
+        }
+      ],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "DRAW",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "medium",
+      "priority": "medium",
+      "covers_chunk_ids": [],
+      "covers_unit_ids": [],
+      "why": "Normalized suitability entry.",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Outline / spatial recognition",
+          "value_for_material": ""
+        },
+        {
+          "level": 2,
+          "role": "Outline + name",
+          "value_for_material": ""
+        }
+      ],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    }
+  ],
+  "authoring_routes": [
+    {
+      "id": "route_1_2",
+      "title": "Complexes route: OPEN_ANSWER progression",
+      "route_kind": "complex_progression",
+      "target_surface": "complexes",
+      "chunk_ids": [
+        "chunk_3",
+        "chunk_4",
+        "chunk_5"
+      ],
+      "unit_ids": [
+        3,
+        5,
+        6
+      ],
+      "steps": [
+        {
+          "step_id": "route_1_step_1",
+          "action_type": "use_task_type_progression",
+          "task_type": "OPEN_ANSWER",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "purpose": "Run the primary progression first to establish structure and baseline coverage.",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Use the route as a progression plan for complexes, not as isolated one-off tasks."
+          ]
+        },
+        {
+          "step_id": "route_1_step_2",
+          "action_type": "use_task_type_progression",
+          "task_type": "CLICK_WORDS",
+          "subtype": null,
+          "progression_policy": "not_fixed",
+          "purpose": "Add a complementary/finisher step after the primary progression to reduce blind spots.",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Use the route as a progression plan for complexes, not as isolated one-off tasks."
+          ]
+        }
+      ],
+      "effort_estimate": "medium",
+      "expected_effect": "Provides a concrete complex-oriented progression with explicit step order and coverage intent.",
+      "anti_patterns": [
+        "Do not present fixed progression levels as an arbitrary manual choice.",
+        "Do not duplicate the same task purpose across multiple complex steps without a new learning goal.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    },
+    {
+      "id": "route_2_2",
+      "title": "Manual editor route (grounded practice)",
+      "route_kind": "manual_practice",
+      "target_surface": "editor_manual",
+      "chunk_ids": [
+        "chunk_3",
+        "chunk_1",
+        "chunk_2",
+        "chunk_4",
+        "chunk_5"
+      ],
+      "unit_ids": [
+        3,
+        1,
+        2,
+        4,
+        5,
+        6,
+        7
+      ],
+      "steps": [
+        {
+          "step_id": "route_2_step_1",
+          "action_type": "use_task_type_progression",
+          "task_type": "OPEN_ANSWER",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "purpose": "Author the first grounded task batch manually in the editor for the linked chunk(s).",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Author concrete task wording in the editor and keep scope limited to the linked chunk(s)."
+          ]
+        },
+        {
+          "step_id": "route_2_step_2",
+          "action_type": "use_task_type_progression",
+          "task_type": "TEST",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "purpose": "Add a second task type manually to cover a different cognitive demand without guessing the next step.",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Author concrete task wording in the editor and keep scope limited to the linked chunk(s)."
+          ]
+        }
+      ],
+      "effort_estimate": "medium",
+      "expected_effect": "Converts the analysis into concrete editor actions with explicit step-by-step authoring guidance.",
+      "anti_patterns": [
+        "Do not present fixed progression levels as an arbitrary manual choice.",
+        "Do not author all route steps against the same fact when multiple units are linked.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    },
+    {
+      "id": "route_3_2",
+      "title": "Microcards route: pair_match reinforcement",
+      "route_kind": "microcards_support",
+      "target_surface": "microcards",
+      "chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_3",
+        "chunk_6",
+        "chunk_4",
+        "chunk_5"
+      ],
+      "unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "steps": [
+        {
+          "step_id": "route_3_step_1",
+          "action_type": "add_microcards",
+          "microcard_mode": "pair_match",
+          "purpose": "Материал содержит термины/классификации и признаки, подходящие для сопоставления пар.",
+          "authoring_checklist": [
+            "Select only pairings that are explicitly supported by the material and linked units.",
+            "Keep pair_match cards within MVP limits (2-5 pairs, no many-to-many).",
+            "Review ambiguous or overlapping pairs manually before adding to a deck."
+          ]
+        }
+      ],
+      "effort_estimate": "low",
+      "expected_effect": "Strengthens pair associations with a short review loop after authoring the main practice set.",
+      "anti_patterns": [
+        "Avoid ambiguous many-to-many pairings or oversized pair_match cards in MVP.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    },
+    {
+      "id": "route_4",
+      "title": "Hybrid route: progression + microcards",
+      "route_kind": "hybrid",
+      "target_surface": "mixed",
+      "chunk_ids": [
+        "chunk_2",
+        "chunk_5",
+        "chunk_1",
+        "chunk_3",
+        "chunk_6",
+        "chunk_4"
+      ],
+      "unit_ids": [
+        2,
+        6,
+        1,
+        3,
+        4,
+        5,
+        7
+      ],
+      "steps": [
+        {
+          "step_id": "route_4_step_1",
+          "action_type": "use_task_type_progression",
+          "task_type": "SEQUENCE",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "purpose": "Start with a structured/grounded progression to build a stable mental model.",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "State the SEQUENCE intent explicitly (ordering/classification/hierarchy/ranking/grouping) before authoring."
+          ]
+        },
+        {
+          "step_id": "route_4_step_2",
+          "action_type": "add_microcards",
+          "microcard_mode": "pair_match",
+          "purpose": "Then add pair_match microcards for spaced repetition of key associations.",
+          "authoring_checklist": [
+            "Select only pairings that are explicitly supported by the material and linked units.",
+            "Keep pair_match cards within MVP limits (2-5 pairs, no many-to-many).",
+            "Review ambiguous or overlapping pairs manually before adding to a deck."
+          ]
+        }
+      ],
+      "effort_estimate": "high",
+      "expected_effect": "Combines initial authoring/complex progression with follow-up retention practice in microcards.",
+      "anti_patterns": [
+        "Do not present fixed progression levels as an arbitrary manual choice.",
+        "Avoid ambiguous many-to-many pairings or oversized pair_match cards in MVP.",
+        "Do not split effort across too many surfaces before covering the core chunk once.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    }
+  ],
+  "coverage_plan": {
+    "coverage_plan_version": "1.0",
+    "target_coverage": {
+      "all_units_min_once": true,
+      "high_risk_units_priority": true
+    },
+    "unit_targets": [
+      {
+        "unit_id": 1,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 2,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "SEQUENCE"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 3,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "OPEN_ANSWER"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 4,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 5,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "CLICK_WORDS"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 6,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "SEQUENCE",
+          "CLICK_TEXT",
+          "CLICK_WORDS"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 7,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST"
+        ],
+        "avoid_overtesting_with": []
+      }
+    ],
+    "chunk_targets": [
+      {
+        "chunk_id": "chunk_1",
+        "route_ids": [
+          "route_2_2",
+          "route_3_2",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_2",
+        "route_ids": [
+          "route_2_2",
+          "route_3_2",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_3",
+        "route_ids": [
+          "route_1_2",
+          "route_2_2",
+          "route_3_2",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_4",
+        "route_ids": [
+          "route_1_2",
+          "route_2_2",
+          "route_3_2",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_5",
+        "route_ids": [
+          "route_1_2",
+          "route_2_2",
+          "route_3_2",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_6",
+        "route_ids": [
+          "route_3_2",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      }
+    ]
+  },
+  "future_capabilities": [
+    {
+      "capability_id": "pair_matching",
+      "display_name": "MATCH (сопоставление пар)",
+      "status": "planned",
+      "recommended_surface": "microcards",
+      "suitability": "high",
+      "covers_chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_3",
+        "chunk_6",
+        "chunk_4",
+        "chunk_5"
+      ],
+      "why": "Материал содержит термины/классификации и признаки, подходящие для сопоставления пар.",
+      "fallback_now": [
+        "SEQUENCE",
+        "TEST",
+        "OPEN_ANSWER"
+      ],
+      "covers_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  ],
+  "microcards_candidates": [
+    {
+      "candidate_id": "mc_1",
+      "unit_id": 1,
+      "chunk_id": "chunk_1",
+      "card_type": "term_definition",
+      "priority": "high",
+      "prompt_seed": "Что является обязательным лабораторным критерием нефротического синдрома?",
+      "answer_seed": "Протеинурия >3.5 г/сут",
+      "anchors": [
+        "протеинурия",
+        "3.5 г/сут"
+      ],
+      "author_review_required": true,
+      "why": "Ключевое, количественное определение синдрома."
+    },
+    {
+      "candidate_id": "mc_2",
+      "unit_id": 2,
+      "chunk_id": "chunk_2",
+      "card_type": "fact_recall",
+      "priority": "high",
+      "prompt_seed": "К какой группе этиологии относится сахарный диабет при НС?",
+      "answer_seed": "Вторичные, неинфекционные",
+      "anchors": [
+        "диабет",
+        "вторичный",
+        "неинфекционный"
+      ],
+      "author_review_required": true,
+      "why": "Проверка понимания структуры классификации."
+    },
+    {
+      "candidate_id": "mc_3",
+      "unit_id": 3,
+      "chunk_id": "chunk_3",
+      "card_type": "contrast_pair",
+      "priority": "medium",
+      "prompt_seed": "Чем иммунная концепция патогенеза НС отличается от метаболической?",
+      "answer_seed": "Иммунная объясняет повреждение клубочков, но не протеинурию; метаболическая объясняет протеинурию потерей заряда мембраны.",
+      "anchors": [
+        "иммунные комплексы",
+        "заряд мембраны",
+        "протеинурия"
+      ],
+      "author_review_required": true,
+      "why": "Важное противопоставление двух теорий."
+    },
+    {
+      "candidate_id": "mc_4",
+      "unit_id": 5,
+      "chunk_id": "chunk_4",
+      "card_type": "numeric_anchor",
+      "priority": "high",
+      "prompt_seed": "Нижняя граница протеинурии для диагностики НС (г/сут)?",
+      "answer_seed": "3.5",
+      "anchors": [
+        "протеинурия",
+        "3.5 г/сут",
+        "критерий"
+      ],
+      "author_review_required": true,
+      "why": "Фундаментальный числовой порог."
+    },
+    {
+      "candidate_id": "mc_5",
+      "unit_id": 6,
+      "chunk_id": "chunk_5",
+      "card_type": "pair_match",
+      "priority": "high",
+      "prompt_seed": "Укажите показания для назначения кортикостероидов при НС.",
+      "answer_seed": "Волчаночная этиология, мембранозная нефропатия, чистая форма НС, минимальные изменения, лекарственная этиология.",
+      "anchors": [
+        "преднизолон",
+        "показания",
+        "волчаночный",
+        "мембранозный"
+      ],
+      "author_review_required": true,
+      "why": "Сложный и клинически важный блок показаний."
+    },
+    {
+      "candidate_id": "mc_6",
+      "unit_id": 6,
+      "chunk_id": "chunk_5",
+      "card_type": "contrast_pair",
+      "priority": "medium",
+      "prompt_seed": "Какое главное противопоказание для кортикостероидов при НС?",
+      "answer_seed": "Активная инфекция (туберкулёз, сифилис), амилоидоз, геморрагический васкулит, опухолевая этиология.",
+      "anchors": [
+        "противопоказания",
+        "инфекция",
+        "амилоидоз"
+      ],
+      "author_review_required": true,
+      "why": "Критически важная информация для безопасности пациента."
+    },
+    {
+      "candidate_id": "mc_7",
+      "unit_id": 6,
+      "chunk_id": "chunk_5",
+      "card_type": "numeric_anchor",
+      "priority": "medium",
+      "prompt_seed": "Доза преднизолона при НС (мг/кг/сут)?",
+      "answer_seed": "1–2",
+      "anchors": [
+        "преднизолон",
+        "доза",
+        "1-2 мг/кг"
+      ],
+      "author_review_required": true,
+      "why": "Точная дозировка ключевого препарата."
+    },
+    {
+      "candidate_id": "mc_8",
+      "unit_id": 5,
+      "chunk_id": "chunk_4",
+      "card_type": "numeric_anchor",
+      "priority": "medium",
+      "prompt_seed": "Плотность мочи при НС (до развития ХПН)?",
+      "answer_seed": "1,030–1,050",
+      "anchors": [
+        "плотность мочи",
+        "1.030",
+        "1.050"
+      ],
+      "author_review_required": true,
+      "why": "Характерный лабораторный признак."
+    }
+  ],
+  "report_blocks_version": "1.0",
+  "report_blocks": [
+    {
+      "id": "rb_5",
+      "type": "toc",
+      "anchor": "toc",
+      "title": "Contents",
+      "body": {
+        "items": [
+          {
+            "label": "Образовательные единицы (7 найдено)",
+            "anchor": "units"
+          },
+          {
+            "label": "Пригодность типов заданий",
+            "anchor": "progression"
+          },
+          {
+            "label": "Практические маршруты создания",
+            "anchor": "routes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rb_2",
+      "type": "section",
+      "body": {},
+      "title": "Образовательные единицы (7 найдено)",
+      "anchor": "units",
+      "collapsible": true,
+      "refs": {
+        "unit_ids": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ]
+      }
+    },
+    {
+      "id": "rb_3",
+      "type": "progression_matrix",
+      "body": {
+        "rows": [
+          {
+            "task_type": "TEST",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "OPEN_ANSWER",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "SEQUENCE",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "CLICK_TEXT",
+            "suitability": "medium",
+            "show_level_roles": false,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "CLICK_WORDS",
+            "suitability": "high",
+            "show_level_roles": false,
+            "show_iterative_notes": true
+          }
+        ]
+      },
+      "title": "Пригодность типов заданий",
+      "anchor": "progression"
+    },
+    {
+      "id": "rb_4",
+      "type": "section",
+      "body": {},
+      "title": "Практические маршруты создания",
+      "anchor": "routes",
+      "collapsible": true
+    },
+    {
+      "id": "rb_5",
+      "type": "callout",
+      "body": {
+        "variant": "warning",
+        "text": "В материале не обнаружено изображений, схем или диаграмм. Задания CLICK и DRAW не применимы без ручного создания визуальных материалов в редакторе."
+      },
+      "title": "Визуальный контент",
+      "anchor": "visual"
+    }
+  ],
+  "report_lint": {
+    "verbosity_risk": "medium",
+    "duplicate_content_signals": 0,
+    "fallback_renderer_recommended": true
+  }
+}

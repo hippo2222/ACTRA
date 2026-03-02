@@ -1,0 +1,33 @@
+{
+  "run_id": "ai_run_20260302T093325Z_0b16789957",
+  "phase": "generated",
+  "provider_model": "mock",
+  "material_language": "ru",
+  "output_language_mode": "same_as_material",
+  "effective_output_language": "ru",
+  "generation_summary": {
+    "total_generated": 0,
+    "total_valid": 0,
+    "total_warnings": 0,
+    "total_errors": 1,
+    "by_type": {
+      "test": 0
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 0,
+      "duplicate_tasks": 0,
+      "language_mismatch_warnings": 0,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 0,
+      "source_grounding_warnings": 0,
+      "semantic_duplicate_groups": 0,
+      "semantic_duplicate_tasks": 0,
+      "warning_fields_breakdown": {},
+      "total_tasks": 0
+    }
+  },
+  "created_at": "2026-03-02T09:33:25Z",
+  "updated_at": "2026-03-02T09:33:25Z"
+}

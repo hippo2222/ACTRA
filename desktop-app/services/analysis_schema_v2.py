@@ -17,6 +17,14 @@ _CHUNK_TYPES = {
 _SURFACES = {"complexes", "editor_manual", "microcards", "mixed"}
 _TASK_TYPES = {"TEST", "OPEN_ANSWER", "SEQUENCE", "CLICK_TEXT", "CLICK_WORDS", "CLICK", "DRAW"}
 
+_CANONICAL_LEVEL_ROLES: dict = {
+    "TEST": [(1, "Multiple choice — recognition/fact check"), (2, "Text answer — recall/extraction")],
+    "OPEN_ANSWER": [(1, "Free-form answer — explanation, cause-effect, mechanisms")],
+    "SEQUENCE": [(1, "Assemble structure / distribute elements"), (2, "Assemble + name levels"), (3, "Assemble + name levels and blocks")],
+    "CLICK": [(1, "Find/recognize on image"), (2, "Find + name"), (3, "Outline + name")],
+    "DRAW": [(1, "Outline / spatial recognition"), (2, "Outline + name")],
+}
+
 
 def _s(v: Any, default: str = "") -> str:
     return str(v if v is not None else default).strip()
@@ -316,8 +324,9 @@ def _normalize_chunks(raw_chunks: Any, units: List[Dict[str, Any]], warnings: Li
             continue
         c = dict(raw)
         c["id"] = _norm_id(c.get("id"), "chunk", idx, used)
-        unit_ids_raw = _uniq_ints(c.get("unit_ids"))
-        c["unit_ids"] = _uniq_ints(c.get("unit_ids"), allowed=valid_unit_ids)
+        raw_uid_field = c.get("unit_ids") or c.get("units_covered") or []
+        unit_ids_raw = _uniq_ints(raw_uid_field)
+        c["unit_ids"] = _uniq_ints(raw_uid_field, allowed=valid_unit_ids)
         if len(c["unit_ids"]) != len(unit_ids_raw):
             dropped = True
         ctype = _s(c.get("chunk_type")).lower()
@@ -566,6 +575,9 @@ def _normalize_type_progression(raw: Any, data: Dict[str, Any], units: List[Dict
             rl = _s(row.get("role"))
             if lv > 0 and rl:
                 levels.append({"level": lv, "role": rl[:220], "value_for_material": _s(row.get("value_for_material"))[:260]})
+        if not levels and _b(item.get("progression_is_fixed")) and task_type in _CANONICAL_LEVEL_ROLES:
+            for lv, rl in _CANONICAL_LEVEL_ROLES[task_type]:
+                levels.append({"level": lv, "role": rl, "value_for_material": ""})
         subtype_s = _s(item.get("subtype"))
         out.append(
             {
@@ -763,7 +775,8 @@ def _manual_route_sort_key(entry: Dict[str, Any]) -> Tuple[int, int, int, str]:
 
 
 def _derive_routes(type_entries: List[Dict[str, Any]], future_caps: List[Dict[str, Any]], units: List[Dict[str, Any]], chunks: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    del units, chunks  # reserved for future route heuristics
+    all_unit_ids = [int(u["id"]) for u in units if isinstance(u, dict) and str(u.get("id")).strip()]
+    all_chunk_ids = [str(c["id"]) for c in chunks if isinstance(c, dict) and _s(c.get("id"))]
     out: List[Dict[str, Any]] = []
     used = set()
 
@@ -832,6 +845,10 @@ def _derive_routes(type_entries: List[Dict[str, Any]], future_caps: List[Dict[st
             )
             sources.append(complex_finisher)
         chunk_ids, unit_ids = _merge_route_refs_from_sources(*sources)
+        if not unit_ids:
+            unit_ids = list(all_unit_ids)
+        if not chunk_ids:
+            chunk_ids = list(all_chunk_ids)
         _append_route(
             {
                 "id": rid,
@@ -882,6 +899,10 @@ def _derive_routes(type_entries: List[Dict[str, Any]], future_caps: List[Dict[st
             )
             sources.append(manual_secondary)
         chunk_ids, unit_ids = _merge_route_refs_from_sources(*sources)
+        if not unit_ids:
+            unit_ids = list(all_unit_ids)
+        if not chunk_ids:
+            chunk_ids = list(all_chunk_ids)
         _append_route(
             {
                 "id": rid,
@@ -1798,6 +1819,114 @@ def _normalize_report_blocks(
             warnings,
             "analysis_json v2 report_blocks lint: anti-grafomania trimming/dedupe was applied.",
         )
+
+    # --- Fallback: generate minimal report_blocks from analysis data if AI returned none ---
+    if not out and (units or type_entries or routes or chunks):
+        fb_id = 0
+
+        def _fb_id() -> str:
+            nonlocal fb_id
+            fb_id += 1
+            return f"rb_{fb_id}"
+
+        toc_entries = []
+        if units:
+            toc_entries.append({"label": "Educational Units", "anchor": "units-overview"})
+        if type_entries:
+            toc_entries.append({"label": "Task Type Progression", "anchor": "progression"})
+        if chunks:
+            toc_entries.append({"label": "Learning Chunks", "anchor": "chunks"})
+        if routes:
+            toc_entries.append({"label": "Authoring Routes", "anchor": "routes"})
+
+        if toc_entries:
+            out.append({
+                "id": _fb_id(), "type": "toc", "anchor": "toc",
+                "title": "Contents", "body": {"items": toc_entries},
+            })
+
+        if units:
+            unit_titles = [_s(u.get("title")) for u in units[:5] if _s(u.get("title"))]
+            summary = f"{len(units)} educational units identified"
+            if unit_titles:
+                summary += f": {', '.join(unit_titles)}"
+                if len(units) > 5:
+                    summary += f" and {len(units) - 5} more"
+                summary += "."
+            out.append({
+                "id": _fb_id(), "type": "section", "anchor": "units-overview",
+                "title": "Educational Units Overview", "collapsible": True,
+                "body": {"summary": summary[:600]},
+                "refs": {"unit_ids": [int(u["id"]) for u in units if str(u.get("id")).strip()]},
+            })
+
+        if type_entries:
+            pm_rows = []
+            for te in type_entries:
+                tt = _s(te.get("task_type")).upper()
+                suit = _s(te.get("suitability"), "medium").lower()
+                if tt:
+                    pm_rows.append({
+                        "task_type": tt, "suitability": suit,
+                        "show_level_roles": True, "show_iterative_notes": True,
+                    })
+            if pm_rows:
+                out.append({
+                    "id": _fb_id(), "type": "progression_matrix", "anchor": "progression",
+                    "title": "Task Type Progression", "body": {"rows": pm_rows},
+                })
+
+        if chunks:
+            out.append({
+                "id": _fb_id(), "type": "section", "anchor": "chunks",
+                "title": "Learning Chunks", "collapsible": True,
+                "body": {"summary": f"{len(chunks)} learning chunks identified."},
+            })
+            for ch in chunks[:8]:
+                cid = _s(ch.get("id"))
+                if cid and cid in valid_chunk_ids:
+                    out.append({
+                        "id": _fb_id(), "type": "chunk_card", "anchor": f"chunk-{cid}",
+                        "title": _s(ch.get("title")) or cid,
+                        "body": {"chunk_id": cid, "show_units": True,
+                                 "show_confusions": True, "show_route_links": True},
+                    })
+
+        if routes:
+            out.append({
+                "id": _fb_id(), "type": "section", "anchor": "routes",
+                "title": "Authoring Routes", "collapsible": True,
+                "body": {"summary": f"{len(routes)} authoring routes suggested."},
+            })
+            for rt in routes[:4]:
+                rid = _s(rt.get("id"))
+                if rid and rid in valid_route_ids:
+                    out.append({
+                        "id": _fb_id(), "type": "route_card", "anchor": f"route-{rid}",
+                        "title": _s(rt.get("title")) or rid,
+                        "body": {"route_id": rid, "show_checklists": True,
+                                 "show_anti_patterns": True},
+                    })
+
+        _append_unique(warnings, "report_blocks were auto-generated from analysis data (AI did not return them).")
+
+    # --- Inject toc if AI returned blocks but no toc ---
+    if out and not any(b.get("type") == "toc" for b in out):
+        toc_entries = []
+        for b in out:
+            anchor = b.get("anchor")
+            title = b.get("title")
+            if anchor and title and b.get("type") in {"section", "progression_matrix", "coverage_table"}:
+                toc_entries.append({"label": title, "anchor": anchor})
+        if toc_entries:
+            toc_block = {
+                "id": f"rb_{len(out) + 1}",
+                "type": "toc",
+                "anchor": "toc",
+                "title": "Contents",
+                "body": {"items": toc_entries},
+            }
+            out.insert(0, toc_block)
 
     verbosity_risk = _risk_from_metrics(metrics, len(out))
     fallback_recommended = bool(

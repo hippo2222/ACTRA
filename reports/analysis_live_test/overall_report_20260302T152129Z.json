@@ -1,0 +1,760 @@
+{
+  "timestamp": "20260302T152129Z",
+  "files_tested": [
+    "25-343.pdf",
+    "Nephr.pdf",
+    "VMleuko.docx"
+  ],
+  "results": [
+    {
+      "file": "25-343.pdf",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\25-343.pdf",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 1222,
+        "file_info": {
+          "original_name": "25-343.pdf",
+          "format": "pdf",
+          "size_mb": 0.46,
+          "has_text_layer": true,
+          "pages": 10,
+          "word_count": 1222
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "mock",
+        "elapsed_sec": 1.01,
+        "provider_chain_attempts": [
+          {
+            "provider": "mock",
+            "model": "mock",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "25-343.pdf",
+        "word_count": 1222,
+        "elapsed_sec": 1.01,
+        "pass": false,
+        "issues": [
+          "[WARN] human_summary is very short or empty",
+          "Only 0 educational units found (expected >= 3 for meaningful material)",
+          "[WARN] No learning_chunks in v2 output",
+          "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_TEXT: implemented but no level_role_map",
+          "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_WORDS: implemented but no level_role_map",
+          "[WARN] No microcards_candidates",
+          "[WARN] No report_blocks"
+        ],
+        "warnings_from_analysis": [
+          "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22)."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "en",
+            "illustrations_detected": false,
+            "illustrations_note": null,
+            "human_summary_length": 0
+          },
+          "educational_units": {
+            "count": 0,
+            "details": []
+          },
+          "recommendations": {
+            "count": 4,
+            "types": {
+              "TEST": {
+                "count": 7,
+                "priority": "high",
+                "covers_units": [],
+                "rationale": "mock"
+              },
+              "CLICK_TEXT": {
+                "count": 5,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "OPEN_ANSWER": {
+                "count": 2,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "CLICK_WORDS": {
+                "count": 4,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+              }
+            },
+            "total_tasks": 18,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 1,
+            "types": [
+              "SEQUENCE"
+            ],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 0
+          },
+          "type_progression_suitability": {
+            "count": 4,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 2,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 1,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 2,
+            "summaries": [
+              {
+                "id": "route_1",
+                "title": "Complexes route: TEST progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": false,
+            "has_chunk_targets": false,
+            "unit_targets_count": 0,
+            "chunk_targets_count": 0
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 0
+          },
+          "report_blocks": {
+            "count": 0,
+            "report_blocks_version": "1.0"
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "low",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 9,
+          "hard_fails": 1,
+          "soft_warnings": 8,
+          "v2_completeness_pct": 66.7,
+          "v2_field_checks": {
+            "learning_chunks": false,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": false,
+            "report_blocks": false,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 0,
+          "total_recommended_tasks": 18,
+          "recommendation_types_count": 4
+        }
+      }
+    },
+    {
+      "file": "Nephr.pdf",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\Nephr.pdf",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 1595,
+        "file_info": {
+          "original_name": "Nephr.pdf",
+          "format": "pdf",
+          "size_mb": 0.08,
+          "has_text_layer": true,
+          "pages": 6,
+          "word_count": 1595
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "mock",
+        "elapsed_sec": 1.01,
+        "provider_chain_attempts": [
+          {
+            "provider": "mock",
+            "model": "mock",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "Nephr.pdf",
+        "word_count": 1595,
+        "elapsed_sec": 1.01,
+        "pass": false,
+        "issues": [
+          "[WARN] human_summary is very short or empty",
+          "Only 0 educational units found (expected >= 3 for meaningful material)",
+          "[WARN] No learning_chunks in v2 output",
+          "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_TEXT: implemented but no level_role_map",
+          "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_WORDS: implemented but no level_role_map",
+          "[WARN] No microcards_candidates",
+          "[WARN] No report_blocks"
+        ],
+        "warnings_from_analysis": [
+          "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~18-22)."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "ru",
+            "illustrations_detected": false,
+            "illustrations_note": null,
+            "human_summary_length": 0
+          },
+          "educational_units": {
+            "count": 0,
+            "details": []
+          },
+          "recommendations": {
+            "count": 4,
+            "types": {
+              "TEST": {
+                "count": 7,
+                "priority": "high",
+                "covers_units": [],
+                "rationale": "mock"
+              },
+              "CLICK_TEXT": {
+                "count": 5,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "OPEN_ANSWER": {
+                "count": 2,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "CLICK_WORDS": {
+                "count": 4,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+              }
+            },
+            "total_tasks": 18,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 1,
+            "types": [
+              "SEQUENCE"
+            ],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 0
+          },
+          "type_progression_suitability": {
+            "count": 4,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 2,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 1,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 2,
+            "summaries": [
+              {
+                "id": "route_1",
+                "title": "Complexes route: TEST progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": false,
+            "has_chunk_targets": false,
+            "unit_targets_count": 0,
+            "chunk_targets_count": 0
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 0
+          },
+          "report_blocks": {
+            "count": 0,
+            "report_blocks_version": "1.0"
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "low",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 9,
+          "hard_fails": 1,
+          "soft_warnings": 8,
+          "v2_completeness_pct": 66.7,
+          "v2_field_checks": {
+            "learning_chunks": false,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": false,
+            "report_blocks": false,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 0,
+          "total_recommended_tasks": 18,
+          "recommendation_types_count": 4
+        }
+      }
+    },
+    {
+      "file": "VMleuko.docx",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\VMleuko.docx",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 2289,
+        "file_info": {
+          "original_name": "VMleuko.docx",
+          "format": "docx",
+          "size_mb": 0.03,
+          "word_count": 2289
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "mock",
+        "elapsed_sec": 1.01,
+        "provider_chain_attempts": [
+          {
+            "provider": "mock",
+            "model": "mock",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "VMleuko.docx",
+        "word_count": 2289,
+        "elapsed_sec": 1.01,
+        "pass": false,
+        "issues": [
+          "[WARN] human_summary is very short or empty",
+          "Only 0 educational units found (expected >= 3 for meaningful material)",
+          "[WARN] No learning_chunks in v2 output",
+          "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_TEXT: implemented but no level_role_map",
+          "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False",
+          "[WARN] TPS CLICK_WORDS: implemented but no level_role_map",
+          "[WARN] No microcards_candidates",
+          "[WARN] No report_blocks"
+        ],
+        "warnings_from_analysis": [
+          "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~22-26)."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "ru",
+            "illustrations_detected": false,
+            "illustrations_note": null,
+            "human_summary_length": 0
+          },
+          "educational_units": {
+            "count": 0,
+            "details": []
+          },
+          "recommendations": {
+            "count": 4,
+            "types": {
+              "TEST": {
+                "count": 8,
+                "priority": "high",
+                "covers_units": [],
+                "rationale": "mock"
+              },
+              "CLICK_TEXT": {
+                "count": 7,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "OPEN_ANSWER": {
+                "count": 3,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "CLICK_WORDS": {
+                "count": 4,
+                "priority": "medium",
+                "covers_units": [],
+                "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+              }
+            },
+            "total_tasks": 22,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 1,
+            "types": [
+              "SEQUENCE"
+            ],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 0
+          },
+          "type_progression_suitability": {
+            "count": 4,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 2,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 1,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 2,
+            "summaries": [
+              {
+                "id": "route_1",
+                "title": "Complexes route: TEST progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": false,
+            "has_chunk_targets": false,
+            "unit_targets_count": 0,
+            "chunk_targets_count": 0
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 0
+          },
+          "report_blocks": {
+            "count": 0,
+            "report_blocks_version": "1.0"
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "low",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 9,
+          "hard_fails": 1,
+          "soft_warnings": 8,
+          "v2_completeness_pct": 66.7,
+          "v2_field_checks": {
+            "learning_chunks": false,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": false,
+            "report_blocks": false,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 0,
+          "total_recommended_tasks": 22,
+          "recommendation_types_count": 4
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "total_files": 3,
+    "analyzed_ok": 3,
+    "failed": 0,
+    "failed_files": [],
+    "avg_v2_completeness_pct": 66.7,
+    "total_hard_fails": 3,
+    "total_soft_warnings": 24,
+    "cross_cutting_issues": {
+      "[WARN] human_summary is very short or empty": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "Only 0 educational units found (expected >= 3 for meaningful material)": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] No learning_chunks in v2 output": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] TPS CLICK_TEXT: implemented but progression_is_fixed=False": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] TPS CLICK_TEXT: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] TPS CLICK_WORDS: implemented but progression_is_fixed=False": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] TPS CLICK_WORDS: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] No microcards_candidates": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ],
+      "[WARN] No report_blocks": [
+        "25-343.pdf",
+        "Nephr.pdf",
+        "VMleuko.docx"
+      ]
+    }
+  }
+}
