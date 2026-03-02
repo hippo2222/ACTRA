@@ -12,6 +12,29 @@ if str(DESKTOP_APP_PATH) not in sys.path:
 import server  # type: ignore
 
 
+@pytest.fixture(autouse=True)
+def _mock_misc_helpers(monkeypatch):
+    """Mock misc_helpers for update check routes after refactoring."""
+    import routes._context as ctx_module
+    
+    misc_helpers = {
+        "env_bool": lambda key, default: default,
+        "update_manifest_url": lambda: "",
+        "configured_update_manifest_url_from_config": lambda: "",
+        "update_cache_path": lambda: Path("./update_check_cache.json"),
+        "get_cached_internet_connectivity": lambda **kwargs: True,
+        "get_app_version": lambda: "1.0.0",
+        "fetch_update_manifest": lambda *args, **kwargs: {},
+        "manifest_url_requires_internet": lambda url: True,
+    }
+    
+    existing_extra = getattr(ctx_module, "_extra", {})
+    existing_extra["misc_helpers"] = misc_helpers
+    monkeypatch.setattr(ctx_module, "_extra", existing_extra)
+    
+    return misc_helpers
+
+
 @pytest.fixture
 def client():
     server.app.config["TESTING"] = True
@@ -19,11 +42,11 @@ def client():
         yield test_client
 
 
-def test_update_check_returns_not_configured_when_manifest_missing(client, monkeypatch, tmp_path):
+def test_update_check_returns_not_configured_when_manifest_missing(client, monkeypatch, tmp_path, _mock_misc_helpers):
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.delenv("ACTRA_UPDATE_MANIFEST_URL", raising=False)
-    monkeypatch.setattr(server, "_configured_update_manifest_url_from_config", lambda: "")
-    monkeypatch.setattr(server, "_update_cache_path", lambda: tmp_path / "update_check_cache.json")
+    _mock_misc_helpers["configured_update_manifest_url_from_config"] = lambda: ""
+    _mock_misc_helpers["update_cache_path"] = lambda: tmp_path / "update_check_cache.json"
 
     resp = client.get("/api/update/check")
     assert resp.status_code == 200
@@ -34,21 +57,18 @@ def test_update_check_returns_not_configured_when_manifest_missing(client, monke
     assert data.get("update_available") is False
 
 
-def test_update_check_reports_update_available(client, monkeypatch, tmp_path):
+def test_update_check_reports_update_available(client, monkeypatch, tmp_path, _mock_misc_helpers):
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.setenv("ACTRA_UPDATE_MANIFEST_URL", "https://updates.example.com/latest.json")
-    monkeypatch.setattr(server, "_update_cache_path", lambda: tmp_path / "update_check_cache.json")
-    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: True)
-    monkeypatch.setattr(server, "_get_app_version", lambda: "1.0.0")
-    monkeypatch.setattr(
-        server,
-        "_fetch_update_manifest",
-        lambda *_args, **_kwargs: {
-            "latest_version": "1.1.0",
-            "download_url": "https://updates.example.com/ACTRA-1.1.0.exe",
-            "notes_url": "https://updates.example.com/notes/1.1.0",
-        },
-    )
+    _mock_misc_helpers["update_manifest_url"] = lambda: "https://updates.example.com/latest.json"
+    _mock_misc_helpers["update_cache_path"] = lambda: tmp_path / "update_check_cache.json"
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
+    _mock_misc_helpers["get_app_version"] = lambda: "1.0.0"
+    _mock_misc_helpers["fetch_update_manifest"] = lambda *_args, **_kwargs: {
+        "latest_version": "1.1.0",
+        "download_url": "https://updates.example.com/ACTRA-1.1.0.exe",
+        "notes_url": "https://updates.example.com/notes/1.1.0",
+    }
 
     resp = client.get("/api/update/check?force=1")
     assert resp.status_code == 200
@@ -60,23 +80,20 @@ def test_update_check_reports_update_available(client, monkeypatch, tmp_path):
     assert data.get("download_url") == "https://updates.example.com/ACTRA-1.1.0.exe"
 
 
-def test_update_check_returns_offline_with_cache_fallback(client, monkeypatch, tmp_path):
+def test_update_check_returns_offline_with_cache_fallback(client, monkeypatch, tmp_path, _mock_misc_helpers):
     cache_path = tmp_path / "update_check_cache.json"
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.setenv("ACTRA_UPDATE_MANIFEST_URL", "https://updates.example.com/latest.json")
-    monkeypatch.setattr(server, "_update_cache_path", lambda: cache_path)
-    monkeypatch.setattr(server, "_get_app_version", lambda: "1.0.0")
-    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: True)
-    monkeypatch.setattr(
-        server,
-        "_fetch_update_manifest",
-        lambda *_args, **_kwargs: {"latest_version": "1.2.0"},
-    )
+    _mock_misc_helpers["update_manifest_url"] = lambda: "https://updates.example.com/latest.json"
+    _mock_misc_helpers["update_cache_path"] = lambda: cache_path
+    _mock_misc_helpers["get_app_version"] = lambda: "1.0.0"
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
+    _mock_misc_helpers["fetch_update_manifest"] = lambda *_args, **_kwargs: {"latest_version": "1.2.0"}
 
     first = client.get("/api/update/check?force=1")
     assert first.status_code == 200
 
-    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: False)
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: False
     second = client.get("/api/update/check?force=1")
     assert second.status_code == 200
     data = second.get_json()
@@ -85,18 +102,17 @@ def test_update_check_returns_offline_with_cache_fallback(client, monkeypatch, t
     assert data.get("reason") == "offline_cached"
 
 
-def test_update_check_uses_local_config_manifest_without_internet(client, monkeypatch, tmp_path):
+def test_update_check_uses_local_config_manifest_without_internet(client, monkeypatch, tmp_path, _mock_misc_helpers):
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.delenv("ACTRA_UPDATE_MANIFEST_URL", raising=False)
-    monkeypatch.setattr(
-        server,
-        "_configured_update_manifest_url_from_config",
-        lambda: str(tmp_path / "update_manifest.json"),
-    )
-    monkeypatch.setattr(server, "_update_cache_path", lambda: tmp_path / "update_check_cache.json")
-    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **_kwargs: False)
-    monkeypatch.setattr(server, "_get_app_version", lambda: "1.0.0")
-    monkeypatch.setattr(server, "_fetch_update_manifest", lambda *_args, **_kwargs: {"latest_version": "1.0.0"})
+    local_manifest_path = str(tmp_path / "update_manifest.json")
+    _mock_misc_helpers["configured_update_manifest_url_from_config"] = lambda: local_manifest_path
+    _mock_misc_helpers["update_manifest_url"] = lambda: local_manifest_path
+    _mock_misc_helpers["update_cache_path"] = lambda: tmp_path / "update_check_cache.json"
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: False
+    _mock_misc_helpers["get_app_version"] = lambda: "1.0.0"
+    _mock_misc_helpers["fetch_update_manifest"] = lambda *_args, **_kwargs: {"latest_version": "1.0.0"}
+    _mock_misc_helpers["manifest_url_requires_internet"] = lambda url: False
 
     resp = client.get("/api/update/check?force=1")
     assert resp.status_code == 200
