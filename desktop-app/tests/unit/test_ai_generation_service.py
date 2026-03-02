@@ -805,7 +805,7 @@ class TestStructuredPrompt:
         assert "authoring_routes" in ANALYSIS_V2_ROUTES_ADDENDUM
         assert "full_fixed_progression" in ANALYSIS_V2_ROUTES_ADDENDUM
         assert "pick_only_level" in ANALYSIS_V2_ROUTES_ADDENDUM
-        assert "fixed progressions" in ANALYSIS_V2_ROUTES_ADDENDUM.lower()
+        assert "fixed progression" in ANALYSIS_V2_ROUTES_ADDENDUM.lower()
 
     def test_p3_routes_addendum_contains_sequence_intent_and_pair_matching_rules(self):
         assert "sequence_intents" in ANALYSIS_V2_ROUTES_ADDENDUM
