@@ -70,6 +70,34 @@ def _mock_misc_helpers(monkeypatch):
         else:
             ticket["status"] = "queued"
     
+    def retry_pending(limit=10):
+        """Mock retry helper that processes queued tickets in feedback_dir."""
+        import json
+        feedback_path = feedback_dir_ref[0]
+        if not feedback_path.exists():
+            return {"attempted": 0, "sent": 0, "failed": 0}
+        
+        attempted = sent = failed = 0
+        for ticket_file in feedback_path.glob("*.json"):
+            if attempted >= limit:
+                break
+            try:
+                ticket = json.loads(ticket_file.read_text(encoding="utf-8"))
+                if ticket.get("status") in ("pending", "queued"):
+                    attempted += 1
+                    # Get user from misc_helpers
+                    user = misc_helpers["user_service"].get_user(ticket.get("user_id", ""))
+                    email_result = misc_helpers["notify_feedback_via_email"](ticket, user)
+                    update_delivery(ticket, email_result)
+                    save_ticket(ticket)
+                    if email_result.get("sent"):
+                        sent += 1
+                    else:
+                        failed += 1
+            except Exception:
+                pass
+        return {"attempted": attempted, "sent": sent, "failed": failed}
+    
     # Default mocks for all tests
     misc_helpers = {
         "get_cached_internet_connectivity": lambda **kwargs: True,
@@ -87,6 +115,7 @@ def _mock_misc_helpers(monkeypatch):
         "build_feedback_ticket": build_ticket,
         "save_feedback_ticket": save_ticket,
         "update_feedback_delivery_fields": update_delivery,
+        "retry_pending_feedback_notifications": retry_pending,
         # Internal reference for tests to update feedback_dir
         "_feedback_dir_ref": feedback_dir_ref,
     }
