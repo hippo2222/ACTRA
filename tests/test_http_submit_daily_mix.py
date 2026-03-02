@@ -51,12 +51,21 @@ class _DummySessionAPI:
         return {"success": bool(getattr(result_obj, "success", False)), "details": {"time_spent": 1}}
 
 
+class _MockAppContext:
+    """Mock AppContextHeadless for testing."""
+    def __init__(self, session_api):
+        self.session_api = session_api
+        self.user_id = "test_user"
+
+
 @pytest.fixture(autouse=True)
 def _patch_server(monkeypatch):
     dummy_api = _DummySessionAPI()
-    monkeypatch.setattr(server, "session_api", dummy_api)
-    # Disable calendar hook side-effects
-    monkeypatch.setattr(server, "calendar_service", None)
+    # After refactoring, routes use context via routes._context
+    import routes._context as ctx_module
+    mock_ctx = _MockAppContext(dummy_api)
+    monkeypatch.setattr(ctx_module, "_app_ctx", mock_ctx)
+    monkeypatch.setattr(ctx_module, "_extra", {"calendar_service": None})
     return dummy_api
 
 
