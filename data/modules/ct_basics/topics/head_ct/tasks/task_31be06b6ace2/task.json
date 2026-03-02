@@ -1,0 +1,62 @@
+{
+  "id": "task_31be06b6ace2",
+  "name": "Задание - Test 1",
+  "type": "test",
+  "description": "",
+  "meta": {
+    "created_at": "2026-03-02T11:35:23.836867",
+    "imported": true,
+    "import_date": "2026-03-02T11:35:23.836867",
+    "import_source": "ai",
+    "module": "ct_basics",
+    "topic": "head_ct",
+    "id": "task_31be06b6ace2",
+    "name": "Задание - Test 1",
+    "task_schema_version": "1.2",
+    "ai_run_id": "ai_run_20260302T093515Z_c71b6cd1d7",
+    "ai_provider": "mock",
+    "ai_model": "mock",
+    "source_file_name": "e2e_test_material.txt"
+  },
+  "content": {
+    "test_type": "single_choice",
+    "questions": [
+      {
+        "answers": [
+          {
+            "correct": true,
+            "is_correct": true,
+            "text": "Да",
+            "id": "q1_a1"
+          },
+          {
+            "correct": false,
+            "is_correct": false,
+            "text": "Нет",
+            "id": "q1_a2"
+          },
+          {
+            "correct": false,
+            "is_correct": false,
+            "text": "Нет",
+            "id": "q1_a3"
+          },
+          {
+            "correct": false,
+            "is_correct": false,
+            "text": "Нет",
+            "id": "q1_a4"
+          }
+        ],
+        "id": 0,
+        "text": "Вопрос?"
+      }
+    ],
+    "settings": {
+      "passing_score": 70,
+      "shuffle_answers": true,
+      "shuffle_questions": true,
+      "time_limit": null
+    }
+  }
+}

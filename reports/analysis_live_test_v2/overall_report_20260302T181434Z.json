@@ -1,0 +1,1972 @@
+{
+  "timestamp": "20260302T181434Z",
+  "files_tested": [
+    "25-343.pdf",
+    "Nephr.pdf",
+    "VMleuko.docx"
+  ],
+  "results": [
+    {
+      "file": "25-343.pdf",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\25-343.pdf",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 1222,
+        "file_info": {
+          "original_name": "25-343.pdf",
+          "format": "pdf",
+          "size_mb": 0.46,
+          "has_text_layer": true,
+          "pages": 10,
+          "word_count": 1222
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "gemini",
+        "elapsed_sec": 55.81,
+        "provider_chain_attempts": [
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "25-343.pdf",
+        "word_count": 1222,
+        "elapsed_sec": 55.81,
+        "pass": true,
+        "issues": [
+          "[WARN] TPS TEST: implemented but no level_role_map",
+          "[WARN] TPS OPEN_ANSWER: implemented but no level_role_map",
+          "[WARN] TPS SEQUENCE: implemented but no level_role_map",
+          "[WARN] TPS CLICK: implemented but no level_role_map",
+          "[WARN] TPS DRAW: implemented but no level_role_map",
+          "[WARN] report_blocks: no toc block"
+        ],
+        "warnings_from_analysis": [
+          "Visual content (images) is present and highly relevant for learning. Auto-generated tasks cannot assess visual recognition; consider creating CLICK or DRAW tasks manually in the editor to leverage this content.",
+          "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+          "Visual content detected: text-only AI generation will not fully cover image recognition skills; add manual image tasks.",
+          "Heuristic adjustment: 4 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~24-30).",
+          "analysis_json v2 normalizer: supplemented authoring_routes with practical surface routes.",
+          "analysis_json v2 report_blocks validator: invalid or unsupported blocks were dropped/sanitized.",
+          "analysis_json v2 report_blocks lint: anti-grafomania trimming/dedupe was applied."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "en",
+            "illustrations_detected": true,
+            "illustrations_note": "The material contains 16 figures illustrating the four BI-RADS breast density categories (A, B, C, D) using various mammogram views (SM, DM). These images are highly suitable for visual recognition tasks. Manual image-task authoring is recommended.",
+            "human_summary_length": 461
+          },
+          "educational_units": {
+            "count": 15,
+            "details": [
+              {
+                "id": 1,
+                "title": "Breast Density Definition",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 2,
+                "title": "BI-RADS Breast Density Categories",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 3,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 3,
+                "title": "Dense vs. Non-Dense Breasts",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 4,
+                "title": "FDA Legislation on Breast Density Reporting",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 5,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 5,
+                "title": "Significance of Breast Density",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 6,
+                "title": "Masking Effect",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 7,
+                "title": "Breast Cancer Risk by Density Category",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 5,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 8,
+                "title": "Evolution of Breast Density Classification",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 9,
+                "title": "Factors Affecting Breast Density Variability",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 10,
+                "title": "Mammography Mass Characteristics",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 11,
+                "title": "Mammography Calcification Characteristics",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 12,
+                "title": "Other Mammography Findings",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 13,
+                "title": "Associated Features and Special Cases",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 14,
+                "title": "Location of Finding Parameters",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 15,
+                "title": "Impact of Technology on Mammography Sensitivity",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 4,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              }
+            ]
+          },
+          "recommendations": {
+            "count": 4,
+            "types": {
+              "TEST": {
+                "count": 8,
+                "priority": "high",
+                "covers_units": [
+                  1,
+                  3,
+                  6,
+                  9
+                ],
+                "rationale": "Added to cover educational units missed by the analysis response."
+              },
+              "CLICK_TEXT": {
+                "count": 7,
+                "priority": "medium",
+                "covers_units": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15
+                ],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "OPEN_ANSWER": {
+                "count": 5,
+                "priority": "medium",
+                "covers_units": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15
+                ],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "CLICK_WORDS": {
+                "count": 4,
+                "priority": "medium",
+                "covers_units": [
+                  2,
+                  4,
+                  5,
+                  7,
+                  8,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15
+                ],
+                "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+              }
+            },
+            "total_tasks": 24,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 2,
+            "types": [
+              "IMAGE_TASKS (manual)",
+              "SEQUENCE"
+            ],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 5,
+            "chunk_ids": [
+              "chunk_1",
+              "chunk_2",
+              "chunk_3",
+              "chunk_4",
+              "chunk_5"
+            ]
+          },
+          "type_progression_suitability": {
+            "count": 7,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 9,
+                "covers_chunk_ids_count": 4
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 4,
+                "covers_chunk_ids_count": 2
+              },
+              {
+                "task_type": "SEQUENCE",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [
+                  "classification",
+                  "ordering",
+                  "grouping"
+                ],
+                "covers_unit_ids_count": 3,
+                "covers_chunk_ids_count": 2
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 3,
+                "covers_chunk_ids_count": 2
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 4,
+                "covers_chunk_ids_count": 3
+              },
+              {
+                "task_type": "CLICK",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 1,
+                "covers_chunk_ids_count": 1
+              },
+              {
+                "task_type": "DRAW",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 1,
+                "covers_chunk_ids_count": 1
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 4,
+            "summaries": [
+              {
+                "id": "route_1_2",
+                "title": "Complexes route: CLICK progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_3_2",
+                "title": "Microcards route: pair_match reinforcement",
+                "route_kind": "microcards_support",
+                "target_surface": "microcards",
+                "steps_count": 1,
+                "effort_estimate": "low",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_4",
+                "title": "Hybrid route: progression + microcards",
+                "route_kind": "hybrid",
+                "target_surface": "mixed",
+                "steps_count": 2,
+                "effort_estimate": "high",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": true,
+            "has_chunk_targets": true,
+            "unit_targets_count": 15,
+            "chunk_targets_count": 5
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 12,
+            "card_types": [
+              "cloze",
+              "contrast_pair",
+              "fact_recall",
+              "numeric_anchor",
+              "pair_match",
+              "term_definition"
+            ]
+          },
+          "report_blocks": {
+            "count": 6,
+            "report_blocks_version": "1.0",
+            "block_types": [
+              "section",
+              "section",
+              "progression_matrix",
+              "section",
+              "section",
+              "callout"
+            ],
+            "has_toc": false,
+            "has_section": true
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "medium",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 6,
+          "hard_fails": 0,
+          "soft_warnings": 6,
+          "v2_completeness_pct": 100.0,
+          "v2_field_checks": {
+            "learning_chunks": true,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": true,
+            "report_blocks": true,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 15,
+          "total_recommended_tasks": 24,
+          "recommendation_types_count": 4
+        }
+      }
+    },
+    {
+      "file": "Nephr.pdf",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\Nephr.pdf",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 1595,
+        "file_info": {
+          "original_name": "Nephr.pdf",
+          "format": "pdf",
+          "size_mb": 0.08,
+          "has_text_layer": true,
+          "pages": 6,
+          "word_count": 1595
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "gemini",
+        "elapsed_sec": 52.88,
+        "provider_chain_attempts": [
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "Nephr.pdf",
+        "word_count": 1595,
+        "elapsed_sec": 52.88,
+        "pass": true,
+        "issues": [
+          "[WARN] TPS TEST: implemented but no level_role_map",
+          "[WARN] TPS OPEN_ANSWER: implemented but no level_role_map",
+          "[WARN] TPS SEQUENCE: implemented but no level_role_map",
+          "[WARN] TPS SEQUENCE: no sequence_intents specified",
+          "[WARN] TPS CLICK: implemented but no level_role_map",
+          "[WARN] TPS DRAW: implemented but no level_role_map",
+          "[WARN] report_blocks: no toc block"
+        ],
+        "warnings_from_analysis": [
+          "Материал не содержит изображений, схем или диаграмм. Задания типов CLICK и DRAW не могут быть сгенерированы автоматически и требуют ручного создания с предоставлением визуального контента, если это необходимо для обучения.",
+          "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+          "Heuristic adjustment: 11 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~19-24).",
+          "analysis_json v2 normalizer: supplemented authoring_routes with practical surface routes.",
+          "analysis_json v2 report_blocks validator: invalid or unsupported blocks were dropped/sanitized.",
+          "analysis_json v2 report_blocks lint: anti-grafomania trimming/dedupe was applied."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "ru",
+            "illustrations_detected": false,
+            "illustrations_note": null,
+            "human_summary_length": 434
+          },
+          "educational_units": {
+            "count": 12,
+            "details": [
+              {
+                "id": 1,
+                "title": "Определение и основные компоненты Нефротического синдрома (НС)",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 2,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall",
+                  "explain"
+                ]
+              },
+              {
+                "id": 2,
+                "title": "Классификация этиологии НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 3,
+                "title": "Концепции патогенеза НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 4,
+                "title": "Клинические проявления НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 5,
+                "title": "Лабораторные признаки НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 6,
+                "title": "Осложнения НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 7,
+                "title": "Общие принципы лечения НС",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "sequence",
+                  "explain"
+                ]
+              },
+              {
+                "id": 8,
+                "title": "Медикаментозное лечение НС: Кортикостероиды",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 9,
+                "title": "Медикаментозное лечение НС: Цитостатики",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 10,
+                "title": "Медикаментозное лечение НС: Антикоагулянты и Антиагреганты",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 11,
+                "title": "Медикаментозное лечение НС: Противовоспалительные и Мембранотропные средства",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 12,
+                "title": "Медикаментозное лечение НС: Симптоматические средства (Диуретики)",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              }
+            ]
+          },
+          "recommendations": {
+            "count": 4,
+            "types": {
+              "TEST": {
+                "count": 8,
+                "priority": "high",
+                "covers_units": [
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12
+                ],
+                "rationale": "Added to cover educational units missed by the analysis response."
+              },
+              "CLICK_TEXT": {
+                "count": 5,
+                "priority": "medium",
+                "covers_units": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12
+                ],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "OPEN_ANSWER": {
+                "count": 2,
+                "priority": "medium",
+                "covers_units": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12
+                ],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "CLICK_WORDS": {
+                "count": 4,
+                "priority": "medium",
+                "covers_units": [
+                  1
+                ],
+                "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+              }
+            },
+            "total_tasks": 19,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 1,
+            "types": [
+              "SEQUENCE"
+            ],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 9,
+            "chunk_ids": [
+              "chunk_1",
+              "chunk_2",
+              "chunk_3",
+              "chunk_4",
+              "chunk_5",
+              "chunk_6",
+              "chunk_7",
+              "chunk_8",
+              "chunk_9"
+            ]
+          },
+          "type_progression_suitability": {
+            "count": 7,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 7,
+                "covers_chunk_ids_count": 5
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 2,
+                "covers_chunk_ids_count": 2
+              },
+              {
+                "task_type": "SEQUENCE",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 1,
+                "covers_chunk_ids_count": 1
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 3,
+                "covers_chunk_ids_count": 2
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 5,
+                "covers_chunk_ids_count": 4
+              },
+              {
+                "task_type": "CLICK",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              },
+              {
+                "task_type": "DRAW",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 0,
+                "covers_chunk_ids_count": 0
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 4,
+            "summaries": [
+              {
+                "id": "route_1_2",
+                "title": "Complexes route: SEQUENCE progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_3_2",
+                "title": "Microcards route: pair_match reinforcement",
+                "route_kind": "microcards_support",
+                "target_surface": "microcards",
+                "steps_count": 1,
+                "effort_estimate": "low",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_4",
+                "title": "Hybrid route: progression + microcards",
+                "route_kind": "hybrid",
+                "target_surface": "mixed",
+                "steps_count": 2,
+                "effort_estimate": "high",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": true,
+            "has_chunk_targets": true,
+            "unit_targets_count": 12,
+            "chunk_targets_count": 9
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 10,
+            "card_types": [
+              "cloze",
+              "contrast_pair",
+              "fact_recall",
+              "numeric_anchor",
+              "pair_match",
+              "term_definition"
+            ]
+          },
+          "report_blocks": {
+            "count": 6,
+            "report_blocks_version": "1.0",
+            "block_types": [
+              "section",
+              "section",
+              "progression_matrix",
+              "section",
+              "section",
+              "callout"
+            ],
+            "has_toc": false,
+            "has_section": true
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "medium",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": true
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 7,
+          "hard_fails": 0,
+          "soft_warnings": 7,
+          "v2_completeness_pct": 100.0,
+          "v2_field_checks": {
+            "learning_chunks": true,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": true,
+            "report_blocks": true,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 12,
+          "total_recommended_tasks": 19,
+          "recommendation_types_count": 4
+        }
+      }
+    },
+    {
+      "file": "VMleuko.docx",
+      "file_path": "D:\\Ai Ai\\radioproject_git\\docs\\VMleuko.docx",
+      "status": "analyzed",
+      "extraction": {
+        "ok": true,
+        "word_count": 2289,
+        "file_info": {
+          "original_name": "VMleuko.docx",
+          "format": "docx",
+          "size_mb": 0.03,
+          "word_count": 2289
+        },
+        "warnings": []
+      },
+      "analysis": {
+        "ok": true,
+        "provider_used": "openrouter:1",
+        "elapsed_sec": 113.24,
+        "provider_chain_attempts": [
+          {
+            "provider": "gemini",
+            "model": "gemini-2.5-flash",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_initial"
+          },
+          {
+            "provider": "openrouter:1",
+            "model": "stepfun/step-3.5-flash:free",
+            "attempt": 1,
+            "status": "success",
+            "stage": "analysis_parse_escalation"
+          }
+        ]
+      },
+      "evaluation": {
+        "file": "VMleuko.docx",
+        "word_count": 2289,
+        "elapsed_sec": 113.24,
+        "pass": true,
+        "issues": [],
+        "warnings_from_analysis": [
+          "Heuristic fallback used: AI analysis response did not follow structured JSON format.",
+          "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+          "Heuristic adjustment: 4 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+          "Coverage calibration increased recommended text tasks to improve coverage (target ~32-40).",
+          "report_blocks were auto-generated from analysis data (AI did not return them)."
+        ],
+        "sections": {
+          "schema": {
+            "analysis_schema_version": "2.0"
+          },
+          "top_level": {
+            "material_volume": "medium",
+            "target_language": "uk",
+            "illustrations_detected": false,
+            "illustrations_note": null,
+            "human_summary_length": 267
+          },
+          "educational_units": {
+            "count": 24,
+            "details": [
+              {
+                "id": 1,
+                "title": "Центральні органи гемопоезу",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 2,
+                "title": "Локалізація, консистенція, маса червоного кісткового мозку.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 3,
+                "title": "Гемопоетична тканина",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 4,
+                "title": "Поліпотентні стовбурові клітини",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 5,
+                "title": "Стимуляція гемопоезу",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 6,
+                "title": "Пригнічення гемопоезу",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 7,
+                "title": "Функції кісткового мозку",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 8,
+                "title": "Тимус",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 9,
+                "title": "Периферичні органи кровотворення",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 10,
+                "title": "Класифікація лейкоцитів",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 11,
+                "title": "Мієлопоез і лімфопоез.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 12,
+                "title": "Напрямки мієлопоезу та лімфопоезу (6 і 2).",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 3,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 13,
+                "title": "Класи клітин у диференціюванні (I-VI)",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 14,
+                "title": "Гостра лейкемія",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 15,
+                "title": "FAB класифікація гострої мієлобластної лейкемії (M0-M7).",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 16,
+                "title": "FAB класифікація гострої лімфобластної лейкемії (L1-L3).",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "classify",
+                  "recall"
+                ]
+              },
+              {
+                "id": 17,
+                "title": "Стадії гострого лейкозу.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 18,
+                "title": "Клінічні маски та синдроми (гіперпластичний, геморагічний, анемічний, інтоксикаційний, імунодефіцитний).",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 19,
+                "title": "Особливості гострого лімфобластного лейкозу.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 20,
+                "title": "Особливості гострого нелімфобластного (мієлобластного) лейкозу.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 21,
+                "title": "Лабораторні дані",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 22,
+                "title": "Цитохімічні та імунофенотипові дослідження.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 23,
+                "title": "Молекулярно-біологічні дослідження.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              },
+              {
+                "id": 24,
+                "title": "Цитогенетичний аналіз.",
+                "v2_fields_present": [
+                  "chunk_ids",
+                  "cognitive_ops",
+                  "factual_anchors",
+                  "prerequisite_unit_ids"
+                ],
+                "v2_fields_missing": [],
+                "factual_anchors_count": 1,
+                "cognitive_ops": [
+                  "recognize",
+                  "recall"
+                ]
+              }
+            ]
+          },
+          "recommendations": {
+            "count": 5,
+            "types": {
+              "TEST": {
+                "count": 15,
+                "priority": "high",
+                "covers_units": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  11,
+                  12,
+                  13,
+                  17,
+                  18,
+                  19,
+                  20,
+                  21,
+                  22,
+                  23,
+                  24
+                ],
+                "rationale": "Heuristic fallback: factual and classification-heavy units fit objective testing."
+              },
+              "CLICK_TEXT": {
+                "count": 7,
+                "priority": "medium",
+                "covers_units": [
+                  10,
+                  14,
+                  15,
+                  16
+                ],
+                "rationale": "Heuristic fallback: suitable for distinctions, rules, and misconception checks."
+              },
+              "OPEN_ANSWER": {
+                "count": 5,
+                "priority": "medium",
+                "covers_units": [
+                  1,
+                  2,
+                  3,
+                  4,
+                  5,
+                  6,
+                  7,
+                  8,
+                  9,
+                  10,
+                  11,
+                  12,
+                  13,
+                  14,
+                  15,
+                  16,
+                  17,
+                  18,
+                  19,
+                  20,
+                  21,
+                  22,
+                  23,
+                  24
+                ],
+                "rationale": "Added by coverage calibration to improve overall material coverage."
+              },
+              "CLICK_WORDS": {
+                "count": 4,
+                "priority": "medium",
+                "covers_units": [
+                  12,
+                  15,
+                  16
+                ],
+                "rationale": "Good fit for factual substitutions in numbers, dates, and terminology."
+              },
+              "SEQUENCE": {
+                "count": 1,
+                "priority": "low",
+                "covers_units": [
+                  17
+                ],
+                "rationale": "Heuristic fallback: sequence/ranking only where wording suggests explicit order or stages."
+              }
+            },
+            "total_tasks": 32,
+            "uncovered_unit_ids": []
+          },
+          "not_recommended": {
+            "count": 0,
+            "types": [],
+            "missing_suitability_map_types": []
+          },
+          "learning_chunks": {
+            "count": 8,
+            "chunk_ids": [
+              "chunk_1",
+              "chunk_2",
+              "chunk_3",
+              "chunk_4",
+              "chunk_5",
+              "chunk_6",
+              "chunk_7",
+              "chunk_8"
+            ]
+          },
+          "type_progression_suitability": {
+            "count": 5,
+            "entries": [
+              {
+                "task_type": "TEST",
+                "availability": "implemented",
+                "suitability": "high",
+                "priority": "high",
+                "progression_is_fixed": true,
+                "level_role_map_count": 2,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 20,
+                "covers_chunk_ids_count": 8
+              },
+              {
+                "task_type": "CLICK_TEXT",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 4,
+                "covers_chunk_ids_count": 3
+              },
+              {
+                "task_type": "OPEN_ANSWER",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": true,
+                "level_role_map_count": 1,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 24,
+                "covers_chunk_ids_count": 8
+              },
+              {
+                "task_type": "CLICK_WORDS",
+                "availability": "implemented",
+                "suitability": "medium",
+                "priority": "medium",
+                "progression_is_fixed": false,
+                "level_role_map_count": 0,
+                "sequence_intents": [],
+                "covers_unit_ids_count": 3,
+                "covers_chunk_ids_count": 3
+              },
+              {
+                "task_type": "SEQUENCE",
+                "availability": "implemented",
+                "suitability": "low",
+                "priority": "low",
+                "progression_is_fixed": true,
+                "level_role_map_count": 3,
+                "sequence_intents": [
+                  "ordering",
+                  "classification",
+                  "hierarchy",
+                  "ranking",
+                  "grouping"
+                ],
+                "covers_unit_ids_count": 1,
+                "covers_chunk_ids_count": 1
+              }
+            ]
+          },
+          "authoring_routes": {
+            "count": 4,
+            "summaries": [
+              {
+                "id": "route_1",
+                "title": "Complexes route: TEST progression",
+                "route_kind": "complex_progression",
+                "target_surface": "complexes",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_2",
+                "title": "Manual editor route (grounded practice)",
+                "route_kind": "manual_practice",
+                "target_surface": "editor_manual",
+                "steps_count": 2,
+                "effort_estimate": "medium",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_3",
+                "title": "Microcards route: pair_match reinforcement",
+                "route_kind": "microcards_support",
+                "target_surface": "microcards",
+                "steps_count": 1,
+                "effort_estimate": "low",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              },
+              {
+                "id": "route_4",
+                "title": "Hybrid route: progression + microcards",
+                "route_kind": "hybrid",
+                "target_surface": "mixed",
+                "steps_count": 2,
+                "effort_estimate": "high",
+                "has_anti_patterns": true,
+                "has_expected_effect": true
+              }
+            ]
+          },
+          "coverage_plan": {
+            "present": true,
+            "has_unit_targets": true,
+            "has_chunk_targets": true,
+            "unit_targets_count": 24,
+            "chunk_targets_count": 8
+          },
+          "future_capabilities": {
+            "count": 1,
+            "has_pair_matching": true
+          },
+          "microcards_candidates": {
+            "count": 10,
+            "card_types": [
+              "fact_recall",
+              "pair_match"
+            ]
+          },
+          "report_blocks": {
+            "count": 17,
+            "report_blocks_version": "1.0",
+            "block_types": [
+              "toc",
+              "section",
+              "progression_matrix",
+              "section",
+              "chunk_card",
+              "chunk_card",
+              "chunk_card",
+              "chunk_card",
+              "chunk_card",
+              "chunk_card",
+              "chunk_card",
+              "chunk_card",
+              "section",
+              "route_card",
+              "route_card",
+              "route_card",
+              "route_card"
+            ],
+            "has_toc": true,
+            "has_section": true
+          },
+          "report_lint": {
+            "present": true,
+            "verbosity_risk": "low",
+            "duplicate_content_signals": 0,
+            "fallback_renderer_recommended": false
+          },
+          "capability_matrix": {
+            "capability_matrix_version": "1.0",
+            "has_validation": true
+          }
+        },
+        "summary": {
+          "total_issues": 0,
+          "hard_fails": 0,
+          "soft_warnings": 0,
+          "v2_completeness_pct": 100.0,
+          "v2_field_checks": {
+            "learning_chunks": true,
+            "type_progression_suitability": true,
+            "authoring_routes": true,
+            "coverage_plan": true,
+            "future_capabilities": true,
+            "microcards_candidates": true,
+            "report_blocks": true,
+            "report_lint": true,
+            "analysis_schema_version_2.0": true
+          },
+          "educational_units_count": 24,
+          "total_recommended_tasks": 32,
+          "recommendation_types_count": 5
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "total_files": 3,
+    "analyzed_ok": 3,
+    "failed": 0,
+    "failed_files": [],
+    "avg_v2_completeness_pct": 100.0,
+    "total_hard_fails": 0,
+    "total_soft_warnings": 13,
+    "cross_cutting_issues": {
+      "[WARN] TPS TEST: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf"
+      ],
+      "[WARN] TPS OPEN_ANSWER: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf"
+      ],
+      "[WARN] TPS SEQUENCE: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf"
+      ],
+      "[WARN] TPS CLICK: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf"
+      ],
+      "[WARN] TPS DRAW: implemented but no level_role_map": [
+        "25-343.pdf",
+        "Nephr.pdf"
+      ],
+      "[WARN] report_blocks: no toc block": [
+        "25-343.pdf",
+        "Nephr.pdf"
+      ],
+      "[WARN] TPS SEQUENCE: no sequence_intents specified": [
+        "Nephr.pdf"
+      ]
+    }
+  }
+}

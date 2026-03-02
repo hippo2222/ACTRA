@@ -1,0 +1,357 @@
+{
+  "file": "25-343.pdf",
+  "word_count": 1222,
+  "elapsed_sec": 105.98,
+  "pass": true,
+  "issues": [],
+  "warnings_from_analysis": [
+    "Visual content (Figures 1-16) is present but text-only analysis cannot generate image-based tasks. Manual authoring of CLICK/DRAW tasks is strongly recommended to cover the visual recognition learning objective (Unit 4).",
+    "Visual content detected: text-only AI generation will not fully cover image recognition skills; add manual image tasks.",
+    "Heuristic adjustment: 5 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~19-23).",
+    "analysis_json v2 report_blocks validator: invalid or unsupported blocks were dropped/sanitized."
+  ],
+  "sections": {
+    "schema": {
+      "analysis_schema_version": "2.0"
+    },
+    "top_level": {
+      "material_volume": "medium",
+      "target_language": "en",
+      "illustrations_detected": true,
+      "illustrations_note": "The material includes 16 labeled figures (Figures 1-16) showing example mammograms (DM and SM views) for each BI-RADS density category (A-D). These are ideal for creating CLICK (find/label) or DRAW (outline) tasks to assess visual recognition of density patterns and the masking effect principle. However, such tasks must be created manually in the editor using these images.",
+      "human_summary_length": 653
+    },
+    "educational_units": {
+      "count": 5,
+      "details": [
+        {
+          "id": 1,
+          "title": "BI-RADS Mammography Lexicon Terms",
+          "v2_fields_present": [
+            "chunk_ids",
+            "cognitive_ops",
+            "factual_anchors",
+            "prerequisite_unit_ids"
+          ],
+          "v2_fields_missing": [],
+          "factual_anchors_count": 2,
+          "cognitive_ops": [
+            "recognize",
+            "classify",
+            "recall"
+          ]
+        },
+        {
+          "id": 2,
+          "title": "Breast Density Categories (BI-RADS A-D)",
+          "v2_fields_present": [
+            "chunk_ids",
+            "cognitive_ops",
+            "factual_anchors",
+            "prerequisite_unit_ids"
+          ],
+          "v2_fields_missing": [],
+          "factual_anchors_count": 4,
+          "cognitive_ops": [
+            "recognize",
+            "classify",
+            "recall"
+          ]
+        },
+        {
+          "id": 3,
+          "title": "Clinical Significance of Breast Density",
+          "v2_fields_present": [
+            "chunk_ids",
+            "cognitive_ops",
+            "factual_anchors",
+            "prerequisite_unit_ids"
+          ],
+          "v2_fields_missing": [],
+          "factual_anchors_count": 2,
+          "cognitive_ops": [
+            "recognize",
+            "recall",
+            "explain"
+          ]
+        },
+        {
+          "id": 4,
+          "title": "Visual Recognition of Density Categories",
+          "v2_fields_present": [
+            "chunk_ids",
+            "cognitive_ops",
+            "factual_anchors",
+            "prerequisite_unit_ids"
+          ],
+          "v2_fields_missing": [],
+          "factual_anchors_count": 3,
+          "cognitive_ops": [
+            "recognize",
+            "sequence",
+            "explain"
+          ]
+        },
+        {
+          "id": 5,
+          "title": "Reporting and Regulatory Requirements",
+          "v2_fields_present": [
+            "chunk_ids",
+            "cognitive_ops",
+            "factual_anchors",
+            "prerequisite_unit_ids"
+          ],
+          "v2_fields_missing": [],
+          "factual_anchors_count": 5,
+          "cognitive_ops": [
+            "recognize",
+            "recall"
+          ]
+        }
+      ]
+    },
+    "recommendations": {
+      "count": 5,
+      "types": {
+        "TEST": {
+          "count": 8,
+          "priority": "high",
+          "covers_units": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "rationale": "Ideal for assessing recall of the extensive standardized terminology and the exact phrasing of the four density categories."
+        },
+        "CLICK_TEXT": {
+          "count": 4,
+          "priority": "medium",
+          "covers_units": [],
+          "rationale": "Effective for dispelling common misconceptions, such as 'dense breasts always mean cancer' or 'density is only about tissue percentage'."
+        },
+        "OPEN_ANSWER": {
+          "count": 3,
+          "priority": "high",
+          "covers_units": [],
+          "rationale": "Best format for evaluating understanding of the cause-effect relationship between density and masking, and the independent risk association with odds ratios."
+        },
+        "CLICK_WORDS": {
+          "count": 3,
+          "priority": "medium",
+          "covers_units": [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          "rationale": "Suitable for creating a cloze-style or error-spotting exercise based on the precise, legally mandated language of the density categories and reporting rules."
+        },
+        "SEQUENCE": {
+          "count": 1,
+          "priority": "medium",
+          "covers_units": [],
+          "rationale": "Perfect for ordering the density categories from least to most dense or grouping them into 'non-dense' (A,B) vs. 'dense' (C,D)."
+        }
+      },
+      "total_tasks": 19,
+      "uncovered_unit_ids": []
+    },
+    "not_recommended": {
+      "count": 3,
+      "types": [
+        "CLICK",
+        "DRAW",
+        "IMAGE_TASKS (manual)"
+      ],
+      "missing_suitability_map_types": []
+    },
+    "learning_chunks": {
+      "count": 4,
+      "chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_3",
+        "chunk_4"
+      ]
+    },
+    "type_progression_suitability": {
+      "count": 5,
+      "entries": [
+        {
+          "task_type": "TEST",
+          "availability": "implemented",
+          "suitability": "high",
+          "priority": "high",
+          "progression_is_fixed": true,
+          "level_role_map_count": 2,
+          "sequence_intents": [],
+          "covers_unit_ids_count": 5,
+          "covers_chunk_ids_count": 4
+        },
+        {
+          "task_type": "CLICK_TEXT",
+          "availability": "implemented",
+          "suitability": "medium",
+          "priority": "medium",
+          "progression_is_fixed": false,
+          "level_role_map_count": 0,
+          "sequence_intents": [],
+          "covers_unit_ids_count": 0,
+          "covers_chunk_ids_count": 0
+        },
+        {
+          "task_type": "OPEN_ANSWER",
+          "availability": "implemented",
+          "suitability": "high",
+          "priority": "high",
+          "progression_is_fixed": true,
+          "level_role_map_count": 1,
+          "sequence_intents": [],
+          "covers_unit_ids_count": 0,
+          "covers_chunk_ids_count": 0
+        },
+        {
+          "task_type": "CLICK_WORDS",
+          "availability": "implemented",
+          "suitability": "medium",
+          "priority": "medium",
+          "progression_is_fixed": false,
+          "level_role_map_count": 0,
+          "sequence_intents": [],
+          "covers_unit_ids_count": 5,
+          "covers_chunk_ids_count": 4
+        },
+        {
+          "task_type": "SEQUENCE",
+          "availability": "implemented",
+          "suitability": "medium",
+          "priority": "medium",
+          "progression_is_fixed": true,
+          "level_role_map_count": 3,
+          "sequence_intents": [
+            "ordering",
+            "classification",
+            "hierarchy",
+            "ranking",
+            "grouping"
+          ],
+          "covers_unit_ids_count": 0,
+          "covers_chunk_ids_count": 0
+        }
+      ]
+    },
+    "authoring_routes": {
+      "count": 4,
+      "summaries": [
+        {
+          "id": "route_1",
+          "title": "Complexes route: OPEN_ANSWER progression",
+          "route_kind": "complex_progression",
+          "target_surface": "complexes",
+          "steps_count": 2,
+          "effort_estimate": "medium",
+          "has_anti_patterns": true,
+          "has_expected_effect": true
+        },
+        {
+          "id": "route_2",
+          "title": "Manual editor route (grounded practice)",
+          "route_kind": "manual_practice",
+          "target_surface": "editor_manual",
+          "steps_count": 2,
+          "effort_estimate": "medium",
+          "has_anti_patterns": true,
+          "has_expected_effect": true
+        },
+        {
+          "id": "route_3",
+          "title": "Microcards route: pair_match reinforcement",
+          "route_kind": "microcards_support",
+          "target_surface": "microcards",
+          "steps_count": 1,
+          "effort_estimate": "low",
+          "has_anti_patterns": true,
+          "has_expected_effect": true
+        },
+        {
+          "id": "route_4",
+          "title": "Hybrid route: progression + microcards",
+          "route_kind": "hybrid",
+          "target_surface": "mixed",
+          "steps_count": 2,
+          "effort_estimate": "high",
+          "has_anti_patterns": true,
+          "has_expected_effect": true
+        }
+      ]
+    },
+    "coverage_plan": {
+      "present": true,
+      "has_unit_targets": true,
+      "has_chunk_targets": true,
+      "unit_targets_count": 5,
+      "chunk_targets_count": 4
+    },
+    "future_capabilities": {
+      "count": 1,
+      "has_pair_matching": true
+    },
+    "microcards_candidates": {
+      "count": 5,
+      "card_types": [
+        "cloze",
+        "contrast_pair",
+        "fact_recall",
+        "numeric_anchor",
+        "term_definition"
+      ]
+    },
+    "report_blocks": {
+      "count": 5,
+      "report_blocks_version": "1.0",
+      "block_types": [
+        "toc",
+        "section",
+        "progression_matrix",
+        "section",
+        "callout"
+      ],
+      "has_toc": true,
+      "has_section": true
+    },
+    "report_lint": {
+      "present": true,
+      "verbosity_risk": "medium",
+      "duplicate_content_signals": 0,
+      "fallback_renderer_recommended": true
+    },
+    "capability_matrix": {
+      "capability_matrix_version": "1.0",
+      "has_validation": true
+    }
+  },
+  "summary": {
+    "total_issues": 0,
+    "hard_fails": 0,
+    "soft_warnings": 0,
+    "v2_completeness_pct": 100.0,
+    "v2_field_checks": {
+      "learning_chunks": true,
+      "type_progression_suitability": true,
+      "authoring_routes": true,
+      "coverage_plan": true,
+      "future_capabilities": true,
+      "microcards_candidates": true,
+      "report_blocks": true,
+      "report_lint": true,
+      "analysis_schema_version_2.0": true
+    },
+    "educational_units_count": 5,
+    "total_recommended_tasks": 19,
+    "recommendation_types_count": 5
+  }
+}

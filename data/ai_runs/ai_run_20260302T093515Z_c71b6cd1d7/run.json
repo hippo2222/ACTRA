@@ -1,0 +1,61 @@
+{
+  "run_id": "ai_run_20260302T093515Z_c71b6cd1d7",
+  "phase": "generated",
+  "material_language": "ru",
+  "output_language_mode": "same_as_material",
+  "effective_output_language": "ru",
+  "material_word_count": 120,
+  "provider_used": "mock",
+  "provider_model": "mock",
+  "provider_chain_attempts": [
+    {
+      "provider": "mock",
+      "model": "mock",
+      "attempt": 1,
+      "status": "success",
+      "stage": "analysis_initial"
+    }
+  ],
+  "source_file_info": {
+    "encoding": "utf-8",
+    "format": "txt",
+    "original_name": "e2e_test_material.txt",
+    "size_mb": 0,
+    "word_count": 120
+  },
+  "created_at": "2026-03-02T09:35:16Z",
+  "updated_at": "2026-03-02T09:35:23Z",
+  "generation_summary": {
+    "total_generated": 5,
+    "total_valid": 2,
+    "total_warnings": 3,
+    "total_errors": 0,
+    "by_type": {
+      "test": 3,
+      "click_text": 1,
+      "open_answer": 1
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 1,
+      "duplicate_tasks": 2,
+      "language_mismatch_warnings": 1,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 0,
+      "source_grounding_warnings": 0,
+      "semantic_duplicate_groups": 1,
+      "semantic_duplicate_tasks": 1,
+      "warning_fields_breakdown": {
+        "duplicate_task": 2,
+        "language_mismatch": 1,
+        "semantic_duplicate_task": 1
+      },
+      "total_tasks": 5
+    }
+  },
+  "import_completed_at": "2026-03-02T09:35:23Z",
+  "imported_count": 5,
+  "module_id": "ct_basics",
+  "topic_id": "head_ct"
+}

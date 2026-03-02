@@ -1,1 +1,34 @@
-﻿[]
+[
+  {
+    "timestamp": "2026-03-02T11:32:43.039035",
+    "archive": "tmp4pdrtre2.zip",
+    "imported": 1,
+    "skipped": 0,
+    "errors": 0,
+    "rollback": false
+  },
+  {
+    "timestamp": "2026-03-02T11:33:00.195906",
+    "archive": "tmp6mkpweb5.zip",
+    "imported": 1,
+    "skipped": 0,
+    "errors": 0,
+    "rollback": false
+  },
+  {
+    "timestamp": "2026-03-02T11:33:31.960784",
+    "archive": "tmp1j1wya57.zip",
+    "imported": 1,
+    "skipped": 0,
+    "errors": 0,
+    "rollback": false
+  },
+  {
+    "timestamp": "2026-03-02T11:35:34.703426",
+    "archive": "tmpuyj8j9wn.zip",
+    "imported": 1,
+    "skipped": 0,
+    "errors": 0,
+    "rollback": false
+  }
+]

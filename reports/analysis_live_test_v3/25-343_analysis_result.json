@@ -1,0 +1,1145 @@
+{
+  "human_summary": "The material is a medium-length (~1000 words) section from the ACR BI-RADS® Mammography v2025 Manual, covering the BI-RADS mammography lexicon (Table 1) and an in-depth explanation of breast density categories (Table 2), including clinical significance, reporting requirements, and illustrated examples (Figures 1-16). Key takeaways for an instructor: the text defines a strict standardized terminology for mammographic findings (masses, calcifications, etc.) and a 4-category system for breast density, emphasizing its dual role in masking cancer and as a risk factor. Numerous example images demonstrate the visual appearance of each density category.",
+  "recommendations": [
+    {
+      "task_type": "TEST",
+      "count": 8,
+      "priority": "high",
+      "covers_units": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "rationale": "Ideal for assessing recall of the extensive standardized terminology and the exact phrasing of the four density categories.",
+      "capability_matrix_entry_id": "test_core",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": true,
+      "supported_levels": [
+        1,
+        2
+      ],
+      "complex_role": "core",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Multiple choice: распознавание и объективная проверка фактов"
+        },
+        {
+          "level": 2,
+          "role": "Text answer: воспроизведение и извлечение ответа"
+        }
+      ],
+      "capability_ids": [
+        "fact_recall",
+        "recognition_check"
+      ],
+      "canonical_task_type": "TEST",
+      "fixed_progression_note": "Уровни L1, L2 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "count": 4,
+      "priority": "medium",
+      "covers_units": [],
+      "rationale": "Effective for dispelling common misconceptions, such as 'dense breasts always mean cancer' or 'density is only about tissue percentage'.",
+      "capability_matrix_entry_id": "click_error_detection",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": false,
+      "supported_levels": [],
+      "complex_role": "finisher_special",
+      "level_role_map": [],
+      "capability_ids": [
+        "error_detection",
+        "discrimination"
+      ],
+      "canonical_task_type": "CLICK",
+      "canonical_subtype": "error_detection",
+      "error_detection_mode": "text_choice"
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "count": 3,
+      "priority": "high",
+      "covers_units": [],
+      "rationale": "Best format for evaluating understanding of the cause-effect relationship between density and masking, and the independent risk association with odds ratios.",
+      "capability_matrix_entry_id": "open_answer_core",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": true,
+      "supported_levels": [
+        1
+      ],
+      "complex_role": "core",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Развернутый ответ: объяснение и причинно-следственные связи"
+        }
+      ],
+      "capability_ids": [
+        "explanation",
+        "causal_reasoning"
+      ],
+      "canonical_task_type": "OPEN_ANSWER",
+      "fixed_progression_note": "Уровни L1 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "count": 3,
+      "priority": "medium",
+      "covers_units": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "rationale": "Suitable for creating a cloze-style or error-spotting exercise based on the precise, legally mandated language of the density categories and reporting rules.",
+      "capability_matrix_entry_id": "click_error_detection",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": false,
+      "supported_levels": [],
+      "complex_role": "finisher_special",
+      "level_role_map": [],
+      "capability_ids": [
+        "error_detection",
+        "discrimination"
+      ],
+      "canonical_task_type": "CLICK",
+      "canonical_subtype": "error_detection",
+      "error_detection_mode": "text_errors"
+    },
+    {
+      "task_type": "SEQUENCE",
+      "count": 1,
+      "priority": "medium",
+      "covers_units": [],
+      "rationale": "Perfect for ordering the density categories from least to most dense or grouping them into 'non-dense' (A,B) vs. 'dense' (C,D).",
+      "capability_matrix_entry_id": "sequence_structuring",
+      "implementation_status": "implemented_complex_type",
+      "progression_is_fixed": true,
+      "supported_levels": [
+        1,
+        2,
+        3
+      ],
+      "complex_role": "core",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Сборка структуры / распределение элементов"
+        },
+        {
+          "level": 2,
+          "role": "Сборка + называние уровней"
+        },
+        {
+          "level": 3,
+          "role": "Сборка + называние уровней и блоков"
+        }
+      ],
+      "capability_ids": [
+        "sequence_structuring",
+        "ordering",
+        "classification",
+        "hierarchy_building"
+      ],
+      "canonical_task_type": "SEQUENCE",
+      "sequence_intent_options": [
+        "ordering",
+        "classification",
+        "hierarchy",
+        "ranking",
+        "grouping"
+      ],
+      "fixed_progression_note": "Уровни L1, L2, L3 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+    }
+  ],
+  "educational_units": [
+    {
+      "id": 1,
+      "title": "BI-RADS Mammography Lexicon Terms",
+      "type": "classification",
+      "description": "The standardized set of terms for describing mammographic findings, including mass characteristics (shape, margin, density), calcification types (benign, suspicious morphology, distribution), architectural distortion, asymmetries, lymph nodes, skin lesions, etc.",
+      "explicitness": "explicit",
+      "evidence": "Table 1: BI-RADS® Mammography Lexicon Overview",
+      "modality": "text",
+      "assessment_risk": "low",
+      "cognitive_ops": [
+        "recognize",
+        "classify",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "BI-RADS Mammography Lexicon Terms"
+        },
+        {
+          "kind": "number",
+          "value": "1"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_1"
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Breast Density Categories (BI-RADS A-D)",
+      "type": "classification",
+      "description": "The four categories of breast composition (A: almost entirely fatty, B: scattered areas, C: heterogeneously dense, D: extremely dense) based on the potential to obscure cancer, not just percentage of tissue.",
+      "explicitness": "explicit",
+      "evidence": "Table 2 and text describing the 2025 classification change from percentage to masking likelihood.",
+      "modality": "text",
+      "assessment_risk": "low",
+      "cognitive_ops": [
+        "recognize",
+        "classify",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Breast Density Categories (BI-RADS A-D)"
+        },
+        {
+          "kind": "date",
+          "value": "2025"
+        },
+        {
+          "kind": "number",
+          "value": "2"
+        },
+        {
+          "kind": "number",
+          "value": "2025"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_2"
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Clinical Significance of Breast Density",
+      "type": "concept",
+      "description": "Dense breasts reduce mammographic sensitivity (masking effect) and are an independent risk factor for breast cancer, with quantified odds ratios for categories C and D.",
+      "explicitness": "explicit",
+      "evidence": "Text sections 'Breast density is significant for two reasons' and the odds ratio data [12].",
+      "modality": "text",
+      "assessment_risk": "medium",
+      "cognitive_ops": [
+        "recognize",
+        "recall",
+        "explain"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Clinical Significance of Breast Density"
+        },
+        {
+          "kind": "number",
+          "value": "12"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_2"
+      ]
+    },
+    {
+      "id": 4,
+      "title": "Visual Recognition of Density Categories",
+      "type": "process",
+      "description": "The ability to visually identify and assign a BI-RADS density category (A-D) to a mammogram image (DM or SM view), understanding the masking principle for category C.",
+      "explicitness": "inferred",
+      "evidence": "Figures 1-16 showing example images for each category with captions.",
+      "modality": "visual",
+      "assessment_risk": "medium",
+      "cognitive_ops": [
+        "recognize",
+        "sequence",
+        "explain"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Visual Recognition of Density Categories"
+        },
+        {
+          "kind": "number",
+          "value": "1"
+        },
+        {
+          "kind": "number",
+          "value": "16"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_3"
+      ]
+    },
+    {
+      "id": 5,
+      "title": "Reporting and Regulatory Requirements",
+      "type": "fact",
+      "description": "Reporting breast density is FDA-mandated since Sept 2024; specific language must be used in reports to referring physicians and patients; singular phrasing is allowed for unilateral mammograms as of July 2025.",
+      "explicitness": "explicit",
+      "evidence": "Text mentioning FDA legislation, federal guidance, and the July 2025 alternative standard.",
+      "modality": "text",
+      "assessment_risk": "low",
+      "cognitive_ops": [
+        "recognize",
+        "recall"
+      ],
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Reporting and Regulatory Requirements"
+        },
+        {
+          "kind": "date",
+          "value": "2024"
+        },
+        {
+          "kind": "date",
+          "value": "2025"
+        },
+        {
+          "kind": "number",
+          "value": "2024"
+        },
+        {
+          "kind": "number",
+          "value": "2025"
+        }
+      ],
+      "prerequisite_unit_ids": [],
+      "chunk_ids": [
+        "chunk_4"
+      ]
+    }
+  ],
+  "not_recommended": [
+    {
+      "task_type": "CLICK",
+      "reason": "Material contains 16 example mammography images (Figures 1-16) perfect for visual recognition, but CLICK tasks require manual image authoring in the editor and cannot be auto-generated from this text."
+    },
+    {
+      "task_type": "DRAW",
+      "reason": "Similarly, DRAW tasks for outlining density regions would be highly relevant but require manual creation with the provided example images as base."
+    },
+    {
+      "task_type": "IMAGE_TASKS (manual)",
+      "reason": "Illustrations are present. Image-based tasks are not auto-generated in this flow; consider manually creating 2-4 image tasks in the editor for visual recognition/classification."
+    }
+  ],
+  "illustrations_detected": true,
+  "illustrations_note": "The material includes 16 labeled figures (Figures 1-16) showing example mammograms (DM and SM views) for each BI-RADS density category (A-D). These are ideal for creating CLICK (find/label) or DRAW (outline) tasks to assess visual recognition of density patterns and the masking effect principle. However, such tasks must be created manually in the editor using these images.",
+  "warnings": [
+    "Visual content (Figures 1-16) is present but text-only analysis cannot generate image-based tasks. Manual authoring of CLICK/DRAW tasks is strongly recommended to cover the visual recognition learning objective (Unit 4).",
+    "Visual content detected: text-only AI generation will not fully cover image recognition skills; add manual image tasks.",
+    "Heuristic adjustment: 5 educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
+    "Coverage calibration increased recommended text tasks to improve coverage (target ~19-23).",
+    "analysis_json v2 report_blocks validator: invalid or unsupported blocks were dropped/sanitized."
+  ],
+  "material_volume": "medium",
+  "target_language": "en",
+  "analysis_schema_version": "2.0",
+  "capability_matrix_version": "1.0",
+  "capability_matrix_validation": {
+    "matrix_version": "1.0",
+    "validated_recommendations": 5,
+    "fixed_progression_annotated": 3,
+    "issues": [],
+    "valid": true
+  },
+  "learning_chunks": [
+    {
+      "chunk_id": "chunk_lexicon",
+      "unit_ids": [
+        1
+      ],
+      "title": "BI-RADS Finding Terminology",
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_1",
+      "chunk_type": "classification",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "BI-RADS Finding Terminology"
+        }
+      ],
+      "route_ids": [
+        "route_1",
+        "route_2",
+        "route_3",
+        "route_4"
+      ]
+    },
+    {
+      "chunk_id": "chunk_density_core",
+      "unit_ids": [
+        2,
+        3
+      ],
+      "title": "Density Categories & Clinical Impact",
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_2",
+      "chunk_type": "classification",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Density Categories & Clinical Impact"
+        }
+      ],
+      "route_ids": [
+        "route_1",
+        "route_2",
+        "route_3",
+        "route_4"
+      ]
+    },
+    {
+      "chunk_id": "chunk_density_visual",
+      "unit_ids": [
+        4
+      ],
+      "title": "Visual Identification of Density",
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_3",
+      "chunk_type": "process",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Visual Identification of Density"
+        }
+      ],
+      "route_ids": [
+        "route_1",
+        "route_2"
+      ]
+    },
+    {
+      "chunk_id": "chunk_density_reporting",
+      "unit_ids": [
+        5
+      ],
+      "title": "Density Reporting Rules",
+      "common_confusions": [],
+      "notes_for_author": [],
+      "id": "chunk_4",
+      "chunk_type": "factual_set",
+      "goal": "Cover the linked educational units with grounded practice.",
+      "factual_anchors": [
+        {
+          "kind": "term",
+          "value": "Density Reporting Rules"
+        }
+      ],
+      "route_ids": [
+        "route_1",
+        "route_2",
+        "route_3",
+        "route_4"
+      ]
+    }
+  ],
+  "type_progression_suitability": [
+    {
+      "task_type": "TEST",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "high",
+      "priority": "high",
+      "covers_chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_3",
+        "chunk_4"
+      ],
+      "covers_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "why": "Ideal for assessing recall of the extensive standardized terminology and the exact phrasing of the four density categories.",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Multiple choice: распознавание и объективная проверка фактов",
+          "value_for_material": "Ideal for assessing recall of the extensive standardized terminology and the exact phrasing of the four density categories."
+        },
+        {
+          "level": 2,
+          "role": "Text answer: воспроизведение и извлечение ответа",
+          "value_for_material": "Ideal for assessing recall of the extensive standardized terminology and the exact phrasing of the four density categories."
+        }
+      ],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": [
+        "Уровни L1, L2 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "subtype": "error_detection",
+      "availability": "implemented",
+      "progression_is_fixed": false,
+      "complex_role": "finisher_special",
+      "suitability": "medium",
+      "priority": "medium",
+      "covers_chunk_ids": [],
+      "covers_unit_ids": [],
+      "why": "Effective for dispelling common misconceptions, such as 'dense breasts always mean cancer' or 'density is only about tissue percentage'.",
+      "level_role_map": [],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "high",
+      "priority": "high",
+      "covers_chunk_ids": [],
+      "covers_unit_ids": [],
+      "why": "Best format for evaluating understanding of the cause-effect relationship between density and masking, and the independent risk association with odds ratios.",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Развернутый ответ: объяснение и причинно-следственные связи",
+          "value_for_material": "Best format for evaluating understanding of the cause-effect relationship between density and masking, and the independent risk association with odds ratios."
+        }
+      ],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": [
+        "Уровни L1 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+      ]
+    },
+    {
+      "task_type": "CLICK_WORDS",
+      "subtype": "error_detection",
+      "availability": "implemented",
+      "progression_is_fixed": false,
+      "complex_role": "finisher_special",
+      "suitability": "medium",
+      "priority": "medium",
+      "covers_chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_3",
+        "chunk_4"
+      ],
+      "covers_unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "why": "Suitable for creating a cloze-style or error-spotting exercise based on the precise, legally mandated language of the density categories and reporting rules.",
+      "level_role_map": [],
+      "sequence_intents": [],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": []
+    },
+    {
+      "task_type": "SEQUENCE",
+      "subtype": null,
+      "availability": "implemented",
+      "progression_is_fixed": true,
+      "complex_role": "core",
+      "suitability": "medium",
+      "priority": "medium",
+      "covers_chunk_ids": [],
+      "covers_unit_ids": [],
+      "why": "Perfect for ordering the density categories from least to most dense or grouping them into 'non-dense' (A,B) vs. 'dense' (C,D).",
+      "level_role_map": [
+        {
+          "level": 1,
+          "role": "Сборка структуры / распределение элементов",
+          "value_for_material": "Perfect for ordering the density categories from least to most dense or grouping them into 'non-dense' (A,B) vs. 'dense' (C,D)."
+        },
+        {
+          "level": 2,
+          "role": "Сборка + называние уровней",
+          "value_for_material": "Perfect for ordering the density categories from least to most dense or grouping them into 'non-dense' (A,B) vs. 'dense' (C,D)."
+        },
+        {
+          "level": 3,
+          "role": "Сборка + называние уровней и блоков",
+          "value_for_material": "Perfect for ordering the density categories from least to most dense or grouping them into 'non-dense' (A,B) vs. 'dense' (C,D)."
+        }
+      ],
+      "sequence_intents": [
+        "ordering",
+        "classification",
+        "hierarchy",
+        "ranking",
+        "grouping"
+      ],
+      "constraints": [],
+      "authoring_risks": [],
+      "iterative_system_notes": [
+        "Уровни L1, L2, L3 являются фиксированной progression этого типа; в анализе их не нужно выбирать вручную по отдельности."
+      ]
+    }
+  ],
+  "authoring_routes": [
+    {
+      "id": "route_1",
+      "title": "Complexes route: OPEN_ANSWER progression",
+      "route_kind": "complex_progression",
+      "target_surface": "complexes",
+      "chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_3",
+        "chunk_4"
+      ],
+      "unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "steps": [
+        {
+          "step_id": "route_1_step_1",
+          "action_type": "use_task_type_progression",
+          "purpose": "Run the primary progression first to establish structure and baseline coverage.",
+          "task_type": "OPEN_ANSWER",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Use the route as a progression plan for complexes, not as isolated one-off tasks."
+          ]
+        },
+        {
+          "step_id": "route_1_step_2",
+          "action_type": "use_task_type_progression",
+          "purpose": "Add a complementary/finisher step after the primary progression to reduce blind spots.",
+          "task_type": "TEST",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Use the route as a progression plan for complexes, not as isolated one-off tasks."
+          ]
+        }
+      ],
+      "effort_estimate": "medium",
+      "expected_effect": "Provides a concrete complex-oriented progression with explicit step order and coverage intent.",
+      "anti_patterns": [
+        "Do not present fixed progression levels as an arbitrary manual choice.",
+        "Do not duplicate the same task purpose across multiple complex steps without a new learning goal.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    },
+    {
+      "id": "route_2",
+      "title": "Manual editor route (grounded practice)",
+      "route_kind": "manual_practice",
+      "target_surface": "editor_manual",
+      "chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_3",
+        "chunk_4"
+      ],
+      "unit_ids": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "steps": [
+        {
+          "step_id": "route_2_step_1",
+          "action_type": "use_task_type_progression",
+          "purpose": "Author the first grounded task batch manually in the editor for the linked chunk(s).",
+          "task_type": "OPEN_ANSWER",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Author concrete task wording in the editor and keep scope limited to the linked chunk(s)."
+          ]
+        },
+        {
+          "step_id": "route_2_step_2",
+          "action_type": "use_task_type_progression",
+          "purpose": "Add a second task type manually to cover a different cognitive demand without guessing the next step.",
+          "task_type": "TEST",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Author concrete task wording in the editor and keep scope limited to the linked chunk(s)."
+          ]
+        }
+      ],
+      "effort_estimate": "medium",
+      "expected_effect": "Converts the analysis into concrete editor actions with explicit step-by-step authoring guidance.",
+      "anti_patterns": [
+        "Do not present fixed progression levels as an arbitrary manual choice.",
+        "Do not author all route steps against the same fact when multiple units are linked.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    },
+    {
+      "id": "route_3",
+      "title": "Microcards route: pair_match reinforcement",
+      "route_kind": "microcards_support",
+      "target_surface": "microcards",
+      "chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_4"
+      ],
+      "unit_ids": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "steps": [
+        {
+          "step_id": "route_3_step_1",
+          "action_type": "add_microcards",
+          "purpose": "Есть несколько единиц, которые можно усилить через сопоставление терминов и признаков.",
+          "microcard_mode": "pair_match",
+          "authoring_checklist": [
+            "Select only pairings that are explicitly supported by the material and linked units.",
+            "Keep pair_match cards within MVP limits (2-5 pairs, no many-to-many).",
+            "Review ambiguous or overlapping pairs manually before adding to a deck."
+          ]
+        }
+      ],
+      "effort_estimate": "low",
+      "expected_effect": "Strengthens pair associations with a short review loop after authoring the main practice set.",
+      "anti_patterns": [
+        "Avoid ambiguous many-to-many pairings or oversized pair_match cards in MVP.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    },
+    {
+      "id": "route_4",
+      "title": "Hybrid route: progression + microcards",
+      "route_kind": "hybrid",
+      "target_surface": "mixed",
+      "chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_4"
+      ],
+      "unit_ids": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "steps": [
+        {
+          "step_id": "route_4_step_1",
+          "action_type": "use_task_type_progression",
+          "purpose": "Start with a structured/grounded progression to build a stable mental model.",
+          "task_type": "SEQUENCE",
+          "subtype": null,
+          "progression_policy": "full_fixed_progression",
+          "sequence_intent": "ordering",
+          "authoring_checklist": [
+            "Keep every task grounded in the linked units/chunks and factual anchors.",
+            "Treat levels as a fixed progression; do not offer a pick-only-level shortcut.",
+            "Keep SEQUENCE intent explicit (ordering) and aligned with the theory semantics."
+          ]
+        },
+        {
+          "step_id": "route_4_step_2",
+          "action_type": "add_microcards",
+          "purpose": "Then add pair_match microcards for spaced repetition of key associations.",
+          "microcard_mode": "pair_match",
+          "authoring_checklist": [
+            "Select only pairings that are explicitly supported by the material and linked units.",
+            "Keep pair_match cards within MVP limits (2-5 pairs, no many-to-many).",
+            "Review ambiguous or overlapping pairs manually before adding to a deck."
+          ]
+        }
+      ],
+      "effort_estimate": "high",
+      "expected_effect": "Combines initial authoring/complex progression with follow-up retention practice in microcards.",
+      "anti_patterns": [
+        "Do not present fixed progression levels as an arbitrary manual choice.",
+        "Avoid ambiguous many-to-many pairings or oversized pair_match cards in MVP.",
+        "Do not split effort across too many surfaces before covering the core chunk once.",
+        "Do not add unsupported facts or terminology that is missing from the linked units."
+      ]
+    }
+  ],
+  "coverage_plan": {
+    "coverage_plan_version": "1.0",
+    "target_coverage": {
+      "all_units_min_once": true,
+      "high_risk_units_priority": true
+    },
+    "unit_targets": [
+      {
+        "unit_id": 1,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "CLICK_WORDS"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 2,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "CLICK_WORDS"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 3,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "CLICK_WORDS"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 4,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "CLICK_WORDS"
+        ],
+        "avoid_overtesting_with": []
+      },
+      {
+        "unit_id": 5,
+        "must_cover": true,
+        "recommended_surfaces": [
+          "complexes",
+          "microcards"
+        ],
+        "preferred_task_types": [
+          "TEST",
+          "CLICK_WORDS"
+        ],
+        "avoid_overtesting_with": []
+      }
+    ],
+    "chunk_targets": [
+      {
+        "chunk_id": "chunk_1",
+        "route_ids": [
+          "route_1",
+          "route_2",
+          "route_3",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_2",
+        "route_ids": [
+          "route_1",
+          "route_2",
+          "route_3",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_3",
+        "route_ids": [
+          "route_1",
+          "route_2"
+        ],
+        "max_primary_tasks_recommended": 3
+      },
+      {
+        "chunk_id": "chunk_4",
+        "route_ids": [
+          "route_1",
+          "route_2",
+          "route_3",
+          "route_4"
+        ],
+        "max_primary_tasks_recommended": 3
+      }
+    ]
+  },
+  "future_capabilities": [
+    {
+      "capability_id": "pair_matching",
+      "display_name": "MATCH (сопоставление пар)",
+      "status": "planned",
+      "recommended_surface": "microcards",
+      "suitability": "medium",
+      "covers_chunk_ids": [
+        "chunk_1",
+        "chunk_2",
+        "chunk_4"
+      ],
+      "why": "Есть несколько единиц, которые можно усилить через сопоставление терминов и признаков.",
+      "fallback_now": [
+        "SEQUENCE",
+        "TEST",
+        "OPEN_ANSWER"
+      ],
+      "covers_unit_ids": [
+        1,
+        2,
+        3,
+        5
+      ]
+    }
+  ],
+  "microcards_candidates": [
+    {
+      "candidate_id": "mc_1",
+      "unit_id": 1,
+      "chunk_id": "chunk_1",
+      "card_type": "term_definition",
+      "priority": "high",
+      "prompt_seed": "What BI-RADS term describes a mass with a 'spiculated' margin?",
+      "answer_seed": "Spiculated margin",
+      "anchors": [
+        "mass",
+        "margin"
+      ],
+      "author_review_required": true,
+      "why": "Core terminology recall for a key descriptor."
+    },
+    {
+      "candidate_id": "mc_2",
+      "unit_id": 1,
+      "chunk_id": "chunk_1",
+      "card_type": "contrast_pair",
+      "priority": "high",
+      "prompt_seed": "Differentiate: 'Amorphous' vs. 'Fine pleomorphic' calcification morphology.",
+      "answer_seed": "Amorphous: vague, fine, no distinct shape. Fine pleomorphic: varied, fine, sharply defined crystals.",
+      "anchors": [
+        "calcification",
+        "morphology"
+      ],
+      "author_review_required": true,
+      "why": "Tests fine discrimination between two suspicious calcification types."
+    },
+    {
+      "candidate_id": "mc_3",
+      "unit_id": 2,
+      "chunk_id": "chunk_2",
+      "card_type": "cloze",
+      "priority": "high",
+      "prompt_seed": "Category C breast density is defined as 'heterogeneously dense, which may ______ small masses.'",
+      "answer_seed": "obscure",
+      "anchors": [
+        "obscure",
+        "mask"
+      ],
+      "author_review_required": true,
+      "why": "Ensures precise recall of the official BI-RADS phrasing."
+    },
+    {
+      "candidate_id": "mc_4",
+      "unit_id": 3,
+      "chunk_id": "chunk_2",
+      "card_type": "numeric_anchor",
+      "priority": "medium",
+      "prompt_seed": "What is the approximate odds ratio for breast cancer in heterogeneously dense (Category C) breasts vs. scattered fibroglandular density?",
+      "answer_seed": "1.4",
+      "anchors": [
+        "odds ratio",
+        "risk"
+      ],
+      "author_review_required": true,
+      "why": "Anchors a key quantitative risk statistic."
+    },
+    {
+      "candidate_id": "mc_5",
+      "unit_id": 5,
+      "chunk_id": "chunk_4",
+      "card_type": "fact_recall",
+      "priority": "high",
+      "prompt_seed": "As of which date is breast density reporting mandated by the FDA?",
+      "answer_seed": "September 2024",
+      "anchors": [
+        "FDA",
+        "mandate"
+      ],
+      "author_review_required": true,
+      "why": "Tests knowledge of a critical regulatory requirement."
+    }
+  ],
+  "report_blocks_version": "1.0",
+  "report_blocks": [
+    {
+      "id": "rb_5",
+      "type": "toc",
+      "anchor": "toc",
+      "title": "Contents",
+      "body": {
+        "items": [
+          {
+            "label": "Educational Units Overview",
+            "anchor": "units"
+          },
+          {
+            "label": "Task Type Progression Suitability",
+            "anchor": "progression"
+          },
+          {
+            "label": "Authoring Routes",
+            "anchor": "routes"
+          }
+        ]
+      }
+    },
+    {
+      "id": "rb_2",
+      "type": "section",
+      "body": {},
+      "title": "Educational Units Overview",
+      "anchor": "units",
+      "collapsible": true,
+      "refs": {
+        "unit_ids": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ]
+      }
+    },
+    {
+      "id": "rb_3",
+      "type": "progression_matrix",
+      "body": {
+        "rows": [
+          {
+            "task_type": "TEST",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "OPEN_ANSWER",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "SEQUENCE",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "CLICK_TEXT",
+            "suitability": "high",
+            "show_level_roles": false,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "CLICK_WORDS",
+            "suitability": "high",
+            "show_level_roles": false,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "CLICK",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          },
+          {
+            "task_type": "DRAW",
+            "suitability": "high",
+            "show_level_roles": true,
+            "show_iterative_notes": true
+          }
+        ]
+      },
+      "title": "Task Type Progression Suitability",
+      "anchor": "progression"
+    },
+    {
+      "id": "rb_4",
+      "type": "section",
+      "body": {},
+      "title": "Authoring Routes",
+      "anchor": "routes",
+      "collapsible": true
+    },
+    {
+      "id": "rb_5",
+      "type": "callout",
+      "body": {
+        "variant": "tip",
+        "text": "This material contains 16 illustrative mammography figures (DM/SM views) for density categories A-D. To assess visual recognition (Unit 4), you must manually create CLICK (point to correct category) or DRAW (outline dense areas) tasks in the editor using these images. Automated text-based generation cannot create these image-interaction tasks."
+      },
+      "title": "Visual Content Requires Manual Authoring",
+      "anchor": "visual_note"
+    }
+  ],
+  "report_lint": {
+    "verbosity_risk": "medium",
+    "duplicate_content_signals": 0,
+    "fallback_renderer_recommended": true
+  }
+}
