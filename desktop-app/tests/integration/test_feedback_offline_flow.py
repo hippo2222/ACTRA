@@ -223,7 +223,8 @@ def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_pat
     feedback_dir_ref[0] = tmp_path
     _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
 
-    ticket = server._build_feedback_ticket(  # type: ignore[attr-defined]
+    # Use mock helpers instead of real server functions
+    ticket = _mock_misc_helpers["build_feedback_ticket"](
         {
             "type": "bug",
             "severity": "medium",
@@ -234,7 +235,7 @@ def test_feedback_retry_pending_sends_queued_ticket(client, monkeypatch, tmp_pat
         },
         user_id=user_id,
     )
-    server._save_feedback_ticket(ticket)  # type: ignore[attr-defined]
+    _mock_misc_helpers["save_feedback_ticket"](ticket)
 
     _mock_misc_helpers["notify_feedback_via_email"] = lambda *_args, **_kwargs: {"sent": True}
 
