@@ -61,7 +61,13 @@ def test_ui_main_serves_current_mainscreen_html(client, tmp_path, monkeypatch):
 
 
 def test_should_welcome_onboarding_when_no_users(client, monkeypatch):
-    monkeypatch.setattr(server, "user_service", _DummyUserService(users=[]))
+    # After refactoring, misc_routes uses _mh() helper which gets from _extra["misc_helpers"]
+    import routes._context as ctx_module
+    dummy_service = _DummyUserService(users=[])
+    misc_helpers = {"user_service": dummy_service}
+    existing_extra = getattr(ctx_module, "_extra", {})
+    existing_extra["misc_helpers"] = misc_helpers
+    monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/api/users/should-welcome")
     assert response.status_code == 200
@@ -78,7 +84,13 @@ def test_should_welcome_login_for_single_password_profile(client, monkeypatch):
         has_password=True,
         require_password_on_login=True,
     )
-    monkeypatch.setattr(server, "user_service", _DummyUserService(users=[user]))
+    # After refactoring, misc_routes uses _mh() helper which gets from _extra["misc_helpers"]
+    import routes._context as ctx_module
+    dummy_service = _DummyUserService(users=[user])
+    misc_helpers = {"user_service": dummy_service}
+    existing_extra = getattr(ctx_module, "_extra", {})
+    existing_extra["misc_helpers"] = misc_helpers
+    monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/api/users/should-welcome")
     assert response.status_code == 200
@@ -96,7 +108,13 @@ def test_should_auto_select_single_profile_without_login_password(client, monkey
         has_password=False,
         require_password_on_login=False,
     )
-    monkeypatch.setattr(server, "user_service", _DummyUserService(users=[user]))
+    # After refactoring, misc_routes uses _mh() helper which gets from _extra["misc_helpers"]
+    import routes._context as ctx_module
+    dummy_service = _DummyUserService(users=[user])
+    misc_helpers = {"user_service": dummy_service}
+    existing_extra = getattr(ctx_module, "_extra", {})
+    existing_extra["misc_helpers"] = misc_helpers
+    monkeypatch.setattr(ctx_module, "_extra", existing_extra)
 
     response = client.get("/api/users/should-welcome")
     assert response.status_code == 200
