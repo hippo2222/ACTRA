@@ -17,6 +17,14 @@ def _mock_misc_helpers(monkeypatch):
     """Mock misc_helpers for update check routes after refactoring."""
     import routes._context as ctx_module
     
+    def build_update_status_mock(force=False):
+        """Default mock that returns 'not configured' status."""
+        return {
+            "manifest_url_configured": False,
+            "update_available": False,
+            "reason": "not_configured",
+        }
+    
     misc_helpers = {
         "env_bool": lambda key, default: default,
         "update_manifest_url": lambda: "",
@@ -26,6 +34,7 @@ def _mock_misc_helpers(monkeypatch):
         "get_app_version": lambda: "1.0.0",
         "fetch_update_manifest": lambda *args, **kwargs: {},
         "manifest_url_requires_internet": lambda url: True,
+        "build_update_status": build_update_status_mock,
     }
     
     existing_extra = getattr(ctx_module, "_extra", {})
@@ -60,14 +69,14 @@ def test_update_check_returns_not_configured_when_manifest_missing(client, monke
 def test_update_check_reports_update_available(client, monkeypatch, tmp_path, _mock_misc_helpers):
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.setenv("ACTRA_UPDATE_MANIFEST_URL", "https://updates.example.com/latest.json")
-    _mock_misc_helpers["update_manifest_url"] = lambda: "https://updates.example.com/latest.json"
-    _mock_misc_helpers["update_cache_path"] = lambda: tmp_path / "update_check_cache.json"
-    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
-    _mock_misc_helpers["get_app_version"] = lambda: "1.0.0"
-    _mock_misc_helpers["fetch_update_manifest"] = lambda *_args, **_kwargs: {
+    
+    _mock_misc_helpers["build_update_status"] = lambda force=False: {
+        "manifest_url_configured": True,
+        "update_available": True,
         "latest_version": "1.1.0",
         "download_url": "https://updates.example.com/ACTRA-1.1.0.exe",
         "notes_url": "https://updates.example.com/notes/1.1.0",
+        "reason": "update_available",
     }
 
     resp = client.get("/api/update/check?force=1")
@@ -84,16 +93,27 @@ def test_update_check_returns_offline_with_cache_fallback(client, monkeypatch, t
     cache_path = tmp_path / "update_check_cache.json"
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.setenv("ACTRA_UPDATE_MANIFEST_URL", "https://updates.example.com/latest.json")
-    _mock_misc_helpers["update_manifest_url"] = lambda: "https://updates.example.com/latest.json"
-    _mock_misc_helpers["update_cache_path"] = lambda: cache_path
-    _mock_misc_helpers["get_app_version"] = lambda: "1.0.0"
-    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
-    _mock_misc_helpers["fetch_update_manifest"] = lambda *_args, **_kwargs: {"latest_version": "1.2.0"}
+    
+    # First call online
+    _mock_misc_helpers["build_update_status"] = lambda force=False: {
+        "manifest_url_configured": True,
+        "update_available": True,
+        "latest_version": "1.2.0",
+        "reason": "update_available",
+    }
 
     first = client.get("/api/update/check?force=1")
     assert first.status_code == 200
 
-    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: False
+    # Second call offline with cache
+    _mock_misc_helpers["build_update_status"] = lambda force=False: {
+        "manifest_url_configured": True,
+        "update_available": True,
+        "from_cache": True,
+        "latest_version": "1.2.0",
+        "reason": "offline_cached",
+    }
+    
     second = client.get("/api/update/check?force=1")
     assert second.status_code == 200
     data = second.get_json()
@@ -105,14 +125,14 @@ def test_update_check_returns_offline_with_cache_fallback(client, monkeypatch, t
 def test_update_check_uses_local_config_manifest_without_internet(client, monkeypatch, tmp_path, _mock_misc_helpers):
     monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
     monkeypatch.delenv("ACTRA_UPDATE_MANIFEST_URL", raising=False)
-    local_manifest_path = str(tmp_path / "update_manifest.json")
-    _mock_misc_helpers["configured_update_manifest_url_from_config"] = lambda: local_manifest_path
-    _mock_misc_helpers["update_manifest_url"] = lambda: local_manifest_path
-    _mock_misc_helpers["update_cache_path"] = lambda: tmp_path / "update_check_cache.json"
-    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: False
-    _mock_misc_helpers["get_app_version"] = lambda: "1.0.0"
-    _mock_misc_helpers["fetch_update_manifest"] = lambda *_args, **_kwargs: {"latest_version": "1.0.0"}
-    _mock_misc_helpers["manifest_url_requires_internet"] = lambda url: False
+    
+    _mock_misc_helpers["build_update_status"] = lambda force=False: {
+        "manifest_url_configured": True,
+        "manifest_requires_internet": False,
+        "update_available": False,
+        "latest_version": "1.0.0",
+        "reason": "up_to_date",
+    }
 
     resp = client.get("/api/update/check?force=1")
     assert resp.status_code == 200
