@@ -30,5 +30,13 @@
     "skipped": 0,
     "errors": 0,
     "rollback": false
+  },
+  {
+    "timestamp": "2026-03-03T01:20:20.320009",
+    "archive": "tmpzdk4nld2.zip",
+    "imported": 1,
+    "skipped": 0,
+    "errors": 0,
+    "rollback": false
   }
 ]

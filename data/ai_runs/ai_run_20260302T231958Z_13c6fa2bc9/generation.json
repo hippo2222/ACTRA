@@ -1,0 +1,243 @@
+{
+  "run_id": "ai_run_20260302T231958Z_13c6fa2bc9",
+  "created_at": "2026-03-02T23:20:06Z",
+  "provider_model": "mock",
+  "material_stats": {
+    "word_count": 120,
+    "char_count": 1100,
+    "language": "ru"
+  },
+  "language_preferences": {
+    "mode": "same_as_material",
+    "requested": null,
+    "effective": "ru",
+    "translation_warning": null
+  },
+  "request": {
+    "tasks_to_generate": [
+      {
+        "task_type": "TEST",
+        "count": 3,
+        "educational_unit_ids": []
+      },
+      {
+        "task_type": "CLICK_TEXT",
+        "count": 1,
+        "educational_unit_ids": []
+      },
+      {
+        "task_type": "OPEN_ANSWER",
+        "count": 1,
+        "educational_unit_ids": []
+      }
+    ]
+  },
+  "summary": {
+    "total_generated": 5,
+    "total_valid": 2,
+    "total_warnings": 3,
+    "total_errors": 0,
+    "by_type": {
+      "test": 3,
+      "click_text": 1,
+      "open_answer": 1
+    },
+    "quality": {
+      "material_language": "ru",
+      "expected_output_language": "ru",
+      "duplicate_groups": 1,
+      "duplicate_tasks": 2,
+      "language_mismatch_warnings": 1,
+      "sequence_grounding_warnings": 0,
+      "source_grounding_checked_tasks": 0,
+      "source_grounding_warnings": 0,
+      "semantic_duplicate_groups": 1,
+      "semantic_duplicate_tasks": 1,
+      "warning_fields_breakdown": {
+        "duplicate_task": 2,
+        "language_mismatch": 1,
+        "semantic_duplicate_task": 1
+      },
+      "total_tasks": 5
+    }
+  },
+  "results": [
+    {
+      "task_type": "TEST",
+      "status": "success",
+      "provider_used": "mock",
+      "provider_chain_attempts": [
+        {
+          "provider": "mock",
+          "model": "mock",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "mock",
+          "model": "mock",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 2
+        },
+        {
+          "provider": "mock",
+          "model": "mock",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 3
+        },
+        {
+          "provider": "mock",
+          "model": "mock",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "TEST",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [],
+      "educational_units_context": [],
+      "generation_time_ms": 4006,
+      "parsing_errors": [
+        "Overgeneration trimmed for TEST: requested 3, kept 3, dropped 1.",
+        "Overgeneration trimmed for TEST after cleanup repair: requested 3, kept 3, dropped 2.",
+        "Overgeneration trimmed for TEST after semantic cleanup: requested 3, kept 3, dropped 2."
+      ],
+      "tasks": [
+        {
+          "name": "Задание - Test 1",
+          "type": "test",
+          "status": "warning",
+          "hash": "a633980faa833264d328d6b9561863ae43c5c7af1c85b22a8bdc6140944f82c2",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Похоже на дубликат другого сгенерированного задания",
+              "field": "duplicate_task"
+            }
+          ],
+          "ai_meta": {
+            "educational_unit_ids": []
+          }
+        },
+        {
+          "name": "Задание - Test 2",
+          "type": "test",
+          "status": "valid",
+          "hash": "bca490bef96e2198f2f2a781e24788fb33a4d3e7c37c69086299368d3a0a11bb",
+          "validation_issues": [],
+          "ai_meta": {
+            "educational_unit_ids": []
+          }
+        },
+        {
+          "name": "Задание - Test 1",
+          "type": "test",
+          "status": "warning",
+          "hash": "a633980faa833264d328d6b9561863ae43c5c7af1c85b22a8bdc6140944f82c2",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Task is semantically too similar to another generated task; consider replacing one for better coverage/diversity.",
+              "field": "semantic_duplicate_task"
+            },
+            {
+              "severity": "warning",
+              "message": "Похоже на дубликат другого сгенерированного задания",
+              "field": "duplicate_task"
+            }
+          ],
+          "ai_meta": {
+            "semantic_duplicate": {
+              "candidate": true,
+              "score": 1.0,
+              "group_size": 2,
+              "similar_to_index": 0,
+              "similar_to_name": "Задание - Test 1"
+            },
+            "educational_unit_ids": []
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "CLICK_TEXT",
+      "status": "success",
+      "provider_used": "mock",
+      "provider_chain_attempts": [
+        {
+          "provider": "mock",
+          "model": "mock",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "CLICK_TEXT",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [],
+      "educational_units_context": [],
+      "generation_time_ms": 1003,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Клик - Test 1",
+          "type": "click",
+          "status": "warning",
+          "hash": "e006dfdcf653b9d82b5097f416c06430a890dcde896cdf219e5ca5d1d6000e68",
+          "validation_issues": [
+            {
+              "severity": "warning",
+              "message": "Возможное несоответствие языка задания ожидаемому языку генерации",
+              "field": "language_mismatch"
+            }
+          ],
+          "ai_meta": {
+            "educational_unit_ids": []
+          }
+        }
+      ]
+    },
+    {
+      "task_type": "OPEN_ANSWER",
+      "status": "success",
+      "provider_used": "mock",
+      "provider_chain_attempts": [
+        {
+          "provider": "mock",
+          "model": "mock",
+          "attempt": 1,
+          "status": "success",
+          "stage": "generate",
+          "task_type": "OPEN_ANSWER",
+          "requested_count": 1
+        }
+      ],
+      "educational_unit_ids": [],
+      "educational_units_context": [],
+      "generation_time_ms": 1001,
+      "parsing_errors": [],
+      "tasks": [
+        {
+          "name": "Открытый ответ - Test 1",
+          "type": "open_answer",
+          "status": "valid",
+          "hash": "16a550cb5cfc09a7776fb7b89ad5fa57f7fd9c5462d02442d1b6c8687c3bcbac",
+          "validation_issues": [],
+          "ai_meta": {
+            "educational_unit_ids": []
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -5,10 +5,31 @@ Loads configuration from config.json and provides default values.
 
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
+
+
+def _get_application_dir() -> Path:
+    """
+    Определяет корневую директорию приложения.
+    
+    - В режиме разработки: возвращает корень проекта (parent parent от __file__)
+    - В PyInstaller: возвращает директорию, где находится .exe
+    
+    Returns:
+        Path: Корневая директория приложения
+    """
+    # Проверяем, запущено ли через PyInstaller
+    if getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        # PyInstaller: sys.executable указывает на ACTRA.exe
+        # Возвращаем директорию, где находится .exe
+        return Path(sys.executable).parent
+    else:
+        # Режим разработки: common/config_loader.py -> common/ -> project_root/
+        return Path(__file__).parent.parent
 
 
 def _resolve_path_with_packaged_data_fallback(base_dir: Path, raw_path: str) -> Path:
@@ -47,19 +68,17 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         >>> config = load_config()
         >>> data_dir = Path(config['data_root'])
     """
-    # Определяем корневую директорию проекта
-    # common/config_loader.py -> common/ -> project_root/
-    current_file = Path(__file__)
-    project_root = current_file.parent.parent
+    # Определяем корневую директорию приложения (работает и в dev, и в PyInstaller)
+    app_dir = _get_application_dir()
     
     # Определяем путь к config.json и базовую директорию для относительных путей
     if config_path is None:
-        config_file = project_root / "config.json"
-        base_dir = project_root
+        config_file = app_dir / "config.json"
+        base_dir = app_dir
     else:
         config_file = Path(config_path)
         if not config_file.is_absolute():
-            config_file = (project_root / config_file).resolve()
+            config_file = (app_dir / config_file).resolve()
         base_dir = config_file.parent
     
     # Значения по умолчанию
