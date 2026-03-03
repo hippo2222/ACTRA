@@ -1488,6 +1488,7 @@
     async function loadQuickAccess() {
         const container = document.getElementById("quick-access-list");
         const emptyEl = document.getElementById("quick-access-empty");
+        const showAllBtn = document.getElementById("quick-access-show-all");
         if (!container) return;
 
         const [{ ok, data }, sessionsResp] = await Promise.all([
@@ -1540,15 +1541,18 @@
         if (!ok) {
             container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-muted">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="text-xs text-primary hover:underline mt-1">Попробовать снова</button></div>`;
             if (emptyEl) emptyEl.hidden = true;
+            if (showAllBtn) showAllBtn.hidden = false;
             return;
         }
         if (!data.items?.length) {
             container.innerHTML = "";
             if (emptyEl) emptyEl.hidden = false;
+            if (showAllBtn) showAllBtn.hidden = true;
             return;
         }
 
         if (emptyEl) emptyEl.hidden = true;
+        if (showAllBtn) showAllBtn.hidden = false;
 
         container.innerHTML = data.items.map(item => {
             const complex = item.complex;

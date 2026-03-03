@@ -134,90 +134,91 @@
             </div>
         </div>
 
-        <main class="flex-1 overflow-y-auto p-2 md:p-3 lg:p-4 flex justify-center">
-            <div class="w-full max-w-[1280px] flex flex-col gap-3 main-page-enter"
+        <main class="flex-1 overflow-y-auto p-2 md:p-3 lg:p-3 flex justify-center">
+            <div class="w-full max-w-[1280px] flex flex-col gap-2 main-page-enter"
                 style="transform-origin: top center;">
-                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-                    <div class="lg:col-span-8 flex flex-col gap-4">
-                        <div class="flex flex-col gap-4">
-                            <div class="interactive-card relative overflow-hidden rounded-2xl bg-surface-1 border border-border-strong shadow-md group cursor-pointer h-56 flex flex-col md:flex-row"
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-3 items-start">
+                    <div class="lg:col-span-8 flex flex-col gap-3">
+                        <div class="flex flex-col gap-3">
+                            <div class="interactive-card relative overflow-hidden rounded-2xl bg-surface-1 border border-border-strong shadow-md group cursor-pointer h-48 flex flex-col md:flex-row"
                                 role="link" tabindex="0" data-nav="/ui/complexes">
-                                <div class="w-full md:w-5/12 h-48 md:h-full bg-cover bg-center relative"
+                                <div class="w-full md:w-5/12 h-40 md:h-full bg-cover bg-center relative"
                                     style="background-image: url('/assets/images/dashboard/main_training_bg.jpg');">
                                     <div
                                         class="absolute inset-0 bg-scrim-light transition-all duration-300 group-hover:bg-transparent">
                                     </div>
                                 </div>
-                                <div class="p-5 md:p-6 flex flex-col justify-center flex-1 relative bg-surface-1">
-                                    <div class="mb-3">
+                                <div class="p-4 md:p-5 flex flex-col justify-center flex-1 relative bg-surface-1">
+                                    <div class="mb-2">
                                         <span
-                                            class="inline-flex items-center rounded-md bg-bg-secondary px-2.5 py-1 text-xs font-bold text-primary ring-1 ring-inset ring-primary-light mb-3 tracking-wide uppercase">Основное
+                                            class="inline-flex items-center rounded-md bg-bg-secondary px-2.5 py-0.5 text-xs font-bold text-primary ring-1 ring-inset ring-primary-light mb-2 tracking-wide uppercase">Основное
                                             обучение</span>
                                         <h3
-                                            class="text-2xl font-extrabold text-text-main mb-2 group-hover:text-primary transition-colors">
+                                            class="text-xl font-extrabold text-text-main mb-1.5 group-hover:text-primary transition-colors">
                                             Проходить комплексы</h3>
-                                        <p class="text-text-secondary text-base leading-normal">Начните
+                                        <p class="text-text-secondary text-sm leading-snug">Начните
                                             тренировку с готовыми комплексами. Анализируйте снимки и ставьте диагнозы в
                                             реальном времени.</p>
                                     </div>
                                     <button
-                                        class="flex w-fit items-center gap-2.5 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-primary-fg shadow-lg shadow-primary-light hover:bg-primary-hover hover:shadow-primary-light hover:-translate-y-0.5 transition-all duration-200"
+                                        class="flex w-fit items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-fg shadow-lg shadow-primary-light hover:bg-primary-hover hover:shadow-primary-light hover:-translate-y-0.5 transition-all duration-200"
                                         data-nav="/ui/complexes">
-                                        <span class="material-symbols-outlined text-[20px]">play_arrow</span>
+                                        <span class="material-symbols-outlined text-[18px]">play_arrow</span>
                                         Начать тренировку
                                     </button>
                                 </div>
                             </div>
-                            <div class="interactive-card rounded-xl bg-surface-2 border border-border-strong p-5 md:p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 cursor-pointer group hover:bg-surface-1 transition-colors"
+                            <div class="interactive-card rounded-xl bg-surface-2 border border-border-strong p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 cursor-pointer group hover:bg-surface-1 transition-colors"
                                 role="link" tabindex="0" data-nav="/ui/complexes/create">
-                                <div class="flex items-start gap-5">
+                                <div class="flex items-start gap-3">
                                     <div
-                                        class="flex h-14 w-14 flex-none items-center justify-center rounded-xl bg-surface-1 text-primary shadow-sm group-hover:scale-110 transition-transform duration-200">
-                                        <span class="material-symbols-outlined text-[28px]">edit_document</span>
+                                        class="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-surface-1 text-primary shadow-sm group-hover:scale-110 transition-transform duration-200">
+                                        <span class="material-symbols-outlined text-[24px]">edit_document</span>
                                     </div>
                                     <div>
                                         <h3
-                                            class="text-xl font-bold text-text-main group-hover:text-primary transition-colors">
+                                            class="text-lg font-bold text-text-main group-hover:text-primary transition-colors">
                                             Редактор комплексов</h3>
-                                        <p class="text-text-secondary mt-1">Создавайте и управляйте
+                                        <p class="text-text-secondary text-sm mt-0.5">Создавайте и управляйте
                                             собственными учебными материалами.</p>
                                     </div>
                                 </div><button
-                                    class="flex items-center gap-2 whitespace-nowrap rounded-lg border border-border-strong bg-surface-1 px-5 py-2.5 text-sm font-semibold text-text-main hover:bg-surface-2 hover:text-primary transition-all"
+                                    class="flex items-center gap-2 whitespace-nowrap rounded-lg border border-border-strong bg-surface-1 px-4 py-2 text-sm font-semibold text-text-main hover:bg-surface-2 hover:text-primary transition-all"
                                     data-nav="/ui/complexes/create">Открыть редактор <span
                                         class="material-symbols-outlined text-[18px]">arrow_forward</span></button>
                             </div>
                         </div>
-                        <div class="flex flex-col gap-4">
+                        <div class="flex flex-col gap-3" id="quick-access-section">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-lg font-bold text-text-main flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-text-muted">history</span>Быстрый доступ
+                                <h3 class="text-base font-bold text-text-main flex items-center gap-2">
+                                    <span class="material-symbols-outlined text-text-muted text-[20px]">history</span>Быстрый доступ
                                 </h3><button
                                     class="text-sm font-medium text-text-main hover:text-primary-hover hover:underline transition-colors"
-                                    onclick="window.navigateWithTransition('/ui/complexes')">Показать
+                                    onclick="window.navigateWithTransition('/ui/complexes')" id="quick-access-show-all">Показать
                                     все</button>
                             </div>
                             <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm divide-y divide-border-subtle overflow-hidden"
                                 id="quick-access-list"></div>
-                            <div class="bg-surface-1 rounded-xl border border-dashed border-border-subtle p-6 text-center"
-                                id="quick-access-empty" hidden>
-                                <div class="flex flex-col items-center gap-2"><span
-                                        class="material-symbols-outlined text-text-muted">bookmark</span>
-                                    <div class="text-sm font-semibold text-text-main">Пока нет
-                                        быстрых комплексов</div>
-                                    <div class="text-xs text-text-secondary">Закрепляйте комплексы или
-                                        откройте любой комплекс — он появится здесь.</div>
+                            <div class="bg-surface-1 rounded-xl border border-dashed border-border-subtle p-8 text-center" id="quick-access-empty" hidden>
+                                <div class="flex flex-col items-center gap-3">
+                                    <div class="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-text-muted text-[40px]">bookmark</span>
+                                    </div>
+                                    <div>
+                                        <div class="text-base font-bold text-text-main mb-1">Пока нет быстрых комплексов</div>
+                                        <div class="text-sm text-text-secondary max-w-xs mx-auto">Закрепляйте комплексы или откройте любой комплекс — он появится здесь</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="lg:col-span-4 flex flex-col gap-3">
-                        <div class="bg-surface-1 rounded-xl shadow-sm border border-border-strong p-3 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
+                    <div class="lg:col-span-4 flex flex-col gap-2.5">
+                        <div class="bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
                             id="calendarCard" role="link" tabindex="0" data-nav="/ui/calendar">
                             <!-- Header with Streak -->
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="font-bold text-text-main flex items-center gap-2"><span
-                                        class="material-symbols-outlined text-primary text-[20px]">calendar_month</span>Календарь
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5"><span
+                                        class="material-symbols-outlined text-primary text-[18px]">calendar_month</span>Календарь
                                 </h3>
                                 <div class="flex items-center gap-1 px-2 py-0.5 bg-primary-lighter rounded-full"
                                     id="calendarStreak"><span
@@ -281,12 +282,12 @@
                             </div>
                         </div>
                         <!-- Microcards Card (M9) -->
-                        <div class="bg-surface-1 rounded-xl shadow-sm border border-border-strong p-3 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
+                        <div class="bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
                             id="microcardsCard" role="link" tabindex="0" data-nav="/ui/microcards">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="font-bold text-text-main flex items-center gap-2">
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5">
                                     <span
-                                        class="material-symbols-outlined text-primary text-[20px]">style</span>Микрокарточки
+                                        class="material-symbols-outlined text-primary text-[18px]">style</span>Микрокарточки
                                 </h3>
                                 <div class="flex items-center gap-1 px-2 py-0.5 bg-primary-lighter rounded-full"
                                     id="microcardsDueBadge">
@@ -362,11 +363,11 @@
                             </div>
                         </div>
                         <a href="/ui/statistics"
-                            class="block bg-surface-1 rounded-xl shadow-sm border border-border-strong p-3 interactive-card cursor-pointer hover:border-primary hover:shadow-md transition-all main-side-enter"
+                            class="block bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 interactive-card cursor-pointer hover:border-primary hover:shadow-md transition-all main-side-enter"
                             id="statsCard">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-sm font-bold text-text-main flex items-center gap-2"><span
-                                        class="material-symbols-outlined text-accent text-[18px]">bar_chart</span>Статистика
+                            <div class="flex items-center justify-between mb-1.5">
+                                <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5"><span
+                                        class="material-symbols-outlined text-accent text-[16px]">bar_chart</span>Статистика
                                 </h3>
                                 <div class="flex bg-bg-secondary rounded-lg p-0.5" onclick="event.preventDefault()">
                                     <button
