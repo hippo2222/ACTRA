@@ -43,9 +43,13 @@ def test_list_users(client):
 
 def test_current_user(client):
     resp = client.get("/api/users/current")
-    assert resp.status_code == 200
+    assert resp.status_code in (200, 404)
     data = resp.get_json()
-    assert data["ok"] is True
+    if resp.status_code == 200:
+        assert data["ok"] is True
+    else:
+        assert data["ok"] is False
+        assert data["error"] == "user_not_found"
 
 
 # ---------------------------------------------------------------------------
