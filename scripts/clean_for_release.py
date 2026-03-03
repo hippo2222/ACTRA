@@ -88,7 +88,6 @@ DATA_DIRS_TO_DELETE = []
 DATA_DIRS_TO_WIPE_CONTENTS = [
     "data/images",
     "data/complexes/history",
-    "data/avatars",
     "data/users",
     "data/user_calendar",
     "data/feedback/tickets",
