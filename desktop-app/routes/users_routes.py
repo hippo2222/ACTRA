@@ -8,6 +8,9 @@ Endpoints:
 - POST   /api/users/update           - Update user profile
 - POST   /api/users/verify-password  - Verify user password
 - POST   /api/users/delete           - Delete user profile
+- GET    /api/users/ai-keys          - Get current user AI keys (masked)
+- POST   /api/users/ai-keys          - Save AI keys for current user
+- POST   /api/users/ai-keys/validate - Validate a single AI key
 - GET    /api/assets/avatars         - List available avatar files
 - GET    /api/assets/avatars/<path>  - Serve avatar image
 """
@@ -349,6 +352,169 @@ def delete_user_profile() -> Any:
     except Exception as exc:
         logger.exception("[HTTP] Failed to delete user profile: %s", exc)
         return jsonify({"ok": False, "error": "delete_failed"}), 500
+
+
+# ---------------------------------------------------------------------------
+# AI Keys management
+# ---------------------------------------------------------------------------
+
+_ALLOWED_AI_PROVIDERS = {"openrouter", "gemini", "groq"}
+
+_PROVIDER_META = {
+    "openrouter": {
+        "label": "OpenRouter",
+        "hint": "Получите бесплатный ключ на openrouter.ai/keys",
+        "url": "https://openrouter.ai/keys",
+        "prefix": "sk-or-",
+    },
+    "gemini": {
+        "label": "Google Gemini",
+        "hint": "Получите ключ на aistudio.google.com/apikey",
+        "url": "https://aistudio.google.com/apikey",
+        "prefix": "AI",
+    },
+    "groq": {
+        "label": "Groq",
+        "hint": "Получите ключ на console.groq.com/keys",
+        "url": "https://console.groq.com/keys",
+        "prefix": "gsk_",
+    },
+}
+
+
+def _mask_key(key: str) -> str:
+    """Mask an API key for safe display: show first 6 and last 4 chars."""
+    if not key or len(key) < 12:
+        return "****" if key else ""
+    return key[:6] + "****" + key[-4:]
+
+
+@users_bp.route("/api/users/ai-keys", methods=["GET"])
+def get_ai_keys() -> Any:
+    """Return current user's AI keys (masked) and provider metadata."""
+    try:
+        ctx = get_ctx()
+        user = ctx.user_service.get_user(ctx.user_id)
+        if not user:
+            return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+        ai_keys = (user.settings or {}).get("ai_keys", {})
+        if not isinstance(ai_keys, dict):
+            ai_keys = {}
+
+        masked = {}
+        has_any = False
+        for name in ("openrouter", "gemini", "groq"):
+            raw = str(ai_keys.get(name, "") or "").strip()
+            masked[name] = {
+                "masked": _mask_key(raw),
+                "has_key": bool(raw),
+                **_PROVIDER_META.get(name, {}),
+            }
+            if raw:
+                has_any = True
+
+        return jsonify({
+            "ok": True,
+            "providers": masked,
+            "has_any_key": has_any,
+        })
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to get AI keys: %s", exc)
+        return jsonify({"ok": False, "error": "ai_keys_get_failed"}), 500
+
+
+@users_bp.route("/api/users/ai-keys", methods=["POST"])
+def save_ai_keys() -> Any:
+    """Save AI keys to current user's profile settings and reload AI service."""
+    try:
+        ctx = get_ctx()
+        user_service = ctx.user_service
+        user = user_service.get_user(ctx.user_id)
+        if not user:
+            return jsonify({"ok": False, "error": "user_not_found"}), 404
+
+        payload = request.get_json(silent=True) or {}
+        keys_input = payload.get("keys", {})
+        if not isinstance(keys_input, dict):
+            return jsonify({"ok": False, "error": "invalid_payload"}), 400
+
+        # Sanitize: only keep allowed provider names, strip whitespace
+        clean_keys: Dict[str, str] = {}
+        for name in _ALLOWED_AI_PROVIDERS:
+            val = str(keys_input.get(name, "") or "").strip()
+            if val:
+                clean_keys[name] = val
+
+        # Save into user settings
+        if user.settings is None:
+            user.settings = {}
+        user.settings["ai_keys"] = clean_keys
+        success = user_service.update_user(user)
+        if not success:
+            return jsonify({"ok": False, "error": "save_failed"}), 500
+
+        # Reload AI service with new keys
+        from routes._context import get_ai_service
+        ai_svc = get_ai_service()
+        if ai_svc is not None:
+            if clean_keys:
+                ai_svc.apply_user_keys(clean_keys)
+            else:
+                ai_svc.reload_config()
+
+        return jsonify({
+            "ok": True,
+            "has_any_key": bool(clean_keys),
+            "configured_providers": list(clean_keys.keys()),
+        })
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to save AI keys: %s", exc)
+        return jsonify({"ok": False, "error": "ai_keys_save_failed"}), 500
+
+
+@users_bp.route("/api/users/ai-keys/validate", methods=["POST"])
+def validate_ai_key() -> Any:
+    """Validate a single AI key by pinging the provider."""
+    try:
+        payload = request.get_json(silent=True) or {}
+        provider_name = str(payload.get("provider", "")).strip()
+        api_key = str(payload.get("api_key", "")).strip()
+
+        if provider_name not in _ALLOWED_AI_PROVIDERS:
+            return jsonify({"ok": False, "error": "unknown_provider"}), 400
+        if not api_key:
+            return jsonify({"ok": False, "error": "empty_key"}), 400
+
+        from routes._context import get_ai_service
+        ai_svc = get_ai_service()
+        if ai_svc is None:
+            return jsonify({"ok": False, "error": "ai_service_unavailable"}), 503
+
+        # Build a temporary provider and ping it
+        from services.ai_generation_service import (
+            OpenRouterProvider, GeminiProvider, GroqProvider,
+        )
+        provider_classes = {
+            "openrouter": OpenRouterProvider,
+            "gemini": GeminiProvider,
+            "groq": GroqProvider,
+        }
+        cls = provider_classes.get(provider_name)
+        if cls is None:
+            return jsonify({"ok": False, "error": "unknown_provider"}), 400
+
+        provider = cls(api_key=api_key, timeout=15)
+        is_valid = provider.ping()
+
+        return jsonify({
+            "ok": True,
+            "valid": is_valid,
+            "provider": provider_name,
+        })
+    except Exception as exc:
+        logger.exception("[HTTP] AI key validation failed: %s", exc)
+        return jsonify({"ok": False, "error": "validation_failed"}), 500
 
 
 # ---------------------------------------------------------------------------

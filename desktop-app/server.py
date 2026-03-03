@@ -402,7 +402,27 @@ class AppContextHeadless:
         if self.calendar_service and hasattr(self.calendar_service, "switch_user"):
             self.calendar_service.switch_user(user_id)
 
+        # Reload AI service with user-specific API keys
+        self._apply_user_ai_keys(user)
+
         return True
+
+    def _apply_user_ai_keys(self, user) -> None:
+        """Reload AI service providers using keys from user profile settings."""
+        try:
+            from routes._context import get_ai_service
+            ai_svc = get_ai_service()
+            if ai_svc is None:
+                return
+            user_keys = ai_svc.get_user_ai_keys(user.settings or {})
+            if user_keys:
+                ai_svc.apply_user_keys(user_keys)
+                logger.info("[HTTP] AI service reconfigured with user keys for %s", user.user_id)
+            else:
+                ai_svc.reload_config()
+                logger.info("[HTTP] AI service reset to global config (no user keys) for %s", user.user_id)
+        except Exception as exc:
+            logger.warning("[HTTP] Failed to apply user AI keys: %s", exc)
 
     def _init_services(self) -> None:
         # Create EventBus for service communication
@@ -567,11 +587,23 @@ _file_processor = None
 if AI_SERVICE_AVAILABLE and AIGenerationService is not None:
     try:
         _ai_service = AIGenerationService(data_dir=_headless_app_ctx.data_dir)
+        
+        # Apply user-specific AI keys from current user profile (if available)
+        startup_user = _headless_app_ctx.user_service.get_user(_headless_app_ctx.user_id)
+        if startup_user and startup_user.settings:
+            user_keys = _ai_service.get_user_ai_keys(startup_user.settings)
+            if user_keys:
+                _ai_service.apply_user_keys(user_keys)
+                logger.info("[HTTP] AIGenerationService initialized with user keys for %s", _headless_app_ctx.user_id)
+            else:
+                logger.info("[HTTP] AIGenerationService initialized (no user keys, using global config)")
+        
         if _ai_service.is_configured:
-            logger.info("[HTTP] AIGenerationService initialized with %d provider(s)",
+            logger.info("[HTTP] AIGenerationService ready with %d provider(s)",
                         len(_ai_service._providers))
         else:
             logger.info("[HTTP] AIGenerationService loaded but no providers configured")
+        
         # FileProcessor uses config values from AIGenerationService
         if FileProcessor is not None:
             _file_processor = FileProcessor(
@@ -603,6 +635,7 @@ EDITOR_UI_DIR = FRONTEND_ROOT / "Editor"
 CALENDAR_UI_DIR = FRONTEND_ROOT / "Calendar"
 STATISTICS_UI_DIR = FRONTEND_ROOT / "statistics"
 MICROCARDS_UI_DIR = FRONTEND_ROOT / "Microcards"
+SETTINGS_UI_DIR = FRONTEND_ROOT / "Settings"
 ASSETS_DIR = FRONTEND_ROOT / "assets"
 
 
@@ -657,6 +690,7 @@ init_context(
         "CALENDAR_UI_DIR": CALENDAR_UI_DIR,
         "STATISTICS_UI_DIR": STATISTICS_UI_DIR,
         "MICROCARDS_UI_DIR": MICROCARDS_UI_DIR,
+        "SETTINGS_UI_DIR": SETTINGS_UI_DIR,
         "ASSETS_DIR": ASSETS_DIR,
     },
 )

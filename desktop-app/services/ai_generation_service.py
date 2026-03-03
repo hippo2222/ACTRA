@@ -2133,6 +2133,103 @@ class AIGenerationService:
         """Перезагрузить конфигурацию (например, после изменения ключей)."""
         self._load_config()
 
+    def apply_user_keys(self, user_ai_keys: Dict[str, str]) -> None:
+        """Apply user-provided API keys on top of the base config.
+
+        *user_ai_keys* is a dict like ``{"openrouter": "sk-...", "gemini": "...", "groq": "..."}``.
+        Only non-empty values are used.  Empty strings or missing keys are ignored.
+        If the user provides at least one valid key the service becomes ``is_configured``.
+        """
+        if not user_ai_keys or not isinstance(user_ai_keys, dict):
+            # No user keys — fall back to global config
+            self._load_config()
+            return
+
+        # Start from global config (or empty)
+        base_config = load_ai_config(self.data_dir) or {}
+        providers_cfg = dict(base_config.get("providers", {}))
+        fallback_order = base_config.get("fallback_order", ["openrouter", "gemini", "groq"])
+        timeout = base_config.get("timeout_seconds", 60)
+
+        # Merge user keys into providers config
+        for provider_name, api_key in user_ai_keys.items():
+            api_key = str(api_key or "").strip()
+            if not api_key:
+                continue
+            if provider_name not in providers_cfg:
+                providers_cfg[provider_name] = {}
+            providers_cfg[provider_name]["api_key"] = api_key
+            providers_cfg[provider_name]["enabled"] = True
+            # Ensure provider is in fallback order
+            if provider_name not in fallback_order:
+                fallback_order.append(provider_name)
+
+        # Rebuild providers list
+        self._config = base_config
+        self._config["providers"] = providers_cfg
+        self._config["fallback_order"] = fallback_order
+
+        # Update rate limits
+        rate_limits = self._config.get("rate_limits", {})
+        max_files = rate_limits.get("max_files_per_day", 3)
+        self._daily_tracker.max_files_per_day = max_files
+
+        self._providers = []
+        for name in fallback_order:
+            pcfg = providers_cfg.get(name, {})
+            if not pcfg.get("enabled", False):
+                continue
+            key = pcfg.get("api_key", "")
+            if not key:
+                continue
+            model = pcfg.get("model", "")
+            cls = _PROVIDER_CLASSES.get(name)
+            if cls is None:
+                continue
+
+            model_candidates: List[str] = []
+            if model:
+                model_candidates.append(str(model))
+            fallback_models = pcfg.get("fallback_models", [])
+            if isinstance(fallback_models, list):
+                for fm in fallback_models:
+                    fm_str = str(fm or "").strip()
+                    if fm_str and fm_str not in model_candidates:
+                        model_candidates.append(fm_str)
+            if not model_candidates:
+                model_candidates = [""]
+
+            for model_idx, model_name in enumerate(model_candidates, start=1):
+                if model_name:
+                    provider = cls(api_key=key, model=model_name, timeout=timeout)
+                else:
+                    provider = cls(api_key=key, timeout=timeout)
+                if len(model_candidates) > 1:
+                    provider.name = f"{name}:{model_idx}"
+                self._providers.append(provider)
+                logger.info(
+                    "[AI] User-key provider registered: %s (model=%s)",
+                    provider.name,
+                    provider.model,
+                )
+
+    @staticmethod
+    def get_user_ai_keys(user_settings: Dict[str, Any]) -> Dict[str, str]:
+        """Extract AI keys dict from user profile settings."""
+        ai_keys = user_settings.get("ai_keys", {})
+        if not isinstance(ai_keys, dict):
+            return {}
+        return {
+            k: str(v) for k, v in ai_keys.items()
+            if k in ("openrouter", "gemini", "groq") and v
+        }
+
+    @staticmethod
+    def has_user_ai_keys(user_settings: Dict[str, Any]) -> bool:
+        """Check if user has at least one non-empty AI key."""
+        keys = AIGenerationService.get_user_ai_keys(user_settings)
+        return any(v.strip() for v in keys.values())
+
     # ----- Provider chain tracing -----
 
     def _begin_provider_chain_trace(self) -> None:
