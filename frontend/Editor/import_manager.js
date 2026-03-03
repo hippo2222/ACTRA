@@ -5832,8 +5832,18 @@ text: Сердце человека состоит из [трёх] камер. �
                 </div>
 
                 ${aiUnavailable ? `
-                    <div class="mb-4 p-3 bg-surface-2 border border-border-strong rounded-lg text-xs text-text-main">
-                        AI-сервис сейчас недоступен. Повторное открытие ранее сохранённых анализов остаётся доступным.
+                    <div class="mb-4 p-4 bg-warning-lighter border border-warning-light rounded-lg">
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-warning text-[20px] mt-0.5">key_off</span>
+                            <div>
+                                <p class="text-sm font-semibold text-text-main mb-1">ИИ-генерация не настроена</p>
+                                <p class="text-xs text-text-secondary">Для запуска анализа необходимо указать API-ключ. Ранее сохранённые анализы остаются доступны.</p>
+                                <a href="/ui/settings" class="inline-flex items-center gap-1.5 mt-2 text-xs font-semibold text-primary hover:underline">
+                                    <span class="material-symbols-outlined text-[14px]">settings</span>
+                                    Настроить API-ключи
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 ` : ''}
 
@@ -6344,6 +6354,35 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     renderStep1AI(modules) {
+        // Show "no API keys" placeholder if AI is unavailable
+        if (this.aiStatus && this.aiStatus.ai_available === false) {
+            return `
+                <div class="space-y-5 animate-fade-in">
+                    <div class="p-6 bg-surface-2 border-2 border-dashed border-border-subtle rounded-xl text-center">
+                        <div class="flex flex-col items-center gap-3 py-4">
+                            <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-warning-lighter">
+                                <span class="material-symbols-outlined text-warning text-[28px]">key_off</span>
+                            </div>
+                            <h4 class="text-base font-bold text-text-main">ИИ-генерация не настроена</h4>
+                            <p class="text-sm text-text-secondary max-w-md">
+                                Для работы ИИ-генерации заданий необходимо указать хотя бы один API-ключ
+                                в настройках. Рекомендуем начать с OpenRouter — бесплатный доступ к ИИ-моделям.
+                            </p>
+                            <a href="/ui/settings"
+                                class="mt-2 inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-fg font-semibold text-sm rounded-xl hover:brightness-110 transition-all shadow-sm">
+                                <span class="material-symbols-outlined text-[18px]">settings</span>
+                                Настроить API-ключи
+                            </a>
+                            <p class="text-xs text-text-disabled mt-1">
+                                Получите бесплатный ключ за минуту на
+                                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener"
+                                   class="text-primary hover:underline">openrouter.ai/keys</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
         const limitInfo = this.dailyLimit;
         const limitHtml = limitInfo ? `
             <div class="flex items-center gap-2 text-xs text-text-muted">

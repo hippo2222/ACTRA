@@ -385,6 +385,38 @@ def serve_microcards_file(filename: str) -> Any:
 
 
 # ---------------------------------------------------------------------------
+# Settings UI Routes
+# ---------------------------------------------------------------------------
+
+@static_bp.route("/ui/settings", methods=["GET"])
+@static_bp.route("/ui/settings/", methods=["GET"])
+def serve_settings_ui() -> Any:
+    """Serve the Settings page (AI keys, etc.)."""
+    dirs = _get_ui_dirs()
+    SETTINGS_UI_DIR = dirs.get("SETTINGS_UI_DIR")
+    if not SETTINGS_UI_DIR or not SETTINGS_UI_DIR.exists():
+        logger.error("[HTTP] SETTINGS_UI_DIR does not exist: %s", SETTINGS_UI_DIR)
+        return jsonify({"ok": False, "error": "settings_ui_not_found"}), 500
+
+    resp = send_from_directory(SETTINGS_UI_DIR, "settings.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
+
+
+@static_bp.route("/ui/settings/<path:filename>", methods=["GET"])
+def serve_settings_file(filename: str) -> Any:
+    """Serve Settings static files (CSS, JS)."""
+    dirs = _get_ui_dirs()
+    SETTINGS_UI_DIR = dirs.get("SETTINGS_UI_DIR")
+    if not SETTINGS_UI_DIR or not SETTINGS_UI_DIR.exists():
+        return jsonify({"ok": False, "error": "settings_ui_not_found"}), 500
+    return send_from_directory(SETTINGS_UI_DIR, filename)
+
+
+# ---------------------------------------------------------------------------
 # Assets
 # ---------------------------------------------------------------------------
 
