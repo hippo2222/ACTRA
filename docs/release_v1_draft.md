@@ -1,9 +1,14 @@
-# ACTRA v1.0.0 (Draft)
+# ACTRA v1.0.0
 
 ## What's included
 
 - Windows installer: `ACTRA-Setup.exe`
 - Portable build: `ACTRA.exe` (from `dist/ACTRA/`)
+
+## Release metadata
+
+- Release date: 2026-03-03
+- Build commit: `a6dbd0c`
 
 ## Packaging updates
 
@@ -14,13 +19,18 @@
 ## Checksums (SHA256)
 
 - `ACTRA-Setup.exe`  
-  `F7216970D5F6964B38C9A22090F060B4926E57724A70D9C58CE61FE7A637949F`
+  `3EA96CCE826F02870149D86754D5143DB16B4680AB2E615344D0EA3189C20F2B`
 
 - `ACTRA.exe`  
-  `C1E4F950E48B905782DFA69699402523DDCE8FA626496B9769D0A217B9B62B25`
+  `68072C300563256F56FF54A5E1A85ABF6F4CE0D03FEAF66AF31C57F26D245A61`
+
+## Verification summary
+
+- Release catalog validation passed (`modules=2`, `topics=2`, `tasks=6`, `complexes=2`, `theories=2`).
+- Quality gates passed: frontend lint, `black --check`, `mypy`, `flake8`, full `pytest`.
+- Portable build starts successfully.
+- Silent installer install/start/uninstall smoke test completed successfully.
 
 ## Notes
 
-- Build date: 2026-02-17.
 - Installer is configured to ask for install directory (`DisableDirPage=no`, `UsePreviousAppDir=no`).
-
