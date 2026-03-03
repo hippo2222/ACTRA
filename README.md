@@ -1,199 +1,370 @@
-# Radioproject (ACTRA) — EdTech-платформа активного обучения
+<div align="center">
 
-Radioproject (ACTRA) — инструмент для преобразования пассивного учебного контента (текстов и изображений) в интерактивные задания для активного запоминания.
+# ACTRA — Платформа Активного Обучения
 
-Платформа решает проблему низкой эффективности традиционного чтения в условиях «клипового мышления» и строится вокруг методологии «сразу применять знания на практике»: пользователь не просто читает материал, а сразу отрабатывает его через задания, сессии и систему повторений.
+**Превращаем пассивное чтение в интерактивную практику**
 
-Проект доменно-агностичен: может применяться в медицине, техническом обучении и других образовательных сценариях, где важны понимание, закрепление и перенос знаний в практику.
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.0-green?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![License](https://img.shields.io/badge/License-Apache_2.0-orange)](LICENSE)
+[![CI](https://github.com/hippo2222/ACTRA/actions/workflows/ci.yml/badge.svg)](https://github.com/hippo2222/ACTRA/actions/workflows/ci.yml)
+
+</div>
+
+---
+
+## О проекте
+
+**ACTRA** (Active Training) — это EdTech-платформа, которая трансформирует учебный контент (тексты, изображения, PDF-документы) в интерактивные задания для активного запоминания и отработки знаний на практике.
+
+### Проблема
+
+Традиционное чтение учебников — один из наименее эффективных методов обучения. В условиях «клипового мышления» студенты с трудом удерживают внимание на длинных текстах, а информация забывается через дни. Многократное перечитывание создаёт иллюзию знания, но не формирует реальные навыки.
+
+### Решение
+
+ACTRA реализует подход **«сразу применяй на практике»**: вместо пассивного чтения пользователь сразу отрабатывает материал через разнообразные интерактивные задания — клик по областям изображения, рисование контуров, тесты, сборка последовательностей, открытые ответы. Платформа включает адаптивную систему повторений, календарное планирование занятий и детальную статистику прогресса.
+
+### Для кого
+
+Проект **доменно-агностичен** — его можно применять в медицинском образовании (рентгенология, анатомия), техническом обучении, изучении языков и любых других сценариях, где важно не просто запомнить, а **понять, закрепить и перенести знания в практику**.
+
+---
 
 ## Ключевые возможности
 
-- Редактор контента и заданий (включая `click`, `draw`, `test`, `open_answer`, `sequence_assembly`, `error_detection`).
-- Тренажёр с сессионным прохождением задач и адаптивной логикой повторов (включая `daily_mix`).
-- Календарное планирование обучения: план на день, расписание, health score памяти, heatmap активности, rest days.
-- Конструктор комплексов/цепочек заданий с автосохранением, историей версий и восстановлением.
-- Импорт/экспорт заданий и комплексов через API и встроенные сервисы.
-- Статистика прогресса по попыткам, сессиям и освоению материала.
-- Два режима запуска: web (через Flask) и desktop (через `pywebview`).
-- Инфраструктурные функции для продакшена: логирование, crash dump, email-уведомления feedback, тесты `pytest` + `vitest`.
+### 🎯 Разнообразные типы заданий
 
-## Системные требования
+| Тип задания | Описание | Применение |
+|---|---|---|
+| **Click** | Клик по точке или области на изображении (точки, полигоны) | Анатомия, рентгенология, топография |
+| **Draw** | Рисование контуров и обводка областей на изображении | Обводка органов, контуры структур |
+| **Test** | Тестовые вопросы с одним или несколькими вариантами ответов | Теория, классификации, терминология |
+| **Open Answer** | Открытый текстовый ответ с оценкой по ключевым словам и морфологией | Описание снимков, свободные ответы |
+| **Sequence Assembly** | Сборка последовательности из перемешанных элементов | Алгоритмы, этапы процедур, протоколы |
+| **Error Detection** | Поиск и исправление ошибок в тексте | Редактура, внимательность к деталям |
 
-- **Python** 3.10+
-- **Node.js** 18+ (только для сборки CSS, не требуется в runtime)
-- **ОС:** Windows 10/11
+### 🤖 AI-генерация заданий
 
-## Быстрый старт (разработка)
+- **Автоматический анализ** загруженных документов (PDF, текст, изображения) с помощью LLM
+- **Генерация заданий** по проанализированному материалу — от тестовых вопросов до click-заданий
+- **Интеллектуальный импорт** сгенерированных заданий с валидацией и автоматической привязкой к теориям
+- **Пайплайн AI run** с сохранением артефактов: анализ → генерация → импорт, полный аудитный трейл каждого запуска
 
-```bash
-# 1. Клонировать репозиторий
-git clone <url> radioproject
-cd radioproject
+### 📚 Редактор заданий
 
-# 2. Создать виртуальное окружение
-python -m venv .venv
-.venv\Scripts\activate
+- Визуальный редактор для каждого типа задания с моментальным предпросмотром
+- **Click Editor** — расстановка точек и полигонов на изображении, настройка допусков и зон
+- **Draw Editor** — определение эталонных контуров для рисования
+- **Test / Open Answer / Sequence / Error Detection Editor** — создание теоретических заданий
+- Система **undo/redo**, автосохранение, drag & drop
+- Менеджер импорта заданий из внешних источников и AI-генерации
 
-# 3. Установить зависимости
-pip install -e ".[dev]"
+### 🔁 Тренажёр с адаптивными повторениями
 
-# 4. Собрать CSS (если ещё не собран)
-npm install
-npm run build:css
+- **Сессионное прохождение** — задания группируются в сессии с навигацией, прогрессом и таймером
+- **Адаптивная логика повторов** — задания, в которых допущены ошибки, повторяются чаще
+- **Daily Mix** — режим «ежедневная смесь», автоматически подбирающий задания для повторения на основе прогресса
+- **Microcards** — модуль быстрого повторения через компактные интерактивные карточки с аналитикой эффективности
 
-# 5. Запустить приложение (веб-режим для разработки)
-cd desktop-app
-python server.py
-# Откройте http://127.0.0.1:8000/ui/main в браузере
+### 📅 Календарь и планирование
 
-# 6. Запустить приложение (оконный режим)
-cd desktop-app
-python webview_launcher.py
+- Календарь занятий с расписанием тренировок и дней отдыха
+- **Health Score** памяти — индикатор «здоровья» усвоения каждой темы
+- **Heatmap активности** — визуализация активности по дням
+- Планирование нагрузки, учёт rest days
+
+### 🏗️ Комплексы заданий
+
+- Конструктор **комплексов (цепочек)** заданий с произвольной структурой
+- Привязка заданий к теоретическому материалу (theory link)
+- **Автосохранение** и **история версий** с возможностью восстановления
+- Импорт/экспорт комплексов в формате JSON через API
+
+### 📊 Статистика и аналитика
+
+- Прогресс по попыткам, сессиям и освоению материала
+- Статистика по каждому заданию, теме и комплексу
+- Динамика обучения во времени
+- Оценка сложности заданий (difficulty manager)
+
+### 🎨 Интерфейс и темы
+
+- Современный UI на основе **TailwindCSS** с адаптивной вёрсткой
+- Система **тем оформления** (светлые, тёмные, нейтральные палитры) с мгновенным переключением
+- Welcome-экран с анимированным логотипом и онбордингом
+- Контрастный аудитор для проверки доступности UI (WCAG)
+- Система уведомлений и профилей пользователей
+
+### ⚙️ Инфраструктура и качество
+
+- **CI/CD** — GitHub Actions: синтаксис-проверка Python, flake8, black, mypy, pytest (Python 3.10/3.11), vitest, lint фронтенда, валидация тем, проверка mojibake
+- **Тестирование** — `pytest` (бэкенд, 100+ тестов) + `vitest` (фронтенд) + Playwright (E2E)
+- **Crash dump** — периодическое сохранение состояния для восстановления после сбоев
+- **Обратная связь** — встроенный feedback с email-уведомлениями (SMTP, Proton Bridge)
+- **Авто-обновления** — проверка обновлений через GitHub Releases + манифест `latest.json`
+- **Watchdog** — мониторинг процессов и автоматическое восстановление
+- **Миграции данных** — версионированная система миграций для обновления структуры данных
+
+---
+
+## Архитектура
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                         Frontend                               │
+│   HTML / JS / TailwindCSS — SPA-like навигация                │
+│   MainScreen · Editor · S1 (Session) · Calendar · Statistics   │
+│   Microcards · Complexes · Welcome · Themes                   │
+└────────────────────────┬───────────────────────────────────────┘
+                         │ REST API (JSON)
+┌────────────────────────▼───────────────────────────────────────┐
+│                    Desktop-App (Flask)                          │
+│  ┌──────────┐  ┌──────────┐  ┌─────────────┐                  │
+│  │  Routes   │  │  Logic   │  │  Services   │                  │
+│  │ (15 mod.) │  │ (ctrl,   │  │ (evaluator, │                  │
+│  │           │  │  session, │  │  progress,  │                  │
+│  │           │  │  repo)   │  │  AI, import, │                  │
+│  │           │  │          │  │  storage...) │                  │
+│  └──────────┘  └──────────┘  └─────────────┘                  │
+│                    server.py · webview_launcher.py              │
+└────────────────────────┬───────────────────────────────────────┘
+                         │
+┌────────────────────────▼───────────────────────────────────────┐
+│                     Task System                                │
+│   Ядро: модели данных, типы заданий, парсеры, миграции         │
+└────────────────────────┬───────────────────────────────────────┘
+                         │
+┌────────────────────────▼───────────────────────────────────────┐
+│                      Data Layer                                │
+│   JSON-файлы: комплексы, теории, прогресс, AI runs, аватары    │
+└────────────────────────────────────────────────────────────────┘
 ```
 
-## Сборка релиза (Windows .exe)
+Приложение имеет **два режима запуска**:
+- **Web** — Flask HTTP-сервер, открывается в браузере (`http://127.0.0.1:8000/ui/main`)
+- **Desktop** — нативное окно через `pywebview`, тот же Flask-сервер работает внутри
 
-```bash
-# Установить PyInstaller
-pip install pyinstaller
-
-# Собрать
-python scripts/build_release.py
-
-# Результат: dist/Radioproject/
-```
-
-Подробнее — см. `scripts/build_release.py`.
-
-## Запуск тестов
-
-```bash
-# Python-тесты
-pytest
-
-# JS-тесты (vitest)
-npm test
-```
+---
 
 ## Структура проекта
 
 ```
-radioproject/
-├── desktop-app/          # HTTP-сервер (Flask) + webview-лаунчер
-│   ├── server.py         # Основной сервер с API
-│   ├── webview_launcher.py  # GUI-обёртка (pywebview)
-│   ├── api/              # Модули API
-│   ├── logic/            # Бизнес-логика (контроллеры, сессии)
-│   └── services/         # Сервисы (оценка, прогресс, хранение)
-├── frontend/             # HTML/JS/CSS интерфейс
-│   ├── S1/               # Экран сессии (прохождение заданий)
-│   ├── MainScreen/       # Главная страница
-│   ├── Editor/           # Редактор заданий
-│   ├── Complexes/        # Управление комплексами
-│   ├── Calendar/         # Календарь занятий
-│   ├── statistics/       # Статистика
-│   └── assets/           # CSS, JS-утилиты, темы
-├── task_system/          # Ядро системы заданий (модели, типы, миграции)
-│   ├── core/             # Базовые классы, IO, менеджеры
-│   ├── models/           # Модели данных и парсеры
-│   ├── types/            # Реестр типов заданий
-│   └── migrations/       # Миграции данных
-├── common/               # Общие утилиты (конфиг, watchdog)
-├── data/                 # Данные приложения (модули, пользователи)
-├── tests/                # Тесты (pytest + vitest)
-├── scripts/              # Вспомогательные скрипты
-└── pyproject.toml        # Конфигурация проекта и зависимости
+ACTRA/
+├── desktop-app/              # Серверная часть (Flask)
+│   ├── server.py             # HTTP-сервер с API
+│   ├── webview_launcher.py   # Нативное окно (pywebview)
+│   ├── api/                  # Модули REST API (комплексы, календарь)
+│   ├── routes/               # Роуты: AI, сессии, импорт, статистика, ...
+│   ├── logic/                # Бизнес-логика: контроллеры, сессии, репозитории
+│   └── services/             # 25+ сервисов: оценка, AI-генерация, прогресс, ...
+│
+├── frontend/                 # Клиентская часть (HTML / JS / CSS)
+│   ├── MainScreen/           # Главный экран — навигация, обзор комплексов
+│   ├── Editor/               # Редактор заданий (click, draw, test, sequence, ...)
+│   ├── S1/                   # Экран тренировочной сессии
+│   ├── Calendar/             # Календарь занятий и планирование
+│   ├── Complexes/            # Конструктор комплексов
+│   ├── Microcards/           # Модуль быстрого повторения
+│   ├── statistics/           # Панель статистики и аналитики
+│   ├── Welcome/              # Экран приветствия и онбординг
+│   ├── PalletesThemes/       # Палитры и темы оформления (6 тем)
+│   ├── ClickUI/              # UI-компоненты click-заданий
+│   ├── DrawUI/               # UI-компоненты draw-заданий
+│   ├── TestUI/               # UI-компоненты тестовых заданий
+│   ├── OpenAnswerUI/         # UI открытых ответов
+│   ├── SequenceUI/           # UI сборки последовательностей
+│   ├── MistakesUI/           # UI обнаружения ошибок
+│   └── assets/               # CSS (Tailwind), шрифты, SVG-логотип, утилиты
+│
+├── task_system/              # Ядро системы заданий
+│   ├── core/                 # Базовые классы, IO, хуки, менеджеры
+│   ├── models/               # Модели данных и парсеры
+│   ├── migrations/           # Версионированные миграции данных
+│   └── VERSION               # Версия ядра
+│
+├── common/                   # Общие утилиты (конфиг, watchdog)
+├── data/                     # Данные: комплексы, теории, AI runs, аватары
+├── tests/                    # Тесты: pytest (70+ файлов) + vitest (12 файлов)
+├── scripts/                  # Скрипты: сборка, линтинг, бенчмарки, валидация
+├── .github/workflows/        # CI (GitHub Actions) + Release Manifest
+├── pyproject.toml            # Конфигурация Python-проекта и зависимостей
+├── package.json              # Frontend tooling (Tailwind, Vitest)
+└── config.json               # Конфигурация приложения
 ```
 
-## Типы заданий
+---
 
-| Тип | Описание |
-|-----|----------|
-| `click` | Клик по области на изображении (точки, полигоны) |
-| `draw` | Рисование на изображении |
-| `test` | Тестовые вопросы с вариантами ответов |
-| `open_answer` | Открытый текстовый ответ с оценкой по ключевым словам |
-| `sequence_assembly` | Сборка последовательности элементов |
-| `error_detection` | Поиск ошибок в тексте |
+## Технологический стек
 
-## Переменные окружения
+| Слой | Технологии |
+|------|-----------|
+| **Backend** | Python 3.10+, Flask 3.0, Pydantic 2.0, PyMuPDF |
+| **Desktop** | pywebview 5.0 (нативное окно) |
+| **Frontend** | Vanilla JS, TailwindCSS 3.4, HTML5 Canvas |
+| **NLP** | pymorphy2 (русская морфология), python-Levenshtein (нечёткое сравнение) |
+| **AI** | Интеграция с LLM (анализ документов, генерация заданий) |
+| **Тестирование** | pytest, vitest, Playwright |
+| **CI/CD** | GitHub Actions (lint, test, build, release) |
+| **Линтинг** | black, flake8, mypy, ESLint (frontend) |
+| **Сборка** | PyInstaller (Windows .exe), Tailwind CLI |
+
+---
+
+## Системные требования
+
+| Компонент | Версия |
+|-----------|--------|
+| **Python** | 3.10+ |
+| **Node.js** | 18+ (только для сборки CSS, не нужен в runtime) |
+| **ОС** | Windows 10 / 11 |
+
+---
+
+## Быстрый старт
+
+### Разработка
+
+```bash
+# Клонировать репозиторий
+git clone https://github.com/hippo2222/ACTRA.git
+cd ACTRA
+
+# Создать виртуальное окружение
+python -m venv .venv
+.venv\Scripts\activate
+
+# Установить Python-зависимости
+pip install -e ".[dev]"
+
+# Установить frontend-зависимости и собрать CSS
+npm install
+npm run build:css
+
+# Запустить сервер (веб-режим)
+cd desktop-app
+python server.py
+# → Открыть http://127.0.0.1:8000/ui/main
+```
+
+### Десктоп-режим (нативное окно)
+
+```bash
+cd desktop-app
+python webview_launcher.py
+```
+
+### Запуск тестов
+
+```bash
+# Python-тесты (pytest + coverage)
+pytest
+
+# Frontend-тесты (vitest)
+npm test
+
+# Валидация тем оформления
+npm run validate:themes
+
+# Контрастный аудит UI
+npm run audit:contrast:auto
+```
+
+---
+
+## Сборка релиза (Windows .exe)
+
+```bash
+pip install pyinstaller
+python scripts/build_release.py
+# → Результат: dist/Radioproject/
+```
+
+Подробности — `docs/windows_release_build.md`.
+
+---
+
+## Конфигурация
+
+### Переменные окружения
+
+<details>
+<summary><b>Основные настройки</b></summary>
 
 | Переменная | Описание | По умолчанию |
 |---|---|---|
 | `TRAINER_HTTP_PORT` | Порт HTTP-сервера | `8000` |
 | `TRAINER_SHOW_CONSOLE` | Показать консоль при запуске webview | `0` |
-| `FLASK_DEBUG` | Включить отладочный режим Flask | `0` |
+| `FLASK_DEBUG` | Отладочный режим Flask | `0` |
 | `TRAINER_SESSION_ID` | ID сессии для прямого открытия | — |
 | `TRAINER_CRASH_DUMP_INTERVAL` | Интервал crash-дампов (сек) | — |
-| `ACTRA_FEEDBACK_EMAIL_ENABLED` | Включить email-уведомления о feedback | `1` |
-| `ACTRA_FEEDBACK_EMAIL_TO` | Получатели уведомлений (через запятую) | `actrafb@proton.me` |
-| `ACTRA_FEEDBACK_SMTP_HOST` | SMTP host для отправки уведомлений | — |
+
+</details>
+
+<details>
+<summary><b>Email-уведомления (feedback)</b></summary>
+
+| Переменная | Описание | По умолчанию |
+|---|---|---|
+| `ACTRA_FEEDBACK_EMAIL_ENABLED` | Включить email-уведомления | `1` |
+| `ACTRA_FEEDBACK_EMAIL_TO` | Получатели (через запятую) | `actrafb@proton.me` |
+| `ACTRA_FEEDBACK_SMTP_HOST` | SMTP host | — |
 | `ACTRA_FEEDBACK_SMTP_PORT` | SMTP порт | `587` |
-| `ACTRA_FEEDBACK_SMTP_USER` | SMTP логин (если нужен) | — |
-| `ACTRA_FEEDBACK_SMTP_PASSWORD` | SMTP пароль (если нужен) | — |
-| `ACTRA_FEEDBACK_SMTP_FROM` | Email отправителя (если не задан, берётся `SMTP_USER`) | — |
-| `ACTRA_FEEDBACK_SMTP_USE_TLS` | Использовать STARTTLS | `1` |
-| `ACTRA_FEEDBACK_SMTP_USE_SSL` | Использовать SMTP SSL (вместо STARTTLS) | `0` |
-| `ACTRA_FEEDBACK_SMTP_TIMEOUT_SEC` | Таймаут SMTP-запроса (сек) | `15` |
+| `ACTRA_FEEDBACK_SMTP_USER` | SMTP логин | — |
+| `ACTRA_FEEDBACK_SMTP_PASSWORD` | SMTP пароль | — |
+| `ACTRA_FEEDBACK_SMTP_FROM` | Email отправителя | берётся из `SMTP_USER` |
+| `ACTRA_FEEDBACK_SMTP_USE_TLS` | STARTTLS | `1` |
+| `ACTRA_FEEDBACK_SMTP_USE_SSL` | SMTP SSL | `0` |
+| `ACTRA_FEEDBACK_SMTP_TIMEOUT_SEC` | Таймаут (сек) | `15` |
+
+> Для Proton Mail используйте Proton Bridge (локальный SMTP host/port и bridge-учётные данные).
+
+</details>
+
+<details>
+<summary><b>Авто-обновления</b></summary>
+
+| Переменная | Описание | По умолчанию |
+|---|---|---|
 | `ACTRA_UPDATE_CHECK_ENABLED` | Включить проверку обновлений | `1` |
-| `ACTRA_UPDATE_MANIFEST_URL` | URL JSON-манифеста обновлений (перекрывает `config.json`) | берётся из `config.json:update_manifest_url` |
-| `ACTRA_UPDATE_CHECK_INTERVAL_SEC` | TTL кэша проверки обновлений (сек) | `86400` |
-| `ACTRA_UPDATE_REQUEST_TIMEOUT_SEC` | Таймаут запроса манифеста (сек) | `3` |
+| `ACTRA_UPDATE_MANIFEST_URL` | URL манифеста обновлений | из `config.json` |
+| `ACTRA_UPDATE_CHECK_INTERVAL_SEC` | TTL кэша проверки (сек) | `86400` |
+| `ACTRA_UPDATE_REQUEST_TIMEOUT_SEC` | Таймаут запроса (сек) | `3` |
 
-Примечание для Proton: для SMTP обычно используется Proton Mail Bridge (локальный SMTP host/port и bridge-учётные данные).
-
-### Манифест обновлений в config.json
-
-В `config.json` поддерживается ключ:
+В `config.json` задаётся URL манифеста:
 
 ```json
 {
-  "update_manifest_url": "data/system/update_manifest.json"
+  "update_manifest_url": "https://hippo2222.github.io/ACTRA/latest.json"
 }
 ```
 
-Можно указать `http(s)://...`, `file://...` или путь к локальному JSON-файлу (относительный путь считается от директории `config.json`).
+Поддерживаются `http(s)://`, `file://` и относительные пути к локальному JSON.
 
-### Автоканал через GitHub Releases
+</details>
 
-В репозитории есть workflow `.github/workflows/release-manifest.yml`:
+### Автоканал обновлений через GitHub Releases
 
-- срабатывает на `release.published`;
-- читает данные релиза и публикует `latest.json` в ветку `gh-pages`.
+Workflow `.github/workflows/release-manifest.yml` автоматически публикует `latest.json` в ветку `gh-pages` при каждом релизе. Для использования:
 
-После включения GitHub Pages (Source: `Deploy from a branch`, Branch: `gh-pages`), можно использовать:
+1. Включите GitHub Pages → Source: `Deploy from a branch`, Branch: `gh-pages`
+2. Укажите `update_manifest_url` в `config.json`
 
-```json
-{
-  "update_manifest_url": "https://<owner>.github.io/<repo>/latest.json"
-}
-```
+Опциональные repository variables:
+- `ACTRA_UPDATE_ASSET_NAME` — имя ассета релиза (по умолчанию `ACTRA-Setup.exe`)
+- `ACTRA_MIN_SUPPORTED_VERSION` — значение `min_supported_version` в манифесте
 
-Опциональные repository variables для workflow:
-
-- `ACTRA_UPDATE_ASSET_NAME` — имя ассета релиза (по умолчанию `ACTRA-Setup.exe`);
-- `ACTRA_MIN_SUPPORTED_VERSION` — значение `min_supported_version` в манифесте.
-
-Workflow также можно запустить вручную (`workflow_dispatch`) для принудительного обновления `latest.json`.
-
-### Проверка email-канала feedback
-
-Тестовая отправка через API:
-
-```powershell
-Invoke-RestMethod `
-  -Method Post `
-  -Uri "http://127.0.0.1:8000/api/feedback/test-email" `
-  -ContentType "application/json" `
-  -Body '{"to_email":"actrafb@proton.me"}'
-```
-
-Основной endpoint обратной связи (`POST /api/feedback`) также отправляет email-уведомление и возвращает поле `email_notification`.
+---
 
 ## Лицензия
 
-Apache License 2.0 — см. [LICENSE](LICENSE).
+[Apache License 2.0](LICENSE) — свободное использование, модификация и распространение с сохранением атрибуции.
 
-## Windows Packaging Notes
+---
 
-See `docs/windows_release_build.md` for portable+installer build commands, icon generation (`actra_white.ico`), and installer path selection behavior.
+<div align="center">
+
+**ACTRA** — учись через практику, а не через перечитывание.
+
+</div>
