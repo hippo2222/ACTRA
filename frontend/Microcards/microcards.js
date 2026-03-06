@@ -462,7 +462,7 @@
     // ── Feature Flags ─────────────────────────────────────────────────────
     async function loadFeatureFlags() {
         try {
-            const resp = await fetch('/api/editor/theory-rollout-status');
+            const resp = await fetch('/api/editor/theory/rollout/status');
             const data = await resp.json();
             if (data.ok && data.rollout && data.rollout.feature_flags) {
                 const ff = data.rollout.feature_flags;
@@ -528,7 +528,8 @@
         el('mcSummaryNew', String(qs.cards_new_total ?? 0));
         const todayReviews = Number(today.reviews || 0);
         const todayCR = today.correct_rate;
-        const todayText = todayReviews + ' повтор.' + (Number.isFinite(todayCR) ? ' · ' + Math.round(todayCR * 100) + '%' : '');
+        const todayText = String(todayReviews)
+            + (Number.isFinite(todayCR) ? ' · ' + Math.round(todayCR * 100) + '%' : '');
         el('mcSummaryToday', todayText);
     }
 
