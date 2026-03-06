@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ACTRA Editor Dashboard
  */
 
@@ -6,16 +6,16 @@ class EditorDashboard {
     constructor() {
         this.catalog = [];
         this.placeholderTaskNames = [
-            'С‚РµСЃС‚ С‚РµСЃС‚Р°',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 2',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 21',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 25',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 26',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 27',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 28',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 45',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 98',
-            'С‚РµСЃС‚ С‚РµСЃС‚Р° 99',
+            'тест теста',
+            'тест теста 2',
+            'тест теста 21',
+            'тест теста 25',
+            'тест теста 26',
+            'тест теста 27',
+            'тест теста 28',
+            'тест теста 45',
+            'тест теста 98',
+            'тест теста 99',
         ];
         this.currentSearchQuery = '';
         this.debouncedSearchHandler = null;
@@ -31,9 +31,9 @@ class EditorDashboard {
         // Import manager
         this.importManager = null;
         this.sortLabels = {
-            alphabet: 'РџРѕ Р°Р»С„Р°РІРёС‚Сѓ',
-            date: 'РџРѕ РґР°С‚Рµ РёР·РјРµРЅРµРЅРёСЏ',
-            type: 'РџРѕ С‚РёРїСѓ Р·Р°РґР°РЅРёСЏ'
+            alphabet: 'По алфавиту',
+            date: 'По дате изменения',
+            type: 'По типу задания'
         };
         this.sortControllerEl = null;
         this.sortToggleEl = null;
@@ -100,7 +100,7 @@ class EditorDashboard {
         button.dataset.allTasksButton = 'true';
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">all_inclusive</span>
-            <span class="editor-sidebar-tree-label truncate text-sm font-semibold flex-1 text-inherit">Р’СЃРµ Р·Р°РґР°РЅРёСЏ</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-semibold flex-1 text-inherit">Все задания</span>
         `;
         button.addEventListener('click', () => {
             this.activeModuleId = null;
@@ -125,7 +125,7 @@ class EditorDashboard {
         // if (window.location.protocol === 'file:') { // Removed as per instruction
         //     this.log("CRITICAL ERROR: Running via file:// protocol.");
         //     this.log("You MUST access this page via http://localhost:8000/ui/editor");
-        //     alert("РћС€РёР±РєР°: Р’С‹ РѕС‚РєСЂС‹Р»Рё С„Р°Р№Р» РЅР°РїСЂСЏРјСѓСЋ. РСЃРїРѕР»СЊР·СѓР№С‚Рµ http://localhost:8000/ui/editor");
+        //     alert("Ошибка: Вы открыли файл напрямую. Используйте http://localhost:8000/ui/editor");
         // }
 
         const lastView = this.loadDashboardState();
@@ -368,7 +368,7 @@ class EditorDashboard {
 
     formatImportHistoryTime(timestamp) {
         const date = new Date(Number(timestamp || 0));
-        if (Number.isNaN(date.getTime())) return 'РЅРµРґР°РІРЅРѕ';
+        if (Number.isNaN(date.getTime())) return 'недавно';
         return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
 
@@ -406,16 +406,16 @@ class EditorDashboard {
 
         host.classList.remove('hidden');
         if (favoriteEntries.length) {
-            host.appendChild(this.createShortcutSection('РР·Р±СЂР°РЅРЅРѕРµ', favoriteEntries));
+            host.appendChild(this.createShortcutSection('Избранное', favoriteEntries));
         }
         if (recentEntries.length) {
-            host.appendChild(this.createShortcutSection('РќРµРґР°РІРЅРёРµ', recentEntries));
+            host.appendChild(this.createShortcutSection('Недавние', recentEntries));
         }
         if (importEntries.length) {
-            host.appendChild(this.createImportHistorySection('РџРѕСЃР»РµРґРЅРёРµ РёРјРїРѕСЂС‚С‹', importEntries));
+            host.appendChild(this.createImportHistorySection('Последние импорты', importEntries));
         }
         if (recoveryDrafts.length) {
-            host.appendChild(this.createRecoverySummarySection('Р§РµСЂРЅРѕРІРёРєРё', recoveryDrafts));
+            host.appendChild(this.createRecoverySummarySection('Черновики', recoveryDrafts));
         }
         this.updateRecoveryCenterTrigger(recoveryDrafts);
     }
@@ -447,7 +447,7 @@ class EditorDashboard {
 
             const favoriteBtn = document.createElement('button');
             favoriteBtn.className = 'h-8 w-8 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-disabled hover:text-warning hover:border-warning transition-colors';
-            favoriteBtn.title = this.isFavoriteTask(entry.uniqueId) ? 'РЈР±СЂР°С‚СЊ РёР· РёР·Р±СЂР°РЅРЅРѕРіРѕ' : 'Р”РѕР±Р°РІРёС‚СЊ РІ РёР·Р±СЂР°РЅРЅРѕРµ';
+            favoriteBtn.title = this.isFavoriteTask(entry.uniqueId) ? 'Убрать из избранного' : 'Добавить в избранное';
             favoriteBtn.innerHTML = `<span class="material-symbols-outlined text-[17px]">${this.isFavoriteTask(entry.uniqueId) ? 'star' : 'star_outline'}</span>`;
             favoriteBtn.addEventListener('click', (event) => {
                 event.stopPropagation();
@@ -486,14 +486,14 @@ class EditorDashboard {
                             : 'text-text-secondary bg-bg-tertiary border-border-subtle';
             const statusLabel =
                 tone === 'success'
-                    ? 'РЈСЃРїРµС€РЅРѕ'
+                    ? 'Успешно'
                     : tone === 'warning'
-                        ? 'Р§Р°СЃС‚РёС‡РЅРѕ'
+                        ? 'Частично'
                         : tone === 'error'
-                            ? 'РћС€РёР±РєР°'
-                            : 'РќРµРґР°РІРЅРѕ';
+                            ? 'Ошибка'
+                            : 'Недавно';
 
-            const location = [entry.module, entry.topic].filter(Boolean).join(' / ') || 'Р‘РµР· РїСЂРёРІСЏР·РєРё';
+            const location = [entry.module, entry.topic].filter(Boolean).join(' / ') || 'Без привязки';
             const summary = `+${entry.imported} В· skip ${entry.skipped} В· err ${entry.errors}`;
 
             const row = document.createElement('button');
@@ -515,7 +515,7 @@ class EditorDashboard {
         const openImportBtn = document.createElement('button');
         openImportBtn.type = 'button';
         openImportBtn.className = 'w-full mt-1 text-left px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-[11px] font-semibold text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors';
-        openImportBtn.textContent = 'РћС‚РєСЂС‹С‚СЊ РёРјРїРѕСЂС‚ Р·Р°РґР°РЅРёР№';
+        openImportBtn.textContent = 'Открыть импорт заданий';
         openImportBtn.addEventListener('click', () => this.showImportModal());
         list.appendChild(openImportBtn);
 
@@ -535,7 +535,7 @@ class EditorDashboard {
         const taskCount = drafts.filter((item) => item && item.kind === 'task').length;
         const complexCount = Math.max(0, drafts.length - taskCount);
         const latestTimestamp = Number(drafts[0]?.timestamp || 0);
-        const latestLabel = latestTimestamp > 0 ? this.formatRecoveryTime(latestTimestamp) : 'РЅ/Рґ';
+        const latestLabel = latestTimestamp > 0 ? this.formatRecoveryTime(latestTimestamp) : 'н/д';
 
         const list = document.createElement('div');
         list.className = 'space-y-1';
@@ -548,11 +548,11 @@ class EditorDashboard {
             <div class="flex items-center justify-between gap-2">
                 <span class="inline-flex items-center gap-1 text-[11px] font-semibold text-text-main">
                     <span class="material-symbols-outlined text-[15px] text-text-disabled">history</span>
-                    Р§РµСЂРЅРѕРІРёРєРё: ${this.escapeHtml(String(drafts.length))}
+                    Черновики: ${this.escapeHtml(String(drafts.length))}
                 </span>
-                <span class="editor-recovery-meta text-[10px]">РїРѕСЃР»РµРґРЅРёР№ ${this.escapeHtml(latestLabel)}</span>
+                <span class="editor-recovery-meta text-[10px]">последний ${this.escapeHtml(latestLabel)}</span>
             </div>
-            <p class="editor-recovery-meta mt-1 text-[10px]">Р·Р°РґР°С‡ ${taskCount} В· РєРѕРјРїР»РµРєСЃРѕРІ ${complexCount}</p>
+            <p class="editor-recovery-meta mt-1 text-[10px]">задач ${taskCount} В· комплексов ${complexCount}</p>
         `;
         summaryBtn.addEventListener('click', () => this.showRecoveryCenter());
         list.appendChild(summaryBtn);
@@ -564,18 +564,18 @@ class EditorDashboard {
             ])
         );
         drafts.slice(0, 2).forEach((item) => {
-            let label = 'Р§РµСЂРЅРѕРІРёРє';
+            let label = 'Черновик';
             let subtitle = '';
             if (item.kind === 'task') {
                 const uniqueId = this.makeTaskUniqueId(item.moduleId, item.topicId, item.taskId);
                 const task = taskLookup.get(uniqueId);
-                label = task?.name || item.taskId || 'Р§РµСЂРЅРѕРІРёРє Р·Р°РґР°РЅРёСЏ';
+                label = task?.name || item.taskId || 'Черновик задания';
                 subtitle = [task?.moduleName || item.moduleId, task?.topicName || item.topicId].filter(Boolean).join(' / ');
             } else {
                 label = item.complexId && item.complexId !== 'new'
-                    ? `РљРѕРјРїР»РµРєСЃ: ${item.complexId}`
-                    : 'Р§РµСЂРЅРѕРІРёРє РєРѕРјРїР»РµРєСЃР°';
-                subtitle = 'РљРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РєРѕРјРїР»РµРєСЃРѕРІ';
+                    ? `Комплекс: ${item.complexId}`
+                    : 'Черновик комплекса';
+                subtitle = 'Конструктор комплексов';
             }
 
             const row = document.createElement('button');
@@ -584,7 +584,7 @@ class EditorDashboard {
             row.className = 'w-full text-left px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-[11px] text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors';
             row.innerHTML = `
                 <div class="editor-recovery-title font-semibold text-text-main">${this.escapeHtml(label)}</div>
-                <div class="editor-recovery-subtitle text-[10px]">${this.escapeHtml(subtitle || 'Р§РµСЂРЅРѕРІРёРє РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ')}</div>
+                <div class="editor-recovery-subtitle text-[10px]">${this.escapeHtml(subtitle || 'Черновик восстановления')}</div>
             `;
             row.addEventListener('click', () => this.openRecoveryDraft(item));
             list.appendChild(row);
@@ -603,7 +603,7 @@ class EditorDashboard {
         let badge = trigger.querySelector('[data-role="recovery-draft-count"]');
         if (total <= 0) {
             trigger.removeAttribute('data-has-recovery');
-            trigger.title = 'Р¦РµРЅС‚СЂ С‡РµСЂРЅРѕРІРёРєРѕРІ';
+            trigger.title = 'Центр черновиков';
             if (badge) badge.remove();
             return;
         }
@@ -619,7 +619,7 @@ class EditorDashboard {
         const complexCount = Math.max(0, total - taskCount);
         badge.textContent = total > 99 ? '99+' : String(total);
         trigger.dataset.hasRecovery = 'true';
-        trigger.title = `Р§РµСЂРЅРѕРІРёРєРё: ${total} (Р·Р°РґР°С‡ ${taskCount}, РєРѕРјРїР»РµРєСЃРѕРІ ${complexCount})`;
+        trigger.title = `Черновики: ${total} (задач ${taskCount}, комплексов ${complexCount})`;
     }
 
     updateTheoryHubTrigger(summary = null) {
@@ -757,18 +757,18 @@ class EditorDashboard {
                 this.log(`Server returned error: ${data.error}`);
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'РљР°С‚Р°Р»РѕРі СЂРµРґР°РєС‚РѕСЂР° РЅРµ Р·Р°РіСЂСѓР¶РµРЅ.',
-                    impact: 'РњРѕРґСѓР»Рё Рё С‚РµРјС‹ СЃРµР№С‡Р°СЃ РЅРµРґРѕСЃС‚СѓРїРЅС‹.',
-                    next: data.error ? `Р”РµС‚Р°Р»Рё: ${data.error}. РџРѕРІС‚РѕСЂРёС‚Рµ Р·Р°РіСЂСѓР·РєСѓ.` : 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРѕРµРґРёРЅРµРЅРёРµ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ.',
+                    what: 'Каталог редактора не загружен.',
+                    impact: 'Модули и темы сейчас недоступны.',
+                    next: data.error ? `Детали: ${data.error}. Повторите загрузку.` : 'Проверьте соединение и повторите попытку.',
                 });
             }
         } catch (error) {
             this.log(`FETCH ERROR: ${error.message}`);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РљР°С‚Р°Р»РѕРі СЂРµРґР°РєС‚РѕСЂР° РЅРµ Р·Р°РіСЂСѓР¶РµРЅ РёР·-Р·Р° СЃРµС‚РµРІРѕР№ РѕС€РёР±РєРё.',
-                impact: 'РўРµРєСѓС‰Р°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° Р±РёР±Р»РёРѕС‚РµРєРё РЅРµРґРѕСЃС‚СѓРїРЅР°.',
-                next: error?.message ? `РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ (${error.message}) Рё РїРѕРІС‚РѕСЂРёС‚Рµ Р·Р°РіСЂСѓР·РєСѓ.` : 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ Р·Р°РіСЂСѓР·РєСѓ.',
+                what: 'Каталог редактора не загружен из-за сетевой ошибки.',
+                impact: 'Текущая структура библиотеки недоступна.',
+                next: error?.message ? `Проверьте сеть (${error.message}) и повторите загрузку.` : 'Проверьте сеть и повторите загрузку.',
             });
         }
     }
@@ -882,22 +882,22 @@ class EditorDashboard {
             actionBar.id = 'selection-action-bar';
             actionBar.className = 'fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-surface-1 rounded-xl shadow-2xl border border-border-subtle p-2 flex items-center gap-3 z-50 transition-all duration-300 translate-y-[200%]';
             actionBar.innerHTML = `
-                <div class="px-3 font-semibold text-text-secondary border-r border-border-subtle" id="selection-counter">0 РІС‹Р±СЂР°РЅРѕ</div>
+                <div class="px-3 font-semibold text-text-secondary border-r border-border-subtle" id="selection-counter">0 выбрано</div>
                 <button data-role="selection-select-all" onclick="dashboard.selectAllVisibleTasks()" class="flex items-center gap-2 px-4 py-2 bg-surface-2 text-text-secondary rounded-lg hover:bg-bg-hover transition-colors font-medium">
                     <span class="material-symbols-outlined">select_all</span>
-                    Р’СЃРµ
+                    Все
                 </button>
                 <div class="w-px h-6 bg-border-subtle"></div>
                 <button data-role="selection-export" onclick="dashboard.exportSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark transition-colors font-medium">
                     <span class="material-symbols-outlined">archive</span>
-                    Р­РєСЃРїРѕСЂС‚
+                    Экспорт
                 </button>
                 <button data-role="selection-delete" onclick="dashboard.deleteSelectedTasks()" class="flex items-center gap-2 px-4 py-2 bg-error-lighter text-error-dark border border-error-light rounded-lg hover:bg-error-light transition-colors font-medium">
                     <span class="material-symbols-outlined">delete</span>
-                    РЈРґР°Р»РёС‚СЊ
+                    Удалить
                 </button>
                 <div class="w-px h-6 bg-border-subtle"></div>
-                <button data-role="selection-cancel" onclick="dashboard.cancelSelection()" class="p-2 text-text-disabled hover:text-text-muted hover:bg-bg-hover rounded-lg" title="РћС‚РјРµРЅР°">
+                <button data-role="selection-cancel" onclick="dashboard.cancelSelection()" class="p-2 text-text-disabled hover:text-text-muted hover:bg-bg-hover rounded-lg" title="Отмена">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             `;
@@ -911,7 +911,7 @@ class EditorDashboard {
             btn.id = 'toggle-select-btn';
             btn.dataset.role = 'selection-toggle';
             btn.className = 'p-2 text-text-disabled hover:text-primary hover:bg-bg-hover rounded-lg transition-colors';
-            btn.title = 'Р’С‹Р±РѕСЂ Р·Р°РґР°РЅРёР№';
+            btn.title = 'Выбор заданий';
             btn.onclick = () => this.toggleSelectionMode();
             btn.innerHTML = '<span class="material-symbols-outlined">checklist</span>';
             // Insert before the last element (usually profile/settings)
@@ -1086,7 +1086,7 @@ class EditorDashboard {
         // Root Level
         const root = document.createElement('span');
         root.className = 'cursor-pointer hover:text-primary transition-colors';
-        root.textContent = 'Р‘РёР±Р»РёРѕС‚РµРєР°';
+        root.textContent = 'Библиотека';
         root.onclick = () => this.renderAllTasks();
         nav.appendChild(root);
 
@@ -1145,7 +1145,7 @@ class EditorDashboard {
 
         // Populate modules
         const moduleSelect = document.querySelector('#task-module-select');
-        moduleSelect.innerHTML = '<option value="">Р’С‹Р±РµСЂРёС‚Рµ РјРѕРґСѓР»СЊ...</option>';
+        moduleSelect.innerHTML = '<option value="">Выберите модуль...</option>';
         this.catalog.forEach(m => {
             const opt = document.createElement('option');
             opt.value = m.id;
@@ -1178,7 +1178,7 @@ class EditorDashboard {
         const topicSelect = document.querySelector('#task-topic-select');
         const module_id = moduleSelect.value;
 
-        topicSelect.innerHTML = '<option value="">Р’С‹Р±РµСЂРёС‚Рµ С‚РµРјСѓ...</option>';
+        topicSelect.innerHTML = '<option value="">Выберите тему...</option>';
         if (!module_id) return;
 
         const module = this.catalog.find(m => m.id === module_id);
@@ -1235,27 +1235,27 @@ class EditorDashboard {
         if (!module_id) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎРѕР·РґР°РЅРёРµ Р·Р°РґР°РЅРёСЏ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅРѕ.',
-                impact: 'РњРѕРґСѓР»СЊ РЅРµ РІС‹Р±СЂР°РЅ.',
-                next: 'Р’С‹Р±РµСЂРёС‚Рµ РјРѕРґСѓР»СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Создание задания приостановлено.',
+                impact: 'Модуль не выбран.',
+                next: 'Выберите модуль и повторите действие.',
             });
             return;
         }
         if (!topic_id) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎРѕР·РґР°РЅРёРµ Р·Р°РґР°РЅРёСЏ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅРѕ.',
-                impact: 'РўРµРјР° РЅРµ РІС‹Р±СЂР°РЅР°.',
-                next: 'Р’С‹Р±РµСЂРёС‚Рµ С‚РµРјСѓ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Создание задания приостановлено.',
+                impact: 'Тема не выбрана.',
+                next: 'Выберите тему и повторите действие.',
             });
             return;
         }
         if (!task_name) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎРѕР·РґР°РЅРёРµ Р·Р°РґР°РЅРёСЏ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅРѕ.',
-                impact: 'РќР°Р·РІР°РЅРёРµ Р·Р°РґР°РЅРёСЏ РїСѓСЃС‚РѕРµ.',
-                next: 'Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Создание задания приостановлено.',
+                impact: 'Название задания пустое.',
+                next: 'Введите название и повторите действие.',
             });
             return;
         }
@@ -1288,9 +1288,9 @@ class EditorDashboard {
         if (!name) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎРѕР·РґР°РЅРёРµ РјРѕРґСѓР»СЏ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅРѕ.',
-                impact: 'РќР°Р·РІР°РЅРёРµ РјРѕРґСѓР»СЏ РїСѓСЃС‚РѕРµ.',
-                next: 'Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Создание модуля приостановлено.',
+                impact: 'Название модуля пустое.',
+                next: 'Введите название и повторите действие.',
             });
             return;
         }
@@ -1314,18 +1314,18 @@ class EditorDashboard {
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'РњРѕРґСѓР»СЊ РЅРµ СЃРѕР·РґР°РЅ.',
-                    impact: 'РР·РјРµРЅРµРЅРёСЏ РЅРµ Р±С‹Р»Рё РїСЂРёРјРµРЅРµРЅС‹.',
-                    next: data?.error ? `РџСЂРѕРІРµСЂСЊС‚Рµ РґР°РЅРЅС‹Рµ (${data.error}) Рё РїРѕРІС‚РѕСЂРёС‚Рµ.` : 'РџСЂРѕРІРµСЂСЊС‚Рµ РґР°РЅРЅС‹Рµ Рё РїРѕРІС‚РѕСЂРёС‚Рµ СЃРѕР·РґР°РЅРёРµ.',
+                    what: 'Модуль не создан.',
+                    impact: 'Изменения не были применены.',
+                    next: data?.error ? `Проверьте данные (${data.error}) и повторите.` : 'Проверьте данные и повторите создание.',
                 });
             }
         } catch (err) {
             console.error(err);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РњРѕРґСѓР»СЊ РЅРµ СЃРѕР·РґР°РЅ РёР·-Р·Р° СЃРµС‚РµРІРѕР№ РѕС€РёР±РєРё.',
-                impact: 'РЎРїРёСЃРѕРє РјРѕРґСѓР»РµР№ РѕСЃС‚Р°Р»СЃСЏ Р±РµР· РёР·РјРµРЅРµРЅРёР№.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Модуль не создан из-за сетевой ошибки.',
+                impact: 'Список модулей остался без изменений.',
+                next: 'Проверьте сеть и повторите действие.',
             });
         }
     }
@@ -1340,9 +1340,9 @@ class EditorDashboard {
         if (!module_id) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎРѕР·РґР°РЅРёРµ С‚РµРјС‹ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅРѕ.',
-                impact: 'РњРѕРґСѓР»СЊ РЅРµ РІС‹Р±СЂР°РЅ.',
-                next: 'РЎРЅР°С‡Р°Р»Р° РІС‹Р±РµСЂРёС‚Рµ РјРѕРґСѓР»СЊ, Р·Р°С‚РµРј СЃРѕР·РґР°Р№С‚Рµ С‚РµРјСѓ.',
+                what: 'Создание темы приостановлено.',
+                impact: 'Модуль не выбран.',
+                next: 'Сначала выберите модуль, затем создайте тему.',
             });
             return;
         }
@@ -1549,9 +1549,9 @@ class EditorDashboard {
         const skipped = Number(summary?.skipped || 0);
         const mode = String(summary?.mode || 'safe');
         if (isDryRun) {
-            return `Preview (${mode}): Р·Р°С‚СЂРѕРЅСѓС‚Рѕ ${impacted}, Р±СѓРґРµС‚ РѕР±РЅРѕРІР»РµРЅРѕ ${wouldUpdate}, Р±РµР· РёР·РјРµРЅРµРЅРёР№ ${skipped}.`;
+            return `Preview (${mode}): затронуто ${impacted}, будет обновлено ${wouldUpdate}, без изменений ${skipped}.`;
         }
-        return `РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ (${mode}): Р·Р°С‚СЂРѕРЅСѓС‚Рѕ ${impacted}, РѕР±РЅРѕРІР»РµРЅРѕ ${updated}, Р±РµР· РёР·РјРµРЅРµРЅРёР№ ${skipped}.`;
+        return `Синхронизация (${mode}): затронуто ${impacted}, обновлено ${updated}, без изменений ${skipped}.`;
     }
 
     async loadTopicTheoryCatalog(force = false) {
@@ -1563,7 +1563,7 @@ class EditorDashboard {
         }
 
         const selectedValue = picker.value;
-        picker.innerHTML = '<option value="">Р—Р°РіСЂСѓР·РєР° С‚РµРѕСЂРёР№...</option>';
+        picker.innerHTML = '<option value="">Загрузка теорий...</option>';
         try {
             const response = await fetch('/api/theories');
             const data = await response.json();
@@ -1574,7 +1574,7 @@ class EditorDashboard {
             const items = Array.isArray(data.items) ? data.items : [];
             this.topicTheoryCatalog = items;
 
-            picker.innerHTML = '<option value="">Р‘РµР· С‚РµРѕСЂРёРё</option>';
+            picker.innerHTML = '<option value="">Без теории</option>';
             items.forEach((item) => {
                 const opt = document.createElement('option');
                 opt.value = item.id;
@@ -1587,12 +1587,12 @@ class EditorDashboard {
             }
         } catch (error) {
             console.error('[Dashboard] Failed to load theory catalog for topic modal', error);
-            picker.innerHTML = '<option value="">РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ С‚РµРѕСЂРёРё</option>';
+            picker.innerHTML = '<option value="">Не удалось загрузить теории</option>';
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎРїРёСЃРѕРє С‚РµРѕСЂРёР№ РЅРµ Р·Р°РіСЂСѓР¶РµРЅ.',
-                impact: 'Р’С‹Р±РѕСЂ С‚РµРѕСЂРёРё РґР»СЏ С‚РµРјС‹ СЃРµР№С‡Р°СЃ РѕРіСЂР°РЅРёС‡РµРЅ.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРѕРµРґРёРЅРµРЅРёРµ Рё РѕР±РЅРѕРІРёС‚Рµ СЃРїРёСЃРѕРє С‚РµРѕСЂРёР№.',
+                what: 'Список теорий не загружен.',
+                impact: 'Выбор теории для темы сейчас ограничен.',
+                next: 'Проверьте соединение и обновите список теорий.',
             });
         }
     }
@@ -1644,7 +1644,7 @@ class EditorDashboard {
         if (dryRunEl) dryRunEl.checked = true;
         if (modeEl) modeEl.value = 'safe';
         this.syncTopicTheoryPropagationControls();
-        this.setTopicTheorySummary('Preview: Р·Р°РіСЂСѓР¶Р°РµРј С‚РµРєСѓС‰РµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ С‚РµРјС‹...', 'info');
+        this.setTopicTheorySummary('Preview: загружаем текущее состояние темы...', 'info');
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -1670,7 +1670,7 @@ class EditorDashboard {
                 if (theoryId && !Array.from(picker.options).some((opt) => opt.value === theoryId)) {
                     const fallback = document.createElement('option');
                     fallback.value = theoryId;
-                    fallback.textContent = `РўРµРѕСЂРёСЏ ${theoryId}`;
+                    fallback.textContent = `Теория ${theoryId}`;
                     picker.appendChild(fallback);
                 }
                 picker.value = theoryId || '';
@@ -1681,17 +1681,17 @@ class EditorDashboard {
             if (data.propagation_preview) {
                 this.setTopicTheorySummary(this.formatTopicTheorySummary(data.propagation_preview), 'muted');
             } else {
-                this.setTopicTheorySummary('Preview: РґР°РЅРЅС‹С… Рѕ СЃРІСЏР·Р°РЅРЅС‹С… РєРѕРјРїР»РµРєСЃР°С… РЅРµС‚.', 'muted');
+                this.setTopicTheorySummary('Preview: данных о связанных комплексах нет.', 'muted');
             }
         } catch (error) {
             console.error('[Dashboard] Failed to load topic theory link', error);
             this.syncTopicTheoryContextActions();
-            this.setTopicTheorySummary('РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РґР°РЅРЅС‹Рµ С‚РµРјС‹. РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ.', 'error');
+            this.setTopicTheorySummary('Не удалось загрузить данные темы. Попробуйте позже.', 'error');
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РЎРІСЏР·СЊ С‚РµРјС‹ СЃ С‚РµРѕСЂРёРµР№ РЅРµ Р·Р°РіСЂСѓР¶РµРЅР°.',
-                impact: 'РўРµРєСѓС‰Р°СЏ РЅР°СЃС‚СЂРѕР№РєР° С‚РµРјС‹ РЅРµРёР·РІРµСЃС‚РЅР°.',
-                next: 'РџРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ РїРѕР·Р¶Рµ РёР»Рё РїСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ.',
+                what: 'Связь темы с теорией не загружена.',
+                impact: 'Текущая настройка темы неизвестна.',
+                next: 'Повторите попытку позже или проверьте сеть.',
             });
         } finally {
             this.topicTheoryModalState.loading = false;
@@ -1702,7 +1702,7 @@ class EditorDashboard {
         const moduleId = this.topicTheoryModalState.moduleId;
         const topicId = this.topicTheoryModalState.topicId;
         if (!moduleId || !topicId) return;
-        this.setTopicTheorySummary('Preview: РѕР±РЅРѕРІР»СЏРµРј...', 'info');
+        this.setTopicTheorySummary('Preview: обновляем...', 'info');
         try {
             const response = await fetch(
                 `/api/editor/topic/${encodeURIComponent(moduleId)}/${encodeURIComponent(topicId)}/theory-link`
@@ -1717,7 +1717,7 @@ class EditorDashboard {
             );
         } catch (error) {
             console.error('[Dashboard] Failed to refresh topic theory preview', error);
-            this.setTopicTheorySummary('Preview РЅРµРґРѕСЃС‚СѓРїРµРЅ: РѕС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё.', 'error');
+            this.setTopicTheorySummary('Preview недоступен: ошибка загрузки.', 'error');
         }
     }
 
@@ -1757,7 +1757,7 @@ class EditorDashboard {
             saveBtn.classList.add('opacity-70');
         }
         if (previewBtn) previewBtn.disabled = true;
-        this.setTopicTheorySummary('РЎРѕС…СЂР°РЅСЏРµРј...', 'info');
+        this.setTopicTheorySummary('Сохраняем...', 'info');
 
         try {
             const response = await fetch(
@@ -1784,31 +1784,31 @@ class EditorDashboard {
                     tone
                 );
             } else {
-                this.setTopicTheorySummary('РЎРІСЏР·СЊ С‚РµРјС‹ СЃРѕС…СЂР°РЅРµРЅР°.', 'success');
+                this.setTopicTheorySummary('Связь темы сохранена.', 'success');
             }
 
             await this.loadCatalog();
             this.showVoiceToast({
                 severity: applyToComplexes && payload.dry_run ? 'info' : 'success',
-                what: 'РЎРІСЏР·СЊ С‚РµРјС‹ СЃ С‚РµРѕСЂРёРµР№ СЃРѕС…СЂР°РЅРµРЅР°.',
+                what: 'Связь темы с теорией сохранена.',
                 impact: applyToComplexes
                     ? (payload.dry_run
-                        ? 'РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїРѕ РєРѕРјРїР»РµРєСЃР°Рј РІС‹РїРѕР»РЅРµРЅР° РІ СЂРµР¶РёРјРµ preview, РґР°РЅРЅС‹Рµ РЅРµ РёР·РјРµРЅРµРЅС‹.'
-                        : 'РЎРІСЏР·Р°РЅРЅС‹Рµ РєРѕРјРїР»РµРєСЃС‹ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅС‹ РїРѕ РІС‹Р±СЂР°РЅРЅС‹Рј РїСЂР°РІРёР»Р°Рј.')
-                    : 'РР·РјРµРЅРµРЅРёРµ РїСЂРёРјРµРЅРµРЅРѕ С‚РѕР»СЊРєРѕ Рє С‚РµРјРµ.',
+                        ? 'Синхронизация по комплексам выполнена в режиме preview, данные не изменены.'
+                        : 'Связанные комплексы синхронизированы по выбранным правилам.')
+                    : 'Изменение применено только к теме.',
                 next: payload.dry_run
-                    ? 'РџСЂРѕРІРµСЂСЊС‚Рµ summary Рё Р·Р°РїСѓСЃС‚РёС‚Рµ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ Р±РµР· dry-run РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё.'
-                    : 'РњРѕР¶РЅРѕ Р·Р°РєСЂС‹С‚СЊ РѕРєРЅРѕ Рё РїСЂРѕРґРѕР»Р¶РёС‚СЊ СЂР°Р±РѕС‚Сѓ РІ СЂРµРґР°РєС‚РѕСЂРµ.',
+                    ? 'Проверьте summary и запустите синхронизацию без dry-run при необходимости.'
+                    : 'Можно закрыть окно и продолжить работу в редакторе.',
             });
             this.closeTopicTheoryModal();
         } catch (error) {
             console.error('[Dashboard] Failed to save topic theory link', error);
-            this.setTopicTheorySummary('РЎРѕС…СЂР°РЅРµРЅРёРµ РЅРµ СѓРґР°Р»РѕСЃСЊ. РџСЂРѕРІРµСЂСЊС‚Рµ РґР°РЅРЅС‹Рµ Рё РїРѕРїСЂРѕР±СѓР№С‚Рµ СЃРЅРѕРІР°.', 'error');
+            this.setTopicTheorySummary('Сохранение не удалось. Проверьте данные и попробуйте снова.', 'error');
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РЎРІСЏР·СЊ С‚РµРјС‹ СЃ С‚РµРѕСЂРёРµР№ РЅРµ СЃРѕС…СЂР°РЅРµРЅР°.',
-                impact: 'РќР°СЃС‚СЂРѕР№РєРё С‚РµРјС‹ Рё РєРѕРјРїР»РµРєСЃРѕРІ РѕСЃС‚Р°Р»РёСЃСЊ РїСЂРµР¶РЅРёРјРё.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ РїР°СЂР°РјРµС‚СЂС‹ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Связь темы с теорией не сохранена.',
+                impact: 'Настройки темы и комплексов остались прежними.',
+                next: 'Проверьте параметры синхронизации и повторите действие.',
             });
         } finally {
             this.topicTheoryModalState.saving = false;
@@ -1832,7 +1832,7 @@ class EditorDashboard {
         if (actionEl) {
             actionEl.classList.add('opacity-60', 'pointer-events-none');
             actionEl.textContent = 'sync';
-            actionEl.title = 'РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїСЂРёРІСЏР·РєРё С‚РµРјС‹...';
+            actionEl.title = 'Синхронизация привязки темы...';
         }
 
         try {
@@ -1851,9 +1851,9 @@ class EditorDashboard {
             if (!sourceTheoryId) {
                 this.showVoiceToast({
                     severity: 'warning',
-                    what: 'Р‘С‹СЃС‚СЂР°СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РѕСЃС‚Р°РЅРѕРІР»РµРЅР°.',
-                    impact: 'РЈ С‚РµРјС‹ РїРѕРєР° РЅРµС‚ РїСЂРёРІСЏР·РєРё Рє С‚РµРѕСЂРёРё.',
-                    next: 'РЎРЅР°С‡Р°Р»Р° Р·Р°РґР°Р№С‚Рµ С‚РµРѕСЂРёСЋ С‡РµСЂРµР· menu_book, Р·Р°С‚РµРј РїРѕРІС‚РѕСЂРёС‚Рµ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ.',
+                    what: 'Быстрая синхронизация остановлена.',
+                    impact: 'У темы пока нет привязки к теории.',
+                    next: 'Сначала задайте теорию через menu_book, затем повторите синхронизацию.',
                 });
                 return;
             }
@@ -1883,13 +1883,13 @@ class EditorDashboard {
             const conflictCount = propagationItems.filter((row) => row && row.status === 'conflict').length;
             this.showVoiceToast({
                 severity: conflictCount > 0 ? 'warning' : 'success',
-                what: 'РџСЂРёРІСЏР·РєР° С‚РµРѕСЂРёРё С‚РµРјС‹ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅР°.',
+                what: 'Привязка теории темы синхронизирована.',
                 impact: propagationSummary
                     ? this.formatTopicTheorySummary(propagationSummary, { dryRun: false })
-                    : 'РЎРІСЏР·Р°РЅРЅС‹Рµ РєРѕРјРїР»РµРєСЃС‹ РїРѕР»СѓС‡РёР»Рё Р°РєС‚СѓР°Р»СЊРЅСѓСЋ РІРµСЂСЃРёСЋ РїСЂРёРІСЏР·РєРё.',
+                    : 'Связанные комплексы получили актуальную версию привязки.',
                 next: conflictCount > 0
-                    ? 'РћС‚РєСЂРѕР№С‚Рµ С‚РµРѕСЂРёСЋ С‚РµРјС‹ Рё РїСЂРѕРІРµСЂСЊС‚Рµ РєРѕРјРїР»РµРєСЃС‹ СЃРѕ СЃС‚Р°С‚СѓСЃРѕРј conflict.'
-                    : 'РњРѕР¶РЅРѕ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ СЂР°Р±РѕС‚Сѓ РІ СЂРµРґР°РєС‚РѕСЂРµ.',
+                    ? 'Откройте теорию темы и проверьте комплексы со статусом conflict.'
+                    : 'Можно продолжать работу в редакторе.',
             });
 
             await this.loadCatalog();
@@ -1897,16 +1897,16 @@ class EditorDashboard {
             console.error('[Dashboard] Failed to run quick topic theory sync', error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Р‘С‹СЃС‚СЂР°СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РЅРµ РІС‹РїРѕР»РЅРµРЅР°.',
-                impact: 'РџСЂРёРІСЏР·РєРё С‚РµРѕСЂРёРё РІ РєРѕРјРїР»РµРєСЃР°С… РЅРµ Р±С‹Р»Рё РѕР±РЅРѕРІР»РµРЅС‹.',
-                next: 'РћС‚РєСЂРѕР№С‚Рµ РЅР°СЃС‚СЂРѕР№РєРё С‚РµРѕСЂРёРё С‚РµРјС‹ Рё РїРѕРІС‚РѕСЂРёС‚Рµ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЋ.',
+                what: 'Быстрая синхронизация не выполнена.',
+                impact: 'Привязки теории в комплексах не были обновлены.',
+                next: 'Откройте настройки теории темы и повторите синхронизацию.',
             });
         } finally {
             this.topicTheorySyncInFlight.delete(syncKey);
             if (actionEl) {
                 actionEl.classList.remove('opacity-60', 'pointer-events-none');
                 actionEl.textContent = initialIcon || 'sync_alt';
-                actionEl.title = initialTitle || 'РЎРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°С‚СЊ РїСЂРёРІСЏР·РєСѓ С‚РµРјС‹ СЃ РєРѕРјРїР»РµРєСЃР°РјРё';
+                actionEl.title = initialTitle || 'Синхронизировать привязку темы с комплексами';
             }
         }
     }
@@ -2531,16 +2531,16 @@ class EditorDashboard {
     }
 
     describeTheoryHubQueueReason(row) {
-        if (!row) return 'РўСЂРµР±СѓРµС‚СЃСЏ РїСЂРѕРІРµСЂРєР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё.';
+        if (!row) return 'Требуется проверка синхронизации.';
         if (row.status === 'conflict') {
             return row.topicTheoryIds?.length > 1
-                ? `РўРµРјС‹ РєРѕРјРїР»РµРєСЃР° СЃСЃС‹Р»Р°СЋС‚СЃСЏ РЅР° СЂР°Р·РЅС‹Рµ С‚РµРѕСЂРёРё: ${row.topicTheoryIds.join(', ')}.`
-                : 'РћР±РЅР°СЂСѓР¶РµРЅ РєРѕРЅС„Р»РёРєС‚ РїСЂРёРІСЏР·РєРё С‚РµРѕСЂРёРё РјРµР¶РґСѓ С‚РµРјР°РјРё РєРѕРјРїР»РµРєСЃР°.';
+                ? `Темы комплекса ссылаются на разные теории: ${row.topicTheoryIds.join(', ')}.`
+                : 'Обнаружен конфликт привязки теории между темами комплекса.';
         }
         if (row.needsSync) {
-            return 'РўРµРєСѓС‰Р°СЏ theory_link РєРѕРјРїР»РµРєСЃР° РЅРµ СЃРѕРІРїР°РґР°РµС‚ СЃ РІС‹С‡РёСЃР»РµРЅРЅРѕР№ РїРѕ С‚РµРјР°Рј.';
+            return 'Текущая theory_link комплекса не совпадает с вычисленной по темам.';
         }
-        return 'РўСЂРµР±СѓРµС‚СЃСЏ РїСЂРѕРІРµСЂРєР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё.';
+        return 'Требуется проверка синхронизации.';
     }
 
     filterTheoryHubRows() {
@@ -3081,9 +3081,9 @@ class EditorDashboard {
             };
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Theory Hub РїРѕРєР° РЅРµРґРѕСЃС‚СѓРїРµРЅ.',
-                impact: 'РљР°СЂС‚Р° СЃРІСЏР·РµР№ Рё РѕС‡РµСЂРµРґСЊ РєРѕРЅС„Р»РёРєС‚РѕРІ РЅРµ Р·Р°РіСЂСѓР¶РµРЅС‹.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РѕР±РЅРѕРІР»РµРЅРёРµ.',
+                what: 'Theory Hub пока недоступен.',
+                impact: 'Карта связей и очередь конфликтов не загружены.',
+                next: 'Проверьте сеть и повторите обновление.',
             });
         } finally {
             this.renderTheoryHub();
@@ -3108,7 +3108,7 @@ class EditorDashboard {
         if (actionEl) {
             actionEl.disabled = true;
             actionEl.classList.add('opacity-60', 'pointer-events-none');
-            actionEl.textContent = 'РЎРёРЅС…СЂ...';
+            actionEl.textContent = 'Синхр...';
         }
 
         try {
@@ -3128,9 +3128,9 @@ class EditorDashboard {
                 if (!silent) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Sync С‚РµРјС‹ РѕСЃС‚Р°РЅРѕРІР»РµРЅ.',
-                        impact: 'РЈ С‚РµРјС‹ РЅРµС‚ РїСЂРёРІСЏР·РєРё Рє С‚РµРѕСЂРёРё.',
-                        next: 'РЎРЅР°С‡Р°Р»Р° РїСЂРёРІСЏР¶РёС‚Рµ С‚РµРѕСЂРёСЋ Рє С‚РµРјРµ.',
+                        what: 'Sync темы остановлен.',
+                        impact: 'У темы нет привязки к теории.',
+                        next: 'Сначала привяжите теорию к теме.',
                     });
                 }
                 return { ok: false, reason: 'topic_has_no_theory' };
@@ -3163,13 +3163,13 @@ class EditorDashboard {
                 const severity = dryRun ? 'info' : (conflictCount > 0 ? 'warning' : 'success');
                 this.showVoiceToast({
                     severity,
-                    what: dryRun ? 'Preview sync С‚РµРјС‹ Р·Р°РІРµСЂС€РµРЅ.' : 'Sync С‚РµРјС‹ РІС‹РїРѕР»РЅРµРЅ.',
+                    what: dryRun ? 'Preview sync темы завершен.' : 'Sync темы выполнен.',
                     impact: propagationSummary
                         ? this.formatTopicTheorySummary(propagationSummary, { dryRun })
-                        : 'РЎРІСЏР·Р°РЅРЅС‹Рµ РєРѕРјРїР»РµРєСЃС‹ РїРѕР»СѓС‡РёР»Рё РѕР±РЅРѕРІР»РµРЅРёСЏ.',
+                        : 'Связанные комплексы получили обновления.',
                     next: dryRun
-                        ? 'РћС‚РєР»СЋС‡РёС‚Рµ dry-run РґР»СЏ РїСЂРёРјРµРЅРµРЅРёСЏ.'
-                        : (conflictCount > 0 ? 'РџСЂРѕРІРµСЂСЊС‚Рµ complex entries СЃРѕ СЃС‚Р°С‚СѓСЃРѕРј conflict.' : 'РњРѕР¶РЅРѕ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ СЂР°Р±РѕС‚Сѓ.'),
+                        ? 'Отключите dry-run для применения.'
+                        : (conflictCount > 0 ? 'Проверьте complex entries со статусом conflict.' : 'Можно продолжать работу.'),
                 });
             }
 
@@ -3182,9 +3182,9 @@ class EditorDashboard {
             if (!silent) {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Sync С‚РµРјС‹ РЅРµ РІС‹РїРѕР»РЅРµРЅ.',
-                    impact: 'РљРѕРјРїР»РµРєСЃС‹ СЃРѕС…СЂР°РЅРёР»Рё РїСЂРµР¶РЅРёРµ РїСЂРёРІСЏР·РєРё.',
-                    next: 'РџСЂРѕРІРµСЂСЊС‚Рµ РїР°СЂР°РјРµС‚СЂС‹ sync Рё РїРѕРІС‚РѕСЂРёС‚Рµ.',
+                    what: 'Sync темы не выполнен.',
+                    impact: 'Комплексы сохранили прежние привязки.',
+                    next: 'Проверьте параметры sync и повторите.',
                 });
             }
             return { ok: false, reason: 'request_failed', error };
@@ -3193,7 +3193,7 @@ class EditorDashboard {
             if (actionEl) {
                 actionEl.disabled = false;
                 actionEl.classList.remove('opacity-60', 'pointer-events-none');
-                actionEl.textContent = initialText || 'РЎРёРЅС…СЂ. С‚РµРјСѓ';
+                actionEl.textContent = initialText || 'Синхр. тему';
                 actionEl.title = initialTitle || actionEl.title;
             }
         }
@@ -3214,7 +3214,7 @@ class EditorDashboard {
         if (actionEl) {
             actionEl.disabled = true;
             actionEl.classList.add('opacity-60', 'pointer-events-none');
-            actionEl.textContent = 'РЎРёРЅС…СЂ...';
+            actionEl.textContent = 'Синхр...';
         }
 
         try {
@@ -3242,12 +3242,12 @@ class EditorDashboard {
                 this.showVoiceToast({
                     severity,
                     what: dryRun
-                        ? `Preview sync РєРѕРјРїР»РµРєСЃР° ${complexId} Р·Р°РІРµСЂС€РµРЅ.`
-                        : `Sync РєРѕРјРїР»РµРєСЃР° ${complexId} РІС‹РїРѕР»РЅРµРЅ.`,
-                    impact: `РЎС‚Р°С‚СѓСЃ: ${status}, action: ${action || 'none'}${reason ? `, reason: ${reason}` : ''}.`,
+                        ? `Preview sync комплекса ${complexId} завершен.`
+                        : `Sync комплекса ${complexId} выполнен.`,
+                    impact: `Статус: ${status}, action: ${action || 'none'}${reason ? `, reason: ${reason}` : ''}.`,
                     next: status === 'conflict'
-                        ? 'РџСЂРѕРІРµСЂСЊС‚Рµ С‚РµРјС‹ РєРѕРјРїР»РµРєСЃР° Рё РІС‹СЂРѕРІРЅСЏР№С‚Рµ theory-link.'
-                        : 'РњРѕР¶РЅРѕ РїСЂРѕРґРѕР»Р¶Р°С‚СЊ СЂР°Р±РѕС‚Сѓ.',
+                        ? 'Проверьте темы комплекса и выровняйте theory-link.'
+                        : 'Можно продолжать работу.',
                 });
             }
 
@@ -3260,9 +3260,9 @@ class EditorDashboard {
             if (!silent) {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РєРѕРјРїР»РµРєСЃР° РЅРµ РІС‹РїРѕР»РЅРµРЅР°.',
-                    impact: `РљРѕРјРїР»РµРєСЃ ${complexId} СЃРѕС…СЂР°РЅРёР» РїСЂРµР¶РЅРµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ.`,
-                    next: 'РџСЂРѕРІРµСЂСЊС‚Рµ РЅР°СЃС‚СЂРѕР№РєРё СЂРµР¶РёРјР° sync Рё РїРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ.',
+                    what: 'Синхронизация комплекса не выполнена.',
+                    impact: `Комплекс ${complexId} сохранил прежнее состояние.`,
+                    next: 'Проверьте настройки режима sync и повторите попытку.',
                 });
             }
             return { ok: false, reason: 'request_failed', error };
@@ -3271,7 +3271,7 @@ class EditorDashboard {
             if (actionEl) {
                 actionEl.disabled = false;
                 actionEl.classList.remove('opacity-60', 'pointer-events-none');
-                actionEl.innerHTML = initialHtml || 'РЎРёРЅС…СЂ. РєРѕРјРїР»РµРєСЃ';
+                actionEl.innerHTML = initialHtml || 'Синхр. комплекс';
             }
         }
     }
@@ -3287,9 +3287,9 @@ class EditorDashboard {
         if (!topicRows.length) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Sync all РѕСЃС‚Р°РЅРѕРІР»РµРЅ.',
-                impact: 'РќРµС‚ С‚РµРј, СЃРІСЏР·Р°РЅРЅС‹С… СЃ РєРѕРјРїР»РµРєСЃР°РјРё.',
-                next: 'Р”РѕР±Р°РІСЊС‚Рµ РєРѕРјРїР»РµРєСЃС‹ РёР»Рё РїСЂРёРІСЏР¶РёС‚Рµ С‚РµРјС‹ Рє СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРј РєРѕРјРїР»РµРєСЃР°Рј.',
+                what: 'Sync all остановлен.',
+                impact: 'Нет тем, связанных с комплексами.',
+                next: 'Добавьте комплексы или привяжите темы к существующим комплексам.',
             });
             return;
         }
@@ -3298,7 +3298,7 @@ class EditorDashboard {
         const initialHtml = syncAllBtn.innerHTML;
         syncAllBtn.disabled = true;
         syncAllBtn.classList.add('opacity-60', 'pointer-events-none');
-        syncAllBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> РЎРёРЅС…СЂ...';
+        syncAllBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span> Синхр...';
 
         let successCount = 0;
         let failedCount = 0;
@@ -3329,13 +3329,13 @@ class EditorDashboard {
                 : (options.dryRun ? 'info' : (conflictCount > 0 ? 'warning' : 'success'));
             this.showVoiceToast({
                 severity,
-                what: options.dryRun ? 'Sync all preview Р·Р°РІРµСЂС€РµРЅ.' : 'Sync all РІС‹РїРѕР»РЅРµРЅ.',
-                impact: `РўРµРј РѕР±СЂР°Р±РѕС‚Р°РЅРѕ: ${topicRows.length}, СѓСЃРїРµС€РЅРѕ: ${successCount}, РїСЂРѕРїСѓС‰РµРЅРѕ (Р±РµР· С‚РµРѕСЂРёРё): ${skippedNoTheoryCount}, СЃ РѕС€РёР±РєР°РјРё: ${failedCount}, conflicts: ${conflictCount}.`,
+                what: options.dryRun ? 'Sync all preview завершен.' : 'Sync all выполнен.',
+                impact: `Тем обработано: ${topicRows.length}, успешно: ${successCount}, пропущено (без теории): ${skippedNoTheoryCount}, с ошибками: ${failedCount}, conflicts: ${conflictCount}.`,
                 next: failedCount > 0
-                    ? 'РџСЂРѕРІРµСЂСЊС‚Рµ Р»РѕРі Рё РїРѕРІС‚РѕСЂРёС‚Рµ sync РґР»СЏ РїСЂРѕР±Р»РµРјРЅС‹С… С‚РµРј.'
+                    ? 'Проверьте лог и повторите sync для проблемных тем.'
                     : (options.dryRun
-                        ? 'РћС‚РєР»СЋС‡РёС‚Рµ dry-run РґР»СЏ РїСЂРёРјРµРЅРµРЅРёСЏ РёР·РјРµРЅРµРЅРёР№.'
-                        : 'Theory Hub РѕР±РЅРѕРІР»РµРЅ РїРѕ С‚РµРєСѓС‰РµРјСѓ СЃРѕСЃС‚РѕСЏРЅРёСЋ.'),
+                        ? 'Отключите dry-run для применения изменений.'
+                        : 'Theory Hub обновлен по текущему состоянию.'),
             });
         } finally {
             syncAllBtn.disabled = false;
@@ -3358,9 +3358,9 @@ class EditorDashboard {
         if (!candidateIds.length) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'Batch sync РѕСЃС‚Р°РЅРѕРІР»РµРЅ.',
-                impact: 'Р’ Theory Hub РЅРµС‚ РІС‹Р±СЂР°РЅРЅС‹С… complex-элементов.',
-                next: 'РћС‚РјРµС‚СЊС‚Рµ РЅСѓР¶РЅС‹Рµ complex entries РІ conflict queue.',
+                what: 'Batch sync остановлен.',
+                impact: 'В Theory Hub нет выбранных complex-элементов.',
+                next: 'Отметьте нужные complex entries в conflict queue.',
             });
             return;
         }
@@ -3402,12 +3402,12 @@ class EditorDashboard {
                     ? 'warning'
                     : (effectiveOptions.dryRun ? 'info' : (conflictCount > 0 ? 'warning' : 'success')),
                 what: effectiveOptions.propagationMode === 'all_force'
-                    ? 'Force resolve РѕС‡РµСЂРµРґРё Р·Р°РІРµСЂС€С‘РЅ.'
-                    : 'Batch sync РѕС‡РµСЂРµРґРё Р·Р°РІРµСЂС€С‘РЅ.',
-                impact: `РћР±СЂР°Р±РѕС‚Р°РЅРѕ complexes: ${candidateIds.length}, СѓСЃРїРµС…: ${successCount}, conflicts: ${conflictCount}, errors: ${failedCount}.`,
+                    ? 'Force resolve очереди завершён.'
+                    : 'Batch sync очереди завершён.',
+                impact: `Обработано complexes: ${candidateIds.length}, успех: ${successCount}, conflicts: ${conflictCount}, errors: ${failedCount}.`,
                 next: effectiveOptions.dryRun
-                    ? 'РћС‚РєР»СЋС‡РёС‚Рµ dry-run, С‡С‚РѕР±С‹ РїСЂРёРјРµРЅРёС‚СЊ РёР·РјРµРЅРµРЅРёСЏ.'
-                    : 'Theory Hub РѕР±РЅРѕРІР»С‘РЅ РїРѕ С‚РµРєСѓС‰РµРјСѓ СЃРѕСЃС‚РѕСЏРЅРёСЋ.',
+                    ? 'Отключите dry-run, чтобы применить изменения.'
+                    : 'Theory Hub обновлён по текущему состоянию.',
             });
         } finally {
             toggleTargets.forEach((btn) => {
@@ -3445,9 +3445,9 @@ class EditorDashboard {
         if (!complexId) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎС‚Р°СЂС‚ С‚СЂРµРЅРёСЂРѕРІРєРё РѕСЃС‚Р°РЅРѕРІР»РµРЅ.',
-                impact: 'Р”Р»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ С‚РµРѕСЂРёРё РЅРµС‚ РґРѕСЃС‚СѓРїРЅС‹С… РєРѕРјРїР»РµРєСЃРѕРІ.',
-                next: 'РЎРЅР°С‡Р°Р»Р° СЃРІСЏР¶РёС‚Рµ С‚РµРѕСЂРёСЋ СЃ topic/complex.',
+                what: 'Старт тренировки остановлен.',
+                impact: 'Для выбранной теории нет доступных комплексов.',
+                next: 'Сначала свяжите теорию с topic/complex.',
             });
             return;
         }
@@ -3487,9 +3487,9 @@ class EditorDashboard {
             console.error('[Dashboard] Failed to start theory-focused training', error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РЎС‚Р°СЂС‚ С‚СЂРµРЅРёСЂРѕРІРєРё РЅРµ РІС‹РїРѕР»РЅРµРЅ.',
-                impact: 'РЎС†РµРЅР°СЂРёР№ В«РёР· С‚РµРѕСЂРёРё РІ complexВ» РЅРµ СЃРѕСЃС‚РѕСЏР»СЃСЏ.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ complex entry Рё РїРѕРІС‚РѕСЂРёС‚Рµ Р·Р°РїСѓСЃРє.',
+                what: 'Старт тренировки не выполнен.',
+                impact: 'Сценарий «из теории в complexВ» не состоялся.',
+                next: 'Проверьте complex entry и повторите запуск.',
             });
         }
     }
@@ -3511,9 +3511,9 @@ class EditorDashboard {
         if (!name) {
             this.showVoiceToast({
                 severity: 'warning',
-                what: 'РЎРѕР·РґР°РЅРёРµ С‚РµРјС‹ РїСЂРёРѕСЃС‚Р°РЅРѕРІР»РµРЅРѕ.',
-                impact: 'РќР°Р·РІР°РЅРёРµ С‚РµРјС‹ РїСѓСЃС‚РѕРµ.',
-                next: 'Р’РІРµРґРёС‚Рµ РЅР°Р·РІР°РЅРёРµ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Создание темы приостановлено.',
+                impact: 'Название темы пустое.',
+                next: 'Введите название и повторите действие.',
             });
             return;
         }
@@ -3538,18 +3538,18 @@ class EditorDashboard {
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'РўРµРјР° РЅРµ СЃРѕР·РґР°РЅР°.',
-                    impact: 'РЎС‚СЂСѓРєС‚СѓСЂР° РјРѕРґСѓР»СЏ РѕСЃС‚Р°Р»Р°СЃСЊ Р±РµР· РёР·РјРµРЅРµРЅРёР№.',
-                    next: data?.error ? `РџСЂРѕРІРµСЂСЊС‚Рµ РґР°РЅРЅС‹Рµ (${data.error}) Рё РїРѕРІС‚РѕСЂРёС‚Рµ.` : 'РџСЂРѕРІРµСЂСЊС‚Рµ РґР°РЅРЅС‹Рµ Рё РїРѕРІС‚РѕСЂРёС‚Рµ СЃРѕР·РґР°РЅРёРµ.',
+                    what: 'Тема не создана.',
+                    impact: 'Структура модуля осталась без изменений.',
+                    next: data?.error ? `Проверьте данные (${data.error}) и повторите.` : 'Проверьте данные и повторите создание.',
                 });
             }
         } catch (err) {
             console.error(err);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РўРµРјР° РЅРµ СЃРѕР·РґР°РЅР° РёР·-Р·Р° СЃРµС‚РµРІРѕР№ РѕС€РёР±РєРё.',
-                impact: 'РР·РјРµРЅРµРЅРёСЏ РЅРµ Р±С‹Р»Рё РѕС‚РїСЂР°РІР»РµРЅС‹.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Тема не создана из-за сетевой ошибки.',
+                impact: 'Изменения не были отправлены.',
+                next: 'Проверьте сеть и повторите действие.',
             });
         }
     }
@@ -3579,18 +3579,18 @@ class EditorDashboard {
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Р—Р°РґР°РЅРёРµ РЅРµ СЃРѕР·РґР°РЅРѕ.',
-                    impact: 'РўРµРєСѓС‰Р°СЏ С‚РµРјР° РЅРµ РёР·РјРµРЅРёР»Р°СЃСЊ.',
-                    next: data?.error ? `РџСЂРѕРІРµСЂСЊС‚Рµ РґР°РЅРЅС‹Рµ (${data.error}) Рё РїРѕРІС‚РѕСЂРёС‚Рµ.` : 'РџСЂРѕРІРµСЂСЊС‚Рµ РїР°СЂР°РјРµС‚СЂС‹ Рё РїРѕРІС‚РѕСЂРёС‚Рµ СЃРѕР·РґР°РЅРёРµ.',
+                    what: 'Задание не создано.',
+                    impact: 'Текущая тема не изменилась.',
+                    next: data?.error ? `Проверьте данные (${data.error}) и повторите.` : 'Проверьте параметры и повторите создание.',
                 });
             }
         } catch (error) {
             console.error("Error creating task:", error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Р—Р°РґР°РЅРёРµ РЅРµ СЃРѕР·РґР°РЅРѕ РёР·-Р·Р° СЃРµС‚РµРІРѕР№ РѕС€РёР±РєРё.',
-                impact: 'РР·РјРµРЅРµРЅРёСЏ РЅРµ Р±С‹Р»Рё РѕС‚РїСЂР°РІР»РµРЅС‹ РЅР° СЃРµСЂРІРµСЂ.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ.',
+                what: 'Задание не создано из-за сетевой ошибки.',
+                impact: 'Изменения не были отправлены на сервер.',
+                next: 'Проверьте сеть и повторите действие.',
             });
         }
     }
@@ -3623,8 +3623,8 @@ class EditorDashboard {
             hint.className = 'flex flex-col items-center gap-2 px-3 py-6 text-center';
             hint.innerHTML = `
                 <span class="material-symbols-outlined text-2xl text-text-disabled">folder_open</span>
-                <p class="editor-sidebar-empty-copy text-xs font-medium">РњРѕРґСѓР»РµР№ РїРѕРєР° РЅРµС‚.</p>
-                <p class="editor-sidebar-empty-copy text-xs">РќР°Р¶РјРёС‚Рµ В«+В» С‡С‚РѕР±С‹ СЃРѕР·РґР°С‚СЊ РїРµСЂРІС‹Р№ РјРѕРґСѓР»СЊ</p>
+                <p class="editor-sidebar-empty-copy text-xs font-medium">Модулей пока нет.</p>
+                <p class="editor-sidebar-empty-copy text-xs">Нажмите В«+В» чтобы создать первый модуль</p>
             `;
             navContainer.appendChild(hint);
         }
@@ -3681,8 +3681,8 @@ class EditorDashboard {
         if (!tasksToRender.length) {
             const emptyCard = this.createEmptyStateCard(
                 isFiltered && this.currentSearchQuery
-                    ? `РџРѕ Р·Р°РїСЂРѕСЃСѓ В«${this.currentSearchQuery.trim()}В» РЅРёС‡РµРіРѕ РЅРµ РЅР°Р№РґРµРЅРѕ`
-                    : 'Р—Р°РґР°РЅРёСЏ РЅРµ РЅР°Р№РґРµРЅС‹'
+                    ? `По запросу В«${this.currentSearchQuery.trim()}В» ничего не найдено`
+                    : 'Задания не найдены'
             );
             gridContainer.appendChild(emptyCard);
             return;
@@ -3765,12 +3765,12 @@ class EditorDashboard {
         article.dataset.taskId = uniqueId;
 
         const { label: typeLabel, className: typeClass } = this.getTaskTypeMeta(task);
-        const topicLabel = task.topicName || task.topicId || 'Р‘РµР· С‚РµРјС‹';
+        const topicLabel = task.topicName || task.topicId || 'Без темы';
         const createdLabel = this.escapeHtml(this.formatCreatedDate(task.created_at));
         const updatedLabel = task.updated_at ? this.escapeHtml(this.formatCreatedDate(task.updated_at)) : null;
         const safeTypeLabel = this.escapeHtml(typeLabel);
-        const safeTaskName = this.escapeHtml(task.name || task.id || 'Р‘РµР· РЅР°Р·РІР°РЅРёСЏ');
-        const safeModuleLabel = this.escapeHtml(task.moduleName || task.moduleId || 'Р‘РµР· РјРѕРґСѓР»СЏ');
+        const safeTaskName = this.escapeHtml(task.name || task.id || 'Без названия');
+        const safeModuleLabel = this.escapeHtml(task.moduleName || task.moduleId || 'Без модуля');
         const safeTopicLabel = this.escapeHtml(topicLabel);
 
         // Theme-aware error badge classes
@@ -3800,14 +3800,14 @@ class EditorDashboard {
                     </span>
                     ${isErrorDetection ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${errorBadgeClass}">
                         <span class="material-symbols-outlined leading-none" style="font-size: 18px;">bug_report</span>
-                        РћС€РёР±РєРё
+                        Ошибки
                     </span>` : ""}
                 </div>
                 <div class="status-indicator-published" title="Published"></div>
             </div>
             <div class="flex-1">
                 <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer">${safeTaskName}</h3>
-                <p class="text-text-secondary text-xs font-medium">РЎРѕР·РґР°РЅРѕ ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` В· РР·Рј. ${updatedLabel}` : ''}</p>
+                <p class="text-text-secondary text-xs font-medium">Создано ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` В· Изм. ${updatedLabel}` : ''}</p>
             </div>
             <div class="flex gap-2 mt-4 flex-wrap items-center">
                 <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal">${safeModuleLabel}</span>
@@ -3860,7 +3860,7 @@ class EditorDashboard {
         const safeMessage = this.escapeHtml(message);
         const safeQuery = this.escapeHtml(this.currentSearchQuery.trim());
         const details = this.currentSearchQuery && this.currentSearchQuery.trim()
-            ? `<p class="editor-grid-empty-detail text-xs">Р—Р°РїСЂРѕСЃ: В«${this.currentSearchQuery.trim()}В»</p>`
+            ? `<p class="editor-grid-empty-detail text-xs">Запрос: В«${this.currentSearchQuery.trim()}В»</p>`
             : '';
         const safeDetails = details && this.currentSearchQuery
             ? details.replace(this.currentSearchQuery.trim(), safeQuery)
@@ -4009,7 +4009,7 @@ class EditorDashboard {
 
         if (task.type === 'click' || task.type === 'click_task') {
             return {
-                label: 'РљР»РёРє',
+                label: 'Клик',
                 className: isDark
                     ? 'bg-secondary-dark text-secondary-lighter ring-1 ring-inset ring-secondary-lighter'
                     : 'bg-secondary-light text-secondary-darker ring-1 ring-inset ring-secondary-darker'
@@ -4017,7 +4017,7 @@ class EditorDashboard {
         }
         if (task.type === 'draw' || task.type === 'draw_task') {
             return {
-                label: 'Р РёСЃРѕРІР°РЅРёРµ',
+                label: 'Рисование',
                 className: isDark
                     ? 'bg-success-dark text-success-lighter ring-1 ring-inset ring-success-lighter'
                     : 'bg-success-light text-success-darker ring-1 ring-inset ring-success-darker'
@@ -4025,7 +4025,7 @@ class EditorDashboard {
         }
         if (task.type === 'test') {
             return {
-                label: 'РўРµСЃС‚',
+                label: 'Тест',
                 className: isDark
                     ? 'bg-warning-dark text-warning-lighter ring-1 ring-inset ring-warning-lighter'
                     : 'bg-warning-light text-warning-darker ring-1 ring-inset ring-warning-darker'
@@ -4033,7 +4033,7 @@ class EditorDashboard {
         }
         if (task.type === 'sequence_assembly') {
             return {
-                label: 'РџРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ',
+                label: 'Последовательность',
                 className: isDark
                     ? 'bg-primary-dark text-primary-lighter ring-1 ring-inset ring-primary-lighter'
                     : 'bg-primary-lighter text-primary-darker ring-1 ring-inset ring-primary-darker'
@@ -4041,7 +4041,7 @@ class EditorDashboard {
         }
         if (task.type === 'open_answer') {
             return {
-                label: 'РћС‚РєСЂС‹С‚С‹Р№ РѕС‚РІРµС‚',
+                label: 'Открытый ответ',
                 className: isDark
                     ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
                     : 'bg-info-light text-info-darker ring-1 ring-inset ring-info-darker'
@@ -4168,7 +4168,7 @@ class EditorDashboard {
 
         if (count > 0 || this.selectionMode) {
             bar.classList.remove('translate-y-[200%]');
-            counter.textContent = `${count} РІС‹Р±СЂР°РЅРѕ`;
+            counter.textContent = `${count} выбрано`;
         } else {
             bar.classList.add('translate-y-[200%]');
         }
@@ -4218,9 +4218,9 @@ class EditorDashboard {
         } catch (error) {
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Р­РєСЃРїРѕСЂС‚ РІС‹Р±СЂР°РЅРЅС‹С… Р·Р°РґР°РЅРёР№ РЅРµ РІС‹РїРѕР»РЅРµРЅ.',
-                impact: 'Р¤Р°Р№Р» СЌРєСЃРїРѕСЂС‚Р° РЅРµ Р±С‹Р» СЃС„РѕСЂРјРёСЂРѕРІР°РЅ.',
-                next: error?.message ? `РџСЂРѕРІРµСЂСЊС‚Рµ РѕРіСЂР°РЅРёС‡РµРЅРёСЏ Рё РїРѕРІС‚РѕСЂРёС‚Рµ (${error.message}).` : 'РџРѕРІС‚РѕСЂРёС‚Рµ СЌРєСЃРїРѕСЂС‚ РїРѕР·Р¶Рµ.',
+                what: 'Экспорт выбранных заданий не выполнен.',
+                impact: 'Файл экспорта не был сформирован.',
+                next: error?.message ? `Проверьте ограничения и повторите (${error.message}).` : 'Повторите экспорт позже.',
             });
         } finally {
             btn.innerHTML = originalText;
@@ -4254,10 +4254,10 @@ class EditorDashboard {
                 <div class="editor-sidebar-tree-hover-actions">
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
                           onclick="dashboard.startRenameModule('${module.id}'); event.stopPropagation();"
-                          title="РџРµСЂРµРёРјРµРЅРѕРІР°С‚СЊ РјРѕРґСѓР»СЊ">edit</span>
+                          title="Переименовать модуль">edit</span>
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-error transition-colors p-0.5 rounded hover:bg-error-lighter"
                           onclick="dashboard.deleteModule('${module.id}'); event.stopPropagation();"
-                          title="РЈРґР°Р»РёС‚СЊ РјРѕРґСѓР»СЊ">delete</span>
+                          title="Удалить модуль">delete</span>
                 </div>
                 <span class="material-symbols-outlined text-[16px] p-0.5 transition-transform" data-role="toggle">expand_more</span>
             </div>
@@ -4323,7 +4323,7 @@ class EditorDashboard {
         addTopicBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-1.5 text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTopicBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Р”РѕР±Р°РІРёС‚СЊ С‚РµРјСѓ</span>
+            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Добавить тему</span>
         `;
         addTopicBtn.onclick = (e) => {
             e.stopPropagation();
@@ -4344,7 +4344,7 @@ class EditorDashboard {
         const theoryId = theoryLink && typeof theoryLink.theory_id === 'string' ? theoryLink.theory_id : '';
         const hasTheoryLink = Boolean(theoryId);
         const theoryBadge = hasTheoryLink
-            ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary-light bg-primary-lighter text-primary-darker" title="РЈ С‚РµРјС‹ РµСЃС‚СЊ РїСЂРёРІСЏР·РєР° Рє С‚РµРѕСЂРёРё"><span class="material-symbols-outlined text-[13px]">menu_book</span></span>'
+            ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary-light bg-primary-lighter text-primary-darker" title="У темы есть привязка к теории"><span class="material-symbols-outlined text-[13px]">menu_book</span></span>'
             : '';
 
         const button = document.createElement('button');
@@ -4359,10 +4359,10 @@ class EditorDashboard {
                 <div class="editor-sidebar-tree-hover-actions">
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
                           onclick="dashboard.startRenameTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
-                          title="РџРµСЂРµРёРјРµРЅРѕРІР°С‚СЊ С‚РµРјСѓ">edit</span>
+                          title="Переименовать тему">edit</span>
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-error transition-colors p-0.5 rounded hover:bg-error-lighter"
                           onclick="dashboard.deleteTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
-                          title="РЈРґР°Р»РёС‚СЊ С‚РµРјСѓ">delete</span>
+                          title="Удалить тему">delete</span>
                 </div>
                 <span class="material-symbols-outlined text-[16px] p-0.5 transition-transform" data-role="toggle">expand_more</span>
             </div>
@@ -4372,7 +4372,7 @@ class EditorDashboard {
             const syncTheoryAction = document.createElement('span');
             syncTheoryAction.className = 'material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter';
             syncTheoryAction.textContent = 'sync_alt';
-            syncTheoryAction.title = 'РЎРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°С‚СЊ РїСЂРёРІСЏР·РєСѓ С‚РµРјС‹ СЃ РєРѕРјРїР»РµРєСЃР°РјРё';
+            syncTheoryAction.title = 'Синхронизировать привязку темы с комплексами';
             syncTheoryAction.dataset.role = 'topic-theory-sync';
             syncTheoryAction.dataset.moduleId = moduleId;
             syncTheoryAction.dataset.topicId = topic.id;
@@ -4387,7 +4387,7 @@ class EditorDashboard {
             theoryAction.dataset.role = 'topic-theory-open';
             theoryAction.dataset.moduleId = moduleId;
             theoryAction.dataset.topicId = topic.id;
-            theoryAction.title = 'РќР°СЃС‚СЂРѕРёС‚СЊ С‚РµРѕСЂРёСЋ С‚РµРјС‹';
+            theoryAction.title = 'Настроить теорию темы';
             theoryAction.addEventListener('click', (event) => {
                 event.stopPropagation();
                 this.showTopicTheoryModal(moduleId, topic.id);
@@ -4462,7 +4462,7 @@ class EditorDashboard {
         addTaskBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-1.5 text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTaskBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Р”РѕР±Р°РІРёС‚СЊ Р·Р°РґР°РЅРёРµ</span>
+            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Добавить задание</span>
         `;
         addTaskBtn.onclick = (e) => {
             e.stopPropagation();
@@ -4610,18 +4610,18 @@ class EditorDashboard {
                 console.error("Failed to load task:", data.error);
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'Р—Р°РґР°С‡Р° РЅРµ РѕС‚РєСЂС‹С‚Р°.',
-                    impact: 'Р РµРґР°РєС‚РѕСЂ РЅРµ РїРѕР»СѓС‡РёР» РґР°РЅРЅС‹Рµ Р·Р°РґР°РЅРёСЏ.',
-                    next: data?.error ? `РџСЂРѕРІРµСЂСЊС‚Рµ СЃРѕСЃС‚РѕСЏРЅРёРµ Р·Р°РґР°С‡Рё (${data.error}) Рё РїРѕРІС‚РѕСЂРёС‚Рµ.` : 'РџРѕРІС‚РѕСЂРёС‚Рµ РѕС‚РєСЂС‹С‚РёРµ Р·Р°РґР°РЅРёСЏ.',
+                    what: 'Задача не открыта.',
+                    impact: 'Редактор не получил данные задания.',
+                    next: data?.error ? `Проверьте состояние задачи (${data.error}) и повторите.` : 'Повторите открытие задания.',
                 });
             }
         } catch (error) {
             console.error("Error fetching task:", error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'Р—Р°РґР°С‡Р° РЅРµ РѕС‚РєСЂС‹С‚Р° РёР·-Р·Р° СЃРµС‚РµРІРѕР№ РѕС€РёР±РєРё.',
-                impact: 'РџРµСЂРµС…РѕРґ РІ СЂРµРґР°РєС‚РѕСЂ РѕС‚РјРµРЅС‘РЅ.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ.',
+                what: 'Задача не открыта из-за сетевой ошибки.',
+                impact: 'Переход в редактор отменён.',
+                next: 'Проверьте сеть и повторите попытку.',
             });
         }
     }
@@ -4834,7 +4834,7 @@ class EditorDashboard {
 
     formatRecoveryTime(timestamp) {
         const date = new Date(Number(timestamp || 0));
-        if (Number.isNaN(date.getTime())) return 'РІСЂРµРјСЏ РЅРµРёР·РІРµСЃС‚РЅРѕ';
+        if (Number.isNaN(date.getTime())) return 'время неизвестно';
         return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
 
@@ -4857,8 +4857,8 @@ class EditorDashboard {
             empty.className = 'rounded-xl border border-border-subtle bg-surface-2 p-6 text-center';
             empty.innerHTML = `
                 <span class="material-symbols-outlined text-3xl text-text-disabled">history_toggle_off</span>
-                <p class="text-sm font-semibold text-text-secondary mt-2">Р§РµСЂРЅРѕРІРёРєРё РЅРµ РЅР°Р№РґРµРЅС‹</p>
-                <p class="text-xs text-text-secondary mt-1">РљРѕРіРґР° Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ СЃРѕР·РґР°СЃС‚ С‡РµСЂРЅРѕРІРёРєРё, РѕРЅРё РїРѕСЏРІСЏС‚СЃСЏ Р·РґРµСЃСЊ.</p>
+                <p class="text-sm font-semibold text-text-secondary mt-2">Черновики не найдены</p>
+                <p class="text-xs text-text-secondary mt-1">Когда автосохранение создаст черновики, они появятся здесь.</p>
             `;
             host.appendChild(empty);
             return;
@@ -4877,13 +4877,13 @@ class EditorDashboard {
                 const task = taskLookup.get(uniqueId);
                 title = task?.name || item.taskId;
                 subtitle = `${task?.moduleName || item.moduleId} / ${task?.topicName || item.topicId}`;
-                targetHint = 'РћС‚РєСЂРѕРµС‚СЃСЏ СЂРµРґР°РєС‚РѕСЂ Р·Р°РґР°РЅРёСЏ';
+                targetHint = 'Откроется редактор задания';
             } else {
                 title = item.complexId && item.complexId !== 'new'
-                    ? `РљРѕРјРїР»РµРєСЃ: ${item.complexId}`
-                    : 'РќРѕРІС‹Р№ РєРѕРјРїР»РµРєСЃ (С‡РµСЂРЅРѕРІРёРє)';
+                    ? `Комплекс: ${item.complexId}`
+                    : 'Новый комплекс (черновик)';
                 subtitle = 'Complex Builder';
-                targetHint = 'РћС‚РєСЂРѕРµС‚СЃСЏ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РєРѕРјРїР»РµРєСЃРѕРІ';
+                targetHint = 'Откроется конструктор комплексов';
             }
 
             card.innerHTML = `
@@ -4893,17 +4893,17 @@ class EditorDashboard {
                         <p class="editor-recovery-title text-sm font-bold text-text-main">${this.escapeHtml(title)}</p>
                     </div>
                     <p class="editor-recovery-subtitle text-xs mt-1">${this.escapeHtml(subtitle)}</p>
-                    <p class="editor-recovery-meta text-[11px] mt-1">РђРІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ: ${this.escapeHtml(this.formatRecoveryTime(item.timestamp))}</p>
+                    <p class="editor-recovery-meta text-[11px] mt-1">Автосохранение: ${this.escapeHtml(this.formatRecoveryTime(item.timestamp))}</p>
                     <p class="editor-recovery-meta text-[11px] mt-1">${this.escapeHtml(targetHint)}</p>
                 </div>
                 <div class="editor-recovery-actions shrink-0">
                     <button type="button" data-action="open-recovery" data-index="${index}"
                         class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
-                        РћС‚РєСЂС‹С‚СЊ
+                        Открыть
                     </button>
                     <button type="button" data-action="discard-recovery" data-index="${index}"
                         class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary text-xs font-semibold hover:text-error hover:border-error transition-colors">
-                        РЈРґР°Р»РёС‚СЊ
+                        Удалить
                     </button>
                 </div>
             `;
@@ -4948,19 +4948,19 @@ class EditorDashboard {
     async discardRecoveryDraft(item) {
         if (!item?.storageKey) return;
         const ok = await NotificationUI.confirm({
-            title: 'РЈРґР°Р»РёС‚СЊ С‡РµСЂРЅРѕРІРёРє?',
-            message: 'Р§РµСЂРЅРѕРІРёРє Р±СѓРґРµС‚ СѓРґР°Р»С‘РЅ Р±РµР· РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ.',
-            confirmText: 'РЈРґР°Р»РёС‚СЊ',
-            cancelText: 'РћС‚РјРµРЅР°',
+            title: 'Удалить черновик?',
+            message: 'Черновик будет удалён без возможности восстановления.',
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
             variant: 'warning',
         });
         if (!ok) return;
         localStorage.removeItem(item.storageKey);
         this.showVoiceToast({
             severity: 'info',
-            what: 'Р§РµСЂРЅРѕРІРёРє СѓРґР°Р»С‘РЅ.',
-            impact: 'Р”Р°РЅРЅС‹Рµ РІ РѕР±Р»Р°РєРµ РЅРµ Р·Р°С‚СЂРѕРЅСѓС‚С‹.',
-            next: 'РџСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё РѕС‚РєСЂРѕР№С‚Рµ РґСЂСѓРіРѕР№ С‡РµСЂРЅРѕРІРёРє.',
+            what: 'Черновик удалён.',
+            impact: 'Данные в облаке не затронуты.',
+            next: 'При необходимости откройте другой черновик.',
         });
         this.renderRecoveryCenter();
     }
@@ -5006,10 +5006,10 @@ class EditorDashboard {
         if (this.selectedTasks.size === 0) return;
 
         const confirmed = await NotificationUI.confirm({
-            title: 'РЈРґР°Р»РёС‚СЊ Р·Р°РґР°РЅРёСЏ?',
-            message: `Р’С‹ РґРµР№СЃС‚РІРёС‚РµР»СЊРЅРѕ С…РѕС‚РёС‚Рµ СѓРґР°Р»РёС‚СЊ РІС‹Р±СЂР°РЅРЅС‹Рµ Р·Р°РґР°РЅРёСЏ (${this.selectedTasks.size} С€С‚.)?`,
-            confirmText: 'РЈРґР°Р»РёС‚СЊ',
-            cancelText: 'РћС‚РјРµРЅР°',
+            title: 'Удалить задания?',
+            message: `Вы действительно хотите удалить выбранные задания (${this.selectedTasks.size} шт.)?`,
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
             variant: 'error'
         });
         if (!confirmed) return;
@@ -5038,34 +5038,34 @@ class EditorDashboard {
 
                 this.showVoiceToast({
                     severity: 'success',
-                    what: `РЈРґР°Р»РµРЅРѕ Р·Р°РґР°РЅРёР№: ${data.deleted}.`,
-                    impact: 'Р’С‹Р±СЂР°РЅРЅС‹Рµ СЌР»РµРјРµРЅС‚С‹ СѓРґР°Р»РµРЅС‹ РёР· Р±РёР±Р»РёРѕС‚РµРєРё.',
-                    next: 'РљР°С‚Р°Р»РѕРі РѕР±РЅРѕРІР»С‘РЅ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.',
+                    what: `Удалено заданий: ${data.deleted}.`,
+                    impact: 'Выбранные элементы удалены из библиотеки.',
+                    next: 'Каталог обновлён автоматически.',
                 });
                 if (data.errors && data.errors.length > 0) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'РЈРґР°Р»РµРЅРёРµ РІС‹РїРѕР»РЅРµРЅРѕ С‡Р°СЃС‚РёС‡РЅРѕ.',
-                        impact: `РћС€РёР±РєРё: ${data.errors.join(', ')}.`,
-                        next: 'РџСЂРѕРІРµСЂСЊС‚Рµ РїСЂРѕР±Р»РµРјРЅС‹Рµ Р·Р°РґР°РЅРёСЏ Рё РїРѕРІС‚РѕСЂРёС‚Рµ СѓРґР°Р»РµРЅРёРµ РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё.',
+                        what: 'Удаление выполнено частично.',
+                        impact: `Ошибки: ${data.errors.join(', ')}.`,
+                        next: 'Проверьте проблемные задания и повторите удаление при необходимости.',
                         timeout: 6000,
                     });
                 }
             } else {
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'РњР°СЃСЃРѕРІРѕРµ СѓРґР°Р»РµРЅРёРµ РЅРµ РІС‹РїРѕР»РЅРµРЅРѕ.',
-                    impact: 'РЎРїРёСЃРѕРє Р·Р°РґР°РЅРёР№ РЅРµ РёР·РјРµРЅС‘РЅ.',
-                    next: data?.error ? `РџСЂРѕРІРµСЂСЊС‚Рµ РґРµС‚Р°Р»Рё (${data.error}) Рё РїРѕРІС‚РѕСЂРёС‚Рµ.` : 'РџРѕРІС‚РѕСЂРёС‚Рµ РѕРїРµСЂР°С†РёСЋ РїРѕР·Р¶Рµ.',
+                    what: 'Массовое удаление не выполнено.',
+                    impact: 'Список заданий не изменён.',
+                    next: data?.error ? `Проверьте детали (${data.error}) и повторите.` : 'Повторите операцию позже.',
                 });
             }
         } catch (error) {
             console.error('Delete error:', error);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РњР°СЃСЃРѕРІРѕРµ СѓРґР°Р»РµРЅРёРµ РЅРµ РІС‹РїРѕР»РЅРµРЅРѕ РёР·-Р·Р° СЃРµС‚РµРІРѕР№ РѕС€РёР±РєРё.',
-                impact: 'РР·РјРµРЅРµРЅРёСЏ РЅРµ Р±С‹Р»Рё РїСЂРёРјРµРЅРµРЅС‹.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РѕРїРµСЂР°С†РёСЋ.',
+                what: 'Массовое удаление не выполнено из-за сетевой ошибки.',
+                impact: 'Изменения не были применены.',
+                next: 'Проверьте сеть и повторите операцию.',
             });
         }
     }
@@ -5346,11 +5346,11 @@ class EditorDashboard {
                 console.error('Commit failed:', data.error);
                 this.showVoiceToast({
                     severity: 'error',
-                    what: 'РЈРґР°Р»РµРЅРёРµ РЅРµ РїРѕРґС‚РІРµСЂР¶РґРµРЅРѕ СЃРµСЂРІРµСЂРѕРј.',
-                    impact: 'РЎСѓС‰РЅРѕСЃС‚СЊ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅР° РІ РёРЅС‚РµСЂС„РµР№СЃРµ.',
+                    what: 'Удаление не подтверждено сервером.',
+                    impact: 'Сущность восстановлена в интерфейсе.',
                     next: data?.message || data?.error
-                        ? `РџСЂРѕРІРµСЂСЊС‚Рµ РїСЂРёС‡РёРЅСѓ (${data.message || data.error}) Рё РїРѕРІС‚РѕСЂРёС‚Рµ.`
-                        : 'РџРѕРІС‚РѕСЂРёС‚Рµ РґРµР№СЃС‚РІРёРµ РїРѕР·Р¶Рµ.',
+                        ? `Проверьте причину (${data.message || data.error}) и повторите.`
+                        : 'Повторите действие позже.',
                 });
                 this.restoreVisuals(key);
             }
@@ -5358,9 +5358,9 @@ class EditorDashboard {
             console.error('Commit exception:', e);
             this.showVoiceToast({
                 severity: 'error',
-                what: 'РЈРґР°Р»РµРЅРёРµ РЅРµ РІС‹РїРѕР»РЅРµРЅРѕ РёР·-Р·Р° СЃРµС‚РµРІРѕР№ РѕС€РёР±РєРё.',
-                impact: 'РР·РјРµРЅРµРЅРёСЏ РѕС‚РјРµРЅРµРЅС‹ Р»РѕРєР°Р»СЊРЅРѕ.',
-                next: 'РџСЂРѕРІРµСЂСЊС‚Рµ СЃРµС‚СЊ Рё РїРѕРІС‚РѕСЂРёС‚Рµ РїРѕРїС‹С‚РєСѓ.',
+                what: 'Удаление не выполнено из-за сетевой ошибки.',
+                impact: 'Изменения отменены локально.',
+                next: 'Проверьте сеть и повторите попытку.',
             });
             this.restoreVisuals(key);
         }
@@ -5400,7 +5400,7 @@ class EditorDashboard {
         const container = document.getElementById('toast-container');
         if (!container) return;
 
-        const label = type === 'module' ? 'РњРѕРґСѓР»СЊ СѓРґР°Р»РµРЅ' : 'РўРµРјР° СѓРґР°Р»РµРЅР°';
+        const label = type === 'module' ? 'Модуль удален' : 'Тема удалена';
         const toast = document.createElement('div');
         toast.id = id;
         toast.className = 'bg-bg-ink text-text-on-dark px-4 py-3 rounded-lg shadow-xl flex items-center gap-4 animate-slide-up pointer-events-auto min-w-[300px] justify-between';
@@ -5410,7 +5410,7 @@ class EditorDashboard {
                 <span class="text-xs text-text-on-dark opacity-60 function-timer">6c</span>
             </div>
             <button class="text-primary-light hover:text-primary text-sm font-bold uppercase tracking-wider transition-colors">
-                РћС‚РјРµРЅРёС‚СЊ
+                Отменить
             </button>
         `;
 

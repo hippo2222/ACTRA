@@ -815,7 +815,7 @@ const StatisticsApp = {
 
         const insights = Array.isArray(this.state.theoryInsights) ? this.state.theoryInsights.slice(0, 3) : [];
         if (!insights.length) {
-            container.innerHTML = '<p class="stats-empty-copy text-sm">РўРµРѕСЂРµС‚РёС‡РµСЃРєРёРµ СЃРІСЏР·Рё РїРѕСЏРІСЏС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… СЃРІСЏР·Р°РЅРЅС‹С… complex-сессий.</p>';
+            container.innerHTML = '<p class="stats-empty-copy text-sm">Теоретические связи появятся после первых связанных complex-сессий.</p>';
             return;
         }
 

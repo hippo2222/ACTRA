@@ -314,7 +314,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div class="min-w-0">
                     <p class="text-sm font-bold text-primary-darker">Theory focus</p>
-                    <p id="complex-theory-banner-copy" class="text-xs text-primary-darker">РџРѕРєР°Р·Р°РЅС‹ РєРѕРјРїР»РµРєСЃС‹ РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ С‚РµРѕСЂРёРё.</p>
+                    <p id="complex-theory-banner-copy" class="text-xs text-primary-darker">Показаны комплексы для выбранной теории.</p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
                     <button id="complex-theory-open-hub" type="button"
@@ -540,7 +540,7 @@
               banner.classList.add("hidden");
               return;
             }
-            copy.textContent = `РџРѕРєР°Р·Р°РЅС‹ РєРѕРјРїР»РµРєСЃС‹, СЃРІСЏР·Р°РЅРЅС‹Рµ СЃ С‚РµРѕСЂРёРµР№ ${activeTheoryFilterId}.`;
+            copy.textContent = `Показаны комплексы, связанные с теорией ${activeTheoryFilterId}.`;
             banner.classList.remove("hidden");
           }
 
@@ -632,11 +632,11 @@
               case "manual_editor":
                 return "Editor";
               case "archive_import":
-                return "РРјРїРѕСЂС‚";
+                return "Импорт";
               case "topic_propagation":
-                return "Sync С‚РµРј";
+                return "Sync тем";
               case "single_complex_sync":
-                return "Sync РєРѕРјРїР»РµРєСЃР°";
+                return "Sync комплекса";
               default:
                 return "Workspace";
             }
@@ -645,15 +645,15 @@
           function buildComplexOwnershipBadges(complex) {
             const ownership = resolveComplexOwnership(complex);
             const ownerBadge = ownership.isOwnedByCurrentUser
-              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-1 text-xs font-semibold text-success-darker" title="РЎРѕР·РґР°РЅРѕ РёР· С‚РµРєСѓС‰РµРіРѕ РїСЂРѕС„РёР»СЏ">
-                    <span class="material-symbols-outlined text-sm">person</span> РњРѕС‘
+              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-1 text-xs font-semibold text-success-darker" title="Создано из текущего профиля">
+                    <span class="material-symbols-outlined text-sm">person</span> Моё
                  </span>`
               : ownership.hasOwner
-                ? `<span class="cx-card-badge inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary" title="РђРІС‚РѕСЂ РєРѕРјРїР»РµРєСЃР°">
+                ? `<span class="cx-card-badge inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary" title="Автор комплекса">
                       <span class="material-symbols-outlined text-sm">badge</span> ${escapeHtml(ownership.createdByUserId)}
                    </span>`
                 : "";
-            const sourceBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-main px-2 py-1 text-xs font-semibold text-text-secondary" title="РСЃС‚РѕС‡РЅРёРє РєРѕРЅС‚РµРЅС‚Р°">
+            const sourceBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-main px-2 py-1 text-xs font-semibold text-text-secondary" title="Источник контента">
                   <span class="material-symbols-outlined text-sm">inventory_2</span> ${escapeHtml(resolveComplexCreatedViaLabel(ownership.createdVia))}
                </span>`;
             return { ownership, ownerBadge, sourceBadge };
@@ -723,9 +723,9 @@
               activeFilterParts.push(getComplexFilterLabel(activeComplexFilter));
             }
             if (activeTheoryFilterId) {
-              activeFilterParts.push(`С‚РµРѕСЂРёСЏ ${activeTheoryFilterId}`);
+              activeFilterParts.push(`теория ${activeTheoryFilterId}`);
             }
-            const activeLabel = activeFilterParts.length ? activeFilterParts.join(" + ") : "РІСЃРµ РєРѕРјРїР»РµРєСЃС‹";
+            const activeLabel = activeFilterParts.length ? activeFilterParts.join(" + ") : "все комплексы";
             if (!total) {
               summaryEl.textContent = "Каталог пока пуст";
               return;
