@@ -330,10 +330,11 @@
                     </div>
                     <div class="flex items-center gap-2 px-3 py-2 bg-surface-1 rounded-xl border border-border-strong">
                         <span class="material-symbols-outlined text-success text-[18px]">check_circle</span>
-                        <div class="flex flex-col">
+                        <div class="flex flex-col min-w-0">
                             <span
-                                class="text-[10px] font-bold text-text-secondary uppercase tracking-wider">Сегодня</span>
-                            <span class="text-base font-black text-text-main leading-tight" id="mcSummaryToday">—</span>
+                                class="text-[10px] font-bold text-text-secondary uppercase tracking-wider whitespace-nowrap">Сегодня</span>
+                            <span class="text-base font-black text-text-main leading-tight whitespace-nowrap"
+                                id="mcSummaryToday">—</span>
                         </div>
                     </div>
                     <button type="button" onclick="mcApp.refreshDecks()"
