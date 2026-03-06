@@ -1280,6 +1280,26 @@
         }
     }
 
+    // ── Current-user header widget ─────────────────────────────────────────
+    async function loadCurrentUser() {
+        try {
+            const res = await fetch('/api/users/current');
+            const data = await res.json();
+            if (!data.ok || !data.user) return;
+            const user = data.user;
+            const avatarEl = document.getElementById('mcHeaderAvatar');
+            const nameEl = document.getElementById('mcHeaderUserName');
+            if (avatarEl && user.avatar_seed) {
+                const seed = String(user.avatar_seed);
+                avatarEl.src = seed.includes('.') ? `/api/assets/avatars/${encodeURIComponent(seed)}` : '/api/assets/avatars/1.png';
+                avatarEl.alt = user.name || 'Пользователь';
+            }
+            if (nameEl) nameEl.textContent = user.name || 'Гость';
+        } catch (e) {
+            /* non-critical, keep defaults */
+        }
+    }
+
     // ── Init ──────────────────────────────────────────────────────────────
     async function init() {
         document.addEventListener('keydown', handleKeyDown);
@@ -1291,7 +1311,7 @@
         // M14: emit runtime opened telemetry
         emitProdTelemetry('microcards_runtime_opened', {});
 
-        await Promise.all([loadDecks(), loadSummary()]);
+        await Promise.all([loadDecks(), loadSummary(), loadCurrentUser()]);
 
         // Check URL params for direct deck open
         const params = new URLSearchParams(window.location.search);
