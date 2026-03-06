@@ -161,6 +161,15 @@
             }
         }
 
+        /* ── Profile modal: blur page content (CSS filter bypasses backdrop-filter stacking limits) ── */
+        body.profile-modal-open header,
+        body.profile-modal-open #mcMain {
+            filter: blur(3px);
+            transition: filter 0.2s ease;
+            pointer-events: none;
+            user-select: none;
+        }
+
         .mc-shell {
             padding-top: 0.875rem;
             padding-bottom: 1rem;
