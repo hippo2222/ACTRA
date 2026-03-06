@@ -172,8 +172,8 @@
                             <div class="text-xs text-text-muted">${isActive ? 'Текущий профиль' : ''}</div>
                         </div>
                         ${isActive
-                            ? '<span class="material-symbols-outlined text-primary shrink-0">check_circle</span>'
-                            : ''}
+                        ? '<span class="material-symbols-outlined text-primary shrink-0">check_circle</span>'
+                        : ''}
                     </div>`;
             }).join('');
 
@@ -192,12 +192,14 @@
         injectModal();
         const modal = document.getElementById('sharedProfileModal');
         modal.classList.remove('hidden');
+        document.body.classList.add('profile-modal-open');
         loadProfileList();
     }
 
     function closeProfileModal() {
         const modal = document.getElementById('sharedProfileModal');
         if (modal) modal.classList.add('hidden');
+        document.body.classList.remove('profile-modal-open');
     }
 
     async function selectProfile(userId) {
