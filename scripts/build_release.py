@@ -18,7 +18,6 @@ import sys
 from pathlib import Path
 
 APP_NAME = "ACTRA"
-APP_VERSION = "1.0.0"
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -26,13 +25,76 @@ APP_VERSION = "1.0.0"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = SCRIPT_DIR.parent
+VERSION_FILE = PROJECT_ROOT / "task_system" / "VERSION"
 DIST_DIR = PROJECT_ROOT / "dist"
 BUILD_DIR = PROJECT_ROOT / "build"
 SPEC_FILE = PROJECT_ROOT / f"{APP_NAME}.spec"
 CATALOG_VALIDATOR = SCRIPT_DIR / "validate_release_catalog.py"
 DEFAULT_ICON_FILE = PROJECT_ROOT / "frontend" / "assets" / "actra_white.ico"
 INSTALLER_ISS_FILE = BUILD_DIR / f"{APP_NAME}_installer.iss"
+VERSION_INFO_FILE = BUILD_DIR / f"{APP_NAME}_version_info.txt"
 INSTALLER_OUTPUT_NAME = f"{APP_NAME}-Setup"
+
+
+def read_app_version() -> str:
+    """Read the release version from the shared task_system source of truth."""
+    try:
+        version = VERSION_FILE.read_text(encoding="utf-8").strip()
+    except Exception as exc:
+        raise RuntimeError(f"Failed to read app version from {VERSION_FILE}") from exc
+    if not version:
+        raise RuntimeError(f"App version file is empty: {VERSION_FILE}")
+    return version
+
+
+APP_VERSION = read_app_version()
+
+
+def version_tuple(version: str) -> tuple[int, int, int, int]:
+    """Convert semantic version text into a Windows file-version tuple."""
+    cleaned = version.strip().split("-", 1)[0]
+    parts = [chunk for chunk in cleaned.split(".") if chunk]
+    numbers: list[int] = []
+    for part in parts[:4]:
+        digits = "".join(ch for ch in part if ch.isdigit())
+        numbers.append(int(digits) if digits else 0)
+    while len(numbers) < 4:
+        numbers.append(0)
+    return tuple(numbers[:4])
+
+
+def build_version_info_content(version: str) -> str:
+    """Generate a PyInstaller-compatible Windows version resource."""
+    major, minor, patch, build = version_tuple(version)
+    return f"""VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=({major}, {minor}, {patch}, {build}),
+    prodvers=({major}, {minor}, {patch}, {build}),
+    mask=0x3f,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0)
+  ),
+  kids=[
+    StringFileInfo([
+      StringTable(
+        '040904B0',
+        [
+          StringStruct('CompanyName', '{APP_NAME}'),
+          StringStruct('FileDescription', '{APP_NAME}'),
+          StringStruct('FileVersion', '{version}'),
+          StringStruct('InternalName', '{APP_NAME}'),
+          StringStruct('OriginalFilename', '{APP_NAME}.exe'),
+          StringStruct('ProductName', '{APP_NAME}'),
+          StringStruct('ProductVersion', '{version}')
+        ]
+      )
+    ]),
+    VarFileInfo([VarStruct('Translation', [1033, 1200])])
+  ]
+)"""
 
 # Directories to bundle as data
 DATA_DIRS = [
@@ -214,6 +276,7 @@ def build_spec_content(icon_path: Path | None = None) -> str:
 
     datas_str = "\n".join(datas_lines)
     icon_line = f"    icon=r'{_path_for_spec(icon_path)}'," if icon_path else ""
+    version_line = f"    version=r'{_path_for_spec(VERSION_INFO_FILE)}',"
 
     return f"""# -*- mode: python ; coding: utf-8 -*-
 # PyInstaller spec for ACTRA
@@ -325,6 +388,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 {icon_line}
+{version_line}
 )
 
 coll = COLLECT(
@@ -342,6 +406,8 @@ coll = COLLECT(
 
 def run_build(icon_path: Path | None) -> bool:
     """Run PyInstaller build."""
+    BUILD_DIR.mkdir(parents=True, exist_ok=True)
+    VERSION_INFO_FILE.write_text(build_version_info_content(APP_VERSION), encoding="utf-8")
     spec_content = build_spec_content(icon_path)
     with open(SPEC_FILE, "w", encoding="utf-8") as f:
         f.write(spec_content)
