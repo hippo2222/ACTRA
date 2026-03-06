@@ -130,21 +130,35 @@
 
     function getDeckCreatedViaLabel(createdVia) {
         const normalized = String(createdVia || '').trim().toLowerCase();
-        if (normalized === 'manual_editor') return 'Editor';
-        if (normalized === 'analysis_auto') return 'AI';
+        if (normalized === 'manual_editor') return 'Редактор';
+        if (normalized === 'analysis_auto') return 'ИИ';
         if (normalized === 'text_import') return 'Импорт';
-        return 'Workspace';
+        return 'Система';
+    }
+
+    function formatOwnerDisplayName(userId) {
+        if (!userId) return '';
+        // Hide technical IDs like user_7f4b075b5365
+        if (/^user_[a-f0-9]{8,}$/i.test(userId)) return 'Другой профиль';
+        return userId;
+    }
+
+    function getCardTypeLabel(cardType) {
+        if (cardType === 'fact_recall') return 'Запомни';
+        if (cardType === 'pair_match') return 'Пары';
+        return cardType;
     }
 
     function renderDeckOwnershipBadges(deck) {
         const ownership = getDeckOwnership(deck);
         const chips = [];
-        const safeOwnerId = escHtml(ownership.createdByUserId);
+        const displayName = escHtml(formatOwnerDisplayName(ownership.createdByUserId));
+        const rawOwnerId = escHtml(ownership.createdByUserId);
         const sourceLabel = escHtml(getDeckCreatedViaLabel(ownership.createdVia));
         if (ownership.isOwnedByCurrentUser) {
             chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-main">моё</span>');
-        } else if (ownership.hasOwner) {
-            chips.push(`<span class="mc-owner-chip inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${safeOwnerId}">${safeOwnerId}</span>`);
+        } else if (ownership.hasOwner && displayName) {
+            chips.push(`<span class="mc-owner-chip inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${rawOwnerId}">${displayName}</span>`);
         }
         chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${sourceLabel}">${sourceLabel}</span>`);
         return chips.join('');
@@ -482,7 +496,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ event: eventName, fields: fields || {} }),
-            }).catch(() => {});
+            }).catch(() => { });
         } catch (_) { /* fire-and-forget */ }
     }
 
@@ -652,7 +666,7 @@
                 : '';
 
             return `
-                <div class="mc-deck-card rounded-xl border ${borderClass} bg-surface-1 p-4 transition-all cursor-pointer hover:shadow-md group"
+                <div class="mc-deck-card rounded-xl border ${borderClass} bg-surface-1 p-4 transition-all cursor-pointer hover:shadow-md hover:-translate-y-0.5 group"
                      onclick="mcApp.openDeck('${idJs}')">
                     <div class="mc-deck-header flex flex-wrap items-start justify-between gap-2 mb-3">
                         <div class="min-w-0 flex-1">
@@ -666,11 +680,11 @@
                     <div class="mc-deck-stats flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">pending_actions</span>
-                            ${escHtml(due)} due
+                            ${escHtml(due)} к повтору
                         </span>
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">fiber_new</span>
-                            ${escHtml(newCards)} new
+                            ${escHtml(newCards)} новых
                         </span>
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">layers</span>
@@ -794,7 +808,7 @@
 
         // Type badge
         const badge = $('mcCardTypeBadge');
-        if (badge) badge.textContent = cardType;
+        if (badge) badge.textContent = getCardTypeLabel(cardType);
 
         // Requeue badge
         const reqBadge = $('mcCardRequeueBadge');
