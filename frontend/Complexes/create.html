@@ -1321,6 +1321,13 @@
         Черновик
       </span>
 
+      <button id="draft-recovery-btn"
+        class="h-9 inline-flex items-center gap-1.5 rounded-lg border border-border-subtle bg-surface-1 px-3 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors"
+        title="Центр черновиков">
+        <span class="material-symbols-outlined text-[18px]">history</span>
+        <span class="hidden sm:inline text-xs font-semibold">Черновики</span>
+      </button>
+
       <!-- Existing History Button -->
       <button id="history-btn"
         class="hidden h-9 w-9 flex items-center justify-center rounded-lg hover:bg-bg-tertiary text-text-muted transition-colors"
@@ -1392,6 +1399,19 @@
               </div>
             </section>
 
+            <section id="complex-workspace-row"
+              class="rounded-2xl border border-border-subtle bg-surface-1 px-5 py-4 shadow-sm">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0">
+                  <p class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Shared library</p>
+                  <p id="complex-workspace-meta" class="text-sm text-text-secondary mt-1">
+                    Новый комплекс будет сохранён в общую библиотеку устройства. Прогресс выполнения останется личным для каждого профиля.
+                  </p>
+                </div>
+                <div id="complex-workspace-badges" class="flex flex-wrap gap-1.5"></div>
+              </div>
+            </section>
+
             <section
               class="card-section-premium p-0 relative overflow-hidden before:absolute before:left-0 before:top-4 before:bottom-4 before:w-1 before:bg-info before:rounded-r">
 
@@ -1406,6 +1426,23 @@
                 </div>
                 <span class="material-symbols-outlined text-text-muted text-[20px]"
                   id="theory-header-chevron">add</span>
+              </div>
+
+              <div id="theory-inherit-sync-row" class="hidden px-5 pb-3">
+                <div id="theory-inherit-sync-box"
+                  class="rounded-xl border border-border-subtle bg-bg-secondary px-3 py-2.5 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                  <div class="min-w-0">
+                    <p class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Наследование теории</p>
+                    <p id="theory-inherit-sync-summary" class="text-sm text-text-secondary">
+                      Теория подтягивается из тем комплекса.
+                    </p>
+                  </div>
+                  <button id="theory-sync-topics-btn" type="button"
+                    class="btn-secondary h-10 px-3 inline-flex items-center gap-1.5 self-start lg:self-auto">
+                    <span class="material-symbols-outlined text-[18px]">sync</span>
+                    Синхронизировать из тем
+                  </button>
+                </div>
               </div>
 
               <!-- Theory Body (collapsible) -->
@@ -1428,6 +1465,27 @@
                       </div>
                       <button id="theory-create-copy" type="button"
                         class="btn-secondary h-10 px-3 hidden self-start">Создать копию теории</button>
+                    </div>
+                  </div>
+
+                  <div id="theory-context-actions-row"
+                    class="hidden rounded-xl border border-border-subtle bg-bg-secondary px-3 py-2.5">
+                    <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                      <p id="theory-context-actions-meta" class="text-sm text-text-secondary">
+                        Контекст теории уже связан с этим комплексом.
+                      </p>
+                      <div class="flex flex-wrap items-center gap-2">
+                        <button id="theory-open-complexes-btn" type="button"
+                          class="btn-secondary h-10 px-3 inline-flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[18px]">dashboard</span>
+                          Комплексы
+                        </button>
+                        <button id="theory-open-hub-btn" type="button"
+                          class="btn-secondary h-10 px-3 inline-flex items-center gap-1.5">
+                          <span class="material-symbols-outlined text-[18px]">account_tree</span>
+                          Theory Hub
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -1552,6 +1610,25 @@
               <div id="selected-cards" class="hidden flex flex-col gap-2 p-1"></div>
               <select id="selected-list" size="10" class="hidden" multiple></select>
               <p id="tasks-error" class="text-xs text-error" hidden></p>
+            </div>
+          </section>
+
+          <section id="builder-quality-section" class="card-section-premium flex flex-col">
+            <div class="section-header-premium flex items-center justify-between p-4">
+              <div class="flex items-center gap-3">
+                <h3 class="text-base font-bold text-text-main">Готовность комплекса</h3>
+                <span id="builder-quality-status"
+                  class="inline-flex items-center rounded-md border border-border-subtle bg-bg-tertiary px-2 py-0.5 text-xs font-semibold text-text-secondary">
+                  Черновик
+                </span>
+              </div>
+              <span class="text-xs text-text-muted">Мягкая проверка перед сохранением</span>
+            </div>
+
+            <div class="px-4 pb-4 flex flex-col gap-3">
+              <div id="builder-quality-metrics" class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"></div>
+              <div id="builder-quality-types" class="flex flex-wrap gap-2"></div>
+              <div id="builder-quality-warnings" class="flex flex-col gap-2"></div>
             </div>
           </section>
 
@@ -1738,6 +1815,23 @@
       chains: []         // [[ref1, ref2], [ref3, ref4]]
     };
 
+    const COMPLEX_VOICE = Object.freeze({
+      saveCreateSuccess: 'Комплекс создан. Данные сохранены в библиотеке.',
+      saveUpdateSuccess: 'Комплекс сохранён. Изменения записаны в библиотеке.',
+      saveFailed: 'Сохранение не выполнено. Черновик остаётся в браузере.',
+      autosaveFailed: 'Автосохранение не выполнено. Продолжайте работу и сохраните вручную.',
+      autosaveCheckFallback: 'Автосохранение не проверено. Загружена последняя сохранённая версия.',
+      localDraftRestored: 'Черновик восстановлен. Проверьте данные и нажмите «Сохранить».',
+      localDraftKept: 'Черновик сохранён без восстановления. Он доступен в разделе «Черновики».',
+      localDraftRemoved: 'Локальный черновик удалён. Данные на сервере не затронуты.',
+      serverDraftRemoved: 'Серверный черновик удалён. Сохранённая версия комплекса не изменена.',
+      serverDraftKept: 'Серверный черновик сохранён. Его можно восстановить через «Черновики».',
+      inheritSyncSuccess: 'Наследуемая теория синхронизирована.',
+      inheritSyncConflict: 'Синхронизация завершена с конфликтом теорий.',
+      inheritSyncUnchanged: 'Синхронизация не требуется: контекст уже актуален.',
+      inheritSyncFailed: 'Синхронизация не выполнена. Проверьте сеть и повторите действие.',
+    });
+
     function toggleTheorySection(forceState) {
       const header = document.getElementById('theory-header');
       const body = document.getElementById('theory-body');
@@ -1787,6 +1881,22 @@
         dirty: false,
         delta: { ops: [{ insert: "\n" }] },
       },
+      complexOwnership: {
+        scope: "workspace",
+        contentScope: "shared_local",
+        createdByUserId: "",
+        updatedByUserId: "",
+        createdVia: "complex_builder",
+        hasOwner: false,
+        isOwnedByCurrentUser: false,
+        isSharedLibrary: true,
+      },
+      complexTheoryContext: {
+        mode: "inherit", // inherit | override
+        syncStatus: "none", // ok | none | conflict
+        theoryLink: null,
+      },
+      theorySyncInFlight: false,
     });
 
 
@@ -1865,6 +1975,378 @@
 
     }
 
+    function notifyComplexToast(message, tone = 'info', duration = 2800) {
+      if (typeof NotificationUI === 'undefined' || typeof NotificationUI.toast !== 'function') return;
+      NotificationUI.toast(message, tone, duration);
+    }
+
+    function escapeHtml(value) {
+
+      return String(value ?? '')
+
+        .replace(/&/g, '&amp;')
+
+        .replace(/</g, '&lt;')
+
+        .replace(/>/g, '&gt;')
+
+        .replace(/"/g, '&quot;')
+
+        .replace(/'/g, '&#39;');
+
+    }
+
+    function escapeInlineJsString(value) {
+
+      return String(value ?? '')
+
+        .replace(/\\/g, '\\\\')
+
+        .replace(/'/g, "\\'")
+
+        .replace(/"/g, '\\x22')
+
+        .replace(/&/g, '\\x26')
+
+        .replace(/\r/g, '\\r')
+
+        .replace(/\n/g, '\\n')
+
+        .replace(/\u2028/g, '\\u2028')
+
+        .replace(/\u2029/g, '\\u2029')
+
+        .replace(/</g, '\\x3C')
+
+        .replace(/>/g, '\\x3E');
+
+    }
+
+    function resolveComplexTheoryMode(item) {
+      const rawMode = String(item?.theory_mode || '').trim().toLowerCase();
+      if (rawMode === 'inherit' || rawMode === 'override') return rawMode;
+      const theoryLink = (item && typeof item.theory_link === 'object') ? item.theory_link : null;
+      const hasTheoryId = !!(theoryLink && typeof theoryLink.theory_id === 'string' && theoryLink.theory_id);
+      return hasTheoryId ? 'override' : 'inherit';
+    }
+
+    function resolveComplexTheorySyncStatus(item) {
+      const rawStatus = String(item?.theory_sync_status || '').trim().toLowerCase();
+      if (rawStatus === 'ok' || rawStatus === 'none' || rawStatus === 'conflict') return rawStatus;
+      const theoryLink = (item && typeof item.theory_link === 'object') ? item.theory_link : null;
+      const hasTheoryId = !!(theoryLink && typeof theoryLink.theory_id === 'string' && theoryLink.theory_id);
+      return hasTheoryId ? 'ok' : 'none';
+    }
+
+    function buildComplexTheoryMiniBadges(item) {
+      const mode = resolveComplexTheoryMode(item);
+      const syncStatus = resolveComplexTheorySyncStatus(item);
+      const modeBadge = mode === 'inherit'
+        ? `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-tertiary px-2 py-0.5 text-[10px] font-semibold text-text-secondary"><span class="material-symbols-outlined text-[12px]">account_tree</span>наследование</span>`
+        : `<span class="inline-flex items-center gap-1 rounded-full border border-primary-light bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-darker"><span class="material-symbols-outlined text-[12px]">tune</span>локально</span>`;
+      const conflictBadge = syncStatus === 'conflict'
+        ? `<span class="inline-flex items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-2 py-0.5 text-[10px] font-semibold text-warning-darker"><span class="material-symbols-outlined text-[12px]">warning</span>конфликт</span>`
+        : '';
+      return `${modeBadge}${conflictBadge}`;
+    }
+
+    function normalizeComplexOwnership(payload) {
+      const ownership = (payload && typeof payload.ownership === 'object') ? payload.ownership : {};
+      const createdByUserId = String(
+        ownership.created_by_user_id
+        || ownership.createdByUserId
+        || payload?.created_by_user_id
+        || payload?.createdByUserId
+        || ''
+      ).trim();
+      const updatedByUserId = String(
+        ownership.updated_by_user_id
+        || ownership.updatedByUserId
+        || payload?.updated_by_user_id
+        || payload?.updatedByUserId
+        || createdByUserId
+        || ''
+      ).trim();
+      const createdVia = String(
+        ownership.created_via
+        || ownership.createdVia
+        || payload?.created_via
+        || payload?.createdVia
+        || ''
+      ).trim() || 'complex_builder';
+      const contentScope = String(
+        ownership.content_scope
+        || ownership.contentScope
+        || payload?.content_scope
+        || payload?.contentScope
+        || ''
+      ).trim() || 'shared_local';
+      return {
+        createdByUserId,
+        updatedByUserId,
+        createdVia,
+        contentScope,
+        hasOwner: ownership.has_owner === true || ownership.hasOwner === true || !!createdByUserId,
+        isOwnedByCurrentUser: ownership.is_owned_by_current_user === true || ownership.isOwnedByCurrentUser === true,
+        isSharedLibrary: ownership.is_shared_library !== false && ownership.isSharedLibrary !== false,
+      };
+    }
+
+    function resolveComplexCreatedViaLabel(createdVia) {
+      switch (String(createdVia || '').trim().toLowerCase()) {
+        case 'complex_builder':
+          return 'Builder';
+        case 'manual_editor':
+          return 'Editor';
+        case 'archive_import':
+          return 'Импорт';
+        case 'topic_propagation':
+          return 'Sync тем';
+        case 'single_complex_sync':
+          return 'Sync комплекса';
+        default:
+          return 'Workspace';
+      }
+    }
+
+    function buildComplexOwnershipBadges(ownership) {
+      const normalized = normalizeComplexOwnership(ownership);
+      const chips = [];
+      if (normalized.isSharedLibrary) {
+        chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[10px] font-semibold text-text-secondary">Общая библиотека</span>');
+      }
+      if (normalized.isOwnedByCurrentUser) {
+        chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-primary-light bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-darker">Создано вами</span>');
+      } else if (normalized.hasOwner) {
+        chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escapeHtml(normalized.createdByUserId)}</span>`);
+      }
+      chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escapeHtml(resolveComplexCreatedViaLabel(normalized.createdVia))}</span>`);
+      return chips.join('');
+    }
+
+    function renderComplexWorkspaceOwnership() {
+      const metaEl = document.getElementById('complex-workspace-meta');
+      const badgesEl = document.getElementById('complex-workspace-badges');
+      if (!metaEl || !badgesEl) return;
+
+      const ownership = normalizeComplexOwnership(state.complexOwnership || {});
+      const ownerText = ownership.isOwnedByCurrentUser
+        ? 'создан вами'
+        : ownership.hasOwner
+          ? `создан пользователем ${ownership.createdByUserId}`
+          : 'пока без явного автора';
+
+      metaEl.textContent = state.editingId
+        ? `Этот комплекс живёт в общей библиотеке устройства, ${ownerText} через ${resolveComplexCreatedViaLabel(ownership.createdVia)}. Прогресс выполнения остаётся личным для каждого профиля.`
+        : 'Новый комплекс будет сохранён в общую библиотеку устройства. Прогресс выполнения останется личным для каждого профиля.';
+      badgesEl.innerHTML = buildComplexOwnershipBadges(ownership);
+    }
+
+    function sanitizeTheoryLinkPayload(value) {
+      if (!value || typeof value !== 'object') return null;
+      const theoryId = String(value.theory_id || '').trim();
+      if (!theoryId) return null;
+      const link = {
+        theory_id: theoryId,
+        relation: normalizeTheoryRelation(value.relation || 'link'),
+      };
+      if (typeof value.title_cache === 'string') {
+        const titleCache = value.title_cache.trim();
+        if (titleCache) link.title_cache = titleCache;
+      }
+      if (typeof value.updated_at === 'string') {
+        const updatedAt = value.updated_at.trim();
+        if (updatedAt) link.updated_at = updatedAt;
+      }
+      return link;
+    }
+
+    function updateComplexTheoryContextFromItem(item) {
+      const mode = resolveComplexTheoryMode(item);
+      const syncStatus = resolveComplexTheorySyncStatus(item);
+      const theoryLink = sanitizeTheoryLinkPayload(
+        (item && typeof item.theory_link === 'object') ? item.theory_link : null
+      );
+      state.complexTheoryContext = {
+        mode,
+        syncStatus,
+        theoryLink,
+      };
+    }
+
+    function resolveEffectiveComplexTheoryMode() {
+      if (state.theory.mode !== 'none' && state.theory.theoryId) return 'override';
+      return state.complexTheoryContext?.mode === 'override' ? 'override' : 'inherit';
+    }
+
+    function resolveInheritedTheoryLinkForBuilder() {
+      if (resolveEffectiveComplexTheoryMode() !== 'inherit') return null;
+      if (state.theory.mode !== 'none') return null;
+      return sanitizeTheoryLinkPayload(state.complexTheoryContext?.theoryLink || null);
+    }
+
+    function resolveWorkspaceTheoryLink() {
+      if (state.theory.mode !== 'none' && state.theory.theoryId) {
+        return sanitizeTheoryLinkPayload({
+          theory_id: state.theory.theoryId,
+          relation: state.theory.relation || (state.theory.mode === 'new' ? 'copy' : 'link'),
+          title_cache: (state.theory.title || '').trim(),
+          updated_at: state.theory.version || null,
+        });
+      }
+      return resolveInheritedTheoryLinkForBuilder();
+    }
+
+    function renderTheoryContextActions() {
+      const row = document.getElementById('theory-context-actions-row');
+      const metaEl = document.getElementById('theory-context-actions-meta');
+      const openHubBtn = document.getElementById('theory-open-hub-btn');
+      const openComplexesBtn = document.getElementById('theory-open-complexes-btn');
+      if (!row || !metaEl || !openHubBtn || !openComplexesBtn) return;
+
+      const theoryLink = resolveWorkspaceTheoryLink();
+      const theoryId = String(theoryLink?.theory_id || '').trim();
+      if (!theoryId) {
+        row.classList.add('hidden');
+        openHubBtn.disabled = true;
+        openComplexesBtn.disabled = true;
+        metaEl.textContent = 'Контекст теории появится после выбора или наследования теории.';
+        return;
+      }
+
+      const label = String(theoryLink?.title_cache || '').trim() || theoryId;
+      const isInherited = resolveEffectiveComplexTheoryMode() === 'inherit' && state.theory.mode === 'none';
+      metaEl.textContent = isInherited
+        ? `Комплекс наследует теорию ${label}. Можно сразу открыть связанные комплексы или Theory Hub.`
+        : `Комплекс использует теорию ${label}. Можно быстро перейти к связанному theory-контексту.`;
+      openHubBtn.disabled = false;
+      openComplexesBtn.disabled = false;
+      row.classList.remove('hidden');
+    }
+
+    function openTheoryWorkspaceContext(target) {
+      const theoryId = String(resolveWorkspaceTheoryLink()?.theory_id || '').trim();
+      if (!theoryId) return;
+      const url = target === 'hub'
+        ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`
+        : `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
+      if (typeof window.navigateWithTransition === 'function') {
+        window.navigateWithTransition(url);
+        return;
+      }
+      window.location.href = url;
+    }
+
+    function renderTheoryInheritSyncPanel() {
+      const row = document.getElementById('theory-inherit-sync-row');
+      const box = document.getElementById('theory-inherit-sync-box');
+      const summaryEl = document.getElementById('theory-inherit-sync-summary');
+      const syncBtn = document.getElementById('theory-sync-topics-btn');
+      if (!row || !box || !summaryEl || !syncBtn) return;
+
+      const shouldShow =
+        !!state.editingId &&
+        resolveEffectiveComplexTheoryMode() === 'inherit' &&
+        state.theory.mode === 'none';
+
+      if (!shouldShow) {
+        row.classList.add('hidden');
+        renderTheoryContextActions();
+        return;
+      }
+
+      row.classList.remove('hidden');
+
+      const syncStatus = String(state.complexTheoryContext?.syncStatus || 'none');
+      const theoryLink = resolveInheritedTheoryLinkForBuilder();
+      const theoryId = theoryLink?.theory_id || '';
+      const theoryLabel = theoryLink?.title_cache || theoryId || '';
+
+      box.className = 'rounded-xl border px-3 py-2.5 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between';
+      summaryEl.className = 'text-sm';
+
+      if (syncStatus === 'conflict') {
+        box.classList.add('border-warning-light', 'bg-warning-light');
+        summaryEl.classList.add('text-warning-darker');
+        summaryEl.textContent = 'В связанных темах обнаружен конфликт теорий. Автовыбор отключён.';
+      } else if (syncStatus === 'ok' && theoryId) {
+        box.classList.add('border-success-light', 'bg-success-lighter');
+        summaryEl.classList.add('text-success-darker');
+        summaryEl.textContent = `Теория синхронизирована из тем: ${theoryLabel}.`;
+      } else {
+        box.classList.add('border-border-subtle', 'bg-bg-secondary');
+        summaryEl.classList.add('text-text-secondary');
+        summaryEl.textContent = 'Теория в темах пока не задана. Синхронизация не применит контекст.';
+      }
+
+      syncBtn.disabled = state.theorySyncInFlight;
+      syncBtn.classList.toggle('opacity-70', state.theorySyncInFlight);
+      renderTheoryContextActions();
+    }
+
+    async function syncInheritedTheoryFromTopics() {
+      if (!state.editingId) return;
+      if (state.theorySyncInFlight) return;
+      if (resolveEffectiveComplexTheoryMode() !== 'inherit' || state.theory.mode !== 'none') {
+        notifyComplexToast('Синхронизация доступна только для режима наследования.', 'info', 3200);
+        return;
+      }
+
+      state.theorySyncInFlight = true;
+      renderTheoryInheritSyncPanel();
+
+      try {
+        const resp = await fetch(
+          `/api/complexes/${encodeURIComponent(state.editingId)}/sync-theory-from-topics`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dry_run: false, propagation_mode: 'safe' }),
+          }
+        );
+        const data = await resp.json();
+        if (!resp.ok || !data?.ok) {
+          throw new Error(data?.error || `HTTP ${resp.status}`);
+        }
+
+        if (data.item && typeof data.item === 'object') {
+          updateComplexTheoryContextFromItem(data.item);
+          if (data.item.updated_at) {
+            state.currentVersion = data.item.updated_at;
+            updateLastSaveTimestamp(state.currentVersion || null);
+          }
+        }
+
+        const summary = data.summary || {};
+        const action = String(summary.action || 'skipped');
+        const reason = String(summary.reason || '');
+        const status = String(summary.status || state.complexTheoryContext?.syncStatus || 'none');
+
+        if (action === 'updated') {
+          if (status === 'conflict') {
+            notifyComplexToast(COMPLEX_VOICE.inheritSyncConflict, 'warning', 3600);
+          } else {
+            notifyComplexToast(COMPLEX_VOICE.inheritSyncSuccess, 'success', 3000);
+          }
+        } else if (reason === 'unchanged') {
+          notifyComplexToast(COMPLEX_VOICE.inheritSyncUnchanged, 'info', 3000);
+        } else if (reason === 'no_topic_refs') {
+          notifyComplexToast('В комплексе нет корректных ссылок на темы для синхронизации.', 'warning', 3600);
+        } else if (reason === 'mode_override') {
+          notifyComplexToast('Режим локальной теории блокирует синхронизацию.', 'warning', 3200);
+        } else {
+          notifyComplexToast('Синхронизация завершена без изменений.', 'info', 3000);
+        }
+      } catch (error) {
+        console.error('Inherited theory sync failed', error);
+        notifyComplexToast(COMPLEX_VOICE.inheritSyncFailed, 'error', 3600);
+      } finally {
+        state.theorySyncInFlight = false;
+        renderTheoryInheritSyncPanel();
+        renderBuilderQualityPreview();
+      }
+    }
+
     function translateTaskType(type) {
 
       const translations = {
@@ -1898,6 +2380,275 @@
       if (name) return `${name} (${type}${suffix})`;
 
       return `${name || 'Задание'}${suffix}`;
+
+    }
+
+    function getSelectedTaskType(task) {
+
+      if (!task) return 'unknown';
+
+      if (task.task_type) return task.task_type;
+
+      const ref = task.ref || '';
+
+      const catalogItem = state.catalog.find((entry) => entry.ref === ref);
+
+      const catalogType = catalogItem?.task_type || catalogItem?.taskType || (catalogItem?.task_data && catalogItem.task_data.type);
+
+      if (catalogType) return catalogType;
+
+      const knownTypes = ['open_answer', 'click', 'test', 'draw', 'sequence_assembly'];
+
+      const parts = String(ref).split('/');
+
+      return knownTypes.find((type) => parts.includes(type)) || 'unknown';
+
+    }
+
+    function getBuilderQualitySnapshot() {
+
+      const tasks = Array.isArray(state.selectedTasks) ? state.selectedTasks : [];
+
+      const chains = Array.isArray(state.chains) ? state.chains : [];
+
+      const typeCounts = new Map();
+
+      for (const task of tasks) {
+
+        const taskType = getSelectedTaskType(task);
+
+        if (!taskType || taskType === 'unknown') continue;
+
+        typeCounts.set(taskType, (typeCounts.get(taskType) || 0) + 1);
+
+      }
+
+      const taskCount = tasks.length;
+
+      const chainCount = chains.length;
+
+      const shortChainCount = chains.filter((chain) => !Array.isArray(chain) || chain.length < 2).length;
+
+      const theoryMode = state.theory?.mode || 'none';
+
+      const hasTheoryLink = !!state.theory?.theoryId;
+
+      const inheritedTheoryLink = resolveInheritedTheoryLinkForBuilder();
+
+      const inheritedTheoryId = inheritedTheoryLink?.theory_id || '';
+
+      const inheritedSyncStatus = String(state.complexTheoryContext?.syncStatus || 'none');
+
+      const hasTheory = theoryMode === 'new' || hasTheoryLink || !!inheritedTheoryId;
+
+      const warnings = [];
+
+      if (taskCount === 0) {
+
+        warnings.push('Комплекс пуст. Добавьте хотя бы одно задание перед сохранением.');
+
+      } else {
+
+        if (taskCount < 3) {
+
+          warnings.push('В комплексе меньше трёх заданий. Для первого прохождения он может ощущаться слишком коротким.');
+
+        }
+
+        if (!hasTheory) {
+
+          warnings.push('Теория не добавлена. Новому пользователю может не хватить контекста перед стартом.');
+
+        }
+
+        if (theoryMode === 'none' && inheritedSyncStatus === 'conflict') {
+
+          warnings.push('В темах обнаружен конфликт теорий. Для наследования выберите единую теорию на уровне тем.');
+
+        }
+
+        if (theoryMode === 'link' && !hasTheoryLink) {
+
+          warnings.push('Вы выбрали привязку к теории, но ещё не указали конкретную теорию.');
+
+        }
+
+        if (typeCounts.size <= 1 && taskCount > 1) {
+
+          warnings.push('Сейчас здесь только один тип заданий. Комплекс может ощущаться слишком однообразным.');
+
+        }
+
+        if (shortChainCount > 0) {
+
+          warnings.push('Есть незавершённая сцепка. В каждой сцепке должно быть минимум два задания.');
+
+        }
+
+      }
+
+      const theoryLabel = theoryMode === 'none'
+        ? (inheritedTheoryId ? 'Наследуется из тем' : 'Без теории')
+        : (theoryMode === 'link' && !hasTheoryLink)
+          ? 'Связь не завершена'
+          : theoryMode === 'new'
+            ? 'Новая теория'
+            : 'Теория привязана';
+
+      const looksReady =
+        taskCount >= 3 &&
+        hasTheory &&
+        shortChainCount === 0 &&
+        (typeCounts.size > 1 || taskCount === 1);
+
+      return {
+        taskCount,
+        chainCount,
+        typeCounts,
+        theoryLabel,
+        warningCount: warnings.length,
+        warnings,
+        looksReady
+      };
+
+    }
+
+    function createBuilderMetric(label, value) {
+
+      const card = document.createElement('div');
+
+      card.className = 'rounded-xl border border-border-subtle bg-bg-secondary px-3 py-3';
+
+      const valueEl = document.createElement('div');
+
+      valueEl.className = 'text-base font-bold text-text-main';
+
+      valueEl.textContent = value;
+
+      const labelEl = document.createElement('div');
+
+      labelEl.className = 'mt-1 text-xs text-text-muted';
+
+      labelEl.textContent = label;
+
+      card.appendChild(valueEl);
+
+      card.appendChild(labelEl);
+
+      return card;
+
+    }
+
+    function renderBuilderQualityPreview() {
+
+      const metricsRoot = document.getElementById('builder-quality-metrics');
+
+      const typesRoot = document.getElementById('builder-quality-types');
+
+      const warningsRoot = document.getElementById('builder-quality-warnings');
+
+      const statusBadge = document.getElementById('builder-quality-status');
+
+      if (!metricsRoot || !typesRoot || !warningsRoot || !statusBadge) return;
+
+      const snapshot = getBuilderQualitySnapshot();
+
+      metricsRoot.replaceChildren();
+
+      metricsRoot.appendChild(createBuilderMetric('Заданий', String(snapshot.taskCount)));
+      metricsRoot.appendChild(createBuilderMetric('Типов заданий', String(snapshot.typeCounts.size || 0)));
+      metricsRoot.appendChild(createBuilderMetric('Теория', snapshot.theoryLabel));
+      metricsRoot.appendChild(createBuilderMetric('Сцепок', String(snapshot.chainCount)));
+
+      statusBadge.className = 'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold';
+
+      if (snapshot.looksReady) {
+
+        statusBadge.classList.add('border-success-light', 'bg-success-lighter', 'text-success-darker');
+        statusBadge.textContent = 'Готово';
+
+      } else if (snapshot.warningCount > 0) {
+
+        statusBadge.classList.add('border-warning-light', 'bg-warning-light', 'text-warning-darker');
+        statusBadge.textContent = 'Есть риски';
+
+      } else {
+
+        statusBadge.classList.add('border-border-subtle', 'bg-bg-tertiary', 'text-text-secondary');
+        statusBadge.textContent = 'Черновик';
+
+      }
+
+      typesRoot.replaceChildren();
+
+      if (!snapshot.typeCounts.size) {
+
+        const emptyType = document.createElement('span');
+
+        emptyType.className = 'inline-flex items-center rounded-full border border-border-subtle bg-bg-tertiary px-2.5 py-1 text-xs font-medium text-text-muted';
+
+        emptyType.textContent = 'Типы появятся после добавления задач';
+
+        typesRoot.appendChild(emptyType);
+
+      } else {
+
+        Array.from(snapshot.typeCounts.entries())
+          .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+          .forEach(([taskType, count]) => {
+            const chip = document.createElement('span');
+            chip.className = 'inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-xs font-medium text-text-secondary';
+
+            const icon = document.createElement('span');
+            icon.className = 'material-symbols-outlined text-[14px] leading-none text-text-muted';
+            icon.textContent = getTaskTypeIcon(taskType);
+
+            const text = document.createElement('span');
+            text.textContent = `${translateTaskType(taskType)}: ${count}`;
+
+            chip.appendChild(icon);
+            chip.appendChild(text);
+            typesRoot.appendChild(chip);
+          });
+
+      }
+
+      warningsRoot.replaceChildren();
+
+      if (!snapshot.warningCount) {
+
+        const okBox = document.createElement('div');
+
+        okBox.className = 'rounded-xl border border-success-light bg-success-lighter px-3 py-2 text-sm text-success-darker';
+
+        okBox.textContent = 'Состав выглядит достаточно цельным для сохранения и первого прохождения.';
+
+        warningsRoot.appendChild(okBox);
+
+        return;
+
+      }
+
+      snapshot.warnings.forEach((warningText) => {
+        const item = document.createElement('div');
+        item.className = 'rounded-xl border border-warning-light bg-warning-light px-3 py-2 text-sm text-warning-darker';
+
+        const row = document.createElement('div');
+        row.className = 'flex items-start gap-2';
+
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined text-[18px] leading-none';
+        icon.textContent = 'warning';
+
+        const text = document.createElement('span');
+        text.className = 'leading-relaxed';
+        text.textContent = warningText;
+
+        row.appendChild(icon);
+        row.appendChild(text);
+        item.appendChild(row);
+        warningsRoot.appendChild(item);
+      });
 
     }
 
@@ -2318,6 +3069,8 @@
 
         cards.innerHTML = '';
 
+        renderBuilderQualityPreview();
+
         return;
 
       }
@@ -2344,17 +3097,20 @@
 
         // Get meta chips
         const metaLabel = t.topic_name || (t.module_name ? `${t.module_name.replace(/_/g, ' ')}` : 'Задание');
+        const safeMetaLabel = escapeHtml(metaLabel);
+        const safeTaskLabel = escapeHtml(t.label);
 
         // Inner HTML Structure
         const tagsHtml = `
           <div class="task-tags-row">
-            <span class="task-tag task-tag-meta">${metaLabel}</span>
+            <span class="task-tag task-tag-meta">${safeMetaLabel}</span>
             ${chains.map(chain => {
           const cColorIdx = (chain.index % 4) + 1;
+          const safeChainLabel = escapeHtml(chain.label);
           return `
                 <span class="task-tag task-tag-chain" data-chain-color="${cColorIdx}">
                   <span class="task-tag-icon">🔗</span>
-                  <span>${chain.label} (${chain.tasksCount})</span>
+                  <span>${safeChainLabel} (${chain.tasksCount})</span>
                 </span>
               `;
         }).join('')}
@@ -2367,7 +3123,7 @@
 
           <!-- Content -->
           <div class="flex-1 min-w-0 flex items-center gap-1 ml-1">
-             <span class="task-title-compact truncate" title="${t.label}">${t.label}</span>
+             <span class="task-title-compact truncate" title="${safeTaskLabel}">${safeTaskLabel}</span>
              <div class="flex-1 flex items-center gap-0.5 min-w-0">
                ${tagsHtml}
              </div>
@@ -2467,6 +3223,8 @@
         cards.appendChild(card);
 
       }
+
+      renderBuilderQualityPreview();
 
     }
 
@@ -2886,12 +3644,13 @@
         modHeader.className = 'module-card-header';
 
         const iconName = 'folder';
+        const safeModuleName = escapeHtml(m.name);
 
         modHeader.innerHTML = `
           <div class="module-info">
             <span class="material-symbols-outlined module-icon">${iconName}</span>
             <div>
-              <h3 class="module-name">${m.name}</h3>
+              <h3 class="module-name">${safeModuleName}</h3>
               <p class="module-meta">${topicCount} ${topicCount === 1 ? 'тема' : topicCount < 5 ? 'темы' : 'тем'} · ${taskCount} ${taskCount === 1 ? 'задание' : taskCount < 5 ? 'задания' : 'заданий'}</p>
             </div>
           </div>
@@ -2933,8 +3692,9 @@
           topicHeader.className = 'topic-card-header';
 
           const taskCountInTopic = t.tasks?.length || 0;
+          const safeTopicName = escapeHtml(t.name);
           topicHeader.innerHTML = `
-            <span class="topic-name">${t.name}</span>
+            <span class="topic-name">${safeTopicName}</span>
             <div style="display: flex; align-items: center; gap: 0.5rem;">
               <span class="topic-count">${taskCountInTopic} ${taskCountInTopic === 1 ? 'задание' : taskCountInTopic < 5 ? 'задания' : 'заданий'}</span>
               <span class="material-symbols-outlined topic-expand" data-topic-chevron>expand_more</span>
@@ -2962,6 +3722,10 @@
             const taskName = task.task_name || task.task_id;
 
             const chipId = `chip-${ref.replace(/\//g, '-')}`;
+            const safeChipId = escapeHtml(chipId);
+            const safeRef = escapeHtml(ref);
+            const safeTaskName = escapeHtml(taskName);
+            const safeTypeLabel = escapeHtml(typeLabel);
 
             const chip = document.createElement('div');
             chip.className = 'task-chip';
@@ -2970,14 +3734,14 @@
 
             chip.innerHTML = `
               <input type="checkbox" 
-                id="${chipId}" 
+                id="${safeChipId}" 
                 ${isChecked ? 'checked' : ''} 
                 ${alreadyAdded ? 'disabled' : ''}
-                data-task-ref="${ref}" />
-              <label for="${chipId}">
-                <span class="chip-number">${taskName}</span>
+                data-task-ref="${safeRef}" />
+              <label for="${safeChipId}">
+                <span class="chip-number">${safeTaskName}</span>
                 ${isErrorDetection ? '<span class="material-symbols-outlined" style="font-size: 0.875rem;">error</span>' : ''}
-                <span class="material-symbols-outlined chip-type" title="${typeLabel}" style="font-size: 1rem;">${getTaskTypeIcon(task.task_type)}</span>
+                <span class="material-symbols-outlined chip-type" title="${safeTypeLabel}" style="font-size: 1rem;">${getTaskTypeIcon(task.task_type)}</span>
               </label>
             `;
 
@@ -3062,7 +3826,8 @@
         ref: normalized,
         label,
         topic_name: found?.topic_name || null,
-        module_name: found?.module_name || null
+        module_name: found?.module_name || null,
+        task_type: found?.task_type || found?.taskType || null
       });
 
       return { ok: true };
@@ -3565,6 +4330,9 @@
       if (body) body.style.maxHeight = enabled ? '2000px' : '0';
       if (label) { label.textContent = enabled ? "" : "Добавить теорию"; label.style.display = enabled ? "none" : ""; }
       if (chevron) chevron.textContent = enabled ? "expand_less" : "add";
+      renderTheoryInheritSyncPanel();
+      renderTheoryContextActions();
+      renderBuilderQualityPreview();
     }
 
     async function loadTheoryCatalog() {
@@ -3574,7 +4342,10 @@
         const resp = await fetch("/api/theories");
         const data = await resp.json();
         if (!resp.ok || !data.ok) {
-          picker.innerHTML = "";
+          picker.innerHTML = '<option value="">Не удалось загрузить теории</option>';
+          if (typeof NotificationUI !== "undefined") {
+            NotificationUI.toast("Не удалось загрузить список теорий", "warning", 2200);
+          }
           return;
         }
         const items = Array.isArray(data.items) ? data.items : [];
@@ -3587,6 +4358,10 @@
         });
       } catch (e) {
         console.error("Failed to load theories catalog", e);
+        picker.innerHTML = '<option value="">Не удалось загрузить теории</option>';
+        if (typeof NotificationUI !== "undefined") {
+          NotificationUI.toast("Не удалось загрузить список теорий", "warning", 2200);
+        }
       }
     }
 
@@ -3608,6 +4383,8 @@
       if (titleEl) titleEl.value = state.theory.title;
       renderTheoryDeltaToEditor(state.theory.delta);
       updateTheoryCopyButtonState();
+      renderTheoryContextActions();
+      renderBuilderQualityPreview();
     }
 
     async function createTheoryCopy() {
@@ -3789,7 +4566,13 @@
 
       };
 
-      if (state.theory.mode !== "none" && state.theory.theoryId) {
+      if (!state.editingId) {
+        payload.created_via = 'complex_builder';
+      }
+
+      const explicitOverride = state.theory.mode !== "none" && state.theory.theoryId;
+
+      if (explicitOverride) {
         payload.theory_link = {
           theory_id: state.theory.theoryId,
           relation: normalizeTheoryRelation(
@@ -3798,8 +4581,10 @@
           title_cache: (state.theory.title || "").trim(),
           updated_at: state.theory.version || null,
         };
+        payload.theory_mode = "override";
       } else {
-        payload.theory_link = null;
+        payload.theory_link = resolveInheritedTheoryLinkForBuilder();
+        payload.theory_mode = "inherit";
       }
 
       payload.theory_draft = {
@@ -3929,6 +4714,8 @@
     async function handleVersionConflict(conflictData) {
 
       const details = conflictData.details || {};
+      const safeExpectedVersion = escapeHtml(formatVersion(details.expected_version));
+      const safeCurrentVersion = escapeHtml(formatVersion(details.current_version));
 
       // Create modal overlay
 
@@ -3954,9 +4741,9 @@
 
           <div class="bg-surface-2 dark:bg-surface-2 rounded p-3 mb-4 text-sm">
 
-            <p><strong>Ваша версия:</strong> ${formatVersion(details.expected_version)}</p>
+            <p><strong>Ваша версия:</strong> ${safeExpectedVersion}</p>
 
-            <p><strong>Текущая версия:</strong> ${formatVersion(details.current_version)}</p>
+            <p><strong>Текущая версия:</strong> ${safeCurrentVersion}</p>
 
           </div>
 
@@ -4010,7 +4797,7 @@
 
         delete payload.expected_version;
 
-        const resp = await fetch(`/api/complexes/${state.editingId}`, {
+        const resp = await fetch(`/api/complexes/${encodeURIComponent(state.editingId)}`, {
 
           method: 'PUT',
 
@@ -4121,7 +4908,7 @@
 
         const method = state.editingId ? 'PUT' : 'POST';
 
-        const url = state.editingId ? `/api/complexes/${state.editingId}` : '/api/complexes';
+        const url = state.editingId ? `/api/complexes/${encodeURIComponent(state.editingId)}` : '/api/complexes';
 
         const resp = await fetch(url, {
 
@@ -4227,20 +5014,19 @@
 
         if (state.editingId) {
 
-          await fetch(`/api/complexes/${state.editingId}/autosave`, { method: 'DELETE' });
+          await fetch(`/api/complexes/${encodeURIComponent(state.editingId)}/autosave`, { method: 'DELETE' });
 
         }
 
-        if (typeof NotificationUI !== 'undefined') {
-          NotificationUI.toast(state.editingId ? 'Комплекс сохранён' : 'Комплекс создан', 'success', 2000);
-        }
+        notifyComplexToast(state.editingId ? COMPLEX_VOICE.saveUpdateSuccess : COMPLEX_VOICE.saveCreateSuccess, 'success', 2600);
         setTimeout(() => { window.navigateWithTransition('/ui/complexes'); }, 500);
 
       } catch (e) {
 
         console.error('Save failed', e);
 
-        showGlobalError('Не удалось сохранить комплекс.');
+        showGlobalError(COMPLEX_VOICE.saveFailed);
+        notifyComplexToast(COMPLEX_VOICE.saveFailed, 'error', 3600);
 
         if (btn) btn.removeAttribute('disabled');
 
@@ -4256,7 +5042,7 @@
 
         const payload = buildPayload();
 
-        const resp = await fetch(`/api/complexes/${state.editingId}/autosave`, {
+        const resp = await fetch(`/api/complexes/${encodeURIComponent(state.editingId)}/autosave`, {
 
           method: 'POST',
 
@@ -4275,11 +5061,14 @@
         } else if (resp.status === 404) {
           // Autosave endpoint not implemented - silently ignore
           console.log('[Autosave] Endpoint not available (404)');
+        } else {
+          showAutosaveIndicator(COMPLEX_VOICE.autosaveFailed, 'error');
         }
 
       } catch (e) {
 
         console.error('Autosave failed', e);
+        showAutosaveIndicator(COMPLEX_VOICE.autosaveFailed, 'error');
 
       }
 
@@ -4303,14 +5092,14 @@
 
     }
 
-    function showAutosaveIndicator() {
+    function showAutosaveIndicator(message = 'Черновик обновлён', type = 'success') {
 
       const indicator = document.getElementById('autosave-indicator');
 
       if (!indicator) return;
 
-      indicator.textContent = '💾 Автосохранено';
-
+      indicator.textContent = message;
+      indicator.style.color = type === 'error' ? 'var(--color-error)' : 'var(--color-text-secondary)';
       indicator.style.opacity = '1';
 
       setTimeout(() => {
@@ -4319,6 +5108,258 @@
 
       }, 2000);
 
+    }
+
+    function getCurrentComplexDraftId() {
+      const managerId = window.autoSaveManager?.currentComplexId;
+      if (managerId) return String(managerId);
+      const params = new URLSearchParams(window.location.search);
+      return (params.get('id') || 'new').trim() || 'new';
+    }
+
+    function formatRecoveryTimestamp(rawValue) {
+      const numeric = Number(rawValue);
+      if (Number.isFinite(numeric) && numeric > 0) {
+        const date = new Date(numeric);
+        return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+      }
+      if (typeof rawValue === 'string' && rawValue.trim()) {
+        const parsed = Date.parse(rawValue);
+        if (Number.isFinite(parsed)) {
+          const date = new Date(parsed);
+          return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
+      }
+      return 'время неизвестно';
+    }
+
+    function collectLocalComplexDrafts() {
+      if (window.autoSaveManager && typeof window.autoSaveManager.listDrafts === 'function') {
+        return window.autoSaveManager.listDrafts();
+      }
+
+      const fallback = [];
+      for (let i = 0; i < localStorage.length; i += 1) {
+        const key = localStorage.key(i);
+        if (!key || !key.startsWith('complex_draft_')) continue;
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object' || !parsed.data) continue;
+          fallback.push({
+            key,
+            id: parsed.id || key.replace(/^complex_draft_/, '') || 'new',
+            timestamp: Number(parsed.timestamp || 0),
+            data: parsed.data,
+          });
+        } catch {
+          // Skip malformed draft entries silently
+        }
+      }
+
+      fallback.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      return fallback;
+    }
+
+    async function collectRecoveryDraftEntries() {
+      const currentDraftId = getCurrentComplexDraftId();
+      const entries = collectLocalComplexDrafts().map((draft) => {
+        const complexId = String(draft.id || 'new');
+        return {
+          source: 'local',
+          key: draft.key || `complex_draft_${complexId}`,
+          complexId,
+          timestamp: Number(draft.timestamp || 0),
+          savedAt: null,
+          payload: draft.data || null,
+          canRestoreInline: complexId === currentDraftId,
+        };
+      });
+
+      const editId = state.editingId || new URLSearchParams(window.location.search).get('id');
+      if (editId) {
+        try {
+          const resp = await fetch(`/api/complexes/${encodeURIComponent(editId)}/autosave`);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data?.ok && data.item) {
+              const savedAtRaw = data.saved_at || data.item.updated_at || null;
+              const parsedTs = savedAtRaw ? Date.parse(savedAtRaw) : 0;
+              entries.push({
+                source: 'server',
+                key: `server:${editId}`,
+                complexId: String(editId),
+                timestamp: Number.isFinite(parsedTs) ? parsedTs : 0,
+                savedAt: savedAtRaw,
+                payload: data.item,
+                canRestoreInline: true,
+              });
+            }
+          }
+        } catch (error) {
+          console.warn('[Complex Builder] Failed to load server autosave for recovery center', error);
+        }
+      }
+
+      entries.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      return entries;
+    }
+
+    function setDraftRecoveryModalVisible(visible) {
+      const modal = document.getElementById('draft-recovery-modal');
+      if (!modal) return;
+      if (visible) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    function closeDraftRecoveryModal() {
+      setDraftRecoveryModalVisible(false);
+    }
+
+    async function refreshDraftRecoveryModal() {
+      const host = document.getElementById('draft-recovery-content');
+      if (!host) return;
+      host.innerHTML = '<div class="text-sm text-text-secondary">Загрузка черновиков...</div>';
+
+      const entries = await collectRecoveryDraftEntries();
+      host.replaceChildren();
+
+      if (!entries.length) {
+        const empty = document.createElement('div');
+        empty.className = 'rounded-xl border border-border-subtle bg-surface-2 p-6 text-center';
+        empty.innerHTML = `
+          <span class="material-symbols-outlined text-3xl text-text-disabled">history_toggle_off</span>
+          <p class="text-sm font-semibold text-text-secondary mt-2">Черновики не найдены</p>
+          <p class="text-xs text-text-muted mt-1">Когда автосохранение создаст черновик, он появится здесь.</p>
+        `;
+        host.appendChild(empty);
+        return;
+      }
+
+      entries.forEach((entry) => {
+        const card = document.createElement('div');
+        card.className = 'rounded-xl border border-border-subtle bg-surface-2 p-4 flex items-start justify-between gap-3';
+
+        const isServer = entry.source === 'server';
+        const title = entry.complexId === 'new' ? 'Новый комплекс (черновик)' : `Комплекс: ${entry.complexId}`;
+        const sourceLabel = isServer ? 'Серверный черновик' : 'Локальный черновик';
+        const sourceBadgeClass = isServer
+          ? 'bg-primary-lighter text-primary-dark border border-primary-light'
+          : 'bg-bg-tertiary text-text-secondary border border-border-subtle';
+        const actionHint = entry.canRestoreInline
+          ? 'Восстановится в текущей форме.'
+          : 'Откроется соответствующая форма комплекса.';
+
+        card.innerHTML = `
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-text-disabled">${isServer ? 'cloud_sync' : 'device_hub'}</span>
+              <p class="text-sm font-bold text-text-main truncate">${escapeHtml(title)}</p>
+              <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold ${sourceBadgeClass}">
+                ${escapeHtml(sourceLabel)}
+              </span>
+            </div>
+            <p class="text-xs text-text-secondary mt-1">Время: ${escapeHtml(formatRecoveryTimestamp(entry.savedAt || entry.timestamp))}</p>
+            <p class="text-[11px] text-text-muted mt-1">${escapeHtml(actionHint)}</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button type="button" data-action="restore-draft"
+              class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
+              ${entry.canRestoreInline ? 'Восстановить' : 'Открыть'}
+            </button>
+            <button type="button" data-action="discard-draft"
+              class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary text-xs font-semibold hover:text-error hover:border-error transition-colors">
+              Удалить
+            </button>
+          </div>
+        `;
+
+        card.querySelector('[data-action="restore-draft"]')?.addEventListener('click', async () => {
+          await restoreRecoveryDraftEntry(entry);
+        });
+
+        card.querySelector('[data-action="discard-draft"]')?.addEventListener('click', async () => {
+          await discardRecoveryDraftEntry(entry);
+        });
+
+        host.appendChild(card);
+      });
+    }
+
+    async function openDraftRecoveryModal() {
+      setDraftRecoveryModalVisible(true);
+      await refreshDraftRecoveryModal();
+    }
+
+    async function restoreRecoveryDraftEntry(entry) {
+      if (!entry) return;
+
+      if (entry.canRestoreInline && entry.payload) {
+        if (entry.source === 'server') {
+          await applyDataToEditor(entry.payload);
+          if (entry.savedAt) {
+            updateLastSaveTimestamp(entry.savedAt);
+          } else {
+            updateLastSaveTimestamp();
+          }
+        } else {
+          restoreComplexState(entry.payload);
+        }
+        markDirty();
+        notifyComplexToast(COMPLEX_VOICE.localDraftRestored, 'success', 3400);
+        closeDraftRecoveryModal();
+        return;
+      }
+
+      const targetUrl = entry.complexId && entry.complexId !== 'new'
+        ? `/ui/complexes/create?id=${encodeURIComponent(entry.complexId)}`
+        : '/ui/complexes/create';
+      closeDraftRecoveryModal();
+      window.navigateWithTransition(targetUrl);
+    }
+
+    async function discardRecoveryDraftEntry(entry) {
+      if (!entry) return;
+
+      const isServer = entry.source === 'server';
+      const ok = await NotificationUI.confirm({
+        title: isServer ? 'Удалить серверный черновик?' : 'Удалить локальный черновик?',
+        message: isServer
+          ? 'Серверный черновик будет удалён. Сохранённая версия комплекса останется без изменений.'
+          : 'Локальный черновик будет удалён только на этом устройстве.',
+        confirmText: 'Удалить',
+        cancelText: 'Отмена',
+        variant: 'warning',
+      });
+      if (!ok) return;
+
+      try {
+        if (isServer) {
+          const resp = await fetch(`/api/complexes/${encodeURIComponent(entry.complexId)}/autosave`, { method: 'DELETE' });
+          if (!resp.ok) {
+            const data = await resp.json().catch(() => ({}));
+            throw new Error(data?.error || `HTTP ${resp.status}`);
+          }
+          notifyComplexToast(COMPLEX_VOICE.serverDraftRemoved, 'info', 3400);
+        } else {
+          if (window.autoSaveManager && typeof window.autoSaveManager.clearDraftByKey === 'function') {
+            window.autoSaveManager.clearDraftByKey(entry.key);
+          } else if (entry.key) {
+            localStorage.removeItem(entry.key);
+          }
+          notifyComplexToast(COMPLEX_VOICE.localDraftRemoved, 'info', 3200);
+        }
+        await refreshDraftRecoveryModal();
+      } catch (error) {
+        console.error('[Complex Builder] Failed to discard draft', error);
+        notifyComplexToast('Не удалось удалить черновик. Попробуйте ещё раз.', 'error', 3600);
+      }
     }
 
     function markDirty() {
@@ -4364,6 +5405,23 @@
       document.getElementById('name')?.addEventListener('input', markDirty);
 
       document.getElementById('description')?.addEventListener('input', markDirty);
+      document.getElementById('draft-recovery-btn')?.addEventListener('click', () => { openDraftRecoveryModal(); });
+      document.getElementById('draft-recovery-close')?.addEventListener('click', closeDraftRecoveryModal);
+      document.getElementById('draft-recovery-dismiss')?.addEventListener('click', closeDraftRecoveryModal);
+      document.getElementById('draft-recovery-reload')?.addEventListener('click', () => { refreshDraftRecoveryModal(); });
+
+      const draftRecoveryModal = document.getElementById('draft-recovery-modal');
+      draftRecoveryModal?.addEventListener('click', (event) => {
+        if (event.target === draftRecoveryModal) {
+          closeDraftRecoveryModal();
+        }
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        if (draftRecoveryModal && !draftRecoveryModal.classList.contains('hidden')) {
+          closeDraftRecoveryModal();
+        }
+      });
 
       const theoryModeEl = document.getElementById("theory-mode");
       const theoryPickerEl = document.getElementById("theory-link-picker");
@@ -4372,11 +5430,25 @@
       const theoryImageBtn = document.getElementById("theory-image-btn");
       const theoryImageInput = document.getElementById("theory-image-input");
       const theoryCopyBtn = document.getElementById("theory-create-copy");
+      const theoryOpenHubBtn = document.getElementById("theory-open-hub-btn");
+      const theoryOpenComplexesBtn = document.getElementById("theory-open-complexes-btn");
 
       setTheoryMode("none");
       renderTheoryDeltaToEditor(state.theory.delta);
       await loadTheoryCatalog();
       updateTheoryCopyButtonState();
+      renderComplexWorkspaceOwnership();
+      renderTheoryInheritSyncPanel();
+      renderTheoryContextActions();
+      renderBuilderQualityPreview();
+
+      document.getElementById('theory-sync-topics-btn')?.addEventListener('click', async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        await syncInheritedTheoryFromTopics();
+      });
+      theoryOpenHubBtn?.addEventListener('click', () => openTheoryWorkspaceContext('hub'));
+      theoryOpenComplexesBtn?.addEventListener('click', () => openTheoryWorkspaceContext('complexes'));
 
       theoryModeEl?.addEventListener("change", async () => {
         const nextMode = theoryModeEl.value || "none";
@@ -4394,6 +5466,8 @@
           if (theoryTitleEl) theoryTitleEl.value = "";
           if (theoryEditorEl) theoryEditorEl.innerHTML = "<p><br></p>";
           updateTheoryCopyButtonState();
+          renderTheoryContextActions();
+          renderBuilderQualityPreview();
           markDirty();
           return;
         }
@@ -4409,12 +5483,15 @@
             theoryEditorEl.innerHTML = "<p><br></p>";
           }
           updateTheoryCopyButtonState();
+          renderTheoryContextActions();
+          renderBuilderQualityPreview();
           markDirty();
           return;
         }
         state.theory.relation = "link";
         await loadTheoryCatalog();
         updateTheoryCopyButtonState();
+        renderTheoryContextActions();
       });
 
       theoryPickerEl?.addEventListener("change", async () => {
@@ -4424,6 +5501,8 @@
           state.theory.relation = "link";
           state.theory.version = null;
           updateTheoryCopyButtonState();
+          renderTheoryContextActions();
+          renderBuilderQualityPreview();
           return;
         }
         try {
@@ -4440,12 +5519,15 @@
         await loadTheoryCatalog();
         if (theoryPickerEl && selectedTheoryId) theoryPickerEl.value = selectedTheoryId;
         updateTheoryCopyButtonState();
+        renderTheoryContextActions();
+        renderBuilderQualityPreview();
       });
       theoryCopyBtn?.addEventListener("click", createTheoryCopy);
 
       theoryTitleEl?.addEventListener("input", () => {
         state.theory.title = theoryTitleEl.value || "";
         state.theory.dirty = true;
+        renderTheoryContextActions();
         markDirty();
       });
 
@@ -4623,31 +5705,42 @@
 
         try {
 
-          const autoResp = await fetch(`/api/complexes/${editId}/autosave`);
+          const autoResp = await fetch(`/api/complexes/${encodeURIComponent(editId)}/autosave`);
 
           // 404 is normal - means no autosave exists
           if (autoResp.ok) {
 
             const autoData = await autoResp.json();
+            const skipPromptKey = `complex_autosave_prompt_skip_${editId}`;
+            const skipPrompt = sessionStorage.getItem(skipPromptKey) === '1';
 
-            if (autoData.ok && autoData.item && await NotificationUI.confirm({ title: 'Найдено автосохранение', message: 'Восстановить последние несохраненные изменения?\nПри отмене автосохранение будет удалено.', confirmText: 'Восстановить', cancelText: 'Отмена', variant: 'info' })) {
-
-              await applyDataToEditor(autoData.item);
-
-              state.editingId = editId; // ensure ID is set
-
-              updateLastSaveTimestamp();
-
-            } else {
-
-              if (autoData.ok) {
-
-                await fetch(`/api/complexes/${editId}/autosave`, { method: 'DELETE' });
-
+            if (autoData.ok && autoData.item) {
+              let shouldRestore = false;
+              if (!skipPrompt) {
+                shouldRestore = await NotificationUI.confirm({
+                  title: 'Найден серверный черновик',
+                  message: 'Есть автосохранённые изменения, которые ещё не попали в основную версию.\nВосстановить их сейчас?',
+                  confirmText: 'Восстановить',
+                  cancelText: 'Открыть сохранённую версию',
+                  variant: 'info',
+                });
               }
 
+              if (shouldRestore) {
+                sessionStorage.removeItem(skipPromptKey);
+                await applyDataToEditor(autoData.item);
+                state.editingId = editId; // ensure ID is set
+                updateLastSaveTimestamp(autoData.saved_at || autoData.item.updated_at || null);
+                notifyComplexToast(COMPLEX_VOICE.localDraftRestored, 'success', 3400);
+              } else {
+                sessionStorage.setItem(skipPromptKey, '1');
+                await loadComplexData(editId);
+                if (!skipPrompt) {
+                  notifyComplexToast(COMPLEX_VOICE.serverDraftKept, 'info', 3600);
+                }
+              }
+            } else {
               await loadComplexData(editId);
-
             }
 
           } else if (autoResp.status === 404) {
@@ -4656,12 +5749,15 @@
 
           } else {
 
+            notifyComplexToast(COMPLEX_VOICE.autosaveCheckFallback, 'warning', 3600);
             await loadComplexData(editId);
 
           }
 
         } catch (e) {
 
+          console.error('Autosave check failed', e);
+          notifyComplexToast(COMPLEX_VOICE.autosaveCheckFallback, 'warning', 3600);
           await loadComplexData(editId);
 
         }
@@ -4685,6 +5781,10 @@
     async function applyDataToEditor(complex) {
 
       state.editingId = complex.id;
+      state.complexOwnership = normalizeComplexOwnership(complex);
+      updateComplexTheoryContextFromItem(complex);
+      state.theorySyncInFlight = false;
+      renderComplexWorkspaceOwnership();
 
       document.getElementById('history-btn')?.classList.remove('hidden');
 
@@ -4723,7 +5823,9 @@
 
           topic_name: catItem?.topic_name || null,
 
-          module_name: catItem?.module_name || null
+          module_name: catItem?.module_name || null,
+
+          task_type: catItem?.task_type || catItem?.taskType || null
 
         };
 
@@ -4736,6 +5838,7 @@
       const theoryPicker = document.getElementById("theory-link-picker");
       const theoryDraft = (complex && typeof complex.theory_draft === "object") ? complex.theory_draft : null;
       const theoryLink = (complex && typeof complex.theory_link === "object") ? complex.theory_link : null;
+      const complexTheoryMode = resolveComplexTheoryMode(complex);
       if (theoryDraft && ["none", "new", "link"].includes(theoryDraft.mode || "")) {
         state.theory.mode = theoryDraft.mode || "none";
         state.theory.theoryId = theoryDraft.theory_id || null;
@@ -4751,7 +5854,12 @@
         if (theoryTitleEl) theoryTitleEl.value = state.theory.title;
         if (theoryPicker && state.theory.theoryId) theoryPicker.value = state.theory.theoryId;
         renderTheoryDeltaToEditor(state.theory.delta);
-      } else if (theoryLink && typeof theoryLink.theory_id === "string" && theoryLink.theory_id) {
+      } else if (
+        complexTheoryMode === "override" &&
+        theoryLink &&
+        typeof theoryLink.theory_id === "string" &&
+        theoryLink.theory_id
+      ) {
         state.theory.mode = "link";
         state.theory.theoryId = theoryLink.theory_id;
         state.theory.relation = normalizeTheoryRelation(theoryLink.relation || "link");
@@ -4781,6 +5889,7 @@
         if (editor) editor.innerHTML = "<p><br></p>";
       }
       updateTheoryCopyButtonState();
+      renderTheoryInheritSyncPanel();
 
       renderSelectedList();
 
@@ -4796,7 +5905,7 @@
 
       try {
 
-        const resp = await fetch(`/api/complexes/${id}`);
+        const resp = await fetch(`/api/complexes/${encodeURIComponent(id)}`);
 
         const data = await resp.json();
 
@@ -4826,7 +5935,7 @@
 
       try {
 
-        const resp = await fetch(`/api/complexes/${complexId}/history`);
+        const resp = await fetch(`/api/complexes/${encodeURIComponent(complexId)}/history`);
 
         const data = await resp.json();
 
@@ -4855,6 +5964,8 @@
         modal.className = 'fixed inset-0 bg-scrim flex items-center justify-center z-50';
 
         modal.id = 'history-modal';
+
+        const safeComplexIdLiteral = escapeInlineJsString(complexId);
 
         modal.innerHTML = `
 
@@ -4897,6 +6008,10 @@
           const chainCount = (snapshot.chains || []).length;
 
           const name = snapshot.name || 'Без названия';
+          const safeName = escapeHtml(name);
+          const safeDateStr = escapeHtml(dateStr);
+          const safeTimeStr = escapeHtml(timeStr);
+          const safeTimestampLiteral = escapeInlineJsString(snapshot._snapshot_timestamp || '');
 
           return `
 
@@ -4906,13 +6021,13 @@
 
                       <div class="flex items-center gap-2">
 
-                        <span class="font-bold text-text-main">${timeStr}</span>
+                        <span class="font-bold text-text-main">${safeTimeStr}</span>
 
-                        <span class="text-xs text-text-muted">${dateStr}</span>
+                        <span class="text-xs text-text-muted">${safeDateStr}</span>
 
                       </div>
 
-                      <div class="text-sm text-text-secondary font-medium">${name}</div>
+                      <div class="text-sm text-text-secondary font-medium">${safeName}</div>
 
                       <div class="text-xs text-text-muted flex gap-3">
 
@@ -4928,7 +6043,7 @@
 
                       class="px-3 py-1.5 bg-surface-1 border border-border-subtle text-primary hover:bg-primary hover:text-primary-fg rounded-lg text-sm font-semibold transition-all shadow-sm"
 
-                      onclick="restoreVersion('${complexId}', '${snapshot._snapshot_timestamp}')"
+                      onclick="restoreVersion('${safeComplexIdLiteral}', '${safeTimestampLiteral}')"
 
                     >
 
@@ -4974,7 +6089,7 @@
 
       try {
 
-        const resp = await fetch(`/api/complexes/${complexId}/restore/${timestamp}`, {
+        const resp = await fetch(`/api/complexes/${encodeURIComponent(complexId)}/restore/${encodeURIComponent(timestamp)}`, {
 
           method: 'POST'
 
@@ -5203,7 +6318,8 @@
         }
       } catch (e) {
         console.error('[Complexes Tab] Error:', e);
-        complexesList.innerHTML = `<div class="p-4 text-center text-status-error text-sm">Ошибка загрузки: ${e.message}</div>`;
+        const safeErrorMessage = escapeHtml(e?.message || 'unknown_error');
+        complexesList.innerHTML = `<div class="p-4 text-center text-status-error text-sm">Ошибка загрузки: ${safeErrorMessage}</div>`;
       }
     }
 
@@ -5215,6 +6331,7 @@
       }
 
       complexesList.innerHTML = items.map(item => {
+        const rawId = String(item?.id || '');
         let dateVal = item.updated_at || 0;
         if (typeof dateVal === 'number' && dateVal < 10000000000) {
           dateVal *= 1000;
@@ -5224,27 +6341,33 @@
         const count = (item.tasks || []).length;
         const isActive = (typeof state !== 'undefined' && state.editingId === item.id);
         const isSelected = state.selectedComplexes.has(item.id);
+        const safeItemIdLiteral = escapeInlineJsString(rawId);
+        const editUrlLiteral = escapeInlineJsString(`/ui/complexes/create?id=${encodeURIComponent(rawId)}`);
+        const safeName = escapeHtml(item.name || 'Без названия');
+        const safeDate = escapeHtml(date);
+        const theoryContextBadges = buildComplexTheoryMiniBadges(item);
 
         return `
              <div class="group relative p-3 rounded-lg border ${isActive ? 'bg-surface-2 border-primary ring-1 ring-primary' : (isSelected ? 'bg-surface-2 border-primary-light' : 'bg-surface-2 border-border-subtle hover:border-primary')} transition-all">
                
                <div class="flex items-start gap-3">
-                 <div class="pt-1" onclick="toggleComplexSelection(event, '${item.id}')">
+                 <div class="pt-1" onclick="toggleComplexSelection(event, '${safeItemIdLiteral}')">
                     <input type="checkbox" class="w-4 h-4 rounded border-2 border-border-strong text-primary focus:ring-primary bg-surface-1 cursor-pointer" ${isSelected ? 'checked' : ''}>
                  </div>
                  
-                 <div class="flex-1 min-w-0 cursor-pointer" onclick="if(!${isActive}) window.navigateWithTransition('/ui/complexes/create?id=${item.id}')">
+                 <div class="flex-1 min-w-0 cursor-pointer" onclick="if(!${isActive}) window.navigateWithTransition('${editUrlLiteral}')">
                    <div class="flex items-start justify-between mb-1">
-                     <div class="font-medium text-text-main ${isActive ? 'text-primary' : ''} line-clamp-2 text-sm" title="${item.name}">${item.name || 'Без названия'}</div>
+                     <div class="font-medium text-text-main ${isActive ? 'text-primary' : ''} line-clamp-2 text-sm" title="${safeName}">${safeName}</div>
                      ${isActive ? '<div class="flex items-center gap-1 text-primary"><span class="text-[10px] uppercase font-bold tracking-wider">Редактируется</span><span class="material-symbols-outlined text-[16px]">edit</span></div>' : ''}
                    </div>
+                   <div class="flex items-center flex-wrap gap-1 mb-1">${theoryContextBadges}</div>
                    <div class="flex items-center justify-between text-xs text-text-muted mt-2">
                      <span>${count} заданий</span>
-                     <span>${date}</span>
+                     <span>${safeDate}</span>
                    </div>
                  </div>
 
-                 <button onclick="openComplexContextMenu(event, '${item.id}')" class="p-1 rounded hover:bg-bg-tertiary text-text-muted hover:text-text-main transition-colors shrink-0">
+                 <button onclick="openComplexContextMenu(event, '${safeItemIdLiteral}')" class="p-1 rounded hover:bg-bg-tertiary text-text-muted hover:text-text-main transition-colors shrink-0">
                     <span class="material-symbols-outlined text-[20px]">more_vert</span>
                  </button>
                </div>
@@ -5439,6 +6562,37 @@
     </div>
   </div>
 
+  <div id="draft-recovery-modal"
+    class="fixed inset-0 z-[320] hidden items-center justify-center bg-scrim backdrop-blur-sm p-4">
+    <div
+      class="bg-surface-1 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[86vh] overflow-hidden border border-border-subtle flex flex-col">
+      <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
+        <div class="min-w-0">
+          <h3 class="text-lg font-bold text-text-main truncate">Центр черновиков</h3>
+          <p class="text-xs text-text-secondary mt-1">Локальные и серверные автосохранения для текущей рабочей зоны.</p>
+        </div>
+        <button id="draft-recovery-close"
+          class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
+          aria-label="Закрыть">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div id="draft-recovery-content" class="flex-1 overflow-y-auto p-5 space-y-3">
+        <div class="text-sm text-text-secondary">Загрузка черновиков...</div>
+      </div>
+      <div class="px-6 py-4 border-t border-border-subtle bg-bg-secondary flex items-center justify-between gap-3">
+        <button id="draft-recovery-reload"
+          class="px-4 py-2 rounded-lg text-sm font-semibold border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors">
+          Обновить список
+        </button>
+        <button id="draft-recovery-dismiss"
+          class="px-4 py-2 rounded-lg text-sm font-semibold bg-bg-tertiary text-text-main hover:bg-bg-hover transition-colors">
+          Закрыть
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div id="autosave-indicator" style="
 
     position: fixed;
@@ -5501,6 +6655,7 @@
            </p>
          `;
         root.appendChild(emptyState);
+        renderBuilderQualityPreview();
         return;
       }
 
@@ -5619,6 +6774,8 @@
 
         root.appendChild(card);
       });
+
+      renderBuilderQualityPreview();
     }
   </script>
   <script src="/assets/NotificationUI.js"></script>
@@ -5642,28 +6799,30 @@
       setTimeout(async () => {
         if (window.autoSaveManager.hasFresherDraft()) {
           const draft = window.autoSaveManager.loadDraft();
-          const savedDate = new Date(draft.timestamp);
+          if (!draft || !draft.data) {
+            window.autoSaveManager.start();
+            return;
+          }
+          const savedDate = new Date(draft.timestamp || Date.now());
           const timeStr = savedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           const dateStr = savedDate.toLocaleDateString();
 
           const ok = await NotificationUI.confirm({
             title: 'Несохраненный черновик',
-            message: `Обнаружена автоматическая копия от ${dateStr} ${timeStr}.\nХотите восстановить данные?`,
+            message: `Обнаружена локальная автокопия от ${dateStr} ${timeStr}.\nВосстановить её сейчас?`,
             confirmText: 'Восстановить',
-            cancelText: 'Не восстанавливать',
+            cancelText: 'Открыть без восстановления',
             variant: 'info'
           });
 
           if (ok) {
-            if (draft && draft.data) {
-              restoreComplexState(draft.data);
-              window.autoSaveManager.start();
-              NotificationUI.toast('Черновик восстановлен', 'success');
-            }
-          } else {
-            window.autoSaveManager.clearDraft();
+            restoreComplexState(draft.data);
+            if (typeof markDirty === 'function') markDirty();
             window.autoSaveManager.start();
-            NotificationUI.toast('Черновик удален', 'info');
+            notifyComplexToast(COMPLEX_VOICE.localDraftRestored, 'success', 3400);
+          } else {
+            window.autoSaveManager.start();
+            notifyComplexToast(COMPLEX_VOICE.localDraftKept, 'info', 3600);
           }
         } else {
           window.autoSaveManager.start();
@@ -5701,7 +6860,7 @@
       // Restore tasks
       if (data.selectedTasks) {
         state.selectedTasks = data.selectedTasks;
-        if (typeof renderSelectedTasks === 'function') renderSelectedTasks();
+        if (typeof renderSelectedList === 'function') renderSelectedList();
       }
 
       // Restore chains
@@ -5752,7 +6911,12 @@
       const el = document.getElementById('save-status');
       if (el) {
         if (status) {
-          el.textContent = `Черновик сохранен ${status.time}`;
+          if (status.error) {
+            el.textContent = status.message || 'Автосохранение не выполнено';
+            el.style.opacity = '1';
+            return;
+          }
+          el.textContent = `Черновик сохранён ${status.time}`;
           el.style.opacity = '1';
         } else {
           el.textContent = '';

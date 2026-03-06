@@ -69,6 +69,7 @@ class TestImportExportSystem(unittest.TestCase):
         with zipfile.ZipFile(zip_path, 'r') as zf:
             files = zf.namelist()
             self.assertIn("manifest.json", files)
+            self.assertNotIn("difficulty_config.json", files)
             # Check internal structure normalized paths
             expected_task_file = f"modules/{module_id}/topics/{topic_id}/tasks/{task_id}/task.json"
             self.assertIn(expected_task_file, files)
@@ -167,6 +168,86 @@ class TestImportExportSystem(unittest.TestCase):
         
         result = next(m for m in messages if m['type'] == 'result')
         self.assertTrue(result['data']['ok'])
+
+    def test_import_confirm_idempotent_replay(self):
+        """Second confirm with the same idempotency key should replay cached result."""
+        zip_path = Path(self.test_dir) / "stream_test_idempotent.zip"
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.writestr(
+                "modules/m1/topics/t1/tasks/task_idempotent/task.json",
+                json.dumps({"id": "task_idempotent", "name": "Task Idempotent"}),
+            )
+
+        key = "archive-confirm-test-replay"
+        with open(zip_path, 'rb') as f:
+            response = self.client.post(
+                '/api/editor/import/confirm',
+                data={
+                    'file': (f, 'test_idempotent.zip'),
+                    'conflict_resolution': 'skip',
+                    'idempotency_key': key,
+                },
+                content_type='multipart/form-data',
+            )
+        self.assertEqual(response.status_code, 200)
+        first_messages = [json.loads(line) for line in response.get_data(as_text=True).strip().split('\n') if line.strip()]
+        first_result = next(m for m in first_messages if m['type'] == 'result')
+        self.assertTrue(first_result['data']['ok'])
+
+        with open(zip_path, 'rb') as f:
+            replay = self.client.post(
+                '/api/editor/import/confirm',
+                data={
+                    'file': (f, 'test_idempotent.zip'),
+                    'conflict_resolution': 'skip',
+                    'idempotency_key': key,
+                },
+                content_type='multipart/form-data',
+            )
+        self.assertEqual(replay.status_code, 200)
+        replay_messages = [json.loads(line) for line in replay.get_data(as_text=True).strip().split('\n') if line.strip()]
+        replay_result = next(m for m in replay_messages if m['type'] == 'result')
+        self.assertTrue(replay_result['data']['ok'])
+        self.assertTrue(replay_result['data']['idempotent_replay'])
+        self.assertEqual(replay_result['data']['idempotency_key'], key)
+
+    def test_import_confirm_idempotency_conflict(self):
+        """Reusing idempotency key with different params must be rejected."""
+        zip_path = Path(self.test_dir) / "stream_test_conflict.zip"
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.writestr(
+                "modules/m1/topics/t1/tasks/task_conflict/task.json",
+                json.dumps({"id": "task_conflict", "name": "Task Conflict"}),
+            )
+
+        key = "archive-confirm-test-conflict"
+        with open(zip_path, 'rb') as f:
+            response = self.client.post(
+                '/api/editor/import/confirm',
+                data={
+                    'file': (f, 'test_conflict.zip'),
+                    'conflict_resolution': 'skip',
+                    'idempotency_key': key,
+                },
+                content_type='multipart/form-data',
+            )
+        self.assertEqual(response.status_code, 200)
+        first_messages = [json.loads(line) for line in response.get_data(as_text=True).strip().split('\n') if line.strip()]
+        first_result = next(m for m in first_messages if m['type'] == 'result')
+        self.assertTrue(first_result['data']['ok'])
+
+        with open(zip_path, 'rb') as f:
+            conflict = self.client.post(
+                '/api/editor/import/confirm',
+                data={
+                    'file': (f, 'test_conflict.zip'),
+                    'conflict_resolution': 'overwrite',
+                    'idempotency_key': key,
+                },
+                content_type='multipart/form-data',
+            )
+        self.assertEqual(conflict.status_code, 409)
+        self.assertEqual(conflict.get_json()['error'], 'idempotency_key_conflict')
 
     # =========================================================================
     # 5. Advanced & Edge Case Tests

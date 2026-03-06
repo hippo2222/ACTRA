@@ -168,6 +168,7 @@
                         <h3 class="text-base font-bold text-text-main leading-tight" id="chart-title">
                             Активность</h3>
                         <div id="chart-period-delta" class="text-xs mt-0.5 font-semibold text-text-secondary">—</div>
+                        <div id="chart-insight" class="hidden mt-1 text-[11px] leading-normal text-text-muted"></div>
                     </div>
                     <div class="chart-controls flex items-center gap-2">
                         <div class="chart-toggle" id="chart-metric-selector" role="tablist" aria-label="Метрика">
@@ -246,6 +247,16 @@
                     aria-label="Что означает блок &quot;Производительность&quot;">
                     <span class="material-symbols-outlined text-[16px] leading-none">help</span>
                 </button>
+            </div>
+            <div id="theory-analytics-card"
+                class="card-with-tooltip bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="material-symbols-outlined text-text-secondary text-sm">account_tree</span>
+                    <h3 class="text-base font-bold text-text-main">Theory Flow</h3>
+                </div>
+                <div id="theory-analytics-list" class="space-y-3">
+                    <p class="text-sm text-text-muted">РўРµРѕСЂРµС‚РёС‡РµСЃРєРёРµ СЃРІСЏР·Рё РїРѕСЏРІСЏС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… СЃРІСЏР·Р°РЅРЅС‹С… complex-сессий.</p>
+                </div>
             </div>
             <div class="shrink-0">
                 <div class="flex items-center gap-2 mb-3">

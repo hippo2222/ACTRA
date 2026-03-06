@@ -4,7 +4,7 @@
 
 <head>
 
-  <script src="../assets/ThemeManager.js"></script>
+  <script src="/assets/ThemeManager.js"></script>
 
   <meta charset="utf-8" />
 
@@ -66,6 +66,20 @@
 
     .s3-btn:hover {
       box-shadow: var(--shadow-md);
+    }
+
+    /* light-b: raise muted text + border contrast to pass AA */
+    html[data-theme="light-b"] #session-status,
+    html[data-theme="light-b"] #session-id-label,
+    html[data-theme="light-b"] #results-badge,
+    html[data-theme="light-b"] .s3-muted-stat-label,
+    html[data-theme="light-b"] .s3-section-caption,
+    html[data-theme="light-b"] #problem-empty-copy {
+      color: var(--color-text-main);
+    }
+
+    html[data-theme="light-b"] #motivational-message {
+      border-color: var(--color-border-strong);
     }
   </style>
 
@@ -137,7 +151,7 @@
 
                     </h2>
 
-                    <span class="text-xs font-medium text-text-secondary dark:text-text-secondary">Итоги</span>
+                    <span id="results-badge" class="text-xs font-medium text-text-secondary dark:text-text-secondary">Итоги</span>
 
                   </div>
 
@@ -149,7 +163,7 @@
 
                         <span class="material-symbols-outlined text-base">sync</span>
 
-                        <p class="text-sm font-medium">Итераций</p>
+                        <p class="s3-muted-stat-label text-sm font-medium">Итераций</p>
 
                       </div>
 
@@ -167,7 +181,7 @@
 
                         <span class="material-symbols-outlined text-base">list_alt</span>
 
-                        <p class="text-sm font-medium">Всего заданий</p>
+                        <p class="s3-muted-stat-label text-sm font-medium">Всего заданий</p>
 
                       </div>
 
@@ -209,7 +223,7 @@
 
                         <span class="material-symbols-outlined text-base">schedule</span>
 
-                        <p class="text-sm font-medium">Время</p>
+                        <p class="s3-muted-stat-label text-sm font-medium">Время</p>
 
                       </div>
 
@@ -243,7 +257,7 @@
 
                       </h3>
 
-                      <span class="text-xs text-text-secondary">Прогресс</span>
+                      <span class="s3-section-caption text-xs text-text-secondary">Прогресс</span>
 
                     </div>
 
@@ -289,7 +303,7 @@
 
                       </h3>
 
-                      <span class="text-xs text-text-secondary">Ошибки</span>
+                      <span class="s3-section-caption text-xs text-text-secondary">Ошибки</span>
 
                     </div>
 
@@ -300,7 +314,7 @@
 
                         <span class="material-symbols-outlined text-3xl text-success">check_circle</span>
 
-                        <p class="text-sm text-text-secondary">Все задания выполнены
+                        <p id="problem-empty-copy" class="text-sm text-text-secondary">Все задания выполнены
 
                           без ошибок!</p>
 
@@ -338,6 +352,11 @@
                 <span class="material-symbols-outlined text-[18px]">list</span>
                 <span class="truncate">К комплексам</span>
               </button>
+              <button id="to-theory-hub-btn"
+                class="hidden flex h-10 min-w-[180px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-primary-light bg-primary-lighter px-6 text-sm font-bold leading-normal tracking-[0.015em] text-primary-darker shadow-sm transition hover:bg-primary-light s3-btn">
+                <span class="material-symbols-outlined text-[18px]">account_tree</span>
+                <span class="truncate">К Theory Hub</span>
+              </button>
               <button id="close-btn" class="hidden">
 
                 <span class="truncate">Закрыть</span>
@@ -372,11 +391,27 @@
 
       },
 
+      async getComplex(complexId) {
+
+        const res = await fetch(
+
+          `/api/complexes/${encodeURIComponent(complexId)}`
+
+        );
+
+        return res.json();
+
+      },
+
     };
 
     const state = {
 
       sessionId: null,
+
+      latestSummary: null,
+
+      theoryBridge: null,
 
     };
 
@@ -399,6 +434,173 @@
       // fallback: ?sessionId=
 
       return url.searchParams.get("sessionId");
+
+    }
+
+    function getTheoryBridgeStorageKey(sessionId) {
+
+      return `theory_training_bridge_v1:${String(sessionId || "").trim()}`;
+
+    }
+
+    function loadTheoryBridgeContext(sessionId) {
+
+      const normalizedSessionId = String(sessionId || "").trim();
+
+      if (!normalizedSessionId || typeof sessionStorage === "undefined") return null;
+
+      try {
+
+        const raw = sessionStorage.getItem(getTheoryBridgeStorageKey(normalizedSessionId));
+
+        if (!raw) return null;
+
+        const parsed = JSON.parse(raw);
+
+        if (!parsed || typeof parsed !== "object") return null;
+
+        const theoryId = String(parsed.theoryId || "").trim();
+
+        if (!theoryId) return null;
+
+        return {
+
+          ...parsed,
+
+          theoryId,
+
+          theoryTitle: String(parsed.theoryTitle || "").trim() || theoryId,
+
+          returnUrl: String(parsed.returnUrl || `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`),
+
+        };
+
+      } catch (error) {
+
+        console.warn("Failed to load theory bridge context", error);
+
+        return null;
+
+      }
+
+    }
+
+    function syncTheoryBridgeAction() {
+
+      const theoryBtn = document.getElementById("to-theory-hub-btn");
+
+      if (!theoryBtn) return;
+
+      const theoryBridge = state.theoryBridge;
+
+      if (!theoryBridge || !theoryBridge.theoryId) {
+
+        theoryBtn.classList.add("hidden");
+
+        return;
+
+      }
+
+      theoryBtn.classList.remove("hidden");
+
+      theoryBtn.title = `Вернуться в Theory Hub: ${theoryBridge.theoryId}`;
+
+      const label = theoryBtn.querySelector(".truncate");
+
+      const theoryLabel = String(theoryBridge.theoryTitle || theoryBridge.theoryId || "").trim() || theoryBridge.theoryId;
+
+      if (label) label.textContent = `К теории ${theoryLabel}`;
+
+    }
+
+    async function hydrateTheoryBridgeFromResults(summary) {
+
+      if (state.theoryBridge && state.theoryBridge.theoryId) return;
+
+      const complexId = String(summary?.complex_id || "").trim();
+
+      if (!complexId) return;
+
+      try {
+
+        const data = await api.getComplex(complexId);
+
+        const item = data?.item && typeof data.item === "object" ? data.item : null;
+
+        const theoryLink = item && typeof item.theory_link === "object" ? item.theory_link : null;
+
+        const theoryId = String(theoryLink?.theory_id || "").trim();
+
+        if (!theoryId) return;
+
+        state.theoryBridge = {
+          theoryId,
+          theoryTitle: String(theoryLink?.title_cache || "").trim() || theoryId,
+          complexId,
+          origin: "s3_complex_theory_link",
+          returnUrl: `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`,
+        };
+
+        syncTheoryBridgeAction();
+
+      } catch (error) {
+
+        console.warn("Failed to hydrate theory bridge from final results", error);
+
+      }
+
+    }
+
+    function updateFinalResultGuidance(summary, successRate) {
+
+      state.latestSummary = summary || null;
+
+      const motEl = document.getElementById("motivational-message");
+
+      const motText = document.getElementById("motivational-text");
+
+      const mainBtnLabel = document.querySelector("#to-main-btn .truncate");
+
+      const complexesBtnLabel = document.querySelector("#to-complexes-btn .truncate");
+
+      const failedAttempts = Math.max(0, Number(summary?.failedAttempts || 0));
+
+      let message = 'Следующий лучший шаг — вернуться на главную: там проще выбрать, что делать дальше без лишних поисков.';
+
+      if (failedAttempts > 0) {
+
+        message = 'Комплекс завершён. Вернитесь на главную, чтобы выбрать следующее действие, а затем закрепите слабые места через календарь или повторение.';
+
+      } else if ((successRate || 0) >= 90) {
+
+        message = 'Сильный проход. На главной вы быстрее всего выберете, продолжать ли новым комплексом или коротким повторением.';
+
+      } else if ((successRate || 0) > 0) {
+
+        message = 'Результат уже есть. Следующий разумный шаг — открыть главную и выбрать, что закрепить сегодня.';
+
+      }
+
+      if (state.theoryBridge && state.theoryBridge.theoryId) {
+
+        message = failedAttempts > 0
+          ? 'Комплекс завершён. Вернитесь в Theory Hub, чтобы сверить ошибки с нужной теорией и сразу продолжить цикл.'
+          : 'Комплекс завершён. Theory Hub уже знает, с какой теорией вы работали, поэтому можно сразу вернуться к связанному контексту.';
+
+      }
+
+      if (motEl && motText) {
+        motText.textContent = message;
+        motEl.classList.remove("hidden");
+      }
+
+      if (mainBtnLabel) mainBtnLabel.textContent = 'Что делать дальше';
+
+      if (complexesBtnLabel && failedAttempts > 0) {
+        complexesBtnLabel.textContent = 'Выбрать другой комплекс';
+      } else if (complexesBtnLabel) {
+        complexesBtnLabel.textContent = 'К комплексам';
+      }
 
     }
 
@@ -571,6 +773,50 @@
 
     }
 
+    function escapeHtml(value) {
+
+      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+
+        "&": "&amp;",
+
+        "<": "&lt;",
+
+        ">": "&gt;",
+
+        '"': "&quot;",
+
+        "'": "&#39;",
+
+      }[char] || char));
+
+    }
+
+    function normalizeRatePercent(rateValue, successValue, totalValue) {
+
+      const explicitRate = toNumberOrNull(rateValue);
+
+      if (explicitRate != null) {
+
+        const normalized = explicitRate <= 1
+
+          ? Math.round(explicitRate * 100)
+
+          : Math.round(explicitRate);
+
+        return Math.max(0, Math.min(100, normalized));
+
+      }
+
+      const success = Math.max(0, toNumberOrNull(successValue) ?? 0);
+
+      const total = Math.max(0, toNumberOrNull(totalValue) ?? 0);
+
+      if (total <= 0) return 0;
+
+      return Math.max(0, Math.min(100, Math.round((success / total) * 100)));
+
+    }
+
     function renderSessionResults(data) {
 
       const summary = normalizeFinalSummary(data);
@@ -591,7 +837,7 @@
 
         summary.totalTasks && summary.totalTasks > 0
 
-          ? Math.round((successfulTasksNumber / summary.totalTasks) * 100)
+          ? normalizeRatePercent(null, successfulTasksNumber, summary.totalTasks)
 
           : null;
 
@@ -647,6 +893,10 @@
         motEl.classList.remove("hidden");
       }
 
+      updateFinalResultGuidance(summary, successRate);
+
+      syncTheoryBridgeAction();
+
       const iterationsGrid = document.getElementById("iterations-grid");
 
       const iterationsEmptyHint = document.getElementById("iterations-empty-hint");
@@ -683,19 +933,17 @@
 
         summary.iterations.forEach((it) => {
 
-          const successRate =
+          const successRate = normalizeRatePercent(
 
-            it && it.success_rate != null
+            it && it.success_rate,
 
-              ? Math.round(it.success_rate * 100)
+            it && (it.successful_tasks ?? it.successes),
 
-              : it && it.total_tasks
+            it && (it.total_tasks ?? it.tasks_total)
 
-                ? Math.round(((it.successful_tasks || 0) / it.total_tasks) * 100)
+          );
 
-                : 0;
-
-          const errors = (it && (it.failed_tasks ?? it.errors)) ?? 0;
+          const errors = Math.max(0, toNumberOrNull(it && (it.failed_tasks ?? it.errors)) ?? 0);
 
           const iterNumber = (it && (it.iteration ?? it.index)) ?? "?";
 
@@ -715,6 +963,12 @@
 
           );
 
+          const safeIterNumber = escapeHtml(iterNumber);
+
+          const safeDurationText = escapeHtml(durationText);
+
+          const safeScoreText = escapeHtml(scoreText);
+
           const card = document.createElement("div");
 
           if (count <= 4) {
@@ -727,7 +981,7 @@
 
                 <div class="flex items-center justify-between gap-2 mb-1">
 
-                  <p class="text-base font-bold text-text-main dark:text-text-main">Итерация ${iterNumber}</p>
+                  <p class="text-base font-bold text-text-main dark:text-text-main">Итерация ${safeIterNumber}</p>
 
                   <span class="rounded-md ${getSuccessColorClasses(successRate).badge} px-2.5 py-1 text-xs font-bold">${successRate}%</span>
 
@@ -745,7 +999,7 @@
 
                     <span class="text-xs text-text-secondary uppercase tracking-wide">Время</span>
 
-                    <span class="font-semibold text-text-main">${durationText}</span>
+                    <span class="font-semibold text-text-main">${safeDurationText}</span>
 
                   </div>
 
@@ -753,7 +1007,7 @@
 
                     <span class="text-xs text-text-secondary uppercase tracking-wide">Счёт</span>
 
-                    <span class="font-semibold text-text-main">${scoreText}</span>
+                    <span class="font-semibold text-text-main">${safeScoreText}</span>
 
                   </div>
 
@@ -785,7 +1039,7 @@
 
                   <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${getSuccessColorClasses(successRate).badge}">
 
-                    <span class="text-sm font-bold ${getSuccessColorClasses(successRate).text}">${iterNumber}</span>
+                    <span class="text-sm font-bold ${getSuccessColorClasses(successRate).text}">${safeIterNumber}</span>
 
                   </div>
 
@@ -815,7 +1069,7 @@
 
                     <p class="text-xs text-text-secondary mb-0.5">Время</p>
 
-                    <p class="font-semibold text-text-main">${durationText}</p>
+                    <p class="font-semibold text-text-main">${safeDurationText}</p>
 
                   </div>
 
@@ -823,7 +1077,7 @@
 
                     <p class="text-xs text-text-secondary mb-0.5">Счёт</p>
 
-                    <p class="font-semibold text-text-main">${scoreText}</p>
+                    <p class="font-semibold text-text-main">${safeScoreText}</p>
 
                   </div>
 
@@ -985,9 +1239,15 @@
 
       state.sessionId = sessionId;
 
+      state.theoryBridge = loadTheoryBridgeContext(sessionId);
+
+      syncTheoryBridgeAction();
+
       if (!sessionId) {
 
         console.error("sessionId отсутствует в URL");
+
+        NotificationUI.toast('Экран итогов открыт без sessionId. Вернитесь в сессию и откройте результаты заново.', 'error');
 
         return;
 
@@ -1001,17 +1261,21 @@
 
           console.error("Ошибка получения финальных результатов", response);
 
-          NotificationUI.toast('Не удалось загрузить итоговые результаты', 'error');
+          NotificationUI.toast('Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.', 'error');
 
           return;
 
         }
+
+        await hydrateTheoryBridgeFromResults(response.results);
 
         renderSessionResults(response.results);
 
       } catch (e) {
 
         console.error("Неожиданная ошибка при загрузке финальных результатов", e);
+
+        NotificationUI.toast('Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.', 'error');
 
       }
 
@@ -1031,6 +1295,12 @@
       document.getElementById("to-complexes-btn").addEventListener("click", () => {
         window.navigateWithTransition("/ui/complexes");
       });
+      document.getElementById("to-theory-hub-btn").addEventListener("click", () => {
+        const returnUrl = state.theoryBridge?.returnUrl || (state.theoryBridge?.theoryId
+          ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(state.theoryBridge.theoryId)}`
+          : "/ui/editor?theory_hub=1");
+        window.navigateWithTransition(returnUrl);
+      });
 
       loadSessionResults();
 
@@ -1039,9 +1309,9 @@
   </script>
 
   <script src="/assets/celebration-effects.js"></script>
-  <script src="../assets/NotificationUI.js"></script>
-  <script src="../assets/ThemeSwitcherUI.js"></script>
-  <script src="../assets/ConnectionMonitor.js"></script>
+  <script src="/assets/NotificationUI.js"></script>
+  <script src="/assets/ThemeSwitcherUI.js"></script>
+  <script src="/assets/ConnectionMonitor.js"></script>
 
 </body>
 

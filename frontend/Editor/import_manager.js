@@ -38,6 +38,7 @@ class ImportManager {
         this.aiAnalyzing = false;
         this.importInProgress = false;
         this.importRequestKey = null;
+        this.importHistoryStorageKey = 'editor_import_history_v1';
 
         // Shared modal can run in classic import mode or standalone theory analysis mode (P5)
         this.modalPurpose = 'import'; // 'import' | 'theory_analysis'
@@ -384,7 +385,23 @@ class ImportManager {
         this.renderCurrentStep();
     }
 
-    showToast(message, type = 'info') {
+    showToast(message, type = 'info', timeout = 3500) {
+        const normalizeType = () => {
+            const key = String(type || '').trim().toLowerCase();
+            if (key === 'blocking') return 'error';
+            if (key === 'success' || key === 'warning' || key === 'error' || key === 'info') return key;
+            if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.resolveVariant === 'function') {
+                return NotificationUI.resolveVariant(key);
+            }
+            return 'info';
+        };
+        const resolvedType = normalizeType();
+
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+            NotificationUI.toast(message, resolvedType, timeout);
+            return;
+        }
+
         const colors = {
             success: 'bg-success text-white',
             error: 'bg-error text-white',
@@ -392,7 +409,7 @@ class ImportManager {
             info: 'bg-info text-white',
         };
         const toast = document.createElement('div');
-        toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${colors[type] || colors.info} transition-all opacity-0 translate-y-2`;
+        toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${colors[resolvedType] || colors.info} transition-all opacity-0 translate-y-2`;
         toast.textContent = message;
         document.body.appendChild(toast);
         requestAnimationFrame(() => {
@@ -404,7 +421,31 @@ class ImportManager {
             toast.style.opacity = '0';
             toast.style.transform = 'translateX(-50%) translateY(8px)';
             setTimeout(() => toast.remove(), 250);
-        }, 3500);
+        }, timeout);
+    }
+
+    showVoiceToast({ severity = 'info', what = '', impact = '', next = '', timeout = 4200 } = {}) {
+        let message = '';
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.voiceMessage === 'function') {
+            message = NotificationUI.voiceMessage({ what, impact, next });
+        } else {
+            message = [what, impact, next].filter(Boolean).join(' ');
+        }
+        if (!message) return;
+        this.showToast(message, severity, timeout);
+    }
+
+    async confirmAction({
+        title = 'Подтверждение',
+        message = 'Вы уверены?',
+        confirmText = 'Подтвердить',
+        cancelText = 'Отмена',
+        variant = 'error',
+    } = {}) {
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
+            return NotificationUI.confirm({ title, message, confirmText, cancelText, variant });
+        }
+        return window.confirm(message);
     }
 
     _makeIdempotencyKey() {
@@ -412,6 +453,97 @@ class ImportManager {
             return `import-${window.crypto.randomUUID()}`;
         }
         return `import-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    }
+
+    loadImportHistory() {
+        try {
+            const raw = localStorage.getItem(this.importHistoryStorageKey);
+            const parsed = raw ? JSON.parse(raw) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    saveImportHistory(items = []) {
+        try {
+            localStorage.setItem(this.importHistoryStorageKey, JSON.stringify(items));
+        } catch (e) {
+            // Ignore storage errors for non-critical import history.
+        }
+    }
+
+    recordImportHistory(entry = {}) {
+        const history = this.loadImportHistory();
+        const nextEntry = {
+            timestamp: Date.now(),
+            mode: this.importMode || 'text',
+            module: this.selectedModuleName || this.selectedModule || '',
+            topic: this.selectedTopicName || this.selectedTopic || '',
+            module_id: this.selectedModule || '',
+            topic_id: this.selectedTopic || '',
+            status: entry.status || 'unknown',
+            imported: Number(entry.imported || 0),
+            skipped: Number(entry.skipped || 0),
+            errors: Number(entry.errors || 0),
+            message: String(entry.message || ''),
+        };
+        history.unshift(nextEntry);
+        this.saveImportHistory(history.slice(0, 8));
+    }
+
+    renderImportHistoryCompact() {
+        const items = this.loadImportHistory();
+        if (!items.length) {
+            return `
+                <div class="mt-6 rounded-xl border border-border-subtle bg-surface-1 p-3">
+                    <div class="text-xs font-semibold text-text-secondary mb-1">Последние импорты</div>
+                    <div class="text-[11px] text-text-muted">История пока пуста.</div>
+                </div>
+            `;
+        }
+
+        const rows = items.slice(0, 4).map((item) => {
+            const date = new Date(item.timestamp || Date.now());
+            const dateText = Number.isNaN(date.getTime())
+                ? 'недавно'
+                : `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            const status = String(item.status || 'unknown');
+            const tone = status === 'ok'
+                ? 'text-success-text'
+                : (status === 'error' ? 'text-error-text' : 'text-warning-text');
+            const location = [item.module, item.topic].filter(Boolean).join(' / ');
+            const summary = `+${Number(item.imported || 0)} | skip ${Number(item.skipped || 0)} | err ${Number(item.errors || 0)}`;
+            return `
+                <div class="rounded-lg border border-border-subtle bg-surface-2 px-2.5 py-2">
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-[11px] font-semibold ${tone}">${this.escapeHtml(status === 'ok' ? 'Успешно' : status === 'error' ? 'Ошибка' : 'Частично')}</div>
+                        <div class="text-[10px] text-text-muted">${this.escapeHtml(dateText)}</div>
+                    </div>
+                    <div class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(location || 'Без привязки')}</div>
+                    <div class="text-[10px] text-text-muted mt-0.5">${this.escapeHtml(summary)}</div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="mt-6 rounded-xl border border-border-subtle bg-surface-1 p-3 space-y-2">
+                <div class="text-xs font-semibold text-text-secondary">Последние импорты</div>
+                ${rows}
+            </div>
+        `;
+    }
+
+    renderModuleOptions(modules, placeholderLabel = 'Выберите модуль...') {
+        const options = [
+            `<option value="">${this.escapeHtml(placeholderLabel)}</option>`,
+        ];
+        (Array.isArray(modules) ? modules : []).forEach((module) => {
+            const value = this.escapeHtmlAttr(String(module?.id || ''));
+            const label = this.escapeHtml(String(module?.name || module?.id || ''));
+            options.push(`<option value="${value}">${label}</option>`);
+        });
+        return options.join('');
     }
 
     renderStep1() {
@@ -423,7 +555,7 @@ class ImportManager {
                 <h3 class="text-lg font-bold text-text-main mb-6">Выберите режим импорта</h3>
                 
                 <div class="grid grid-cols-3 gap-3 mb-8">
-                    <button onclick="dashboard.importManager.setImportMode('text')" 
+                    <button data-role="import-mode-text" onclick="dashboard.importManager.setImportMode('text')" 
                         class="p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'text' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'text' ? 'text-primary' : 'text-text-disabled'}">description</span>
@@ -432,7 +564,7 @@ class ImportManager {
                         <p class="text-xs text-text-secondary">Вставка текста с разметкой (@OPEN_ANSWER, @SEQUENCE...)</p>
                     </button>
                     
-                    <button onclick="dashboard.importManager.setImportMode('archive')" 
+                    <button data-role="import-mode-archive" onclick="dashboard.importManager.setImportMode('archive')" 
                         class="p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'archive' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'archive' ? 'text-primary' : 'text-text-disabled'}">folder_zip</span>
@@ -441,7 +573,7 @@ class ImportManager {
                         <p class="text-xs text-text-secondary">Загрузка ZIP-архива с заданиями (с картинками)</p>
                     </button>
 
-                    <button onclick="dashboard.importManager.setImportMode('ai')" 
+                    <button data-role="import-mode-ai" onclick="dashboard.importManager.setImportMode('ai')" 
                         class="p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'ai' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'ai' ? 'text-primary' : 'text-text-disabled'}">auto_awesome</span>
@@ -450,6 +582,8 @@ class ImportManager {
                         <p class="text-xs text-text-secondary">Загрузите материал — ИИ создаст задания автоматически</p>
                     </button>
                 </div>
+
+                ${this.renderImportHistoryCompact()}
                 
                 ${this.importMode === 'text' ? this.renderStep1Text(modules) : ''}
                 ${this.importMode === 'archive' ? this.renderStep1Archive(modules) : ''}
@@ -465,8 +599,7 @@ class ImportManager {
                     <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
                     <select id="import-module-select" 
                         class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                        <option value="">Выберите модуль...</option>
-                        ${modules.map(m => `<option value="${m.id}">${m.name || m.id}</option>`).join('')}
+                        ${this.renderModuleOptions(modules, 'Выберите модуль...')}
                     </select>
                 </div>
                 
@@ -516,8 +649,7 @@ class ImportManager {
                             <label class="block text-sm font-medium text-text-muted mb-1">Переопределить модуль (опционально)</label>
                             <select id="import-module-select" 
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs">
-                                <option value="">Не переопределять (из архива)</option>
-                                ${modules.map(m => `<option value="${m.id}">${m.name || m.id}</option>`).join('')}
+                                ${this.renderModuleOptions(modules, 'Не переопределять (из архива)')}
                             </select>
                         </div>
                         <div>
@@ -617,7 +749,7 @@ class ImportManager {
                 <textarea id="import-text-area" 
                     class="block w-full rounded-lg border-border-subtle bg-surface-2 p-4 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm font-mono ${hasErrors ? 'border-error focus:ring-error' : ''}"
                     rows="15"
-                    placeholder="@OPEN_ANSWER&#10;# Опишите признаки пневмонии&#10;&#10;@SEQUENCE&#10;# Алгоритм диагностики&#10;element_1: Сбор анамнеза&#10;...&#10;&#10;@CLICK_TEXT&#10;# Выберите верные утверждения&#10;+ Верный вариант&#10;- Неверный вариант&#10;&#10;@TEST&#10;# Контрольные вопросы&#10;? Вопрос&#10;+ Верный ответ&#10;- Неверный ответ">${this.sourceText}</textarea>
+                    placeholder="@OPEN_ANSWER&#10;# Опишите признаки пневмонии&#10;&#10;@SEQUENCE&#10;# Алгоритм диагностики&#10;element_1: Сбор анамнеза&#10;...&#10;&#10;@CLICK_TEXT&#10;# Выберите верные утверждения&#10;+ Верный вариант&#10;- Неверный вариант&#10;&#10;@TEST&#10;# Контрольные вопросы&#10;? Вопрос&#10;+ Верный ответ&#10;- Неверный ответ">${this.escapeHtml(this.sourceText)}</textarea>
                 
                 <div id="import-live-counter" class="mt-2 flex flex-wrap gap-2 text-xs min-h-[24px]"></div>
                 
@@ -640,6 +772,9 @@ class ImportManager {
     renderStep3() {
         if (this.importMode === 'ai') {
             return this.renderStep3AI();
+        }
+        if (this.importMode === 'archive') {
+            return this.renderStep3Archive();
         }
 
         if (!this.parsedResult) {
@@ -758,8 +893,371 @@ class ImportManager {
         `;
     }
 
+    getArchiveTaskPreviewStatusMeta(task = {}) {
+        const status = String(task.status || 'valid').trim().toLowerCase();
+        if (status === 'error') {
+            return {
+                label: 'Ошибка',
+                badgeClass: 'border border-error-light bg-error-lighter text-error-text',
+                cardClass: 'border-error-light bg-error-lighter',
+                icon: 'error',
+                hint: String(task.error || 'Архив содержит ошибку, задача не может быть импортирована.'),
+            };
+        }
+        if (status === 'conflict') {
+            if (String(task.conflict_type || '').trim().toLowerCase() === 'duplicate') {
+                return {
+                    label: 'Дубликат',
+                    badgeClass: 'border border-info-light bg-info-lighter text-info-text',
+                    cardClass: 'border-info-light bg-info-lighter',
+                    icon: 'content_copy',
+                    hint: 'В библиотеке уже есть идентичное задание.',
+                };
+            }
+            return {
+                label: 'Конфликт',
+                badgeClass: 'border border-warning-light bg-warning-lighter text-warning-text',
+                cardClass: 'border-warning-light bg-warning-lighter',
+                icon: 'warning',
+                hint: 'Задание уже существует и отличается от версии в архиве.',
+            };
+        }
+        if (status === 'warning') {
+            return {
+                label: 'Предупреждение',
+                badgeClass: 'border border-warning-light bg-warning-lighter text-warning-text',
+                cardClass: 'border-warning-light bg-warning-lighter',
+                icon: 'warning',
+                hint: 'Задание можно импортировать, но архив требует внимания.',
+            };
+        }
+        return {
+            label: 'Готово',
+            badgeClass: 'border border-success-light bg-success-lighter text-success-darker',
+            cardClass: 'border-success-light bg-success-lighter',
+            icon: 'check_circle',
+            hint: 'Задание можно импортировать без конфликта.',
+        };
+    }
+
+    renderArchivePreviewIssueList(items, emptyText, formatter, role = '') {
+        const safeRole = role ? ` data-role="${this.escapeHtmlAttr(role)}"` : '';
+        if (!Array.isArray(items) || items.length === 0) {
+            return `<div${safeRole} class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-secondary">${this.escapeHtml(emptyText)}</div>`;
+        }
+        return `
+            <div${safeRole} class="space-y-2">
+                ${items.slice(0, 6).map((item) => `
+                    <div class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main">
+                        ${formatter(item)}
+                    </div>
+                `).join('')}
+                ${items.length > 6 ? `<div class="text-xs text-text-secondary">И ещё ${items.length - 6} элементов.</div>` : ''}
+            </div>
+        `;
+    }
+
+    renderArchiveTaskCard(task, index) {
+        const meta = this.getArchiveTaskPreviewStatusMeta(task);
+        const taskName = String(task.name || task.id || `Задание ${index + 1}`);
+        const taskId = String(task.id || '');
+        const taskType = String(task.type || 'unknown');
+        const targetModule = String(task.target_module || this.selectedModuleName || this.selectedModule || 'из архива');
+        const targetTopic = String(task.target_topic || this.selectedTopicName || this.selectedTopic || 'из архива');
+        const warnings = Array.isArray(task.warnings) ? task.warnings.filter(Boolean) : [];
+        const diffKeys = Array.isArray(task.diff_keys) ? task.diff_keys.filter(Boolean) : [];
+        const existingPath = String(task.existing_path || '').trim();
+        const isSelected = this.selectedTasks.has(index);
+        const isExcluded = this.excludedTasks.has(index);
+
+        return `
+            <div data-role="archive-import-task-card" class="rounded-xl border ${meta.cardClass} overflow-hidden transition-all hover:shadow-md ${isExcluded ? 'opacity-60' : ''}">
+                <div class="p-4 border-b border-border-subtle">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3 min-w-0 flex-1">
+                            <input
+                                type="checkbox"
+                                class="mt-1 w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary flex-shrink-0"
+                                data-task-checkbox="${index}"
+                                onchange="dashboard.importManager.toggleTaskSelection(${index})"
+                                ${isSelected ? 'checked' : ''}>
+                            <div class="min-w-0 flex-1">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="text-xs font-bold text-text-muted">#${index + 1}</span>
+                                    <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-border-subtle bg-surface-1 text-text-secondary">${this.escapeHtml(taskType)}</span>
+                                    ${isExcluded ? '<span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border border-border-subtle bg-surface-1 text-text-secondary">исключено</span>' : ''}
+                                </div>
+                                <div class="mt-2 text-base font-bold text-text-main break-words">${this.escapeHtml(taskName)}</div>
+                                <div class="text-[11px] font-mono text-text-secondary break-all mt-1">${this.escapeHtml(taskId)}</div>
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${meta.badgeClass}">
+                            <span class="material-symbols-outlined text-[14px]">${meta.icon}</span>
+                            <span>${this.escapeHtml(meta.label)}</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-text-secondary mt-3">${this.escapeHtml(meta.hint)}</p>
+                </div>
+
+                <div class="p-4 bg-surface-1 space-y-3">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
+                            <div class="text-text-muted uppercase tracking-wide">Модуль</div>
+                            <div class="mt-1 font-semibold text-text-main">${this.escapeHtml(targetModule)}</div>
+                        </div>
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
+                            <div class="text-text-muted uppercase tracking-wide">Тема</div>
+                            <div class="mt-1 font-semibold text-text-main">${this.escapeHtml(targetTopic)}</div>
+                        </div>
+                    </div>
+
+                    ${existingPath ? `
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2 text-xs">
+                            <div class="text-text-muted uppercase tracking-wide">Текущий путь</div>
+                            <div class="mt-1 font-mono text-text-main break-all">${this.escapeHtml(existingPath)}</div>
+                        </div>
+                    ` : ''}
+
+                    ${diffKeys.length ? `
+                        <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text">
+                            <div class="font-semibold">Изменённые ключи</div>
+                            <div class="mt-1 break-words">${this.escapeHtml(diffKeys.join(', '))}</div>
+                        </div>
+                    ` : ''}
+
+                    ${warnings.length ? `
+                        <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2 text-xs text-warning-text">
+                            <div class="font-semibold">Предупреждения</div>
+                            <div class="mt-1 space-y-1">
+                                ${warnings.slice(0, 3).map((warning) => `<div>${this.escapeHtml(warning)}</div>`).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${task.status === 'error' && task.error ? `
+                        <div class="rounded-lg border border-error-light bg-error-lighter px-3 py-2 text-xs text-error-text">
+                            <div class="font-semibold">Ошибка</div>
+                            <div class="mt-1 break-words">${this.escapeHtml(task.error)}</div>
+                        </div>
+                    ` : ''}
+                </div>
+
+                ${task.status === 'conflict' ? `
+                    <div class="px-4 py-3 border-t border-border-subtle bg-warning-lighter">
+                        <label class="block text-xs font-semibold text-text-secondary mb-1">Действие при конфликте:</label>
+                        <select
+                            onchange="dashboard.importManager.setPerTaskConflict(${index}, this.value)"
+                            class="block w-full rounded border-border-normal text-xs py-1.5 focus:ring-primary bg-surface-1">
+                            <option value="" ${!this.perTaskConflictRes.has(index) ? 'selected' : ''}>Как в общих настройках</option>
+                            <option value="skip" ${this.perTaskConflictRes.get(index) === 'skip' ? 'selected' : ''}>Пропустить</option>
+                            <option value="overwrite" ${this.perTaskConflictRes.get(index) === 'overwrite' ? 'selected' : ''}>Перезаписать</option>
+                            <option value="new_id" ${this.perTaskConflictRes.get(index) === 'new_id' ? 'selected' : ''}>Создать копию (новый ID)</option>
+                        </select>
+                    </div>
+                ` : ''}
+
+                <div class="p-3 bg-surface-1 border-t border-border-subtle flex gap-2">
+                    <button
+                        onclick="dashboard.importManager.toggleExclude(${index})"
+                        class="flex-1 px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-bg-hover hover:text-text-main rounded transition-colors border border-border-subtle"
+                        data-task-exclude-btn="${index}">
+                        ${isExcluded ? 'Включить' : 'Исключить'}
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    renderStep3Archive() {
+        if (!this.parsedResult) {
+            return `
+                <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
+                    <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
+                    <p class="text-text-muted">Проверка архива...</p>
+                </div>
+            `;
+        }
+
+        const summary = this.parsedResult.summary || {};
+        const tasks = Array.isArray(this.parsedResult.tasks) ? this.parsedResult.tasks : [];
+        const warnings = Array.isArray(this.parsedResult.warnings)
+            ? this.parsedResult.warnings.filter((item) => typeof item === 'string' && item.trim())
+            : [];
+        const errors = Array.isArray(this.parsedResult.errors) ? this.parsedResult.errors : [];
+        const duplicates = Array.isArray(this.parsedResult.conflicts?.duplicates) ? this.parsedResult.conflicts.duplicates : [];
+        const overwrites = Array.isArray(this.parsedResult.conflicts?.overwrites) ? this.parsedResult.conflicts.overwrites : [];
+        const brokenDeps = Array.isArray(this.parsedResult.conflicts?.broken_deps) ? this.parsedResult.conflicts.broken_deps : [];
+        const selectedCount = this.selectedTasks.size;
+        const taskWarningsCount = tasks.filter((task) => Array.isArray(task?.warnings) && task.warnings.length > 0).length;
+        const overrideMode = this.selectedModule || this.selectedTopic;
+        const overrideLabel = overrideMode
+            ? `${this.selectedModuleName || this.selectedModule || 'Модуль не задан'} / ${this.selectedTopicName || this.selectedTopic || 'Тема из архива'}`
+            : 'Структура архива будет использована как источник модулей и тем.';
+        const archiveVersion = String(this.parsedResult.archive_version || '').trim();
+
+        return `
+            <div data-role="archive-import-preview" class="animate-slide-up-fade space-y-5">
+                <div>
+                    <h3 class="text-lg font-bold text-text-main">Предпросмотр архива</h3>
+                    <p class="text-sm text-text-muted mt-1">Проверьте состав пакета, конфликты и правила импорта до применения изменений.</p>
+                </div>
+
+                ${this.parsedResult.critical_error ? `
+                    <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3 text-sm text-error-text">
+                        <div class="font-semibold">Критическая ошибка проверки</div>
+                        <div class="mt-1 break-words">${this.escapeHtml(this.parsedResult.critical_error)}</div>
+                    </div>
+                ` : ''}
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary">Всего</div>
+                        <div class="mt-1 text-2xl font-bold text-text-main">${summary.total || 0}</div>
+                    </div>
+                    <div class="rounded-xl border border-success-light bg-success-lighter px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-success-darker">Готово</div>
+                        <div class="mt-1 text-2xl font-bold text-success-darker">${summary.valid || 0}</div>
+                    </div>
+                    <div class="rounded-xl border border-warning-light bg-warning-lighter px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-warning-text">Конфликты</div>
+                        <div class="mt-1 text-2xl font-bold text-warning-text">${summary.conflicts || 0}</div>
+                    </div>
+                    <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-error-text">Ошибки</div>
+                        <div class="mt-1 text-2xl font-bold text-error-text">${summary.errors || 0}</div>
+                    </div>
+                    <div class="rounded-xl border border-warning-light bg-warning-lighter px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-warning-text">Warnings</div>
+                        <div class="mt-1 text-2xl font-bold text-warning-text">${warnings.length + taskWarningsCount}</div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm space-y-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div>
+                            <h4 class="text-sm font-bold text-text-main">Контекст импорта</h4>
+                            <p class="text-xs text-text-secondary mt-1">Override применяется только если вы задали модуль или тему вручную.</p>
+                        </div>
+                        ${archiveVersion ? `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary">Archive v${this.escapeHtml(archiveVersion)}</span>` : ''}
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3">
+                            <div class="text-xs uppercase tracking-wide text-text-secondary">Target override</div>
+                            <div class="mt-1 font-semibold text-text-main break-words">${this.escapeHtml(overrideLabel)}</div>
+                        </div>
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3">
+                            <div class="text-xs uppercase tracking-wide text-text-secondary">Политика ошибок</div>
+                            <div class="mt-1 font-semibold text-text-main">${this.excludedTasks.size > 0 ? `Ручных исключений: ${this.excludedTasks.size}` : 'Исключений вручную пока нет.'}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
+                    <h4 class="text-sm font-bold text-text-main mb-3">Настройки импорта</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-text-secondary mb-1">Если задание уже существует</label>
+                            <select id="conflict-resolution-select" class="block w-full rounded border-border-normal text-sm py-1.5 focus:ring-primary">
+                                <option value="skip">Пропустить (по умолчанию)</option>
+                                <option value="overwrite">Перезаписать</option>
+                                <option value="new_id">Создать копию (новый ID)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center">
+                            <label class="flex items-center gap-2 cursor-pointer mt-4">
+                                <input type="checkbox" id="skip-errors-checkbox" checked class="rounded text-primary focus:ring-primary w-4 h-4">
+                                <span class="text-sm text-text-secondary">Пропускать задания с ошибками</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid gap-5 lg:grid-cols-2">
+                    <div class="space-y-4">
+                        <div>
+                            <h4 class="text-sm font-bold text-text-main mb-2">Конфликты и ошибки</h4>
+                            ${this.renderArchivePreviewIssueList(
+                                [
+                                    ...duplicates.map((item) => ({
+                                        title: item.name || item.id || 'Дубликат',
+                                        detail: 'Идентичная версия уже есть в библиотеке.',
+                                    })),
+                                    ...overwrites.map((item) => ({
+                                        title: item.name || item.id || 'Конфликт',
+                                        detail: `Требует решения по конфликту${Array.isArray(item.diff_keys) && item.diff_keys.length ? `, diff: ${item.diff_keys.join(', ')}` : '.'}`,
+                                    })),
+                                    ...brokenDeps.map((item) => ({
+                                        title: item.name || item.id || 'Проблема зависимостей',
+                                        detail: item.error || 'В архиве отсутствуют нужные ресурсы.',
+                                    })),
+                                    ...errors.map((item) => ({
+                                        title: item.name || item.id || 'Ошибка',
+                                        detail: item.error || 'Не удалось проверить задание.',
+                                    })),
+                                ],
+                                'Проверка не нашла критичных конфликтов.',
+                                (item) => `
+                                    <div class="font-medium text-text-main">${this.escapeHtml(item.title || 'Элемент архива')}</div>
+                                    <div class="text-xs text-text-secondary mt-1">${this.escapeHtml(item.detail || '')}</div>
+                                `,
+                                'archive-import-issues'
+                            )}
+                        </div>
+                        <div>
+                            <h4 class="text-sm font-bold text-text-main mb-2">Предупреждения</h4>
+                            ${this.renderArchivePreviewIssueList(
+                                warnings.map((warning) => ({ warning })),
+                                'Дополнительных предупреждений нет.',
+                                (item) => `<div class="text-sm text-text-main">${this.escapeHtml(item.warning || '')}</div>`,
+                                'archive-import-warnings'
+                            )}
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div class="p-3 bg-primary-lighter border border-primary-light rounded-lg flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <label class="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        id="select-all-tasks"
+                                        onchange="dashboard.importManager.toggleSelectAll()"
+                                        class="w-4 h-4 text-primary rounded focus:ring-2 focus:ring-primary"
+                                        ${this.selectedTasks.size === tasks.length && tasks.length > 0 ? 'checked' : ''}>
+                                    <span class="text-sm font-medium text-text-secondary">Выбрать все</span>
+                                </label>
+                                ${selectedCount > 0 ? `
+                                    <span class="text-xs text-text-muted px-2 py-1 bg-surface-1 rounded border border-border-subtle">
+                                        Выбрано: ${selectedCount}
+                                    </span>
+                                ` : ''}
+                            </div>
+                            <div class="flex gap-2">
+                                <button
+                                    onclick="dashboard.importManager.bulkExclude()"
+                                    class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    ${selectedCount === 0 ? 'disabled' : ''}>
+                                    Исключить выбранные
+                                </button>
+                                <button
+                                    onclick="dashboard.importManager.bulkInclude()"
+                                    class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    ${selectedCount === 0 ? 'disabled' : ''}>
+                                    Включить выбранные
+                                </button>
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            ${tasks.map((task, index) => this.renderArchiveTaskCard(task, index)).join('')}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     renderStep4() {
-        const validTasks = (this.parsedResult?.tasks || []).filter(t => t.status !== 'error');
+        const validTasks = (this.parsedResult?.tasks || []).filter((task, index) => task.status !== 'error' && !this.excludedTasks.has(index));
 
         return `
             <div class="max-w-2xl mx-auto text-center py-8 animate-slide-up-fade">
@@ -1032,6 +1530,86 @@ class ImportManager {
         const div = document.createElement('div');
         div.textContent = text || '';
         return div.innerHTML;
+    }
+
+    escapeHtmlAttr(text) {
+        return String(text ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    escapeInlineJsString(text) {
+        return String(text ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, '\\x27')
+            .replace(/"/g, '\\x22')
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E')
+            .replace(/&/g, '\\x26');
+    }
+
+    serializeInlineJson(value) {
+        try {
+            return this.escapeInlineJsString(
+                JSON.stringify(value)
+                    .replace(/</g, '\\u003c')
+                    .replace(/>/g, '\\u003e')
+                    .replace(/&/g, '\\u0026')
+            );
+        } catch (_) {
+            return '';
+        }
+    }
+
+    getMicrocardsDeckOwnership(deck) {
+        const ownership = (deck && typeof deck.ownership === 'object') ? deck.ownership : {};
+        const meta = (deck && typeof deck.meta === 'object') ? deck.meta : {};
+        const createdByUserId = String(
+            ownership.created_by_user_id || ownership.createdByUserId || meta.created_by_user_id || ''
+        ).trim();
+        const createdVia = String(
+            ownership.created_via || ownership.createdVia || meta.source || ''
+        ).trim() || ((deck && deck.analysis_id) ? 'analysis_auto' : 'manual_editor');
+        return {
+            createdByUserId,
+            createdVia,
+            hasOwner: ownership.has_owner === true || !!createdByUserId,
+            isOwnedByCurrentUser: ownership.is_owned_by_current_user === true,
+            isSharedLibrary: ownership.is_shared_library !== false,
+        };
+    }
+
+    getMicrocardsDeckCreatedViaLabel(createdVia) {
+        switch (String(createdVia || '').trim().toLowerCase()) {
+            case 'analysis_auto':
+                return 'AI';
+            case 'manual_editor':
+                return 'Editor';
+            case 'text_import':
+                return 'Импорт';
+            default:
+                return 'Workspace';
+        }
+    }
+
+    renderMicrocardsDeckOwnershipBadges(deck) {
+        const ownership = this.getMicrocardsDeckOwnership(deck);
+        const chips = [];
+        if (ownership.isSharedLibrary) {
+            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">Общая библиотека</span>');
+        }
+        if (ownership.isOwnedByCurrentUser) {
+            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-primary-light bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-darker">Создано вами</span>');
+        } else if (ownership.hasOwner) {
+            chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(ownership.createdByUserId)}</span>`);
+        }
+        chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(this.getMicrocardsDeckCreatedViaLabel(ownership.createdVia))}</span>`);
+        return chips.join('');
     }
 
     aiUxMessage(key, fallback = '', params = {}) {
@@ -1921,15 +2499,28 @@ text: Сердце человека состоит из [трёх] камер. �
 
         if (!module || !module.topics) {
             topicSelect.disabled = true;
-            topicSelect.innerHTML = '<option value="">Модуль не содержит тем...</option>';
+            topicSelect.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Модуль не содержит тем...';
+            topicSelect.appendChild(option);
             return;
         }
 
         topicSelect.disabled = false;
-        topicSelect.innerHTML = `
-            <option value="">Выберите тему...</option>
-            ${module.topics.map(t => `<option value="${t.id}">${t.name || t.id}</option>`).join('')}
-        `;
+        topicSelect.innerHTML = '';
+
+        const placeholder = document.createElement('option');
+        placeholder.value = '';
+        placeholder.textContent = 'Выберите тему...';
+        topicSelect.appendChild(placeholder);
+
+        (module.topics || []).forEach((topic) => {
+            const option = document.createElement('option');
+            option.value = String(topic?.id || '');
+            option.textContent = String(topic?.name || topic?.id || '');
+            topicSelect.appendChild(option);
+        });
 
         // Restore selection
         if (this.selectedTopic) {
@@ -1998,7 +2589,12 @@ text: Сердце человека состоит из [трёх] камер. �
             if (this.importMode === 'ai') {
                 // Validate AI step 1: need material + module/topic
                 if (!this.selectedModule || !this.selectedTopic) {
-                    this.showToast('Выберите модуль и тему', 'warning');
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Переход к анализу приостановлен.',
+                        impact: 'Модуль и тема не выбраны.',
+                        next: 'Выберите модуль и тему, затем запустите анализ снова.',
+                    });
                     return;
                 }
                 // Save textarea content
@@ -2006,11 +2602,21 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (textarea) this.materialText = textarea.value;
 
                 if (!this.materialText || this.materialText.split(/\s+/).filter(Boolean).length < 50) {
-                    this.showToast('Загрузите файл или вставьте текст (минимум 50 слов)', 'warning');
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Анализ не запущен.',
+                        impact: 'Материала недостаточно: нужно минимум 50 слов.',
+                        next: 'Загрузите файл или вставьте более полный текст.',
+                    });
                     return;
                 }
                 if (this.aiOutputLanguageMode === 'custom' && !this.aiOutputLanguage) {
-                    this.showToast('Выберите язык для генерируемых заданий', 'warning');
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Генерация приостановлена.',
+                        impact: 'Не выбран язык итоговых заданий.',
+                        next: 'Выберите язык генерации и повторите запуск.',
+                    });
                     return;
                 }
 
@@ -2023,14 +2629,24 @@ text: Сердце человека состоит из [трёх] камер. �
             if (this.importMode === 'text') {
                 // Validate step 1 Text
                 if (!this.selectedModule || !this.selectedTopic) {
-                    alert('Пожалуйста, выберите модуль и тему');
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Переход к парсингу приостановлен.',
+                        impact: 'Модуль и тема не выбраны.',
+                        next: 'Выберите модуль и тему, затем продолжите импорт.',
+                    });
                     return;
                 }
                 this.nextStep();
             } else {
                 // Validate step 1 Archive
                 if (!this.uploadedFile) {
-                    alert('Пожалуйста, выберите файл архива');
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Проверка архива не запущена.',
+                        impact: 'Файл архива не выбран.',
+                        next: 'Выберите архив и повторите проверку.',
+                    });
                     return;
                 }
                 // Go to Step 2 (Validation Spinner) which automatically triggers Step 3
@@ -2050,13 +2666,24 @@ text: Сердце человека состоит из [трёх] камер. �
                     if (result.ok) {
                         this.parsedResult = result; // Reuse parsedResult structure
                         this.archiveCacheId = result.cache_id || null;
+                        this.importRequestKey = null;
                         this.nextStep(); // Go to Step 3 (Preview)
                     } else {
-                        alert("Ошибка проверки архива: " + result.error);
+                        this.showVoiceToast({
+                            severity: 'error',
+                            what: 'Проверка архива завершилась ошибкой.',
+                            impact: 'Предпросмотр не сформирован.',
+                            next: `Проверьте архив и повторите проверку. Детали: ${result.error || 'unknown_error'}`,
+                        });
                         this.prevStep();
                     }
                 } catch (e) {
-                    alert("Ошибка: " + e.message);
+                    this.showVoiceToast({
+                        severity: 'error',
+                        what: 'Проверка архива прервана сетью.',
+                        impact: 'Импорт не может перейти к предпросмотру.',
+                        next: `Проверьте соединение и повторите проверку. Детали: ${e.message}`,
+                    });
                     this.prevStep();
                 }
             }
@@ -2070,7 +2697,12 @@ text: Сердце человека состоит из [трёх] камер. �
 
             // Parse text
             if (!this.sourceText.trim()) {
-                alert('Пожалуйста, введите текст с заданиями');
+                this.showVoiceToast({
+                    severity: 'warning',
+                    what: 'Парсинг не запущен.',
+                    impact: 'Поле с исходным текстом пустое.',
+                    next: 'Вставьте текст заданий и повторите действие.',
+                });
                 return;
             }
 
@@ -2144,16 +2776,43 @@ text: Сердце человека состоит из [трёх] камер. �
                     idempotencyKey: this.importRequestKey,
                 });
                 if (result.ok) {
-                    this.showToast(`Успешно импортировано ${result.imported} заданий!`, 'success');
+                    this.recordImportHistory({
+                        status: 'ok',
+                        imported: result.imported,
+                        skipped: result.skipped || 0,
+                        errors: result.errors || 0,
+                        message: 'text_or_ai',
+                    });
+                    this.showVoiceToast({
+                        severity: 'success',
+                        what: 'Импорт завершён.',
+                        impact: `Добавлено: ${result.imported}.`,
+                        next: 'Каталог обновлён, можно переходить к редактуре.',
+                    });
                     this.dashboard.closeModals(); // Use dashboard helper
                     this.dashboard.loadCatalog();
                 } else {
-                    this.showToast('Ошибка импорта: ' + (result.error || 'Неизвестная ошибка'), 'error');
+                    this.recordImportHistory({
+                        status: 'error',
+                        imported: 0,
+                        skipped: 0,
+                        errors: 1,
+                        message: result.error || 'import_failed',
+                    });
+                    this.showVoiceToast({
+                        severity: 'error',
+                        what: 'Импорт завершился ошибкой.',
+                        impact: 'Изменения в каталог не были применены полностью.',
+                        next: `Проверьте источник и повторите импорт. Детали: ${result.error || 'unknown_error'}`,
+                    });
                 }
             } else {
                 // Archive Import
                 const conflictRes = document.getElementById('conflict-resolution-select')?.value || 'skip';
                 const skipErrors = document.getElementById('skip-errors-checkbox')?.checked || false;
+                if (!this.importRequestKey) {
+                    this.importRequestKey = this._makeIdempotencyKey();
+                }
 
                 const formData = new FormData();
                 if (this.archiveCacheId) {
@@ -2161,6 +2820,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 } else {
                     formData.append('file', this.uploadedFile);
                 }
+                formData.append('idempotency_key', this.importRequestKey);
                 formData.append('conflict_resolution', conflictRes);
                 formData.append('skip_errors', skipErrors.toString());
                 if (this.selectedModule) formData.append('target_module_id', this.selectedModule);
@@ -2202,6 +2862,17 @@ text: Сердце человека состоит из [трёх] камер. �
                         body: formData
                     });
 
+                    if (!response.ok || !response.body) {
+                        let errorText = `HTTP ${response.status || 'import_failed'}`;
+                        try {
+                            const errorData = await response.json();
+                            errorText = errorData?.error || errorText;
+                        } catch (_) {
+                            // ignore JSON parse errors
+                        }
+                        throw new Error(errorText);
+                    }
+
                     const reader = response.body.getReader();
                     const decoder = new TextDecoder();
                     let buffer = '';
@@ -2241,35 +2912,67 @@ text: Сердце человека состоит из [трёх] камер. �
 
                     if (finalResult) {
                         if (finalResult.ok) {
-                            if (typeof NotificationUI !== 'undefined') {
-                                NotificationUI.toast(`Импорт завершен: ${finalResult.imported} добавлено, ${finalResult.skipped} пропущено, ${finalResult.errors} ошибок.`, 'success');
-                            } else {
-                                alert(`Импорт завершен: ${finalResult.imported} добавлено, ${finalResult.skipped} пропущено, ${finalResult.errors} ошибок.`);
-                            }
+                            this.recordImportHistory({
+                                status: finalResult.errors > 0 ? 'partial' : 'ok',
+                                imported: finalResult.imported,
+                                skipped: finalResult.skipped,
+                                errors: finalResult.errors,
+                                message: 'archive_stream',
+                            });
+                            this.showVoiceToast({
+                                severity: finalResult.errors > 0 ? 'warning' : 'success',
+                                what: 'Импорт архива завершён.',
+                                impact: `Добавлено: ${finalResult.imported}, пропущено: ${finalResult.skipped}, ошибок: ${finalResult.errors}.`,
+                                next: finalResult.errors > 0
+                                    ? 'Проверьте проблемные задания и при необходимости повторите импорт.'
+                                    : 'Каталог обновлён и готов к работе.',
+                            });
                             this.dashboard.closeModals();
                             this.dashboard.loadCatalog();
                         } else {
                             const errorMsg = finalResult.rollback
                                 ? `Ошибка импорта (выполнен откат): ${finalResult.error_message || finalResult.error}`
                                 : `Ошибка импорта: ${finalResult.error}`;
-                            if (typeof NotificationUI !== 'undefined') {
-                                NotificationUI.toast(errorMsg, 'error');
-                            } else {
-                                alert(errorMsg);
-                            }
+                            this.recordImportHistory({
+                                status: 'error',
+                                imported: 0,
+                                skipped: 0,
+                                errors: 1,
+                                message: errorMsg,
+                            });
+                            this.showVoiceToast({
+                                severity: 'error',
+                                what: 'Импорт архива завершился ошибкой.',
+                                impact: finalResult.rollback
+                                    ? 'Откат выполнен, каталог сохранён в прежнем состоянии.'
+                                    : 'Часть изменений могла не примениться.',
+                                next: 'Исправьте проблему в архиве и повторите импорт.',
+                            });
                         }
                     }
                 } finally {
                     if (btn) {
                         btn.disabled = false;
-                        btn.textContent = 'Импортировать';
+                        btn.textContent = originalText || 'Импортировать';
                     }
                     const pc = document.getElementById('import-progress-bar-container');
                     if (pc) pc.remove();
                 }
             }
         } catch (error) {
-            alert('Ошибка импорта: ' + error.message);
+            this.recordImportHistory({
+                status: 'error',
+                imported: 0,
+                skipped: 0,
+                errors: 1,
+                message: error.message,
+            });
+            this.showVoiceToast({
+                severity: 'error',
+                what: 'Импорт прерван из-за ошибки.',
+                impact: 'Операция не завершена.',
+                next: `Проверьте соединение и входные данные. Детали: ${error.message}`,
+            });
         }
         this.importInProgress = false;
         this.updateNavigationButtons();
@@ -2467,8 +3170,8 @@ text: Сердце человека состоит из [трёх] камер. �
         };
         const subtitles = {
             microcards: 'Повторение по колодам из анализа. Колоды общие на устройстве, прогресс — персональный.',
-            manual_editor: 'Создание и редактирование колод и карточек вручную.',
-            text_import: 'Создание карточек из текстового формата @MICROCARD или ответа внешнего ИИ-агента.',
+            manual_editor: 'Создание и редактирование колод вручную. Колоды общие на устройстве, а прогресс повторения остаётся персональным.',
+            text_import: 'Импорт карточек из @MICROCARD или ответа внешнего ИИ-агента в общую библиотеку колод. Прогресс повторения остаётся персональным.',
             analysis: 'Запуск анализа без генерации и импорта. История сохраняется по <code class="font-mono">ai_run_id</code>.',
         };
         const currentMode = isTextImport ? 'text_import' : (isManualEditor ? 'manual_editor' : (isMicrocardsMode ? 'microcards' : 'analysis'));
@@ -2602,7 +3305,12 @@ text: Сердце человека состоит из [трёх] камер. �
         }
         const runId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
         if (!runId) {
-            this.showToast('Сначала откройте анализ (ai_run_id)', 'warning');
+            this.showVoiceToast({
+                severity: 'warning',
+                what: 'Создание колоды приостановлено.',
+                impact: 'Не найден открытый анализ (ai_run_id).',
+                next: 'Сначала откройте анализ, затем повторите создание колоды.',
+            });
             return { ok: false, error: 'ai_run_id_required' };
         }
         this.microcardsCreateLoading = true;
@@ -2615,18 +3323,33 @@ text: Сердце человека состоит из [трёх] камер. �
             });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast(`Колода создана: ${data.deck_summary?.cards_total || 0} карточек`, 'success');
+                this.showVoiceToast({
+                    severity: 'success',
+                    what: 'Колода микрокарточек создана.',
+                    impact: `Добавлено карточек: ${data.deck_summary?.cards_total || 0}.`,
+                    next: 'Можно открыть колоду и начать повторение.',
+                });
                 await this.loadMicrocardsDecks();
                 if (opts?.open !== false && data.deck?.id) {
                     await this.openTheoryMicrocardsMode(data.deck.id);
                 }
             } else {
-                this.showToast(data.message || data.error || 'Не удалось создать колоду', 'error');
+                this.showVoiceToast({
+                    severity: 'error',
+                    what: 'Создание колоды завершилось ошибкой.',
+                    impact: 'Новая колода не была сохранена.',
+                    next: data.message || data.error || 'Проверьте входные данные и повторите создание.',
+                });
             }
             return data;
         } catch (e) {
             console.error('[Microcards] create deck failed:', e);
-            this.showToast('Ошибка сети при создании колоды', 'error');
+            this.showVoiceToast({
+                severity: 'error',
+                what: 'Создание колоды недоступно из-за сетевой ошибки.',
+                impact: 'Операция не была завершена.',
+                next: 'Проверьте сеть и повторите попытку.',
+            });
             return { ok: false, error: 'network_error' };
         } finally {
             this.microcardsCreateLoading = false;
@@ -2665,7 +3388,12 @@ text: Сердце человека состоит из [трёх] камер. �
         }
         const decks = Array.isArray(this.microcardsDecks) ? this.microcardsDecks : [];
         if (!decks.length) {
-            this.showToast('Нет существующих колод. Сначала создайте новую.', 'warning');
+            this.showVoiceToast({
+                severity: 'warning',
+                what: 'Добавление в существующую колоду недоступно.',
+                impact: 'Список колод пуст.',
+                next: 'Сначала создайте новую колоду из текущего анализа.',
+            });
             return null;
         }
         const defaultId = String(this.microcardsActiveDeck?.id || decks[0]?.id || '').trim();
@@ -2686,7 +3414,12 @@ text: Сердце человека состоит из [трёх] камер. �
         }
         const runId = String(this.aiRunId || this.analysisResult?.ai_run_id || '').trim();
         if (!runId) {
-            this.showToast('Сначала откройте анализ (ai_run_id)', 'warning');
+            this.showVoiceToast({
+                severity: 'warning',
+                what: 'Добавление карточек приостановлено.',
+                impact: 'Не найден открытый анализ (ai_run_id).',
+                next: 'Откройте анализ и повторите операцию.',
+            });
             return { ok: false, error: 'ai_run_id_required' };
         }
         const deckId = String(opts.deckId || '').trim() || await this.pickExistingMicrocardsDeckId();
@@ -2701,18 +3434,33 @@ text: Сердце человека состоит из [трёх] камер. �
             });
             const data = await resp.json();
             if (data.ok) {
-                this.showToast(`Добавлено: ${data.added_cards || 0}, пропущено дублей: ${data.skipped_duplicates || 0}`, 'success');
+                this.showVoiceToast({
+                    severity: 'success',
+                    what: 'Карточки добавлены в колоду.',
+                    impact: `Добавлено: ${data.added_cards || 0}, пропущено дублей: ${data.skipped_duplicates || 0}.`,
+                    next: 'Можно открыть очередь колоды и продолжить повторение.',
+                });
                 await this.loadMicrocardsDecks();
                 if (opts?.open !== false) {
                     await this.openTheoryMicrocardsMode(deckId);
                 }
             } else {
-                this.showToast(data.message || data.error || 'Не удалось добавить карточки в колоду', 'error');
+                this.showVoiceToast({
+                    severity: 'error',
+                    what: 'Добавление карточек завершилось ошибкой.',
+                    impact: 'Колода не была обновлена.',
+                    next: data.message || data.error || 'Проверьте параметры и повторите попытку.',
+                });
             }
             return data;
         } catch (e) {
             console.error('[Microcards] append to deck failed:', e);
-            this.showToast('Ошибка сети при добавлении карточек в колоду', 'error');
+            this.showVoiceToast({
+                severity: 'error',
+                what: 'Добавление карточек недоступно из-за сетевой ошибки.',
+                impact: 'Изменения в колоду не сохранены.',
+                next: 'Проверьте сеть и повторите попытку.',
+            });
             return { ok: false, error: 'network_error' };
         } finally {
             this.microcardsCreateLoading = false;
@@ -2779,12 +3527,22 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.microcardsReviewEvaluation = null;
                 this.microcardsReviewStartedAt = Date.now();
             } else {
-                this.showToast(data.message || data.error || 'Не удалось открыть очередь колоды', 'error');
+                this.showVoiceToast({
+                    severity: 'error',
+                    what: 'Очередь колоды не открыта.',
+                    impact: 'Сессию повторения нельзя начать.',
+                    next: data.message || data.error || 'Проверьте состояние колоды и повторите открытие.',
+                });
             }
             return data;
         } catch (e) {
             console.error('[Microcards] open queue failed:', e);
-            this.showToast('Ошибка сети при открытии колоды', 'error');
+            this.showVoiceToast({
+                severity: 'error',
+                what: 'Открытие колоды недоступно из-за сетевой ошибки.',
+                impact: 'Очередь карточек не загружена.',
+                next: 'Проверьте сеть и повторите открытие колоды.',
+            });
             return { ok: false, error: 'network_error' };
         } finally {
             this.microcardsQueueLoading = false;
@@ -2813,18 +3571,20 @@ text: Сердце человека состоит из [трёх] камер. �
                     ${decks.map((deck) => {
                         const isActive = String(deck?.id || '') === String(activeDeck?.id || '');
                         const stats = deck?.stats || {};
+                        const ownershipBadges = this.renderMicrocardsDeckOwnershipBadges(deck);
                         return `
                             <div class="rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} p-3">
                                 <div class="flex items-start justify-between gap-2">
                                     <div class="min-w-0">
                                         <div class="text-xs font-semibold text-text-main truncate">${this.escapeHtml(String(deck?.name || deck?.id || 'Deck'))}</div>
                                         <div class="text-[11px] text-text-secondary mt-1 font-mono truncate">${this.escapeHtml(String(deck?.id || ''))}</div>
+                                        ${ownershipBadges ? `<div class="mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
                                         <div class="text-[11px] text-text-secondary mt-1">
                                             due ${this.escapeHtml(String(stats.cards_due ?? 0))} · new ${this.escapeHtml(String(stats.cards_new ?? 0))} · total ${this.escapeHtml(String(stats.cards_total ?? 0))}
                                         </div>
                                     </div>
                                     <button type="button"
-                                        onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeHtml(String(deck?.id || ''))}')"
+                                        onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(deck?.id || ''))}')"
                                         class="px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'}">
                                         Повторять
                                     </button>
@@ -2883,16 +3643,17 @@ text: Сердце человека состоит из [трёх] камер. �
                                 ${queueCount ? ` · ${doneCount}/${queueCount} пройдено` : ''}
                                 ${remainingCount ? ` · осталось ${remainingCount}` : ''}
                             </div>
+                            ${activeDeck?.id ? `<div class="mt-2 flex flex-wrap gap-1">${this.renderMicrocardsDeckOwnershipBadges(activeDeck)}</div>` : ''}
                         </div>
                         ${activeDeck?.id ? `
                             <button type="button"
-                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeHtml(String(activeDeck.id))}')"
+                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}')"
                                 ${this.microcardsQueueLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
                                 ${this.microcardsQueueLoading ? 'Обновление...' : 'Resume / обновить'}
                             </button>
                             <button type="button"
-                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeHtml(String(activeDeck.id))}', { restart: true })"
+                                onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}', { restart: true })"
                                 ${this.microcardsQueueLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
                                 Новая сессия
@@ -3005,12 +3766,12 @@ text: Сердце человека состоит из [трёх] камер. �
                         return `
                             <div class="grid grid-cols-1 md:grid-cols-[1fr_1fr] gap-2 items-center">
                                 <div class="text-xs text-text-main p-2 rounded-md border border-border-strong bg-surface-1">${this.escapeHtml(String(left?.text || leftId))}</div>
-                                <select onchange="dashboard.importManager.setMicrocardsPairSelection('${this.escapeHtml(cardId)}','${this.escapeHtml(leftId)}', this.value)"
+                                <select onchange="dashboard.importManager.setMicrocardsPairSelection('${this.escapeInlineJsString(cardId)}','${this.escapeInlineJsString(leftId)}', this.value)"
                                     class="rounded-md border border-border-strong bg-surface-1 px-2 py-2 text-xs text-text-main">
                                     <option value="">Выберите соответствие...</option>
                                     ${rightItems.map((right) => {
                                         const rid = String(right?.id || '');
-                                        return `<option value="${this.escapeHtml(rid)}" ${currentVal === rid ? 'selected' : ''}>${this.escapeHtml(String(right?.text || rid))}</option>`;
+                                        return `<option value="${this.escapeHtmlAttr(rid)}" ${currentVal === rid ? 'selected' : ''}>${this.escapeHtml(String(right?.text || rid))}</option>`;
                                     }).join('')}
                                 </select>
                             </div>
@@ -3095,7 +3856,12 @@ text: Сердце человека состоит из [трёх] камер. �
         const deckId = String(this.microcardsActiveDeck?.id || '');
         if (!card || !deckId) return { ok: false, error: 'no_active_card' };
         if (!this.microcardsReviewReveal) {
-            this.showToast('Сначала откройте ответ / проверьте пары', 'warning');
+            this.showVoiceToast({
+                severity: 'warning',
+                what: 'Оценка карточки приостановлена.',
+                impact: 'Ответ ещё не открыт.',
+                next: 'Сначала откройте ответ или завершите проверку пар.',
+            });
             return { ok: false, error: 'reveal_required' };
         }
         this.microcardsReviewSubmitting = true;
@@ -3135,22 +3901,42 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.microcardsReviewEvaluation = null;
                 this.microcardsReviewStartedAt = Date.now();
                 if (this.microcardsQueueIndex >= this.microcardsQueue.length) {
-                    this.showToast('Сессия повторения завершена', 'success');
+                    this.showVoiceToast({
+                        severity: 'success',
+                        what: 'Сессия повторения завершена.',
+                        impact: 'Очередь текущей колоды пройдена полностью.',
+                        next: 'Можно запустить новую очередь или перейти к другой колоде.',
+                    });
                     this.microcardsSession = null;
                     await this.loadMicrocardsDecks();
                 }
             } else {
                 const err = String(data.error || '');
                 if (err.startsWith('session_')) {
-                    this.showToast('Сессия устарела. Откройте очередь колоды заново.', 'warning');
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Текущая сессия устарела.',
+                        impact: 'Рейтинг не сохранён.',
+                        next: 'Откройте очередь колоды заново и повторите оценку.',
+                    });
                 } else {
-                    this.showToast(data.message || data.error || 'Не удалось сохранить review', 'error');
+                    this.showVoiceToast({
+                        severity: 'error',
+                        what: 'Оценка карточки не сохранена.',
+                        impact: 'Прогресс этой карточки не обновлён.',
+                        next: data.message || data.error || 'Повторите отправку оценки.',
+                    });
                 }
             }
             return data;
         } catch (e) {
             console.error('[Microcards] submit review failed:', e);
-            this.showToast('Ошибка сети при сохранении review', 'error');
+            this.showVoiceToast({
+                severity: 'error',
+                what: 'Сохранение оценки недоступно из-за сетевой ошибки.',
+                impact: 'Прогресс карточки не обновлён.',
+                next: 'Проверьте сеть и повторите отправку.',
+            });
             return { ok: false, error: 'network_error' };
         } finally {
             this.microcardsReviewSubmitting = false;
@@ -3281,7 +4067,14 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async manualEditorDeleteDeck(deckId) {
-        if (!confirm('Удалить колоду? Это действие необратимо.')) return;
+        const confirmed = await this.confirmAction({
+            title: 'Удалить колоду?',
+            message: 'Это действие необратимо.',
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
+            variant: 'error',
+        });
+        if (!confirmed) return;
         try {
             const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}`, { method: 'DELETE' });
             const data = await resp.json();
@@ -3297,6 +4090,16 @@ text: Сердце человека состоит из [трёх] камер. �
             this.showToast('Ошибка сети', 'error');
         }
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+    }
+
+    manualEditorEditCardFromEncoded(encodedCardJson) {
+        try {
+            const parsed = JSON.parse(String(encodedCardJson || ''));
+            this.manualEditorShowCardForm('edit', parsed);
+        } catch (error) {
+            console.error('[M11] decode card payload failed:', error);
+            this.showToast('Не удалось открыть карточку для редактирования.', 'error');
+        }
     }
 
     manualEditorShowCardForm(mode = 'create', card = null) {
@@ -3505,7 +4308,14 @@ text: Сердце человека состоит из [трёх] камер. �
     async manualEditorDeleteCard(cardId) {
         const deckId = String(this.manualEditorDeck?.id || '').trim();
         if (!deckId || !cardId) return;
-        if (!confirm('Удалить карточку?')) return;
+        const confirmed = await this.confirmAction({
+            title: 'Удалить карточку?',
+            message: 'Карточка будет удалена без возможности восстановления.',
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
+            variant: 'error',
+        });
+        if (!confirmed) return;
         try {
             const resp = await fetch(`/api/editor/microcards/decks/${encodeURIComponent(deckId)}/cards/${encodeURIComponent(cardId)}`, { method: 'DELETE' });
             const data = await resp.json();
@@ -3853,6 +4663,9 @@ text: Сердце человека состоит из [трёх] камер. �
         const summary = parsed.summary || {};
         const items = parsed.items || [];
         const notes = Array.isArray(parsed.notes) ? parsed.notes.filter(n => typeof n === 'string' && n.trim()) : [];
+        const targetDeck = this.mcImportMode === 'append_to_deck'
+            ? decks.find((deck) => String(deck?.id || '') === String(this.mcImportTargetDeckId || ''))
+            : null;
 
         return `
             <div class="space-y-4 animate-slide-up-fade">
@@ -3912,7 +4725,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div>
                                 <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Название колоды</label>
                                 <input id="mcImportDeckName" type="text"
-                                    value="${this.escapeHtml(this.mcImportDeckName || (items[0]?.metadata?.deck || ''))}"
+                                    value="${this.escapeHtmlAttr(this.mcImportDeckName || (items[0]?.metadata?.deck || ''))}"
                                     oninput="dashboard.importManager.mcImportDeckName = this.value"
                                     placeholder="Из метаданных или укажите вручную"
                                     class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
@@ -3921,16 +4734,22 @@ text: Сердце человека состоит из [трёх] камер. �
                             <div>
                                 <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Целевая колода</label>
                                 <select id="mcImportTargetDeck"
-                                    onchange="dashboard.importManager.mcImportTargetDeckId = this.value"
+                                    onchange="dashboard.importManager.mcImportTargetDeckId = this.value; dashboard.importManager.renderTheoryAnalysisMode()"
                                     class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary">
                                     <option value="">— выберите колоду —</option>
                                     ${decks.filter(d => !d?.meta?.archived).map(d => `
-                                        <option value="${this.escapeHtml(String(d?.id || ''))}" ${this.mcImportTargetDeckId === String(d?.id) ? 'selected' : ''}>${this.escapeHtml(String(d?.name || d?.id || 'Колода'))} (${d?.stats?.cards_total ?? 0} карт.)</option>
+                                        <option value="${this.escapeHtmlAttr(String(d?.id || ''))}" ${this.mcImportTargetDeckId === String(d?.id) ? 'selected' : ''}>${this.escapeHtml(String(d?.name || d?.id || 'Колода'))} (${d?.stats?.cards_total ?? 0} карт.)</option>
                                     `).join('')}
                                 </select>
                             </div>
                         `}
                     </div>
+                    ${targetDeck ? `
+                        <div id="mcImportTargetDeckNote" class="mt-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
+                            <div class="flex flex-wrap gap-1 mb-1.5">${this.renderMicrocardsDeckOwnershipBadges(targetDeck)}</div>
+                            <p class="text-[11px] text-text-secondary">Карточки будут добавлены в общую колоду <span class="font-semibold text-text-main">${this.escapeHtml(String(targetDeck.name || targetDeck.id || 'Колода'))}</span>. Прогресс повторения по ним останется персональным.</p>
+                        </div>
+                    ` : ''}
                     <div class="flex flex-wrap items-center gap-2">
                         <button onclick="dashboard.importManager.mcImportExecute()"
                             class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50 shadow-sm"
@@ -3973,11 +4792,11 @@ text: Сердце человека состоит из [трёх] камер. �
                         Новый импорт
                     </button>
                     ${ok && result.deck_id ? `
-                        <button onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeHtml(String(result.deck_id))}'); dashboard.importManager.enterTheorySubMode('manual_editor')"
+                        <button onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeInlineJsString(String(result.deck_id))}'); dashboard.importManager.enterTheorySubMode('manual_editor')"
                             class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
                             Открыть в редакторе
                         </button>
-                        <button onclick="dashboard.importManager.openTheoryMicrocardsMode('${this.escapeHtml(String(result.deck_id))}')"
+                        <button onclick="dashboard.importManager.openTheoryMicrocardsMode('${this.escapeInlineJsString(String(result.deck_id))}')"
                             class="px-4 py-2 text-sm font-semibold rounded-lg border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
                             Начать повторение
                         </button>
@@ -4124,15 +4943,17 @@ text: Сердце человека состоит из [трёх] камер. �
                 const isActive = deck && String(d?.id) === String(deck?.id);
                 const archived = d?.meta?.archived === true;
                 const stats = d?.stats || {};
+                const ownershipBadges = this.renderMicrocardsDeckOwnershipBadges(d);
                 return `
-                    <div class="flex items-center gap-2 px-3 py-2 rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} ${archived ? 'opacity-60' : ''} cursor-pointer hover:bg-bg-hover transition-colors"
-                         onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeHtml(String(d?.id || ''))}')">
+                    <div data-m11-deck-row="${this.escapeHtmlAttr(String(d?.id || ''))}" class="flex items-center gap-2 px-3 py-2 rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} ${archived ? 'opacity-60' : ''} cursor-pointer hover:bg-bg-hover transition-colors"
+                         onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeInlineJsString(String(d?.id || ''))}')">
                         <div class="min-w-0 flex-1">
                             <div class="text-xs font-semibold text-text-main truncate">${this.escapeHtml(String(d?.name || d?.id || 'Колода'))}${archived ? ' <span class="text-text-muted">(архив)</span>' : ''}</div>
+                            ${ownershipBadges ? `<div class="mt-1 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
                             <div class="text-[10px] text-text-secondary mt-0.5">${stats.cards_total ?? 0} карт.</div>
                         </div>
                         ${this.manualEditorRenamingDeckId === String(d?.id) ? '' : `
-                            <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorRenamingDeckId='${this.escapeHtml(String(d?.id))}'; dashboard.importManager.renderTheoryAnalysisMode();"
+                            <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorRenamingDeckId='${this.escapeInlineJsString(String(d?.id))}'; dashboard.importManager.renderTheoryAnalysisMode();"
                                 class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Переименовать">
                                 <span class="material-symbols-outlined text-[14px]">edit</span>
                             </button>
@@ -4140,9 +4961,9 @@ text: Сердце человека состоит из [трёх] камер. �
                     </div>
                     ${this.manualEditorRenamingDeckId === String(d?.id) ? `
                         <div class="flex gap-1 mt-1 mb-1" onclick="event.stopPropagation()">
-                            <input id="m11RenameInput" type="text" value="${this.escapeHtml(String(d?.name || ''))}"
+                            <input id="m11RenameInput" type="text" value="${this.escapeHtmlAttr(String(d?.name || ''))}"
                                 class="flex-1 min-w-0 px-2 py-1.5 text-xs rounded-md border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
-                            <button onclick="dashboard.importManager.manualEditorRenameDeck('${this.escapeHtml(String(d?.id))}')"
+                            <button onclick="dashboard.importManager.manualEditorRenameDeck('${this.escapeInlineJsString(String(d?.id))}')"
                                 class="px-2 py-1 text-[10px] font-bold rounded-md bg-primary text-primary-fg hover:bg-primary-hover" ${this.manualEditorSaving ? 'disabled' : ''}>OK</button>
                             <button onclick="dashboard.importManager.manualEditorRenamingDeckId=null; dashboard.importManager.renderTheoryAnalysisMode();"
                                 class="px-2 py-1 text-[10px] font-bold rounded-md border border-border-strong text-text-secondary hover:bg-bg-hover">✕</button>
@@ -4184,11 +5005,11 @@ text: Сердце человека состоит из [трёх] камер. �
                             ${formPairs.map((p, i) => `
                                 <div class="flex items-center gap-2">
                                     <span class="text-[10px] text-text-muted font-mono w-4 text-right shrink-0">${i + 1}.</span>
-                                    <input id="m15PairLeft_${i}" type="text" value="${this.escapeHtml(String(p.left || ''))}"
+                                    <input id="m15PairLeft_${i}" type="text" value="${this.escapeHtmlAttr(String(p.left || ''))}"
                                         class="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
                                         placeholder="Левый элемент" />
                                     <span class="text-text-muted text-xs shrink-0">\u2192</span>
-                                    <input id="m15PairRight_${i}" type="text" value="${this.escapeHtml(String(p.right || ''))}"
+                                    <input id="m15PairRight_${i}" type="text" value="${this.escapeHtmlAttr(String(p.right || ''))}"
                                         class="flex-1 min-w-0 px-2.5 py-1.5 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
                                         placeholder="Правый элемент" />
                                     ${formPairs.length > 2 ? `
@@ -4219,7 +5040,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-1">Теги (через запятую)</label>
-                        <input id="m11CardTags" type="text" value="${this.escapeHtml(form.tags)}"
+                        <input id="m11CardTags" type="text" value="${this.escapeHtmlAttr(form.tags)}"
                             class="w-full px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary"
                             placeholder="кардиология, ритм" />
                     </div>
@@ -4302,19 +5123,19 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <div class="text-[11px] text-text-secondary truncate mt-0.5">${this.escapeHtml(bt || '')}</div>
                             </div>
                             <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                                ${idx > 0 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeHtml(cid)}', -1)"
+                                ${idx > 0 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeInlineJsString(cid)}', -1)"
                                     class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Вверх">
                                     <span class="material-symbols-outlined text-[14px]">arrow_upward</span>
                                 </button>` : ''}
-                                ${idx < cards.length - 1 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeHtml(cid)}', 1)"
+                                ${idx < cards.length - 1 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeInlineJsString(cid)}', 1)"
                                     class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Вниз">
                                     <span class="material-symbols-outlined text-[14px]">arrow_downward</span>
                                 </button>` : ''}
-                                <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorShowCardForm('edit', ${JSON.stringify(card).replace(/</g, '\\u003c').replace(/'/g, '\\u0027')})"
+                                <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorEditCardFromEncoded('${this.serializeInlineJson(card)}')"
                                     class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Редактировать">
                                     <span class="material-symbols-outlined text-[14px]">edit</span>
                                 </button>
-                                <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorDeleteCard('${this.escapeHtml(cid)}')"
+                                <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorDeleteCard('${this.escapeInlineJsString(cid)}')"
                                     class="p-1 rounded text-text-muted hover:text-error transition-colors" title="Удалить">
                                     <span class="material-symbols-outlined text-[14px]">delete</span>
                                 </button>
@@ -4330,6 +5151,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="space-y-3">
                     <div class="rounded-xl border border-border-strong bg-surface-1 p-4">
                         <div class="text-xs font-bold text-text-main mb-3">Колоды</div>
+                        <div id="m11WorkspaceNote" class="mb-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
+                            <p class="text-[11px] text-text-secondary">Колоды живут в общей библиотеке устройства. Прогресс повторения и будущие review остаются персональными.</p>
+                        </div>
                         <div class="flex gap-2 mb-3">
                             <input id="m11DeckNameInput" type="text" placeholder="Название новой колоды"
                                 class="flex-1 min-w-0 px-3 py-2 text-xs rounded-lg border border-border-strong bg-surface-1 text-text-main focus:outline-none focus:ring-1 focus:ring-primary" />
@@ -4350,6 +5174,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <div class="min-w-0">
                                     <div class="text-sm font-bold text-text-main truncate">${this.escapeHtml(String(deck.name || deck.id || 'Колода'))}</div>
                                     <div class="text-[10px] text-text-secondary font-mono mt-0.5">${this.escapeHtml(String(deck.id || ''))}</div>
+                                    <div class="mt-2 flex flex-wrap gap-1">${this.renderMicrocardsDeckOwnershipBadges(deck)}</div>
                                 </div>
                                 <div class="flex gap-1.5 shrink-0">
                                     ${!isArchived ? `
@@ -4358,12 +5183,12 @@ text: Сердце человека состоит из [трёх] камер. �
                                             <span class="material-symbols-outlined text-[14px]">add</span> Карточка
                                         </button>
                                     ` : ''}
-                                    <button onclick="dashboard.importManager.manualEditorArchiveDeck('${this.escapeHtml(String(deck.id))}', ${!isArchived})"
+                                    <button onclick="dashboard.importManager.manualEditorArchiveDeck('${this.escapeInlineJsString(String(deck.id))}', ${!isArchived})"
                                         class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors"
                                         title="${isArchived ? 'Разархивировать' : 'Архивировать'}">
                                         <span class="material-symbols-outlined text-[14px]">${isArchived ? 'unarchive' : 'archive'}</span>
                                     </button>
-                                    <button onclick="dashboard.importManager.manualEditorDeleteDeck('${this.escapeHtml(String(deck.id))}')"
+                                    <button onclick="dashboard.importManager.manualEditorDeleteDeck('${this.escapeInlineJsString(String(deck.id))}')"
                                         class="flex items-center gap-1 px-2.5 py-1.5 text-[11px] font-semibold rounded-lg border border-error-light text-error-text hover:bg-error-lighter transition-colors"
                                         title="Удалить колоду">
                                         <span class="material-symbols-outlined text-[14px]">delete</span>
@@ -4374,6 +5199,9 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <span>${cards.length} карт.</span>
                                 ${deck.meta?.source === 'manual_editor' ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text">manual</span>' : ''}
                                 ${isArchived ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text">архив</span>' : ''}
+                            </div>
+                            <div class="mb-3 rounded-lg border border-border-subtle bg-bg-secondary px-3 py-2">
+                                <p class="text-[11px] text-text-secondary">Изменения в этой колоде увидят все профили устройства, а история повторения останется только у текущего пользователя.</p>
                             </div>
                             ${cardFormHtml}
                             ${this.manualEditorDeckLoading ? '<div class="text-sm text-text-secondary py-4 text-center">Загрузка карточек...</div>' : cardListHtml}
@@ -4957,7 +5785,7 @@ text: Сердце человека состоит из [трёх] камер. �
             : 'border-border-strong bg-surface-1 text-text-secondary hover:bg-bg-hover';
         return `
             <button type="button"
-                onclick="dashboard.importManager.scrollTheoryReportToAnchor('${this.escapeHtml(anchorText)}')"
+                onclick="dashboard.importManager.scrollTheoryReportToAnchor('${this.escapeInlineJsString(anchorText)}')"
                 class="${baseClass} ${stateClass}">
                 ${!compact ? '<span class="material-symbols-outlined text-[14px]">link</span>' : ''}
                 <span class="truncate">${this.escapeHtml(String(label || anchorText))}</span>
@@ -5037,7 +5865,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 ${anchor ? this.renderTheoryReportJumpButton(anchor, anchor) : ''}
                                 ${canSendToEditor ? `
                                     <button type="button"
-                                        onclick="dashboard.importManager.pushTheoryReportBlockContextForEditor('${this.escapeHtml(blockId)}')"
+                                        onclick="dashboard.importManager.pushTheoryReportBlockContextForEditor('${this.escapeInlineJsString(blockId)}')"
                                         class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-colors">
                                         <span class="material-symbols-outlined text-[12px]">open_in_new</span>
                                         <span>В редактор</span>
@@ -5050,7 +5878,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             <button type="button"
                                 data-role="theory-report-block-toggle-btn"
                                 aria-expanded="${collapsed ? 'false' : 'true'}"
-                                onclick="dashboard.importManager.toggleTheoryReportBlockCollapse('${this.escapeHtml(blockId)}')"
+                                onclick="dashboard.importManager.toggleTheoryReportBlockCollapse('${this.escapeInlineJsString(blockId)}')"
                                 class="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border-strong bg-surface-1 text-text-secondary hover:bg-bg-hover text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40">
                                 <span data-role="theory-report-block-toggle-icon" class="material-symbols-outlined text-[15px] transition-transform duration-150 ease-out">${collapsed ? 'expand_more' : 'expand_less'}</span>
                                 <span data-role="theory-report-block-toggle-label">${collapsed ? 'Открыть' : 'Свернуть'}</span>
@@ -5164,12 +5992,12 @@ text: Сердце человека состоит из [трёх] камер. �
                         ${chunk.chunk_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(chunk.chunk_type)}</span>` : ''}
                         <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${unitIds.length} units</span>
                         <button type="button"
-                            onclick="dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkId)}')"
+                            onclick="dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeInlineJsString(chunkId)}')"
                             class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
                             Колода по chunk
                         </button>
                         <button type="button"
-                            onclick="dashboard.importManager.appendTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkId)}')"
+                            onclick="dashboard.importManager.appendTheoryMicrocardsDeckForChunk('${this.escapeInlineJsString(chunkId)}')"
                             class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
                             + в колоду...
                         </button>
@@ -5188,12 +6016,12 @@ text: Сердце человека состоит из [трёх] камер. �
                                         <div class="flex flex-wrap items-center gap-2">
                                             <div class="text-xs text-text-main">#${this.escapeHtml(String(unitId))} ${this.escapeHtml(unit?.title || 'Unit')}</div>
                                             <button type="button"
-                                                onclick="dashboard.importManager.createTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitId))}','${this.escapeHtml(chunkId)}')"
+                                                onclick="dashboard.importManager.createTheoryMicrocardsDeckForUnit('${this.escapeInlineJsString(String(unitId))}','${this.escapeInlineJsString(chunkId)}')"
                                                 class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-info-light text-info-text bg-info-lighter hover:bg-info-light transition-colors">
                                                 Колода по unit
                                             </button>
                                             <button type="button"
-                                                onclick="dashboard.importManager.appendTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitId))}','${this.escapeHtml(chunkId)}')"
+                                                onclick="dashboard.importManager.appendTheoryMicrocardsDeckForUnit('${this.escapeInlineJsString(String(unitId))}','${this.escapeInlineJsString(chunkId)}')"
                                                 class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
                                                 + в колоду...
                                             </button>
@@ -5345,22 +6173,22 @@ text: Сердце человека состоит из [трёх] камер. �
         const createAction = hasPairMatchStep
             ? "dashboard.importManager.createTheoryMicrocardsPairMatchDeck()"
             : (chunkIds.length === 1
-                ? `dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkIds[0])}')`
+                ? `dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeInlineJsString(chunkIds[0])}')`
                 : (unitIds.length === 1
-                    ? `dashboard.importManager.createTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitIds[0]))}','${this.escapeHtml(String(chunkIds[0] || ''))}')`
+                    ? `dashboard.importManager.createTheoryMicrocardsDeckForUnit('${this.escapeInlineJsString(String(unitIds[0]))}','${this.escapeInlineJsString(String(chunkIds[0] || ''))}')`
                     : "dashboard.importManager.createTheoryMicrocardsDeckAll()"));
         const appendAction = hasPairMatchStep
             ? "dashboard.importManager.appendTheoryMicrocardsPairMatchDeck()"
             : (chunkIds.length === 1
-                ? `dashboard.importManager.appendTheoryMicrocardsDeckForChunk('${this.escapeHtml(chunkIds[0])}')`
+                ? `dashboard.importManager.appendTheoryMicrocardsDeckForChunk('${this.escapeInlineJsString(chunkIds[0])}')`
                 : (unitIds.length === 1
-                    ? `dashboard.importManager.appendTheoryMicrocardsDeckForUnit('${this.escapeHtml(String(unitIds[0]))}','${this.escapeHtml(String(chunkIds[0] || ''))}')`
+                    ? `dashboard.importManager.appendTheoryMicrocardsDeckForUnit('${this.escapeInlineJsString(String(unitIds[0]))}','${this.escapeInlineJsString(String(chunkIds[0] || ''))}')`
                     : "dashboard.importManager.appendTheoryMicrocardsDeckAll()"));
 
         const buttons = [
             canPushEditorContext ? `
                 <button type="button"
-                    onclick="dashboard.importManager.pushTheoryAuthoringRouteContextForEditor('${this.escapeHtml(routeId)}')"
+                    onclick="dashboard.importManager.pushTheoryAuthoringRouteContextForEditor('${this.escapeInlineJsString(routeId)}')"
                     class="${small} rounded-md font-medium border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-colors">
                     В редактор (маршрут)
                 </button>
@@ -5982,13 +6810,13 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <div class="rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} p-3">
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="min-w-0">
-                                            <div class="text-[11px] font-mono text-text-secondary truncate" title="${this.escapeHtml(row.ai_run_id)}">${this.escapeHtml(row.ai_run_id)}</div>
+                                            <div class="text-[11px] font-mono text-text-secondary truncate" title="${this.escapeHtmlAttr(row.ai_run_id)}">${this.escapeHtml(row.ai_run_id)}</div>
                                             <div class="text-xs font-semibold text-text-main mt-1 truncate">${this.escapeHtml(row.source_file_name || row.human_summary || 'Анализ без имени')}</div>
                                             ${updatedAt ? `<div class="text-[10px] text-text-secondary mt-1">${this.escapeHtml(updatedAt)}</div>` : ''}
                                             ${stats ? `<div class="text-[10px] text-text-secondary mt-1">${this.escapeHtml(stats)}</div>` : ''}
                                             ${counts ? `<div class="text-[10px] text-text-secondary mt-0.5">${this.escapeHtml(counts)}</div>` : ''}
                                         </div>
-                                        <button onclick="dashboard.importManager.openTheoryAnalysisRun('${this.escapeHtml(row.ai_run_id)}')" ${isOpening ? 'disabled' : ''}
+                                        <button onclick="dashboard.importManager.openTheoryAnalysisRun('${this.escapeInlineJsString(row.ai_run_id)}')" ${isOpening ? 'disabled' : ''}
                                             class="px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'} disabled:opacity-60 disabled:cursor-not-allowed">
                                             ${isOpening ? 'Открытие...' : (isActive ? 'Открыт' : 'Открыть')}
                                         </button>
@@ -6354,6 +7182,36 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     renderStep1AI(modules) {
+        if (this.aiStatus && this.aiStatus.status_check_failed) {
+            return `
+                <div class="space-y-5 animate-fade-in">
+                    <div class="p-6 bg-surface-2 border-2 border-dashed border-border-subtle rounded-xl text-center">
+                        <div class="flex flex-col items-center gap-3 py-4">
+                            <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-error-lighter">
+                                <span class="material-symbols-outlined text-error text-[28px]">cloud_off</span>
+                            </div>
+                            <h4 class="text-base font-bold text-text-main">Не удалось проверить ИИ-сервис</h4>
+                            <p class="text-sm text-text-secondary max-w-md">
+                                Статус ИИ сейчас недоступен. Это похоже на сетевую ошибку или временную недоступность backend.
+                            </p>
+                            <div class="mt-2 flex flex-wrap items-center justify-center gap-2">
+                                <button type="button"
+                                    onclick="dashboard.importManager.aiCheckStatus().then(() => dashboard.importManager.renderCurrentStep())"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-fg font-semibold text-sm rounded-xl hover:brightness-110 transition-all shadow-sm">
+                                    <span class="material-symbols-outlined text-[18px]">refresh</span>
+                                    Повторить
+                                </button>
+                                <button type="button"
+                                    onclick="dashboard.importManager.setImportMode('text')"
+                                    class="inline-flex items-center gap-2 px-4 py-2.5 border border-border-strong text-text-secondary font-semibold text-sm rounded-xl hover:bg-bg-hover transition-all">
+                                    Ручной режим
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
         // Show "no API keys" placeholder if AI is unavailable
         if (this.aiStatus && this.aiStatus.ai_available === false) {
             return `
@@ -6413,8 +7271,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
                         <select id="import-module-select" 
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                            <option value="">Выберите модуль...</option>
-                            ${modules.map(m => `<option value="${m.id}">${m.name || m.id}</option>`).join('')}
+                            ${this.renderModuleOptions(modules, 'Выберите модуль...')}
                         </select>
                     </div>
                     <div>
@@ -6963,7 +7820,7 @@ text: Сердце человека состоит из [трёх] камер. �
             return data;
         } catch (e) {
             console.error('[AI] status check failed:', e);
-            this.aiStatus = { ai_available: false };
+            this.aiStatus = { ai_available: false, status_check_failed: true };
             return this.aiStatus;
         }
     }
@@ -7190,4 +8047,3 @@ text: Сердце человека состоит из [трёх] камер. �
         }
     }
 }
-

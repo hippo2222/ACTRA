@@ -39,22 +39,22 @@
         banner.classList.remove("hidden");
 
         // Reset classes
-        banner.className = "mb-6 rounded-lg border p-4 flex items-start gap-3 transition-colors duration-200";
+        banner.className = "mb-6 rounded-lg border-2 p-4 flex items-start gap-3 transition-colors duration-200";
 
         if (type === "error") {
             banner.classList.add(
-                "border-error-light", "bg-error-lighter", "text-error-darker",
-                "dark:border-error", "dark:bg-error-light", "dark:text-error-lighter"
+                "border-error", "bg-surface-1", "text-text-main",
+                "dark:border-error-light", "dark:bg-surface-2", "dark:text-text-on-dark"
             );
         } else if (type === "success") {
             banner.classList.add(
-                "border-success-light", "bg-success-lighter", "text-success-darker",
-                "dark:border-success", "dark:bg-success-light", "dark:text-success-lighter"
+                "border-success", "bg-surface-1", "text-text-main",
+                "dark:border-success-light", "dark:bg-surface-2", "dark:text-text-on-dark"
             );
         } else {
             banner.classList.add(
-                "border-warning-light", "bg-warning-lighter", "text-warning-darker",
-                "dark:border-warning", "dark:bg-warning-light", "dark:text-warning-lighter"
+                "border-warning", "bg-surface-1", "text-text-main",
+                "dark:border-warning-light", "dark:bg-surface-2", "dark:text-text-on-dark"
             );
         }
     }
@@ -63,26 +63,37 @@
         const banner = document.getElementById("status-banner");
         if (!banner) return;
 
-        banner.innerHTML = `
-      <div class="flex items-center justify-between gap-4 w-full">
-        <div>
-          <p class="font-semibold">Ошибка отправки ответа</p>
-          <p class="text-sm mt-1">Проверьте подключение к сети и попробуйте снова</p>
-        </div>
-        <button 
-          id="retry-submit-btn" 
-          class="shrink-0 px-4 py-2 bg-surface-1 dark:bg-surface-2 border border-current rounded-lg font-semibold hover:bg-bg-hover dark:hover:bg-bg-hover transition"
-        >
-          Повторить
-        </button>
-      </div>
-    `;
+        banner.replaceChildren();
+
+        const row = document.createElement("div");
+        row.className = "flex items-center justify-between gap-4 w-full";
+
+        const textWrap = document.createElement("div");
+        const title = document.createElement("p");
+        title.className = "font-semibold";
+        title.textContent = "Ошибка отправки ответа";
+        const text = document.createElement("p");
+        text.className = "text-sm mt-1";
+        text.textContent = "Проверьте подключение к сети и попробуйте снова";
+        textWrap.appendChild(title);
+        textWrap.appendChild(text);
+
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.id = "retry-submit-btn";
+        btn.className =
+            "shrink-0 px-4 py-2 bg-surface-1 dark:bg-surface-2 border border-current rounded-lg font-semibold hover:bg-bg-hover dark:hover:bg-bg-hover transition disabled:opacity-60 disabled:cursor-not-allowed";
+        btn.textContent = "Повторить";
+        btn.disabled = typeof retryCallback !== "function";
+
+        row.appendChild(textWrap);
+        row.appendChild(btn);
+        banner.appendChild(row);
 
         banner.classList.remove("hidden");
-        banner.className = "mb-6 rounded-lg border p-4 flex items-start gap-3 border-error-light bg-error-lighter text-error-darker dark:border-error dark:bg-error-light dark:text-error-lighter";
+        banner.className = "mb-6 rounded-lg border-2 p-4 flex items-start gap-3 border-error bg-surface-1 text-text-main dark:border-error-light dark:bg-surface-2 dark:text-text-on-dark";
 
-        const btn = document.getElementById("retry-submit-btn");
-        if (btn && retryCallback) {
+        if (retryCallback) {
             btn.onclick = (e) => {
                 e.stopPropagation();
                 retryCallback();

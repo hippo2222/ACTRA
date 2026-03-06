@@ -383,7 +383,7 @@ const TestUI = (function () {
     if (!usingCustomLayout) {
       const legend = document.createElement("div");
       legend.className =
-        "mt-4 border-t border-border-strong dark:border-border-strong pt-3 space-y-2 text-[11px] text-text-muted dark:text-text-muted";
+        "mt-4 border-t border-border-strong dark:border-border-strong pt-3 space-y-2 text-[11px] text-text-main dark:text-text-on-dark";
 
       function legendItem(boxClass, text) {
         const row = document.createElement("div");

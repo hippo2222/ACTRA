@@ -439,12 +439,23 @@ def save_ai_keys() -> Any:
         if not isinstance(keys_input, dict):
             return jsonify({"ok": False, "error": "invalid_payload"}), 400
 
-        # Sanitize: only keep allowed provider names, strip whitespace
-        clean_keys: Dict[str, str] = {}
+        # Merge with existing keys so partial updates do not wipe untouched providers.
+        existing_keys = (user.settings or {}).get("ai_keys", {})
+        if not isinstance(existing_keys, dict):
+            existing_keys = {}
+        clean_keys: Dict[str, str] = {
+            name: str(existing_keys.get(name, "") or "").strip()
+            for name in _ALLOWED_AI_PROVIDERS
+            if str(existing_keys.get(name, "") or "").strip()
+        }
         for name in _ALLOWED_AI_PROVIDERS:
+            if name not in keys_input:
+                continue
             val = str(keys_input.get(name, "") or "").strip()
             if val:
                 clean_keys[name] = val
+            else:
+                clean_keys.pop(name, None)
 
         # Save into user settings
         if user.settings is None:

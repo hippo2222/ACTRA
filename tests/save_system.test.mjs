@@ -28,6 +28,10 @@ function setupDom() {
     global.confirm = vi.fn(() => true); // Auto-confirm dialogs
     global.alert = vi.fn();
     global.fetch = vi.fn();
+    dom.window.requestAnimationFrame = dom.window.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
+    dom.window.cancelAnimationFrame = dom.window.cancelAnimationFrame || ((id) => clearTimeout(id));
+    global.requestAnimationFrame = dom.window.requestAnimationFrame;
+    global.cancelAnimationFrame = dom.window.cancelAnimationFrame;
 
     // Mock Canvas for DrawEditor/ClickEditor
     global.HTMLCanvasElement = dom.window.HTMLCanvasElement;
@@ -118,6 +122,31 @@ describe('Save System (Autosave & Undo/Redo)', () => {
         return editor;
     };
 
+    describe('AutoSaveManager', () => {
+        it('reports error state when draft save fails', () => {
+            const editor = {
+                taskId: 'task_1',
+                moduleId: 'mod_1',
+                topicId: 'top_1',
+                captureState: () => ({ ok: true }),
+                updateSaveStatus: vi.fn()
+            };
+            const manager = new dom.window.AutoSaveManager(editor, { interval: 1000 });
+            vi.spyOn(console, 'error').mockImplementation(() => {});
+            const setItemSpy = vi.spyOn(dom.window.Storage.prototype, 'setItem').mockImplementation(() => {
+                throw new Error('boom');
+            });
+
+            manager.saveDraft();
+
+            expect(editor.updateSaveStatus).toHaveBeenCalledWith(expect.objectContaining({
+                type: 'error'
+            }));
+
+            setItemSpy.mockRestore();
+        });
+    });
+
     describe('SequenceEditor', () => {
         it('implements captureState and restoreState', () => {
             const editor = setupEditor('frontend/Editor/sequence_editor.js', 'SequenceEditor');
@@ -155,6 +184,24 @@ describe('Save System (Autosave & Undo/Redo)', () => {
             editor.restoreState(state);
             expect(editor.questions).toHaveLength(1);
             expect(editor.questions[0].text).toBe('Questions 1');
+        });
+
+        it('uses NotificationUI confirm and renders toast text safely', async () => {
+            dom.window.NotificationUI = {
+                confirm: vi.fn().mockResolvedValue(true)
+            };
+            const editor = setupEditor('frontend/Editor/test_editor.js', 'TestEditor');
+            editor.questions = [{ id: 'q1', text: 'Q1' }, { id: 'q2', text: 'Q2' }];
+            editor.toastContainer = dom.window.document.createElement('div');
+            dom.window.document.body.appendChild(editor.toastContainer);
+
+            await editor.clearTest();
+            expect(dom.window.NotificationUI.confirm).toHaveBeenCalled();
+            expect(editor.questions).toHaveLength(1);
+
+            editor.showToast('<img src=x onerror=alert(1)>', 'info');
+            expect(editor.toastContainer.querySelector('img')).toBeNull();
+            expect(editor.toastContainer.textContent).toContain('<img src=x onerror=alert(1)>');
         });
     });
 

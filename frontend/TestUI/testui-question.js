@@ -3,6 +3,36 @@
 
 (function (global) {
   function createQuestionRenderer(state, main) {
+    function requestCheck() {
+      if (
+        global &&
+        global.TestInterfaceBridge &&
+        typeof global.TestInterfaceBridge.onCheckRequested === "function"
+      ) {
+        global.TestInterfaceBridge.onCheckRequested();
+        return true;
+      }
+      if (typeof state.onCheckRequested === "function") {
+        state.onCheckRequested();
+        return true;
+      }
+      if (
+        global &&
+        global.NotificationUI &&
+        typeof global.NotificationUI.toast === "function"
+      ) {
+        global.NotificationUI.toast(
+          "Check is unavailable on this screen.",
+          "warning"
+        );
+        return false;
+      }
+      if (typeof console !== "undefined" && console.warn) {
+        console.warn("[TestUIQuestion] Check requested without a handler");
+      }
+      return false;
+    }
+
     function getCurrentMeta() {
       if (!state.questions || state.questions.length === 0) {
         return { meta: null, raw: null };
@@ -215,6 +245,8 @@
       checkBtn.textContent = "Check Answer";
 
       checkBtn.addEventListener("click", () => {
+        requestCheck();
+        return;
         // Если TestInterfaceBridge доступен (mock/webview), дергаем его onCheckRequested
         if (
           typeof window !== "undefined" &&

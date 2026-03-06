@@ -83,6 +83,7 @@ def validate_and_normalize_create_payload(
     chains = payload.get("chains")
     settings = payload.get("settings")
     theory_link = payload.get("theory_link")
+    theory_mode = payload.get("theory_mode")
 
     errors: List[Dict[str, Any]] = []
 
@@ -119,6 +120,18 @@ def validate_and_normalize_create_payload(
     )
     if theory_link_error is not None:
         errors.append({"field": "theory_link", "reason": theory_link_error})
+
+    normalized_theory_mode = None
+    if theory_mode is None:
+        normalized_theory_mode = "override" if normalized_theory_link else "inherit"
+    elif not isinstance(theory_mode, str):
+        errors.append({"field": "theory_mode", "reason": "theory_mode_must_be_string"})
+    else:
+        theory_mode_norm = theory_mode.strip().lower()
+        if theory_mode_norm not in {"inherit", "override"}:
+            errors.append({"field": "theory_mode", "reason": "theory_mode_invalid"})
+        else:
+            normalized_theory_mode = theory_mode_norm
 
     seen = set()
     deduped_tasks: List[str] = []
@@ -180,6 +193,7 @@ def validate_and_normalize_create_payload(
         "chains": normalized_chains,
         "settings": settings_dict,
         "theory_link": normalized_theory_link,
+        "theory_mode": normalized_theory_mode,
     }
 
     return normalized, []

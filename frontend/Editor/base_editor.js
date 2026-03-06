@@ -176,7 +176,10 @@ class BaseEditor {
             const result = await response.json();
 
             if (result.ok) {
-                this.showToast("Задание сохранено", 'success');
+                const semanticWarnings = this.getSemanticWarnings();
+                if (!semanticWarnings.length) {
+                    this.showToast("Задание сохранено", 'success');
+                }
                 this.markSaved();
                 this.refreshTheoryGroundingCoverage().catch(() => {});
                 this.renderTheoryGroundingPanel();
@@ -187,6 +190,14 @@ class BaseEditor {
                 }
 
                 this.onTaskSaved(); // Hook for child classes
+                if (semanticWarnings.length) {
+                    this.updateSaveStatus({
+                        type: 'warning',
+                        message: 'Сохранено с предупреждениями',
+                        detail: this.buildSemanticWarningsDetail(semanticWarnings)
+                    });
+                    this.showToast(this.buildSemanticWarningsToast(semanticWarnings), 'warning', 5200);
+                }
             } else {
                 this.showToast(result.error || "Ошибка сохранения", 'error');
             }
@@ -216,7 +227,7 @@ class BaseEditor {
 
     /**
      * Update save status indicator in UI
-     * Handles multiple states: saving, saved, dirty, draft, error
+     * Handles multiple states: saving, saved, dirty, draft, error, warning
      * @param {Object} options - Status options { type, message, detail }
      */
     updateSaveStatus(options = {}) {
@@ -279,10 +290,60 @@ class BaseEditor {
                 text.className = 'text-[11px] font-bold text-error-dark leading-none';
                 if (detail) detail.classList.add('hidden');
                 break;
+            case 'blocking':
+                dot.classList.add('bg-error', 'animate-pulse');
+                text.textContent = options.message || 'Действие заблокировано';
+                text.className = 'text-[11px] font-bold text-error-dark leading-none';
+                if (detail && options.detail) {
+                    detail.textContent = options.detail;
+                    detail.classList.remove('hidden');
+                } else if (detail) {
+                    detail.classList.add('hidden');
+                }
+                break;
+            case 'warning':
+                dot.classList.add('bg-warning');
+                text.textContent = options.message || 'Сохранено с предупреждениями';
+                text.className = 'text-[11px] font-bold text-warning-dark leading-none';
+                if (detail && options.detail) {
+                    detail.textContent = options.detail;
+                    detail.classList.remove('hidden');
+                } else if (detail) {
+                    detail.classList.add('hidden');
+                }
+                break;
         }
     }
 
     // ===== UI NOTIFICATIONS =====
+
+    normalizeFeedbackVariant(variant = 'info') {
+        const key = String(variant || '').trim().toLowerCase();
+        if (key === 'success' || key === 'warning' || key === 'error' || key === 'info') {
+            return key;
+        }
+        if (key === 'blocking') {
+            return 'error';
+        }
+        return 'info';
+    }
+
+    composeFeedbackMessage({ what = '', impact = '', next = '' } = {}) {
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.voiceMessage === 'function') {
+            return NotificationUI.voiceMessage({ what, impact, next });
+        }
+        return [what, impact, next].filter(Boolean).join(' ');
+    }
+
+    showVoiceToast({ severity = 'info', what = '', impact = '', next = '', timeout = 4200 } = {}) {
+        const message = this.composeFeedbackMessage({ what, impact, next });
+        if (!message) return;
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toastVoice === 'function') {
+            NotificationUI.toastVoice({ what, impact, next, severity, timeout });
+            return;
+        }
+        this.showToast(message, severity, timeout);
+    }
 
     /**
      * Show toast notification
@@ -291,8 +352,14 @@ class BaseEditor {
      * @param {number} timeout - Timeout in milliseconds (default: 4000)
      */
     showToast(message, variant = 'info', timeout = 4000) {
+        const normalized = this.normalizeFeedbackVariant(variant);
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+            NotificationUI.toast(message, normalized, timeout);
+            return;
+        }
+
         const toast = document.createElement('div');
-        toast.className = `toast toast-${variant}`;
+        toast.className = `toast toast-${normalized}`;
         toast.textContent = message;
 
         // Add to body
@@ -308,6 +375,32 @@ class BaseEditor {
         }, timeout);
     }
 
+    getSemanticWarnings() {
+        return [];
+    }
+
+    buildSemanticWarningsToast(warnings = []) {
+        if (!Array.isArray(warnings) || !warnings.length) {
+            return 'Сохранено.';
+        }
+        const first = String(warnings[0] || '').trim();
+        if (warnings.length === 1) {
+            return `Сохранено, но проверьте: ${first}`;
+        }
+        return `Сохранено, но есть ${warnings.length} замечания. Сначала проверьте: ${first}`;
+    }
+
+    buildSemanticWarningsDetail(warnings = []) {
+        if (!Array.isArray(warnings) || !warnings.length) {
+            return '';
+        }
+        const first = String(warnings[0] || '').trim();
+        if (warnings.length === 1) {
+            return first;
+        }
+        return `${warnings.length} замечания. Первое: ${first}`;
+    }
+
     /**
      * Toggle loading overlay
      * @param {boolean} show - Show or hide loading
@@ -321,9 +414,10 @@ class BaseEditor {
                 overlay = document.createElement('div');
                 overlay.id = 'loading-overlay';
                 overlay.className = 'loading-overlay';
+                const safeMessage = this.escapeHtml(message);
                 overlay.innerHTML = `
                     <div class="loading-spinner"></div>
-                    <div class="loading-message">${message}</div>
+                    <div class="loading-message">${safeMessage}</div>
                 `;
                 document.body.appendChild(overlay);
             } else {
@@ -357,6 +451,7 @@ class BaseEditor {
      */
     showFatalError(message) {
         this.toggleLoading(false); // Ensure loading is hidden
+        const safeMessage = this.escapeHtml(message);
 
         const overlay = document.createElement('div');
         overlay.className = 'fixed inset-0 z-50 bg-bg-main backdrop-blur flex flex-col items-center justify-center p-6 text-center animate-fade-in';
@@ -364,7 +459,7 @@ class BaseEditor {
             <div class="bg-error-light rounded-2xl p-8 max-w-md w-full border border-error-light shadow-xl">
                 <span class="material-symbols-outlined text-4xl text-error mb-4">error</span>
                 <h3 class="text-xl font-bold text-text-main mb-2">Ошибка загрузки</h3>
-                <p class="text-text-secondary mb-6">${message}</p>
+                <p class="text-text-secondary mb-6">${safeMessage}</p>
                 <button onclick="window.navigateWithTransition('/ui/editor')" class="w-full py-3 px-4 bg-surface-1 border border-border-subtle rounded-lg shadow-sm font-semibold text-text-main hover:bg-bg-hover transition-all flex items-center justify-center gap-2">
                     <span class="material-symbols-outlined">arrow_back</span>
                     Вернуться в меню
@@ -389,6 +484,10 @@ class BaseEditor {
 
         const icon = 'history';
         const colorClass = 'text-primary';
+        title = this.escapeHtml(title || 'РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ');
+        message = this.escapeHtml(message || 'Р’С‹ СѓРІРµСЂРµРЅС‹?');
+        confirmText = this.escapeHtml(confirmText || 'РџРѕРґС‚РІРµСЂРґРёС‚СЊ');
+        cancelText = this.escapeHtml(cancelText || 'РћС‚РјРµРЅР°');
 
         overlay.innerHTML = `
             <div class="bg-surface-1 rounded-2xl p-8 max-w-md w-full border border-border-subtle shadow-xl transform transition-all scale-100 animate-slide-up">
@@ -412,8 +511,30 @@ class BaseEditor {
 
         const confirmBtn = overlay.querySelector('#confirm-modal-btn');
         const cancelBtn = overlay.querySelector('#cancel-modal-btn');
+        let settled = false;
+
+        const handleCancel = () => {
+            if (settled) return;
+            cleanup();
+            if (onCancel) onCancel();
+        };
+
+        const handleConfirm = () => {
+            if (settled) return;
+            cleanup();
+            if (onConfirm) onConfirm();
+        };
+
+        const handleKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                handleCancel();
+            }
+        };
 
         const cleanup = () => {
+            if (settled) return;
+            settled = true;
+            document.removeEventListener('keydown', handleKeyDown);
             overlay.classList.add('opacity-0');
             // Allow animation to finish
             setTimeout(() => {
@@ -421,15 +542,15 @@ class BaseEditor {
             }, 300);
         };
 
-        confirmBtn.onclick = () => {
-            cleanup();
-            if (onConfirm) onConfirm();
-        };
-
-        cancelBtn.onclick = () => {
-            cleanup();
-            if (onCancel) onCancel();
-        };
+        document.addEventListener('keydown', handleKeyDown);
+        requestAnimationFrame(() => confirmBtn && confirmBtn.focus({ preventScroll: true }));
+        confirmBtn.onclick = handleConfirm;
+        cancelBtn.onclick = handleCancel;
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                handleCancel();
+            }
+        });
     }
 
     // ===== UTILITY METHODS =====

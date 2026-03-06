@@ -148,7 +148,7 @@ class DrawEditor extends BaseEditor {
                 <div class="w-2.5 h-2.5 rounded-full ${isSelected ? 'bg-success' : 'bg-primary'} shrink-0 ring-2 ring-surface-2"></div>
                 <div class="flex-1 min-w-0">
                     <div class="text-[10px] ${isSelected ? 'text-primary' : 'text-text-disabled'} uppercase font-bold mb-0.5">Region ${index + 1}</div>
-                    <input class="w-full bg-transparent border-none p-0 text-sm font-medium text-text-main focus:ring-0 truncate" type="text" value="${region.label || ''}"/>
+                    <input class="w-full bg-transparent border-none p-0 text-sm font-medium text-text-main focus:ring-0 truncate" type="text"/>
                 </div>
                 <button class="text-text-disabled hover:text-error transition-colors p-1 rounded hover:bg-error-lighter">
                     <span class="material-symbols-outlined text-[18px]">delete</span>
@@ -158,8 +158,10 @@ class DrawEditor extends BaseEditor {
             div.onclick = () => this.selectRegion(index);
 
             const input = div.querySelector('input');
+            input.value = region.label || '';
             input.oninput = (e) => {
                 this.regions[index].label = e.target.value;
+                this.markUnsaved();
             };
 
             div.querySelector('button').onclick = (e) => {
@@ -217,18 +219,21 @@ class DrawEditor extends BaseEditor {
         if (this.selectedRegionIndex === index) this.selectedRegionIndex = -1;
         else if (this.selectedRegionIndex > index) this.selectedRegionIndex--;
         this.renderUI();
+        this.markUnsaved();
     }
 
     deleteVertex(rIndex, vIndex) {
         if (this.regions[rIndex].points.length <= 3) {
-            alert("A region must have at least 3 points. Delete the region instead if needed.");
+            this.showToast("A region must have at least 3 points. Delete the region instead if needed.", 'warning');
             return;
         }
         this.regions[rIndex].points.splice(vIndex, 1);
         this.renderUI();
+        this.markUnsaved();
     }
 
     startDraggingVertex(rIndex, vIndex) {
+        let changed = false;
         const onMouseMove = (e) => {
             const img = document.querySelector('#main-image');
             const rect = img.getBoundingClientRect();
@@ -241,6 +246,7 @@ class DrawEditor extends BaseEditor {
             y = Math.max(0, Math.min(100, y));
 
             this.regions[rIndex].points[vIndex] = [x, y];
+            changed = true;
             this.renderRegions();
             this.renderVertexEditor();
         };
@@ -248,6 +254,9 @@ class DrawEditor extends BaseEditor {
         const onMouseUp = () => {
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
+            if (changed) {
+                this.markUnsaved();
+            }
         };
 
         window.addEventListener('mousemove', onMouseMove);
@@ -270,6 +279,7 @@ class DrawEditor extends BaseEditor {
                 });
                 this.selectedRegionIndex = this.regions.length - 1;
                 this.renderUI();
+                this.markUnsaved();
             };
         }
 
@@ -277,6 +287,16 @@ class DrawEditor extends BaseEditor {
         const publishBtn = document.querySelector('button.bg-primary');
         if (publishBtn) {
             publishBtn.onclick = () => this.saveTask();
+        }
+
+        const promptArea = document.querySelector('#prompt-textarea');
+        if (promptArea) {
+            promptArea.addEventListener('input', () => this.markUnsaved());
+        }
+
+        const correctInput = document.querySelector('#required-correct-input');
+        if (correctInput) {
+            correctInput.addEventListener('input', () => this.markUnsaved());
         }
 
         window.addEventListener('resize', () => this.renderRegions());
@@ -311,12 +331,13 @@ class DrawEditor extends BaseEditor {
                 console.log("Main image uploaded:", data.path);
                 this.task.task_data.content.image = data.path;
                 this.renderUI();
+                this.markUnsaved();
             } else {
-                alert("Upload failed: " + data.error);
+                this.showToast(`Upload failed: ${data.error || 'upload_failed'}`, 'error');
             }
         } catch (error) {
             console.error("Error uploading image:", error);
-            alert("Error uploading image. See console.");
+            this.showToast("Error uploading image. See console.", 'error');
         } finally {
             event.target.value = '';
         }
@@ -369,6 +390,59 @@ class DrawEditor extends BaseEditor {
         }
 
         return null; // Validation passed
+    }
+
+    calculateRegionArea(points = []) {
+        if (!Array.isArray(points) || points.length < 3) return 0;
+        let area = 0;
+        for (let i = 0; i < points.length; i += 1) {
+            const [x1, y1] = points[i] || [0, 0];
+            const [x2, y2] = points[(i + 1) % points.length] || [0, 0];
+            area += (Number(x1) * Number(y2)) - (Number(x2) * Number(y1));
+        }
+        return Math.abs(area) / 2;
+    }
+
+    isPlaceholderRegionLabel(label) {
+        const normalized = String(label || "").trim().toLowerCase();
+        return normalized === "new region" || /^region\s+\d+$/i.test(normalized);
+    }
+
+    getSemanticWarnings() {
+        const warnings = [];
+        const labels = this.regions
+            .map((region) => String(region?.label || "").trim())
+            .filter(Boolean);
+
+        const duplicateLabels = [];
+        const seenLabels = new Set();
+
+        labels.forEach((label) => {
+            const key = label.toLowerCase();
+            if (seenLabels.has(key)) {
+                if (!duplicateLabels.includes(label)) {
+                    duplicateLabels.push(label);
+                }
+                return;
+            }
+            seenLabels.add(key);
+        });
+
+        if (duplicateLabels.length) {
+            warnings.push(`Повторяются названия областей: ${duplicateLabels.slice(0, 2).join(", ")}.`);
+        }
+
+        const placeholderCount = this.regions.filter((region) => this.isPlaceholderRegionLabel(region?.label)).length;
+        if (placeholderCount > 0) {
+            warnings.push(`У ${placeholderCount} областей осталось техническое имя. Лучше заменить его на понятную подсказку для пользователя.`);
+        }
+
+        const tinyRegions = this.regions.filter((region) => this.calculateRegionArea(region?.points) > 0 && this.calculateRegionArea(region?.points) < 25).length;
+        if (tinyRegions > 0) {
+            warnings.push(`${tinyRegions} областей выглядят слишком маленькими. Проверьте, что по ним реально удобно попадать.`);
+        }
+
+        return warnings;
     }
 
     /**
@@ -428,6 +502,8 @@ class DrawEditor extends BaseEditor {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.editor = new DrawEditor();
-});
+if (!(typeof window !== 'undefined' && window.__DRAW_EDITOR_AUTO_INIT_DISABLED__)) {
+    document.addEventListener('DOMContentLoaded', () => {
+        window.editor = new DrawEditor();
+    });
+}

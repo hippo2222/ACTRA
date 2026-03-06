@@ -1181,9 +1181,10 @@ const SequenceUI = (function () {
     renderAll();
     containerElement.appendChild(root);
 
-    window.addEventListener("resize", () => {
+    const onResize = () => {
       requestAnimationFrame(adjustAvailableHeight);
-    });
+    };
+    window.addEventListener("resize", onResize);
 
     return {
       getUserAnswerPayload() {
@@ -1316,11 +1317,17 @@ const SequenceUI = (function () {
 
         renderAll();
       },
+      cleanup() {
+        window.removeEventListener("resize", onResize);
+      },
     };
   }
 
   return {
     render(containerElement, task) {
+      if (currentInstance && typeof currentInstance.cleanup === "function") {
+        currentInstance.cleanup();
+      }
       currentInstance = createRoot(containerElement, task);
     },
     getUserAnswerPayload() {
@@ -1349,14 +1356,10 @@ const SequenceUI = (function () {
 
     // Phase 2: Cleanup method to prevent memory leaks
     cleanup() {
-      // Reset current instance
+      if (currentInstance && typeof currentInstance.cleanup === "function") {
+        currentInstance.cleanup();
+      }
       currentInstance = null;
-      // Note: The window resize listener is attached in createRoot (line 1184),
-      // but it's an anonymous function so we cannot remove it explicitly.
-      // This is a known limitation - the listener will remain until page unload.
-      // For a complete fix, we would need to store the listener reference.
-      // However, the resize listener is lightweight and won't cause significant leaks.
-      // Event listeners on DOM elements will be garbage collected when elements are removed.
     }
   };
 })();

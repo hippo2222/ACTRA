@@ -27,6 +27,7 @@
 
         // --- Toggle button ---
         const toggleBtn = document.createElement('button');
+        toggleBtn.type = 'button';
         if (sidebarTarget) {
             // Sidebar style (Rectangular, with text)
             toggleBtn.className = 'flex items-center gap-3 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left';
@@ -53,9 +54,9 @@
 
                     // Sidebar-specific positioning: always open up if in sidebar
                     if (sidebarTarget) {
-                        menu.style.bottom = '100% ';
+                        menu.style.bottom = '100%';
                         menu.style.top = 'auto';
-                        menu.style.marginBottom = '8px ';
+                        menu.style.marginBottom = '8px';
                         menu.style.marginTop = '0';
                         menu.style.left = '0';
                         menu.style.right = 'auto';
@@ -87,6 +88,7 @@
 
         THEMES.forEach(theme => {
             const btn = document.createElement('button');
+            btn.type = 'button';
             btn.dataset.themeId = theme.id;
             btn.className = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-xs font-medium transition-colors hover:bg-bg-hover';
             btn.onclick = (e) => {
@@ -95,6 +97,7 @@
                     window.ThemeManager.setTheme(theme.id);
                     updateActiveState(theme.id);
                 }
+                menu.classList.add('hidden');
             };
 
             const swatch = document.createElement('div');

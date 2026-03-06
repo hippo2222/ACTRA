@@ -27,6 +27,7 @@
     const state = SessionState && SessionState.state ? SessionState.state : SessionState;
     const {
         showStatus,
+        showRetryOption,
         showResumeModal,
         hideResumeModal,
         setPaused,
@@ -86,6 +87,107 @@
         return rawId;
     }
 
+    function getTheoryBridgeStorageKey(sessionId) {
+        return `theory_training_bridge_v1:${String(sessionId || '').trim()}`;
+    }
+
+    function loadTheoryBridgeContext(sessionId) {
+        const normalizedSessionId = String(sessionId || '').trim();
+        if (!normalizedSessionId || typeof window.sessionStorage === 'undefined') return null;
+
+        try {
+            const raw = window.sessionStorage.getItem(getTheoryBridgeStorageKey(normalizedSessionId));
+            if (!raw) return null;
+
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return null;
+
+            const theoryId = String(parsed.theoryId || '').trim();
+            if (!theoryId) return null;
+
+            return {
+                ...parsed,
+                theoryId,
+                theoryTitle: String(parsed.theoryTitle || '').trim() || theoryId,
+            };
+        } catch (error) {
+            console.warn('Failed to load theory bridge context in S1', error);
+            return null;
+        }
+    }
+
+    function renderTheorySessionContext(context) {
+        const banner = document.getElementById('theory-session-banner');
+        const titleEl = document.getElementById('theory-session-title');
+        const metaEl = document.getElementById('theory-session-meta');
+        if (!banner || !titleEl || !metaEl) return;
+
+        const theoryId = String(context?.theoryId || '').trim();
+        if (!theoryId) {
+            banner.classList.add('hidden');
+            titleEl.textContent = 'Теория';
+            metaEl.textContent = '';
+            state.theoryContext = null;
+            return;
+        }
+
+        const theoryTitle = String(context?.theoryTitle || '').trim() || theoryId;
+        const complexId = String(context?.complexId || '').trim();
+        const origin = String(context?.origin || '').trim();
+        const metaParts = [];
+
+        if (complexId) metaParts.push(`Комплекс: ${complexId}`);
+        if (origin === 'editor_theory_hub') {
+            metaParts.push('Сессия запущена из Theory Hub.');
+        } else if (origin === 'complex_theory_link') {
+            metaParts.push('Контекст подтянут из theory_link комплекса.');
+        } else {
+            metaParts.push('Текущая сессия привязана к этой теории.');
+        }
+        metaParts.push('После завершения можно вернуться к связанному theory-контексту на экране итогов.');
+
+        titleEl.textContent = `Теория: ${theoryTitle}`;
+        metaEl.textContent = metaParts.join(' ');
+        banner.classList.remove('hidden');
+        state.theoryContext = {
+            theoryId,
+            theoryTitle,
+            complexId,
+            origin,
+        };
+    }
+
+    async function resolveTheorySessionContext(taskPayload) {
+        const sessionId = String(state.sessionId || '').trim();
+        const bridgeContext = loadTheoryBridgeContext(sessionId);
+        if (bridgeContext && bridgeContext.theoryId) {
+            return bridgeContext;
+        }
+
+        const complexId = String(taskPayload?.complex_id || '').trim();
+        if (!complexId) return null;
+
+        try {
+            const response = await fetch(`/api/complexes/${encodeURIComponent(complexId)}`);
+            const data = await response.json();
+            if (!response.ok || !data?.ok || !data?.item) return null;
+
+            const theoryLink = (data.item && typeof data.item.theory_link === 'object') ? data.item.theory_link : null;
+            const theoryId = String(theoryLink?.theory_id || '').trim();
+            if (!theoryId) return null;
+
+            return {
+                theoryId,
+                theoryTitle: String(theoryLink?.title_cache || '').trim() || theoryId,
+                complexId,
+                origin: 'complex_theory_link',
+            };
+        } catch (error) {
+            console.warn('Failed to resolve theory context for session task', error);
+            return null;
+        }
+    }
+
     async function loadInitialTask() {
         const sessionId = getSessionIdFromLocation();
 
@@ -97,6 +199,7 @@
 
         state.sessionId = sessionId;
         setCanGoNext(false);
+        renderTheorySessionContext(null);
         const sessionLabel = document.getElementById('session-id-label');
         if (sessionLabel) {
             sessionLabel.textContent = sessionId || '-';
@@ -105,6 +208,7 @@
         try {
             setLoading(true);
             showStatus('Загружаем текущее задание...');
+            const hadRenderedTask = !!state.currentTask;
             const { status, data } = await api.getCurrentTask(sessionId);
 
             if (status === 404) {
@@ -130,7 +234,9 @@
             const response = data;
             if (!response.ok) {
                 showStatus(response.error || 'Не удалось загрузить задание', 'error');
-                renderTask(null);
+                if (!hadRenderedTask) {
+                    renderTask(null);
+                }
                 syncCheckButtonState();
                 return;
             }
@@ -143,12 +249,21 @@
             }
 
             showStatus('');
+            const theoryContext = await resolveTheorySessionContext(response.task);
+            renderTheorySessionContext(theoryContext);
             renderTask(response.task);
             syncCheckButtonState();
         } catch (err) {
             console.error(err);
-            showRetryOption(loadInitialTask);
-            renderTask(null);
+            renderTheorySessionContext(null);
+            if (typeof showRetryOption === 'function') {
+                showRetryOption(loadInitialTask);
+            } else {
+                showStatus('Не удалось загрузить задание. Попробуйте снова', 'error');
+            }
+            if (!state.currentTask) {
+                renderTask(null);
+            }
             syncCheckButtonState();
         } finally {
             setLoading(false);

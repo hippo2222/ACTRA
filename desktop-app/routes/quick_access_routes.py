@@ -25,10 +25,11 @@ from flask import Blueprint, jsonify, request
 
 from routes._context import get_ctx, get_extra
 from routes._helpers import (
-    _enrich_complex_with_theory_link,
     _get_complex_by_id,
     _json_safe,
     _normalize_complex_id,
+    _resolve_effective_user_id,
+    _serialize_complex_payload,
 )
 
 logger = logging.getLogger(__name__)
@@ -138,7 +139,7 @@ def start_complex_session(complex_id: str) -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
     payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(payload.get("user_id"))
     start_iteration = payload.get("start_iteration", 1)
     force = payload.get("force", False)
 
@@ -183,7 +184,7 @@ def start_complex_session(complex_id: str) -> Any:
 def get_quick_access() -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
-    user_id = request.args.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(request.args.get("user_id"))
     state = _read_ui_state(user_id)
 
     pinned = [x for x in state.get("pinned", []) if isinstance(x, str)]
@@ -326,9 +327,8 @@ def get_quick_access() -> Any:
 
 @quick_access_bp.route("/api/ui/quick-access/pin", methods=["POST"])
 def pin_quick_access() -> Any:
-    ctx = get_ctx()
     payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(payload.get("user_id"))
     complex_id = _normalize_complex_id(payload.get("complex_id"))
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
@@ -344,9 +344,8 @@ def pin_quick_access() -> Any:
 
 @quick_access_bp.route("/api/ui/quick-access/unpin", methods=["POST"])
 def unpin_quick_access() -> Any:
-    ctx = get_ctx()
     payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(payload.get("user_id"))
     complex_id = _normalize_complex_id(payload.get("complex_id"))
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
@@ -361,9 +360,8 @@ def unpin_quick_access() -> Any:
 @quick_access_bp.route("/api/ui/quick-access/remove", methods=["POST"])
 def remove_from_quick_access() -> Any:
     """Remove a complex from both pinned and recent lists."""
-    ctx = get_ctx()
     payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(payload.get("user_id"))
     complex_id = _normalize_complex_id(payload.get("complex_id"))
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
@@ -377,9 +375,8 @@ def remove_from_quick_access() -> Any:
 
 @quick_access_bp.route("/api/ui/quick-access/recent", methods=["POST"])
 def mark_recent_complex() -> Any:
-    ctx = get_ctx()
     payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(payload.get("user_id"))
     complex_id = _normalize_complex_id(payload.get("complex_id"))
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
@@ -394,16 +391,15 @@ def mark_recent_complex() -> Any:
 
 @quick_access_bp.route("/api/ui/settings", methods=["GET"])
 def get_ui_settings() -> Any:
-    user_id = request.args.get("user_id") or get_ctx().user_id
+    user_id = _resolve_effective_user_id(request.args.get("user_id"))
     state = _read_ui_state(user_id)
     return jsonify({"ok": True, "settings": state.get("settings", {})})
 
 
 @quick_access_bp.route("/api/ui/settings", methods=["POST"])
 def update_ui_settings() -> Any:
-    ctx = get_ctx()
     payload = request.get_json(silent=True) or {}
-    user_id = payload.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(payload.get("user_id"))
 
     state = _read_ui_state(user_id)
     current_settings = state.get("settings", {})
@@ -425,21 +421,10 @@ def list_complexes() -> Any:
     """Return the list of complexes available for the current user."""
     try:
         complexes = get_ctx().complex_service.get_all_complexes()
-        items = []
-        for c in complexes:
-            obj = c.dict()
-            created_at = obj.get("created_at")
-            updated_at = obj.get("updated_at")
-            if created_at is not None:
-                obj["created_at"] = (
-                    created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
-                )
-            if updated_at is not None:
-                obj["updated_at"] = (
-                    updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
-                )
-            obj = _enrich_complex_with_theory_link(obj)
-            items.append(obj)
+        items = [
+            _serialize_complex_payload(c, current_user_id=get_ctx().user_id)
+            for c in complexes
+        ]
         return jsonify({"ok": True, "items": items})
     except Exception as exc:
         logger.exception("[HTTP] Failed to list complexes: %s", exc)

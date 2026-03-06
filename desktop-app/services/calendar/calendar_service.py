@@ -294,7 +294,11 @@ class CalendarService:
             settings = UserCalendarSettings(user_id=self.user_id)
             self.save_settings(settings)
             return settings
-        return UserCalendarSettings.from_dict(data)
+        settings = UserCalendarSettings.from_dict(data)
+        if settings.user_id != self.user_id:
+            settings.user_id = self.user_id
+            self.save_settings(settings)
+        return settings
     
     def save_settings(self, settings: UserCalendarSettings) -> bool:
         """Сохранить настройки."""

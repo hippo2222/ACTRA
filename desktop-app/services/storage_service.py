@@ -304,10 +304,19 @@ class StorageService:
                         module_data['topics'] = topics
                     else:
                         # Дополнительно обогащаем задания метаданными (created_at и др.)
+                        # и подтягиваем topic-level theory_link из topic.json (если есть).
                         for topic in module_data.get('topics', []):
                             topic_id = topic.get('id')
                             topic_path = module_path / "topics" / topic_id if topic_id else None
                             topic['tasks'] = self._enrich_tasks_with_metadata(topic.get('tasks', []), topic_path)
+                            file_theory_link = self._read_topic_theory_link_from_file(topic_path)
+                            if file_theory_link is not None:
+                                topic['theory_link'] = file_theory_link
+                            elif 'theory_link' in topic and topic.get('theory_link') is not None:
+                                # Keep module.json value if topic.json is missing.
+                                pass
+                            else:
+                                topic.pop('theory_link', None)
                     
                     modules.append(module_data)
                     
@@ -525,6 +534,27 @@ class StorageService:
             enriched.append(metadata)
         
         return enriched
+
+    def _read_topic_theory_link_from_file(self, topic_path: Optional[Path]) -> Optional[Dict[str, Any]]:
+        """
+        Read topic-level theory link from topic.json if available.
+        Returns None when there is no link or file is absent.
+        """
+        if not topic_path:
+            return None
+        topic_json_path = topic_path / "topic.json"
+        if not topic_json_path.exists():
+            return None
+        try:
+            with open(topic_json_path, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            theory_link = data.get("theory_link")
+            if isinstance(theory_link, dict):
+                return dict(theory_link)
+            return None
+        except Exception as exc:
+            self.logger.warning(f"Failed to read topic theory_link from {topic_json_path}: {exc}")
+            return None
     
     def get_module(self, module_id: str) -> Optional[Dict[str, Any]]:
         """
@@ -592,6 +622,129 @@ class StorageService:
                 return topic
         
         return None
+
+    def _topic_json_path(self, module_id: str, topic_id: str) -> Path:
+        return self.modules_dir / module_id / "topics" / topic_id / "topic.json"
+
+    def get_topic_theory_link(self, module_id: str, topic_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Return topic-level theory_link if set.
+        Prefers topic.json as source of truth, falls back to cached topic payload.
+        """
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+
+        topic_json_path = self._topic_json_path(module_id, topic_id)
+        if topic_json_path.exists():
+            try:
+                with open(topic_json_path, "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+                theory_link = data.get("theory_link")
+                if isinstance(theory_link, dict):
+                    return dict(theory_link)
+                return None
+            except Exception as exc:
+                self.logger.warning(f"Failed to read topic theory link from {topic_json_path}: {exc}")
+
+        topic = self.get_topic(module_id, topic_id)
+        if isinstance(topic, dict) and isinstance(topic.get("theory_link"), dict):
+            return dict(topic.get("theory_link"))
+        return None
+
+    def set_topic_theory_link(
+        self,
+        module_id: str,
+        topic_id: str,
+        theory_link: Optional[Dict[str, Any]],
+    ) -> Dict[str, Any]:
+        """
+        Set or clear topic-level theory_link in topic.json (source of truth).
+        Also mirrors value into module.json topic entry when present.
+        """
+        import shutil
+        import tempfile
+
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+
+        topic = self.get_topic(module_id, topic_id)
+        if not topic:
+            raise ValueError("topic_not_found")
+
+        topic_json_path = self._topic_json_path(module_id, topic_id)
+        topic_json_path.parent.mkdir(parents=True, exist_ok=True)
+
+        payload: Dict[str, Any] = {}
+        if topic_json_path.exists():
+            try:
+                with open(topic_json_path, "r", encoding="utf-8") as fh:
+                    loaded = json.load(fh)
+                if isinstance(loaded, dict):
+                    payload = loaded
+            except Exception:
+                payload = {}
+
+        if not isinstance(payload, dict):
+            payload = {}
+
+        # Keep core fields stable even for partially broken legacy files.
+        payload["id"] = payload.get("id") or topic_id
+        payload["name"] = payload.get("name") or topic.get("name") or topic_id
+        if not isinstance(payload.get("tasks"), list):
+            payload["tasks"] = topic.get("tasks") if isinstance(topic.get("tasks"), list) else []
+
+        if isinstance(theory_link, dict):
+            payload["theory_link"] = dict(theory_link)
+        else:
+            payload.pop("theory_link", None)
+
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            dir=topic_json_path.parent,
+            delete=False,
+            encoding="utf-8",
+            suffix=".tmp",
+        ) as tf:
+            json.dump(payload, tf, ensure_ascii=False, indent=2)
+            temp_name = tf.name
+        shutil.move(temp_name, str(topic_json_path))
+
+        # Mirror theory_link into module.json topic entry (best-effort).
+        module_json_path = self.modules_dir / module_id / "module.json"
+        if module_json_path.exists():
+            try:
+                with open(module_json_path, "r", encoding="utf-8") as fh:
+                    module_data = json.load(fh)
+                topics = module_data.get("topics")
+                changed = False
+                if isinstance(topics, list):
+                    for row in topics:
+                        if not isinstance(row, dict):
+                            continue
+                        if row.get("id") != topic_id:
+                            continue
+                        if isinstance(theory_link, dict):
+                            row["theory_link"] = dict(theory_link)
+                        else:
+                            row.pop("theory_link", None)
+                        changed = True
+                        break
+                if changed:
+                    with tempfile.NamedTemporaryFile(
+                        mode="w",
+                        dir=module_json_path.parent,
+                        delete=False,
+                        encoding="utf-8",
+                        suffix=".tmp",
+                    ) as tf:
+                        json.dump(module_data, tf, ensure_ascii=False, indent=2)
+                        temp_name = tf.name
+                    shutil.move(temp_name, str(module_json_path))
+            except Exception as exc:
+                self.logger.warning(f"Failed to mirror topic theory_link into module.json: {exc}")
+
+        self._modules_cache = None
+        return payload
     
     # =========================================================================
     # ЗАДАНИЯ

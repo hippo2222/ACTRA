@@ -100,6 +100,53 @@
               </button>
             </div>
           </div>
+          <div class="px-4 mb-4">
+            <div class="rounded-xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
+              <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                <label class="relative flex-1 min-w-0">
+                  <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-secondary">
+                    <span class="material-symbols-outlined text-lg">search</span>
+                  </span>
+                  <input id="complex-search-input" type="search" autocomplete="off" spellcheck="false"
+                    class="w-full rounded-lg border border-border-strong bg-bg-main py-2.5 pl-11 pr-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary-light"
+                    placeholder="Найти по названию, описанию или задаче" aria-label="Поиск по комплексам">
+                </label>
+                <p id="complex-filter-summary" class="text-xs font-medium text-text-secondary">Показаны все комплексы</p>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-2" role="tablist" aria-label="Фильтры комплексов">
+                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
+                  data-filter="all">Все</button>
+                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
+                  data-filter="active">В работе</button>
+                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
+                  data-filter="pinned">Закреплённые</button>
+                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
+                  data-filter="frozen">Замороженные</button>
+                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
+                  data-filter="review">Нужно повторить</button>
+              </div>
+              <div id="complex-theory-banner" class="hidden mt-3 rounded-xl border border-primary-light bg-primary-lighter px-4 py-3">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-sm font-bold text-primary-darker">Theory focus</p>
+                    <p id="complex-theory-banner-copy" class="text-xs text-primary-darker/80">РџРѕРєР°Р·Р°РЅС‹ РєРѕРјРїР»РµРєСЃС‹ РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ С‚РµРѕСЂРёРё.</p>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button id="complex-theory-open-hub" type="button"
+                      class="inline-flex items-center gap-1 rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary-darker transition-colors hover:bg-primary-light">
+                      <span class="material-symbols-outlined text-[15px]">account_tree</span>
+                      Theory Hub
+                    </button>
+                    <button id="complex-theory-clear" type="button"
+                      class="inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-primary hover:text-primary">
+                      <span class="material-symbols-outlined text-[15px]">close</span>
+                      Сбросить
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
           <div id="complex-selection-action-bar"
             class="fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 p-2 shadow-2xl">
             <div id="complex-selection-counter" class="border-r border-border-subtle px-3 font-semibold text-text-secondary">0 выбрано</div>
@@ -121,6 +168,16 @@
           <div class="px-4">
             <div id="complexes-list" class="space-y-4">
               <!-- Cards will be rendered here via JavaScript. -->
+            </div>
+            <div class="p-4 mt-8" id="filtered-empty-state" hidden>
+              <div
+                class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border-subtle bg-surface-1 px-8 py-12 text-center">
+                <div class="flex h-14 w-14 items-center justify-center rounded-full bg-bg-tertiary">
+                  <span class="material-symbols-outlined text-2xl text-text-disabled">filter_alt_off</span>
+                </div>
+                <h3 class="text-lg font-bold text-text-main">По этому фильтру ничего не найдено</h3>
+                <p class="max-w-md text-sm text-text-secondary">Попробуйте снять часть фильтров или изменить поисковый запрос.</p>
+              </div>
             </div>
             <div class="p-4 mt-8" id="empty-state" hidden>
               <div
@@ -204,6 +261,52 @@
               .replace(/'/g, "&#39;");
           }
 
+          function composeComplexFeedbackMessage(parts = {}) {
+            const payload = {
+              what: String(parts.what || ""),
+              impact: String(parts.impact || ""),
+              next: String(parts.next || ""),
+            };
+            if (typeof NotificationUI !== "undefined" && typeof NotificationUI.voiceMessage === "function") {
+              return NotificationUI.voiceMessage(payload);
+            }
+            return [payload.what, payload.impact, payload.next].filter(Boolean).join(" ");
+          }
+
+          function resolveComplexFeedbackVariant(level = "info") {
+            if (typeof NotificationUI !== "undefined" && typeof NotificationUI.resolveVariant === "function") {
+              return NotificationUI.resolveVariant(level);
+            }
+            const key = String(level || "").trim().toLowerCase();
+            if (key === "success" || key === "warning" || key === "error" || key === "info") return key;
+            if (key === "blocking") return "error";
+            return "info";
+          }
+
+          function showComplexVoiceToast({ severity = "info", what = "", impact = "", next = "", timeout = 4200 } = {}) {
+            const message = composeComplexFeedbackMessage({ what, impact, next });
+            if (!message) return;
+            if (typeof NotificationUI !== "undefined" && typeof NotificationUI.toastVoice === "function") {
+              NotificationUI.toastVoice({ severity, what, impact, next, timeout });
+              return;
+            }
+            if (typeof NotificationUI !== "undefined" && typeof NotificationUI.toast === "function") {
+              NotificationUI.toast(message, resolveComplexFeedbackVariant(severity), timeout);
+              return;
+            }
+            console.warn("[Complexes] Toast unavailable:", message);
+          }
+
+          function escapeAttributeSelectorValue(value) {
+            const raw = String(value || "");
+            if (window.CSS && typeof window.CSS.escape === "function") {
+              return window.CSS.escape(raw);
+            }
+            return raw
+              .replace(/\\/g, "\\\\")
+              .replace(/"/g, '\\"');
+          }
+
           function localImageSrc(path) {
             if (!path) return "";
             return `/api/local-image?path=${encodeURIComponent(path)}`;
@@ -215,11 +318,355 @@
           let hasLoadedComplexesOnce = false;
           let isComplexesLoading = false;
           let complexesSkeletonTimer = null;
+          const pinnedComplexIds = new Set();
+          let activeComplexFilter = "all";
+          let activeComplexSearch = "";
+          let activeTheoryFilterId = "";
           const loadingRevealDelayMs = window.ACTRA_CONFIG?.ui?.loadingRevealDelayMs ?? 280;
+
+          function readInitialTheoryFilterFromUrl() {
+            try {
+              const params = new URLSearchParams(window.location.search || "");
+              return String(params.get("theory_id") || "").trim();
+            } catch (error) {
+              return "";
+            }
+          }
+
+          function updateTheoryFilterUrl() {
+            try {
+              const url = new URL(window.location.href);
+              if (activeTheoryFilterId) {
+                url.searchParams.set("theory_id", activeTheoryFilterId);
+              } else {
+                url.searchParams.delete("theory_id");
+              }
+              window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+            } catch (error) {
+              console.warn("[Complexes] Failed to update theory filter URL", error);
+            }
+          }
+
+          function updateComplexTheoryBanner() {
+            const banner = document.getElementById("complex-theory-banner");
+            const copy = document.getElementById("complex-theory-banner-copy");
+            if (!banner || !copy) return;
+            if (!activeTheoryFilterId) {
+              banner.classList.add("hidden");
+              return;
+            }
+            copy.textContent = `РџРѕРєР°Р·Р°РЅС‹ РєРѕРјРїР»РµРєСЃС‹, СЃРІСЏР·Р°РЅРЅС‹Рµ СЃ С‚РµРѕСЂРёРµР№ ${activeTheoryFilterId}.`;
+            banner.classList.remove("hidden");
+          }
+
+          function setTheoryFilter(theoryId, { updateUrl = true } = {}) {
+            activeTheoryFilterId = String(theoryId || "").trim();
+            updateComplexTheoryBanner();
+            if (updateUrl) updateTheoryFilterUrl();
+            applyComplexFilters();
+          }
 
           function normalizeComplexId(value) {
             if (value === null || value === undefined) return "";
             return String(value);
+          }
+
+          function normalizeComplexSearch(value) {
+            return String(value || "")
+              .toLocaleLowerCase("ru-RU")
+              .trim();
+          }
+
+          function resolveComplexTheoryMode(complex) {
+            const rawMode = String(complex?.theory_mode || "").trim().toLowerCase();
+            if (rawMode === "inherit" || rawMode === "override") return rawMode;
+            const theoryLink = (complex && typeof complex.theory_link === "object") ? complex.theory_link : null;
+            const hasTheoryId = !!(theoryLink && typeof theoryLink.theory_id === "string" && theoryLink.theory_id);
+            return hasTheoryId ? "override" : "inherit";
+          }
+
+          function resolveComplexTheorySyncStatus(complex) {
+            const rawStatus = String(complex?.theory_sync_status || "").trim().toLowerCase();
+            if (rawStatus === "ok" || rawStatus === "none" || rawStatus === "conflict") return rawStatus;
+            const theoryLink = (complex && typeof complex.theory_link === "object") ? complex.theory_link : null;
+            const hasTheoryId = !!(theoryLink && typeof theoryLink.theory_id === "string" && theoryLink.theory_id);
+            return hasTheoryId ? "ok" : "none";
+          }
+
+          function buildComplexTheoryBadges(complex) {
+            const mode = resolveComplexTheoryMode(complex);
+            const syncStatus = resolveComplexTheorySyncStatus(complex);
+
+            const modeBadge = mode === "inherit"
+              ? `<span class="inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
+                    <span class="material-symbols-outlined text-sm">account_tree</span> Наследование
+                 </span>`
+              : `<span class="inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+                    <span class="material-symbols-outlined text-sm">tune</span> Локальная теория
+                 </span>`;
+
+            const conflictBadge = syncStatus === "conflict"
+              ? `<span class="inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
+                    <span class="material-symbols-outlined text-sm">warning</span> Конфликт теорий
+                 </span>`
+              : "";
+
+            return { mode, syncStatus, modeBadge, conflictBadge };
+          }
+
+          function resolveComplexOwnership(complex) {
+            const ownership = (complex && typeof complex.ownership === "object") ? complex.ownership : {};
+            const createdByUserId = String(
+              ownership.created_by_user_id || complex?.created_by_user_id || ""
+            ).trim();
+            const updatedByUserId = String(
+              ownership.updated_by_user_id || complex?.updated_by_user_id || createdByUserId || ""
+            ).trim();
+            const createdVia = String(
+              ownership.created_via || complex?.created_via || ""
+            ).trim() || "legacy_unknown";
+            const contentScope = String(
+              ownership.content_scope || complex?.content_scope || ""
+            ).trim() || "shared_local";
+            const isOwnedByCurrentUser = ownership.is_owned_by_current_user === true;
+            return {
+              createdByUserId,
+              updatedByUserId,
+              createdVia,
+              contentScope,
+              hasOwner: ownership.has_owner === true || !!createdByUserId,
+              isOwnedByCurrentUser,
+              isSharedLibrary: ownership.is_shared_library !== false,
+            };
+          }
+
+          function resolveComplexCreatedViaLabel(createdVia) {
+            switch (String(createdVia || "").trim().toLowerCase()) {
+              case "complex_builder":
+                return "Builder";
+              case "manual_editor":
+                return "Editor";
+              case "archive_import":
+                return "РРјРїРѕСЂС‚";
+              case "topic_propagation":
+                return "Sync С‚РµРј";
+              case "single_complex_sync":
+                return "Sync РєРѕРјРїР»РµРєСЃР°";
+              default:
+                return "Workspace";
+            }
+          }
+
+          function buildComplexOwnershipBadges(complex) {
+            const ownership = resolveComplexOwnership(complex);
+            const ownerBadge = ownership.isOwnedByCurrentUser
+              ? `<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-1 text-xs font-semibold text-success-darker" title="РЎРѕР·РґР°РЅРѕ РёР· С‚РµРєСѓС‰РµРіРѕ РїСЂРѕС„РёР»СЏ">
+                    <span class="material-symbols-outlined text-sm">person</span> РњРѕС‘
+                 </span>`
+              : ownership.hasOwner
+                ? `<span class="inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary" title="РђРІС‚РѕСЂ РєРѕРјРїР»РµРєСЃР°">
+                      <span class="material-symbols-outlined text-sm">badge</span> ${escapeHtml(ownership.createdByUserId)}
+                   </span>`
+                : "";
+            const sourceBadge = `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-main px-2 py-1 text-xs font-semibold text-text-secondary" title="РСЃС‚РѕС‡РЅРёРє РєРѕРЅС‚РµРЅС‚Р°">
+                  <span class="material-symbols-outlined text-sm">inventory_2</span> ${escapeHtml(resolveComplexCreatedViaLabel(ownership.createdVia))}
+               </span>`;
+            return { ownership, ownerBadge, sourceBadge };
+          }
+
+          function ensureComplexOwnershipControls() {
+            const filterBar = document.querySelector('[role="tablist"][aria-label]');
+            if (!filterBar) return;
+
+            const injectedFilters = [
+              { id: "mine", label: "Моё" },
+              { id: "shared", label: "Общее" },
+              { id: "imported", label: "Импорт" },
+            ];
+            const anchorChip = filterBar.querySelector('.complex-filter-chip[data-filter="all"]');
+            let insertionPoint = anchorChip ? anchorChip.nextSibling : null;
+
+            injectedFilters.forEach(({ id, label }) => {
+              if (filterBar.querySelector(`.complex-filter-chip[data-filter="${id}"]`)) return;
+              const chip = document.createElement("button");
+              chip.type = "button";
+              chip.className = "complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors";
+              chip.setAttribute("data-filter", id);
+              chip.textContent = label;
+              if (insertionPoint) {
+                filterBar.insertBefore(chip, insertionPoint);
+              } else {
+                filterBar.appendChild(chip);
+              }
+            });
+
+            if (!document.getElementById("complex-library-note")) {
+              const note = document.createElement("p");
+              note.id = "complex-library-note";
+              note.className = "mt-3 text-[11px] text-text-muted";
+              note.textContent = "Комплексы живут в общей локальной библиотеке. «Моё» показывает комплексы текущего профиля, «Общее» — библиотеку вне вашего профиля, «Импорт» — комплексы, пришедшие из архива.";
+              filterBar.insertAdjacentElement("afterend", note);
+            }
+          }
+
+          function getComplexFilterLabel(filterId) {
+            switch (filterId) {
+              case "mine":
+                return "моё";
+              case "shared":
+                return "общее";
+              case "imported":
+                return "импорт";
+              case "active":
+                return "в работе";
+              case "pinned":
+                return "закреплённые";
+              case "frozen":
+                return "замороженные";
+              case "review":
+                return "нужно повторить";
+              default:
+                return "все комплексы";
+            }
+          }
+
+          function updateComplexFilterSummary(total, visible) {
+            const summaryEl = document.getElementById("complex-filter-summary");
+            if (!summaryEl) return;
+            const activeFilterParts = [];
+            if (activeComplexFilter !== "all") {
+              activeFilterParts.push(getComplexFilterLabel(activeComplexFilter));
+            }
+            if (activeTheoryFilterId) {
+              activeFilterParts.push(`С‚РµРѕСЂРёСЏ ${activeTheoryFilterId}`);
+            }
+            const activeLabel = activeFilterParts.length ? activeFilterParts.join(" + ") : "РІСЃРµ РєРѕРјРїР»РµРєСЃС‹";
+            if (!total) {
+              summaryEl.textContent = "Каталог пока пуст";
+              return;
+            }
+            if (visible === total && !activeComplexSearch && activeComplexFilter === "all" && !activeTheoryFilterId) {
+              summaryEl.textContent = `Показаны все комплексы: ${total}`;
+              return;
+            }
+            if (!visible) {
+              summaryEl.textContent = `Нет совпадений: ${activeLabel}`;
+              return;
+            }
+            summaryEl.textContent = `Показано ${visible} из ${total}: ${activeLabel}`;
+          }
+
+          function updateComplexFilterUi() {
+            const chips = document.querySelectorAll(".complex-filter-chip[data-filter]");
+            chips.forEach((chip) => {
+              const isActive = chip.getAttribute("data-filter") === activeComplexFilter;
+              chip.classList.toggle("bg-primary", isActive);
+              chip.classList.toggle("text-primary-fg", isActive);
+              chip.classList.toggle("border-primary", isActive);
+              chip.classList.toggle("shadow-sm", isActive);
+              chip.classList.toggle("bg-surface-1", !isActive);
+              chip.classList.toggle("text-text-secondary", !isActive);
+              chip.classList.toggle("border-border-subtle", !isActive);
+              chip.classList.toggle("hover:bg-bg-hover", !isActive);
+              chip.setAttribute("aria-selected", isActive ? "true" : "false");
+            });
+          }
+
+          function applyComplexFilters() {
+            const listEl = document.getElementById("complexes-list");
+            const filterEmptyEl = document.getElementById("filtered-empty-state");
+            if (!listEl) return;
+            const cards = Array.from(listEl.querySelectorAll("[data-complex-card-id]"));
+            if (!cards.length) {
+              listEl.classList.remove("hidden");
+              if (filterEmptyEl) filterEmptyEl.hidden = true;
+              updateComplexFilterSummary(0, 0);
+              return;
+            }
+
+            const normalizedQuery = normalizeComplexSearch(activeComplexSearch);
+            let visibleCount = 0;
+
+            cards.forEach((card) => {
+              const searchText = card.getAttribute("data-complex-search") || "";
+              const matchesQuery = !normalizedQuery || searchText.includes(normalizedQuery);
+              const status = card.getAttribute("data-complex-status") || "new";
+              const isPaused = card.getAttribute("data-complex-paused") === "true";
+              const isPinned = card.getAttribute("data-complex-pinned") === "true";
+              const needsReview = card.getAttribute("data-complex-critical") === "true";
+              const isOwnedByCurrentUser = card.getAttribute("data-complex-owned") === "true";
+              const isImported = card.getAttribute("data-complex-imported") === "true";
+              const theoryId = card.getAttribute("data-complex-theory-id") || "";
+
+              let matchesFilter = true;
+              if (activeComplexFilter === "mine") {
+                matchesFilter = isOwnedByCurrentUser;
+              } else if (activeComplexFilter === "shared") {
+                matchesFilter = !isOwnedByCurrentUser && !isImported;
+              } else if (activeComplexFilter === "imported") {
+                matchesFilter = isImported;
+              } else if (activeComplexFilter === "active") {
+                matchesFilter = status === "in_progress" || isPaused;
+              } else if (activeComplexFilter === "pinned") {
+                matchesFilter = isPinned;
+              } else if (activeComplexFilter === "frozen") {
+                matchesFilter = status === "frozen";
+              } else if (activeComplexFilter === "review") {
+                matchesFilter = needsReview;
+              }
+
+              const matchesTheory = !activeTheoryFilterId || theoryId === activeTheoryFilterId;
+
+              const shouldShow = matchesQuery && matchesFilter && matchesTheory;
+              card.hidden = !shouldShow;
+              if (shouldShow) visibleCount += 1;
+            });
+
+            listEl.classList.toggle("hidden", visibleCount === 0);
+            if (filterEmptyEl) {
+              filterEmptyEl.hidden = visibleCount !== 0;
+            }
+            updateComplexFilterSummary(cards.length, visibleCount);
+          }
+
+          function bindComplexFilters() {
+            ensureComplexOwnershipControls();
+            const searchInput = document.getElementById("complex-search-input");
+            if (searchInput) {
+              searchInput.addEventListener("input", () => {
+                activeComplexSearch = searchInput.value || "";
+                applyComplexFilters();
+              });
+            }
+
+            const chips = document.querySelectorAll(".complex-filter-chip[data-filter]");
+            chips.forEach((chip) => {
+              chip.addEventListener("click", () => {
+                activeComplexFilter = chip.getAttribute("data-filter") || "all";
+                updateComplexFilterUi();
+                applyComplexFilters();
+              });
+            });
+
+            const clearTheoryBtn = document.getElementById("complex-theory-clear");
+            if (clearTheoryBtn) {
+              clearTheoryBtn.addEventListener("click", () => {
+                setTheoryFilter("");
+              });
+            }
+
+            const openTheoryHubBtn = document.getElementById("complex-theory-open-hub");
+            if (openTheoryHubBtn) {
+              openTheoryHubBtn.addEventListener("click", () => {
+                const url = activeTheoryFilterId
+                  ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(activeTheoryFilterId)}`
+                  : "/ui/editor?theory_hub=1";
+                window.navigateWithTransition(url);
+              });
+            }
+
+            updateComplexFilterUi();
+            updateComplexTheoryBanner();
           }
 
           function syncComplexSelectionUi() {
@@ -260,12 +707,17 @@
             const shell = card.querySelector("[data-complex-card-shell]");
             const checkbox = card.querySelector("input.complex-select-checkbox");
             const isSelected = selectedComplexes.has(normalizedId);
+            const theoryId = card.getAttribute("data-complex-theory-id") || "";
+            const isTheoryFocused = !!(activeTheoryFilterId && theoryId === activeTheoryFilterId);
 
             if (shell) {
               shell.classList.toggle("border-primary", isSelected);
               shell.classList.toggle("ring-2", isSelected);
               shell.classList.toggle("ring-primary-lighter", isSelected);
-              shell.classList.toggle("border-border-subtle", !isSelected);
+              shell.classList.toggle("border-primary-light", !isSelected && isTheoryFocused);
+              shell.classList.toggle("ring-1", !isSelected && isTheoryFocused);
+              shell.classList.toggle("ring-primary-light", !isSelected && isTheoryFocused);
+              shell.classList.toggle("border-border-subtle", !isSelected && !isTheoryFocused);
             }
             if (checkbox) {
               checkbox.checked = isSelected;
@@ -315,7 +767,14 @@
             if (!selectionMode) {
               selectionMode = true;
             }
-            renderedComplexIds.forEach((complexId) => {
+            const visibleCards = Array.from(
+              document.querySelectorAll("[data-complex-card-id]:not([hidden])")
+            );
+            const visibleIds = visibleCards
+              .map((card) => normalizeComplexId(card.getAttribute("data-complex-card-id")))
+              .filter(Boolean);
+            const targetIds = visibleIds.length ? visibleIds : renderedComplexIds;
+            targetIds.forEach((complexId) => {
               selectedComplexes.add(complexId);
             });
             updateAllComplexCardSelectionStates();
@@ -332,10 +791,20 @@
             }
             try {
               await exportComplexArchive(Array.from(selectedComplexes));
-              NotificationUI.toast("Экспорт готов", "success");
+              showComplexVoiceToast({
+                severity: "success",
+                what: "Экспорт комплексов готов.",
+                impact: `Файл сформирован для ${selectedComplexes.size} комплексов.`,
+                next: "Архив можно использовать для импорта в другой профиль.",
+              });
             } catch (err) {
               console.error("Bulk complex export failed", err);
-              NotificationUI.toast(`Ошибка экспорта: ${err?.message || err}`, "error");
+              showComplexVoiceToast({
+                severity: "error",
+                what: "Экспорт комплексов не выполнен.",
+                impact: "Файл архива не был сформирован.",
+                next: err?.message ? `Проверьте причину (${err.message}) и повторите экспорт.` : "Повторите экспорт позже.",
+              });
             } finally {
               if (exportBtn) {
                 exportBtn.innerHTML = originalHtml;
@@ -497,7 +966,12 @@
               const resp = await fetch(`/api/theories/${encodeURIComponent(theoryId)}`);
               const data = await resp.json();
               if (!resp.ok || !data.ok || !data.item) {
-                NotificationUI.toast("Не удалось загрузить теорию", "error");
+                showComplexVoiceToast({
+                  severity: "error",
+                  what: "Теория не загружена.",
+                  impact: "Просмотр теории для комплекса недоступен.",
+                  next: "Проверьте доступность теории и повторите попытку.",
+                });
                 return;
               }
               const item = data.item;
@@ -512,9 +986,17 @@
                       <p class="text-lg font-bold text-text-main">${escapeHtml(item.title || "Теория")}</p>
                       <p class="text-sm text-text-secondary">Комплекс: ${escapeHtml(complexName || "—")} · Обновлено: ${escapeHtml(updatedAt)}</p>
                     </div>
-                    <button type="button" class="theory-modal-close rounded-lg p-2 hover:bg-bg-tertiary text-text-secondary">
-                      <span class="material-symbols-outlined">close</span>
-                    </button>
+                    <div class="flex items-center gap-2">
+                      <button type="button" class="theory-modal-open-complexes rounded-lg px-3 py-2 border border-border-subtle bg-surface-2 text-sm font-medium text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        Комплексы
+                      </button>
+                      <button type="button" class="theory-modal-open-hub rounded-lg px-3 py-2 border border-border-subtle bg-surface-2 text-sm font-medium text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        Theory Hub
+                      </button>
+                      <button type="button" class="theory-modal-close rounded-lg p-2 hover:bg-bg-tertiary text-text-secondary">
+                        <span class="material-symbols-outlined">close</span>
+                      </button>
+                    </div>
                   </div>
                   <div class="p-5 overflow-y-auto custom-scrollbar text-text-main">${html}</div>
                 </div>
@@ -523,11 +1005,40 @@
                 if (e.target === modal) modal.remove();
               });
               const closeBtn = modal.querySelector(".theory-modal-close");
+              const openComplexesBtn = modal.querySelector(".theory-modal-open-complexes");
+              const openHubBtn = modal.querySelector(".theory-modal-open-hub");
               if (closeBtn) closeBtn.addEventListener("click", () => modal.remove());
+              if (openComplexesBtn) {
+                openComplexesBtn.addEventListener("click", () => {
+                  const url = `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
+                  modal.remove();
+                  if (typeof window.navigateWithTransition === "function") {
+                    window.navigateWithTransition(url);
+                    return;
+                  }
+                  window.location.href = url;
+                });
+              }
+              if (openHubBtn) {
+                openHubBtn.addEventListener("click", () => {
+                  const url = `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`;
+                  modal.remove();
+                  if (typeof window.navigateWithTransition === "function") {
+                    window.navigateWithTransition(url);
+                    return;
+                  }
+                  window.location.href = url;
+                });
+              }
               document.body.appendChild(modal);
             } catch (err) {
               console.error("Failed to open theory modal", err);
-              NotificationUI.toast("Ошибка при открытии теории", "error");
+              showComplexVoiceToast({
+                severity: "error",
+                what: "Окно теории не открыто.",
+                impact: "Данные теории недоступны в текущем сеансе.",
+                next: "Проверьте соединение и повторите попытку.",
+              });
             }
           }
 
@@ -573,6 +1084,262 @@
               ? `complex_${complexIds[0]}_${timestamp}.zip`
               : `complexes_${complexIds.length}_${timestamp}.zip`;
             downloadBlob(blob, filename);
+          }
+
+          function makeComplexImportIdempotencyKey() {
+            if (window.crypto?.randomUUID) {
+              return `complex-import-${window.crypto.randomUUID()}`;
+            }
+            return `complex-import-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          }
+
+          function resolveComplexImportPolicyLabels(options = {}) {
+            const complexPolicyMap = {
+              new_id: "Комплексы: создать копию",
+              overwrite: "Комплексы: перезаписать",
+              skip: "Комплексы: пропускать конфликт",
+            };
+            const taskPolicyMap = {
+              skip: "Задания: пропускать конфликт",
+              overwrite: "Задания: перезаписать",
+            };
+            const theoryPolicyMap = {
+              reuse_if_same_hash: "Теория: reuse_if_same_hash",
+              new_id_if_diff: "Теория: new_id_if_diff",
+              overwrite: "Теория: overwrite",
+            };
+            const atomicModeMap = {
+              bundle: "Режим: bundle",
+              best_effort: "Режим: best_effort",
+            };
+            return [
+              complexPolicyMap[options.complex_conflict_resolution] || complexPolicyMap.new_id,
+              taskPolicyMap[options.task_conflict_resolution] || taskPolicyMap.skip,
+              theoryPolicyMap[options.theory_conflict_resolution] || theoryPolicyMap.reuse_if_same_hash,
+              atomicModeMap[options.atomic_mode] || atomicModeMap.bundle,
+              options.skip_errors ? "Ошибки: пропускать" : "Ошибки: останавливать импорт",
+            ];
+          }
+
+          function resolveComplexImportPreviewStatusMeta(item = {}) {
+            const status = String(item.status || "valid").trim().toLowerCase();
+            if (status === "error") {
+              return {
+                label: "Ошибка",
+                badgeClass: "border border-error-light bg-error-lighter text-status-error",
+                detail: String(item.error || "Архив требует ручной проверки."),
+              };
+            }
+            if (status === "conflict") {
+              const conflictType = String(item.conflict_type || "overwrite").trim().toLowerCase();
+              if (conflictType === "duplicate") {
+                return {
+                  label: "Дубликат",
+                  badgeClass: "border border-warning-light bg-warning-lighter text-warning-darker",
+                  detail: "Комплекс уже есть в библиотеке в том же виде.",
+                };
+              }
+              return {
+                label: "Конфликт",
+                badgeClass: "border border-warning-light bg-warning-lighter text-warning-darker",
+                detail: "Архив затрагивает существующий комплекс.",
+              };
+            }
+            return {
+              label: "Готов",
+              badgeClass: "border border-success-light bg-success-lighter text-success-darker",
+              detail: "Комплекс можно импортировать без конфликта.",
+            };
+          }
+
+          function renderComplexImportIssueList(items, emptyText, formatter) {
+            if (!Array.isArray(items) || !items.length) {
+              return `<div class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-secondary">${escapeHtml(emptyText)}</div>`;
+            }
+            return `
+              <div class="space-y-2">
+                ${items.slice(0, 6).map((item) => `
+                  <div class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main">
+                    ${formatter(item)}
+                  </div>
+                `).join("")}
+                ${items.length > 6
+                  ? `<div class="text-xs text-text-secondary">И ещё ${escapeHtml(String(items.length - 6))} элементов в архиве.</div>`
+                  : ""}
+              </div>
+            `;
+          }
+
+          function renderComplexImportPreviewRows(complexes = []) {
+            if (!Array.isArray(complexes) || !complexes.length) {
+              return `<div class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-3 text-sm text-text-secondary">Архив не содержит комплексов.</div>`;
+            }
+            return `
+              <div class="space-y-2">
+                ${complexes.slice(0, 8).map((item) => {
+                  const meta = resolveComplexImportPreviewStatusMeta(item);
+                  const title = String(item.name || item.id || "Без названия");
+                  const identifier = String(item.id || "");
+                  const brokenDeps = Array.isArray(item.broken_deps) && item.broken_deps.length
+                    ? `<div class="text-xs text-text-secondary mt-1">Зависимости: ${escapeHtml(item.broken_deps.join(", "))}</div>`
+                    : "";
+                  return `
+                    <div class="rounded-xl border border-border-subtle bg-surface-2 px-3 py-3">
+                      <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                          <div class="text-sm font-semibold text-text-main break-words">${escapeHtml(title)}</div>
+                          <div class="text-xs text-text-secondary break-all">${escapeHtml(identifier)}</div>
+                        </div>
+                        <span class="inline-flex items-center rounded-full px-2 py-1 text-xs font-semibold ${meta.badgeClass}">${escapeHtml(meta.label)}</span>
+                      </div>
+                      <div class="text-xs text-text-secondary mt-2">${escapeHtml(meta.detail)}</div>
+                      ${brokenDeps}
+                    </div>
+                  `;
+                }).join("")}
+                ${complexes.length > 8
+                  ? `<div class="text-xs text-text-secondary">Полный пакет содержит ещё ${escapeHtml(String(complexes.length - 8))} комплексов.</div>`
+                  : ""}
+              </div>
+            `;
+          }
+
+          function openComplexImportPreviewDialog(checkData = {}, options = {}) {
+            const summary = checkData.summary || {};
+            const manifest = checkData.manifest || {};
+            const entities = manifest.entities || {};
+            const warnings = Array.isArray(checkData.warnings) ? checkData.warnings : [];
+            const errors = Array.isArray(checkData.errors) ? checkData.errors : [];
+            const duplicates = Array.isArray(checkData.conflicts?.duplicates) ? checkData.conflicts.duplicates : [];
+            const overwrites = Array.isArray(checkData.conflicts?.overwrites) ? checkData.conflicts.overwrites : [];
+            const brokenDeps = Array.isArray(checkData.conflicts?.broken_deps) ? checkData.conflicts.broken_deps : [];
+            const complexes = Array.isArray(checkData.complexes) ? checkData.complexes : [];
+            const policyLabels = resolveComplexImportPolicyLabels(options);
+            const riskNotice = Number(summary.errors || 0) > 0
+              ? (options.skip_errors
+                  ? "В архиве есть ошибки. Импорт пропустит проблемные элементы и продолжит пакет."
+                  : "В архиве есть ошибки. Текущие настройки могут остановить импорт до применения пакета.")
+              : "";
+
+            return new Promise((resolve) => {
+              const overlay = document.createElement("div");
+              overlay.className = "fixed inset-0 z-[1220] bg-scrim flex items-center justify-center p-4";
+              overlay.innerHTML = `
+                <div class="bg-surface-1 w-full max-w-4xl rounded-xl shadow-xl border border-border-subtle max-h-[92vh] overflow-hidden flex flex-col" data-role="confirm-card" data-role-kind="complex-import-preview">
+                  <div class="px-5 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
+                    <div>
+                      <p class="text-lg font-bold text-text-main">Предпросмотр импорта комплексов</p>
+                      <p class="text-sm text-text-secondary">Проверьте состав архива, конфликты и выбранные политики до запуска импорта.</p>
+                    </div>
+                    <button type="button" class="rounded-lg p-2 hover:bg-bg-tertiary text-text-secondary" data-role="close" aria-label="Закрыть">
+                      <span class="material-symbols-outlined">close</span>
+                    </button>
+                  </div>
+                  <div class="p-5 overflow-y-auto custom-scrollbar space-y-5">
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-text-secondary">Комплексы</div>
+                        <div class="mt-1 text-2xl font-bold text-text-main">${escapeHtml(String(summary.total || 0))}</div>
+                      </div>
+                      <div class="rounded-xl border border-success-light bg-success-lighter px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-success-darker">Готово</div>
+                        <div class="mt-1 text-2xl font-bold text-success-darker">${escapeHtml(String(summary.valid || 0))}</div>
+                      </div>
+                      <div class="rounded-xl border border-warning-light bg-warning-lighter px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-warning-darker">Конфликты</div>
+                        <div class="mt-1 text-2xl font-bold text-warning-darker">${escapeHtml(String(summary.conflicts || 0))}</div>
+                      </div>
+                      <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3">
+                        <div class="text-xs uppercase tracking-wide text-status-error">Ошибки</div>
+                        <div class="mt-1 text-2xl font-bold text-status-error">${escapeHtml(String(summary.errors || 0))}</div>
+                      </div>
+                    </div>
+
+                    <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-4 space-y-3">
+                      <div>
+                        <div class="text-xs uppercase tracking-wide text-text-secondary">Состав пакета</div>
+                        <div class="mt-2 flex flex-wrap gap-2 text-xs text-text-main">
+                          <span class="inline-flex items-center rounded-full border border-border-subtle px-2 py-1 bg-surface-1">Комплексы: ${escapeHtml(String((entities.complexes || []).length || summary.total || 0))}</span>
+                          <span class="inline-flex items-center rounded-full border border-border-subtle px-2 py-1 bg-surface-1">Задания: ${escapeHtml(String((entities.tasks || []).length || 0))}</span>
+                          <span class="inline-flex items-center rounded-full border border-border-subtle px-2 py-1 bg-surface-1">Теории: ${escapeHtml(String((entities.theories || []).length || 0))}</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-xs uppercase tracking-wide text-text-secondary">Политики импорта</div>
+                        <div class="mt-2 flex flex-wrap gap-2 text-xs text-text-main">
+                          ${policyLabels.map((label) => `<span class="inline-flex items-center rounded-full border border-border-subtle px-2 py-1 bg-surface-1">${escapeHtml(label)}</span>`).join("")}
+                        </div>
+                      </div>
+                      ${riskNotice
+                        ? `<div class="rounded-xl border border-warning-light bg-warning-lighter px-3 py-2 text-sm text-warning-darker">${escapeHtml(riskNotice)}</div>`
+                        : ""}
+                    </div>
+
+                    <div class="grid gap-5 lg:grid-cols-2">
+                      <div class="space-y-3">
+                        <div>
+                          <div class="text-sm font-semibold text-text-main mb-2">Конфликты и ошибки</div>
+                          ${renderComplexImportIssueList(
+                            [
+                              ...duplicates.map((item) => ({
+                                title: item.name || item.id || "Без названия",
+                                detail: "Дубликат: архив уже содержит комплекс, совпадающий с библиотекой.",
+                              })),
+                              ...overwrites.map((item) => ({
+                                title: item.name || item.id || "Без названия",
+                                detail: "Конфликт перезаписи: архив меняет уже существующий комплекс.",
+                              })),
+                              ...brokenDeps.map((item) => ({
+                                title: item.name || item.id || "Без названия",
+                                detail: `Проблемные зависимости: ${(item.broken_deps || []).join(", ") || item.error || "не указаны"}`,
+                              })),
+                              ...errors.map((item) => ({
+                                title: item.name || item.id || "Ошибка",
+                                detail: item.error || "Архив не прошёл проверку.",
+                              })),
+                            ],
+                            "Проверка не обнаружила критичных конфликтов.",
+                            (item) => `
+                              <div class="font-medium text-text-main">${escapeHtml(item.title || "Элемент архива")}</div>
+                              <div class="text-xs text-text-secondary mt-1">${escapeHtml(item.detail || "")}</div>
+                            `
+                          )}
+                        </div>
+                        <div>
+                          <div class="text-sm font-semibold text-text-main mb-2">Предупреждения</div>
+                          ${renderComplexImportIssueList(
+                            warnings.map((warning) => ({ warning })),
+                            "Предупреждений нет.",
+                            (item) => `<div class="text-sm text-text-main">${escapeHtml(item.warning || "")}</div>`
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <div class="text-sm font-semibold text-text-main mb-2">Комплексы в архиве</div>
+                        ${renderComplexImportPreviewRows(complexes)}
+                      </div>
+                    </div>
+                  </div>
+                  <div class="px-5 py-4 border-t border-border-subtle flex justify-end gap-3">
+                    <button type="button" class="btn-secondary h-10 px-4" data-role="cancel">Отмена</button>
+                    <button type="button" class="btn-primary h-10 px-4" data-role="confirm">Запустить импорт</button>
+                  </div>
+                </div>
+              `;
+
+              const close = (result) => {
+                overlay.remove();
+                resolve(result);
+              };
+
+              overlay.querySelector("[data-role='close']")?.addEventListener("click", () => close(false));
+              overlay.querySelector("[data-role='cancel']")?.addEventListener("click", () => close(false));
+              overlay.querySelector("[data-role='confirm']")?.addEventListener("click", () => close(true));
+              overlay.addEventListener("click", (event) => {
+                if (event.target === overlay) close(false);
+              });
+              document.body.appendChild(overlay);
+            });
           }
 
           function openComplexImportSettingsDialog(defaults = {}) {
@@ -763,6 +1530,52 @@
             return finalResult;
           }
 
+          async function confirmComplexArchiveImport(checkData, options) {
+            const proceed = await openComplexImportPreviewDialog(checkData, options);
+            if (!proceed) return null;
+
+            const confirmForm = new FormData();
+            confirmForm.append("cache_id", checkData.cache_id || "");
+            confirmForm.append("idempotency_key", makeComplexImportIdempotencyKey());
+            confirmForm.append("complex_conflict_resolution", options.complex_conflict_resolution || "new_id");
+            confirmForm.append("task_conflict_resolution", options.task_conflict_resolution || "skip");
+            confirmForm.append(
+              "theory_conflict_resolution",
+              options.theory_conflict_resolution || "reuse_if_same_hash"
+            );
+            confirmForm.append("atomic_mode", options.atomic_mode || "bundle");
+            confirmForm.append("skip_errors", options.skip_errors ? "true" : "false");
+
+            const confirmResp = await fetch("/api/complexes/import/confirm", {
+              method: "POST",
+              body: confirmForm,
+            });
+            if (!confirmResp.ok) {
+              let errorText = "complex_import_confirm_failed";
+              try {
+                const errorData = await confirmResp.json();
+                errorText = errorData?.error || errorText;
+              } catch (_) {
+                // ignore parse errors
+              }
+              throw new Error(errorText);
+            }
+
+            const progressDialog = createComplexImportProgressDialog();
+            let resultData = null;
+            try {
+              resultData = await readComplexImportNdjson(confirmResp, (msg) => {
+                progressDialog.update(msg);
+              });
+            } finally {
+              progressDialog.close();
+            }
+            if (!resultData || !resultData.ok) {
+              throw new Error((resultData && (resultData.error_message || resultData.error)) || "complex_import_failed");
+            }
+            return resultData;
+          }
+
           async function importComplexArchiveFile(file, options) {
             if (!file) return;
 
@@ -776,6 +1589,8 @@
             if (!checkResp.ok || !checkData.ok) {
               throw new Error(checkData.error || "complex_import_check_failed");
             }
+            return await confirmComplexArchiveImport(checkData, options);
+            /*
 
             const summary = checkData.summary || {};
             const proceed = await NotificationUI.confirm({
@@ -823,6 +1638,7 @@
               throw new Error((resultData && (resultData.error_message || resultData.error)) || "complex_import_failed");
             }
             return resultData;
+            */
           }
 
           function chooseComplexImportFile() {
@@ -846,11 +1662,21 @@
                 }
                 try {
                   await importComplexArchiveFile(file, options);
-                  NotificationUI.toast("Импорт завершен", "success");
+                  showComplexVoiceToast({
+                    severity: "success",
+                    what: "Импорт комплексов завершён.",
+                    impact: "Новые элементы добавлены в каталог.",
+                    next: "Список обновлён автоматически.",
+                  });
                   fetchComplexes();
                 } catch (err) {
                   console.error("Complex import failed", err);
-                  NotificationUI.toast(`Ошибка импорта: ${err?.message || err}`, "error");
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "Импорт комплексов не выполнен.",
+                    impact: "Каталог не получил новые данные из архива.",
+                    next: err?.message ? `Проверьте архив (${err.message}) и повторите.` : "Проверьте архив и повторите импорт.",
+                  });
                 } finally {
                   input.remove();
                 }
@@ -899,33 +1725,52 @@
             const listEl = document.getElementById("complexes-list");
             const emptyEl = document.getElementById("empty-state");
             const errorEl = document.getElementById("error-state");
+            const filterEmptyEl = document.getElementById("filtered-empty-state");
             if (!listEl) return;
             isComplexesLoading = true;
             if (!hasLoadedComplexesOnce) {
               scheduleComplexesSkeleton(listEl);
             }
+            listEl.classList.remove("hidden");
             if (emptyEl) emptyEl.hidden = true;
             if (errorEl) errorEl.hidden = true;
+            if (filterEmptyEl) filterEmptyEl.hidden = true;
             try {
-              const [complexesResp, sessionsResp] = await Promise.all([
+              const [complexesResp, sessionsResp, quickAccessResp] = await Promise.all([
                 fetch("/api/complexes"),
                 fetch("/api/sessions/active"),
+                fetch("/api/ui/quick-access"),
               ]);
               const data = await complexesResp.json();
               let sessions = [];
+              let quickAccessData = null;
               try {
                 const s = await sessionsResp.json();
                 if (s && s.ok && Array.isArray(s.items)) sessions = s.items;
               } catch (e) {
                 sessions = [];
               }
+              try {
+                const q = await quickAccessResp.json();
+                if (q && q.ok) quickAccessData = q;
+              } catch (e) {
+                quickAccessData = null;
+              }
               if (!data.ok) {
                 listEl.innerHTML = "";
                 setComplexSelectionMode(false);
                 if (errorEl) errorEl.hidden = false;
+                updateComplexFilterSummary(0, 0);
                 return;
               }
               const items = Array.isArray(data.items) ? data.items : [];
+              pinnedComplexIds.clear();
+              if (quickAccessData && Array.isArray(quickAccessData.pinned)) {
+                quickAccessData.pinned.forEach((id) => {
+                  const normalizedId = normalizeComplexId(id);
+                  if (normalizedId) pinnedComplexIds.add(normalizedId);
+                });
+              }
               renderedComplexIds = items
                 .map((complex) => normalizeComplexId(complex && complex.id))
                 .filter(Boolean);
@@ -937,6 +1782,7 @@
               }
               // Calendar progress statuses (in_progress/frozen)
               const statusByComplexId = new Map();
+              const reviewStateByComplexId = new Map();
               try {
                 const healthResp = await fetch("/api/calendar/health");
                 const healthData = await healthResp.json();
@@ -947,6 +1793,7 @@
                       const id = normalizeComplexId(c.complex_id || c.id);
                       if (id) {
                         statusByComplexId.set(id, c.status);
+                        reviewStateByComplexId.set(id, !!c.is_critical);
                       }
                     }
                   }
@@ -966,6 +1813,7 @@
                 listEl.innerHTML = "";
                 setComplexSelectionMode(false);
                 if (emptyEl) emptyEl.hidden = false;
+                updateComplexFilterSummary(0, 0);
                 return;
               }
               listEl.innerHTML = "";
@@ -1010,6 +1858,8 @@
                     ${pausedProgressBar}`
                   : "";
                 const calendarStatus = statusByComplexId.get(complexId) || "new";
+                const isPinned = pinnedComplexIds.has(complexId);
+                const needsReview = reviewStateByComplexId.get(complexId) === true;
                 let statusBadge = "";
                 if (calendarStatus === "frozen") {
                   statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
@@ -1029,6 +1879,10 @@
                         <span class="material-symbols-outlined text-sm">check_box_outline_blank</span> Не начат
                       </span>`;
                 }
+                const safeComplexId = escapeHtml(complexId);
+                const safeCalendarStatus = escapeHtml(calendarStatus);
+                const safeComplexName = escapeHtml(complex.name || "Без названия");
+                const safeComplexDescription = escapeHtml(complex.description || "Нет описания");
                 const canToggleFreeze = calendarStatus === "in_progress" || calendarStatus === "frozen";
                 const freezeBtnText = calendarStatus === "frozen" ? "Разморозить" : "Заморозить";
                 const freezeBtnIcon = calendarStatus === "frozen" ? "water_drop" : "ac_unit";
@@ -1036,44 +1890,80 @@
                   ? "freeze-toggle-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-success text-sm font-medium leading-normal hover:bg-success-light transition-colors gap-2"
                   : "freeze-toggle-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2";
                 const freezeBtnHtml = canToggleFreeze
-                  ? `<button class="${freezeBtnClass}" data-complex-id="${complexId}" data-status="${calendarStatus}">
+                  ? `<button class="${freezeBtnClass}" data-complex-id="${safeComplexId}" data-status="${safeCalendarStatus}">
                       <span class="material-symbols-outlined text-lg">${freezeBtnIcon}</span>
                       <span class="truncate">${freezeBtnText}</span>
                     </button>`
                   : "";
                 const theoryLink = (complex && typeof complex.theory_link === "object") ? complex.theory_link : null;
                 const theoryId = theoryLink && typeof theoryLink.theory_id === "string" ? theoryLink.theory_id : "";
+                const safeTheoryId = escapeHtml(theoryId);
+                const isTheoryFocused = !!(activeTheoryFilterId && theoryId === activeTheoryFilterId);
                 const hasTheory = !!(complex.has_theory || theoryId);
+                const theoryContext = buildComplexTheoryBadges(complex);
+                const ownershipContext = buildComplexOwnershipBadges(complex);
+                const theoryModeBadge = theoryContext.modeBadge || "";
+                const theoryConflictBadge = theoryContext.conflictBadge || "";
+                const ownerBadge = ownershipContext.ownerBadge || "";
+                const sourceBadge = ownershipContext.sourceBadge || "";
+                const theoryActionLabel = theoryContext.mode === "inherit" ? "Теория (наследование)" : "Теория";
+                const canSyncTheoryFromTopics = theoryContext.mode === "inherit";
                 const theoryBadge = hasTheory
                   ? `<span class="inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
                       <span class="material-symbols-outlined text-sm">menu_book</span> Теория
                     </span>`
                   : "";
                 const theoryButton = hasTheory
-                  ? `<button class="theory-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-2" data-theory-id="${theoryId}" data-complex-name="${escapeHtml(complex.name || "")}">
+                  ? `<button class="theory-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-2" title="${theoryActionLabel}" data-theory-id="${safeTheoryId}" data-complex-name="${safeComplexName}">
                       <span class="material-symbols-outlined text-lg">visibility</span>
                       <span class="truncate">Теория</span>
                     </button>`
                   : "";
+                const theorySyncButton = canSyncTheoryFromTopics
+                  ? `<button class="theory-sync-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-2" data-complex-id="${safeComplexId}" title="Синхронизировать наследуемую теорию по темам">
+                      <span class="material-symbols-outlined text-lg">sync</span>
+                      <span class="truncate">Синхрониз.</span>
+                    </button>`
+                  : "";
                 const tasksList = Array.isArray(complex.tasks) ? complex.tasks : [];
                 const taskTypeLabels = { test: 'Тест', click: 'Клик', draw: 'Рисование', sequence_assembly: 'Последовательность', open_answer: 'Открытый ответ' };
+                const searchSource = [
+                  complex.name || "",
+                  complex.description || "",
+                  ...tasksList.map((task) => {
+                    const ref = typeof task === 'string' ? task : (task.task_ref || task.task_id || '');
+                    return ref;
+                  }),
+                ].join(" ");
                 const detailRows = tasksList.map((t, i) => {
                   const ref = typeof t === 'string' ? t : (t.task_ref || t.task_id || '');
                   const parts = ref.split('/');
                   const taskName = parts.length >= 3 ? parts[2] : ref;
                   const typeBadge = t.type ? (taskTypeLabels[t.type] || t.type) : '';
                   return `<div class="flex items-center justify-between py-1.5 px-2 text-sm ${i % 2 === 0 ? 'bg-surface-2' : ''} rounded">
-                    <span class="text-text-main truncate flex-1">${i + 1}. ${taskName}</span>
-                    ${typeBadge ? `<span class="text-xs text-text-muted ml-2">${typeBadge}</span>` : ''}
+                    <span class="text-text-main truncate flex-1">${i + 1}. ${escapeHtml(taskName)}</span>
+                    ${typeBadge ? `<span class="text-xs text-text-muted ml-2">${escapeHtml(typeBadge)}</span>` : ''}
                   </div>`;
                 }).join('');
+                const safePausedSessionId = isPaused ? escapeHtml(pausedSession.session_id || "") : "";
+                const pinBtnClass = isPinned
+                  ? "pin-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-primary-lighter text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-1"
+                  : "pin-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1";
+                card.setAttribute("data-complex-search", normalizeComplexSearch(searchSource));
+                card.setAttribute("data-complex-status", calendarStatus);
+                card.setAttribute("data-complex-paused", isPaused ? "true" : "false");
+                card.setAttribute("data-complex-pinned", isPinned ? "true" : "false");
+                card.setAttribute("data-complex-critical", needsReview ? "true" : "false");
+                card.setAttribute("data-complex-theory-id", theoryId || "");
+                card.setAttribute("data-complex-owned", ownershipContext.ownership.isOwnedByCurrentUser ? "true" : "false");
+                card.setAttribute("data-complex-imported", ownershipContext.ownership.createdVia === "archive_import" ? "true" : "false");
                 card.innerHTML = `
-            <div data-complex-card-shell class="relative flex flex-col items-stretch justify-start rounded-lg shadow-sm bg-surface-1 border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : "border-border-subtle"} cx-card-inner">
+            <div data-complex-card-shell class="relative flex flex-col items-stretch justify-start rounded-lg shadow-sm bg-surface-1 border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : (isTheoryFocused ? "border-primary-light ring-1 ring-primary-light" : "border-border-subtle")} cx-card-inner">
               <div data-complex-select-box class="absolute right-3 top-3 z-10 ${selectionMode ? "" : "hidden"}">
                 <input
                   type="checkbox"
                   class="complex-select-checkbox h-5 w-5 rounded border-border-strong text-primary focus:ring-primary"
-                  data-complex-id="${complexId}"
+                  data-complex-id="${safeComplexId}"
                   ${isSelected ? "checked" : ""}
                   aria-label="Выбрать комплекс"
                 >
@@ -1081,46 +1971,51 @@
               <div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-4 p-4">
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2 flex-wrap">
-                    <p class="text-text-main text-lg font-bold leading-tight tracking-[-0.015em]">${complex.name || "Без названия"}</p>
+                    <p class="text-text-main text-lg font-bold leading-tight tracking-[-0.015em]">${safeComplexName}</p>
                     ${pausedBadge}
                     ${statusBadge}
                     ${theoryBadge}
+                    ${theoryModeBadge}
+                    ${theoryConflictBadge}
+                    ${ownerBadge}
+                    ${sourceBadge}
                   </div>
-                  <p class="text-text-secondary text-base font-normal leading-normal">${complex.description || "Нет описания"}</p>
+                  <p class="text-text-secondary text-base font-normal leading-normal">${safeComplexDescription}</p>
                   ${pausedInfo}
                   <p class="text-text-secondary text-base font-normal leading-normal">Всего заданий: ${tasksCount} · Адаптивность: ${adaptiveOn ? "Вкл" : "Выкл"}</p>
                 </div>
                 <div class="flex justify-stretch border-t border-border-subtle pt-4">
                   <div class="flex flex-1 gap-3 flex-wrap items-center">
-                    <button class="start-btn cx-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors" data-complex-id="${complexId}" ${isPaused ? `data-session-id="${pausedSession.session_id}"` : ""}>
+                    <button class="start-btn cx-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors" data-complex-id="${safeComplexId}" ${isPaused ? `data-session-id="${safePausedSessionId}"` : ""}>
                       <span class="truncate">${isPaused ? "Продолжить" : "Запустить"}</span>
                     </button>
-                    <button class="detail-toggle-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1" data-complex-id="${complexId}" title="Подробнее">
+                    <button class="detail-toggle-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1" data-complex-id="${safeComplexId}" title="Подробнее">
                       <span class="material-symbols-outlined text-lg">expand_more</span>
                       <span class="truncate">Подробнее</span>
                     </button>
                     ${theoryButton}
+                    ${theorySyncButton}
                     <div class="flex-grow"></div>
-                    <button class="pin-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1" data-complex-id="${complexId}" title="Закрепить в быстром доступе">
+                    <button class="${pinBtnClass}" data-complex-id="${safeComplexId}" title="${isPinned ? "Уже в быстром доступе" : "Закрепить в быстром доступе"}">
                       <span class="material-symbols-outlined text-lg">push_pin</span>
                     </button>
                     ${freezeBtnHtml}
-                    <button class="export-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${complexId}">
+                    <button class="export-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${safeComplexId}">
                       <span class="material-symbols-outlined text-lg">download</span>
                       <span class="truncate">Экспорт</span>
                     </button>
-                    <button class="edit-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${complexId}">
+                    <button class="edit-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${safeComplexId}">
                       <span class="material-symbols-outlined text-lg">edit</span>
                       <span class="truncate">Редактировать</span>
                     </button>
-                    <button class="delete-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-error-text text-sm font-medium leading-normal hover:bg-error-lighter transition-colors gap-2" data-complex-id="${complexId}">
+                    <button class="delete-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-error-text text-sm font-medium leading-normal hover:bg-error-lighter transition-colors gap-2" data-complex-id="${safeComplexId}">
                       <span class="material-symbols-outlined text-lg">delete</span>
                       <span class="truncate">Удалить</span>
                     </button>
                   </div>
                 </div>
               </div>
-              <div class="detail-panel border-t border-border-subtle" data-detail-for="${complexId}">
+              <div class="detail-panel border-t border-border-subtle" data-detail-for="${safeComplexId}">
                 <div class="p-4 max-h-[300px] overflow-y-auto">
                   <p class="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Задания в комплексе (${tasksCount})</p>
                   ${tasksCount > 0 ? `<div class="flex flex-col gap-0.5">${detailRows}</div>` : '<p class="text-sm text-text-muted">Нет заданий</p>'}
@@ -1216,6 +2111,12 @@
                         const data2 = await resp2.json();
                         if (!data2.ok || !data2.session_id) {
                           console.error("Failed to force-start session", data2);
+                          showComplexVoiceToast({
+                            severity: "error",
+                            what: "Сессия не запущена.",
+                            impact: "Переход в тренажёр отменён.",
+                            next: data2?.error ? `Проверьте причину (${data2.error}) и повторите.` : "Повторите запуск позже.",
+                          });
                           btn.removeAttribute("disabled");
                           return;
                         }
@@ -1227,6 +2128,12 @@
 
                     if (!data.ok || !data.session_id) {
                       console.error("Failed to start session", data);
+                      showComplexVoiceToast({
+                        severity: "error",
+                        what: "Сессия не запущена.",
+                        impact: "Новый прогон комплекса не создан.",
+                        next: data?.error ? `Проверьте причину (${data.error}) и повторите.` : "Повторите запуск позже.",
+                      });
                       btn.removeAttribute("disabled");
                       return;
                     }
@@ -1236,6 +2143,12 @@
                   }
                 } catch (err) {
                   console.error("Error starting session", err);
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "Сессия не запущена из-за сетевой ошибки.",
+                    impact: "Переход к комплексу отменён.",
+                    next: "Проверьте сеть и повторите запуск.",
+                  });
                   btn.removeAttribute("disabled");
                 }
               });
@@ -1255,9 +2168,21 @@
                     const data = await resp.json();
                     if (!(data && (data.success || data.ok))) {
                       console.error("Failed to unfreeze", data);
+                      showComplexVoiceToast({
+                        severity: "error",
+                        what: "Разморозка не выполнена.",
+                        impact: "Статус комплекса остался прежним.",
+                        next: data?.error ? `Проверьте причину (${data.error}) и повторите.` : "Повторите действие позже.",
+                      });
                       btn.removeAttribute("disabled");
                       return;
                     }
+                    showComplexVoiceToast({
+                      severity: "success",
+                      what: "Комплекс разморожен.",
+                      impact: "Его можно запускать в обычном режиме.",
+                      next: "Статус обновлён в списке.",
+                    });
                   } else {
                     const resp = await fetch(`/api/calendar/complex/${complexId}/freeze`, {
                       method: "POST",
@@ -1267,13 +2192,31 @@
                     const data = await resp.json();
                     if (!(data && (data.success || data.ok))) {
                       console.error("Failed to freeze", data);
+                      showComplexVoiceToast({
+                        severity: "error",
+                        what: "Заморозка не выполнена.",
+                        impact: "Статус комплекса не изменился.",
+                        next: data?.error ? `Проверьте причину (${data.error}) и повторите.` : "Повторите действие позже.",
+                      });
                       btn.removeAttribute("disabled");
                       return;
                     }
+                    showComplexVoiceToast({
+                      severity: "success",
+                      what: "Комплекс заморожен на 30 дней.",
+                      impact: "Планирование повторов временно приостановлено.",
+                      next: "При необходимости используйте кнопку «Разморозить».",
+                    });
                   }
                   fetchComplexes();
                 } catch (err) {
                   console.error("Error toggling freeze", err);
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "Статус комплекса не изменён из-за сетевой ошибки.",
+                    impact: "Текущее состояние комплекса сохранено.",
+                    next: "Проверьте сеть и повторите действие.",
+                  });
                   btn.removeAttribute("disabled");
                 }
               });
@@ -1286,10 +2229,20 @@
                 btn.setAttribute("disabled", "true");
                 try {
                   await exportComplexArchive(complexId);
-                  NotificationUI.toast("Экспорт готов", "success");
+                  showComplexVoiceToast({
+                    severity: "success",
+                    what: "Экспорт комплекса готов.",
+                    impact: "Архив сформирован и скачан.",
+                    next: "Файл можно импортировать в другой профиль.",
+                  });
                 } catch (err) {
                   console.error("Complex export failed", err);
-                  NotificationUI.toast(`Ошибка экспорта: ${err?.message || err}`, "error");
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "Экспорт комплекса не выполнен.",
+                    impact: "Архив не был сформирован.",
+                    next: err?.message ? `Проверьте причину (${err.message}) и повторите.` : "Повторите экспорт позже.",
+                  });
                 } finally {
                   btn.removeAttribute("disabled");
                 }
@@ -1324,7 +2277,12 @@
                   });
                   const data = await resp.json();
                   if (!data.ok) {
-                    NotificationUI.toast(`Ошибка при удалении: ${data.error}`, 'error');
+                    showComplexVoiceToast({
+                      severity: "error",
+                      what: "Комплекс не удалён.",
+                      impact: "Каталог остался без изменений.",
+                      next: data?.error ? `Проверьте причину (${data.error}) и повторите.` : "Повторите удаление позже.",
+                    });
                     btn.removeAttribute("disabled");
                     return;
                   }
@@ -1332,7 +2290,12 @@
                   fetchComplexes();
                 } catch (err) {
                   console.error("Error deleting complex", err);
-                  NotificationUI.toast('Не удалось удалить комплекс', 'error');
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "Комплекс не удалён из-за сетевой ошибки.",
+                    impact: "Текущая карточка сохранена.",
+                    next: "Проверьте сеть и повторите удаление.",
+                  });
                   btn.removeAttribute("disabled");
                 }
               });
@@ -1352,12 +2315,36 @@
                   });
                   const data = await resp.json();
                   if (data.ok) {
-                    NotificationUI.toast('Комплекс закреплён в быстром доступе', 'success');
+                    pinnedComplexIds.add(complexId);
+                    const card = btn.closest("[data-complex-card-id]");
+                    if (card) {
+                      card.setAttribute("data-complex-pinned", "true");
+                    }
+                    btn.classList.remove("bg-transparent", "text-text-secondary", "hover:bg-bg-tertiary");
+                    btn.classList.add("bg-primary-lighter", "text-primary");
+                    btn.setAttribute("title", "Уже в быстром доступе");
+                    applyComplexFilters();
+                    showComplexVoiceToast({
+                      severity: "success",
+                      what: "Комплекс закреплён в быстром доступе.",
+                      impact: "Он появится в быстрых переходах на главном экране.",
+                      next: "Продолжайте работу с комплексом как обычно.",
+                    });
                   } else {
-                    NotificationUI.toast('Не удалось закрепить', 'error');
+                    showComplexVoiceToast({
+                      severity: "error",
+                      what: "Закрепление не выполнено.",
+                      impact: "Комплекс не добавлен в быстрый доступ.",
+                      next: data?.error ? `Проверьте причину (${data.error}) и повторите.` : "Повторите попытку позже.",
+                    });
                   }
                 } catch (err) {
-                  NotificationUI.toast('Ошибка сети', 'error');
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "Закрепление недоступно из-за сетевой ошибки.",
+                    impact: "Список быстрого доступа не изменился.",
+                    next: "Проверьте сеть и повторите действие.",
+                  });
                 } finally {
                   btn.removeAttribute("disabled");
                 }
@@ -1368,7 +2355,8 @@
             detailButtons.forEach((btn) => {
               btn.addEventListener("click", () => {
                 const complexId = btn.getAttribute("data-complex-id");
-                const panel = document.querySelector(`[data-detail-for="${complexId}"]`);
+                const selectorValue = escapeAttributeSelectorValue(complexId);
+                const panel = document.querySelector(`[data-detail-for="${selectorValue}"]`);
                 if (!panel) return;
                 const isExpanded = panel.classList.contains("expanded");
                 panel.classList.toggle("expanded", !isExpanded);
@@ -1388,9 +2376,110 @@
               });
             });
 
+            const theorySyncButtons = document.querySelectorAll("button.theory-sync-btn[data-complex-id]");
+            theorySyncButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const complexId = btn.getAttribute("data-complex-id");
+                if (!complexId) return;
+                btn.setAttribute("disabled", "true");
+                btn.classList.add("opacity-70");
+                try {
+                  const resp = await fetch(
+                    `/api/complexes/${encodeURIComponent(complexId)}/sync-theory-from-topics`,
+                    {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        dry_run: false,
+                        propagation_mode: "safe",
+                      }),
+                    }
+                  );
+                  const data = await resp.json();
+                  if (!resp.ok || !data?.ok) {
+                    showComplexVoiceToast({
+                      severity: "error",
+                      what: "Синхронизация теории не выполнена.",
+                      impact: "Карточка комплекса осталась без изменений.",
+                      next: data?.error
+                        ? `Проверьте причину (${data.error}) и повторите.`
+                        : "Повторите попытку позже.",
+                    });
+                    return;
+                  }
+
+                  const summary = data.summary || {};
+                  const action = summary.action || "skipped";
+                  const reason = summary.reason || "";
+                  const status = summary.status || "none";
+
+                  if (action === "updated") {
+                    if (status === "conflict") {
+                      showComplexVoiceToast({
+                        severity: "warning",
+                        what: "Синхронизация завершена с конфликтом теорий.",
+                        impact: "Комплекс помечен как конфликтный, локальная теория не перезаписана.",
+                        next: "Проверьте связанные темы и выберите целевую теорию вручную.",
+                      });
+                    } else {
+                      showComplexVoiceToast({
+                        severity: "success",
+                        what: "Наследуемая теория синхронизирована.",
+                        impact: "Контекст теории обновлён по связанным темам.",
+                        next: "Можно запускать комплекс или продолжить редактирование.",
+                      });
+                    }
+                  } else if (reason === "unchanged") {
+                    showComplexVoiceToast({
+                      severity: "info",
+                      what: "Синхронизация не требуется.",
+                      impact: "Текущий теоретический контекст уже актуален.",
+                      next: "Дополнительные действия не нужны.",
+                    });
+                  } else if (reason === "mode_override") {
+                    showComplexVoiceToast({
+                      severity: "warning",
+                      what: "Синхронизация пропущена.",
+                      impact: "Комплекс в режиме локальной теории (override).",
+                      next: "Для наследования переключите режим в редакторе комплекса.",
+                    });
+                  } else if (reason === "no_topic_refs") {
+                    showComplexVoiceToast({
+                      severity: "info",
+                      what: "Синхронизация пропущена.",
+                      impact: "В комплексе нет валидных ссылок на темы.",
+                      next: "Проверьте состав заданий комплекса.",
+                    });
+                  } else {
+                    showComplexVoiceToast({
+                      severity: "info",
+                      what: "Синхронизация завершена без изменений.",
+                      impact: "Теоретический контекст не изменился.",
+                      next: "Можно продолжать работу.",
+                    });
+                  }
+                  fetchComplexes();
+                } catch (err) {
+                  console.error("Complex theory sync failed", err);
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "Синхронизация не выполнена из-за сетевой ошибки.",
+                    impact: "Состояние комплекса осталось прежним.",
+                    next: "Проверьте сеть и повторите действие.",
+                  });
+                } finally {
+                  btn.removeAttribute("disabled");
+                  btn.classList.remove("opacity-70");
+                }
+              });
+            });
+
             syncComplexSelectionUi();
+            applyComplexFilters();
           }
           document.addEventListener("DOMContentLoaded", () => {
+            activeTheoryFilterId = readInitialTheoryFilterFromUrl();
+            bindComplexFilters();
             fetchComplexes();
             const toggleSelectBtn = document.getElementById("toggle-select-complexes");
             if (toggleSelectBtn) {

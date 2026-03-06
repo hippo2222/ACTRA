@@ -461,6 +461,26 @@ class MicrocardsService:
             "cards_suspended": suspended_count,
         }
 
+    def _deck_ownership(self, deck: Dict[str, Any], meta: Dict[str, Any]) -> Dict[str, Any]:
+        created_by_user_id = _s(meta.get("created_by_user_id")) or None
+        updated_by_user_id = _s(meta.get("updated_by_user_id")) or created_by_user_id
+        created_via = _s(meta.get("source"))
+        if not created_via:
+            created_via = "analysis_auto" if _s(deck.get("analysis_id")) else "manual_editor"
+        content_scope = _s(meta.get("content_scope"), "shared_local") or "shared_local"
+        return {
+            "scope": "workspace",
+            "content_scope": content_scope,
+            "created_by_user_id": created_by_user_id,
+            "updated_by_user_id": updated_by_user_id,
+            "created_via": created_via,
+            "has_owner": bool(created_by_user_id),
+            "is_owned_by_current_user": bool(
+                created_by_user_id and created_by_user_id == self.user_id
+            ),
+            "is_shared_library": content_scope == "shared_local",
+        }
+
     def list_decks(self, limit: int = 100) -> List[Dict[str, Any]]:
         states = self._read_states()
         rows: List[Tuple[str, Dict[str, Any]]] = []
@@ -479,6 +499,7 @@ class MicrocardsService:
                 "selector": deck.get("selector") if isinstance(deck.get("selector"), dict) else {},
                 "settings": deck.get("settings") if isinstance(deck.get("settings"), dict) else {},
                 "meta": meta,
+                "ownership": self._deck_ownership(deck, meta),
                 "stats": self._deck_user_stats(deck, states),
             }
             sort_key = _s(meta.get("updated_at")) or _s(meta.get("created_at"))

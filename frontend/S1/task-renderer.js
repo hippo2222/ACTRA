@@ -182,6 +182,80 @@
         }
     }
 
+    function clearElementChildren(el) {
+        if (!el) return;
+        if (typeof el.replaceChildren === "function") {
+            el.replaceChildren();
+        } else {
+            el.textContent = "";
+        }
+    }
+
+    function resetExtendedResultBlocks(parts) {
+        const {
+            keywordsBox,
+            userAnswerBox,
+            referenceWrap,
+            referenceText,
+            referenceTitle
+        } = parts || {};
+
+        if (keywordsBox) {
+            clearElementChildren(keywordsBox);
+            keywordsBox.classList.add("hidden");
+        }
+
+        if (userAnswerBox) {
+            clearElementChildren(userAnswerBox);
+            userAnswerBox.classList.add("hidden");
+        }
+
+        if (referenceText) referenceText.textContent = "";
+        if (referenceTitle) referenceTitle.textContent = "";
+        if (referenceWrap) referenceWrap.classList.add("hidden");
+    }
+
+    function renderUnsupportedTaskFallback(taskContent, taskType, taskId) {
+        if (!taskContent) return;
+
+        clearElementChildren(taskContent);
+
+        const wrap = document.createElement("div");
+        wrap.className =
+            "rounded-lg border-2 border-error bg-error-light p-6 text-center dark:border-error-dark dark:bg-error-light";
+
+        const icon = document.createElement("span");
+        icon.className =
+            "material-symbols-outlined text-4xl text-error dark:text-error";
+        icon.textContent = "error";
+
+        const title = document.createElement("h3");
+        title.className =
+            "mt-3 text-lg font-semibold text-error-darker dark:text-error-lighter";
+        title.textContent = "Ошибка отображения задания";
+
+        const text = document.createElement("p");
+        text.className = "mt-2 text-sm text-error-text dark:text-error";
+        text.textContent =
+            `Тип задания "${taskType || "unknown"}" не поддерживается или UI-компонент не загружен.`;
+
+        const idLine = document.createElement("p");
+        idLine.className = "mt-1 text-xs text-error dark:text-error";
+        idLine.textContent = `ID: ${taskId || "unknown"}`;
+
+        wrap.appendChild(icon);
+        wrap.appendChild(title);
+        wrap.appendChild(text);
+        wrap.appendChild(idLine);
+        taskContent.appendChild(wrap);
+    }
+
+    function buildBackgroundImageValue(url) {
+        const raw = String(url || "");
+        const escaped = raw.replace(/["\\\n\r\f]/g, "\\$&");
+        return `url("${escaped}")`;
+    }
+
     // Result Display Helper
 
     function showEvaluationResult(result) {
@@ -212,16 +286,13 @@
                 if (icon) icon.textContent = "";
                 if (msg) msg.textContent = "";
                 if (details) details.textContent = "";
-                if (keywordsBox) {
-                    keywordsBox.innerHTML = "";
-                    keywordsBox.classList.add("hidden");
-                }
-                if (userAnswerBox) {
-                    userAnswerBox.innerHTML = "";
-                    userAnswerBox.classList.add("hidden");
-                }
-                if (referenceText) referenceText.textContent = "";
-                if (referenceWrap) referenceWrap.classList.add("hidden");
+                resetExtendedResultBlocks({
+                    keywordsBox,
+                    userAnswerBox,
+                    referenceWrap,
+                    referenceText,
+                    referenceTitle
+                });
                 if (inner) inner.className = "flex flex-col rounded-lg border border-border-strong bg-surface-2 dark:bg-surface-2 overflow-hidden";
                 return;
             }
@@ -235,16 +306,13 @@
             if (icon) icon.textContent = "";
             if (msg) msg.textContent = "";
             if (details) details.textContent = "";
-            if (keywordsBox) {
-                keywordsBox.innerHTML = "";
-                keywordsBox.classList.add("hidden");
-            }
-            if (userAnswerBox) {
-                userAnswerBox.innerHTML = "";
-                userAnswerBox.classList.add("hidden");
-            }
-            if (referenceText) referenceText.textContent = "";
-            if (referenceWrap) referenceWrap.classList.add("hidden");
+            resetExtendedResultBlocks({
+                keywordsBox,
+                userAnswerBox,
+                referenceWrap,
+                referenceText,
+                referenceTitle
+            });
             if (inner) inner.className = "flex flex-col rounded-lg border border-border-strong bg-surface-2 dark:bg-surface-2 overflow-hidden";
             return;
         }
@@ -329,6 +397,14 @@
             "";
         if (details) details.textContent = extra;
 
+        resetExtendedResultBlocks({
+            keywordsBox,
+            userAnswerBox,
+            referenceWrap,
+            referenceText,
+            referenceTitle
+        });
+
         // D-4 fix: Render Keywords, UserAnswer, Reference for open_answer
         try {
             const currentTaskType = getCurrentEffectiveTaskType();
@@ -362,8 +438,9 @@
                     keywordsBox.appendChild(kwRow);
                 }
 
-                if (userAnswerBox && detailsObj.user_answer) {
-                    userAnswerBox.innerHTML = "";
+                const userAnswerText =
+                    detailsObj.user_answer != null ? String(detailsObj.user_answer) : "";
+                if (userAnswerBox && userAnswerText) {
                     userAnswerBox.classList.remove("hidden");
 
                     const uaTitle = document.createElement("h4");
@@ -373,14 +450,16 @@
 
                     const uaCard = document.createElement("div");
                     uaCard.className = "rounded-lg border border-border-strong bg-surface-1 p-3 text-sm text-text-main leading-relaxed";
-                    uaCard.textContent = detailsObj.user_answer;
+                    uaCard.textContent = userAnswerText;
                     userAnswerBox.appendChild(uaCard);
                 }
 
-                if (referenceWrap && detailsObj.reference_answer) {
+                const referenceAnswerText =
+                    detailsObj.reference_answer != null ? String(detailsObj.reference_answer) : "";
+                if (referenceWrap && referenceAnswerText) {
                     referenceWrap.classList.remove("hidden");
                     if (referenceTitle) referenceTitle.textContent = "\u042d\u0442\u0430\u043b\u043e\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442";
-                    if (referenceText) referenceText.textContent = detailsObj.reference_answer;
+                    if (referenceText) referenceText.textContent = referenceAnswerText;
                 }
             }
         } catch (e) {
@@ -440,6 +519,7 @@
         const progressBar = document.getElementById("progress-bar");
 
         if (!task) {
+            if (SessionState) SessionState.currentTask = null;
             UIHelpers.setCanGoNext(false);
             if (titleEl) titleEl.textContent = "\u041d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439";
             if (metaEl) metaEl.textContent = "";
@@ -451,6 +531,29 @@
             if (progressLabel) progressLabel.textContent = "\u0417\u0430\u0434\u0430\u043d\u0438\u0435: -";
             if (difficultyLabel) difficultyLabel.textContent = "\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: -";
             if (progressBar) progressBar.style.width = "0%";
+            const checkBtn = document.getElementById("check-answer-btn");
+            if (checkBtn) {
+                checkBtn.disabled = true;
+                checkBtn.classList.add("hidden");
+            }
+            const taskHeaderMeta = document.getElementById("task-header-meta");
+            if (taskHeaderMeta) taskHeaderMeta.classList.add("hidden");
+            const statusBanner = document.getElementById("status-banner");
+            if (statusBanner) {
+                statusBanner.classList.add("hidden");
+                statusBanner.textContent = "";
+            }
+            showEvaluationResult(null);
+            const taskContent = document.getElementById("task-content");
+            if (taskContent) {
+                clearElementChildren(taskContent);
+                const emptyState = document.createElement("div");
+                emptyState.className =
+                    "rounded-lg border border-border-strong bg-surface-2 p-6 text-center text-sm text-text-secondary";
+                emptyState.textContent =
+                    "\u0414\u043b\u044f \u044d\u0442\u043e\u0439 \u0441\u0435\u0441\u0441\u0438\u0438 \u0431\u043e\u043b\u044c\u0448\u0435 \u043d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439.";
+                taskContent.appendChild(emptyState);
+            }
             return;
         }
 
@@ -481,7 +584,7 @@
 
         if (imgEl) {
             if (imageUrlFromData) {
-                imgEl.style.backgroundImage = `url("${imageUrlFromData}")`;
+                imgEl.style.backgroundImage = buildBackgroundImageValue(imageUrlFromData);
                 imgEl.style.display = "block";
             } else {
                 imgEl.style.backgroundImage = "none";
@@ -585,6 +688,12 @@
                                     SessionState.autoSubmitting = false;
                                 });
                             } else {
+                                if (UIHelpers && typeof UIHelpers.showStatus === "function") {
+                                    UIHelpers.showStatus(
+                                        "\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0442\u0432\u0435\u0442 \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438. \u041f\u0435\u0440\u0435\u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u0435 \u044d\u043a\u0440\u0430\u043d \u0438 \u043f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.",
+                                        "error"
+                                    );
+                                }
                                 console.warn("handleSubmitAnswer not found");
                                 SessionState.autoSubmitting = false;
                             }
@@ -641,21 +750,7 @@
                 }
 
                 // Display fallback error UI
-                taskContent.innerHTML =
-                    `
-                    <div class="rounded-lg border-2 border-error bg-error-light p-6 text-center dark:border-error-dark dark:bg-error-light">
-                        <span class="material-symbols-outlined text-4xl text-error dark:text-error">error</span>
-                        <h3 class="mt-3 text-lg font-semibold text-error-darker dark:text-error-lighter">
-                            \u041e\u0448\u0438\u0431\u043a\u0430 \u043e\u0442\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u044f \u0437\u0430\u0434\u0430\u043d\u0438\u044f
-                        </h3>
-                        <p class="mt-2 text-sm text-error-text dark:text-error">
-                            \u0422\u0438\u043f \u0437\u0430\u0434\u0430\u043d\u0438\u044f "${taskType || 'unknown'}" \u043d\u0435 \u043f\u043e\u0434\u0434\u0435\u0440\u0436\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0438\u043b\u0438 UI-\u043a\u043e\u043c\u043f\u043e\u043d\u0435\u043d\u0442 \u043d\u0435 \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043d.
-                        </p>
-                        <p class="mt-1 text-xs text-error dark:text-error">
-                            ID: ${task.task_id || 'unknown'}
-                        </p>
-                    </div>
-                `;
+                renderUnsupportedTaskFallback(taskContent, taskType, task.task_id);
             }
 
             const subtypeForResult = subtype;
@@ -678,7 +773,7 @@
 
         // Restore draft
         try {
-            if (task && DraftStorage) {
+            if (task && DraftStorage && SessionState && SessionState.sessionId) {
                 const draft = DraftStorage.loadDraft(SessionState.sessionId, task.task_id);
                 if (draft) {
                     setTimeout(() => {

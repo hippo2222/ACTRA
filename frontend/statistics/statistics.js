@@ -8,6 +8,9 @@ const createInitialState = () => ({
     dynamics: [],
     previousDynamics: [],
     complexStats: {},
+    complexList: [],
+    theoryCatalog: [],
+    theoryInsights: [],
     currentUser: null,
     hasData: false,
     currentPeriod: 7,
@@ -56,6 +59,39 @@ const StatisticsApp = {
     resetState(overrides = {}) {
         this.state = { ...createInitialState(), ...overrides };
         return this.state;
+    },
+
+    escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char] || char));
+    },
+
+    showToast(message, type = 'error', duration = 2200) {
+        const palette = {
+            success: 'bg-success text-white',
+            error: 'bg-error text-white',
+            warning: 'bg-warning text-warning-dark',
+            info: 'bg-info text-white',
+        };
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${palette[type] || palette.info} transition-all opacity-0 translate-y-2`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.style.transition = 'opacity 200ms, transform 200ms';
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+        });
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(8px)';
+            setTimeout(() => toast.remove(), 250);
+        }, Math.max(1200, duration));
     },
 
     initForTest(stateOverrides = {}) {
@@ -410,10 +446,15 @@ const StatisticsApp = {
                 console.log('[Statistics] User loaded:', data.user.name, 'avatar_seed:', data.user.avatar_seed);
                 this.updateUserDisplay();
             } else {
+                this.state.currentUser = null;
                 console.warn('[Statistics] No user found in response');
+                this.updateUserDisplay();
             }
         } catch (error) {
+            this.state.currentUser = null;
             console.error('[Statistics] Failed to load user profile:', error);
+            this.updateUserDisplay();
+            this.showToast('Не удалось загрузить профиль. Продолжаем без данных профиля.', 'warning');
         }
     },
 
@@ -449,6 +490,15 @@ const StatisticsApp = {
         }
 
         // Update streak badge — use canonical activity_streak_days (mixed activity)
+        if (!user) {
+            if (avatarEl) {
+                avatarEl.src = this.getAvatarUrl(null, null);
+            }
+            if (nameEl) {
+                nameEl.textContent = 'Гость';
+            }
+        }
+
         if (streakBadge) {
             const streak = this.state.stats?.activity_streak_days || this.state.stats?.streak_days || 0;
             const streakGap = this.state.stats?.streak_gap || 0;
@@ -501,6 +551,7 @@ const StatisticsApp = {
 
     async loadData() {
         this.showSkeleton();
+        let hadPartialLoadError = false;
         try {
             const period = this.state.currentPeriod;
             const statsUrl = this.buildApiUrl('/api/statistics/overall');
@@ -508,13 +559,15 @@ const StatisticsApp = {
             const previousPeriodUrl = this.buildApiUrl(`/api/statistics/time-dynamics?days=${period}&offset=${period}&smooth=${this.state.smoothingWindow}`);
             const complexesUrl = this.buildApiUrl('/api/statistics/complexes');
             const complexesListUrl = this.buildApiUrl('/api/complexes');
+            const theoriesUrl = this.buildApiUrl('/api/theories');
 
-            const [statsRes, dynamicsRes, previousRes, complexesRes, complexesListRes] = await Promise.all([
+            const [statsRes, dynamicsRes, previousRes, complexesRes, complexesListRes, theoriesRes] = await Promise.all([
                 fetch(statsUrl),
                 fetch(dynamicsUrl),
                 fetch(previousPeriodUrl),
                 fetch(complexesUrl),
-                fetch(complexesListUrl)
+                fetch(complexesListUrl),
+                fetch(theoriesUrl)
             ]);
 
             const statsData = await statsRes.json();
@@ -522,6 +575,7 @@ const StatisticsApp = {
             const previousData = await previousRes.json();
             const complexesData = await complexesRes.json();
             const complexesListData = await complexesListRes.json();
+            const theoriesData = await theoriesRes.json();
 
             console.log('[Statistics] API Responses:', {
                 stats: statsData,
@@ -534,6 +588,8 @@ const StatisticsApp = {
                 this.state.stats = statsData.stats;
                 console.log('[Statistics] Stats loaded:', this.state.stats);
             } else {
+                this.state.stats = null;
+                hadPartialLoadError = true;
                 console.warn('[Statistics] Stats API error:', statsData);
             }
 
@@ -543,6 +599,8 @@ const StatisticsApp = {
                 this.state.dynamicsCache[this.state.currentPeriod] = this.state.dynamics;
             } else {
                 this.state.dynamics = [];
+                delete this.state.dynamicsCache[this.state.currentPeriod];
+                hadPartialLoadError = true;
             }
 
             if (previousData.ok) {
@@ -551,17 +609,35 @@ const StatisticsApp = {
                 this.state.previousDynamicsCache[this.state.currentPeriod] = this.state.previousDynamics;
             } else {
                 this.state.previousDynamics = [];
+                delete this.state.previousDynamicsCache[this.state.currentPeriod];
+                hadPartialLoadError = true;
             }
 
-            this.state.complexStats = complexesData.complexes || {};
+            if (complexesData.ok && complexesData.complexes) {
+                this.state.complexStats = complexesData.complexes;
+            } else {
+                this.state.complexStats = {};
+                hadPartialLoadError = true;
+            }
 
             // Build complex name lookup from /api/complexes
             this.state.complexNames = {};
+            this.state.complexList = [];
             if (complexesListData.ok && complexesListData.items) {
                 for (const c of complexesListData.items) {
                     if (c.id && c.name) this.state.complexNames[c.id] = c.name;
                 }
+                this.state.complexList = Array.isArray(complexesListData.items) ? complexesListData.items : [];
+            } else {
+                hadPartialLoadError = true;
             }
+            if (theoriesRes.ok && theoriesData.ok && Array.isArray(theoriesData.items)) {
+                this.state.theoryCatalog = theoriesData.items;
+            } else {
+                this.state.theoryCatalog = [];
+                hadPartialLoadError = true;
+            }
+            this.state.theoryInsights = this.buildTheoryInsights();
             const mcReviews = this.state.stats?.microcards?.reviews_total || 0;
             const combinedAttempts = this.state.stats?.learning_sources?.combined?.attempts || 0;
             const statsHasData = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0 || mcReviews > 0 || combinedAttempts > 0));
@@ -571,13 +647,25 @@ const StatisticsApp = {
             this.hideSkeleton();
             this.render();
             this.updateUserDisplay();
+            if (hadPartialLoadError) {
+                this.showToast('Не удалось полностью обновить статистику. Показаны доступные данные.', 'warning');
+            }
         } catch (error) {
             console.error('[Statistics] Failed to load data:', error);
+            this.state.stats = null;
             this.state.hasData = false;
             this.state.dynamics = [];
             this.state.previousDynamics = [];
+            delete this.state.dynamicsCache[this.state.currentPeriod];
+            delete this.state.previousDynamicsCache[this.state.currentPeriod];
+            this.state.complexStats = {};
+            this.state.complexList = [];
+            this.state.theoryCatalog = [];
+            this.state.theoryInsights = [];
+            this.state.complexNames = {};
             this.hideSkeleton();
             this.render();
+            this.showToast('Не удалось загрузить статистику', 'error');
         }
     },
 
@@ -587,6 +675,7 @@ const StatisticsApp = {
         this.state.currentPeriod = days;
         this.state.focusedDay = null;
         this.state.focusSource = null;
+        let hadPeriodLoadError = false;
 
         document.querySelectorAll('.period-btn').forEach(btn => {
             const isActive = parseInt(btn.dataset.period) === days;
@@ -604,37 +693,194 @@ const StatisticsApp = {
         });
 
         const loadCurrent = this.state.dynamicsCache[days]
-            ? Promise.resolve(this.state.dynamicsCache[days])
+            ? Promise.resolve({ ok: true, dynamics: this.state.dynamicsCache[days], fromCache: true })
             : fetch(this.buildApiUrl(`/api/statistics/time-dynamics?days=${days}&smooth=${this.state.smoothingWindow}`))
-                .then(res => res.json())
-                .then(data => (data.ok ? data.dynamics || [] : []))
+                .then(async (res) => {
+                    const data = await res.json();
+                    if (!res.ok || !data.ok) {
+                        hadPeriodLoadError = true;
+                        return { ok: false, dynamics: [], fromCache: false };
+                    }
+                    return { ok: true, dynamics: data.dynamics || [], fromCache: false };
+                })
                 .catch((error) => {
                     console.error('[Statistics] Failed to load dynamics:', error);
-                    return [];
+                    hadPeriodLoadError = true;
+                    return { ok: false, dynamics: [], fromCache: false };
                 });
 
         const loadPrevious = this.state.previousDynamicsCache[days]
-            ? Promise.resolve(this.state.previousDynamicsCache[days])
+            ? Promise.resolve({ ok: true, dynamics: this.state.previousDynamicsCache[days], fromCache: true })
             : fetch(this.buildApiUrl(`/api/statistics/time-dynamics?days=${days}&offset=${days}&smooth=${this.state.smoothingWindow}`))
-                .then(res => res.json())
-                .then(data => (data.ok ? data.dynamics || [] : []))
+                .then(async (res) => {
+                    const data = await res.json();
+                    if (!res.ok || !data.ok) {
+                        hadPeriodLoadError = true;
+                        return { ok: false, dynamics: [], fromCache: false };
+                    }
+                    return { ok: true, dynamics: data.dynamics || [], fromCache: false };
+                })
                 .catch((error) => {
                     console.error('[Statistics] Failed to load previous dynamics:', error);
-                    return [];
+                    hadPeriodLoadError = true;
+                    return { ok: false, dynamics: [], fromCache: false };
                 });
 
-        const [current, previous] = await Promise.all([loadCurrent, loadPrevious]);
-        this.state.dynamics = this.normalizeDynamics(current, days);
-        this.state.previousDynamics = this.normalizeDynamics(previous, days);
-        this.state.dynamicsCache[days] = this.state.dynamics;
-        this.state.previousDynamicsCache[days] = this.state.previousDynamics;
+        const [currentResult, previousResult] = await Promise.all([loadCurrent, loadPrevious]);
+        this.state.dynamics = this.normalizeDynamics(currentResult.dynamics, days);
+        this.state.previousDynamics = this.normalizeDynamics(previousResult.dynamics, days);
+
+        if (currentResult.ok) {
+            this.state.dynamicsCache[days] = this.state.dynamics;
+        } else {
+            delete this.state.dynamicsCache[days];
+        }
+
+        if (previousResult.ok) {
+            this.state.previousDynamicsCache[days] = this.state.previousDynamics;
+        } else {
+            delete this.state.previousDynamicsCache[days];
+        }
         const mcReviews = this.state.stats?.microcards?.reviews_total || 0;
         const combinedAttempts = this.state.stats?.learning_sources?.combined?.attempts || 0;
         const statsHasData = !!(this.state.stats && ((this.state.stats.total_tasks_attempted || 0) > 0 || (this.state.stats.total_time_spent || 0) > 0 || mcReviews > 0 || combinedAttempts > 0));
         const dynamicsHasData = (this.state.dynamics?.length || 0) > 0;
         this.state.hasData = statsHasData || dynamicsHasData;
 
+        if (hadPeriodLoadError) {
+            this.showToast('Не удалось полностью обновить график. Показаны доступные данные.', 'warning');
+        }
+
         this.render();
+    },
+
+    buildTheoryInsights() {
+        const theoryTitleById = {};
+        (Array.isArray(this.state.theoryCatalog) ? this.state.theoryCatalog : []).forEach((item) => {
+            const theoryId = String(item?.id || '').trim();
+            if (!theoryId) return;
+            theoryTitleById[theoryId] = String(item?.title || theoryId).trim() || theoryId;
+        });
+
+        const grouped = new Map();
+        (Array.isArray(this.state.complexList) ? this.state.complexList : []).forEach((complex) => {
+            const complexId = String(complex?.id || '').trim();
+            const theoryId = String(complex?.theory_link?.theory_id || '').trim();
+            if (!complexId || !theoryId) return;
+
+            const statEntry = this.state.complexStats?.[complexId] || {};
+            const aggregated = statEntry.aggregated || {};
+            const attempts = Number(aggregated.attempts || 0);
+            const successRate = Number(aggregated.success_rate || 0);
+            const recentSessions = Array.isArray(statEntry.recent_sessions) ? statEntry.recent_sessions : [];
+            const latestEndTime = recentSessions[0]?.end_time || null;
+
+            if (!grouped.has(theoryId)) {
+                grouped.set(theoryId, {
+                    theoryId,
+                    title: theoryTitleById[theoryId] || theoryId,
+                    complexCount: 0,
+                    attempts: 0,
+                    successSum: 0,
+                    successWeight: 0,
+                    latestEndTime: null,
+                });
+            }
+
+            const row = grouped.get(theoryId);
+            row.complexCount += 1;
+            row.attempts += attempts;
+            row.successSum += successRate * attempts;
+            row.successWeight += attempts;
+            if (latestEndTime && (!row.latestEndTime || latestEndTime > row.latestEndTime)) {
+                row.latestEndTime = latestEndTime;
+            }
+        });
+
+        return Array.from(grouped.values())
+            .map((row) => ({
+                ...row,
+                successRate: row.successWeight > 0 ? row.successSum / row.successWeight : 0,
+            }))
+            .sort((left, right) => {
+                if (right.attempts !== left.attempts) return right.attempts - left.attempts;
+                if (right.complexCount !== left.complexCount) return right.complexCount - left.complexCount;
+                return (left.title || left.theoryId).localeCompare(right.title || right.theoryId, 'ru');
+            });
+    },
+
+    renderTheoryInsights() {
+        const container = document.getElementById('theory-analytics-list');
+        if (!container) return;
+
+        const insights = Array.isArray(this.state.theoryInsights) ? this.state.theoryInsights.slice(0, 3) : [];
+        if (!insights.length) {
+            container.innerHTML = '<p class="text-sm text-text-muted">РўРµРѕСЂРµС‚РёС‡РµСЃРєРёРµ СЃРІСЏР·Рё РїРѕСЏРІСЏС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… СЃРІСЏР·Р°РЅРЅС‹С… complex-сессий.</p>';
+            return;
+        }
+
+        container.innerHTML = insights.map((item) => {
+            const successRate = Math.max(0, Math.min(100, Math.round((item.successRate || 0) * 100)));
+            const toneClass = successRate >= 80
+                ? 'bg-success'
+                : (successRate >= 50 ? 'bg-warning' : 'bg-error');
+            const latestLabel = item.latestEndTime ? this.escapeHtml(this.formatSessionDate(item.latestEndTime)) : 'вЂ”';
+            return `
+                <div class="rounded-xl border border-border-subtle bg-bg-secondary p-3">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-bold text-text-main truncate">${this.escapeHtml(item.title || item.theoryId)}</p>
+                            <p class="text-[10px] text-text-muted">${this.escapeHtml(item.theoryId)}</p>
+                        </div>
+                        <span class="rounded-full border border-border-subtle px-2 py-1 text-[10px] font-semibold text-text-secondary">${item.complexCount} complexes</span>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between text-[11px] text-text-secondary">
+                        <span>${item.attempts} attempts</span>
+                        <span>${latestLabel}</span>
+                    </div>
+                    <div class="mt-2 h-2 w-full rounded-full bg-surface-1 overflow-hidden">
+                        <div class="h-full ${toneClass} rounded-full transition-all duration-500" style="width:${successRate}%"></div>
+                    </div>
+                    <div class="mt-1 flex items-center justify-between text-[11px]">
+                        <span class="text-text-muted">Theory-driven success</span>
+                        <span class="font-semibold text-text-main">${successRate}%</span>
+                    </div>
+                    <div class="mt-3 flex flex-wrap gap-2">
+                        <button type="button" data-action="open-theory-complexes" data-theory-id="${this.escapeHtml(item.theoryId)}"
+                            class="rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-primary hover:text-primary">
+                            Complexes
+                        </button>
+                        <button type="button" data-action="open-theory-hub" data-theory-id="${this.escapeHtml(item.theoryId)}"
+                            class="rounded-lg border border-primary-light bg-primary-lighter px-3 py-1.5 text-xs font-semibold text-primary-darker transition-colors hover:bg-primary-light">
+                            Theory Hub
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.querySelectorAll('[data-action="open-theory-complexes"]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const theoryId = btn.getAttribute('data-theory-id');
+                const url = theoryId ? `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}` : '/ui/complexes';
+                if (typeof window.navigateWithTransition === 'function') {
+                    window.navigateWithTransition(url);
+                } else {
+                    window.location.href = url;
+                }
+            });
+        });
+        container.querySelectorAll('[data-action="open-theory-hub"]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const theoryId = btn.getAttribute('data-theory-id');
+                const url = theoryId ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}` : '/ui/editor?theory_hub=1';
+                if (typeof window.navigateWithTransition === 'function') {
+                    window.navigateWithTransition(url);
+                } else {
+                    window.location.href = url;
+                }
+            });
+        });
     },
 
     render() {
@@ -643,8 +889,10 @@ const StatisticsApp = {
         this.updateLegendLabels();
         this.updateChartTitle();
         this.updateChartSummary();
+        this.updateChartInsight(this.state.dynamics);
         this.renderChart();
         this.renderPerformance();
+        this.renderTheoryInsights();
         this.renderComplexes();
         this.updateEmptyState();
     },
@@ -1050,7 +1298,46 @@ const StatisticsApp = {
     },
 
     updateChartInsight(dynamics) {
-        // Эта функция больше не используется, так как сообщение теперь выводится в updateChartSummary
+        const insightEl = document.getElementById('chart-insight');
+        if (!insightEl) return;
+
+        const series = Array.isArray(dynamics) ? dynamics : [];
+        if (!series.length) {
+            insightEl.textContent = '';
+            insightEl.classList.add('hidden');
+            return;
+        }
+
+        const metricId = this.state.currentMetric;
+        const metricLabel = metricId === 'study' ? 'времени' : 'активности';
+        const activeDays = series.filter((day) => this.getMetricValue(day, metricId) > 0).length;
+        const period = this.state.currentPeriod || series.length;
+        const delta = this.calculatePeriodDelta();
+        let text = '';
+
+        if (!delta.hasPrevious) {
+            text = activeDays > 0
+                ? `Это первый ${period}-дневный срез: смотри в первую очередь на регулярность, а не только на сумму.`
+                : 'Как только появится активность, здесь будет подсказка по текущему ритму.';
+        } else {
+            const deltaPercent = Math.round(Math.abs(delta.deltaPercent || 0));
+            if (delta.direction === 'up') {
+                text = deltaPercent > 0
+                    ? `${metricLabel[0].toUpperCase()}${metricLabel.slice(1)} стало больше на ${deltaPercent}% относительно прошлого периода. Удерживай текущий темп.`
+                    : 'Темп выше прошлого периода. Продолжай в том же ритме.';
+            } else if (delta.direction === 'down') {
+                text = deltaPercent > 0
+                    ? `${metricLabel[0].toUpperCase()}${metricLabel.slice(1)} стало меньше на ${deltaPercent}% относительно прошлого периода. Верни хотя бы одну короткую сессию в день.`
+                    : 'Темп просел относительно прошлого периода. Верни короткую ежедневную практику.';
+            } else if (activeDays <= Math.max(1, Math.floor(period * 0.4))) {
+                text = `Ритм ровный, но активных дней только ${activeDays} из ${period}. Добавь ещё 1-2 короткие сессии в неделю.`;
+            } else {
+                text = `Ритм стабильный: ${activeDays} активных дней из ${period}. Теперь важнее держать регулярность, чем гнаться за пиком.`;
+            }
+        }
+
+        insightEl.textContent = text;
+        insightEl.classList.toggle('hidden', !text);
     },
 
     describeEvent(event) {
@@ -1301,11 +1588,12 @@ const StatisticsApp = {
             const data = byType[type] || { attempts: 0, average_score: 0 };
             const rate = data.attempts > 0 ? Math.round(data.average_score) : 0;
             const hasTypeData = data.attempts > 0;
+            const safeName = this.escapeHtml(config.name);
 
             return `
                 <div>
                     <div class="flex justify-between text-sm mb-1">
-                        <span class="${hasTypeData ? 'text-text-main' : 'text-text-muted'} font-medium">${config.name}</span>
+                        <span class="${hasTypeData ? 'text-text-main' : 'text-text-muted'} font-medium">${safeName}</span>
                         <span class="${hasTypeData ? 'text-text-main' : 'text-text-muted'} font-bold">${hasTypeData ? rate + '%' : '—'}</span>
                     </div>
                     <div class="h-2 w-full bg-bg-secondary rounded-full overflow-hidden">
@@ -1414,13 +1702,15 @@ const StatisticsApp = {
         container.innerHTML = recentComplexes.map((complex) => {
             const rate = Math.round(complex.successRate * 100);
             const dateLabel = this.formatSessionDate(complex.lastEndTime);
-            const tooltip = `Попыток: ${complex.attempts} · Успешность: ${rate}%`;
+            const tooltip = this.escapeHtml(`Попыток: ${complex.attempts} · Успешность: ${rate}%`);
+            const safeName = this.escapeHtml(complex.name);
+            const safeDateLabel = this.escapeHtml(dateLabel);
 
             return `
                 <div class="bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="${tooltip}">
                     <div>
-                        <h4 class="font-bold text-sm text-text-main truncate leading-tight" title="${complex.name}">${complex.name}</h4>
-                        <p class="text-[10px] text-text-muted mt-0.5">${dateLabel}</p>
+                        <h4 class="font-bold text-sm text-text-main truncate leading-tight" title="${safeName}">${safeName}</h4>
+                        <p class="text-[10px] text-text-muted mt-0.5">${safeDateLabel}</p>
                     </div>
                     <div>
                         <div class="flex justify-between text-[10px] font-bold mb-1 text-text-main">
@@ -1484,6 +1774,7 @@ const StatisticsApp = {
             const reviews = data.reviews || 0;
             const rate = Math.round((data.correct_rate || 0) * 100);
             const perfectRate = data.perfect_rate != null ? Math.round(data.perfect_rate * 100) : null;
+            const safeName = this.escapeHtml(config.name);
 
             let rateLabel = `${rate}%`;
             if (perfectRate != null && type === 'pair_match') {
@@ -1493,7 +1784,7 @@ const StatisticsApp = {
             return `
                 <div>
                     <div class="flex justify-between text-sm mb-1">
-                        <span class="${reviews > 0 ? 'text-text-main' : 'text-text-muted'} font-medium">${config.name}</span>
+                        <span class="${reviews > 0 ? 'text-text-main' : 'text-text-muted'} font-medium">${safeName}</span>
                         <span class="${reviews > 0 ? 'text-text-main' : 'text-text-muted'} font-bold">${reviews > 0 ? rateLabel : '—'}</span>
                     </div>
                     <div class="h-2 w-full bg-bg-secondary rounded-full overflow-hidden">

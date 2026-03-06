@@ -50,6 +50,43 @@ window.NotificationUI = (function () {
         },
     };
 
+    const _SEVERITY_TO_VARIANT = {
+        success: 'success',
+        warning: 'warning',
+        error: 'error',
+        blocking: 'error',
+        info: 'info',
+    };
+
+    function normalizeSeverity(severity) {
+        const key = String(severity || '').trim().toLowerCase();
+        return _SEVERITY_TO_VARIANT[key] ? key : 'info';
+    }
+
+    function resolveVariant(severityOrVariant) {
+        const normalized = normalizeSeverity(severityOrVariant);
+        return _SEVERITY_TO_VARIANT[normalized] || 'info';
+    }
+
+    function voiceMessage({ what = '', impact = '', next = '' } = {}) {
+        const parts = [];
+        const whatPart = String(what || '').trim();
+        const impactPart = String(impact || '').trim();
+        const nextPart = String(next || '').trim();
+
+        if (whatPart) parts.push(whatPart);
+        if (impactPart) parts.push(impactPart);
+        if (nextPart) parts.push(nextPart);
+
+        return parts.join(' ');
+    }
+
+    function toastVoice({ what = '', impact = '', next = '', severity = 'info', timeout = 4000 } = {}) {
+        const message = voiceMessage({ what, impact, next });
+        if (!message) return;
+        toast(message, resolveVariant(severity), timeout);
+    }
+
     // ── toast ────────────────────────────────────────────────────────────
     function toast(message, variant = 'info', timeout = 4000) {
         const container = _ensureContainer();
@@ -130,9 +167,19 @@ window.NotificationUI = (function () {
                 overlay.classList.remove('opacity-0');
                 const card = overlay.querySelector('[data-role="confirm-card"]');
                 if (card) card.classList.remove('scale-95');
+                const confirmBtn = overlay.querySelector('[data-role="confirm"]');
+                if (confirmBtn) confirmBtn.focus({ preventScroll: true });
             });
 
+            let settled = false;
+            const cleanup = () => {
+                document.removeEventListener('keydown', onKey);
+            };
+
             const close = (result) => {
+                if (settled) return;
+                settled = true;
+                cleanup();
                 overlay.classList.add('opacity-0');
                 const card = overlay.querySelector('[data-role="confirm-card"]');
                 if (card) card.classList.add('scale-95');
@@ -145,7 +192,7 @@ window.NotificationUI = (function () {
 
             // ESC = cancel
             const onKey = (e) => {
-                if (e.key === 'Escape') { close(false); document.removeEventListener('keydown', onKey); }
+                if (e.key === 'Escape') { close(false); }
             };
             document.addEventListener('keydown', onKey);
 
@@ -162,5 +209,12 @@ window.NotificationUI = (function () {
         return el.innerHTML;
     }
 
-    return { toast, confirm };
+    return {
+        toast,
+        confirm,
+        normalizeSeverity,
+        resolveVariant,
+        voiceMessage,
+        toastVoice,
+    };
 })();

@@ -207,6 +207,12 @@
     return el;
   }
 
+  function _escapeHtml(text) {
+    const el = document.createElement("span");
+    el.textContent = text != null ? String(text) : "";
+    return el.innerHTML;
+  }
+
   function _ensureTaskContentPath(taskDto) {
     if (!taskDto || typeof taskDto !== "object") return null;
     const taskData = taskDto.task_data || (taskDto.task_data = {});
@@ -1274,7 +1280,7 @@
         clearTimeout(state.tempHintTimer);
         state.tempHintTimer = null;
       }
-      _setHint("warn", `<span class=\"font-semibold\">${message}</span>`);
+      _setHint("warn", `<span class=\"font-semibold\">${_escapeHtml(message)}</span>`);
       state.tempHintTimer = setTimeout(() => {
         state.tempHintTimer = null;
         if (typeof state._updateToolbar === "function") state._updateToolbar();
@@ -1326,13 +1332,13 @@
         const total = state.maxPolygons;
         const base = total > 0 ? `Контуры ${done} из ${total}.` : `Контуры ${done}.`;
         const extra = state.maxLines > 0 ? ` Далее штрихи.` : "";
-        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${base}</span> Нарисуй контур и замкни линию.${extra}`);
+        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${_escapeHtml(base)}</span> Нарисуй контур и замкни линию.${extra}`);
       } else {
         const done = state.lines.length;
         const total = state.maxLines;
         const base = total > 0 ? `Штрихи ${done} из ${total}.` : `Штрихи ${done}.`;
         const extra = _requiresLabels() && _hasAnyUserMarks() ? "<div class=\"mt-0.5 leading-snug\">Введи названия и нажми «Проверить ответ».</div>" : "";
-        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${base}</span> Зажми и веди мышью по линии.${extra}`);
+        _setHint("info", `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${_escapeHtml(base)}</span> Зажми и веди мышью по линии.${extra}`);
       }
     }
 
