@@ -14,7 +14,7 @@
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--color-bg-base);
+            background: var(--color-bg-main);
             color: var(--color-text-main);
         }
 
@@ -58,8 +58,62 @@
         }
 
         .provider-diagnostics {
-            border: 1px dashed var(--color-border-subtle);
-            background: color-mix(in srgb, var(--color-surface-1) 88%, transparent);
+            border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-1);
+            box-shadow: var(--shadow-xs);
+        }
+
+        .settings-shell {
+            max-width: 72rem;
+        }
+
+        .settings-topbar-back,
+        .settings-topbar > h1,
+        .settings-provider-heading {
+            min-width: 0;
+        }
+
+        .settings-topbar > h1 {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .settings-provider-actions {
+            align-items: stretch;
+        }
+
+        .settings-provider-action {
+            justify-content: center;
+        }
+
+        #save-status {
+            color: var(--color-text-secondary);
+            font-weight: 500;
+        }
+
+        @media (max-width: 767px) {
+            .settings-topbar {
+                flex-wrap: wrap;
+                align-items: flex-start;
+            }
+
+            .settings-topbar > h1 {
+                order: 2;
+                width: 100%;
+                text-align: left;
+            }
+
+            .settings-topbar > div:last-child {
+                display: none;
+            }
+
+            .settings-provider-actions {
+                flex-direction: column;
+            }
+
+            .settings-provider-action {
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -67,9 +121,9 @@
 <body class="min-h-screen">
     <!-- Top bar -->
     <header class="sticky top-0 z-30 bg-surface-1 border-b border-border-subtle backdrop-blur-sm">
-        <div class="max-w-3xl mx-auto px-6 py-4 flex items-center gap-4">
+        <div class="settings-shell settings-topbar mx-auto flex items-center gap-4 px-4 py-4 sm:px-6">
             <a href="/ui/main"
-                class="flex items-center gap-2 text-text-secondary hover:text-primary transition-colors">
+                class="settings-topbar-back flex items-center gap-2 text-text-secondary hover:text-primary transition-colors">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
                 <span class="text-sm font-medium">Главная</span>
             </a>
@@ -81,21 +135,21 @@
     </header>
 
     <!-- Main content -->
-    <main class="max-w-3xl mx-auto px-6 py-8">
+    <main class="settings-shell mx-auto px-4 py-8 sm:px-6">
         <!-- AI Keys Section -->
         <section class="animate-fade-in">
             <div class="flex items-center gap-3 mb-6">
-                <div class="flex items-center justify-center w-10 h-10 rounded-xl bg-primary-lighter">
+                <div class="flex items-center justify-center w-10 h-10 rounded-xl border border-primary-light bg-surface-1 shadow-sm">
                     <span class="material-symbols-outlined text-primary text-[22px]">key</span>
                 </div>
-                <div>
+                <div class="settings-provider-heading">
                     <h2 class="text-xl font-bold text-text-main">API-ключи для ИИ</h2>
                     <p class="text-sm text-text-secondary">Настройте ключи для генерации заданий с помощью ИИ</p>
                 </div>
             </div>
 
             <!-- Info banner -->
-            <div class="mb-6 p-4 bg-info-lighter border border-info-light rounded-xl">
+            <div class="mb-6 p-4 bg-info-lighter border border-info rounded-xl">
                 <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-info text-[20px] mt-0.5">info</span>
                     <div class="text-sm text-info-text">
@@ -144,7 +198,7 @@
             </div>
 
             <!-- Save button -->
-            <div class="mt-8 flex items-center gap-4">
+            <div class="mt-8 flex flex-wrap items-center gap-4">
                 <button id="save-keys-btn" onclick="saveKeys()"
                     class="px-6 py-2.5 bg-primary text-primary-fg font-semibold text-sm rounded-xl hover:brightness-110 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                     Сохранить ключи
@@ -153,13 +207,13 @@
                     class="px-4 py-2.5 border border-border-subtle bg-surface-1 text-text-secondary font-semibold text-sm rounded-xl hover:bg-bg-hover transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                     РџСЂРѕРІРµСЂРёС‚СЊ РІСЃРµ РєР»СЋС‡Рё
                 </button>
-                <span id="save-status" class="text-sm text-text-muted"></span>
+                <span id="save-status" class="text-sm text-text-secondary"></span>
             </div>
         </section>
 
         <!-- Spacer -->
         <div class="mt-12 pt-8 border-t border-border-subtle">
-            <p class="text-xs text-text-disabled text-center">
+            <p class="text-xs text-text-secondary text-center">
                 Настройки сохраняются в профиле текущего пользователя.
             </p>
         </div>

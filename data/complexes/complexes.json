@@ -22,7 +22,11 @@
     "updated_at": "2026-02-26T16:01:28.702617",
     "theory_link": {
       "theory_id": "th_demo_xray"
-    }
+    },
+    "created_by_user_id": null,
+    "updated_by_user_id": null,
+    "created_via": "legacy_unknown",
+    "content_scope": "shared_local"
   },
   {
     "id": "ct_head_safety_complex",
@@ -46,6 +50,74 @@
     "updated_at": "2026-02-28T20:43:00",
     "theory_link": {
       "theory_id": "th_demo_ct"
+    },
+    "created_by_user_id": null,
+    "updated_by_user_id": null,
+    "created_via": "legacy_unknown",
+    "content_scope": "shared_local"
+  },
+  {
+    "id": "release_smoke_theory_complex",
+    "name": "[Smoke] Theory Complex",
+    "description": "Release browser-smoke theory complex",
+    "tasks": [
+      "release_smoke_module/release_smoke_topic/release_smoke_test_task"
+    ],
+    "chains": [],
+    "settings": {
+      "adaptive_difficulty": true,
+      "escalation_on_success": true,
+      "error_pool_enabled": true,
+      "max_iterations": null,
+      "smart_retry_near_offset": 2,
+      "smart_retry_near_jitter_max": 2,
+      "smart_retry_max_copies_per_task": 5,
+      "smart_retry_training_control_enabled": true
+    },
+    "created_at": "2026-03-06T09:42:11.726962",
+    "updated_at": "2026-03-06T21:10:12.782290",
+    "theory_link": {
+      "theory_id": "release_smoke_theory",
+      "relation": "link"
+    },
+    "theory_mode": "inherit",
+    "created_by_user_id": "user_7f4b075b5365",
+    "updated_by_user_id": "user_7f4b075b5365",
+    "created_via": "manual_editor",
+    "content_scope": "shared_local",
+    "theory_sync_status": "ok",
+    "theory_sync_meta": {
+      "source": "single_complex_sync",
+      "updated_at": "2026-03-06T21:10:12.780766",
+      "topic_count": 1,
+      "theory_ids": [
+        "release_smoke_theory"
+      ]
     }
+  },
+  {
+    "id": "daily_mix",
+    "name": "Daily Mix",
+    "description": "Synthetic daily mix",
+    "tasks": [
+      "release_smoke_module/release_smoke_topic/release_smoke_test_task"
+    ],
+    "chains": [],
+    "settings": {
+      "adaptive_difficulty": true,
+      "escalation_on_success": true,
+      "error_pool_enabled": true,
+      "max_iterations": null,
+      "smart_retry_near_offset": 2,
+      "smart_retry_near_jitter_max": 2,
+      "smart_retry_max_copies_per_task": 5,
+      "smart_retry_training_control_enabled": true
+    },
+    "created_at": "2026-03-06T21:10:49.135032",
+    "updated_at": "2026-03-06T21:10:49.135032",
+    "created_by_user_id": null,
+    "updated_by_user_id": null,
+    "created_via": "legacy_unknown",
+    "content_scope": "shared_local"
   }
 ]

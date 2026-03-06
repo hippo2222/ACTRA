@@ -1265,7 +1265,7 @@
                 if (currentStatsPeriod === d) {
                     btn.classList.add('bg-surface-1', 'shadow-sm', 'text-text-main', 'border', 'border-border-strong');
                 } else {
-                    btn.classList.add('text-text-muted', 'hover:text-text-main', 'border', 'border-transparent');
+                    btn.classList.add('text-text-secondary', 'hover:text-text-main', 'hover:bg-surface-1', 'border', 'border-transparent');
                 }
             }
         });
@@ -1637,10 +1637,10 @@
         const timeEl = document.getElementById('calendarDailyMixTime');
 
         if (mixCount === 0) {
-            if (countEl) countEl.innerHTML = '<span class="text-lg">Нет задач</span>';
+            if (countEl) countEl.innerHTML = '<span class="text-sm font-semibold text-text-secondary">Нет задач</span>';
             if (timeEl) timeEl.parentElement.classList.add('hidden');
         } else {
-            if (countEl) countEl.innerHTML = `<span class="text-3xl font-black text-text-main">${mixCount}</span><span class="text-sm font-bold text-text-muted ml-1">задач</span>`;
+            if (countEl) countEl.innerHTML = `<span class="text-3xl font-black text-text-main">${mixCount}</span><span class="ml-1 text-sm font-bold text-text-secondary">задач</span>`;
             if (timeEl) {
                 timeEl.parentElement.classList.remove('hidden');
                 timeEl.textContent = `~${mixMinutes} мин`;
@@ -1685,7 +1685,7 @@
         }
 
         container.innerHTML = days.map(day => {
-            let bgClass = 'bg-transparent border border-secondary';
+            let bgClass = 'bg-border-strong border border-border-strong';
             let style = '';
             if (day.is_today) {
                 bgClass = 'ring-1 ring-accent';
@@ -1721,19 +1721,19 @@
         const toShow = complexes.filter(c => c.health_percent < 80).slice(0, 2);
 
         if (toShow.length === 0) {
-            container.innerHTML = '<p class="text-[10px] text-text-muted text-center py-1">Все комплексы в норме</p>';
+            container.innerHTML = '<p class="text-[11px] text-text-secondary text-center py-1">Все комплексы в норме</p>';
             return;
         }
 
         container.innerHTML = toShow.map(c => {
             const tooltip = c.message ? `${c.hint_title || ''}\n${c.message}`.trim() : `Здоровье: ${c.health_percent}%`;
             return `
-                <div class="flex items-center justify-between py-1.5 px-2 bg-surface-2 rounded text-[11px]" title="${escapeHtml(tooltip)}">
-                    <div class="flex items-center gap-1.5">
+                <div class="main-health-row" title="${escapeHtml(tooltip)}">
+                    <div class="main-health-meta">
                         <div class="w-1.5 h-1.5 rounded-full ${c.is_critical ? 'bg-status-error' : 'bg-accent'}"></div>
-                        <span class="font-medium text-text-muted truncate max-w-[100px]">${escapeHtml(c.name || '')}</span>
+                        <span class="main-health-name">${escapeHtml(c.name || '')}</span>
                     </div>
-                    <span class="font-bold ${c.is_critical ? 'text-status-error' : 'text-accent'}">${escapeHtml(String(c.health_percent ?? 0))}%</span>
+                    <span class="shrink-0 font-bold ${c.is_critical ? 'text-status-error' : 'text-accent'}">${escapeHtml(String(c.health_percent ?? 0))}%</span>
                 </div>`;
         }).join('');
     }
@@ -1743,6 +1743,7 @@
         const container = document.getElementById("quick-access-list");
         const emptyEl = document.getElementById("quick-access-empty");
         const showAllBtn = document.getElementById("quick-access-show-all");
+        const quickAccessPreviewLimit = 4;
         if (!container) return;
 
         const [{ ok, data }, sessionsResp] = await Promise.all([
@@ -1819,7 +1820,7 @@
         };
 
         if (!ok) {
-            container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-muted">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="text-xs text-primary hover:underline mt-1">Попробовать снова</button></div>`;
+            container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-secondary">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="mt-1 text-xs font-semibold text-primary hover:underline">Попробовать снова</button></div>`;
             if (emptyEl) emptyEl.hidden = true;
             if (showAllBtn) showAllBtn.hidden = false;
             return;
@@ -1846,8 +1847,9 @@
         setMainRecommendationState({ preferredAction: buildQuickAccessRecommendation(data.items[0]) });
         if (emptyEl) emptyEl.hidden = true;
         if (showAllBtn) showAllBtn.hidden = false;
+        const previewItems = data.items.slice(0, quickAccessPreviewLimit);
 
-        container.innerHTML = data.items.map(item => {
+        container.innerHTML = previewItems.map(item => {
             const complex = item.complex;
             const complexName = String(complex.name || '');
             const safeComplexName = escapeHtml(complexName);
@@ -1884,7 +1886,7 @@
             } else if (progress > 0) {
                 iconContent = `<div class="relative w-10 h-10 flex items-center justify-center"><svg class="w-full h-full transform -rotate-90"><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"/><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - progress}" stroke-linecap="round" class="text-primary transition-all duration-500 ease-out"/></svg><span class="absolute text-[9px] font-bold text-text-secondary dark:text-text-on-dark">${progress}%</span></div>`;
             } else {
-                iconContent = `<div class="w-10 h-10 rounded-lg bg-surface-2 flex items-center justify-center text-text-muted font-bold text-xs uppercase border border-border-subtle">${safeComplexInitials}</div>`;
+                iconContent = `<div class="w-10 h-10 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-xs uppercase">${safeComplexInitials}</div>`;
             }
 
             let statusLine = '';
@@ -1893,31 +1895,31 @@
                     ? `На паузе с ${pausedAtLabel}`
                     : "На паузе";
                 const progressText = (pausedProgress && pausedTotal) ? ` В· ${pausedProgress}/${pausedTotal}` : "";
-                statusLine = `<span class="text-accent text-[10px] font-bold uppercase tracking-wider">${escapeHtml(`${pauseText}${progressText}`)}</span>`;
+                statusLine = `<span class="main-quick-access-status-copy text-accent text-[10px] font-semibold uppercase tracking-[0.16em]">${escapeHtml(`${pauseText}${progressText}`)}</span>`;
             } else if (item.is_pinned) {
-                statusLine = `<span class="text-text-muted text-[10px] flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">push_pin</span> Закреплено</span>`;
+                statusLine = `<span class="inline-flex items-center gap-1 text-[11px] text-text-secondary"><span class="material-symbols-outlined text-[11px]">push_pin</span> Закреплено</span>`;
             } else {
                 if (health.days_since_last !== null && health.days_since_last !== undefined) {
                     const dayText = health.days_since_last === 0 ? 'Сегодня' : `${health.days_since_last}дн. назад`;
-                    statusLine = `<span class="text-text-muted text-[10px]">Активность: ${dayText}</span>`;
+                    statusLine = `<span class="main-quick-access-status-copy text-[11px] text-text-secondary">Активность: ${dayText}</span>`;
                 } else {
-                    statusLine = `<span class="text-text-muted text-[10px] uppercase tracking-wider max-w-[120px] truncate">${safeComplexDescription}</span>`;
+                    statusLine = `<span class="main-quick-access-status-copy text-[11px] text-text-secondary">${safeComplexDescription}</span>`;
                 }
             }
 
             return `
-                <div class="group relative bg-surface-1 rounded-xl p-3 border border-border-subtle hover:border-primary-light hover:shadow-lg transition-all cursor-pointer flex items-center justify-between gap-3"
+                <div class="main-quick-access-item group relative bg-surface-1 rounded-xl p-3 border border-border-subtle hover:border-primary-light hover:shadow-lg transition-all cursor-pointer"
                 onclick="${onClickHandler}">
-                    <div class="flex items-center gap-3">
-                        <div class="relative">${iconContent}${healthBadge}</div>
-                        <div class="flex flex-col">
-                            <h4 class="font-bold text-sm text-text-main group-hover:text-primary transition-colors line-clamp-1">${safeComplexName}</h4>
-                            <div class="flex items-center gap-2 mt-0.5">${statusLine}</div>
+                    <div class="main-quick-access-left">
+                        <div class="relative shrink-0">${iconContent}${healthBadge}</div>
+                        <div class="main-quick-access-copy flex flex-col">
+                            <h4 class="main-quick-access-title font-bold text-sm text-text-main group-hover:text-primary transition-colors" title="${safeComplexName}">${safeComplexName}</h4>
+                            <div class="main-quick-access-status">${statusLine}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-1">
-                        <button class="h-7 w-7 rounded-full flex items-center justify-center text-text-muted hover:text-status-error hover:bg-surface-2 transition-all opacity-0 group-hover:opacity-100" onclick="event.stopPropagation();window._removeFromQuickAccess('${complexIdLiteral}')" title="Убрать"><span class="material-symbols-outlined text-[14px]">close</span></button>
-                        <button class="h-8 w-8 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted group-hover:bg-primary group-hover:text-primary-fg transition-all shadow-sm">
+                    <div class="flex shrink-0 items-center gap-1">
+                        <button class="h-7 w-7 rounded-full flex items-center justify-center text-text-secondary hover:text-status-error hover:bg-surface-2 transition-all opacity-70 group-hover:opacity-100" onclick="event.stopPropagation();window._removeFromQuickAccess('${complexIdLiteral}')" title="Убрать"><span class="material-symbols-outlined text-[14px]">close</span></button>
+                        <button class="h-8 w-8 rounded-full border border-border-strong bg-surface-2 flex items-center justify-center text-text-secondary group-hover:border-primary group-hover:bg-primary group-hover:text-primary-fg transition-all shadow-sm">
                             <span class="material-symbols-outlined text-[18px]">${ctaIcon}</span>
                         </button>
                     </div>

@@ -281,14 +281,88 @@
 /* =============================================================================
    SCHEDULE STRIP
    ============================================================================= */
+.calendar-main {
+    width: min(100%, 1380px);
+}
+
+.calendar-header {
+    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+.calendar-summary-card,
+.calendar-panel-card,
+.schedule-card {
+    box-shadow: var(--shadow-sm);
+}
+
 .schedule-card {
     transition: opacity 0.2s ease, border-color 0.2s ease;
     scroll-snap-align: start;
+    width: 196px;
+    min-width: 196px;
+    flex: 0 0 196px;
+    min-height: 156px;
+    opacity: 1;
 }
 
 .schedule-strip {
     scroll-snap-type: x mandatory;
     scroll-padding: 0 16px;
+    align-items: stretch;
+    padding-inline-end: 4px;
+}
+
+.schedule-card-expanded {
+    width: 256px;
+    min-width: 256px;
+    flex-basis: 256px;
+}
+
+.schedule-card-today {
+    box-shadow: 0 0 0 1px var(--color-primary-light), var(--shadow-md);
+}
+
+.schedule-task-list,
+.schedule-task-row {
+    min-width: 0;
+}
+
+.schedule-task-row {
+    align-items: flex-start;
+}
+
+.schedule-task-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.schedule-task-name {
+    min-width: 0;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+.schedule-card-expanded .schedule-task-name {
+    display: block;
+    -webkit-line-clamp: initial;
+    overflow: visible;
+}
+
+.health-complex-meta {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.health-complex-name {
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 /* Today indicator pulse */
@@ -387,7 +461,61 @@
 /* Large screens */
 @media (min-width: 1200px) {
     .schedule-card {
-        min-width: 180px;
+        width: 208px;
+        min-width: 208px;
+        flex-basis: 208px;
+    }
+
+    .schedule-card-expanded {
+        width: 280px;
+        min-width: 280px;
+        flex-basis: 280px;
+    }
+}
+
+@media (min-width: 1024px) and (max-height: 980px) {
+    .calendar-header {
+        padding-top: 0.625rem;
+        padding-bottom: 0.625rem;
+    }
+
+    .calendar-main {
+        gap: 0.75rem;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .calendar-card-body,
+    .calendar-summary-card,
+    .calendar-panel-card {
+        gap: 0.75rem;
+    }
+
+    .calendar-card-body {
+        padding: 0.875rem;
+    }
+
+    .schedule-card {
+        min-height: 144px;
+        padding: 0.875rem;
+    }
+
+    #schedule-strip {
+        padding-bottom: 0.25rem;
+    }
+
+    #heatmap {
+        gap: 0.35rem;
+        margin-bottom: 0.75rem;
+    }
+
+    #health-content {
+        gap: 0.875rem;
+    }
+
+    #health-chart {
+        width: 4.5rem;
+        height: 4.5rem;
     }
 }
 

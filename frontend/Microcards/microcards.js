@@ -139,12 +139,14 @@
     function renderDeckOwnershipBadges(deck) {
         const ownership = getDeckOwnership(deck);
         const chips = [];
+        const safeOwnerId = escHtml(ownership.createdByUserId);
+        const sourceLabel = escHtml(getDeckCreatedViaLabel(ownership.createdVia));
         if (ownership.isOwnedByCurrentUser) {
-            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[10px] font-semibold text-success-darker">моё</span>');
+            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-main">моё</span>');
         } else if (ownership.hasOwner) {
-            chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escHtml(ownership.createdByUserId)}</span>`);
+            chips.push(`<span class="mc-owner-chip inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${safeOwnerId}">${safeOwnerId}</span>`);
         }
-        chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escHtml(getDeckCreatedViaLabel(ownership.createdVia))}</span>`);
+        chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary" title="${sourceLabel}">${sourceLabel}</span>`);
         return chips.join('');
     }
 
@@ -639,8 +641,8 @@
             if (isDeckRecent(deck)) metaHintParts.push('обновлена недавно');
             const metaHint = escHtml(metaHintParts.join(' · '));
             const dueBadge = hasDue
-                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary border border-primary-light">${due + newCards} к повтору</span>`
-                : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-text-muted border border-border-subtle">всё пройдено</span>`;
+                ? `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary border border-primary-light">${due + newCards} к повтору</span>`
+                : `<span class="inline-flex self-start shrink-0 items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-text-secondary border border-border-subtle">всё пройдено</span>`;
 
             const urgentBadge = isMostUrgent
                 ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning-lighter text-warning-text border border-warning-light">
@@ -650,18 +652,18 @@
                 : '';
 
             return `
-                <div class="rounded-xl border ${borderClass} bg-surface-1 p-4 transition-all cursor-pointer hover:shadow-md group"
+                <div class="mc-deck-card rounded-xl border ${borderClass} bg-surface-1 p-4 transition-all cursor-pointer hover:shadow-md group"
                      onclick="mcApp.openDeck('${idJs}')">
-                    <div class="flex items-start justify-between gap-2 mb-3">
+                    <div class="mc-deck-header flex flex-wrap items-start justify-between gap-2 mb-3">
                         <div class="min-w-0 flex-1">
-                            <h3 class="text-sm font-bold text-text-main truncate group-hover:text-primary transition-colors">${name}</h3>
-                            ${metaHint ? `<p class="mt-1 text-[11px] text-text-secondary truncate">${metaHint}</p>` : ''}
-                            ${ownershipBadges ? `<div class="mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
+                            <h3 class="mc-deck-title text-sm font-bold text-text-main group-hover:text-primary transition-colors" title="${name}">${name}</h3>
+                            ${metaHint ? `<p class="mc-deck-meta mt-1 text-[11px] text-text-secondary" title="${metaHint}">${metaHint}</p>` : ''}
+                            ${ownershipBadges ? `<div class="mc-deck-badges mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
                         </div>
                         ${dueBadge}
                     </div>
                     ${urgentBadge ? `<div class="mb-3">${urgentBadge}</div>` : ''}
-                    <div class="flex items-center gap-3 text-[11px] text-text-secondary">
+                    <div class="mc-deck-stats flex flex-wrap items-center gap-2 text-[11px] text-text-secondary">
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">pending_actions</span>
                             ${escHtml(due)} due

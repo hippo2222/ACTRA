@@ -82,10 +82,90 @@
             .mc-rating-active { animation: none !important; }
             .mc-rating-active { transform: none; }
         }
+
+        .mc-shell {
+            padding-top: 0.875rem;
+            padding-bottom: 1rem;
+        }
+
+        #mcDeckGrid,
+        .mc-deck-card,
+        .mc-deck-header,
+        .mc-deck-badges,
+        .mc-deck-stats {
+            min-width: 0;
+        }
+
+        .mc-deck-card {
+            height: 100%;
+        }
+
+        .mc-deck-title,
+        .mc-deck-meta,
+        .mc-owner-chip {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .mc-deck-title,
+        .mc-deck-meta {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .mc-deck-title {
+            -webkit-line-clamp: 2;
+        }
+
+        .mc-deck-meta {
+            -webkit-line-clamp: 2;
+            line-height: 1.35;
+        }
+
+        .mc-owner-chip {
+            max-width: 100%;
+            line-height: 1.3;
+            white-space: normal;
+        }
+
+        #mcDeckOwnershipHint,
+        #mcDeckLoading p,
+        #mcViewReview .mt-3.text-center p {
+            color: var(--color-text-secondary);
+            line-height: 1.45;
+        }
+
+        .mc-deck-stats {
+            row-gap: 0.375rem;
+        }
+
+        #mcActionsPostReveal [role="group"] {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        #mcViewSummary .flex.justify-center.gap-3.mb-6 {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        @media (min-width: 640px) {
+            #mcActionsPostReveal [role="group"] {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+        }
+
+        @media (min-width: 1024px) and (max-height: 900px) {
+            .mc-shell {
+                padding-top: 0.75rem;
+                padding-bottom: 0.875rem;
+            }
+        }
     </style>
 </head>
 
-<body class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
+<body class="bg-bg-main text-text-main min-h-screen overflow-x-hidden overflow-y-auto flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
     <!-- Header -->
     <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-4 md:px-6 py-2.5">
         <div class="flex items-center justify-between max-w-[1280px] mx-auto">
@@ -127,8 +207,8 @@
     </header>
 
     <!-- Main Content -->
-    <main id="mcMain" class="flex-1 min-h-0 overflow-y-auto">
-        <div class="max-w-[1280px] mx-auto p-3 md:p-4 lg:p-6 mc-page-enter">
+    <main id="mcMain" class="flex-1 min-h-0">
+        <div class="mc-shell max-w-[1280px] mx-auto p-3 md:p-4 lg:p-5 xl:p-6 mc-page-enter">
 
             <!-- View: Deck List -->
             <div id="mcViewDeckList" class="hidden">
