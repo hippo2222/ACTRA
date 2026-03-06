@@ -285,6 +285,12 @@
                     <span class="material-symbols-outlined text-[16px]">edit_note</span>
                     Редактор
                 </a>
+                <!-- User profile widget (same as Statistics/Calendar) -->
+                <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
+                    onclick="openProfileModal()" title="Профиль">
+                    <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="mcHeaderAvatar">
+                    <span class="text-text-main text-sm font-medium hidden sm:inline" id="mcHeaderUserName">Гость</span>
+                </div>
             </div>
         </div>
     </header>
@@ -670,6 +676,10 @@
     <div id="mcToastContainer" class="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none"></div>
 
     <script src="/ui/microcards/microcards.js"></script>
+    <!-- Shared user profile modal (same as Statistics/Calendar) -->
+    <script src="../assets/SharedProfileModal.js"></script>
+    <script src="../assets/ThemeSwitcherUI.js"></script>
+    <script src="../assets/ConnectionMonitor.js"></script>
 </body>
 
 </html>
