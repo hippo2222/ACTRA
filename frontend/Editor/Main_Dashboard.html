@@ -51,6 +51,344 @@
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
+    <style>
+        .editor-sidebar-action-label {
+            display: block;
+            white-space: normal;
+            line-height: 1.25;
+            text-align: center;
+        }
+
+        .editor-sidebar-tree-button,
+        .editor-sidebar-tree-label,
+        .editor-sidebar-empty-copy,
+        .editor-grid-empty-message,
+        .editor-grid-empty-detail,
+        .editor-task-card-title,
+        .editor-task-card-chip {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .editor-sidebar-tree-button {
+            min-width: 0;
+        }
+
+        .editor-sidebar-tree-label {
+            min-width: 0;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .editor-sidebar-tree-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            flex-shrink: 0;
+        }
+
+        .editor-sidebar-tree-hover-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 160ms ease;
+        }
+
+        .editor-sidebar-tree-button:hover .editor-sidebar-tree-hover-actions,
+        .editor-sidebar-tree-button:focus-visible .editor-sidebar-tree-hover-actions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .editor-sidebar-empty-copy {
+            color: var(--color-text-secondary);
+        }
+
+        .editor-grid-empty-message,
+        .editor-grid-empty-detail {
+            color: var(--color-text-secondary);
+        }
+
+        .editor-task-card-title {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
+            line-height: 1.25;
+        }
+
+        .editor-task-card-chip {
+            max-width: 100%;
+            white-space: normal;
+            line-height: 1.2;
+        }
+
+        #header-breadcrumbs {
+            flex-wrap: wrap;
+            row-gap: 0.25rem;
+        }
+
+        #header-breadcrumbs > * {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .editor-header-actions {
+            flex-wrap: wrap;
+            row-gap: 0.75rem;
+            max-width: min(100%, 48rem);
+        }
+
+        [data-role="sort-toggle"] {
+            white-space: normal;
+            line-height: 1.25;
+        }
+
+        .editor-theory-hub-header,
+        .editor-theory-hub-controls,
+        .editor-theory-hub-summary,
+        .editor-theory-hub-body,
+        .editor-theory-hub-panel {
+            min-width: 0;
+        }
+
+        .editor-theory-hub-title-wrap,
+        .editor-theory-hub-note,
+        .editor-theory-hub-panel-subtitle,
+        .editor-theory-hub-card-title,
+        .editor-theory-hub-card-id,
+        .editor-theory-hub-preview-btn,
+        .editor-theory-hub-secondary {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .editor-theory-hub-subtitle,
+        .editor-theory-hub-note,
+        .editor-theory-hub-panel-subtitle,
+        .editor-theory-hub-card-id,
+        .editor-theory-hub-secondary {
+            color: var(--color-text-secondary);
+        }
+
+        .editor-theory-hub-preview-btn {
+            max-width: 100%;
+            white-space: normal;
+            line-height: 1.2;
+            text-align: left;
+        }
+
+        .editor-theory-hub-badge-row,
+        .editor-theory-hub-action-row {
+            min-width: 0;
+        }
+
+        .editor-flow-wrap {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .editor-flow-secondary {
+            color: var(--color-text-secondary);
+        }
+
+        .editor-flow-button-wrap {
+            white-space: normal;
+            line-height: 1.2;
+            text-align: left;
+        }
+
+        .editor-dialog-shell,
+        .editor-dialog-header,
+        .editor-dialog-body,
+        .editor-dialog-footer,
+        .editor-dialog-title-wrap {
+            min-width: 0;
+        }
+
+        .editor-dialog-shell {
+            width: 100%;
+            max-height: min(90vh, 48rem);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .editor-dialog-shell-wide {
+            max-width: min(100%, 42rem);
+        }
+
+        .editor-dialog-shell-compact {
+            max-width: min(100%, 34rem);
+        }
+
+        .editor-dialog-title-wrap,
+        .editor-dialog-title,
+        .editor-dialog-subtitle,
+        .editor-dialog-inline-action,
+        .editor-dialog-danger-target {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .editor-dialog-subtitle {
+            color: var(--color-text-secondary);
+        }
+
+        .editor-dialog-inline-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0.5rem;
+        }
+
+        .editor-dialog-inline-row > :first-child {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
+        .editor-dialog-inline-action {
+            flex: 0 0 auto;
+            min-width: 2.75rem;
+        }
+
+        .editor-dialog-footer {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .editor-sidebar-confirm-shell {
+            width: min(18rem, calc(100% - 1rem));
+            max-width: calc(100% - 1rem);
+        }
+
+        .editor-sidebar-confirm-target {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            line-height: 1.35;
+        }
+
+        .editor-sidebar-confirm-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .editor-import-modal-shell,
+        .editor-recovery-modal-shell,
+        .editor-import-header,
+        .editor-import-steps-panel,
+        .editor-import-content-shell,
+        .editor-import-footer,
+        .editor-recovery-header,
+        .editor-recovery-content {
+            min-width: 0;
+        }
+
+        .editor-import-modal-shell {
+            max-width: min(100%, 64rem);
+            max-height: min(92vh, 58rem);
+        }
+
+        .editor-recovery-modal-shell {
+            max-width: min(100%, 58rem);
+            max-height: min(88vh, 52rem);
+        }
+
+        .editor-import-steps {
+            gap: 0.75rem;
+        }
+
+        .editor-import-step-item {
+            min-width: 0;
+        }
+
+        .editor-import-step-label {
+            text-align: center;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .editor-import-history-title,
+        .editor-import-history-meta,
+        .editor-import-history-summary,
+        .editor-recovery-title,
+        .editor-recovery-subtitle,
+        .editor-recovery-meta {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .editor-import-history-meta,
+        .editor-import-history-summary,
+        .editor-recovery-subtitle,
+        .editor-recovery-meta {
+            color: var(--color-text-secondary);
+        }
+
+        .editor-recovery-card {
+            min-width: 0;
+        }
+
+        .editor-recovery-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.5rem;
+        }
+
+        .editor-theory-hub-action-row {
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 1023px) {
+            .editor-header-actions {
+                gap: 0.75rem;
+            }
+
+            .editor-theory-hub-header,
+            .editor-theory-hub-controls,
+            .editor-theory-hub-summary,
+            .editor-theory-hub-body {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+
+            .editor-import-header,
+            .editor-import-steps-panel,
+            .editor-import-content-shell,
+            .editor-import-footer,
+            .editor-dialog-header,
+            .editor-dialog-body,
+            .editor-dialog-footer,
+            .editor-recovery-header,
+            .editor-recovery-content {
+                padding-left: 1rem;
+                padding-right: 1rem;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .editor-import-steps {
+                gap: 0.5rem;
+            }
+
+            .editor-dialog-inline-row {
+                flex-wrap: wrap;
+            }
+
+            .editor-dialog-inline-action {
+                width: 100%;
+            }
+        }
+    </style>
 
 </head>
 
@@ -74,7 +412,7 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">add_circle</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">РќРѕРІС‹Р№ РјРѕРґСѓР»СЊ</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">РќРѕРІС‹Р№ РјРѕРґСѓР»СЊ</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
@@ -82,7 +420,7 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">upload_file</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">РРјРїРѕСЂС‚ Р·Р°РґР°РЅРёР№</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">РРјРїРѕСЂС‚ Р·Р°РґР°РЅРёР№</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
@@ -90,7 +428,7 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">analytics</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">Р С’Р Р…Р В°Р В»Р С‘Р В· РЎвЂљР ВµР С•РЎР‚Р С‘Р С‘</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Р С’Р Р…Р В°Р В»Р С‘Р В· РЎвЂљР ВµР С•РЎР‚Р С‘Р С‘</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
@@ -98,7 +436,7 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">hub</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">Theory Hub</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Theory Hub</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
@@ -106,7 +444,7 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">history</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">Р В§Р ВµРЎР‚Р Р…Р С•Р Р†Р С‘Р С”Р С‘</span>
+                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Р В§Р ВµРЎР‚Р Р…Р С•Р Р†Р С‘Р С”Р С‘</span>
                 </button>
             </div>
             <div id="editor-workspace-shortcuts" class="px-4 mb-4"></div>
@@ -132,7 +470,7 @@
     <div id="sidebar-delete-modal"
         class="absolute top-0 left-0 h-full z-40 hidden flex items-center justify-center pointer-events-none"
         style="width: var(--sidebar-width, 250px);">
-        <div class="bg-surface-1 w-[220px] rounded-xl shadow-xl p-4 border border-border-subtle transform transition-all scale-95 opacity-0 pointer-events-auto"
+        <div class="editor-sidebar-confirm-shell bg-surface-1 rounded-xl shadow-xl p-4 border border-border-subtle transform transition-all scale-95 opacity-0 pointer-events-auto"
             id="sidebar-delete-modal-content">
             <div class="flex flex-col gap-3 text-center">
                 <div
@@ -141,10 +479,10 @@
                 </div>
                 <div>
                     <h3 class="text-sm font-bold text-text-main">РЈРґР°Р»РёС‚СЊ?</h3>
-                    <p class="text-xs text-text-secondary mt-1 line-clamp-2" id="sidebar-delete-target-name">Module Name
+                    <p class="editor-sidebar-confirm-target text-xs text-text-secondary mt-1" id="sidebar-delete-target-name">Module Name
                     </p>
                 </div>
-                <div class="flex gap-2 mt-1">
+                <div class="editor-sidebar-confirm-actions mt-1">
                     <button onclick="dashboard.cancelDeleteConfirmation()"
                         class="flex-1 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 hover:bg-bg-hover rounded-lg transition-colors">
                         РћС‚РјРµРЅР°
@@ -164,7 +502,7 @@
                 class="flex items-center gap-2 text-text-main font-bold text-2xl tracking-tight shrink-1 min-w-0 flex-1">
                 <span class="cursor-pointer hover:text-primary transition-colors">Р‘РёР±Р»РёРѕС‚РµРєР°</span>
             </nav>
-            <div class="flex items-center gap-8 justify-end min-w-0 shrink-0">
+            <div class="editor-header-actions flex items-center gap-8 justify-end min-w-0 shrink-0">
                 <div class="relative search-container-expanding shrink-0 rounded-lg">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-text-disabled">search</span>
@@ -234,25 +572,28 @@
     <div id="create-task-modal"
         class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
-            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-            <div class="bg-surface-1 px-6 pt-6 pb-4">
-                <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-bold text-text-main">РЎРѕР·РґР°С‚СЊ РЅРѕРІРѕРµ Р·Р°РґР°РЅРёРµ</h3>
+            class="editor-dialog-shell editor-dialog-shell-wide inline-block align-bottom bg-surface-1 rounded-xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:w-full">
+            <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
+                <div class="flex items-start justify-between gap-4 mb-6">
+                    <div class="editor-dialog-title-wrap">
+                        <h3 class="editor-dialog-title text-xl font-bold text-text-main">РЎРѕР·РґР°С‚СЊ РЅРѕРІРѕРµ Р·Р°РґР°РЅРёРµ</h3>
+                        <p class="editor-dialog-subtitle text-xs mt-1">Выберите модуль, тему и тип. После создания откроется рабочий редактор задания.</p>
+                    </div>
                     <button onclick="dashboard.closeModals()"
-                        class="text-text-disabled hover:text-text-secondary transition-colors">
+                        class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
                 <form id="create-task-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-text-secondary mb-1">РњРѕРґСѓР»СЊ</label>
-                        <div class="flex gap-2">
+                        <div class="editor-dialog-inline-row">
                             <select id="task-module-select"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
                                 <option value="">Р’С‹Р±РµСЂРёС‚Рµ РјРѕРґСѓР»СЊ...</option>
                             </select>
                             <button type="button" onclick="dashboard.showModuleModal()"
-                                class="p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
+                                class="editor-dialog-inline-action p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
                                 title="Add Module">
                                 <span class="material-symbols-outlined text-[20px]">add</span>
                             </button>
@@ -260,13 +601,13 @@
                     </div>
                     <div>
                         <label class="block text-sm font-semibold text-text-secondary mb-1">РўРµРјР°</label>
-                        <div class="flex gap-2">
+                        <div class="editor-dialog-inline-row">
                             <select id="task-topic-select"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
                                 <option value="">Р’С‹Р±РµСЂРёС‚Рµ С‚РµРјСѓ...</option>
                             </select>
                             <button type="button" onclick="dashboard.showTopicModal()"
-                                class="p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
+                                class="editor-dialog-inline-action p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
                                 title="Add Topic">
                                 <span class="material-symbols-outlined text-[20px]">add</span>
                             </button>
@@ -291,7 +632,7 @@
                     </div>
                 </form>
             </div>
-            <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
+            <div class="editor-dialog-footer bg-surface-2 px-6 py-4">
                 <button type="button" onclick="dashboard.closeModals()"
                     class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
                     РћС‚РјРµРЅР°
@@ -308,9 +649,19 @@
     <div id="create-module-modal"
         class="hidden fixed inset-0 z-[60] overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
-            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
-            <div class="bg-surface-1 px-6 pt-6 pb-4">
-                <h3 class="text-xl font-bold text-text-main mb-4">РЎРѕР·РґР°С‚СЊ РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ</h3>
+            class="editor-dialog-shell editor-dialog-shell-compact inline-block align-bottom bg-surface-1 rounded-xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:w-full">
+            <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div class="editor-dialog-title-wrap">
+                        <h3 class="editor-dialog-title text-xl font-bold text-text-main">РЎРѕР·РґР°С‚СЊ РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ</h3>
+                        <p class="editor-dialog-subtitle text-xs mt-1">Новый модуль появится в общей библиотеке и станет доступен для тем и заданий.</p>
+                    </div>
+                    <button type="button" onclick="dashboard.closeModuleModal()"
+                        class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors"
+                        aria-label="Закрыть">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
                 <div>
                     <label class="block text-sm font-semibold text-text-secondary mb-1">РќР°Р·РІР°РЅРёРµ РјРѕРґСѓР»СЏ</label>
                     <input type="text" id="module-name-input"
@@ -318,7 +669,7 @@
                         placeholder="РЅР°РїСЂРёРјРµСЂ, РђРЅР°С‚РѕРјРёСЏ РіСЂСѓРґРЅРѕР№ РєР»РµС‚РєРё" required>
                 </div>
             </div>
-            <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
+            <div class="editor-dialog-footer bg-surface-2 px-6 py-4">
                 <button type="button" onclick="dashboard.closeModuleModal()"
                     class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
                     РћС‚РјРµРЅР°
@@ -335,14 +686,24 @@
     <div id="create-topic-modal"
         class="hidden fixed inset-0 z-[60] overflow-y-auto modal-backdrop items-center justify-center p-4">
         <div
-            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
-            <div class="bg-surface-1 px-6 pt-6 pb-4">
-                <h3 class="text-xl font-bold text-text-main mb-4">РЎРѕР·РґР°С‚СЊ РЅРѕРІСѓСЋ С‚РµРјСѓ</h3>
+            class="editor-dialog-shell editor-dialog-shell-compact inline-block align-bottom bg-surface-1 rounded-xl text-left shadow-xl transform transition-all sm:my-8 sm:align-middle sm:w-full">
+            <div class="editor-dialog-header bg-surface-1 px-6 pt-6 pb-4">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div class="editor-dialog-title-wrap">
+                        <h3 class="editor-dialog-title text-xl font-bold text-text-main">РЎРѕР·РґР°С‚СЊ РЅРѕРІСѓСЋ С‚РµРјСѓ</h3>
+                        <p class="editor-dialog-subtitle text-xs mt-1">Тема будет добавлена в выбранный модуль и сразу станет доступна в редакторе.</p>
+                    </div>
+                    <button type="button" onclick="dashboard.closeTopicModal()"
+                        class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors"
+                        aria-label="Закрыть">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
                 <div class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-text-secondary mb-1">Р¦РµР»РµРІРѕР№ РјРѕРґСѓР»СЊ</label>
                         <select id="topic-module-select" disabled
-                            class="block w-full rounded-lg border-border-subtle bg-bg-hover py-2.5 text-text-disabled sm:text-sm">
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-secondary sm:text-sm opacity-90">
                         </select>
                     </div>
                     <div>
@@ -353,7 +714,7 @@
                     </div>
                 </div>
             </div>
-            <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
+            <div class="editor-dialog-footer bg-surface-2 px-6 py-4">
                 <button type="button" onclick="dashboard.closeTopicModal()"
                     class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
                     РћС‚РјРµРЅР°
@@ -373,7 +734,7 @@
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <div class="min-w-0">
                         <h3 class="text-xl font-bold text-text-main">РўРµРѕСЂРёСЏ С‚РµРјС‹</h3>
-                        <p id="topic-theory-meta" class="text-xs text-text-muted mt-1">Р’С‹Р±РµСЂРёС‚Рµ С‚РµРѕСЂРёСЋ РґР»СЏ С‚РµРјС‹.</p>
+                        <p id="topic-theory-meta" class="editor-flow-wrap text-xs text-text-secondary mt-1">Р’С‹Р±РµСЂРёС‚Рµ С‚РµРѕСЂРёСЋ РґР»СЏ С‚РµРјС‹.</p>
                     </div>
                     <button type="button" data-role="topic-theory-close"
                         class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
@@ -388,7 +749,7 @@
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
                             <option value="">Р‘РµР· С‚РµРѕСЂРёРё</option>
                         </select>
-                        <p class="text-xs text-text-muted mt-1">РЎРІСЏР·СЊ С…СЂР°РЅРёС‚СЃСЏ РЅР° СѓСЂРѕРІРЅРµ С‚РµРјС‹ Рё РЅР°СЃР»РµРґСѓРµС‚СЃСЏ РєРѕРјРїР»РµРєСЃР°РјРё РІ СЂРµР¶РёРјРµ Inherit.</p>
+                        <p class="editor-flow-wrap text-xs text-text-secondary mt-1">РЎРІСЏР·СЊ С…СЂР°РЅРёС‚СЃСЏ РЅР° СѓСЂРѕРІРЅРµ С‚РµРјС‹ Рё РЅР°СЃР»РµРґСѓРµС‚СЃСЏ РєРѕРјРїР»РµРєСЃР°РјРё РІ СЂРµР¶РёРјРµ Inherit.</p>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div>
@@ -420,7 +781,7 @@
                                 class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary bg-surface-1" checked>
                             РўРѕР»СЊРєРѕ preview (dry-run, РєРѕРјРїР»РµРєСЃС‹ РЅРµ РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ)
                         </label>
-                        <p id="topic-theory-propagation-summary" class="text-xs text-text-muted">
+                        <p id="topic-theory-propagation-summary" class="text-xs text-text-secondary">
                             Preview: вЂ”
                         </p>
                     </div>
@@ -458,65 +819,65 @@
     <!-- Import Tasks Modal -->
     <div id="import-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
         <div
-            class="bg-surface-1 rounded-2xl shadow-xl max-w-[900px] w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+            class="editor-import-modal-shell bg-surface-1 rounded-2xl shadow-xl w-full mx-4 overflow-hidden flex flex-col">
             <!-- Header -->
-            <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between shrink-0">
-                <h2 class="text-xl font-bold text-text-main">РРјРїРѕСЂС‚ Р·Р°РґР°РЅРёР№</h2>
+            <div class="editor-import-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4 shrink-0">
+                <h2 class="editor-flow-wrap text-xl font-bold text-text-main" data-role="import-modal-title">РРјРїРѕСЂС‚ Р·Р°РґР°РЅРёР№</h2>
                 <button onclick="dashboard.closeImportModal()"
-                    class="text-text-disabled hover:text-text-secondary transition-colors">
+                    class="shrink-0 text-text-disabled hover:text-text-secondary transition-colors">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
             <!-- Progress Steps -->
-            <div class="px-6 py-4 border-b border-border-subtle shrink-0" data-role="import-steps-panel">
-                <div class="flex items-center justify-between" data-role="import-steps">
+            <div class="editor-import-steps-panel px-6 py-4 border-b border-border-subtle shrink-0" data-role="import-steps-panel">
+                <div class="editor-import-steps flex items-center justify-between" data-role="import-steps">
                     <!-- Step 1 -->
-                    <div class="flex flex-col items-center gap-2 flex-1" data-step="1">
+                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="1">
                         <div
                             class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-semibold text-sm">
                             1
                         </div>
-                        <span class="text-xs font-medium text-text-secondary">РњРѕРґСѓР»СЊ/РўРµРјР°</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-secondary">РњРѕРґСѓР»СЊ/РўРµРјР°</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
                     <!-- Step 2 -->
-                    <div class="flex flex-col items-center gap-2 flex-1" data-step="2">
+                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="2">
                         <div
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             2
                         </div>
-                        <span class="text-xs font-medium text-text-disabled">РўРµРєСЃС‚</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled">РўРµРєСЃС‚</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
                     <!-- Step 3 -->
-                    <div class="flex flex-col items-center gap-2 flex-1" data-step="3">
+                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="3">
                         <div
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             3
                         </div>
-                        <span class="text-xs font-medium text-text-disabled">РџСЂРµРІСЊСЋ</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled">РџСЂРµРІСЊСЋ</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
                     <!-- Step 4 -->
-                    <div class="flex flex-col items-center gap-2 flex-1" data-step="4">
+                    <div class="editor-import-step-item flex flex-col items-center gap-2 flex-1" data-step="4">
                         <div
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             4
                         </div>
-                        <span class="text-xs font-medium text-text-disabled">РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ</span>
+                        <span class="editor-import-step-label text-xs font-medium text-text-disabled">РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ</span>
                     </div>
                 </div>
             </div>
             <!-- Content Area -->
-            <div class="flex-1 overflow-y-auto p-6" data-role="import-content">
+            <div class="editor-import-content-shell flex-1 overflow-y-auto p-6" data-role="import-content">
                 <!-- Content will be rendered by JavaScript -->
                 <div class="text-center text-text-disabled">Р—Р°РіСЂСѓР·РєР°...</div>
             </div>
             <!-- Footer -->
-            <div class="px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0" data-role="import-footer">
+            <div class="editor-import-footer px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0" data-role="import-footer">
                 <button onclick="dashboard.importPrevStep()" data-role="import-prev"
                     class="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled>
@@ -530,28 +891,28 @@
         </div>
     </div>
     <div id="recovery-center-modal" class="hidden fixed inset-0 z-[70] modal-backdrop items-center justify-center p-4">
-        <div class="bg-surface-1 rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
-                <div>
+        <div class="editor-recovery-modal-shell bg-surface-1 rounded-2xl shadow-xl w-full overflow-hidden flex flex-col">
+            <div class="editor-recovery-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
+                <div class="min-w-0">
                     <h3 class="text-lg font-bold text-text-main">Р В¦Р ВµР Р…РЎвЂљРЎР‚ Р Р†Р С•РЎРѓРЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р В»Р ВµР Р…Р С‘РЎРЏ РЎвЂЎР ВµРЎР‚Р Р…Р С•Р Р†Р С‘Р С”Р С•Р Р†</h3>
-                    <p class="text-xs text-text-secondary mt-1">Р вЂєР С•Р С”Р В°Р В»РЎРЉР Р…РЎвЂ№Р Вµ Р В°Р Р†РЎвЂљР С•РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р ВµР Р…Р С‘РЎРЏ Р С‘ Р В±РЎвЂ№РЎРѓРЎвЂљРЎР‚РЎвЂ№Р в„– Р Р†Р С•Р В·Р Р†РЎР‚Р В°РЎвЂљ Р Р† РЎР‚Р В°Р В±Р С•РЎвЂљРЎС“</p>
+                    <p class="editor-flow-wrap text-xs text-text-secondary mt-1">Р вЂєР С•Р С”Р В°Р В»РЎРЉР Р…РЎвЂ№Р Вµ Р В°Р Р†РЎвЂљР С•РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р ВµР Р…Р С‘РЎРЏ Р С‘ Р В±РЎвЂ№РЎРѓРЎвЂљРЎР‚РЎвЂ№Р в„– Р Р†Р С•Р В·Р Р†РЎР‚Р В°РЎвЂљ Р Р† РЎР‚Р В°Р В±Р С•РЎвЂљРЎС“</p>
                 </div>
                 <button data-role="close-recovery-center"
-                    class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors">
+                    class="shrink-0 p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors">
                     <span class="material-symbols-outlined">close</span>
                 </button>
             </div>
-            <div id="recovery-center-content" class="flex-1 overflow-y-auto p-5 space-y-3">
+            <div id="recovery-center-content" class="editor-recovery-content flex-1 overflow-y-auto p-5 space-y-3">
                 <div class="text-sm text-text-secondary">Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В°...</div>
             </div>
         </div>
     </div>
     <div id="theory-hub-modal" class="hidden fixed inset-0 z-[72] modal-backdrop items-center justify-center p-4">
         <div class="bg-surface-1 rounded-2xl shadow-xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
-            <div class="px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
-                <div>
+            <div class="editor-theory-hub-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
+                <div class="editor-theory-hub-title-wrap">
                     <h3 class="text-lg font-bold text-text-main">Theory Hub</h3>
-                    <p class="text-xs text-text-secondary mt-1">Карта theory/topic/complex, conflict center и единый вход в sync-операции.</p>
+                    <p class="editor-theory-hub-subtitle text-xs mt-1">Карта theory/topic/complex, conflict center и единый вход в sync-операции.</p>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <button id="theory-hub-refresh-btn" type="button"
@@ -566,7 +927,7 @@
                     </button>
                 </div>
             </div>
-            <div class="px-6 py-4 border-b border-border-subtle bg-surface-2 flex flex-wrap items-center gap-3">
+            <div class="editor-theory-hub-controls px-6 py-4 border-b border-border-subtle bg-surface-2 flex flex-wrap items-center gap-3">
                 <label class="text-xs font-semibold text-text-secondary" for="theory-hub-focus-theory">Фокус теории</label>
                 <select id="theory-hub-focus-theory"
                     class="min-w-[180px] rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-2.5 text-sm text-text-main focus:ring-2 focus:ring-primary">
@@ -599,26 +960,26 @@
                     <span class="material-symbols-outlined text-[16px]">sync_alt</span>
                     Синхронизировать всё
                 </button>
-                <p id="theory-hub-ownership-note" class="basis-full text-[11px] text-text-muted">Theory Hub фильтрует общую библиотеку комплексов. Прогресс по ним остаётся личным.</p>
+                <p id="theory-hub-ownership-note" class="editor-theory-hub-note basis-full text-[11px]">Theory Hub фильтрует общую библиотеку комплексов. Прогресс по ним остаётся личным.</p>
             </div>
-            <div id="theory-hub-summary" class="px-6 py-3 border-b border-border-subtle bg-surface-1 flex flex-wrap gap-2">
+            <div id="theory-hub-summary" class="editor-theory-hub-summary px-6 py-3 border-b border-border-subtle bg-surface-1 flex flex-wrap gap-2">
                 <span class="inline-flex items-center px-2.5 py-1 rounded-full border border-border-subtle bg-surface-2 text-xs text-text-secondary">Загрузка...</span>
             </div>
-            <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <section class="lg:col-span-2 rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[260px]">
-                    <div class="flex items-center justify-between gap-3 mb-3">
+            <div class="editor-theory-hub-body flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <section class="editor-theory-hub-panel lg:col-span-2 rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[260px]">
+                    <div class="flex items-start justify-between gap-3 mb-3">
                         <h4 class="text-sm font-bold text-text-main">Граф связей theory ↔ topics ↔ complexes</h4>
-                        <p class="text-[11px] text-text-muted">Sync-кнопки учитывают выбранный mode и dry-run.</p>
+                        <p class="editor-theory-hub-panel-subtitle text-[11px]">Sync-кнопки учитывают выбранный mode и dry-run.</p>
                     </div>
                     <div id="theory-hub-map" class="space-y-2">
                         <div class="text-sm text-text-secondary">Загрузка...</div>
                     </div>
                 </section>
                 <div class="flex flex-col gap-4">
-                    <section class="rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
-                        <div class="flex items-center justify-between gap-3 mb-3">
+                    <section class="editor-theory-hub-panel rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
+                        <div class="flex items-start justify-between gap-3 mb-3">
                             <h4 class="text-sm font-bold text-text-main">Conflict Queue</h4>
-                            <p class="text-[11px] text-text-muted">Batch-resolve + переход в Builder.</p>
+                            <p class="editor-theory-hub-panel-subtitle text-[11px]">Batch-resolve + переход в Builder.</p>
                         </div>
                         <div class="mb-3 flex flex-wrap items-center gap-2">
                             <button id="theory-hub-select-all-btn" type="button"
@@ -641,10 +1002,10 @@
                             <div class="text-sm text-text-secondary">Загрузка...</div>
                         </div>
                     </section>
-                    <section class="rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
-                        <div class="flex items-center justify-between gap-3 mb-3">
+                    <section class="editor-theory-hub-panel rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
+                        <div class="flex items-start justify-between gap-3 mb-3">
                             <h4 class="text-sm font-bold text-text-main">Impact Map</h4>
-                            <p class="text-[11px] text-text-muted">Что связано с выбранной теорией.</p>
+                            <p class="editor-theory-hub-panel-subtitle text-[11px]">Что связано с выбранной теорией.</p>
                         </div>
                         <div id="theory-hub-impact" class="space-y-2">
                             <div class="text-sm text-text-secondary">Выберите теорию, чтобы увидеть связи и быстрые действия.</div>

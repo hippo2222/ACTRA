@@ -39,7 +39,7 @@
         banner.classList.remove("hidden");
 
         // Reset classes
-        banner.className = "mb-6 rounded-lg border-2 p-4 flex items-start gap-3 transition-colors duration-200";
+        banner.className = "mb-4 w-full min-w-0 rounded-lg border-2 p-4 flex items-start gap-3 break-words transition-colors duration-200";
 
         if (type === "error") {
             banner.classList.add(
@@ -66,7 +66,7 @@
         banner.replaceChildren();
 
         const row = document.createElement("div");
-        row.className = "flex items-center justify-between gap-4 w-full";
+        row.className = "flex w-full min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between";
 
         const textWrap = document.createElement("div");
         const title = document.createElement("p");
@@ -91,7 +91,7 @@
         banner.appendChild(row);
 
         banner.classList.remove("hidden");
-        banner.className = "mb-6 rounded-lg border-2 p-4 flex items-start gap-3 border-error bg-surface-1 text-text-main dark:border-error-light dark:bg-surface-2 dark:text-text-on-dark";
+        banner.className = "mb-4 w-full min-w-0 rounded-lg border-2 p-4 flex items-start gap-3 break-words border-error bg-surface-1 text-text-main dark:border-error-light dark:bg-surface-2 dark:text-text-on-dark";
 
         if (retryCallback) {
             btn.onclick = (e) => {

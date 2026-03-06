@@ -15,7 +15,7 @@
 </head>
 
 <body
-    class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
+    class="bg-bg-main text-text-main min-h-screen overflow-x-hidden overflow-y-auto flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
     <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-3">
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -47,11 +47,11 @@
             </div>
         </div>
     </header>
-    <main class="flex-1 min-h-0 w-full max-w-[1920px] mx-auto p-4 md:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 stats-page-enter">
-        <section class="lg:col-span-8 flex flex-col gap-6 min-h-0">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 shrink-0">
+    <main class="stats-shell flex-1 min-h-0 w-full max-w-[1920px] mx-auto p-4 md:p-5 xl:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-6 stats-page-enter">
+        <section class="lg:col-span-8 flex flex-col gap-5 xl:gap-6 min-h-0">
+            <div class="stats-metrics-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 shrink-0">
                 <div id="metric-tasks"
-                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
                     <div class="flex justify-between items-start">
                         <div id="metric-tasks-icon"
                             class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
@@ -75,7 +75,7 @@
                     </button>
                 </div>
                 <div id="metric-time"
-                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
                     <div class="flex justify-between items-start">
                         <div id="metric-time-icon"
                             class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
@@ -102,7 +102,7 @@
                     </button>
                 </div>
                 <div id="metric-microcards"
-                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
                     <div class="flex justify-between items-start">
                         <div id="metric-microcards-icon"
                             class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
@@ -126,7 +126,7 @@
                     </button>
                 </div>
                 <div id="metric-streak"
-                    class="metric-card metric-card-enter relative bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all h-[140px]">
+                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
                     <div class="flex justify-between items-start">
                         <div id="metric-streak-icon"
                             class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
@@ -162,7 +162,7 @@
             </div>
 
             <div id="chart-card"
-                class="statistics-panel card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex-1 min-h-0 flex flex-col gap-3 relative overflow-hidden hover:shadow-md transition-shadow">
+                class="statistics-panel stats-chart-card card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex-1 min-h-0 flex flex-col gap-3 relative overflow-hidden hover:shadow-md transition-shadow">
                 <div id="chart-header" class="chart-top flex items-center justify-between gap-3">
                     <div class="flex-1 min-w-0">
                         <h3 class="text-base font-bold text-text-main leading-tight" id="chart-title">
@@ -227,9 +227,9 @@
                 </div>
             </div>
         </section>
-        <section id="right-column" class="lg:col-span-4 flex flex-col gap-6 min-h-0 stats-side-enter">
+        <section id="right-column" class="stats-sidebar lg:col-span-4 flex flex-col gap-5 xl:gap-6 min-h-0 stats-side-enter">
             <div id="performance-card"
-                class="card-with-tooltip bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
+                class="stats-side-card card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-text-secondary text-sm">pie_chart</span>
                     <h3 class="text-base font-bold text-text-main">Производительность</h3>
@@ -249,7 +249,7 @@
                 </button>
             </div>
             <div id="theory-analytics-card"
-                class="card-with-tooltip bg-surface-1 rounded-xl p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
+                class="stats-side-card card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
                 <div class="flex items-center gap-2 mb-4">
                     <span class="material-symbols-outlined text-text-secondary text-sm">account_tree</span>
                     <h3 class="text-base font-bold text-text-main">Theory Flow</h3>
@@ -258,12 +258,12 @@
                     <p class="text-sm text-text-muted">РўРµРѕСЂРµС‚РёС‡РµСЃРєРёРµ СЃРІСЏР·Рё РїРѕСЏРІСЏС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… СЃРІСЏР·Р°РЅРЅС‹С… complex-сессий.</p>
                 </div>
             </div>
-            <div class="shrink-0">
+            <div class="shrink-0 stats-complexes-section">
                 <div class="flex items-center gap-2 mb-3">
                     <span class="material-symbols-outlined text-text-secondary text-sm">history</span>
                     <h3 class="text-base font-bold text-text-main">Последние комплексы</h3>
                 </div>
-                <div id="complexes-grid" class="grid grid-cols-2 gap-4 h-[110px] min-h-[110px]"></div>
+                <div id="complexes-grid" class="stats-complexes-grid grid grid-cols-2 gap-3 md:gap-4"></div>
             </div>
         </section>
     </main>

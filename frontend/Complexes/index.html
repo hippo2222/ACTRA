@@ -51,6 +51,191 @@
       transform: scale(0.97);
     }
 
+    .cx-page-shell {
+      width: 100%;
+      max-width: 1440px;
+    }
+
+    .cx-toolbar-title {
+      min-width: 0;
+    }
+
+    .cx-toolbar-actions {
+      min-width: 0;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .cx-toolbar-actions button {
+      min-width: 0;
+    }
+
+    .cx-toolbar-actions button .truncate {
+      display: block;
+      max-width: 12rem;
+    }
+
+    .cx-selection-bar {
+      max-width: calc(100vw - 2rem);
+      flex-wrap: wrap;
+      justify-content: center;
+      row-gap: 0.5rem;
+    }
+
+    .cx-filter-note {
+      color: var(--color-text-secondary);
+    }
+
+    .cx-card-shell {
+      min-width: 0;
+    }
+
+    .cx-card-body {
+      min-width: 0;
+    }
+
+    .cx-card-heading {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .cx-card-title {
+      min-width: 0;
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+
+    .cx-card-badges {
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .cx-card-badge {
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 0 1 auto;
+    }
+
+    .cx-card-badge-label {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cx-card-badge .material-symbols-outlined {
+      flex: 0 0 auto;
+    }
+
+    .cx-card-description {
+      color: var(--color-text-secondary);
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .cx-card-meta {
+      color: var(--color-text-secondary);
+    }
+
+    .cx-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      border-top: 1px solid var(--color-border-subtle);
+      padding-top: 1rem;
+    }
+
+    .cx-card-actions-primary,
+    .cx-card-actions-secondary {
+      min-width: 0;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .cx-card-actions-secondary {
+      justify-content: flex-end;
+      flex: 1 1 18rem;
+    }
+
+    .cx-card-actions-primary {
+      flex: 1 1 24rem;
+    }
+
+    .cx-card-actions button {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .cx-card-actions button .truncate {
+      display: block;
+      max-width: 12rem;
+    }
+
+    .cx-detail-row {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .cx-detail-title {
+      min-width: 0;
+      flex: 1 1 auto;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cx-detail-type {
+      flex: 0 0 auto;
+      color: var(--color-text-secondary);
+    }
+
+    @media (max-width: 767px) {
+      .cx-card-actions button .truncate {
+        max-width: 9rem;
+      }
+
+      .cx-selection-bar {
+        width: calc(100vw - 1rem);
+      }
+    }
+
+    @media (min-width: 1024px) and (max-height: 980px) {
+      .cx-page-shell {
+        max-width: 1500px;
+      }
+
+      .cx-card-actions {
+        gap: 0.625rem;
+        padding-top: 0.875rem;
+      }
+
+      .cx-card-body {
+        gap: 0.875rem;
+      }
+    }
+
   </style>
 
   <link href="/assets/tailwind.css" rel="stylesheet" />
@@ -63,8 +248,8 @@
 <body class="bg-bg-main font-display text-text-main antialiased selection:bg-primary-light selection:text-primary">
   <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
     <div class="layout-container flex h-full grow flex-col">
-      <div class="px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40 flex flex-1 justify-center py-5">
-        <div class="layout-content-container flex flex-col max-w-5xl flex-1 cx-page-enter">
+      <div class="flex flex-1 justify-center px-4 py-4 sm:px-6 sm:py-5 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
+        <div class="layout-content-container cx-page-shell flex flex-col flex-1 cx-page-enter">
           <div class="flex items-center gap-3 px-4 pb-4">
             <button id="back-button"
               class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-tertiary transition-colors cursor-pointer"
@@ -80,9 +265,9 @@
             </div>
           </div>
           <div class="flex flex-wrap justify-between items-center gap-4 p-4 mb-4">
-            <p class="text-text-main text-4xl font-black leading-tight tracking-[-0.033em] min-w-72">
+            <p class="cx-toolbar-title text-text-main text-4xl font-black leading-tight tracking-[-0.033em] min-w-0">
               Комплексы заданий</p>
-            <div class="flex items-center gap-2">
+            <div class="cx-toolbar-actions flex items-center gap-2">
               <button id="toggle-select-complexes"
                 class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2"
                 title="Выбрать несколько комплексов">
@@ -129,7 +314,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-3">
                   <div class="min-w-0">
                     <p class="text-sm font-bold text-primary-darker">Theory focus</p>
-                    <p id="complex-theory-banner-copy" class="text-xs text-primary-darker/80">РџРѕРєР°Р·Р°РЅС‹ РєРѕРјРїР»РµРєСЃС‹ РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ С‚РµРѕСЂРёРё.</p>
+                    <p id="complex-theory-banner-copy" class="text-xs text-primary-darker">РџРѕРєР°Р·Р°РЅС‹ РєРѕРјРїР»РµРєСЃС‹ РґР»СЏ РІС‹Р±СЂР°РЅРЅРѕР№ С‚РµРѕСЂРёРё.</p>
                   </div>
                   <div class="flex flex-wrap items-center gap-2">
                     <button id="complex-theory-open-hub" type="button"
@@ -148,7 +333,7 @@
             </div>
           </div>
           <div id="complex-selection-action-bar"
-            class="fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 p-2 shadow-2xl">
+            class="cx-selection-bar fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 p-2 shadow-2xl">
             <div id="complex-selection-counter" class="border-r border-border-subtle px-3 font-semibold text-text-secondary">0 выбрано</div>
             <button id="complex-select-all"
               class="flex items-center gap-2 rounded-lg bg-surface-2 px-4 py-2 font-medium text-text-secondary transition-colors hover:bg-bg-hover">
@@ -161,7 +346,7 @@
               Экспорт
             </button>
             <button id="complex-selection-cancel"
-              class="rounded-lg p-2 text-text-disabled transition-colors hover:bg-bg-hover hover:text-text-muted" title="Отмена выбора">
+              class="rounded-lg p-2 text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-main" title="Отмена выбора">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
@@ -398,15 +583,15 @@
             const syncStatus = resolveComplexTheorySyncStatus(complex);
 
             const modeBadge = mode === "inherit"
-              ? `<span class="inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
+              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
                     <span class="material-symbols-outlined text-sm">account_tree</span> Наследование
                  </span>`
-              : `<span class="inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+              : `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
                     <span class="material-symbols-outlined text-sm">tune</span> Локальная теория
                  </span>`;
 
             const conflictBadge = syncStatus === "conflict"
-              ? `<span class="inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
+              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
                     <span class="material-symbols-outlined text-sm">warning</span> Конфликт теорий
                  </span>`
               : "";
@@ -460,15 +645,15 @@
           function buildComplexOwnershipBadges(complex) {
             const ownership = resolveComplexOwnership(complex);
             const ownerBadge = ownership.isOwnedByCurrentUser
-              ? `<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-1 text-xs font-semibold text-success-darker" title="РЎРѕР·РґР°РЅРѕ РёР· С‚РµРєСѓС‰РµРіРѕ РїСЂРѕС„РёР»СЏ">
+              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-1 text-xs font-semibold text-success-darker" title="РЎРѕР·РґР°РЅРѕ РёР· С‚РµРєСѓС‰РµРіРѕ РїСЂРѕС„РёР»СЏ">
                     <span class="material-symbols-outlined text-sm">person</span> РњРѕС‘
                  </span>`
               : ownership.hasOwner
-                ? `<span class="inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary" title="РђРІС‚РѕСЂ РєРѕРјРїР»РµРєСЃР°">
+                ? `<span class="cx-card-badge inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary" title="РђРІС‚РѕСЂ РєРѕРјРїР»РµРєСЃР°">
                       <span class="material-symbols-outlined text-sm">badge</span> ${escapeHtml(ownership.createdByUserId)}
                    </span>`
                 : "";
-            const sourceBadge = `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-main px-2 py-1 text-xs font-semibold text-text-secondary" title="РСЃС‚РѕС‡РЅРёРє РєРѕРЅС‚РµРЅС‚Р°">
+            const sourceBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-main px-2 py-1 text-xs font-semibold text-text-secondary" title="РСЃС‚РѕС‡РЅРёРє РєРѕРЅС‚РµРЅС‚Р°">
                   <span class="material-symbols-outlined text-sm">inventory_2</span> ${escapeHtml(resolveComplexCreatedViaLabel(ownership.createdVia))}
                </span>`;
             return { ownership, ownerBadge, sourceBadge };
@@ -503,7 +688,7 @@
             if (!document.getElementById("complex-library-note")) {
               const note = document.createElement("p");
               note.id = "complex-library-note";
-              note.className = "mt-3 text-[11px] text-text-muted";
+              note.className = "cx-filter-note mt-3 text-[11px]";
               note.textContent = "Комплексы живут в общей локальной библиотеке. «Моё» показывает комплексы текущего профиля, «Общее» — библиотеку вне вашего профиля, «Импорт» — комплексы, пришедшие из архива.";
               filterBar.insertAdjacentElement("afterend", note);
             }
@@ -958,7 +1143,7 @@
             }
 
             flushList();
-            return blocks.length ? blocks.join("") : '<p class="text-text-muted">Теория пуста.</p>';
+            return blocks.length ? blocks.join("") : '<p class="text-text-secondary">Теория пуста.</p>';
           }
           async function openTheoryModal(complexName, theoryId) {
             if (!theoryId) return;
@@ -1838,7 +2023,7 @@
                   ? pausedSession.total_tasks
                   : null;
                 const pausedBadge = isPaused
-                  ? `<span class="inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
+                  ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
                       <span class="material-symbols-outlined text-sm">pause</span> На паузе
                     </span>`
                   : "";
@@ -1862,20 +2047,20 @@
                 const needsReview = reviewStateByComplexId.get(complexId) === true;
                 let statusBadge = "";
                 if (calendarStatus === "frozen") {
-                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
+                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
                       <span class="material-symbols-outlined text-sm">ac_unit</span> Заморожен
                     </span>`;
                 } else if (calendarStatus === "in_progress") {
-                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-success-lighter text-success-darker border border-success-light px-2 py-1 text-xs font-semibold">
+                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-success-lighter text-success-darker border border-success-light px-2 py-1 text-xs font-semibold">
                         <span class="material-symbols-outlined text-sm">play_arrow</span> Активен
                       </span>`;
                 } else if (calendarStatus === "mastered") {
-                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
                         <span class="material-symbols-outlined text-sm">school</span> Освоен
                       </span>`;
                 } else {
                   // New / Not Started
-                  statusBadge = `<span class="inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-muted border border-border-subtle px-2 py-1 text-xs font-semibold">
+                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
                         <span class="material-symbols-outlined text-sm">check_box_outline_blank</span> Не начат
                       </span>`;
                 }
@@ -1909,7 +2094,7 @@
                 const theoryActionLabel = theoryContext.mode === "inherit" ? "Теория (наследование)" : "Теория";
                 const canSyncTheoryFromTopics = theoryContext.mode === "inherit";
                 const theoryBadge = hasTheory
-                  ? `<span class="inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+                  ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
                       <span class="material-symbols-outlined text-sm">menu_book</span> Теория
                     </span>`
                   : "";
@@ -1940,9 +2125,9 @@
                   const parts = ref.split('/');
                   const taskName = parts.length >= 3 ? parts[2] : ref;
                   const typeBadge = t.type ? (taskTypeLabels[t.type] || t.type) : '';
-                  return `<div class="flex items-center justify-between py-1.5 px-2 text-sm ${i % 2 === 0 ? 'bg-surface-2' : ''} rounded">
-                    <span class="text-text-main truncate flex-1">${i + 1}. ${escapeHtml(taskName)}</span>
-                    ${typeBadge ? `<span class="text-xs text-text-muted ml-2">${escapeHtml(typeBadge)}</span>` : ''}
+                  return `<div class="cx-detail-row py-1.5 px-2 text-sm ${i % 2 === 0 ? 'bg-surface-2' : ''} rounded">
+                    <span class="cx-detail-title text-text-main">${i + 1}. ${escapeHtml(taskName)}</span>
+                    ${typeBadge ? `<span class="cx-detail-type text-xs">${escapeHtml(typeBadge)}</span>` : ''}
                   </div>`;
                 }).join('');
                 const safePausedSessionId = isPaused ? escapeHtml(pausedSession.session_id || "") : "";
@@ -1958,7 +2143,7 @@
                 card.setAttribute("data-complex-owned", ownershipContext.ownership.isOwnedByCurrentUser ? "true" : "false");
                 card.setAttribute("data-complex-imported", ownershipContext.ownership.createdVia === "archive_import" ? "true" : "false");
                 card.innerHTML = `
-            <div data-complex-card-shell class="relative flex flex-col items-stretch justify-start rounded-lg shadow-sm bg-surface-1 border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : (isTheoryFocused ? "border-primary-light ring-1 ring-primary-light" : "border-border-subtle")} cx-card-inner">
+            <div data-complex-card-shell class="cx-card-shell relative flex flex-col items-stretch justify-start rounded-lg shadow-sm bg-surface-1 border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : (isTheoryFocused ? "border-primary-light ring-1 ring-primary-light" : "border-border-subtle")} cx-card-inner">
               <div data-complex-select-box class="absolute right-3 top-3 z-10 ${selectionMode ? "" : "hidden"}">
                 <input
                   type="checkbox"
@@ -1968,10 +2153,11 @@
                   aria-label="Выбрать комплекс"
                 >
               </div>
-              <div class="flex w-full min-w-72 grow flex-col items-stretch justify-center gap-4 p-4">
-                <div class="flex flex-col gap-1">
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <p class="text-text-main text-lg font-bold leading-tight tracking-[-0.015em]">${safeComplexName}</p>
+              <div class="cx-card-body flex w-full min-w-0 grow flex-col items-stretch justify-center gap-4 p-4">
+                <div class="flex flex-col gap-2">
+                  <div class="cx-card-heading">
+                    <p class="cx-card-title text-text-main text-lg font-bold leading-tight tracking-[-0.015em]" title="${safeComplexName}">${safeComplexName}</p>
+                    <div class="cx-card-badges">
                     ${pausedBadge}
                     ${statusBadge}
                     ${theoryBadge}
@@ -1979,13 +2165,14 @@
                     ${theoryConflictBadge}
                     ${ownerBadge}
                     ${sourceBadge}
+                    </div>
                   </div>
-                  <p class="text-text-secondary text-base font-normal leading-normal">${safeComplexDescription}</p>
+                  <p class="cx-card-description text-base font-normal leading-normal">${safeComplexDescription}</p>
                   ${pausedInfo}
                   <p class="text-text-secondary text-base font-normal leading-normal">Всего заданий: ${tasksCount} · Адаптивность: ${adaptiveOn ? "Вкл" : "Выкл"}</p>
                 </div>
-                <div class="flex justify-stretch border-t border-border-subtle pt-4">
-                  <div class="flex flex-1 gap-3 flex-wrap items-center">
+                <div class="cx-card-actions">
+                  <div class="cx-card-actions-primary">
                     <button class="start-btn cx-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors" data-complex-id="${safeComplexId}" ${isPaused ? `data-session-id="${safePausedSessionId}"` : ""}>
                       <span class="truncate">${isPaused ? "Продолжить" : "Запустить"}</span>
                     </button>
@@ -1995,7 +2182,8 @@
                     </button>
                     ${theoryButton}
                     ${theorySyncButton}
-                    <div class="flex-grow"></div>
+                  </div>
+                  <div class="cx-card-actions-secondary">
                     <button class="${pinBtnClass}" data-complex-id="${safeComplexId}" title="${isPinned ? "Уже в быстром доступе" : "Закрепить в быстром доступе"}">
                       <span class="material-symbols-outlined text-lg">push_pin</span>
                     </button>
@@ -2018,7 +2206,7 @@
               <div class="detail-panel border-t border-border-subtle" data-detail-for="${safeComplexId}">
                 <div class="p-4 max-h-[300px] overflow-y-auto">
                   <p class="text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">Задания в комплексе (${tasksCount})</p>
-                  ${tasksCount > 0 ? `<div class="flex flex-col gap-0.5">${detailRows}</div>` : '<p class="text-sm text-text-muted">Нет заданий</p>'}
+                  ${tasksCount > 0 ? `<div class="flex flex-col gap-0.5">${detailRows}</div>` : '<p class="text-sm text-text-secondary">Нет заданий</p>'}
                 </div>
               </div>
             </div>

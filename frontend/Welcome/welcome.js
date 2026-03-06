@@ -365,7 +365,7 @@
 
         hint = document.createElement('p');
         hint.id = 'welcomeHeaderHint';
-        hint.className = 'mt-4 mx-auto max-w-xl rounded-2xl border border-border-subtle bg-surface-1/80 px-4 py-3 text-sm font-medium text-text-secondary';
+        hint.className = 'welcome-header-hint mt-4 mx-auto max-w-xl rounded-2xl px-4 py-3 text-sm font-medium';
         subtitle.insertAdjacentElement('afterend', hint);
         return hint;
     }
@@ -528,7 +528,7 @@
             form.classList.remove('hidden');
             form.innerHTML = `
                 <div class="bg-surface-1 rounded-3xl border border-primary p-8 shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-300 relative">
-                    <button onclick="window.welcomeCancelCreate()" class="absolute top-4 right-4 text-text-muted hover:text-error transition-colors">
+                    <button onclick="window.welcomeCancelCreate()" class="absolute top-4 right-4 text-text-secondary hover:text-error transition-colors">
                         <span class="material-symbols-outlined">close</span>
                     </button>
                     
@@ -538,7 +538,7 @@
                                   class="w-20 h-20 rounded-full object-cover avatar-fill ring-4 ring-primary ring-offset-4 ring-offset-surface-1 shadow-md">
                         </div>
                         <input type="text" id="selectNewName" placeholder="Имя профиля..."
-                            class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-2 py-2 text-xl font-bold text-text-main outline-none transition-colors placeholder:text-text-main"
+                            class="welcome-name-input w-full text-center bg-transparent border-b-2 border-border-subtle focus:border-primary px-2 py-2 text-xl font-bold text-text-main outline-none transition-colors placeholder:text-text-secondary"
                             maxlength="50" onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateFromSelect()}">
                     </div>
                     
@@ -622,7 +622,7 @@
                 <img src="${safeAvatarUrl}" class="w-12 h-12 rounded-full bg-surface-2 object-cover avatar-fill ring-2 ring-primary/30 shadow-sm">
                 <div class="flex flex-col">
                     <span class="font-black text-text-main text-lg leading-tight tracking-tight">${safeProfileName}</span>
-                    <span class="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-0.5">Вход по паролю</span>
+                    <span class="text-[10px] text-text-secondary font-bold uppercase tracking-wider mt-0.5">Вход по паролю</span>
                 </div>
             `;
             const pwdSection = document.getElementById('passwordInline');
@@ -739,7 +739,7 @@
 
             // V3 Profile Card Structure
             return `
-            <button class="profile-card-v3 group flex flex-col items-center p-8 rounded-3xl text-center flex-shrink-0 cursor-pointer outline-none focus:ring-4 focus:ring-primary/20 relative overflow-hidden"
+            <button class="welcome-profile-card profile-card-v3 group relative flex flex-col items-center overflow-hidden rounded-3xl p-8 text-center cursor-pointer outline-none focus:ring-4 focus:ring-primary/20"
                  onclick="window.welcomeSelectProfile('${safeUserId}')">
                 
                 <!-- Hover background effect -->
@@ -751,8 +751,8 @@
                 </div>
                 
                 <div class="w-full relative z-10">
-                    <p class="text-xl font-bold text-text-main group-hover:text-primary transition-colors truncate w-full mb-1 tracking-tight">${safeUserName}</p>
-                    <p class="text-[11px] uppercase tracking-widest font-bold text-text-muted opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
+                    <p class="welcome-profile-name mb-1 w-full text-xl font-bold tracking-tight text-text-main transition-colors group-hover:text-primary" title="${safeUserName}">${safeUserName}</p>
+                    <p class="welcome-profile-meta text-[11px] uppercase tracking-widest font-bold transition-all duration-300 transform translate-y-1 group-hover:translate-y-0 group-hover:text-primary">
                         ${hasLock ? 'Требуется пароль' : 'Нажмите для входа'}
                     </p>
                 </div>
@@ -760,13 +760,13 @@
         }).join('');
 
         const addCardHtml = `
-            <button class="profile-card-v3 profile-card-new group flex flex-col items-center justify-center p-8 rounded-3xl text-center flex-shrink-0 cursor-pointer outline-none focus:ring-4 focus:ring-primary/20"
+            <button class="welcome-profile-card profile-card-v3 profile-card-new group flex flex-col items-center justify-center rounded-3xl p-8 text-center cursor-pointer outline-none focus:ring-4 focus:ring-primary/20"
                  onclick="window.welcomeToggleCreate()">
                 <div class="w-24 h-24 rounded-full flex items-center justify-center bg-surface-2 mb-5 group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all duration-300 shadow-inner group-hover:shadow-lg ring-4 ring-transparent group-hover:ring-primary/20">
-                    <span class="material-symbols-outlined text-text-muted text-4xl group-hover:text-white transition-colors">add</span>
+                    <span class="material-symbols-outlined text-text-secondary text-4xl group-hover:text-white transition-colors">add</span>
                 </div>
                 <div class="w-full">
-                     <p class="text-lg font-bold text-text-muted group-hover:text-primary transition-colors tracking-tight">Новый профиль</p>
+                     <p class="text-lg font-bold text-text-secondary group-hover:text-primary transition-colors tracking-tight">Новый профиль</p>
                 </div>
             </button>`;
 

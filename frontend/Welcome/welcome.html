@@ -114,6 +114,8 @@
             background: var(--color-surface-1);
             border: 1px solid var(--color-border-subtle);
             box-shadow: var(--shadow-md);
+            min-width: 0;
+            min-height: 18rem;
         }
 
         .profile-card-v3:hover {
@@ -135,6 +137,84 @@
         .profile-card-new:hover {
             border-color: var(--color-primary);
             background: var(--color-bg-hover);
+        }
+
+        .welcome-shell {
+            min-height: 100vh;
+        }
+
+        .welcome-panel-right {
+            overflow: visible;
+        }
+
+        .welcome-main,
+        .welcome-header,
+        #profilesList,
+        #modeOnboarding,
+        #modeSelect,
+        #modeLogin {
+            min-width: 0;
+        }
+
+        #welcomeHeaderTitle,
+        #welcomeHeaderSubtitle,
+        #welcomeHeaderHint {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #welcomeHeaderSubtitle {
+            color: var(--color-text-secondary);
+        }
+
+        .welcome-header-hint {
+            border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-1);
+            box-shadow: var(--shadow-sm);
+            color: var(--color-text-secondary);
+        }
+
+        .welcome-profiles-grid {
+            align-content: flex-start;
+        }
+
+        .welcome-profile-card {
+            justify-content: flex-start;
+        }
+
+        .welcome-profile-name {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .welcome-profile-meta {
+            color: var(--color-text-secondary);
+            opacity: 1;
+            line-height: 1.4;
+        }
+
+        .welcome-version-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: fit-content;
+            margin-inline: auto;
+            padding: 0.28rem 0.7rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 999px;
+            background: rgba(14, 8, 48, 0.34);
+            backdrop-filter: blur(10px);
+            color: rgba(255, 255, 255, 0.96);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+        }
+
+        .welcome-footer {
+            color: var(--color-text-secondary);
+            opacity: 0.72;
         }
 
         /* ===== ANIMATIONS ===== */
@@ -215,6 +295,11 @@
                 font-size: 2rem !important;
                 margin-bottom: 0.5rem !important;
             }
+
+            .profile-card-v3 {
+                width: min(100%, 320px);
+                min-height: auto;
+            }
         }
 
         .loading-logo {
@@ -242,8 +327,8 @@
         }
 
         @media (max-height: 900px) {
-            .panel-right {
-                overflow: hidden !important;
+            .welcome-panel-right {
+                overflow: visible !important;
             }
 
             .welcome-main {
@@ -268,6 +353,22 @@
             #modeOnboarding {
                 gap: 0.75rem !important;
                 margin-top: 0.35rem !important;
+            }
+
+            #modeSelect {
+                gap: 1.5rem !important;
+            }
+
+            #profilesList {
+                gap: 1rem !important;
+                padding-top: 0.75rem !important;
+                padding-bottom: 0.75rem !important;
+            }
+
+            .profile-card-v3 {
+                width: 208px;
+                min-height: 16.5rem;
+                padding: 1.5rem !important;
             }
 
             #modeOnboardingCard {
@@ -324,10 +425,10 @@
     <link href="/assets/animations.css" rel="stylesheet" />
 </head>
 
-<body class="bg-bg-main min-h-screen font-display antialiased text-text-main overflow-hidden">
+<body class="bg-bg-main min-h-screen overflow-x-hidden overflow-y-auto font-display antialiased text-text-main">
 
     <!-- ===== SPLIT LAYOUT CONTAINER ===== -->
-    <div class="flex flex-col md:flex-row h-screen w-full overflow-hidden">
+    <div class="welcome-shell flex w-full flex-col md:flex-row">
 
         <!-- ===== LEFT HERO (33%) ===== -->
         <section class="welcome-hero flex flex-col items-center justify-center md:w-1/3 text-center p-8 relative z-20">
@@ -436,13 +537,13 @@
 
             <!-- Version Badge (Left) -->
             <div
-                class="absolute bottom-6 left-0 right-0 text-center text-[10px] font-mono text-white/40 hidden md:block uppercase tracking-wider">
+                class="welcome-version-badge absolute bottom-6 left-0 right-0 hidden text-center text-[10px] font-mono uppercase tracking-wider md:block">
                 v1.1.0
             </div>
         </section>
 
         <!-- ===== RIGHT CONTENT (67%) ===== -->
-        <section class="panel-right flex-1 flex flex-col relative overflow-y-auto">
+        <section class="welcome-panel-right panel-right relative flex flex-1 flex-col">
 
             <!-- Main Content Area - Centered -->
             <main
@@ -455,7 +556,7 @@
                         style="color: var(--color-primary-dark);">
                         Добро пожаловать
                     </h2>
-                    <p id="welcomeHeaderSubtitle" class="text-text-muted text-lg md:text-xl font-medium">
+                    <p id="welcomeHeaderSubtitle" class="text-lg md:text-xl font-medium">
                         Выберите профиль, чтобы продолжить обучение
                     </p>
                 </header>
@@ -536,7 +637,7 @@
                     <div id="modeSelect" class="hidden w-full flex flex-col items-center gap-10">
 
                         <!-- Grid Layout for Cards -->
-                        <div id="profilesList" class="flex flex-wrap justify-center gap-8 w-full max-w-6xl py-6 px-4">
+                        <div id="profilesList" class="welcome-profiles-grid flex w-full max-w-6xl flex-wrap justify-center gap-8 px-4 py-6">
                             <!-- JS Populates this with .profile-card-v3 -->
                         </div>
 
@@ -549,7 +650,7 @@
                                 <form onsubmit="event.preventDefault();window.welcomeSubmitPassword()">
                                     <div class="relative mb-4">
                                         <span
-                                            class="absolute left-4 top-3.5 text-text-muted material-symbols-outlined">lock</span>
+                                            class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
                                         <input type="password" id="passwordInlineInput" placeholder="Введите пароль..."
                                             class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-lg placeholder:text-text-secondary">
                                     </div>
@@ -558,7 +659,7 @@
                                     </p>
                                     <div class="grid grid-cols-2 gap-4">
                                         <button type="button" onclick="window.welcomeCancelPassword()"
-                                            class="py-3 rounded-xl font-bold text-text-muted hover:bg-surface-2 transition-colors">Отмена</button>
+                                            class="py-3 rounded-xl font-bold text-text-secondary hover:bg-surface-2 transition-colors">Отмена</button>
                                         <button type="submit"
                                             class="py-3 rounded-xl font-bold bg-primary text-primary-fg hover:bg-primary-hover shadow-lg transition-all transform hover:scale-[1.02]">Войти</button>
                                     </div>
@@ -585,7 +686,7 @@
                                 onsubmit="event.preventDefault();window.welcomeLoginSubmit()">
                                 <div class="relative">
                                     <span
-                                        class="absolute left-4 top-3.5 text-text-muted material-symbols-outlined">lock</span>
+                                        class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
                                     <input type="password" id="loginPassword" placeholder="Пароль" autofocus
                                         class="w-full pl-12 pr-12 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
                                 </div>
@@ -606,7 +707,7 @@
 
             <!-- Sticky Footer right aligned -->
             <footer
-                class="welcome-footer p-3 md:p-4 flex justify-center items-center text-[9px] md:text-[10px] font-bold text-text-muted/40 uppercase tracking-widest mt-auto">
+                class="welcome-footer mt-auto flex items-center justify-center p-3 text-[9px] font-bold uppercase tracking-widest md:p-4 md:text-[10px]">
                 <span>В© 2026 ACTRA Project</span>
             </footer>
 
@@ -625,7 +726,7 @@
                 </div>
                 <button type="button" onclick="window.welcomeCloseLegalDocument()"
                     class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
-                    <span class="material-symbols-outlined text-text-muted">close</span>
+                    <span class="material-symbols-outlined text-text-secondary">close</span>
                 </button>
             </div>
             <div class="p-5 max-h-[60vh] overflow-y-auto">
@@ -699,7 +800,7 @@
             <img id="loadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="loading-logo">
             <img id="loadingLogoStatic" src="/assets/logo.svg" alt="" aria-hidden="true" class="loading-logo">
         </div>
-        <p class="mt-6 text-sm font-bold text-text-muted tracking-widest uppercase animate-pulse">Загрузка...</p>
+        <p class="mt-6 text-sm font-bold text-text-secondary tracking-widest uppercase animate-pulse">Загрузка...</p>
     </div>
 
     <script src="/assets/NotificationUI.js"></script>

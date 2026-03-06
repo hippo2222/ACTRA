@@ -230,6 +230,74 @@
         return '';
     }
 
+    function isRenderedElement(el) {
+        if (!el) return false;
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
+            return false;
+        }
+        const rects = typeof el.getClientRects === 'function' ? el.getClientRects() : null;
+        if (rects && rects.length > 0) return true;
+        const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+        return !!(rect && (rect.width > 0 || rect.height > 0));
+    }
+
+    function getVisibleBorderSegments(style) {
+        if (!style) return [];
+        const sides = [
+            { name: 'top', width: style.borderTopWidth, color: style.borderTopColor, borderStyle: style.borderTopStyle },
+            { name: 'right', width: style.borderRightWidth, color: style.borderRightColor, borderStyle: style.borderRightStyle },
+            { name: 'bottom', width: style.borderBottomWidth, color: style.borderBottomColor, borderStyle: style.borderBottomStyle },
+            { name: 'left', width: style.borderLeftWidth, color: style.borderLeftColor, borderStyle: style.borderLeftStyle },
+        ];
+        return sides
+            .map((side) => ({
+                ...side,
+                widthValue: parseFloat(side.width) || 0,
+            }))
+            .filter((side) => side.widthValue > 0 && side.color !== 'transparent' && side.borderStyle !== 'none' && side.borderStyle !== 'hidden');
+    }
+
+    function getVisibleBorderSummary(style) {
+        const segments = getVisibleBorderSegments(style);
+        const maxWidth = segments.reduce((max, side) => Math.max(max, side.widthValue), 0);
+        return {
+            segments,
+            maxWidth,
+            hasVisibleBorder: segments.length > 0,
+        };
+    }
+
+    function getBestBorderContrast(style, bgColor) {
+        const summary = getVisibleBorderSummary(style);
+        if (!summary.hasVisibleBorder || !bgColor) {
+            return {
+                ...summary,
+                bestRatio: 0,
+                bestSegment: null,
+            };
+        }
+
+        let bestRatio = 0;
+        let bestSegment = null;
+        summary.segments.forEach((segment) => {
+            const parsedColor = parseColor(segment.color);
+            if (!parsedColor) return;
+            const effectiveBorder = getEffectiveForegroundColor(parsedColor, bgColor);
+            const ratio = getContrastRatio(effectiveBorder, bgColor);
+            if (ratio > bestRatio) {
+                bestRatio = ratio;
+                bestSegment = segment;
+            }
+        });
+
+        return {
+            ...summary,
+            bestRatio,
+            bestSegment,
+        };
+    }
+
     function formatElementLabel(el) {
         if (!el) return '';
         const tag = el.tagName ? el.tagName.toLowerCase() : 'el';
@@ -459,7 +527,7 @@
 
     elements.forEach(el => {
         // Skip invisible unless includeHidden mode is enabled
-        if (!includeHidden && el.offsetParent === null) return;
+        if (!includeHidden && !isRenderedElement(el)) return;
 
         const style = window.getComputedStyle(el);
         if (!includeHidden && (style.visibility === 'hidden' || style.display === 'none' || style.opacity === '0')) return;
@@ -529,25 +597,23 @@
             ? String(el.getAttribute('type') || '').toLowerCase()
             : '';
         const isNativeToggle = inputType === 'radio' || inputType === 'checkbox';
+        const borderSummary = getVisibleBorderSummary(style);
         if (
-            parseInt(style.borderWidth) > 0 &&
-            style.borderColor !== 'transparent' &&
+            borderSummary.hasVisibleBorder &&
             !(ignoreNativeToggleBorderWarnings && isNativeToggle)
         ) {
-            const borderColor = parseColor(style.borderColor);
             const bgColor = getEffectiveBackgroundColor(el.parentElement || document.body); // Border contrasts against PARENT bg usually
+            const borderContrast = getBestBorderContrast(style, bgColor);
 
-            if (borderColor && bgColor) {
-                const effectiveBorder = getEffectiveForegroundColor(borderColor, bgColor);
-                const ratio = getContrastRatio(effectiveBorder, bgColor);
-                if (ratio < 3.0) {
+            if (bgColor && borderContrast.bestSegment) {
+                if (borderContrast.bestRatio < 3.0) {
                     warnings.push({
                         type: 'UI Border Contrast',
                         el: el,
-                        text: 'Border',
-                        ratio: ratio.toFixed(2),
+                        text: `Border (${borderContrast.bestSegment.name})`,
+                        ratio: borderContrast.bestRatio.toFixed(2),
                         required: 3.0,
-                        fg: style.borderColor,
+                        fg: borderContrast.bestSegment.color,
                         bg: `rgb(${bgColor.r},${bgColor.g},${bgColor.b})`
                     });
                 }
@@ -614,22 +680,15 @@
                         let hasSufficientBorder = false;
                         let borderDebug = "None"; // For debugging report matching issues
 
-                        const borderWidth = parseFloat(style.borderWidth) || parseFloat(style.borderTopWidth) || 0;
-                        if (borderWidth > 0 && style.borderColor !== 'transparent') {
-                            const borderColor = parseColor(style.borderColor);
-                            if (borderColor) {
-                                const effectiveBorder = getEffectiveForegroundColor(borderColor, parentBg);
-                                const borderRatio = getContrastRatio(effectiveBorder, parentBg);
-                                if (borderRatio >= 3.0) {
-                                    hasSufficientBorder = true;
-                                } else {
-                                    borderDebug = `Fail Ratio ${borderRatio.toFixed(2)}`;
-                                }
+                        const borderContrast = getBestBorderContrast(style, parentBg);
+                        if (borderContrast.hasVisibleBorder && borderContrast.bestSegment) {
+                            if (borderContrast.bestRatio >= 3.0) {
+                                hasSufficientBorder = true;
                             } else {
-                                borderDebug = "Parse Error";
+                                borderDebug = `${borderContrast.bestSegment.name} ${borderContrast.bestSegment.widthValue}px fail ${borderContrast.bestRatio.toFixed(2)}`;
                             }
                         } else {
-                            borderDebug = `Width: ${borderWidth}, Color: ${style.borderColor}`;
+                            borderDebug = "None";
                         }
 
                         // Shadows *can* provide contrast, but often they are too subtle. 
@@ -654,8 +713,8 @@
                 }
             } else if (el.tagName === 'BUTTON' || el.getAttribute('role') === 'button') {
                 // Transparent button with no border can visually disappear into parent.
-                const borderWidth = parseFloat(style.borderWidth) || parseFloat(style.borderTopWidth) || 0;
-                const hasVisibleBorder = borderWidth > 0 && style.borderColor !== 'transparent';
+                const transparentButtonBorder = getVisibleBorderSummary(style);
+                const hasVisibleBorder = transparentButtonBorder.hasVisibleBorder;
                 const bgRaw = parseColor(style.backgroundColor);
                 const hasVisibleBg = !!(bgRaw && bgRaw.a > 0);
                 const controlLabel = ((el.innerText || '') + ' ' + (el.getAttribute('aria-label') || '')).trim();
@@ -667,7 +726,7 @@
                         ratio: 'N/A',
                         required: 'Visible bg or border',
                         fg: `BG: ${style.backgroundColor}`,
-                        bg: `Border: ${style.borderColor}, width: ${borderWidth}`
+                        bg: `Border segments: ${transparentButtonBorder.segments.map((segment) => `${segment.name}:${segment.widthValue}px ${segment.color}`).join(', ') || 'none'}`
                     });
                 }
             }

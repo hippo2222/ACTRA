@@ -159,7 +159,7 @@ class CalendarUI {
             btn.className = `time-btn px-4 py-1.5 rounded text-sm font-medium transition-all ${
                 isActive 
                     ? 'bg-primary text-primary-fg shadow-lg shadow-primary-light font-bold transform scale-105' 
-                    : 'text-text-muted hover:bg-bg-hover hover:text-primary'
+                    : 'border border-border-subtle bg-bg-secondary text-text-main hover:border-primary-light hover:bg-surface-1 hover:text-primary'
             }`;
         });
     }
@@ -204,44 +204,49 @@ class CalendarUI {
         container.innerHTML = this.state.schedule.map(day => {
             const isToday = day.is_today;
             const isMissed = day.status === 'missed';
+            const isFuture = day.is_future;
             
             let borderClass = 'border-border-subtle';
-            let opacityClass = 'opacity-80 hover:opacity-100';
+            let stateClass = '';
+            let bgClass = 'bg-surface-1';
             let extraContent = '';
             
             if (isToday) {
                 borderClass = 'border-primary';
-                opacityClass = '';
+                stateClass = 'schedule-card-today';
                 extraContent = '<div class="absolute top-2 right-2 size-2 rounded-full bg-primary animate-pulse"></div>';
             } else if (isMissed) {
-                opacityClass = 'opacity-60';
+                borderClass = 'border-error-light';
+                bgClass = 'bg-error-lighter';
+            } else if (isFuture) {
+                bgClass = 'bg-surface-1';
             }
             
             const tasksHtml = (day.tasks || []).filter(t => t).map(task => `
-                <div class="flex items-center gap-2">
-                    <div class="size-1.5 rounded-full ${isToday ? 'bg-text-main' : 'bg-text-muted'}"></div>
-                    <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-muted'}">${task}</span>
+                <div class="schedule-task-row flex items-start gap-2">
+                    <div class="schedule-task-icon size-1.5 rounded-full ${isToday ? 'bg-text-main' : 'bg-text-secondary'}"></div>
+                    <span class="schedule-task-name text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'}" title="${task}">${task}</span>
                 </div>
             `).join('');
             
             const badgesHtml = (day.badges || []).map(badge => {
-                let badgeClass = 'bg-bg-hover text-text-muted';
-                if (badge === 'Пропущено') badgeClass = 'bg-heat-missed text-text-muted';
-                if (badge === 'Пересчитано' || badge === 'Смещено') badgeClass = 'bg-primary-lighter border border-primary-light text-primary';
+                let badgeClass = 'bg-bg-secondary border border-border-subtle text-text-secondary';
+                if (badge === 'Пропущено') badgeClass = 'bg-error-lighter border border-error-light text-error-text';
+                if (badge === 'Пересчитано' || badge === 'Смещено') badgeClass = 'bg-primary-lighter border border-primary-light text-primary-dark';
                 return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${badge}</span></div>`;
             }).join('');
             
             return `
-                <div class="min-w-[160px] flex-1 ${isMissed ? 'bg-bg-secondary' : 'bg-surface-1'} border ${borderClass} rounded-xl p-4 flex flex-col gap-3 ${opacityClass} transition-opacity shadow-sm relative">
+                <div class="schedule-card ${stateClass} ${bgClass} border ${borderClass} rounded-xl p-4 flex flex-col gap-3 transition-all shadow-sm relative">
                     ${extraContent}
-                    <div class="flex justify-between items-start">
-                        <span class="${isToday ? 'text-primary font-bold' : 'text-text-muted font-medium'}">${day.day_name}</span>
-                        <span class="text-xs text-text-muted">${day.day_num || ''} ${day.month || ''}</span>
+                    <div class="flex justify-between items-start gap-2">
+                        <span class="${isToday ? 'text-primary font-bold' : 'text-text-main font-semibold'}">${day.day_name}</span>
+                        <span class="text-xs text-text-secondary whitespace-nowrap">${day.day_num || ''} ${day.month || ''}</span>
                     </div>
                     <div class="h-px w-full bg-border-subtle"></div>
-                    <div class="flex flex-col gap-2">
+                    <div class="schedule-task-list flex flex-col gap-2">
                         ${tasksHtml}
-                        ${badgesHtml || '<div class="px-2 py-0.5 rounded bg-bg-hover w-fit"><span class="text-[10px] text-text-muted uppercase">План</span></div>'}
+                        ${badgesHtml || '<div class="px-2 py-0.5 rounded bg-bg-secondary border border-border-subtle w-fit"><span class="text-[10px] text-text-secondary uppercase">План</span></div>'}
                     </div>
                 </div>
             `;
@@ -415,9 +420,9 @@ class CalendarUI {
         // List
         elements.list.innerHTML = health.complexes.map(c => `
             <div class="flex items-center justify-between group cursor-pointer" data-action="review-complex" data-complex="${c.complex_id || c.name}">
-                <div class="flex items-center gap-2">
+                <div class="health-complex-meta flex items-center gap-2">
                     <div class="size-2 rounded-full ${c.is_critical ? 'bg-warning' : (c.health_percent >= 80 ? 'bg-primary' : 'bg-primary-light')}"></div>
-                    <span class="text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors">${c.name}</span>
+                    <span class="health-complex-name text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors" title="${c.name}">${c.name}</span>
                 </div>
                 <span class="text-xs ${c.is_critical ? 'text-warning-dark' : (c.health_percent >= 80 ? 'text-primary' : 'text-text-muted')} font-bold">${c.health_percent}%</span>
             </div>

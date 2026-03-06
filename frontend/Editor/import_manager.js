@@ -277,19 +277,19 @@ class ImportManager {
                 // Current step - primary color with number
                 circle.className = 'w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-semibold text-sm transition-all duration-300';
                 circle.innerHTML = stepNum;
-                label.className = 'text-xs font-medium text-text-secondary transition-colors duration-300';
+                label.className = 'editor-import-step-label text-xs font-medium text-text-secondary transition-colors duration-300';
                 stepEl.classList.remove('completed');
             } else if (stepNum < this.currentStep) {
                 // Completed step - green with checkmark
                 circle.className = 'w-10 h-10 rounded-full bg-success flex items-center justify-center text-primary-contrast font-semibold text-sm cursor-pointer hover:ring-2 hover:ring-success hover:ring-offset-2 transition-all duration-300';
                 circle.innerHTML = '<span class="material-symbols-outlined text-[20px]">check</span>';
-                label.className = 'text-xs font-medium text-success-text transition-colors duration-300';
+                label.className = 'editor-import-step-label text-xs font-medium text-success-text transition-colors duration-300';
                 stepEl.classList.add('completed');
             } else {
                 // Future step - disabled
                 circle.className = 'w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm transition-all duration-300';
                 circle.innerHTML = stepNum;
-                label.className = 'text-xs font-medium text-text-disabled transition-colors duration-300';
+                label.className = 'editor-import-step-label text-xs font-medium text-text-disabled transition-colors duration-300';
                 stepEl.classList.remove('completed');
             }
 
@@ -498,7 +498,7 @@ class ImportManager {
             return `
                 <div class="mt-6 rounded-xl border border-border-subtle bg-surface-1 p-3">
                     <div class="text-xs font-semibold text-text-secondary mb-1">Последние импорты</div>
-                    <div class="text-[11px] text-text-muted">История пока пуста.</div>
+                    <div class="editor-import-history-summary text-[11px]">История пока пуста.</div>
                 </div>
             `;
         }
@@ -518,10 +518,10 @@ class ImportManager {
                 <div class="rounded-lg border border-border-subtle bg-surface-2 px-2.5 py-2">
                     <div class="flex items-center justify-between gap-2">
                         <div class="text-[11px] font-semibold ${tone}">${this.escapeHtml(status === 'ok' ? 'Успешно' : status === 'error' ? 'Ошибка' : 'Частично')}</div>
-                        <div class="text-[10px] text-text-muted">${this.escapeHtml(dateText)}</div>
+                        <div class="editor-import-history-meta text-[10px]" title="${this.escapeHtmlAttr(dateText)}">${this.escapeHtml(dateText)}</div>
                     </div>
-                    <div class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(location || 'Без привязки')}</div>
-                    <div class="text-[10px] text-text-muted mt-0.5">${this.escapeHtml(summary)}</div>
+                    <div class="editor-import-history-title text-[11px] mt-1">${this.escapeHtml(location || 'Без привязки')}</div>
+                    <div class="editor-import-history-summary text-[10px] mt-0.5">${this.escapeHtml(summary)}</div>
                 </div>
             `;
         }).join('');
@@ -551,12 +551,12 @@ class ImportManager {
         const modules = this.dashboard.catalog || [];
 
         return `
-            <div class="max-w-2xl mx-auto animate-slide-up-fade">
+            <div class="max-w-3xl mx-auto animate-slide-up-fade">
                 <h3 class="text-lg font-bold text-text-main mb-6">Выберите режим импорта</h3>
                 
-                <div class="grid grid-cols-3 gap-3 mb-8">
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 mb-8">
                     <button data-role="import-mode-text" onclick="dashboard.importManager.setImportMode('text')" 
-                        class="p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'text' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
+                        class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'text' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'text' ? 'text-primary' : 'text-text-disabled'}">description</span>
                             <span class="font-bold text-text-main">Из текста</span>
@@ -565,7 +565,7 @@ class ImportManager {
                     </button>
                     
                     <button data-role="import-mode-archive" onclick="dashboard.importManager.setImportMode('archive')" 
-                        class="p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'archive' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
+                        class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'archive' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'archive' ? 'text-primary' : 'text-text-disabled'}">folder_zip</span>
                             <span class="font-bold text-text-main">Из архива</span>
@@ -574,7 +574,7 @@ class ImportManager {
                     </button>
 
                     <button data-role="import-mode-ai" onclick="dashboard.importManager.setImportMode('ai')" 
-                        class="p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'ai' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
+                        class="editor-flow-wrap p-4 rounded-xl border-2 transition-all text-left ${this.importMode === 'ai' ? 'border-primary bg-primary-lighter ring-2 ring-primary-light' : 'border-border-subtle hover:border-border-strong'}">
                         <div class="flex items-center gap-3 mb-2">
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'ai' ? 'text-primary' : 'text-text-disabled'}">auto_awesome</span>
                             <span class="font-bold text-text-main">ИИ-генерация</span>
@@ -646,14 +646,14 @@ class ImportManager {
                    </div>
                    <div id="advanced-options" class="hidden space-y-4">
                        <div>
-                            <label class="block text-sm font-medium text-text-muted mb-1">Переопределить модуль (опционально)</label>
+                            <label class="block text-sm font-medium text-text-secondary mb-1">Переопределить модуль (опционально)</label>
                             <select id="import-module-select" 
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs">
                                 ${this.renderModuleOptions(modules, 'Не переопределять (из архива)')}
                             </select>
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-text-muted mb-1">Переопределить тему (опционально)</label>
+                            <label class="block text-sm font-medium text-text-secondary mb-1">Переопределить тему (опционально)</label>
                             <select id="import-topic-select" 
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main sm:text-xs" disabled>
                                 <option value="">Не переопределять</option>
@@ -675,7 +675,7 @@ class ImportManager {
                <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
                    <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
                    <h3 class="text-lg font-bold text-text-main">Проверка архива...</h3>
-                   <p class="text-text-muted text-sm mt-2">Анализ структуры и поиск конфликтов</p>
+                   <p class="text-text-secondary text-sm mt-2">Анализ структуры и поиск конфликтов</p>
                </div>
             `;
         }
@@ -686,9 +686,9 @@ class ImportManager {
         const activeTemplate = templateOptions[this.aiTemplateType] || templateOptions.open_answer;
 
         return `
-            <div class="max-w-2xl mx-auto animate-slide-up-fade">
+            <div class="max-w-3xl mx-auto animate-slide-up-fade">
                 <h3 class="text-lg font-bold text-text-main mb-2">Вставьте текст с заданиями</h3>
-                <p class="text-sm text-text-muted mb-6">Вставьте текст, содержащий задания в формате парсера</p>
+                <p class="text-sm text-text-secondary mb-6">Вставьте текст, содержащий задания в формате парсера</p>
 
                 <div class="mb-4 p-4 bg-surface-2 border border-border-subtle rounded-lg">
                     <div class="flex items-start justify-between gap-3 mb-3">
@@ -810,7 +810,7 @@ class ImportManager {
                 
                 <!-- Summary -->
                 <div class="mb-6 p-4 bg-surface-2 rounded-lg">
-                    <div class="flex gap-6">
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div class="text-center">
                             <div class="text-2xl font-bold text-text-main">${summary.total || 0}</div>
                             <div class="text-xs text-text-secondary">Всего</div>
@@ -852,8 +852,8 @@ class ImportManager {
                 </div>
 
                 <!-- Bulk Actions -->
-                <div class="mb-4 p-3 bg-primary-lighter border border-primary-light rounded-lg flex items-center justify-between">
-                    <div class="flex items-center gap-3">
+                <div class="mb-4 p-3 bg-primary-lighter border border-primary-light rounded-lg flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-wrap items-center gap-3 min-w-0">
                         <label class="flex items-center gap-2 cursor-pointer">
                             <input 
                                 type="checkbox" 
@@ -869,7 +869,7 @@ class ImportManager {
                             </span>
                         ` : ''}
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
                         <button 
                             onclick="dashboard.importManager.bulkExclude()"
                             class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1099,7 +1099,7 @@ class ImportManager {
             <div data-role="archive-import-preview" class="animate-slide-up-fade space-y-5">
                 <div>
                     <h3 class="text-lg font-bold text-text-main">Предпросмотр архива</h3>
-                    <p class="text-sm text-text-muted mt-1">Проверьте состав пакета, конфликты и правила импорта до применения изменений.</p>
+                    <p class="text-sm text-text-secondary mt-1">Проверьте состав пакета, конфликты и правила импорта до применения изменений.</p>
                 </div>
 
                 ${this.parsedResult.critical_error ? `
@@ -1215,8 +1215,8 @@ class ImportManager {
                     </div>
 
                     <div class="space-y-4">
-                        <div class="p-3 bg-primary-lighter border border-primary-light rounded-lg flex items-center justify-between">
-                            <div class="flex items-center gap-3">
+                        <div class="p-3 bg-primary-lighter border border-primary-light rounded-lg flex flex-wrap items-center justify-between gap-3">
+                            <div class="flex flex-wrap items-center gap-3 min-w-0">
                                 <label class="flex items-center gap-2 cursor-pointer">
                                     <input
                                         type="checkbox"
@@ -1232,7 +1232,7 @@ class ImportManager {
                                     </span>
                                 ` : ''}
                             </div>
-                            <div class="flex gap-2">
+                            <div class="flex flex-wrap gap-2">
                                 <button
                                     onclick="dashboard.importManager.bulkExclude()"
                                     class="px-3 py-1.5 text-xs font-medium text-text-secondary bg-surface-1 border border-border-subtle rounded hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -1260,26 +1260,26 @@ class ImportManager {
         const validTasks = (this.parsedResult?.tasks || []).filter((task, index) => task.status !== 'error' && !this.excludedTasks.has(index));
 
         return `
-            <div class="max-w-2xl mx-auto text-center py-8 animate-slide-up-fade">
+            <div class="max-w-3xl mx-auto text-center py-8 animate-slide-up-fade">
                 <div class="w-20 h-20 bg-success-light rounded-full flex items-center justify-center mx-auto mb-6">
                     <span class="material-symbols-outlined text-success-text text-[48px]">check_circle</span>
                 </div>
                 
                 <h3 class="text-xl font-bold text-text-main mb-2">Готово к импорту</h3>
-                <p class="text-text-muted mb-6">Будет импортировано ${validTasks.length} заданий</p>
+                <p class="text-text-secondary mb-6">Будет импортировано ${validTasks.length} заданий</p>
                 
                 <div class="bg-surface-2 rounded-lg p-6 text-left">
                     <div class="space-y-2 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-text-muted">Модуль:</span>
-                            <span class="font-medium text-text-main">${this.escapeHtml(this.selectedModuleName || this.selectedModule)}</span>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Модуль:</span>
+                            <span class="editor-flow-wrap font-medium text-text-main text-right">${this.escapeHtml(this.selectedModuleName || this.selectedModule)}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-text-muted">Тема:</span>
-                            <span class="font-medium text-text-main">${this.escapeHtml(this.selectedTopicName || this.selectedTopic)}</span>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Тема:</span>
+                            <span class="editor-flow-wrap font-medium text-text-main text-right">${this.escapeHtml(this.selectedTopicName || this.selectedTopic)}</span>
                         </div>
-                        <div class="flex justify-between">
-                            <span class="text-text-muted">Заданий:</span>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Заданий:</span>
                             <span class="font-medium text-text-main">${validTasks.length}</span>
                         </div>
                     </div>
@@ -3185,7 +3185,7 @@ text: Сердце человека состоит из [трёх] камер. �
             ];
             return modes.filter(m => m.key !== activeMode).map(m =>
                 `<button onclick="dashboard.importManager.${m.fn}"
-                    class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                    class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
                     ${m.label}
                 </button>`
             ).join('');
@@ -3196,38 +3196,38 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
                     <div>
                         <h3 class="text-lg font-bold text-text-main">${titles[currentMode]}</h3>
-                        <p class="text-sm text-text-muted">${subtitles[currentMode]}</p>
+                        <p class="editor-flow-wrap text-sm text-text-secondary">${subtitles[currentMode]}</p>
                     </div>
                     <div class="flex flex-wrap gap-2">
                         ${isMcSubMode ? `
                             <button onclick="dashboard.importManager.enterTheorySubMode('analysis')"
-                                class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
                                 К анализу
                             </button>
                             ${mcNavButtons(currentMode)}
                             <button onclick="dashboard.importManager.loadMicrocardsDecks()"
-                                class="px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
+                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
                                 Обновить колоды
                             </button>
                         ` : `
                             <button onclick="dashboard.importManager.openTheoryMicrocardsMode()"
-                                class="px-3 py-2 text-sm font-medium text-primary-fg bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm">
+                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-primary-fg bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm">
                                 Микрокарточки
                             </button>
                             <button onclick="dashboard.importManager.openManualMicrocardsEditor()"
-                                class="px-3 py-2 text-sm font-medium text-info-text border border-info-light rounded-lg hover:bg-info-lighter transition-colors">
+                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-info-text border border-info-light rounded-lg hover:bg-info-lighter transition-colors">
                                 Редактор карточек
                             </button>
                             <button onclick="dashboard.importManager.openMicrocardsTextImport()"
-                                class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
                                 Импорт из текста
                             </button>
                             <button onclick="dashboard.importManager.theoryResetDraft()"
-                                class="px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
                                 Новый анализ
                             </button>
                             <button onclick="dashboard.importManager.loadTheoryAnalysisRuns()"
-                                class="px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
+                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
                                 Обновить список
                             </button>
                         `}
@@ -6754,7 +6754,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         class="px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
                         ${this.aiAnalyzing ? 'Анализ...' : 'Запустить анализ'}
                     </button>
-                    <span class="text-xs text-text-secondary">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : 'Результат будет сохранён в истории анализов.'}</span>
+                    <span class="editor-flow-wrap text-xs text-text-secondary">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : 'Результат будет сохранён в истории анализов.'}</span>
                 </div>
             </div>
         `;
@@ -6763,13 +6763,13 @@ text: Сердце человека состоит из [трёх] камер. �
     renderTheoryAnalysisRunsPanel() {
         const rows = Array.isArray(this.theoryRuns) ? this.theoryRuns : [];
         return `
-            <div class="border border-border-strong rounded-xl bg-surface-1 p-4 sticky top-0">
-                <div class="flex items-center justify-between gap-2 mb-3">
-                    <div>
+            <div class="border border-border-strong rounded-xl bg-surface-1 p-4 xl:sticky xl:top-0">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="min-w-0">
                         <div class="text-sm font-bold text-text-main">Сохранённые анализы</div>
-                        <div class="text-xs text-text-secondary">Повторное открытие по <code class="font-mono">ai_run_id</code></div>
+                        <div class="editor-flow-wrap text-xs text-text-secondary">Повторное открытие по <code class="font-mono">ai_run_id</code></div>
                     </div>
-                    <span class="px-2 py-0.5 rounded-full text-xs bg-surface-2 text-text-secondary">${rows.length}</span>
+                    <span class="shrink-0 px-2 py-0.5 rounded-full text-xs bg-surface-2 text-text-secondary">${rows.length}</span>
                 </div>
 
                 ${this.theoryRunsLoading ? `
@@ -6808,16 +6808,16 @@ text: Сердце человека состоит из [трёх] камер. �
             ].filter(Boolean).join(' · ');
             return `
                                 <div class="rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} p-3">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div class="min-w-0">
-                                            <div class="text-[11px] font-mono text-text-secondary truncate" title="${this.escapeHtmlAttr(row.ai_run_id)}">${this.escapeHtml(row.ai_run_id)}</div>
-                                            <div class="text-xs font-semibold text-text-main mt-1 truncate">${this.escapeHtml(row.source_file_name || row.human_summary || 'Анализ без имени')}</div>
-                                            ${updatedAt ? `<div class="text-[10px] text-text-secondary mt-1">${this.escapeHtml(updatedAt)}</div>` : ''}
-                                            ${stats ? `<div class="text-[10px] text-text-secondary mt-1">${this.escapeHtml(stats)}</div>` : ''}
-                                            ${counts ? `<div class="text-[10px] text-text-secondary mt-0.5">${this.escapeHtml(counts)}</div>` : ''}
+                                    <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="editor-flow-wrap text-[11px] font-mono text-text-secondary" title="${this.escapeHtmlAttr(row.ai_run_id)}">${this.escapeHtml(row.ai_run_id)}</div>
+                                            <div class="editor-flow-wrap text-xs font-semibold text-text-main mt-1">${this.escapeHtml(row.source_file_name || row.human_summary || 'Анализ без имени')}</div>
+                                            ${updatedAt ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-1">${this.escapeHtml(updatedAt)}</div>` : ''}
+                                            ${stats ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-1">${this.escapeHtml(stats)}</div>` : ''}
+                                            ${counts ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-0.5">${this.escapeHtml(counts)}</div>` : ''}
                                         </div>
                                         <button onclick="dashboard.importManager.openTheoryAnalysisRun('${this.escapeInlineJsString(row.ai_run_id)}')" ${isOpening ? 'disabled' : ''}
-                                            class="px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'} disabled:opacity-60 disabled:cursor-not-allowed">
+                                            class="editor-flow-button-wrap shrink-0 px-2.5 py-1.5 text-xs font-medium rounded-md border ${isActive ? 'border-primary text-primary bg-primary-lighter' : 'border-border-strong text-text-secondary hover:bg-bg-hover'} disabled:opacity-60 disabled:cursor-not-allowed">
                                             ${isOpening ? 'Открытие...' : (isActive ? 'Открыт' : 'Открыть')}
                                         </button>
                                     </div>

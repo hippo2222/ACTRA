@@ -815,7 +815,7 @@ const StatisticsApp = {
 
         const insights = Array.isArray(this.state.theoryInsights) ? this.state.theoryInsights.slice(0, 3) : [];
         if (!insights.length) {
-            container.innerHTML = '<p class="text-sm text-text-muted">РўРµРѕСЂРµС‚РёС‡РµСЃРєРёРµ СЃРІСЏР·Рё РїРѕСЏРІСЏС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… СЃРІСЏР·Р°РЅРЅС‹С… complex-сессий.</p>';
+            container.innerHTML = '<p class="stats-empty-copy text-sm">РўРµРѕСЂРµС‚РёС‡РµСЃРєРёРµ СЃРІСЏР·Рё РїРѕСЏРІСЏС‚СЃСЏ РїРѕСЃР»Рµ РїРµСЂРІС‹С… СЃРІСЏР·Р°РЅРЅС‹С… complex-сессий.</p>';
             return;
         }
 
@@ -825,16 +825,18 @@ const StatisticsApp = {
                 ? 'bg-success'
                 : (successRate >= 50 ? 'bg-warning' : 'bg-error');
             const latestLabel = item.latestEndTime ? this.escapeHtml(this.formatSessionDate(item.latestEndTime)) : 'вЂ”';
+            const safeTitle = this.escapeHtml(item.title || item.theoryId);
+            const safeTheoryId = this.escapeHtml(item.theoryId);
             return `
-                <div class="rounded-xl border border-border-subtle bg-bg-secondary p-3">
+                <div class="stats-theory-card rounded-xl border border-border-subtle bg-bg-secondary p-3">
                     <div class="flex items-start justify-between gap-2">
                         <div class="min-w-0">
-                            <p class="text-sm font-bold text-text-main truncate">${this.escapeHtml(item.title || item.theoryId)}</p>
-                            <p class="text-[10px] text-text-muted">${this.escapeHtml(item.theoryId)}</p>
+                            <p class="stats-theory-title text-sm font-bold text-text-main" title="${safeTitle}">${safeTitle}</p>
+                            <p class="stats-theory-id text-[10px]" title="${safeTheoryId}">${safeTheoryId}</p>
                         </div>
                         <span class="rounded-full border border-border-subtle px-2 py-1 text-[10px] font-semibold text-text-secondary">${item.complexCount} complexes</span>
                     </div>
-                    <div class="mt-2 flex items-center justify-between text-[11px] text-text-secondary">
+                    <div class="stats-theory-meta mt-2 flex items-center justify-between gap-3 text-[11px]">
                         <span>${item.attempts} attempts</span>
                         <span>${latestLabel}</span>
                     </div>
@@ -842,16 +844,16 @@ const StatisticsApp = {
                         <div class="h-full ${toneClass} rounded-full transition-all duration-500" style="width:${successRate}%"></div>
                     </div>
                     <div class="mt-1 flex items-center justify-between text-[11px]">
-                        <span class="text-text-muted">Theory-driven success</span>
+                        <span class="text-text-secondary">Theory-driven success</span>
                         <span class="font-semibold text-text-main">${successRate}%</span>
                     </div>
                     <div class="mt-3 flex flex-wrap gap-2">
                         <button type="button" data-action="open-theory-complexes" data-theory-id="${this.escapeHtml(item.theoryId)}"
-                            class="rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-primary hover:text-primary">
+                            class="rounded-lg border border-border-strong bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-main transition-colors hover:border-primary hover:bg-bg-hover hover:text-primary">
                             Complexes
                         </button>
                         <button type="button" data-action="open-theory-hub" data-theory-id="${this.escapeHtml(item.theoryId)}"
-                            class="rounded-lg border border-primary-light bg-primary-lighter px-3 py-1.5 text-xs font-semibold text-primary-darker transition-colors hover:bg-primary-light">
+                            class="rounded-lg border border-primary bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:border-primary-dark hover:bg-primary-dark">
                             Theory Hub
                         </button>
                     </div>
@@ -971,10 +973,22 @@ const StatisticsApp = {
                 const pct = Math.round(rate * 100);
                 mcBadge.textContent = `${mcStats.decks_active || 0} колод`;
                 mcBadge.classList.remove('hidden');
-                mcBadge.className = mcBadge.className.replace(/bg-\S+/g, '').replace(/text-\S+/g, '').trim();
-                mcBadge.classList.add('text-xs', 'px-2', 'py-1', 'rounded-full', 'font-bold',
-                    pct >= 80 ? 'bg-success-light' : pct >= 50 ? 'bg-warning-light' : 'bg-error-light',
-                    pct >= 80 ? 'text-success-dark' : pct >= 50 ? 'text-warning-dark' : 'text-error-dark'
+                mcBadge.className = mcBadge.className
+                    .replace(/\bborder-\S+/g, '')
+                    .replace(/\bborder\b/g, '')
+                    .replace(/bg-\S+/g, '')
+                    .replace(/text-\S+/g, '')
+                    .trim();
+                mcBadge.classList.add(
+                    'text-xs',
+                    'px-2',
+                    'py-1',
+                    'rounded-full',
+                    'font-bold',
+                    'border',
+                    'bg-surface-1',
+                    'text-text-main',
+                    pct >= 80 ? 'border-success-light' : pct >= 50 ? 'border-warning-light' : 'border-error-light'
                 );
             } else {
                 mcBadge.classList.add('hidden');
@@ -1579,7 +1593,7 @@ const StatisticsApp = {
         this.renderMicrocardsPerformance();
 
         if (!hasAnyAttempts) {
-            container.innerHTML = '<p class="text-sm text-text-muted text-center py-3">Пока нет данных по типам задач. Пройдите несколько заданий, чтобы увидеть статистику.</p>';
+            container.innerHTML = '<p class="stats-empty-copy text-sm text-center py-3">Пока нет данных по типам задач. Пройдите несколько заданий, чтобы увидеть статистику.</p>';
             return;
         }
 
@@ -1591,10 +1605,10 @@ const StatisticsApp = {
             const safeName = this.escapeHtml(config.name);
 
             return `
-                <div>
-                    <div class="flex justify-between text-sm mb-1">
-                        <span class="${hasTypeData ? 'text-text-main' : 'text-text-muted'} font-medium">${safeName}</span>
-                        <span class="${hasTypeData ? 'text-text-main' : 'text-text-muted'} font-bold">${hasTypeData ? rate + '%' : '—'}</span>
+                <div class="stats-performance-row">
+                    <div class="stats-row-top text-sm">
+                        <span class="stats-row-label ${hasTypeData ? 'text-text-main' : 'stats-row-label--muted'}">${safeName}</span>
+                        <span class="stats-row-value ${hasTypeData ? 'text-text-main' : 'stats-row-value--muted'}">${hasTypeData ? rate + '%' : '&mdash;'}</span>
                     </div>
                     <div class="h-2 w-full bg-bg-secondary rounded-full overflow-hidden">
                         <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: ${rate}%"></div>
@@ -1659,9 +1673,9 @@ const StatisticsApp = {
 
         if (complexIds.length === 0) {
             container.innerHTML = `
-                <div class="col-span-2 bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col items-center justify-center text-center hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="Карточки комплексов появятся после первых сессий">
-                    <span class="material-symbols-outlined text-text-muted text-2xl mb-2">folder_open</span>
-                    <p class="text-xs text-text-muted">Нет данных о комплексах</p>
+                <div class="col-span-2 stats-complex-card bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col items-center justify-center text-center hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="Карточки комплексов появятся после первых сессий">
+                    <span class="material-symbols-outlined text-text-secondary text-2xl mb-2">folder_open</span>
+                    <p class="stats-empty-copy text-xs">Нет данных о комплексах</p>
                 </div>
             `;
             return;
@@ -1691,9 +1705,9 @@ const StatisticsApp = {
 
         if (recentComplexes.length === 0) {
             container.innerHTML = `
-                <div class="col-span-2 bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col items-center justify-center text-center hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="Карточки комплексов появятся после первых сессий">
-                    <span class="material-symbols-outlined text-text-muted text-2xl mb-2">folder_open</span>
-                    <p class="text-xs text-text-muted">Нет данных о комплексах</p>
+                <div class="col-span-2 stats-complex-card bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col items-center justify-center text-center hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="Карточки комплексов появятся после первых сессий">
+                    <span class="material-symbols-outlined text-text-secondary text-2xl mb-2">folder_open</span>
+                    <p class="stats-empty-copy text-xs">Нет данных о комплексах</p>
                 </div>
             `;
             return;
@@ -1707,10 +1721,10 @@ const StatisticsApp = {
             const safeDateLabel = this.escapeHtml(dateLabel);
 
             return `
-                <div class="bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="${tooltip}">
-                    <div>
-                        <h4 class="font-bold text-sm text-text-main truncate leading-tight" title="${safeName}">${safeName}</h4>
-                        <p class="text-[10px] text-text-muted mt-0.5">${safeDateLabel}</p>
+                <div class="stats-complex-card bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="${tooltip}">
+                    <div class="min-w-0">
+                        <h4 class="stats-complex-title font-bold text-sm text-text-main leading-tight" title="${safeName}">${safeName}</h4>
+                        <p class="stats-complex-date text-[10px] mt-1">${safeDateLabel}</p>
                     </div>
                     <div>
                         <div class="flex justify-between text-[10px] font-bold mb-1 text-text-main">
@@ -1810,7 +1824,7 @@ const StatisticsApp = {
                         <div class="bg-success h-full" style="width:${pct('good')}%" title="Хорошо: ${ratings.good || 0}"></div>
                         <div class="bg-info h-full" style="width:${pct('easy')}%" title="Легко: ${ratings.easy || 0}"></div>
                     </div>
-                    <div class="flex justify-between text-[9px] text-text-muted mt-0.5">
+                    <div class="flex justify-between text-[9px] text-text-secondary mt-0.5">
                         <span>Снова</span>
                         <span>Трудно</span>
                         <span>Хорошо</span>
@@ -1833,16 +1847,14 @@ const StatisticsApp = {
         const rightColumnHasData = hasOverallStats || hasComplexData;
         const dynamicsHasData = (this.state.dynamics?.length || 0) > 0;
 
-        if (!rightColumnHasData) {
-            if (rightColumn) rightColumn.classList.add('opacity-60', 'grayscale-[0.8]', 'select-none', 'pointer-events-none');
-        } else {
-            if (rightColumn) rightColumn.classList.remove('opacity-60', 'grayscale-[0.8]', 'select-none', 'pointer-events-none');
+        if (rightColumn) {
+            rightColumn.classList.remove('opacity-60', 'grayscale-[0.8]', 'select-none', 'pointer-events-none');
+            rightColumn.classList.toggle('stats-column-empty', !rightColumnHasData);
         }
 
-        if (!dynamicsHasData) {
-            if (chartHeader) chartHeader.classList.add('opacity-40', 'pointer-events-none', 'select-none');
-        } else {
-            if (chartHeader) chartHeader.classList.remove('opacity-40', 'pointer-events-none', 'select-none');
+        if (chartHeader) {
+            chartHeader.classList.remove('opacity-40', 'pointer-events-none', 'select-none');
+            chartHeader.classList.toggle('stats-chart-header--idle', !dynamicsHasData);
         }
     }
 };

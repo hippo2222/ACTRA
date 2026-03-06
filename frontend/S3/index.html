@@ -68,6 +68,139 @@
       box-shadow: var(--shadow-md);
     }
 
+    .s3-shell-row {
+      width: 100%;
+      align-items: stretch;
+    }
+
+    .s3-toolbar {
+      gap: 1rem;
+    }
+
+    .s3-toolbar-main {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .s3-toolbar-title {
+      min-width: 0;
+    }
+
+    .s3-toolbar-meta {
+      min-width: 0;
+      max-width: 18rem;
+      text-align: right;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    .s3-action-btn {
+      width: 100%;
+      min-width: 0;
+      min-height: 2.5rem;
+    }
+
+    .s3-action-label {
+      display: block;
+      white-space: normal;
+      line-height: 1.25;
+      text-align: center;
+    }
+
+    .s3-problem-task {
+      min-width: 0;
+      align-items: flex-start;
+    }
+
+    .s3-problem-task-main {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .s3-problem-task-name {
+      display: -webkit-box;
+      overflow: hidden;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 2;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .s3-problem-task-count {
+      flex-shrink: 0;
+      text-align: right;
+    }
+
+    #complex-name,
+    #results-title,
+    #motivational-text,
+    #problem-empty-copy,
+    #iterations-empty-hint {
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    #iterations-grid,
+    #problem-tasks-list {
+      min-width: 0;
+    }
+
+    #results-badge {
+      border: 1px solid var(--color-border-strong);
+      background: var(--color-surface-1);
+      padding: 0.25rem 0.625rem;
+      border-radius: 9999px;
+      color: var(--color-text-main);
+      font-weight: 700;
+    }
+
+    #session-status,
+    .s3-muted-stat-label,
+    .s3-section-caption {
+      font-weight: 600;
+    }
+
+    #iterations-placeholder,
+    #problem-empty-hint {
+      border: 1px solid var(--color-border-strong);
+      background: var(--color-surface-1);
+    }
+
+    @media (min-width: 640px) {
+      .s3-action-btn {
+        width: auto;
+        min-width: 160px;
+      }
+
+      .s3-action-btn--wide {
+        min-width: 180px;
+      }
+    }
+
+    @media (max-width: 767px) {
+      .s3-toolbar {
+        flex-wrap: wrap;
+        padding: 1rem 1.25rem;
+      }
+
+      .s3-toolbar-meta {
+        max-width: none;
+        text-align: left;
+      }
+    }
+
+    @media (min-width: 1024px) and (max-height: 920px) {
+      .s3-compact-shell {
+        gap: 0.875rem;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+      }
+
+      .s3-toolbar {
+        margin-bottom: 0.75rem;
+      }
+    }
+
     /* light-b: raise muted text + border contrast to pass AA */
     html[data-theme="light-b"] #session-status,
     html[data-theme="light-b"] #session-id-label,
@@ -94,24 +227,24 @@
 
 </head>
 
-<body class="font-display bg-bg-main text-text-main antialiased selection:bg-primary-light">
+<body class="min-h-screen overflow-x-hidden overflow-y-auto bg-bg-main font-display text-text-main antialiased selection:bg-primary-light">
 
-  <div class="relative flex h-screen w-full flex-col overflow-hidden group/design-root">
+  <div class="group/design-root relative flex min-h-screen w-full flex-col overflow-x-hidden">
 
-    <div class="layout-container flex h-full grow flex-col">
+    <div class="layout-container flex min-h-screen grow flex-col">
 
-      <div class="flex flex-1 justify-center py-3 sm:px-4 md:px-8 lg:px-10 xl:py-4">
+      <div class="s3-shell-row flex flex-1 justify-center py-3 sm:px-4 md:px-8 lg:px-10 xl:py-4">
 
-        <div class="layout-content-container flex w-full max-w-[1600px] flex-1 flex-col px-0">
+        <div class="layout-content-container flex w-full max-w-[1680px] flex-1 flex-col px-0">
 
           <header
-            class="mb-3 xl:mb-4 flex items-center justify-between whitespace-nowrap rounded-xl bg-surface-2 border-2 border-border-strong px-6 py-2 sm:px-8 lg:px-10 shadow-sm">
+            class="s3-toolbar mb-3 flex items-center justify-between rounded-xl border-2 border-border-strong bg-surface-2 px-6 py-3 shadow-sm xl:mb-4 sm:px-8 lg:px-10">
 
-            <div class="flex items-center gap-3 text-text-main">
+            <div class="s3-toolbar-main flex items-center gap-3 text-text-main">
 
               <span class="brand-logo size-6" style="color:var(--color-primary)" aria-hidden="true"></span>
 
-              <div>
+              <div class="s3-toolbar-title">
 
                 <h1 class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-main xl:text-2xl">
 
@@ -129,21 +262,21 @@
 
             </div>
 
-            <span id="session-id-label" class="text-xs font-medium text-text-secondary">Сессия
+            <span id="session-id-label" class="s3-toolbar-meta text-xs font-semibold text-text-secondary">Сессия
 
               —</span>
 
           </header>
 
-          <main class="flex flex-col">
+          <main class="flex flex-1 flex-col">
 
             <div class="px-0 py-0">
 
-              <div class="flex flex-col gap-3 px-4 py-3 md:px-6 lg:px-8 xl:px-10 xl:py-4 s3-page-enter">
+              <div class="s3-compact-shell s3-page-enter flex flex-col gap-3 px-4 py-3 md:px-6 lg:px-8 xl:px-10 xl:py-4">
 
                 <div class="rounded-xl bg-surface-2 p-6 shadow-md transition-shadow duration-200 hover:shadow-lg">
 
-                  <div class="mb-3 flex items-center justify-between">
+                  <div class="mb-3 flex items-start justify-between gap-3">
 
                     <h2 id="results-title" class="text-xl font-bold text-text-main xl:text-2xl">
 
@@ -155,7 +288,7 @@
 
                   </div>
 
-                  <div class="grid grid-cols-2 gap-3 text-left sm:grid-cols-4">
+                  <div class="grid grid-cols-1 gap-3 text-left sm:grid-cols-2 xl:grid-cols-4">
 
                     <div class="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 s3-stat">
 
@@ -244,12 +377,12 @@
                   <p id="motivational-text" class="text-base font-semibold text-text-main"></p>
                 </div>
 
-                <div class="grid grid-cols-1 items-start gap-4 lg:grid-cols-[3fr_2fr] s3-section-enter">
+                <div class="s3-section-enter grid grid-cols-1 items-start gap-4 lg:grid-cols-[3fr_2fr]">
 
                   <div id="iterations-card"
                     class="flex flex-col rounded-xl border border-border-strong bg-surface-2 p-3 shadow-sm transition-shadow duration-200 hover:shadow-md xl:p-4">
 
-                    <div class="mb-3 flex items-center justify-between">
+                    <div class="mb-3 flex items-start justify-between gap-3">
 
                       <h3 class="text-lg font-bold text-text-main">
 
@@ -295,7 +428,7 @@
                   <div id="problem-card"
                     class="flex flex-col rounded-xl bg-surface-2 p-4 shadow-sm transition-shadow duration-200 hover:shadow-md">
 
-                    <div class="mb-2 flex items-center justify-between">
+                    <div class="mb-2 flex items-start justify-between gap-3">
 
                       <h3 class="text-lg font-bold text-text-main">
 
@@ -322,7 +455,7 @@
 
                     </div>
 
-                    <ul id="problem-tasks-list" class="mt-2 space-y-2 flex-grow">
+                    <ul id="problem-tasks-list" class="mt-2 flex-grow space-y-2">
 
                       <!-- problem tasks injected here -->
 
@@ -340,26 +473,26 @@
 
           <footer class="border-t border-border-strong px-4 pb-3 pt-3 md:px-6 lg:px-10 xl:px-12">
 
-            <div class="flex flex-wrap items-center justify-center gap-3">
+            <div class="flex flex-wrap items-stretch justify-center gap-3">
 
               <button id="to-main-btn"
-                class="flex h-10 min-w-[160px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary px-6 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg shadow-md transition hover:brightness-110 s3-btn">
+                class="s3-action-btn s3-btn flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary px-6 py-2 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg shadow-md transition hover:brightness-110">
                 <span class="material-symbols-outlined text-[18px]">home</span>
-                <span class="truncate">На главную</span>
+                <span class="s3-action-label">На главную</span>
               </button>
               <button id="to-complexes-btn"
-                class="flex h-10 min-w-[160px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-6 text-sm font-bold leading-normal tracking-[0.015em] text-text-main shadow-sm transition hover:bg-bg-hover s3-btn">
+                class="s3-action-btn s3-btn flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-6 py-2 text-sm font-bold leading-normal tracking-[0.015em] text-text-main shadow-sm transition hover:bg-bg-hover">
                 <span class="material-symbols-outlined text-[18px]">list</span>
-                <span class="truncate">К комплексам</span>
+                <span class="s3-action-label">К комплексам</span>
               </button>
               <button id="to-theory-hub-btn"
-                class="hidden flex h-10 min-w-[180px] cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-primary-light bg-primary-lighter px-6 text-sm font-bold leading-normal tracking-[0.015em] text-primary-darker shadow-sm transition hover:bg-primary-light s3-btn">
+                class="s3-action-btn s3-action-btn--wide s3-btn hidden cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-primary-light bg-primary-lighter px-6 py-2 text-sm font-bold leading-normal tracking-[0.015em] text-primary-darker shadow-sm transition hover:bg-primary-light">
                 <span class="material-symbols-outlined text-[18px]">account_tree</span>
-                <span class="truncate">К Theory Hub</span>
+                <span class="s3-action-label">К Theory Hub</span>
               </button>
               <button id="close-btn" class="hidden">
 
-                <span class="truncate">Закрыть</span>
+                <span class="s3-action-label">Закрыть</span>
 
               </button>
 
@@ -505,7 +638,7 @@
 
       theoryBtn.title = `Вернуться в Theory Hub: ${theoryBridge.theoryId}`;
 
-      const label = theoryBtn.querySelector(".truncate");
+      const label = theoryBtn.querySelector(".s3-action-label");
 
       const theoryLabel = String(theoryBridge.theoryTitle || theoryBridge.theoryId || "").trim() || theoryBridge.theoryId;
 
@@ -559,9 +692,9 @@
 
       const motText = document.getElementById("motivational-text");
 
-      const mainBtnLabel = document.querySelector("#to-main-btn .truncate");
+      const mainBtnLabel = document.querySelector("#to-main-btn .s3-action-label");
 
-      const complexesBtnLabel = document.querySelector("#to-complexes-btn .truncate");
+      const complexesBtnLabel = document.querySelector("#to-complexes-btn .s3-action-label");
 
       const failedAttempts = Math.max(0, Number(summary?.failedAttempts || 0));
 
@@ -1189,7 +1322,7 @@
 
           li.className =
 
-            "flex items-center justify-between gap-3 rounded-lg border-2 border-border-strong bg-surface-2 px-4 py-2 shadow-sm transition duration-200 hover:shadow-md hover:-translate-y-0.5";
+            "s3-problem-task flex flex-col gap-3 rounded-lg border-2 border-border-strong bg-surface-2 px-4 py-3 shadow-sm transition duration-200 hover:shadow-md hover:-translate-y-0.5 sm:flex-row sm:justify-between";
 
           const errors = (t && (t.errors ?? t.failures ?? t.failed ?? 0)) ?? 0;
 
@@ -1200,18 +1333,18 @@
             "Задание";
 
           const leftDiv = document.createElement("div");
-          leftDiv.className = "flex items-center gap-2";
+          leftDiv.className = "s3-problem-task-main flex items-start gap-2";
           const warnIcon = document.createElement("span");
           warnIcon.className = "material-symbols-outlined text-error";
           warnIcon.textContent = "warning";
           const nameSpan = document.createElement("span");
-          nameSpan.className = "text-sm font-semibold text-text-main";
+          nameSpan.className = "s3-problem-task-name text-sm font-semibold text-text-main";
           nameSpan.textContent = displayName;
           leftDiv.appendChild(warnIcon);
           leftDiv.appendChild(nameSpan);
 
           const rightDiv = document.createElement("div");
-          rightDiv.className = "whitespace-nowrap text-sm text-text-secondary";
+          rightDiv.className = "s3-problem-task-count whitespace-nowrap text-sm font-semibold text-text-secondary";
           const errBold = document.createElement("span");
           errBold.className = "font-bold";
           errBold.textContent = String(errors);

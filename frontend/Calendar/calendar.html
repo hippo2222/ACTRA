@@ -243,7 +243,7 @@
 
         <!-- Header -->
 
-        <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-3">
+        <header class="calendar-header sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-3">
 
             <div class="flex items-center justify-between">
 
@@ -312,8 +312,8 @@
 
         </header>
 
-        <main class="flex-1 w-full max-w-[1200px] mx-auto p-3 md:p-4 lg:p-4 flex flex-col gap-3 page-enter"
-            style="transform: scale(0.9); transform-origin: top center;">
+        <main id="calendar-main"
+            class="calendar-main flex-1 w-full max-w-[1380px] mx-auto p-3 md:p-4 lg:px-4 lg:py-3 flex flex-col gap-3 page-enter">
 
             <!-- Recipe Cards with Time Controller -->
 
@@ -326,12 +326,12 @@
                     <!-- Daily Mix Card -->
 
                     <div id="daily-mix-card"
-                        class="group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-primary transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
+                        class="calendar-summary-card group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-primary transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
                         onclick="startSession('daily_mix')">
 
                         <div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
 
-                        <div class="flex-1 p-4 flex flex-col justify-between gap-3 z-10">
+                        <div class="calendar-card-body flex-1 p-4 flex flex-col justify-between gap-3 z-10">
 
                             <div>
 
@@ -371,7 +371,7 @@
                                 </div>
 
                                 <button
-                                    class="flex items-center gap-2 bg-bg-hover hover:bg-primary-light text-primary px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
+                                    class="flex items-center gap-2 border border-primary-light bg-surface-2 hover:bg-primary-lighter hover:border-primary text-primary px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
 
                                     <span class="material-symbols-outlined text-[18px]">play_circle</span>
 
@@ -388,12 +388,12 @@
                     <!-- Main Focus Card -->
 
                     <div id="main-focus-card"
-                        class="group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-accent transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
+                        class="calendar-summary-card group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-accent transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
                         onclick="startSession('new_material')">
 
                         <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
 
-                        <div class="flex-1 p-4 flex flex-col justify-between gap-3 z-10">
+                        <div class="calendar-card-body flex-1 p-4 flex flex-col justify-between gap-3 z-10">
 
                             <div>
 
@@ -453,7 +453,7 @@
 
                 <div class="lg:col-span-3 flex flex-col">
 
-                    <div class="bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm h-full flex flex-col justify-between gap-4">
+                    <div class="calendar-summary-card calendar-control-card bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm h-full flex flex-col justify-between gap-4">
 
                         <div class="flex flex-col items-center">
 
@@ -519,7 +519,7 @@
 
                 </div>
 
-                <div id="schedule-strip" class="flex overflow-x-auto gap-3 pb-2 hide-scrollbar drag-scroll"></div>
+                <div id="schedule-strip" class="schedule-strip flex overflow-x-auto gap-3 pb-2 hide-scrollbar drag-scroll"></div>
 
             </div>
 
@@ -531,7 +531,7 @@
 
                 <div class="lg:col-span-7 flex flex-col gap-4">
 
-                    <div class="bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm">
+                    <div class="calendar-panel-card bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm">
 
                         <div class="flex justify-between items-center mb-3">
 
@@ -579,7 +579,7 @@
 
                     <!-- Health Indicator -->
 
-                    <div class="bg-surface-1 border border-border-subtle rounded-xl p-3 flex flex-col flex-1 shadow-sm">
+                    <div class="calendar-panel-card bg-surface-1 border border-border-subtle rounded-xl p-3 flex flex-col flex-1 shadow-sm">
 
                         <div class="flex justify-between items-center mb-3">
 
@@ -599,7 +599,7 @@
                                     <span id="health-percent" class="text-lg font-black text-text-main">—</span>
 
                                     <span
-                                        class="text-[8px] text-text-light-secondary uppercase font-bold tracking-wide">Общее</span>
+                                        class="text-[8px] text-text-secondary uppercase font-bold tracking-wide">Общее</span>
 
                                 </div>
 
@@ -1604,7 +1604,7 @@
 
                     ? 'bg-primary text-primary-fg shadow-lg shadow-primary-light font-bold transform scale-105'
 
-                    : 'text-text-secondary hover:bg-bg-hover hover:text-primary'
+                    : 'border border-border-subtle bg-bg-secondary text-text-main hover:border-primary-light hover:bg-surface-1 hover:text-primary'
 
                     }`;
 
@@ -2014,17 +2014,15 @@
 
                 let borderClass = 'border-border-subtle';
 
-                let opacityClass = 'opacity-80 hover:opacity-100';
+                let stateClass = '';
 
-                let bgClass = isMissed ? 'bg-bg-secondary' : 'bg-surface-1';
+                let bgClass = 'bg-surface-1';
 
                 let extraContent = '';
 
                 if (isRestDay) {
 
-                    bgClass = 'bg-surface-1';
-
-                    opacityClass = 'opacity-70';
+                    bgClass = 'bg-bg-secondary';
 
                     borderClass = 'border-border-subtle';
 
@@ -2032,13 +2030,15 @@
 
                     borderClass = 'border-primary';
 
-                    opacityClass = '';
+                    stateClass = 'schedule-card-today';
 
                     extraContent = '<div class="absolute top-2 right-2 size-2 rounded-full bg-primary animate-pulse"></div>';
 
                 } else if (isMissed) {
 
-                    opacityClass = 'opacity-60';
+                    bgClass = 'bg-error-lighter';
+
+                    borderClass = 'border-error-light';
 
                 }
 
@@ -2074,11 +2074,11 @@
 
                         return `
 
-                    <div class="flex items-center gap-2">
+                    <div class="schedule-task-row flex items-start gap-2 min-w-0">
 
-                        ${checkIcon}
+                        <span class="schedule-task-icon">${checkIcon}</span>
 
-                        <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'} ${isCompleted ? 'line-through opacity-70' : ''}">${safeTaskName}</span>
+                        <span class="schedule-task-name text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'} ${isCompleted ? 'line-through opacity-70' : ''}" title="${safeTaskName}">${safeTaskName}</span>
 
                     </div>
 
@@ -2088,11 +2088,11 @@
 
                     : normalizeTasks(day.tasks || []).filter(t => t && t.name).map(task => `
 
-                <div class="flex items-center gap-2">
+                <div class="schedule-task-row flex items-start gap-2 min-w-0">
 
-                    <div class="size-1.5 rounded-full ${isToday ? 'bg-text-main' : 'bg-text-secondary'}"></div>
+                    <div class="schedule-task-icon size-1.5 rounded-full ${isToday ? 'bg-text-main' : 'bg-text-secondary'}"></div>
 
-                    <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'}">${escapeHtml(task.name)}</span>
+                    <span class="schedule-task-name text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'}" title="${escapeHtml(task.name)}">${escapeHtml(task.name)}</span>
 
                 </div>
 
@@ -2132,12 +2132,12 @@
 
                     return list.map(badge => {
 
-                        let badgeClass = 'bg-bg-hover text-text-secondary';
+                        let badgeClass = 'bg-bg-secondary border border-border-subtle text-text-secondary';
                         const badgeLabel = escapeHtml(badge);
 
-                        if (badge === 'Пропущено') badgeClass = 'bg-error-lighter text-error';
+                        if (badge === 'Пропущено') badgeClass = 'bg-error-lighter border border-error-light text-error-text';
 
-                        if (badge === 'Пересчитано') badgeClass = 'bg-primary-light border border-primary text-primary';
+                        if (badge === 'Пересчитано') badgeClass = 'bg-primary-lighter border border-primary-light text-primary-dark';
 
                         if (badge === 'Нет данных') badgeClass = 'bg-warning-light text-warning-dark border border-warning-lighter';
 
@@ -2169,13 +2169,13 @@
 
                 return `
 
-            <div class="w-[180px] ${isExpanded ? 'w-[240px]' : ''} flex-none ${bgClass} border ${borderClass} rounded-xl p-4 flex flex-col gap-3 ${opacityClass} transition-all shadow-sm relative">
+            <div class="schedule-card ${isExpanded ? 'schedule-card-expanded' : ''} ${stateClass} ${bgClass} border ${borderClass} rounded-xl p-4 flex flex-col gap-3 transition-all shadow-sm relative">
 
                 ${extraContent}
 
-                <div class="flex justify-between items-start">
+                <div class="schedule-header flex justify-between items-start gap-2">
 
-                    <span class="${isToday ? 'text-primary font-bold' : isRestDay ? 'text-text-secondary font-medium' : 'text-text-secondary font-medium'}">${day.day_name}</span>
+                    <span class="schedule-day-label ${isToday ? 'text-primary font-bold' : 'text-text-main font-semibold'}">${day.day_name}</span>
 
                     <div class="flex items-center gap-1">
 
@@ -2183,7 +2183,7 @@
 
                         ${day.is_future ? `<span class="material-symbols-outlined text-[16px] text-info" title="Прогноз: план может обновиться после новых прохождений">visibility</span>` : ''}
 
-                        <span class="text-xs text-text-secondary whitespace-nowrap">${day.day_num || ''} ${day.month || ''}</span>
+                        <span class="schedule-date-label text-xs text-text-secondary whitespace-nowrap">${day.day_num || ''} ${day.month || ''}</span>
 
                     </div>
 
@@ -2191,7 +2191,7 @@
 
                 <div class="h-px w-full bg-border-subtle"></div>
 
-                <div class="flex flex-col gap-2">
+                <div class="schedule-task-list flex flex-col gap-2 min-w-0">
 
                     ${tasksHtml}
 
@@ -2723,11 +2723,11 @@
 
             <div class="flex items-center justify-between">
 
-                <div class="flex items-center gap-2">
+                <div class="health-complex-meta flex items-center gap-2">
 
                     <div class="size-2 rounded-full ${c.is_critical ? 'bg-warning-text' : (c.health_percent >= 80 ? 'bg-primary' : 'bg-primary')}"></div>
 
-                    <span class="text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors truncate max-w-[120px]">${safeComplexName}</span>
+                    <span class="health-complex-name text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors" title="${safeComplexName}">${safeComplexName}</span>
 
                     ${badge}
 

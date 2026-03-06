@@ -96,11 +96,11 @@ class EditorDashboard {
 
     createAllTasksElement() {
         const button = document.createElement('button');
-        button.className = 'flex items-center gap-2 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left';
+        button.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left';
         button.dataset.allTasksButton = 'true';
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">all_inclusive</span>
-            <span class="text-sm font-semibold flex-1 truncate text-inherit">Р’СЃРµ Р·Р°РґР°РЅРёСЏ</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-semibold flex-1 text-inherit">Р’СЃРµ Р·Р°РґР°РЅРёСЏ</span>
         `;
         button.addEventListener('click', () => {
             this.activeModuleId = null;
@@ -500,12 +500,12 @@ class EditorDashboard {
             row.type = 'button';
             row.className = 'w-full text-left px-2.5 py-2 rounded-lg border border-border-subtle bg-surface-1 hover:border-primary hover:bg-bg-hover transition-colors';
             row.innerHTML = `
-                <div class="flex items-center justify-between gap-2">
+                <div class="flex flex-wrap items-start justify-between gap-2">
                     <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${toneClass}">${statusLabel}</span>
-                    <span class="text-[10px] text-text-muted">${this.escapeHtml(this.formatImportHistoryTime(entry.timestamp))}</span>
+                    <span class="editor-import-history-meta text-[10px]" title="${this.escapeHtml(this.formatImportHistoryTime(entry.timestamp))}">${this.escapeHtml(this.formatImportHistoryTime(entry.timestamp))}</span>
                 </div>
-                <p class="mt-1 text-[11px] font-semibold text-text-main truncate">${this.escapeHtml(location)}</p>
-                <p class="mt-0.5 text-[10px] text-text-muted">${this.escapeHtml(summary)}</p>
+                <p class="editor-import-history-title mt-1 text-[11px] font-semibold text-text-main">${this.escapeHtml(location)}</p>
+                <p class="editor-import-history-summary mt-0.5 text-[10px]">${this.escapeHtml(summary)}</p>
             `;
             row.addEventListener('click', () => this.openImportHistoryEntry(entry));
 
@@ -550,9 +550,9 @@ class EditorDashboard {
                     <span class="material-symbols-outlined text-[15px] text-text-disabled">history</span>
                     Р§РµСЂРЅРѕРІРёРєРё: ${this.escapeHtml(String(drafts.length))}
                 </span>
-                <span class="text-[10px] text-text-muted">РїРѕСЃР»РµРґРЅРёР№ ${this.escapeHtml(latestLabel)}</span>
+                <span class="editor-recovery-meta text-[10px]">РїРѕСЃР»РµРґРЅРёР№ ${this.escapeHtml(latestLabel)}</span>
             </div>
-            <p class="mt-1 text-[10px] text-text-muted">Р·Р°РґР°С‡ ${taskCount} В· РєРѕРјРїР»РµРєСЃРѕРІ ${complexCount}</p>
+            <p class="editor-recovery-meta mt-1 text-[10px]">Р·Р°РґР°С‡ ${taskCount} В· РєРѕРјРїР»РµРєСЃРѕРІ ${complexCount}</p>
         `;
         summaryBtn.addEventListener('click', () => this.showRecoveryCenter());
         list.appendChild(summaryBtn);
@@ -583,8 +583,8 @@ class EditorDashboard {
             row.dataset.role = 'recovery-shortcut-entry';
             row.className = 'w-full text-left px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-[11px] text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors';
             row.innerHTML = `
-                <div class="truncate font-semibold text-text-main">${this.escapeHtml(label)}</div>
-                <div class="truncate text-[10px] text-text-muted">${this.escapeHtml(subtitle || 'Р§РµСЂРЅРѕРІРёРє РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ')}</div>
+                <div class="editor-recovery-title font-semibold text-text-main">${this.escapeHtml(label)}</div>
+                <div class="editor-recovery-subtitle text-[10px]">${this.escapeHtml(subtitle || 'Р§РµСЂРЅРѕРІРёРє РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ')}</div>
             `;
             row.addEventListener('click', () => this.openRecoveryDraft(item));
             list.appendChild(row);
@@ -1275,7 +1275,12 @@ class EditorDashboard {
     }
 
     closeModuleModal() {
-        document.querySelector('#create-module-modal').classList.add('hidden');
+        const modal = document.querySelector('#create-module-modal');
+        if (!modal) return;
+        const content = modal.querySelector('.bg-surface-1');
+        if (content) content.classList.remove('animate-scale-in');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
     }
 
     async submitModuleForm() {
@@ -1361,7 +1366,12 @@ class EditorDashboard {
     }
 
     closeTopicModal() {
-        document.querySelector('#create-topic-modal').classList.add('hidden');
+        const modal = document.querySelector('#create-topic-modal');
+        if (!modal) return;
+        const content = modal.querySelector('.bg-surface-1');
+        if (content) content.classList.remove('animate-scale-in');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
     }
 
     getTopicRow(moduleId, topicId) {
@@ -1522,7 +1532,7 @@ class EditorDashboard {
         );
 
         const toneMap = {
-            muted: 'text-text-muted',
+            muted: 'text-text-secondary',
             info: 'text-text-secondary',
             success: 'text-success-darker',
             warning: 'text-warning-darker',
@@ -2416,11 +2426,11 @@ class EditorDashboard {
         const normalized = this.normalizeComplexOwnership({ ownership });
         const chips = [];
         if (normalized.isOwnedByCurrentUser) {
-            chips.push('<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-success-light bg-success-lighter text-[10px] font-semibold text-success-darker">моё</span>');
+            chips.push('<span class="inline-flex max-w-full items-center px-2 py-0.5 rounded-full border border-success-light bg-success-lighter text-[10px] font-semibold text-success-darker">моё</span>');
         } else if (normalized.hasOwner) {
-            chips.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(normalized.createdByUserId)}</span>`);
+            chips.push(`<span class="inline-flex max-w-full items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] font-semibold text-text-secondary" title="${this.escapeHtml(normalized.createdByUserId)}">${this.escapeHtml(normalized.createdByUserId)}</span>`);
         }
-        chips.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(this.getComplexCreatedViaLabel(normalized.createdVia))}</span>`);
+        chips.push(`<span class="inline-flex max-w-full items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(this.getComplexCreatedViaLabel(normalized.createdVia))}</span>`);
         return chips.join('');
     }
 
@@ -2495,12 +2505,12 @@ class EditorDashboard {
                 : 'border-border-subtle bg-surface-1 text-text-secondary');
         const ownershipBadges = this.renderComplexOwnershipBadges(normalized.ownership);
         const buttonClasses = compact
-            ? `inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] ${tone}`
-            : `inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] ${tone}`;
+            ? `editor-theory-hub-preview-btn inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] ${tone}`
+            : `editor-theory-hub-preview-btn inline-flex items-center px-2.5 py-1 rounded-lg border text-[11px] ${tone}`;
         return `
-            <div class="inline-flex max-w-full items-center gap-1">
+            <div class="editor-theory-hub-badge-row inline-flex max-w-full flex-wrap items-center gap-1">
                 <button type="button" data-action="${this.escapeHtml(action)}" data-complex-id="${this.escapeHtml(normalized.id)}"
-                    class="${buttonClasses}">${this.escapeHtml(normalized.name)}</button>
+                    class="${buttonClasses}" title="${this.escapeHtml(normalized.name)}">${this.escapeHtml(normalized.name)}</button>
                 ${ownershipBadges}
             </div>
         `;
@@ -2515,7 +2525,7 @@ class EditorDashboard {
             danger: 'border-error-light bg-error-lighter text-error-text',
             success: 'border-success-light bg-success-lighter text-success-darker',
         };
-        chip.className = `inline-flex items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${toneMap[tone] || toneMap.neutral}`;
+        chip.className = `inline-flex max-w-full items-center px-2.5 py-1 rounded-full border text-xs font-semibold ${toneMap[tone] || toneMap.neutral}`;
         chip.textContent = `${label}: ${value}`;
         return chip;
     }
@@ -2684,7 +2694,7 @@ class EditorDashboard {
 
         const topicPreview = topics.slice(0, 3).map((topicRow) => {
             return `<button type="button" data-action="hub-open-topic" data-module-id="${this.escapeHtml(topicRow.moduleId)}" data-topic-id="${this.escapeHtml(topicRow.topicId)}"
-                class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-1 text-[10px] text-text-secondary hover:text-primary hover:border-primary transition-colors">${this.escapeHtml(topicRow.topicName)}</button>`;
+                class="editor-theory-hub-preview-btn inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-1 text-[10px] text-text-secondary hover:text-primary hover:border-primary transition-colors" title="${this.escapeHtml(topicRow.topicName)}">${this.escapeHtml(topicRow.topicName)}</button>`;
         }).join('');
 
         const complexPreview = complexes.slice(0, 4)
@@ -2695,8 +2705,8 @@ class EditorDashboard {
             <div class="rounded-xl border border-border-subtle bg-surface-1 p-3">
                 <div class="flex items-center justify-between gap-2">
                     <div class="min-w-0">
-                        <p class="text-sm font-semibold text-text-main truncate">${this.escapeHtml(row.title || row.theoryId)}</p>
-                        <p class="text-[11px] text-text-muted">${this.escapeHtml(row.theoryId)}</p>
+                        <p class="editor-theory-hub-card-title text-sm font-semibold text-text-main">${this.escapeHtml(row.title || row.theoryId)}</p>
+                        <p class="editor-theory-hub-card-id text-[11px]">${this.escapeHtml(row.theoryId)}</p>
                     </div>
                     <button type="button" data-action="hub-start-theory-training" data-theory-id="${this.escapeHtml(row.theoryId)}"
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors ${startCandidate ? '' : 'opacity-60 cursor-not-allowed'}"
@@ -2711,11 +2721,11 @@ class EditorDashboard {
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-warning-light bg-warning-lighter text-[10px] text-warning-darker">stale: ${row.staleComplexes || 0}</span>
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-error-light bg-error-lighter text-[10px] text-error-text">conflicts: ${row.conflictComplexes || 0}</span>
                 </div>
-                <div class="mt-2 text-[11px] text-text-secondary">Темы</div>
+                <div class="editor-theory-hub-secondary mt-2 text-[11px]">Темы</div>
                 <div class="mt-1 flex flex-wrap gap-1">${topicPreview || '<span class="text-[11px] text-text-muted">Нет связанных тем</span>'}</div>
-                <div class="mt-2 text-[11px] text-text-secondary">Комплексы</div>
+                <div class="editor-theory-hub-secondary mt-2 text-[11px]">Комплексы</div>
                 <div class="mt-1 flex flex-wrap gap-2">${complexPreview || '<span class="text-[11px] text-text-muted">Нет связанных комплексов</span>'}</div>
-                <div class="mt-3 flex flex-wrap gap-2">
+                <div class="editor-theory-hub-action-row mt-3 flex gap-2">
                     <button type="button" data-action="hub-open-complexes-for-theory" data-theory-id="${this.escapeHtml(row.theoryId)}"
                         class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-xs font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors">
                         <span class="material-symbols-outlined text-[15px]">dashboard</span>
@@ -2907,17 +2917,17 @@ class EditorDashboard {
                 card.innerHTML = `
                     <div class="flex flex-wrap items-start justify-between gap-2">
                         <div class="min-w-0">
-                            <p class="text-sm font-semibold text-text-main truncate">${this.escapeHtml(`${row.moduleName} / ${row.topicName}`)}</p>
-                            <p class="text-[11px] text-text-muted mt-0.5">${this.escapeHtml(`${row.moduleId}:${row.topicId}`)}</p>
+                            <p class="editor-theory-hub-card-title text-sm font-semibold text-text-main">${this.escapeHtml(`${row.moduleName} / ${row.topicName}`)}</p>
+                            <p class="editor-theory-hub-card-id mt-0.5 text-[11px]">${this.escapeHtml(`${row.moduleId}:${row.topicId}`)}</p>
                         </div>
-                        <div class="flex items-center gap-1 shrink-0">
+                        <div class="editor-theory-hub-badge-row flex flex-wrap items-center gap-1 shrink-0">
                             ${theoryBadge}
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[11px] text-text-secondary">комплексы: ${row.linkedComplexes}</span>
                             ${row.conflictComplexes > 0 ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-error-light bg-error-lighter text-[11px] text-error-text">конфликты: ${row.conflictComplexes}</span>` : ''}
                         </div>
                     </div>
                     <div class="mt-2 flex flex-wrap gap-2">${complexPreview || '<span class="text-[11px] text-text-muted">Комплексы не используют эту тему.</span>'}${moreCount > 0 ? `<span class="text-[10px] text-text-muted px-1 py-0.5">+${moreCount}</span>` : ''}</div>
-                    <div class="mt-3 flex items-center gap-2">
+                    <div class="editor-theory-hub-action-row mt-3 flex items-center gap-2">
                         <button type="button" data-action="hub-sync-topic" data-module-id="${this.escapeHtml(row.moduleId)}" data-topic-id="${this.escapeHtml(row.topicId)}"
                             class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             ${hasLinks ? '' : 'disabled'}>
@@ -2965,21 +2975,21 @@ class EditorDashboard {
                                     class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary" ${isSelected ? 'checked' : ''}>
                             </label>
                             <div class="min-w-0">
-                                <p class="text-sm font-semibold text-text-main truncate">${this.escapeHtml(row.name)}</p>
-                                <p class="text-[11px] text-text-muted mt-0.5">${this.escapeHtml(row.id)}</p>
+                                <p class="editor-theory-hub-card-title text-sm font-semibold text-text-main">${this.escapeHtml(row.name)}</p>
+                                <p class="editor-theory-hub-card-id mt-0.5 text-[11px]">${this.escapeHtml(row.id)}</p>
                             </div>
                         </div>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold ${statusTone}">${this.escapeHtml(row.status)}</span>
                     </div>
-                    <p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(this.describeTheoryHubQueueReason(row))}</p>
-                    <div class="mt-2 flex flex-wrap gap-1">
+                    <p class="editor-theory-hub-secondary mt-2 text-[11px]">${this.escapeHtml(this.describeTheoryHubQueueReason(row))}</p>
+                    <div class="editor-theory-hub-badge-row mt-2 flex flex-wrap gap-1">
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">режим: ${this.escapeHtml(row.mode)}</span>
                         <span class="inline-flex items-center px-2 py-0.5 rounded-full border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">тем: ${row.topicCount}</span>
                         ${row.theoryId ? `<span class="inline-flex items-center px-2 py-0.5 rounded-full border border-primary-light bg-primary-lighter text-[10px] text-primary-darker">theory комплекса: ${this.escapeHtml(row.theoryId)}</span>` : ''}
                         ${ownershipBadges}
                         ${theoryBadges}
                     </div>
-                    <div class="mt-3 flex items-center gap-2">
+                    <div class="editor-theory-hub-action-row mt-3 flex items-center gap-2">
                         <button type="button" data-action="hub-sync-complex" data-complex-id="${this.escapeHtml(row.id)}"
                             class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
                             Sync комплекс
@@ -3613,8 +3623,8 @@ class EditorDashboard {
             hint.className = 'flex flex-col items-center gap-2 px-3 py-6 text-center';
             hint.innerHTML = `
                 <span class="material-symbols-outlined text-2xl text-text-disabled">folder_open</span>
-                <p class="text-xs text-text-muted">РњРѕРґСѓР»РµР№ РїРѕРєР° РЅРµС‚.</p>
-                <p class="text-xs text-text-disabled">РќР°Р¶РјРёС‚Рµ В«+В» С‡С‚РѕР±С‹ СЃРѕР·РґР°С‚СЊ РїРµСЂРІС‹Р№ РјРѕРґСѓР»СЊ</p>
+                <p class="editor-sidebar-empty-copy text-xs font-medium">РњРѕРґСѓР»РµР№ РїРѕРєР° РЅРµС‚.</p>
+                <p class="editor-sidebar-empty-copy text-xs">РќР°Р¶РјРёС‚Рµ В«+В» С‡С‚РѕР±С‹ СЃРѕР·РґР°С‚СЊ РїРµСЂРІС‹Р№ РјРѕРґСѓР»СЊ</p>
             `;
             navContainer.appendChild(hint);
         }
@@ -3796,12 +3806,12 @@ class EditorDashboard {
                 <div class="status-indicator-published" title="Published"></div>
             </div>
             <div class="flex-1">
-                <h3 class="text-text-main text-lg font-bold leading-tight mb-2 group-hover:text-primary transition-colors cursor-pointer">${safeTaskName}</h3>
+                <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer">${safeTaskName}</h3>
                 <p class="text-text-secondary text-xs font-medium">РЎРѕР·РґР°РЅРѕ ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` В· РР·Рј. ${updatedLabel}` : ''}</p>
             </div>
             <div class="flex gap-2 mt-4 flex-wrap items-center">
-                <span class="inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal">${safeModuleLabel}</span>
-                <span class="inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal">${safeTopicLabel}</span>
+                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal">${safeModuleLabel}</span>
+                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal">${safeTopicLabel}</span>
             </div>
         `;
 
@@ -3846,18 +3856,18 @@ class EditorDashboard {
 
     createEmptyStateCard(message) {
         const article = document.createElement('article');
-        article.className = 'border-2 border-dashed border-border-subtle rounded-xl bg-surface-1 p-6 flex flex-col items-center justify-center text-center text-text-disabled gap-2 h-[200px]';
+        article.className = 'border-2 border-dashed border-border-subtle rounded-xl bg-surface-1 p-6 flex flex-col items-center justify-center text-center gap-2 h-[200px]';
         const safeMessage = this.escapeHtml(message);
         const safeQuery = this.escapeHtml(this.currentSearchQuery.trim());
         const details = this.currentSearchQuery && this.currentSearchQuery.trim()
-            ? `<p class="text-xs text-text-disabled">Р—Р°РїСЂРѕСЃ: В«${this.currentSearchQuery.trim()}В»</p>`
+            ? `<p class="editor-grid-empty-detail text-xs">Р—Р°РїСЂРѕСЃ: В«${this.currentSearchQuery.trim()}В»</p>`
             : '';
         const safeDetails = details && this.currentSearchQuery
             ? details.replace(this.currentSearchQuery.trim(), safeQuery)
             : details;
         article.innerHTML = `
             <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">search_off</span>
-            <p class="text-sm font-medium text-text-secondary">${safeMessage}</p>
+            <p class="editor-grid-empty-message text-sm font-medium">${safeMessage}</p>
             ${safeDetails}
         `;
         return article;
@@ -4235,13 +4245,13 @@ class EditorDashboard {
         container.dataset.module = module.id;
 
         const button = document.createElement('button');
-        button.className = 'flex items-center gap-2 px-3 h-9 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors group w-full text-left';
+        button.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors group w-full text-left';
         button.dataset.moduleButton = module.id;
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-colors">folder_open</span>
-            <span class="text-sm font-medium flex-1 truncate" title="${module.name || module.id}">${module.name || module.id}</span>
-            <div class="flex items-center gap-1 h-full">
-                <div class="hidden group-hover:flex items-center gap-1">
+            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${module.name || module.id}">${module.name || module.id}</span>
+            <div class="editor-sidebar-tree-actions h-full">
+                <div class="editor-sidebar-tree-hover-actions">
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
                           onclick="dashboard.startRenameModule('${module.id}'); event.stopPropagation();"
                           title="РџРµСЂРµРёРјРµРЅРѕРІР°С‚СЊ РјРѕРґСѓР»СЊ">edit</span>
@@ -4310,10 +4320,10 @@ class EditorDashboard {
 
         // Add "New Topic" button at the bottom of children
         const addTopicBtn = document.createElement('button');
-        addTopicBtn.className = 'flex items-center gap-2 px-3 py-1.5 text-text-disabled hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
+        addTopicBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-1.5 text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTopicBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="text-[11px] font-bold uppercase tracking-wider">Р”РѕР±Р°РІРёС‚СЊ С‚РµРјСѓ</span>
+            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Р”РѕР±Р°РІРёС‚СЊ С‚РµРјСѓ</span>
         `;
         addTopicBtn.onclick = (e) => {
             e.stopPropagation();
@@ -4338,15 +4348,15 @@ class EditorDashboard {
             : '';
 
         const button = document.createElement('button');
-        button.className = 'flex items-center gap-2 px-3 h-9 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left group';
+        button.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left group';
         button.dataset.topicButton = topic.id;
         button.dataset.topicModule = moduleId;
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">folder</span>
-            <span class="text-sm font-medium flex-1 truncate" title="${topic.name || topic.id}">${topic.name || topic.id}</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1" title="${topic.name || topic.id}">${topic.name || topic.id}</span>
             ${theoryBadge}
-            <div class="flex items-center gap-1 h-full">
-                <div class="hidden group-hover:flex items-center gap-1">
+            <div class="editor-sidebar-tree-actions h-full">
+                <div class="editor-sidebar-tree-hover-actions">
                     <span class="material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter"
                           onclick="dashboard.startRenameTopic('${moduleId}', '${topic.id}'); event.stopPropagation();"
                           title="РџРµСЂРµРёРјРµРЅРѕРІР°С‚СЊ С‚РµРјСѓ">edit</span>
@@ -4357,7 +4367,7 @@ class EditorDashboard {
                 <span class="material-symbols-outlined text-[16px] p-0.5 transition-transform" data-role="toggle">expand_more</span>
             </div>
         `;
-        const actionsGroup = button.querySelector('div.hidden');
+        const actionsGroup = button.querySelector('.editor-sidebar-tree-hover-actions');
         if (actionsGroup) {
             const syncTheoryAction = document.createElement('span');
             syncTheoryAction.className = 'material-symbols-outlined text-[16px] text-text-disabled hover:text-primary transition-colors p-0.5 rounded hover:bg-primary-lighter';
@@ -4449,10 +4459,10 @@ class EditorDashboard {
 
         // Add "New Task" button at the bottom of tasks
         const addTaskBtn = document.createElement('button');
-        addTaskBtn.className = 'flex items-center gap-2 px-3 py-1.5 text-text-disabled hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
+        addTaskBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-1.5 text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTaskBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="text-[11px] font-bold uppercase tracking-wider">Р”РѕР±Р°РІРёС‚СЊ Р·Р°РґР°РЅРёРµ</span>
+            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Р”РѕР±Р°РІРёС‚СЊ Р·Р°РґР°РЅРёРµ</span>
         `;
         addTaskBtn.onclick = (e) => {
             e.stopPropagation();
@@ -4473,7 +4483,7 @@ class EditorDashboard {
 
     createTaskElement(task, moduleId, topicId) {
         const button = document.createElement('button');
-        const baseClasses = 'flex items-center gap-2 px-3 py-2 rounded-lg w-full text-left transition-colors';
+        const baseClasses = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-2 rounded-lg w-full text-left transition-colors';
         const tone = 'text-text-secondary hover:text-text-main hover:bg-bg-hover';
         button.className = `${baseClasses} ${tone}`;
 
@@ -4487,7 +4497,7 @@ class EditorDashboard {
 
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">${icon}</span>
-            <span class="text-sm font-normal flex-1 truncate">${task.name || task.id}</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-normal flex-1">${task.name || task.id}</span>
         `;
 
         button.addEventListener('click', () => {
@@ -4848,7 +4858,7 @@ class EditorDashboard {
             empty.innerHTML = `
                 <span class="material-symbols-outlined text-3xl text-text-disabled">history_toggle_off</span>
                 <p class="text-sm font-semibold text-text-secondary mt-2">Р§РµСЂРЅРѕРІРёРєРё РЅРµ РЅР°Р№РґРµРЅС‹</p>
-                <p class="text-xs text-text-muted mt-1">РљРѕРіРґР° Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ СЃРѕР·РґР°СЃС‚ С‡РµСЂРЅРѕРІРёРєРё, РѕРЅРё РїРѕСЏРІСЏС‚СЃСЏ Р·РґРµСЃСЊ.</p>
+                <p class="text-xs text-text-secondary mt-1">РљРѕРіРґР° Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ СЃРѕР·РґР°СЃС‚ С‡РµСЂРЅРѕРІРёРєРё, РѕРЅРё РїРѕСЏРІСЏС‚СЃСЏ Р·РґРµСЃСЊ.</p>
             `;
             host.appendChild(empty);
             return;
@@ -4856,7 +4866,7 @@ class EditorDashboard {
 
         drafts.forEach((item, index) => {
             const card = document.createElement('div');
-            card.className = 'rounded-xl border border-border-subtle bg-surface-2 p-4 flex items-start justify-between gap-3';
+            card.className = 'editor-recovery-card rounded-xl border border-border-subtle bg-surface-2 p-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4';
             card.dataset.recoveryIndex = String(index);
 
             let title = '';
@@ -4877,16 +4887,16 @@ class EditorDashboard {
             }
 
             card.innerHTML = `
-                <div class="min-w-0">
+                <div class="min-w-0 flex-1">
                     <div class="flex items-center gap-2">
                         <span class="material-symbols-outlined text-[18px] text-text-disabled">${item.kind === 'task' ? 'article' : 'widgets'}</span>
-                        <p class="text-sm font-bold text-text-main truncate">${this.escapeHtml(title)}</p>
+                        <p class="editor-recovery-title text-sm font-bold text-text-main">${this.escapeHtml(title)}</p>
                     </div>
-                    <p class="text-xs text-text-secondary mt-1">${this.escapeHtml(subtitle)}</p>
-                    <p class="text-[11px] text-text-muted mt-1">РђРІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ: ${this.escapeHtml(this.formatRecoveryTime(item.timestamp))}</p>
-                    <p class="text-[11px] text-text-muted mt-1">${this.escapeHtml(targetHint)}</p>
+                    <p class="editor-recovery-subtitle text-xs mt-1">${this.escapeHtml(subtitle)}</p>
+                    <p class="editor-recovery-meta text-[11px] mt-1">РђРІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёРµ: ${this.escapeHtml(this.formatRecoveryTime(item.timestamp))}</p>
+                    <p class="editor-recovery-meta text-[11px] mt-1">${this.escapeHtml(targetHint)}</p>
                 </div>
-                <div class="flex items-center gap-2 shrink-0">
+                <div class="editor-recovery-actions shrink-0">
                     <button type="button" data-action="open-recovery" data-index="${index}"
                         class="px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
                         РћС‚РєСЂС‹С‚СЊ

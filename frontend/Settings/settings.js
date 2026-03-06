@@ -13,9 +13,24 @@
     };
 
     const PROVIDER_COLORS = {
-        openrouter: { bg: 'bg-blue-50', border: 'border-blue-200', icon: 'text-blue-600' },
-        gemini: { bg: 'bg-purple-50', border: 'border-purple-200', icon: 'text-purple-600' },
-        groq: { bg: 'bg-amber-50', border: 'border-amber-200', icon: 'text-amber-600' },
+        openrouter: {
+            bg: 'bg-info-lighter',
+            border: 'border-info',
+            iconWrap: 'border border-info-light bg-surface-1 shadow-sm',
+            icon: 'text-info',
+        },
+        gemini: {
+            bg: 'bg-primary-lighter',
+            border: 'border-primary-light',
+            iconWrap: 'border border-primary-light bg-surface-1 shadow-sm',
+            icon: 'text-primary',
+        },
+        groq: {
+            bg: 'bg-warning-lighter',
+            border: 'border-warning-light',
+            iconWrap: 'border border-warning-light bg-surface-1 shadow-sm',
+            icon: 'text-warning-dark dark:text-warning',
+        },
     };
 
     const DIAGNOSTICS_STORAGE_KEY = 'settings_provider_diagnostics_v1';
@@ -316,39 +331,39 @@
             return `
             <div class="provider-card rounded-xl border ${colors.border} ${colors.bg} p-5 animate-fade-in"
                  style="animation-delay: ${idx * 80}ms">
-                <div class="flex items-start justify-between gap-3 mb-4">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center justify-center w-9 h-9 rounded-lg bg-white/80 shadow-sm">
+                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="settings-provider-heading flex min-w-0 items-start gap-3">
+                        <div class="flex items-center justify-center w-9 h-9 rounded-lg ${colors.iconWrap}">
                             <span class="material-symbols-outlined ${colors.icon} text-[20px]">${icon}</span>
                         </div>
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="font-bold text-text-main">${escapeHtml(provider.label || name)}</span>
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <span class="break-words font-bold text-text-main">${escapeHtml(provider.label || name)}</span>
                                 ${name === 'openrouter' ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-fg uppercase tracking-wide">рекомендуем</span>' : ''}
                             </div>
-                            <div class="text-xs text-text-secondary mt-0.5">${escapeHtml(provider.hint || '')}</div>
+                            <div class="mt-0.5 break-words text-xs text-text-main">${escapeHtml(provider.hint || '')}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 shrink-0 ${validationStatus === 'validating' ? 'validating' : ''}">
+                    <div class="flex shrink-0 items-center gap-2 self-start ${validationStatus === 'validating' ? 'validating' : ''}">
                         ${renderStatusBadge(validationStatus, hasKey, markedForRemoval)}
                     </div>
                 </div>
 
-                <div class="flex gap-2">
-                    <div class="relative flex-1">
+                <div class="settings-provider-actions flex gap-2">
+                    <div class="relative min-w-0 flex-1">
                         <input type="password" id="key-input-${name}"
-                            class="key-input block w-full rounded-lg border border-border-subtle bg-white/90 py-2.5 px-3 text-sm text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary focus:border-primary pr-10"
+                            class="key-input block w-full rounded-lg border border-border-strong bg-surface-1 py-2.5 px-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary focus:border-primary pr-10"
                             placeholder="${escapeHtml(placeholder)}"
                             autocomplete="off" spellcheck="false"
                             data-provider="${name}">
                         <button onclick="toggleKeyVisibility('${name}')" type="button"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-surface-2 transition-colors"
+                            class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-secondary hover:bg-surface-2 transition-colors"
                             title="Показать или скрыть ключ">
-                            <span class="material-symbols-outlined text-text-muted text-[18px]" id="eye-icon-${name}">visibility_off</span>
+                            <span class="material-symbols-outlined text-[18px]" id="eye-icon-${name}">visibility_off</span>
                         </button>
                     </div>
                     <button onclick="validateKey('${name}')"
-                        class="px-3 py-2 text-xs font-semibold rounded-lg border border-border-subtle bg-white hover:bg-surface-2 text-text-secondary transition-colors shrink-0 ${markedForRemoval ? 'opacity-50 cursor-not-allowed' : ''}"
+                        class="settings-provider-action flex shrink-0 items-center rounded-lg border border-border-strong bg-surface-1 px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-2 ${markedForRemoval ? 'opacity-50 cursor-not-allowed' : ''}"
                         id="validate-btn-${name}"
                         ${markedForRemoval ? 'disabled' : ''}
                         title="Проверить ключ">
@@ -357,7 +372,7 @@
                     ${hasKey || markedForRemoval ? `
                     <button onclick="toggleKeyRemoval('${name}')"
                         type="button"
-                        class="px-3 py-2 text-xs font-semibold rounded-lg border border-border-subtle bg-white hover:bg-surface-2 ${markedForRemoval ? 'text-warning-dark border-warning-light' : 'text-error'} transition-colors shrink-0"
+                        class="settings-provider-action flex shrink-0 items-center rounded-lg border border-border-strong bg-surface-1 px-3 py-2 text-xs font-semibold transition-colors hover:bg-surface-2 ${markedForRemoval ? 'text-warning-dark border-warning-light' : 'text-error'}"
                         title="${markedForRemoval ? 'Отменить удаление' : 'Удалить сохраненный ключ'}">
                         <span class="material-symbols-outlined text-[16px]">${markedForRemoval ? 'undo' : 'delete'}</span>
                     </button>` : ''}
@@ -372,9 +387,9 @@
 
                 ${safeUrl ? `
                 <div class="mt-3 flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[14px] text-text-disabled">open_in_new</span>
+                    <span class="material-symbols-outlined text-[14px] text-text-secondary">open_in_new</span>
                     <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener"
-                       class="text-xs text-primary hover:underline font-medium">Получить ключ</a>
+                       class="text-xs font-semibold text-text-main underline decoration-border-strong decoration-2 underline-offset-2 transition-colors hover:text-primary">Получить ключ</a>
                 </div>` : ''}
             </div>`;
         });
@@ -411,7 +426,7 @@
                 if (hasKey) {
                     return '<span class="status-dot bg-success"></span><span class="text-xs text-success-text font-medium">Настроен</span>';
                 }
-                return '<span class="status-dot bg-border-subtle"></span><span class="text-xs text-text-disabled">Не настроен</span>';
+                return '<span class="status-dot bg-border-strong"></span><span class="text-xs text-text-main font-medium">Не настроен</span>';
         }
     }
 
@@ -447,7 +462,7 @@
             line = 'Ключ не задан. Без него AI-генерация будет недоступна.';
         }
 
-        return `<div class="provider-diagnostics mt-3 rounded-lg px-3 py-2 text-[11px] ${toneClass}">${escapeHtml(line)}</div>`;
+        return `<div class="provider-diagnostics mt-3 rounded-lg px-3 py-2 text-[12px] leading-relaxed ${toneClass}">${escapeHtml(line)}</div>`;
     }
 
     function renderError(message) {
@@ -479,7 +494,7 @@
 
         btn.disabled = true;
         statusEl.textContent = 'Сохранение...';
-        statusEl.className = 'text-sm text-text-muted';
+        statusEl.className = 'text-sm text-text-secondary font-medium';
 
         const payload = {};
         for (const name of PROVIDERS_ORDER) {
@@ -585,7 +600,7 @@
         btn.disabled = true;
         if (validateAllBtn) validateAllBtn.disabled = true;
         statusEl.textContent = 'Сохранение...';
-        statusEl.className = 'text-sm text-text-muted';
+        statusEl.className = 'text-sm text-text-secondary font-medium';
 
         const payload = {};
         const removedProviders = [];

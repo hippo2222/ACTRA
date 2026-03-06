@@ -823,6 +823,43 @@ async function applyTheme(page, themeId) {
   }, themeId);
 }
 
+const CONTRAST_AUDIT_FREEZE_CSS = `
+  *, *::before, *::after {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+`;
+
+async function settlePageForContrastAudit(page) {
+  await page.evaluate((cssText) => {
+    const styleId = "__contrast_audit_freeze_style__";
+    let styleEl = document.getElementById(styleId);
+    if (!styleEl) {
+      styleEl = document.createElement("style");
+      styleEl.id = styleId;
+      document.head.appendChild(styleEl);
+    }
+    styleEl.textContent = cssText;
+
+    if (typeof document.getAnimations === "function") {
+      document.getAnimations({ subtree: true }).forEach((animation) => {
+        try {
+          animation.finish();
+        } catch (err) {
+          try {
+            animation.cancel();
+          } catch (_ignore) {
+            // Ignore animations that cannot be force-finished.
+          }
+        }
+      });
+    }
+  }, CONTRAST_AUDIT_FREEZE_CSS);
+}
+
 async function readS1TaskInfo(page) {
   return page.evaluate(() => {
     const state = window.SessionState || null;
@@ -1520,6 +1557,7 @@ async function runS1Coverage({
         await ensureAuditorReady();
         for (const theme of themesForPage) {
           await applyTheme(page, theme);
+          await settlePageForContrastAudit(page);
           if (afterThemeWaitMs) await page.waitForTimeout(afterThemeWaitMs);
 
           if (Array.isArray(coverage.actionsPerTheme)) {
@@ -2010,21 +2048,6 @@ async function main() {
     const url = resolveUrl(baseUrl, resolvedPageUrl);
     if (!url) continue;
 
-    const page = await browser.newPage();
-    await page.addInitScript({ path: auditorPath });
-    await page.goto(url, { waitUntil: pageCfg.waitUntil || "networkidle" });
-
-    if (pageCfg.waitFor) {
-      await page.waitForSelector(pageCfg.waitFor, {
-        state: pageCfg.waitForState || "attached",
-        timeout: pageCfg.waitForTimeout || 20000,
-      });
-    }
-
-    if (Array.isArray(pageCfg.actionsOnce)) {
-      await runActions(page, pageCfg.actionsOnce);
-    }
-
     const pageSlug = slugify(name || url);
     const themesForPage =
       Array.isArray(pageCfg.themes) && pageCfg.themes.length ? pageCfg.themes : themes;
@@ -2033,6 +2056,20 @@ async function main() {
       : {};
 
     if (pageCfg.s1Coverage) {
+      const page = await browser.newPage();
+      await page.goto(url, { waitUntil: pageCfg.waitUntil || "networkidle" });
+
+      if (pageCfg.waitFor) {
+        await page.waitForSelector(pageCfg.waitFor, {
+          state: pageCfg.waitForState || "attached",
+          timeout: pageCfg.waitForTimeout || 20000,
+        });
+      }
+
+      if (Array.isArray(pageCfg.actionsOnce)) {
+        await runActions(page, pageCfg.actionsOnce);
+      }
+
       await runS1Coverage({
         page,
         pageCfg,
@@ -2048,19 +2085,34 @@ async function main() {
         pageAuditOptions,
         baseUrl,
       });
+      await page.close();
     } else {
-      // Inject auditor once per page
-      await page.addScriptTag({ path: auditorPath });
       const auditOptions = mergeAuditOptions(globalAuditOptions, pageAuditOptions);
+      const pageAfterThemeWaitMs = Number.isFinite(Number(pageCfg.afterThemeWaitMs))
+        ? Math.max(0, Number(pageCfg.afterThemeWaitMs))
+        : globalAfterThemeWaitMs !== null
+          ? globalAfterThemeWaitMs
+          : 120;
+      const page = await browser.newPage();
 
       for (const theme of themesForPage) {
-        await applyTheme(page, theme);
+        await page.goto(url, { waitUntil: pageCfg.waitUntil || "networkidle" });
 
-        const pageAfterThemeWaitMs = Number.isFinite(Number(pageCfg.afterThemeWaitMs))
-          ? Math.max(0, Number(pageCfg.afterThemeWaitMs))
-          : globalAfterThemeWaitMs !== null
-            ? globalAfterThemeWaitMs
-            : 120;
+        if (pageCfg.waitFor) {
+          await page.waitForSelector(pageCfg.waitFor, {
+            state: pageCfg.waitForState || "attached",
+            timeout: pageCfg.waitForTimeout || 20000,
+          });
+        }
+
+        if (Array.isArray(pageCfg.actionsOnce)) {
+          await runActions(page, pageCfg.actionsOnce);
+        }
+
+        await page.addScriptTag({ path: auditorPath });
+        await applyTheme(page, theme);
+        await settlePageForContrastAudit(page);
+
         if (pageAfterThemeWaitMs > 0) {
           await page.waitForTimeout(pageAfterThemeWaitMs);
         }
@@ -2093,9 +2145,8 @@ async function main() {
           report: outPath,
         });
       }
+      await page.close();
     }
-
-    await page.close();
   }
 
   await browser.close();
