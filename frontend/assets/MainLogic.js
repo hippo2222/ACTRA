@@ -49,6 +49,210 @@
         if (appContent) appContent.classList.remove('blurred');
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char] || char));
+    }
+
+    function escapeInlineJsString(value) {
+        const escaped = String(value ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E');
+        return escapeHtml(escaped);
+    }
+
+    const mainRecommendationState = {
+        preferredAction: null,
+        statsEmpty: null,
+        calendarMixCount: 0,
+        calendarHasData: false,
+        microcardsDue: 0,
+        microcardsHasDecks: false,
+        microcardsDisabled: false,
+    };
+
+    function setMainRecommendationState(partial) {
+        Object.assign(mainRecommendationState, partial || {});
+        renderMainNextStepBanner();
+    }
+
+    function ensureMainNextStepBanner() {
+        const host = document.getElementById('quick-access-section');
+        if (!host) return null;
+
+        let banner = document.getElementById('mainNextStepBanner');
+        if (banner) return banner;
+
+        banner = document.createElement('div');
+        banner.id = 'mainNextStepBanner';
+        banner.className = 'mb-3 rounded-xl border border-primary-light bg-primary-lighter/40 p-3';
+
+        const wrap = document.createElement('div');
+        wrap.className = 'flex flex-col gap-3 md:flex-row md:items-center md:justify-between';
+
+        const textWrap = document.createElement('div');
+        textWrap.className = 'min-w-0';
+
+        const eyebrow = document.createElement('p');
+        eyebrow.className = 'text-[10px] font-bold uppercase tracking-[0.18em] text-primary';
+        eyebrow.textContent = 'Лучший следующий шаг';
+
+        const title = document.createElement('p');
+        title.id = 'mainNextStepTitle';
+        title.className = 'mt-1 text-sm font-bold text-text-main';
+
+        const reason = document.createElement('p');
+        reason.id = 'mainNextStepReason';
+        reason.className = 'mt-1 text-xs text-text-secondary';
+
+        textWrap.appendChild(eyebrow);
+        textWrap.appendChild(title);
+        textWrap.appendChild(reason);
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.id = 'mainNextStepButton';
+        button.className = 'inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg transition-all hover:bg-primary-hover';
+
+        const icon = document.createElement('span');
+        icon.id = 'mainNextStepButtonIcon';
+        icon.className = 'material-symbols-outlined text-[18px]';
+
+        const label = document.createElement('span');
+        label.id = 'mainNextStepButtonLabel';
+
+        button.appendChild(icon);
+        button.appendChild(label);
+        wrap.appendChild(textWrap);
+        wrap.appendChild(button);
+        banner.appendChild(wrap);
+
+        const referenceNode = document.getElementById('quick-access-list');
+        if (referenceNode) {
+            host.insertBefore(banner, referenceNode);
+        } else {
+            host.appendChild(banner);
+        }
+
+        return banner;
+    }
+
+    function ensureWorkspaceOwnershipBanner() {
+        const host = document.getElementById('quick-access-section');
+        if (!host) return null;
+
+        let banner = document.getElementById('workspaceOwnershipBanner');
+        if (banner) return banner;
+
+        banner = document.createElement('div');
+        banner.id = 'workspaceOwnershipBanner';
+        banner.className = 'rounded-xl border border-border-subtle bg-surface-1 p-3';
+        banner.innerHTML = `
+            <div class="flex items-start gap-3">
+                <div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-lighter text-primary">
+                    <span class="material-symbols-outlined text-[20px]">groups</span>
+                </div>
+                <div class="min-w-0">
+                    <p class="text-sm font-bold text-text-main">Профиль хранит личный прогресс</p>
+                    <p class="mt-1 text-xs text-text-secondary">Комплексы, теория и микрокарточки могут быть частью общей локальной библиотеки. Прогресс, календарь, статистика и активные сессии остаются личными.</p>
+                </div>
+            </div>
+        `;
+
+        const referenceNode = document.getElementById('mainNextStepBanner') || document.getElementById('quick-access-list');
+        if (referenceNode) {
+            host.insertBefore(banner, referenceNode);
+        } else {
+            host.appendChild(banner);
+        }
+
+        return banner;
+    }
+
+    function getMainFallbackRecommendation() {
+        if (mainRecommendationState.calendarHasData && mainRecommendationState.calendarMixCount > 0) {
+            return {
+                title: 'Откройте план на сегодня',
+                reason: 'На сегодня уже есть готовый учебный шаг. Это самый быстрый способ войти в рабочий ритм.',
+                label: 'Открыть календарь',
+                icon: 'calendar_month',
+                action: () => window.navigateWithTransition('/ui/calendar'),
+            };
+        }
+
+        if (mainRecommendationState.microcardsDue > 0) {
+            return {
+                title: 'Сделайте короткое повторение',
+                reason: `Сейчас к повторению ждут ${mainRecommendationState.microcardsDue} карточек. Это самый короткий путь вернуться в обучение.`,
+                label: 'Открыть микрокарточки',
+                icon: 'style',
+                action: () => window.navigateWithTransition('/ui/microcards'),
+            };
+        }
+
+        if (mainRecommendationState.statsEmpty === true) {
+            return {
+                title: 'Запустите первый комплекс',
+                reason: 'После первого прохождения здесь появятся прогресс, календарь и понятная статистика.',
+                label: 'Открыть комплексы',
+                icon: 'playlist_play',
+                action: () => window.navigateWithTransition('/ui/complexes'),
+            };
+        }
+
+        if (mainRecommendationState.microcardsHasDecks && !mainRecommendationState.microcardsDisabled) {
+            return {
+                title: 'Вернитесь через лёгкое повторение',
+                reason: 'Если нет времени на длинную сессию, начните с микрокарточек и быстро вернитесь в ритм.',
+                label: 'Открыть микрокарточки',
+                icon: 'style',
+                action: () => window.navigateWithTransition('/ui/microcards'),
+            };
+        }
+
+        return {
+            title: 'Продолжите обучение',
+            reason: 'Откройте комплексы и выберите следующий шаг без лишних поисков.',
+            label: 'Открыть комплексы',
+            icon: 'arrow_forward',
+            action: () => window.navigateWithTransition('/ui/complexes'),
+        };
+    }
+
+    function renderMainNextStepBanner() {
+        const banner = ensureMainNextStepBanner();
+        if (!banner) return;
+
+        const recommendation = mainRecommendationState.preferredAction || getMainFallbackRecommendation();
+        const titleEl = document.getElementById('mainNextStepTitle');
+        const reasonEl = document.getElementById('mainNextStepReason');
+        const labelEl = document.getElementById('mainNextStepButtonLabel');
+        const iconEl = document.getElementById('mainNextStepButtonIcon');
+        const buttonEl = document.getElementById('mainNextStepButton');
+        if (!titleEl || !reasonEl || !labelEl || !iconEl || !buttonEl) return;
+
+        titleEl.textContent = recommendation.title;
+        reasonEl.textContent = recommendation.reason;
+        labelEl.textContent = recommendation.label;
+        iconEl.textContent = recommendation.icon || 'arrow_forward';
+        buttonEl.onclick = () => {
+            if (typeof recommendation.action === 'function') {
+                recommendation.action();
+            }
+        };
+    }
+
     function showFeedbackError(message) {
         const el = document.getElementById('feedbackError');
         if (!el) return;
@@ -412,11 +616,17 @@
     function renderFeedbackSelectOptions(selectId, values, labelsMap, defaultValue) {
         const select = document.getElementById(selectId);
         if (!select || !Array.isArray(values) || values.length === 0) return;
-        select.innerHTML = values.map(v => {
+
+        select.replaceChildren();
+        values.forEach(v => {
             const safe = String(v);
             const label = labelsMap[safe] || safe;
-            return `<option value="${safe}">${label}</option>`;
-        }).join('');
+            const option = document.createElement('option');
+            option.value = safe;
+            option.textContent = String(label);
+            select.appendChild(option);
+        });
+
         if (defaultValue && values.includes(defaultValue)) {
             select.value = defaultValue;
         }
@@ -556,6 +766,7 @@
 
         // 2. Load User
         await loadCurrentUser();
+        ensureWorkspaceOwnershipBanner();
 
         // 3. Load Dynamic Content
         if (currentUser) {
@@ -653,26 +864,31 @@
         const { ok, data } = await apiFetch('/api/users');
 
         if (ok) {
-            listEl.innerHTML = data.items.map(user => `
+            listEl.innerHTML = data.items.map(user => {
+                const userIdLiteral = escapeInlineJsString(user.user_id);
+                const avatarUrl = escapeHtml(getAvatarUrl(user.avatar_seed, user.user_id));
+                const safeUserName = escapeHtml(user.name);
+                return `
                 <div class="group flex items-center justify-between p-4 rounded-2xl border ${currentUser?.user_id === user.user_id ? 'border-primary bg-primary-lighter' : 'border-border-subtle hover:border-border-strong'} hover:border-primary cursor-pointer transition-all">
-                    <div class="flex items-center gap-4 flex-1" onclick="selectProfile('${user.user_id}')">
-                        <img src="${getAvatarUrl(user.avatar_seed, user.user_id)}" class="w-10 h-10 rounded-full bg-surface-2 object-cover">
+                    <div class="flex items-center gap-4 flex-1" onclick="selectProfile('${userIdLiteral}')">
+                        <img src="${avatarUrl}" class="w-10 h-10 rounded-full bg-surface-2 object-cover">
                         <div>
                             <div class="font-bold text-text-main flex items-center gap-2">
-                                ${user.name}
+                                ${safeUserName}
                                 ${user.has_password ? '<span class="material-symbols-outlined text-[14px] text-text-muted">lock</span>' : ''}
                             </div>
                             <div class="text-[10px] text-text-main font-medium uppercase">Нажмите для выбора</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2">
-                        <button onclick="openEditProfile('${user.user_id}')" class="size-8 flex items-center justify-center rounded-xl bg-transparent border border-transparent text-text-muted hover:bg-surface-2 hover:text-text-main transition-all" title="Редактировать">
+                        <button onclick="openEditProfile('${userIdLiteral}')" class="size-8 flex items-center justify-center rounded-xl bg-transparent border border-transparent text-text-muted hover:bg-surface-2 hover:text-text-main transition-all" title="Редактировать">
                             <span class="material-symbols-outlined text-[18px]">edit</span>
                         </button>
                         ${currentUser?.user_id === user.user_id ? '<span class="text-primary material-symbols-outlined">check_circle</span>' : ''}
                     </div>
                 </div>
-            `).join('');
+            `;
+            }).join('');
         } else {
             listEl.innerHTML = '<div class="text-center py-8 text-error">Ошибка загрузки</div>';
         }
@@ -769,6 +985,7 @@
 
     // --- Profile Editing & Passwords ---
     let passwordPromptResolve = null;
+    let passwordPromptUserId = null;
     let editingUserId = null;
     let isAvatarManualMode = false; // legacy flag, manual mode disabled
 
@@ -796,6 +1013,7 @@
 
         // Check if edit is protected
         if (user.has_password && user.security_settings?.require_password_on_edit) {
+            passwordPromptUserId = userId;
             const verified = await showPasswordPrompt(`Защита настроек: ${user.name}`);
             if (!verified) return;
         }
@@ -824,12 +1042,17 @@
         if (ok && files) {
             // Filter out manual-seed avatars if any (filename startswith 'manual_' for safety)
             const safeFiles = files.filter(f => !f.startsWith('manual_'));
-            html += safeFiles.map(file => `
+            html += safeFiles.map(file => {
+                const fileLiteral = escapeInlineJsString(file);
+                const fileAttr = escapeHtml(file);
+                const fileUrl = encodeURIComponent(String(file));
+                return `
                 <div class="avatar-gallery-item aspect-square rounded-xl bg-surface-2 cursor-pointer overflow-hidden border border-transparent hover:border-primary transition-all"
-                onclick="selectGalleryAvatar('${file}')" data-filename="${file}">
-                    <img src="/api/assets/avatars/${file}" class="w-full h-full object-cover">
+                onclick="selectGalleryAvatar('${fileLiteral}')" data-filename="${fileAttr}">
+                    <img src="/api/assets/avatars/${fileUrl}" class="w-full h-full object-cover">
                 </div>
-            `).join('');
+            `;
+            }).join('');
         }
 
         if (!html) {
@@ -870,6 +1093,7 @@
         let verificationPassword = null;
 
         if (user && user.has_password) {
+            passwordPromptUserId = editingUserId;
             const verified = await showPasswordPrompt(`Подтверждение удаления: ${user.name}`);
             if (!verified) return;
             verificationPassword = verified;
@@ -940,15 +1164,20 @@
 
         // We need to verify this password.
         if (passwordPromptResolve) {
+            if (!passwordPromptUserId) {
+                NotificationUI.toast('Не определён профиль для проверки пароля', 'error');
+                return;
+            }
             const { ok, data } = await apiFetch('/api/users/verify-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: editingUserId || pendingSelectUserId, password })
+                body: JSON.stringify({ user_id: passwordPromptUserId, password })
             });
 
             if (ok && data?.verified) {
+                const resolver = passwordPromptResolve;
                 cleanupPrompt();
-                passwordPromptResolve(password);
+                if (resolver) resolver(password);
             } else {
                 NotificationUI.toast('Неверный пароль', 'error');
                 document.getElementById('promptPasswordInput').value = '';
@@ -956,7 +1185,6 @@
         }
     }
 
-    let pendingSelectUserId = null;
     const originalSelectProfile = window.selectProfile;
 
     window.selectProfile = async function (userId) {
@@ -969,7 +1197,7 @@
         const user = users.find(u => u.user_id === userId);
 
         if (user && user.has_password && user.security_settings?.require_password_on_login) {
-            pendingSelectUserId = userId;
+            passwordPromptUserId = userId;
             const verified = await showPasswordPrompt(`Вход в профиль: ${user.name}`);
             if (verified) return originalSelectProfile(userId);
             return;
@@ -979,13 +1207,15 @@
     }
 
     window.closePasswordPrompt = function () {
+        const resolver = passwordPromptResolve;
         cleanupPrompt();
-        if (passwordPromptResolve) passwordPromptResolve(false);
+        if (resolver) resolver(false);
     }
 
     function cleanupPrompt() {
         closeModal('passwordPromptModal');
         passwordPromptResolve = null;
+        passwordPromptUserId = null;
     }
 
     // --- Statistics & Calendar ---
@@ -1121,13 +1351,14 @@
 
             // UX-30: Show welcome message if all stats are zero
             const isEmpty = !(s.tasks_mastered || s.success_rate || s.total_time_spent || s.completed_complexes_today);
+            setMainRecommendationState({ statsEmpty: isEmpty });
             let welcomeEl = document.getElementById('statsWelcomeMessage');
             if (isEmpty) {
                 if (!welcomeEl && statsContent) {
                     welcomeEl = document.createElement('div');
                     welcomeEl.id = 'statsWelcomeMessage';
                     welcomeEl.className = 'p-3 bg-primary-lighter/40 border border-primary-light rounded-lg text-center mb-2';
-                    welcomeEl.innerHTML = '<p class="text-sm font-medium text-primary-dark">Добро пожаловать! Запустите первый комплекс, чтобы здесь появилась статистика.</p>';
+                    welcomeEl.innerHTML = '<p class="text-sm font-medium text-primary-dark">Запустите первый комплекс: после него здесь появятся прогресс, время и ежедневная динамика.</p>';
                     statsContent.parentElement.insertBefore(welcomeEl, statsContent);
                 }
             } else if (welcomeEl) {
@@ -1144,6 +1375,7 @@
             }
         } else {
             console.error('Failed to load statistics:', data);
+            setMainRecommendationState({ statsEmpty: null });
             hideStatsSkeleton();
             showStatsError();
             if (statsContent) {
@@ -1170,6 +1402,8 @@
     function showStatsError() {
         const statsContent = document.getElementById('statsContent');
         if (!statsContent) return;
+        const welcomeEl = document.getElementById('statsWelcomeMessage');
+        if (welcomeEl) welcomeEl.remove();
         // Check if error message already exists
         let errorEl = document.getElementById('statsErrorMessage');
 
@@ -1177,7 +1411,7 @@
             errorEl = document.createElement('div');
             errorEl.id = 'statsErrorMessage';
             errorEl.className = 'p-3 bg-error-lighter border border-error-light rounded-lg text-center';
-            errorEl.innerHTML = `<div class="flex flex-col gap-2"><span class="material-symbols-outlined text-status-error text-[24px]">error</span><p class="text-sm font-semibold text-text-main">Не удалось загрузить статистику</p><button onclick="retryLoadStatistics()" class="text-xs font-medium text-status-error hover:text-text-main underline">Попробовать снова</button></div>`;
+            errorEl.innerHTML = `<div class="flex flex-col gap-2"><span class="material-symbols-outlined text-status-error text-[24px]">error</span><p class="text-sm font-semibold text-text-main">Статистика временно недоступна</p><p class="text-xs text-text-secondary">Ваш прогресс не потерян. Попробуйте загрузить блок ещё раз.</p><button onclick="retryLoadStatistics()" class="text-xs font-medium text-status-error hover:text-text-main underline">Загрузить снова</button></div>`;
             statsContent.parentElement.insertBefore(errorEl, statsContent);
         }
 
@@ -1236,8 +1470,11 @@
         const contentState = document.getElementById('microcardsContentState');
         const disabledState = document.getElementById('microcardsDisabledState');
         const cardEl = document.getElementById('microcardsCard');
+        const ctaEl = document.getElementById('microcardsCTA');
 
         if (!cardEl) return;
+
+        if (ctaEl) ctaEl.disabled = false;
 
         const { ok, data } = await apiFetch('/api/microcards/summary');
         if (loadingState) loadingState.classList.add('hidden');
@@ -1245,16 +1482,19 @@
         if (!ok) {
             const isDisabled = data && (data.error === 'microcards_mode_disabled' || data.error === 'guest_cannot_use_microcards');
             if (isDisabled) {
+                setMainRecommendationState({ microcardsDisabled: true, microcardsHasDecks: false, microcardsDue: 0 });
                 if (disabledState) disabledState.classList.remove('hidden');
                 if (emptyState) emptyState.classList.add('hidden');
                 if (contentState) contentState.classList.add('hidden');
-                const cta = document.getElementById('microcardsCTA');
-                if (cta) cta.disabled = true;
+                if (ctaEl) ctaEl.disabled = true;
             } else {
+                setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
                 if (emptyState) {
                     emptyState.classList.remove('hidden');
                     const titleEl = emptyState.querySelector('p.text-sm');
-                    if (titleEl) titleEl.textContent = 'Не удалось загрузить';
+                    const descEl = emptyState.querySelector('p.text-\\[10px\\]');
+                    if (titleEl) titleEl.textContent = 'Сводка временно недоступна';
+                    if (descEl) descEl.textContent = 'Открыть режим можно позже: сама карточка никуда не исчезнет.';
                 }
             }
             return;
@@ -1272,11 +1512,19 @@
         const hasDecks = decksActive > 0 || dueTotal > 0 || newTotal > 0 || todayReviews > 0 || (totals.reviews || 0) > 0;
 
         if (!hasDecks) {
+            setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
             if (emptyState) emptyState.classList.remove('hidden');
+            if (emptyState) {
+                const titleEl = emptyState.querySelector('p.text-sm');
+                const descEl = emptyState.querySelector('p.text-\\[10px\\]');
+                if (titleEl) titleEl.textContent = 'Пока нет колод';
+                if (descEl) descEl.textContent = 'Когда появятся колоды, здесь будет самый быстрый вход в повторение.';
+            }
             if (contentState) contentState.classList.add('hidden');
             return;
         }
 
+        setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: true, microcardsDue: dueTotal });
         if (emptyState) emptyState.classList.add('hidden');
         if (contentState) {
             contentState.classList.remove('hidden');
@@ -1360,6 +1608,7 @@
         const hasActivity = statsOk && statsData?.dynamics?.some(d => (d.tasks_attempted > 0) || (d.microcards_reviews > 0) || (d.activity_attempts_total > 0));
         const criticalHealth = (data?.health_summary?.complexes || []).filter(c => c.health_percent < 80).length > 0;
         hasData = hasData || hasActivity || criticalHealth;
+        setMainRecommendationState({ calendarHasData: hasData, calendarMixCount: mixCount });
 
         // Update streak badge
         if (streakEl) {
@@ -1368,6 +1617,11 @@
 
         if (!hasData) {
             if (emptyState) emptyState.classList.remove('hidden');
+            if (emptyState) {
+                const textNodes = emptyState.querySelectorAll('p');
+                if (textNodes[0]) textNodes[0].textContent = 'Начните с первого учебного шага';
+                if (textNodes[1]) textNodes[1].textContent = 'После первого комплекса или повторения здесь появится ваш план на день.';
+            }
             if (contentState) contentState.classList.add('hidden');
             return;
         }
@@ -1474,12 +1728,12 @@
         container.innerHTML = toShow.map(c => {
             const tooltip = c.message ? `${c.hint_title || ''}\n${c.message}`.trim() : `Здоровье: ${c.health_percent}%`;
             return `
-                <div class="flex items-center justify-between py-1.5 px-2 bg-surface-2 rounded text-[11px]" title="${tooltip}">
+                <div class="flex items-center justify-between py-1.5 px-2 bg-surface-2 rounded text-[11px]" title="${escapeHtml(tooltip)}">
                     <div class="flex items-center gap-1.5">
                         <div class="w-1.5 h-1.5 rounded-full ${c.is_critical ? 'bg-status-error' : 'bg-accent'}"></div>
-                        <span class="font-medium text-text-muted truncate max-w-[100px]">${c.name}</span>
+                        <span class="font-medium text-text-muted truncate max-w-[100px]">${escapeHtml(c.name || '')}</span>
                     </div>
-                    <span class="font-bold ${c.is_critical ? 'text-status-error' : 'text-accent'}">${c.health_percent}%</span>
+                    <span class="font-bold ${c.is_critical ? 'text-status-error' : 'text-accent'}">${escapeHtml(String(c.health_percent ?? 0))}%</span>
                 </div>`;
         }).join('');
     }
@@ -1537,6 +1791,32 @@
                 pausedMap.set(s.complex_id, pickPreferredSession(existing, s));
             }
         });
+        setMainRecommendationState({ preferredAction: null });
+        const buildQuickAccessRecommendation = (item) => {
+            if (!item || !item.complex || !item.complex.id) return null;
+            const complexId = item.complex.id;
+            const complexName = item.complex.name || 'текущий комплекс';
+            const pausedSession = pausedMap.get(complexId) || item.paused_session || null;
+            const isPaused = !!(pausedSession && pausedSession.paused);
+
+            if (isPaused && pausedSession.session_id) {
+                return {
+                    title: 'Вернитесь к сессии на паузе',
+                    reason: `У вас уже есть незавершённый прогон по комплексу «${complexName}». Самый быстрый следующий шаг — продолжить его.`,
+                    label: 'Продолжить сессию',
+                    icon: 'restart_alt',
+                    action: () => window.handleStartSession(complexId, pausedSession.session_id),
+                };
+            }
+
+            return {
+                title: 'Продолжите активный комплекс',
+                reason: `Комплекс «${complexName}» уже у вас под рукой. Проще всего вернуться в обучение через него.`,
+                label: 'Открыть комплекс',
+                icon: 'play_arrow',
+                action: () => window.handleStartSession(complexId),
+            };
+        };
 
         if (!ok) {
             container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-muted">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="text-xs text-primary hover:underline mt-1">Попробовать снова</button></div>`;
@@ -1548,20 +1828,39 @@
             container.innerHTML = "";
             if (emptyEl) emptyEl.hidden = false;
             if (showAllBtn) showAllBtn.hidden = true;
+            if (emptyEl) {
+                let cta = document.getElementById('quick-access-empty-cta');
+                if (!cta) {
+                    cta = document.createElement('button');
+                    cta.type = 'button';
+                    cta.id = 'quick-access-empty-cta';
+                    cta.className = 'mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg transition-all hover:bg-primary-hover';
+                    cta.textContent = 'Открыть комплексы';
+                    cta.addEventListener('click', () => window.navigateWithTransition('/ui/complexes'));
+                    emptyEl.querySelector('.flex')?.appendChild(cta);
+                }
+            }
             return;
         }
 
+        setMainRecommendationState({ preferredAction: buildQuickAccessRecommendation(data.items[0]) });
         if (emptyEl) emptyEl.hidden = true;
         if (showAllBtn) showAllBtn.hidden = false;
 
         container.innerHTML = data.items.map(item => {
             const complex = item.complex;
+            const complexName = String(complex.name || '');
+            const safeComplexName = escapeHtml(complexName);
+            const safeComplexDescription = escapeHtml(complex.description || 'Нет описания');
+            const safeComplexInitials = escapeHtml(complexName.slice(0, 2));
+            const complexIdLiteral = escapeInlineJsString(complex.id);
             const pausedSession = pausedMap.get(complex.id) || item.paused_session || null;
             const isPaused = !!(pausedSession && pausedSession.paused);
             const stats = item.stats || {};
             const health = item.health || {};
             const ctaIcon = isPaused ? 'restart_alt' : 'play_arrow';
-            const onClickHandler = isPaused ? `window.handleStartSession('${complex.id}', '${pausedSession.session_id}')` : `window.handleStartSession('${complex.id}')`;
+            const pausedSessionIdLiteral = pausedSession ? escapeInlineJsString(pausedSession.session_id) : '';
+            const onClickHandler = isPaused ? `window.handleStartSession('${complexIdLiteral}', '${pausedSessionIdLiteral}')` : `window.handleStartSession('${complexIdLiteral}')`;
             const pausedAtLabel = formatPausedAt(pausedSession && pausedSession.paused_at);
             const pausedProgress = pausedSession && typeof pausedSession.current_task_index === "number"
                 ? pausedSession.current_task_index + 1
@@ -1585,7 +1884,7 @@
             } else if (progress > 0) {
                 iconContent = `<div class="relative w-10 h-10 flex items-center justify-center"><svg class="w-full h-full transform -rotate-90"><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"/><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - progress}" stroke-linecap="round" class="text-primary transition-all duration-500 ease-out"/></svg><span class="absolute text-[9px] font-bold text-text-secondary dark:text-text-on-dark">${progress}%</span></div>`;
             } else {
-                iconContent = `<div class="w-10 h-10 rounded-lg bg-surface-2 flex items-center justify-center text-text-muted font-bold text-xs uppercase border border-border-subtle">${complex.name.slice(0, 2)}</div>`;
+                iconContent = `<div class="w-10 h-10 rounded-lg bg-surface-2 flex items-center justify-center text-text-muted font-bold text-xs uppercase border border-border-subtle">${safeComplexInitials}</div>`;
             }
 
             let statusLine = '';
@@ -1594,7 +1893,7 @@
                     ? `На паузе с ${pausedAtLabel}`
                     : "На паузе";
                 const progressText = (pausedProgress && pausedTotal) ? ` В· ${pausedProgress}/${pausedTotal}` : "";
-                statusLine = `<span class="text-accent text-[10px] font-bold uppercase tracking-wider">${pauseText}${progressText}</span>`;
+                statusLine = `<span class="text-accent text-[10px] font-bold uppercase tracking-wider">${escapeHtml(`${pauseText}${progressText}`)}</span>`;
             } else if (item.is_pinned) {
                 statusLine = `<span class="text-text-muted text-[10px] flex items-center gap-1"><span class="material-symbols-outlined text-[10px]">push_pin</span> Закреплено</span>`;
             } else {
@@ -1602,7 +1901,7 @@
                     const dayText = health.days_since_last === 0 ? 'Сегодня' : `${health.days_since_last}дн. назад`;
                     statusLine = `<span class="text-text-muted text-[10px]">Активность: ${dayText}</span>`;
                 } else {
-                    statusLine = `<span class="text-text-muted text-[10px] uppercase tracking-wider max-w-[120px] truncate">${complex.description || 'Нет описания'}</span>`;
+                    statusLine = `<span class="text-text-muted text-[10px] uppercase tracking-wider max-w-[120px] truncate">${safeComplexDescription}</span>`;
                 }
             }
 
@@ -1612,12 +1911,12 @@
                     <div class="flex items-center gap-3">
                         <div class="relative">${iconContent}${healthBadge}</div>
                         <div class="flex flex-col">
-                            <h4 class="font-bold text-sm text-text-main group-hover:text-primary transition-colors line-clamp-1">${complex.name}</h4>
+                            <h4 class="font-bold text-sm text-text-main group-hover:text-primary transition-colors line-clamp-1">${safeComplexName}</h4>
                             <div class="flex items-center gap-2 mt-0.5">${statusLine}</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-1">
-                        <button class="h-7 w-7 rounded-full flex items-center justify-center text-text-muted hover:text-status-error hover:bg-surface-2 transition-all opacity-0 group-hover:opacity-100" onclick="event.stopPropagation();window._removeFromQuickAccess('${complex.id}')" title="Убрать"><span class="material-symbols-outlined text-[14px]">close</span></button>
+                        <button class="h-7 w-7 rounded-full flex items-center justify-center text-text-muted hover:text-status-error hover:bg-surface-2 transition-all opacity-0 group-hover:opacity-100" onclick="event.stopPropagation();window._removeFromQuickAccess('${complexIdLiteral}')" title="Убрать"><span class="material-symbols-outlined text-[14px]">close</span></button>
                         <button class="h-8 w-8 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted group-hover:bg-primary group-hover:text-primary-fg transition-all shadow-sm">
                             <span class="material-symbols-outlined text-[18px]">${ctaIcon}</span>
                         </button>

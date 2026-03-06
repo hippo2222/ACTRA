@@ -22,6 +22,7 @@ function setupDom() {
     dom.window.fetch = vi.fn();
     dom.window.alert = vi.fn();
     dom.window.confirm = vi.fn(() => true);
+    dom.window.__CLICK_EDITOR_AUTO_INIT_DISABLED__ = true;
     dom.window.HTMLCanvasElement.prototype.getContext = () => ({
         drawImage: vi.fn(), clearRect: vi.fn(), beginPath: vi.fn(),
         moveTo: vi.fn(), lineTo: vi.fn(), stroke: vi.fn(), fill: vi.fn(),
@@ -90,11 +91,14 @@ const buildErrorsPane = () => {
 };
 
 const createEditorInstance = () => {
-    const editorClass = dom.window.editor?.constructor;
+    const editorClass = dom.window.ClickEditor;
     if (!editorClass) {
-        throw new Error("ClickEditor is not available on dom.window.editor");
+        throw new Error("ClickEditor is not available on dom.window.ClickEditor");
     }
-    return new editorClass();
+    const initSpy = vi.spyOn(editorClass.prototype, "init").mockResolvedValue(undefined);
+    const instance = new editorClass();
+    initSpy.mockRestore();
+    return instance;
 };
 
 describe("ClickEditor errors pane (jsdom)", () => {
@@ -137,7 +141,7 @@ describe("ClickEditor errors pane (jsdom)", () => {
         expect(editor.errorsAddSpanBtn.disabled).toBe(true);
     });
 
-    it("clears all spans and resets selection/highlight on clear-all", () => {
+    it("clears all spans and resets selection/highlight on clear-all", async () => {
         const spans = editor.getErrorSpansArray();
         spans.push({ start: 0, end: 3 });
         editor.renderErrorsSpanList();
@@ -147,7 +151,7 @@ describe("ClickEditor errors pane (jsdom)", () => {
         editor.errorsTextSelection = { start: 0, end: 3 };
         editor.errorsTextEditor.setSelectionRange(0, 3);
 
-        editor.handleErrorsClearAll();
+        await editor.handleErrorsClearAll();
 
         expect(spans.length).toBe(0);
         expect(editor.errorsTextSelection).toBeNull();
@@ -179,6 +183,42 @@ describe("ClickEditor errors pane (jsdom)", () => {
         expect(spans[0]).toMatchObject({ start: 2, end: 5 }); // "foo" without spaces
         expect(editor.referenceSelection).toBeNull();
         expect(editor.referenceAddSpanBtn.disabled).toBe(true);
+    });
+});
+
+describe("ClickEditor semantic warnings", () => {
+    beforeEach(() => {
+        vi.restoreAllMocks();
+        document.body.innerHTML = `<div id="app"></div>`;
+        window.alert = vi.fn();
+        window.confirm = vi.fn(() => true);
+        dispatchDomReady();
+    });
+
+    it("detects overlapping spans in error-detection mode", () => {
+        const editor = createEditorInstance();
+        editor.task = {
+            task_data: {
+                content: {
+                    mode: "text_errors",
+                    text: "abcdef",
+                    error_spans: []
+                },
+                subtype: "error_detection"
+            }
+        };
+        editor.errorDetection.enabled = true;
+        editor.errorDetection.mode = "text_errors";
+        editor.errorDetection.text = "abcdef";
+        editor.errorDetection.errorSpans = [
+            { start: 0, end: 3 },
+            { start: 2, end: 5 }
+        ];
+
+        const warnings = editor.getSemanticWarnings();
+
+        expect(warnings).toHaveLength(1);
+        expect(warnings[0]).toContain("пересеч");
     });
 });
 
@@ -278,5 +318,32 @@ describe("ClickEditor choice prompt (errors text_choice)", () => {
 
         expect(editor.task.task_data.content.choice_prompt).toBe("Промпт по умолчанию");
         expect(fetchMock).toHaveBeenCalled();
+    });
+
+    it("shows warning feedback instead of plain success when semantic warnings are present", async () => {
+        const fetchMock = vi.fn().mockResolvedValue({
+            ok: true,
+            json: async () => ({ ok: true })
+        });
+
+        createEditorWithTask({
+            choice_prompt: "Старая",
+            prompt: "Основной",
+            options: [
+                { id: "opt1", text: "Повтор", is_correct: true },
+                { id: "opt2", text: "Повтор", is_correct: false }
+            ]
+        });
+        editor.errorDetection.options = editor.task.task_data.content.options;
+        dom.window.fetch = fetchMock;
+
+        const toastSpy = vi.spyOn(editor, "showToast").mockImplementation(() => {});
+        const statusSpy = vi.spyOn(editor, "updateSaveStatus");
+
+        await editor.saveTask();
+
+        expect(statusSpy).toHaveBeenCalledWith(expect.objectContaining({ type: "warning" }));
+        expect(toastSpy).toHaveBeenCalledWith(expect.stringContaining("проверьте"), "warning", 5200);
+        expect(toastSpy).not.toHaveBeenCalledWith("Задание сохранено.", "success");
     });
 });

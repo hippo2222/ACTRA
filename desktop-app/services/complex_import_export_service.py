@@ -137,11 +137,6 @@ class ComplexImportExportService:
                                 zf.write(file_path, arc_name)
                                 checksums[arc_name] = self.package_io.sha256_file(file_path)
 
-                difficulty_path = self.storage.modules_dir.parent / "difficulty_config.json"
-                if difficulty_path.exists():
-                    zf.write(difficulty_path, "difficulty_config.json")
-                    checksums["difficulty_config.json"] = self.package_io.sha256_file(difficulty_path)
-
                 manifest = {
                     "spec": self.SPEC,
                     "export_type": "complexes",
@@ -780,6 +775,21 @@ class ComplexImportExportService:
             "chains": normalized.get("chains", []),
             "settings": normalized.get("settings", {}),
             "theory_link": normalized.get("theory_link"),
+            "theory_mode": normalized.get("theory_mode"),
+            "created_by_user_id": (
+                str(cloned.get("created_by_user_id")).strip()
+                if isinstance(cloned.get("created_by_user_id"), str) and str(cloned.get("created_by_user_id")).strip()
+                else None
+            ),
+            "updated_by_user_id": (
+                str(cloned.get("updated_by_user_id")).strip()
+                if isinstance(cloned.get("updated_by_user_id"), str) and str(cloned.get("updated_by_user_id")).strip()
+                else None
+            ),
+            # Imported complexes must be explicitly marked as archive-originated,
+            # otherwise ownership filters cannot distinguish them from local edits.
+            "created_via": "archive_import",
+            "content_scope": "shared_local",
         }
 
         if existing:

@@ -243,7 +243,11 @@
      */
     function renderAnimatedCheckmark(iconWrap) {
         if (!iconWrap) return;
-        iconWrap.innerHTML = '';
+        if (typeof iconWrap.replaceChildren === 'function') {
+            iconWrap.replaceChildren();
+        } else {
+            iconWrap.textContent = '';
+        }
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', '0 0 52 52');
@@ -281,7 +285,11 @@
      */
     function renderAnimatedCross(iconWrap) {
         if (!iconWrap) return;
-        iconWrap.innerHTML = '';
+        if (typeof iconWrap.replaceChildren === 'function') {
+            iconWrap.replaceChildren();
+        } else {
+            iconWrap.textContent = '';
+        }
 
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.setAttribute('viewBox', '0 0 52 52');
@@ -339,8 +347,36 @@
         const badge = document.createElement('span');
         badge.className = 'streak-badge';
 
-        let fires = '';
+        let fireCount = 1;
         let extraClass = '';
+        if (streak >= 5) {
+            fireCount = 3;
+            extraClass = ' streak-badge-epic';
+        } else if (streak >= 3) {
+            fireCount = 2;
+            extraClass = ' streak-badge-hot';
+        }
+
+        const inner = document.createElement('span');
+        inner.className = `streak-badge-inner${extraClass}`;
+
+        const fireWrap = document.createElement('span');
+        fireWrap.className = 'inline-flex items-center gap-0.5';
+        for (let i = 0; i < fireCount; i++) {
+            const fire = document.createElement('span');
+            fire.className = 'material-symbols-outlined text-[16px] leading-none';
+            fire.textContent = 'local_fire_department';
+            fireWrap.appendChild(fire);
+        }
+
+        inner.appendChild(fireWrap);
+        inner.appendChild(document.createTextNode(` ${streak} подряд!`));
+        badge.appendChild(inner);
+        header.appendChild(badge);
+        return;
+
+        var fires = '';
+        extraClass = '';
         if (streak >= 5) {
             fires = '🔥🔥🔥';
             extraClass = ' streak-badge-epic';

@@ -904,6 +904,12 @@
     return el;
   }
 
+  function _escapeHtml(text) {
+    const el = document.createElement("span");
+    el.textContent = text != null ? String(text) : "";
+    return el.innerHTML;
+  }
+
   function _clearMarkers() {
     if (!state.markerLayer) return;
     state.markerLayer.innerHTML = "";
@@ -2730,7 +2736,9 @@
       hint.className =
         "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-warning-lighter dark:bg-warning-light border border-warning-light dark:border-warning-light rounded-lg text-sm text-warning-darker dark:text-warning-lighter";
       _setHintIcon("warning", "material-symbols-outlined text-warning dark:text-warning-light");
-      _setHintHtml(`<span class="font-semibold text-text-main dark:text-text-on-dark">${message}</span>`);
+      _setHintHtml(
+        `<span class="font-semibold text-text-main dark:text-text-on-dark">${_escapeHtml(message)}</span>`
+      );
 
       state.tempHintTimer = setTimeout(() => {
         state.tempHintTimer = null;
@@ -3517,4 +3525,3 @@
 
   global.ClickUI = ClickUI;
 })(window);
-

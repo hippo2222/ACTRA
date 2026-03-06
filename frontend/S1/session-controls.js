@@ -256,11 +256,13 @@
                 // But index.html had `const setPaused = UIHelpers.setPausedUI`.
                 // I should verify if setPausedUI is valid. I'll assume yes for now.
                 showStatus("");
-                // Access global loadInitialTask? Or should we reload?
-                // Ideally we should reload the task. But loadInitialTask is in main.js (not yet created).
-                // Check if loadInitialTask is available globally.
-                if (typeof window.loadInitialTask === 'function') {
-                    await window.loadInitialTask();
+                const reloadTask =
+                    (window.Main && typeof window.Main.loadInitialTask === "function")
+                        ? window.Main.loadInitialTask.bind(window.Main)
+                        : (typeof window.loadInitialTask === "function" ? window.loadInitialTask : null);
+
+                if (reloadTask) {
+                    await reloadTask();
                 } else {
                     console.warn("loadInitialTask not found, reloading page");
                     window.location.reload();
@@ -627,9 +629,11 @@
         try {
             setLoading(true);
             showStatus("Загружаем следующее задание...");
-            showTaskSkeleton(); // Skeleton integration!
 
             const prevTask = SessionState.currentTask || null;
+            if (!prevTask) {
+                showTaskSkeleton();
+            }
             const { status, data } = await SessionAPI.nextTask(SessionState.sessionId);
 
             if (status === 409) {
@@ -718,7 +722,21 @@
         if (finishBtn) finishBtn.setAttribute("disabled", "true");
 
         try {
-            await fetch(SessionRoutes.API.CANCEL(SessionState.sessionId), { method: "POST" });
+            const response = await fetch(SessionRoutes.API.CANCEL(SessionState.sessionId), { method: "POST" });
+            if (!response.ok) {
+                let message = "Не удалось завершить комплекс. Попробуйте ещё раз";
+                try {
+                    const data = await response.json();
+                    if (data && (data.error || data.message)) {
+                        message = data.error || data.message;
+                    }
+                } catch (e) {
+                    // Ignore parse errors and keep default message.
+                }
+                showStatus(message, "error");
+                if (finishBtn) finishBtn.removeAttribute("disabled");
+                return;
+            }
             window.navigateWithTransition(SessionRoutes.MAIN);
         } catch (err) {
             console.error("Cancel session failed", err);
@@ -784,4 +802,3 @@
         initBeforeUnloadGuard
     };
 }));
-

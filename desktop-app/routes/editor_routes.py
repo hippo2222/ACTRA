@@ -18,6 +18,8 @@ Endpoints:
 - POST   /api/editor/task/new                             - Create new task
 - POST   /api/editor/module/new                           - Create new module
 - POST   /api/editor/topic/new                            - Create new topic
+- GET    /api/editor/topic/<m>/<t>/theory-link           - Get topic-level theory link
+- PUT    /api/editor/topic/<m>/<t>/theory-link           - Set topic-level theory link (+ optional propagation)
 - POST   /api/editor/upload-image                         - Upload image for task
 - GET    /api/editor/image                                - Serve editor image
 """
@@ -30,9 +32,10 @@ import tempfile
 import threading
 import time
 import uuid as _uuid
+import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from flask import (
     Blueprint,
@@ -45,6 +48,7 @@ from flask import (
 )
 from werkzeug.utils import secure_filename
 
+from api.complexes_api import validate_and_normalize_theory_link
 from task_system.models.test_parser import TestFileParser
 from task_system.models.test_task import TestTask
 
@@ -54,6 +58,132 @@ from routes._helpers import _make_safe_id, _resolve_editor_image_path
 logger = logging.getLogger(__name__)
 
 editor_bp = Blueprint("editor", __name__)
+
+_ARCHIVE_CONFIRM_IDEMPOTENCY_LOCK = threading.Lock()
+_TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
+_COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
+_ARCHIVE_CONFIRM_IDEMPOTENCY_TTL_SECONDS = 15 * 60
+
+
+def _stable_json_hash(data: Any) -> str:
+    payload = json.dumps(
+        data,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _cleanup_archive_confirm_idempotency_cache(cache: Dict[str, Dict[str, Any]]) -> None:
+    now = time.time()
+    stale_keys = [
+        key
+        for key, item in cache.items()
+        if now - float(item.get("created_ts", 0)) > _ARCHIVE_CONFIRM_IDEMPOTENCY_TTL_SECONDS
+    ]
+    for key in stale_keys:
+        cache.pop(key, None)
+
+
+def _archive_confirm_idempotency_reserve(
+    cache: Dict[str, Dict[str, Any]],
+    idempotency_key: str,
+    request_fingerprint: str,
+) -> Optional[Dict[str, Any]]:
+    if not idempotency_key:
+        return None
+    with _ARCHIVE_CONFIRM_IDEMPOTENCY_LOCK:
+        _cleanup_archive_confirm_idempotency_cache(cache)
+        item = cache.get(idempotency_key)
+        if item:
+            if item.get("request_fingerprint") != request_fingerprint:
+                return {"conflict": True}
+            if item.get("in_progress"):
+                return {"in_progress": True}
+            cached_response = dict(item.get("response") or {})
+            cached_response["idempotent_replay"] = True
+            return cached_response
+        cache[idempotency_key] = {
+            "created_ts": time.time(),
+            "request_fingerprint": request_fingerprint,
+            "in_progress": True,
+            "response": None,
+        }
+        return None
+
+
+def _archive_confirm_idempotency_store(
+    cache: Dict[str, Dict[str, Any]],
+    idempotency_key: str,
+    request_fingerprint: str,
+    response: Dict[str, Any],
+) -> None:
+    if not idempotency_key:
+        return
+    payload = dict(response or {})
+    payload["idempotency_key"] = idempotency_key
+    with _ARCHIVE_CONFIRM_IDEMPOTENCY_LOCK:
+        _cleanup_archive_confirm_idempotency_cache(cache)
+        cache[idempotency_key] = {
+            "created_ts": time.time(),
+            "request_fingerprint": request_fingerprint,
+            "in_progress": False,
+            "response": payload,
+        }
+
+
+def _archive_confirm_idempotency_release(
+    cache: Dict[str, Dict[str, Any]],
+    idempotency_key: str,
+    request_fingerprint: str,
+) -> None:
+    if not idempotency_key:
+        return
+    with _ARCHIVE_CONFIRM_IDEMPOTENCY_LOCK:
+        item = cache.get(idempotency_key)
+        if not item:
+            return
+        if item.get("request_fingerprint") == request_fingerprint and item.get("in_progress"):
+            cache.pop(idempotency_key, None)
+
+
+def _uploaded_file_fingerprint(file_storage: Any) -> Optional[Dict[str, Any]]:
+    if file_storage is None:
+        return None
+    filename = str(getattr(file_storage, "filename", "") or "").strip()
+    stream = getattr(file_storage, "stream", None)
+    if stream is None:
+        return {"filename": filename, "sha256": None}
+
+    hasher = hashlib.sha256()
+    try:
+        stream.seek(0)
+    except Exception:
+        pass
+
+    while True:
+        chunk = stream.read(1024 * 1024)
+        if not chunk:
+            break
+        if isinstance(chunk, str):
+            chunk = chunk.encode("utf-8")
+        hasher.update(chunk)
+
+    try:
+        stream.seek(0)
+    except Exception:
+        pass
+
+    return {
+        "filename": filename,
+        "sha256": hasher.hexdigest(),
+    }
+
+
+def _stream_result_response(payload: Dict[str, Any]) -> Response:
+    body = json.dumps({"type": "result", "data": payload}, ensure_ascii=False) + "\n"
+    return Response(body, mimetype="application/x-ndjson")
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +274,237 @@ def _resolve_task_dir(module_id: str, topic_id: str, task_id: str) -> Path:
         / "tasks"
         / task_id
     )
+
+
+def _normalize_propagation_mode(value: Any) -> str:
+    mode = str(value or "").strip().lower()
+    if mode in {"safe", "inherit_only_force", "all_force"}:
+        return mode
+    return "safe"
+
+
+def _parse_task_ref(task_ref: Any) -> Optional[Tuple[str, str, str]]:
+    if not isinstance(task_ref, str):
+        return None
+    parts = [p.strip() for p in task_ref.split("/") if p is not None]
+    if len(parts) < 3:
+        return None
+    module_id, topic_id, task_id = parts[0], parts[1], parts[-1]
+    if not module_id or not topic_id or not task_id:
+        return None
+    return module_id, topic_id, task_id
+
+
+def _collect_topic_refs_from_tasks(task_refs: Any) -> Set[Tuple[str, str]]:
+    refs: Set[Tuple[str, str]] = set()
+    if not isinstance(task_refs, list):
+        return refs
+    for task_ref in task_refs:
+        parsed = _parse_task_ref(task_ref)
+        if not parsed:
+            continue
+        module_id, topic_id, _ = parsed
+        refs.add((module_id, topic_id))
+    return refs
+
+
+def _complex_theory_mode(payload: Dict[str, Any]) -> str:
+    raw = str(payload.get("theory_mode") or "").strip().lower()
+    if raw in {"inherit", "override"}:
+        return raw
+    if isinstance(payload.get("theory_link"), dict):
+        return "override"
+    return "inherit"
+
+
+def _json_like_equal(left: Any, right: Any) -> bool:
+    if isinstance(left, (dict, list)) or isinstance(right, (dict, list)):
+        try:
+            return json.dumps(left, ensure_ascii=False, sort_keys=True) == json.dumps(
+                right, ensure_ascii=False, sort_keys=True
+            )
+        except Exception:
+            return left == right
+    return left == right
+
+
+def _compute_inherited_theory_for_topics(
+    topic_refs: Set[Tuple[str, str]],
+) -> Dict[str, Any]:
+    storage = get_ctx().storage_service
+    topic_rows: List[Dict[str, Any]] = []
+    unique_theory_links: Dict[str, Dict[str, Any]] = {}
+
+    for module_id, topic_id in sorted(topic_refs):
+        theory_link = storage.get_topic_theory_link(module_id, topic_id)
+        theory_id = (
+            str(theory_link.get("theory_id") or "").strip()
+            if isinstance(theory_link, dict)
+            else ""
+        )
+        topic_rows.append(
+            {
+                "module_id": module_id,
+                "topic_id": topic_id,
+                "theory_id": theory_id or None,
+            }
+        )
+        if theory_id and isinstance(theory_link, dict):
+            unique_theory_links[theory_id] = dict(theory_link)
+
+    if not unique_theory_links:
+        return {
+            "status": "none",
+            "inherited_theory_link": None,
+            "theory_ids": [],
+            "topic_rows": topic_rows,
+        }
+
+    if len(unique_theory_links) == 1:
+        theory_id = next(iter(unique_theory_links.keys()))
+        return {
+            "status": "ok",
+            "inherited_theory_link": unique_theory_links[theory_id],
+            "theory_ids": [theory_id],
+            "topic_rows": topic_rows,
+        }
+
+    return {
+        "status": "conflict",
+        "inherited_theory_link": None,
+        "theory_ids": sorted(unique_theory_links.keys()),
+        "topic_rows": topic_rows,
+    }
+
+
+def _sync_topic_theory_to_complexes(
+    module_id: str,
+    topic_id: str,
+    *,
+    propagation_mode: str = "safe",
+    dry_run: bool = True,
+) -> Dict[str, Any]:
+    ctx = get_ctx()
+    mode = _normalize_propagation_mode(propagation_mode)
+    complexes = ctx.complex_service.get_all_complexes()
+
+    items: List[Dict[str, Any]] = []
+    summary = {
+        "mode": mode,
+        "dry_run": bool(dry_run),
+        "target_topic": {"module_id": module_id, "topic_id": topic_id},
+        "impacted_complexes": 0,
+        "updated": 0,
+        "would_update": 0,
+        "skipped": 0,
+    }
+
+    target_ref = (module_id, topic_id)
+    force_refresh = mode == "inherit_only_force"
+    target_all_modes = mode == "all_force"
+
+    for complex_obj in complexes:
+        payload = complex_obj.dict() if hasattr(complex_obj, "dict") else {}
+        complex_id = str(payload.get("id") or "").strip()
+        if not complex_id:
+            continue
+
+        task_refs = payload.get("tasks") if isinstance(payload.get("tasks"), list) else []
+        topic_refs = _collect_topic_refs_from_tasks(task_refs)
+        if target_ref not in topic_refs:
+            continue
+
+        summary["impacted_complexes"] += 1
+        current_mode = _complex_theory_mode(payload)
+        if not target_all_modes and current_mode != "inherit":
+            items.append(
+                {
+                    "complex_id": complex_id,
+                    "action": "skipped",
+                    "reason": "mode_override",
+                    "mode": current_mode,
+                }
+            )
+            summary["skipped"] += 1
+            continue
+
+        inherited = _compute_inherited_theory_for_topics(topic_refs)
+        inherited_status = inherited.get("status")
+
+        updates: Dict[str, Any] = {
+            "theory_sync_status": inherited_status,
+            "theory_sync_meta": {
+                "source": "topic_propagation",
+                "updated_at": datetime.utcnow().isoformat(),
+                "topic_count": len(topic_refs),
+                "theory_ids": inherited.get("theory_ids") or [],
+            },
+        }
+
+        if current_mode == "inherit":
+            updates["theory_mode"] = "inherit"
+        elif target_all_modes:
+            updates["theory_mode"] = "override"
+
+        if inherited_status == "ok":
+            updates["theory_link"] = inherited.get("inherited_theory_link")
+        elif inherited_status == "none":
+            updates["theory_link"] = None
+        else:
+            # conflict: keep current complex theory_link untouched
+            updates.pop("theory_link", None)
+            updates["theory_sync_meta"]["conflict_topics"] = inherited.get("topic_rows") or []
+
+        changed_keys = []
+        for key, next_value in updates.items():
+            if not _json_like_equal(payload.get(key), next_value):
+                changed_keys.append(key)
+
+        if not changed_keys and not (force_refresh and current_mode == "inherit"):
+            items.append(
+                {
+                    "complex_id": complex_id,
+                    "action": "skipped",
+                    "reason": "unchanged",
+                    "mode": current_mode,
+                    "status": inherited_status,
+                }
+            )
+            summary["skipped"] += 1
+            continue
+
+        if dry_run:
+            items.append(
+                {
+                    "complex_id": complex_id,
+                    "action": "would_update",
+                    "mode": current_mode,
+                    "status": inherited_status,
+                    "changed_keys": changed_keys,
+                }
+            )
+            summary["would_update"] += 1
+            continue
+
+        ctx.complex_service.update_complex(
+            complex_id,
+            {
+                **updates,
+                "updated_by_user_id": ctx.user_id,
+            },
+        )
+        items.append(
+            {
+                "complex_id": complex_id,
+                "action": "updated",
+                "mode": current_mode,
+                "status": inherited_status,
+                "changed_keys": changed_keys,
+            }
+        )
+        summary["updated"] += 1
+
+    return {"summary": summary, "items": items}
 
 
 # ---------------------------------------------------------------------------
@@ -334,6 +695,8 @@ def import_confirm() -> Any:
     try:
         # Parse per-task conflict overrides (index -> resolution)
         per_task_conflict = {}
+        request_fingerprint = ""
+        idempotency_key = str(request.form.get("idempotency_key") or "").strip()
         try:
             raw_ptc = request.form.get("per_task_conflict", "")
             if raw_ptc:
@@ -350,23 +713,60 @@ def import_confirm() -> Any:
         }
 
         temp_path = None
-        cached = False
+        cache_id = str(request.form.get("cache_id") or "").strip()
+        upload_fingerprint = None
+        upload_file = None
+        if cache_id:
+            upload_fingerprint = None
+        else:
+            if "file" not in request.files:
+                return jsonify({"ok": False, "error": "file_required"}), 400
+            upload_file = request.files["file"]
+            if not upload_file or upload_file.filename == "":
+                return jsonify({"ok": False, "error": "no_selected_file"}), 400
+            upload_fingerprint = _uploaded_file_fingerprint(upload_file)
+
+        request_fingerprint = _stable_json_hash(
+            {
+                "cache_id": cache_id or None,
+                "uploaded_file": upload_fingerprint,
+                "params": params,
+            }
+        )
+        cached_response = _archive_confirm_idempotency_reserve(
+            _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+            idempotency_key,
+            request_fingerprint,
+        )
+        if cached_response:
+            if cached_response.get("conflict"):
+                return jsonify({"ok": False, "error": "idempotency_key_conflict"}), 409
+            if cached_response.get("in_progress"):
+                return jsonify({"ok": False, "error": "idempotency_key_in_progress"}), 409
+            logger.info(
+                "[HTTP] editor/import/confirm idempotent replay: key=%s cache_id=%s",
+                idempotency_key,
+                cache_id or "-",
+            )
+            return _stream_result_response(cached_response)
 
         # Try to use cached archive from check step
-        cache_id = request.form.get("cache_id", "")
         if cache_id and cache_id in _import_archive_cache:
             temp_path, _ = _import_archive_cache.pop(cache_id)
-            cached = True
 
         # Fall back to file upload
         if not temp_path or not os.path.exists(temp_path):
-            if "file" not in request.files:
+            if upload_file is None:
+                _archive_confirm_idempotency_release(
+                    _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                    idempotency_key,
+                    request_fingerprint,
+                )
                 return jsonify({"ok": False, "error": "file_required"}), 400
-            file = request.files["file"]
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
             temp_path = tmp.name
             tmp.close()
-            file.save(temp_path)
+            upload_file.save(temp_path)
 
         q = queue.Queue()
 
@@ -377,9 +777,24 @@ def import_confirm() -> Any:
                     q.put({"type": "progress", "current": curr, "total": total, "status": status})
 
                 res = svc.import_tasks_atomic(temp_path, params, progress_callback=progress)
+                if isinstance(res, dict) and idempotency_key:
+                    res = dict(res)
+                    res["idempotency_key"] = idempotency_key
+                if isinstance(res, dict):
+                    _archive_confirm_idempotency_store(
+                        _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                        idempotency_key,
+                        request_fingerprint,
+                        res,
+                    )
                 q.put({"type": "result", "data": res})
             except Exception as e:
                 logger.exception("Import worker failed")
+                _archive_confirm_idempotency_release(
+                    _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                    idempotency_key,
+                    request_fingerprint,
+                )
                 q.put({"type": "error", "error": str(e)})
             finally:
                 q.put(None)  # Sentinel
@@ -403,6 +818,11 @@ def import_confirm() -> Any:
         return Response(stream_with_context(generator()), mimetype="application/x-ndjson")
 
     except Exception as exc:
+        _archive_confirm_idempotency_release(
+            _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+            locals().get("idempotency_key", ""),
+            locals().get("request_fingerprint", ""),
+        )
         logger.exception("[HTTP] Import confirm setup failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -545,19 +965,61 @@ def import_complexes_confirm() -> Any:
             "atomic_mode": request.form.get("atomic_mode", "bundle"),
         }
 
+        request_fingerprint = ""
+        idempotency_key = str(request.form.get("idempotency_key") or "").strip()
         temp_path = None
-        cache_id = request.form.get("cache_id", "")
+        cache_id = str(request.form.get("cache_id") or "").strip()
+        upload_file = None
+        upload_fingerprint = None
+        if cache_id:
+            upload_fingerprint = None
+        else:
+            if "file" not in request.files:
+                return jsonify({"ok": False, "error": "file_required"}), 400
+            upload_file = request.files["file"]
+            if not upload_file or upload_file.filename == "":
+                return jsonify({"ok": False, "error": "no_selected_file"}), 400
+            upload_fingerprint = _uploaded_file_fingerprint(upload_file)
+
+        request_fingerprint = _stable_json_hash(
+            {
+                "cache_id": cache_id or None,
+                "uploaded_file": upload_fingerprint,
+                "params": params,
+            }
+        )
+        cached_response = _archive_confirm_idempotency_reserve(
+            _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+            idempotency_key,
+            request_fingerprint,
+        )
+        if cached_response:
+            if cached_response.get("conflict"):
+                return jsonify({"ok": False, "error": "idempotency_key_conflict"}), 409
+            if cached_response.get("in_progress"):
+                return jsonify({"ok": False, "error": "idempotency_key_in_progress"}), 409
+            logger.info(
+                "[HTTP] complexes/import/confirm idempotent replay: key=%s cache_id=%s",
+                idempotency_key,
+                cache_id or "-",
+            )
+            return _stream_result_response(cached_response)
+
         if cache_id and cache_id in _complex_import_archive_cache:
             temp_path, _ = _complex_import_archive_cache.pop(cache_id)
 
         if not temp_path or not os.path.exists(temp_path):
-            if "file" not in request.files:
+            if upload_file is None:
+                _archive_confirm_idempotency_release(
+                    _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                    idempotency_key,
+                    request_fingerprint,
+                )
                 return jsonify({"ok": False, "error": "file_required"}), 400
-            file = request.files["file"]
             tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".zip")
             temp_path = tmp.name
             tmp.close()
-            file.save(temp_path)
+            upload_file.save(temp_path)
 
         q = queue.Queue()
 
@@ -568,9 +1030,24 @@ def import_complexes_confirm() -> Any:
                     q.put({"type": "progress", "current": curr, "total": total, "status": status})
 
                 res = svc.import_complexes_atomic(temp_path, params, progress_callback=progress)
+                if isinstance(res, dict) and idempotency_key:
+                    res = dict(res)
+                    res["idempotency_key"] = idempotency_key
+                if isinstance(res, dict):
+                    _archive_confirm_idempotency_store(
+                        _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                        idempotency_key,
+                        request_fingerprint,
+                        res,
+                    )
                 q.put({"type": "result", "data": res})
             except Exception as e:
                 logger.exception("Complex import worker failed")
+                _archive_confirm_idempotency_release(
+                    _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                    idempotency_key,
+                    request_fingerprint,
+                )
                 q.put({"type": "error", "error": str(e)})
             finally:
                 q.put(None)
@@ -594,6 +1071,11 @@ def import_complexes_confirm() -> Any:
         return Response(stream_with_context(generator()), mimetype="application/x-ndjson")
 
     except Exception as exc:
+        _archive_confirm_idempotency_release(
+            _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+            locals().get("idempotency_key", ""),
+            locals().get("request_fingerprint", ""),
+        )
         logger.exception("[HTTP] Complex import confirm setup failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -795,6 +1277,48 @@ def create_editor_topic() -> Any:
         if not all([module_id, name]):
             return jsonify({"ok": False, "error": "missing_params"}), 400
 
+        theory_link_payload = payload.get("theory_link")
+        normalized_theory_link = None
+        if theory_link_payload is not None:
+            normalized_theory_link, theory_link_error = validate_and_normalize_theory_link(
+                theory_link_payload, required=False
+            )
+            if theory_link_error is not None:
+                return (
+                    jsonify(
+                        {
+                            "ok": False,
+                            "error": "validation_error",
+                            "details": {"errors": [{"field": "theory_link", "reason": theory_link_error}]},
+                        }
+                    ),
+                    400,
+                )
+            if isinstance(normalized_theory_link, dict):
+                theory_id = str(normalized_theory_link.get("theory_id") or "").strip()
+                if theory_id:
+                    try:
+                        ctx.theory_service.get_theory(theory_id, include_delta=False)
+                    except Exception:
+                        return (
+                            jsonify(
+                                {
+                                    "ok": False,
+                                    "error": "validation_error",
+                                    "details": {
+                                        "errors": [
+                                            {
+                                                "field": "theory_link",
+                                                "reason": "theory_not_found",
+                                                "value": theory_id,
+                                            }
+                                        ]
+                                    },
+                                }
+                            ),
+                            400,
+                        )
+
         topic_id = _make_safe_id(name)
         if not topic_id:
             return jsonify({"ok": False, "error": "invalid_topic_name"}), 400
@@ -802,13 +1326,148 @@ def create_editor_topic() -> Any:
         topic_dir.mkdir(parents=True, exist_ok=True)
         (topic_dir / "tasks").mkdir(exist_ok=True)
 
+        topic_payload = {"id": topic_id, "name": name, "tasks": []}
+        if isinstance(normalized_theory_link, dict):
+            topic_payload["theory_link"] = normalized_theory_link
         with open(topic_dir / "topic.json", "w", encoding="utf-8") as f:
-            json.dump({"id": topic_id, "name": name, "tasks": []}, f, indent=2, ensure_ascii=False)
+            json.dump(topic_payload, f, indent=2, ensure_ascii=False)
 
         ctx.storage_service.reload_modules()
         return jsonify({"ok": True, "topic_id": topic_id})
     except Exception as exc:
         return jsonify({"ok": False, "error": str(exc)}), 500
+
+
+@editor_bp.route("/api/editor/topic/<module_id>/<topic_id>/theory-link", methods=["GET"])
+def get_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
+    try:
+        topic = get_ctx().storage_service.get_topic(module_id, topic_id)
+        if not topic:
+            return jsonify({"ok": False, "error": "topic_not_found"}), 404
+
+        theory_link = get_ctx().storage_service.get_topic_theory_link(module_id, topic_id)
+        preview = _sync_topic_theory_to_complexes(
+            module_id,
+            topic_id,
+            propagation_mode="safe",
+            dry_run=True,
+        )
+        return jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "module_id": module_id,
+                    "topic_id": topic_id,
+                    "theory_link": theory_link,
+                },
+                "propagation_preview": preview.get("summary", {}),
+            }
+        )
+    except Exception as exc:
+        logger.exception(
+            "[HTTP] Failed to load topic theory link module=%s topic=%s: %s",
+            module_id,
+            topic_id,
+            exc,
+        )
+        return jsonify({"ok": False, "error": "topic_theory_link_load_failed"}), 500
+
+
+@editor_bp.route("/api/editor/topic/<module_id>/<topic_id>/theory-link", methods=["PUT"])
+def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+    try:
+        payload = request.get_json(silent=True) or {}
+        if "theory_link" not in payload:
+            return jsonify({"ok": False, "error": "theory_link_required"}), 400
+
+        theory_link_payload = payload.get("theory_link")
+        normalized_theory_link = None
+        if theory_link_payload is not None:
+            normalized_theory_link, theory_link_error = validate_and_normalize_theory_link(
+                theory_link_payload, required=False
+            )
+            if theory_link_error is not None:
+                return (
+                    jsonify(
+                        {
+                            "ok": False,
+                            "error": "validation_error",
+                            "details": {"errors": [{"field": "theory_link", "reason": theory_link_error}]},
+                        }
+                    ),
+                    400,
+                )
+            if isinstance(normalized_theory_link, dict):
+                theory_id = str(normalized_theory_link.get("theory_id") or "").strip()
+                if theory_id:
+                    try:
+                        ctx.theory_service.get_theory(theory_id, include_delta=False)
+                    except Exception:
+                        return (
+                            jsonify(
+                                {
+                                    "ok": False,
+                                    "error": "validation_error",
+                                    "details": {
+                                        "errors": [
+                                            {
+                                                "field": "theory_link",
+                                                "reason": "theory_not_found",
+                                                "value": theory_id,
+                                            }
+                                        ]
+                                    },
+                                }
+                            ),
+                            400,
+                        )
+
+        updated_topic_payload = ctx.storage_service.set_topic_theory_link(
+            module_id,
+            topic_id,
+            normalized_theory_link,
+        )
+
+        apply_to_complexes = bool(payload.get("apply_to_complexes"))
+        mode = _normalize_propagation_mode(payload.get("propagation_mode"))
+        dry_run = bool(payload.get("dry_run"))
+        propagation_result = None
+        if apply_to_complexes:
+            propagation_result = _sync_topic_theory_to_complexes(
+                module_id,
+                topic_id,
+                propagation_mode=mode,
+                dry_run=dry_run,
+            )
+
+        return jsonify(
+            {
+                "ok": True,
+                "item": {
+                    "module_id": module_id,
+                    "topic_id": topic_id,
+                    "theory_link": updated_topic_payload.get("theory_link")
+                    if isinstance(updated_topic_payload, dict)
+                    else None,
+                },
+                "propagation": propagation_result,
+            }
+        )
+    except ValueError as exc:
+        if str(exc) == "topic_not_found":
+            return jsonify({"ok": False, "error": "topic_not_found"}), 404
+        return jsonify({"ok": False, "error": str(exc)}), 400
+    except Exception as exc:
+        logger.exception(
+            "[HTTP] Failed to save topic theory link module=%s topic=%s: %s",
+            module_id,
+            topic_id,
+            exc,
+        )
+        return jsonify({"ok": False, "error": "topic_theory_link_save_failed"}), 500
 
 
 # _copy_editor_images removed (logic moved to StorageService)

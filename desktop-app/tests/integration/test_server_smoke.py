@@ -61,6 +61,11 @@ def test_list_complexes(client):
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["ok"] is True
+    items = data.get("items")
+    if isinstance(items, list) and items:
+        ownership = items[0].get("ownership")
+        assert isinstance(ownership, dict)
+        assert ownership.get("scope") == "workspace"
 
 
 # ---------------------------------------------------------------------------

@@ -367,7 +367,7 @@ class ClickEditor extends BaseEditor {
             });
             const data = await response.json();
             if (!response.ok || !data?.ok || !data?.path) {
-                alert(`Ошибка загрузки дополнительного изображения: ${data?.error || "upload_failed"}`);
+                this.showToast(`Ошибка загрузки дополнительного изображения: ${data?.error || "upload_failed"}`, "error");
                 return;
             }
 
@@ -382,7 +382,7 @@ class ClickEditor extends BaseEditor {
             this.renderAdditionalInfo();
         } catch (error) {
             console.error("Failed to upload additional image:", error);
-            alert("Ошибка при загрузке дополнительного изображения.");
+            this.showToast("Ошибка при загрузке дополнительного изображения.", "error");
         } finally {
             event.target.value = "";
         }
@@ -516,7 +516,14 @@ class ClickEditor extends BaseEditor {
             // Check for fresher draft
             const lastSaved = this.task.task_data?.meta?.modified || 0;
             if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
-                if (confirm('Найдена более новая локальная копия (черновик). Восстановить её?')) {
+                const shouldRestoreDraft = await this.confirmAction({
+                    title: "Восстановить черновик?",
+                    message: "Найдена более новая локальная копия (черновик).",
+                    confirmText: "Восстановить",
+                    cancelText: "Оставить серверную",
+                    variant: "info"
+                });
+                if (shouldRestoreDraft) {
                     const draft = this.autoSaveManager.loadDraft();
                     if (draft && draft.data) {
                         this.restoreState(draft.data);
@@ -635,24 +642,24 @@ class ClickEditor extends BaseEditor {
     validateTextErrorsBeforeSave() {
         const text = (this.errorDetection.text || "").trim();
         if (!text) {
-            alert("Для режима «Ошибки в тексте» необходимо заполнить текст.");
+            this.showToast("Для режима «Ошибки в тексте» необходимо заполнить текст.", "error");
             this.ensureErrorsPaneLoaded();
             return false;
         }
         const spans = this.getErrorSpansArray();
         if (!Array.isArray(spans) || !spans.length) {
-            alert("Добавьте хотя бы одну ошибку (выделенный диапазон).");
+            this.showToast("Добавьте хотя бы одну ошибку (выделенный диапазон).", "error");
             return false;
         }
         const maxLen = text.length;
         for (let i = 0; i < spans.length; i += 1) {
             const { start, end } = spans[i];
             if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start) {
-                alert(`Неверные границы у ошибки №${i + 1}. Проверьте выделения.`);
+                this.showToast(`Неверные границы у ошибки №${i + 1}. Проверьте выделения.`, "error");
                 return false;
             }
             if (end > maxLen) {
-                alert(`Ошибка №${i + 1} выходит за пределы текста. Исправьте диапазон.`);
+                this.showToast(`Ошибка №${i + 1} выходит за пределы текста. Исправьте диапазон.`, "error");
                 return false;
             }
         }
@@ -662,7 +669,7 @@ class ClickEditor extends BaseEditor {
     validateChoiceModeBeforeSave() {
         const options = this.getChoiceOptionsArray();
         if (!Array.isArray(options) || options.length < 2) {
-            alert("Для режима выбора текста нужно минимум два варианта.");
+            this.showToast("Для режима выбора текста нужно минимум два варианта.", "error");
             return false;
         }
         const trimmedOptions = options.map((opt) => ({
@@ -671,12 +678,12 @@ class ClickEditor extends BaseEditor {
         }));
         const emptyOption = trimmedOptions.findIndex((opt) => !opt.text.length);
         if (emptyOption !== -1) {
-            alert(`Заполните текст у варианта №${emptyOption + 1}.`);
+            this.showToast(`Заполните текст у варианта №${emptyOption + 1}.`, "error");
             return false;
         }
         const correctCount = trimmedOptions.filter((opt) => opt.is_correct).length;
         if (correctCount !== 1) {
-            alert("Должен быть ровно один правильный вариант.");
+            this.showToast("Должен быть ровно один правильный вариант.", "error");
             return false;
         }
         return true;
@@ -1736,10 +1743,17 @@ class ClickEditor extends BaseEditor {
         this.markUnsaved();
     }
 
-    handleErrorsClearAll() {
+    async handleErrorsClearAll() {
         const spans = this.getErrorSpansArray();
         if (!spans.length) return;
-        if (!confirm("Очистить все отмеченные ошибки?")) return;
+        const confirmed = await this.confirmAction({
+            title: "Очистить ошибки?",
+            message: "Все отмеченные ошибки будут удалены.",
+            confirmText: "Очистить",
+            cancelText: "Отмена",
+            variant: "error"
+        });
+        if (!confirmed) return;
         spans.splice(0, spans.length);
         this.errorsTextSelection = null;
         if (this.errorsTextEditor) {
@@ -2997,9 +3011,16 @@ class ClickEditor extends BaseEditor {
         this.resetVertexEditingState();
     }
 
-    clearAnnotations() {
+    async clearAnnotations() {
         if (!this.annotations.length && !this.currentPolygonPoints.length) return;
-        if (!confirm("Удалить все контуры?")) return;
+        const confirmed = await this.confirmAction({
+            title: "Удалить все контуры?",
+            message: "Это удалит все текущие аннотации на изображении.",
+            confirmText: "Удалить",
+            cancelText: "Отмена",
+            variant: "error"
+        });
+        if (!confirmed) return;
         this.annotations = [];
         this.currentPolygonPoints = [];
         this.selectedAnnotationIndex = -1;
@@ -4166,7 +4187,7 @@ class ClickEditor extends BaseEditor {
             });
             const data = await response.json();
             if (!data.ok) {
-                alert(`Ошибка загрузки: ${data.error}`);
+                this.showToast(`Ошибка загрузки: ${data.error || "upload_failed"}`, "error");
                 return;
             }
             if (!this.task.task_data) {
@@ -4177,9 +4198,10 @@ class ClickEditor extends BaseEditor {
             }
             this.task.task_data.content.image = data.path;
             this.renderUI();
+            this.markUnsaved();
         } catch (error) {
             console.error("Ошибка загрузки изображения:", error);
-            alert("Ошибка при загрузке изображения. Подробности в консоли.");
+            this.showToast("Ошибка при загрузке изображения. Подробности в консоли.", "error");
         } finally {
             event.target.value = "";
         }
@@ -4190,6 +4212,87 @@ class ClickEditor extends BaseEditor {
         this.imagePlaceholder.classList.remove("hidden");
         this.img.classList.add("hidden");
         this.updateStatusBadge("Не удалось загрузить изображение");
+    }
+
+    countOverlappingErrorPairs(spans = []) {
+        if (!Array.isArray(spans) || spans.length < 2) return 0;
+        const normalized = spans
+            .map((span) => {
+                const start = Number.isFinite(span?.start) ? span.start : 0;
+                const end = Number.isFinite(span?.end) ? span.end : start;
+                return { start: Math.min(start, end), end: Math.max(start, end) };
+            })
+            .sort((a, b) => a.start - b.start || a.end - b.end);
+
+        let overlaps = 0;
+        for (let i = 1; i < normalized.length; i += 1) {
+            if (normalized[i].start < normalized[i - 1].end) {
+                overlaps += 1;
+            }
+        }
+        return overlaps;
+    }
+
+    collectDuplicateLabels(values = []) {
+        const duplicates = [];
+        const seen = new Set();
+        values.forEach((value) => {
+            const text = String(value || "").trim();
+            if (!text) return;
+            const key = text.toLowerCase();
+            if (seen.has(key)) {
+                if (!duplicates.includes(text)) {
+                    duplicates.push(text);
+                }
+                return;
+            }
+            seen.add(key);
+        });
+        return duplicates;
+    }
+
+    isGeneratedAnnotationLabel(label) {
+        const normalized = String(label || "").trim().toLowerCase();
+        return /^(контур|линия)\s+\d+$/i.test(normalized);
+    }
+
+    getSemanticWarnings() {
+        const warnings = [];
+
+        if (this.isErrorDetectionTask()) {
+            const mode = this.errorDetection.mode || (this.task?.task_data?.content?.mode ?? "text_errors");
+            if (mode === "text_choice") {
+                const options = this.getChoiceOptionsArray().map((opt) => opt?.text || "");
+                const duplicates = this.collectDuplicateLabels(options);
+                if (duplicates.length) {
+                    warnings.push(`Повторяются варианты ответа: ${duplicates.slice(0, 2).join(", ")}.`);
+                }
+            } else {
+                const overlaps = this.countOverlappingErrorPairs(this.getErrorSpansArray());
+                if (overlaps > 0) {
+                    warnings.push(`Есть ${overlaps} пересечений между диапазонами ошибок. Пользователь может получить неоднозначную разметку.`);
+                }
+            }
+            return warnings;
+        }
+
+        const labels = this.annotations.map((annotation) => annotation?.label || "");
+        const duplicates = this.collectDuplicateLabels(labels);
+        if (duplicates.length) {
+            warnings.push(`Повторяются названия контуров: ${duplicates.slice(0, 2).join(", ")}.`);
+        }
+
+        const generatedLabels = this.annotations.filter((annotation) => this.isGeneratedAnnotationLabel(annotation?.label)).length;
+        if (generatedLabels > 0) {
+            warnings.push(`У ${generatedLabels} контуров осталось автосгенерированное имя. Лучше заменить его на содержательную подпись.`);
+        }
+
+        const requiredCorrect = this.requiredCorrectInput ? parseInt(this.requiredCorrectInput.value, 10) : Number(this.task?.task_data?.content?.required_correct || 0);
+        if (this.annotations.length > 1 && Number.isFinite(requiredCorrect) && requiredCorrect === this.annotations.length) {
+            warnings.push('Сейчас пользователь должен отметить все контуры. Убедитесь, что такой порог действительно нужен.');
+        }
+
+        return warnings;
     }
 
     async saveTask() {
@@ -4206,22 +4309,22 @@ class ClickEditor extends BaseEditor {
             return;
         }
         if (!isErrorDetection && !this.task.task_data?.content?.image) {
-            alert("Загрузите основное изображение задания.");
+            this.showToast("Загрузите основное изображение задания.", "error");
             return;
         }
 
         if (!isErrorDetection) {
             if (!this.annotations.length) {
-                alert("Добавьте минимум один контур.");
+                this.showToast("Добавьте минимум один контур.", "error");
                 return;
             }
             if (!Number.isFinite(requiredCorrect) || requiredCorrect < 1) {
-                alert("Количество необходимых правильных аннотаций должно быть положительным числом.");
+                this.showToast("Количество необходимых правильных аннотаций должно быть положительным числом.", "error");
                 this.requiredCorrectInput?.focus();
                 return;
             }
             if (requiredCorrect > this.annotations.length) {
-                alert("Количество нужных аннотаций не может превышать общее число контуров.");
+                this.showToast("Количество нужных аннотаций не может превышать общее число контуров.", "error");
                 this.requiredCorrectInput?.focus();
                 return;
             }
@@ -4265,7 +4368,7 @@ class ClickEditor extends BaseEditor {
         const topicId = this.topicId || this.task.task_data?.meta?.topic || this.task.metadata?.topic;
         const taskId = this.taskId || this.task.metadata?.id || this.task.task_data?.meta?.id;
         if (!moduleId || !topicId || !taskId) {
-            alert("Не удалось определить идентификаторы задания (module/topic/task). Перезагрузите редактор из списка задач.");
+            this.showToast("Не удалось определить идентификаторы задания (module/topic/task). Перезагрузите редактор из списка задач.", "error");
             return;
         }
 
@@ -4284,16 +4387,27 @@ class ClickEditor extends BaseEditor {
             });
             const data = await response.json();
             if (data.ok) {
-                this.showToast("Задание сохранено.", "success");
+                const semanticWarnings = this.getSemanticWarnings();
+                if (!semanticWarnings.length) {
+                    this.showToast("Задание сохранено.", "success");
+                }
                 this.initialTaskSnapshot = this.captureTaskSnapshot();
                 this.hasUnsavedChanges = false;
                 this.updateSaveStatus(false);
+                if (semanticWarnings.length) {
+                    this.updateSaveStatus({
+                        type: "warning",
+                        message: "Сохранено с предупреждениями",
+                        detail: this.buildSemanticWarningsDetail(semanticWarnings)
+                    });
+                    this.showToast(this.buildSemanticWarningsToast(semanticWarnings), "warning", 5200);
+                }
             } else {
-                alert(`Ошибка сохранения: ${data.error}`);
+                this.showToast(`Ошибка сохранения: ${data.error || "save_failed"}`, "error");
             }
         } catch (error) {
             console.error("Error saving task:", error);
-            alert("Ошибка при сохранении. Проверьте консоль.");
+            this.showToast("Ошибка при сохранении. Проверьте консоль.", "error");
         }
     }
 
@@ -4328,8 +4442,25 @@ class ClickEditor extends BaseEditor {
         }
     }
 
-    updateSaveStatus(isDirty) {
+    updateSaveStatus(state) {
         if (!this.saveStatusBadge || !this.saveStatusText || !this.saveStatusIcon) return;
+        const isObjectState = typeof state === "object" && state !== null;
+        if (isObjectState && state.type === "warning") {
+            this.saveStatusBadge.classList.remove("text-success-text", "border-success", "bg-success-lighter", "animate-pulse");
+            this.saveStatusBadge.classList.add("text-warning-text", "border-warning", "bg-warning-lighter");
+            this.saveStatusText.textContent = state.message || "Сохранено с предупреждениями";
+            this.saveStatusIcon.textContent = "warning";
+            this.saveStatusBadge.classList.remove("opacity-0");
+            if (this.saveStatusTimer) {
+                clearTimeout(this.saveStatusTimer);
+            }
+            this.saveStatusTimer = setTimeout(() => {
+                this.saveStatusBadge.classList.add("opacity-0");
+                this.saveStatusTimer = null;
+            }, 4000);
+            return;
+        }
+        const isDirty = isObjectState ? state.type === "dirty" : !!state;
         if (isDirty) {
             this.saveStatusBadge.classList.remove("text-success-text", "border-success", "bg-success-lighter", "animate-pulse");
             this.saveStatusBadge.classList.add("text-warning-text", "border-warning", "bg-warning-lighter");
@@ -4358,25 +4489,43 @@ class ClickEditor extends BaseEditor {
         }
     }
 
+    async confirmAction({
+        title = "Подтверждение",
+        message = "Вы уверены?",
+        confirmText = "Подтвердить",
+        cancelText = "Отмена",
+        variant = "error"
+    } = {}) {
+        if (typeof NotificationUI !== "undefined" && typeof NotificationUI.confirm === "function") {
+            return NotificationUI.confirm({ title, message, confirmText, cancelText, variant });
+        }
+        return window.confirm(message);
+    }
+
     showToast(message, variant = "success", duration = 2500) {
         if (typeof document === "undefined") return;
         const existing = document.querySelector("#click-editor-toast");
         if (existing) existing.remove();
 
         const palette = {
-            success: { bg: "bg-success", border: "border-success-dark" },
-            error: { bg: "bg-error", border: "border-error-dark" },
-            info: { bg: "bg-primary", border: "border-primary-dark" }
+            success: { bg: "bg-success-lighter", border: "border-success-light", text: "text-success-text" },
+            error: { bg: "bg-error-lighter", border: "border-error-light", text: "text-error-text" },
+            warning: { bg: "bg-warning-lighter", border: "border-warning-light", text: "text-warning-text" },
+            info: { bg: "bg-info-lighter", border: "border-info-light", text: "text-info-text" }
         };
         const theme = palette[variant] || palette.info;
 
         const toast = document.createElement("div");
         toast.id = "click-editor-toast";
-        toast.className = `fixed top-4 right-4 z-[2000] px-4 py-3 rounded-lg shadow-lg text-text-on-dark border ${theme.bg} ${theme.border} flex items-center gap-2 animate-fade-in`;
-        toast.innerHTML = `
-            <span class="material-symbols-outlined text-[20px]">check_circle</span>
-            <span class="text-sm font-medium">${message}</span>
-        `;
+        toast.className = `fixed top-4 right-4 z-[2000] px-4 py-3 rounded-lg shadow-lg border ${theme.bg} ${theme.border} ${theme.text} flex items-center gap-2 animate-fade-in`;
+        const icon = document.createElement("span");
+        icon.className = "material-symbols-outlined text-[20px]";
+        icon.textContent = variant === "error" ? "error" : (variant === "warning" ? "warning" : "check_circle");
+        const text = document.createElement("span");
+        text.className = "text-sm font-medium";
+        text.textContent = message;
+        toast.appendChild(icon);
+        toast.appendChild(text);
         document.body.appendChild(toast);
 
         setTimeout(() => {
@@ -4386,6 +4535,11 @@ class ClickEditor extends BaseEditor {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    window.editor = new ClickEditor();
-});
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof window !== 'undefined' && window.__CLICK_EDITOR_AUTO_INIT_DISABLED__) {
+            return;
+        }
+        window.editor = new ClickEditor();
+    });
+}

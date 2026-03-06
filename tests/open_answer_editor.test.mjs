@@ -35,6 +35,7 @@ function setupGlobalDom() {
     dom.window.fetch = vi.fn();
     dom.window.alert = vi.fn();
     dom.window.confirm = vi.fn(() => true);
+    dom.window.__OPEN_ANSWER_EDITOR_AUTO_INIT_DISABLED__ = true;
 
     // Load dependencies in order via eval
     dom.window.eval(loadScript('frontend/Editor/undo_manager.js') + "\n;window.UndoManager = UndoManager;");
@@ -135,12 +136,13 @@ describe('OpenAnswerEditor image handling and saving', () => {
         expect(document.querySelector('#add-image-btn').disabled).toBe(false);
     });
 
-    it('prevents uploads above the image limit and shows alert', async () => {
+    it('prevents uploads above the image limit and shows warning toast', async () => {
         editor.task.task_data.content.images = ['1.png', '2.png', '3.png'];
+        const toastSpy = vi.spyOn(editor, 'showToast').mockImplementation(() => {});
 
         await editor.handleImageUpload({ target: { files: [new File([1], 'extra.png')], value: '' } });
 
-        expect(dom.window.alert).toHaveBeenCalledWith('Можно загрузить не более 3 изображений.');
+        expect(toastSpy).toHaveBeenCalledWith('Можно загрузить не более 3 изображений.', 'warning');
         expect(dom.window.fetch).not.toHaveBeenCalled();
     });
 

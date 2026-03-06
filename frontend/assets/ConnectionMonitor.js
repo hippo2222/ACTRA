@@ -133,7 +133,9 @@
 
     function init() {
         createBanner();
-        schedule();
+        window.addEventListener('online', ping);
+        window.addEventListener('offline', ping);
+        ping();
     }
 
     if (document.readyState === 'loading') {

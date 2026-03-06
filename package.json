@@ -17,6 +17,11 @@
     "audit:contrast:full": "npm run build:css && node scripts/contrast_audit.js --config scripts/contrast_audit.config.json && node scripts/ensure_contrast_s1_seed.js && node scripts/contrast_audit.js --config scripts/contrast_audit.s1_state_matrix.config.json",
     "audit:contrast:auto": "node scripts/run_contrast_suite.js",
     "smoke:theory-p10": "node scripts/theory_p10_smoke.js",
+    "smoke:release": "node scripts/run_browser_smoke_release.js",
+    "smoke:release:p0": "node scripts/run_browser_smoke_release.js --suite p0",
+    "smoke:release:p1": "node scripts/run_browser_smoke_release.js --suite p1",
+    "smoke:release:guardrail": "node scripts/run_browser_smoke_release.js --suite guardrail",
+    "smoke:release:gate": "node scripts/run_browser_smoke_release.js --suite p0,p1,guardrail",
     "validate:themes": "node scripts/validate_theme_vars.js"
   },
   "keywords": [],

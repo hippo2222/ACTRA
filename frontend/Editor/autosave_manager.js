@@ -83,8 +83,10 @@ class AutoSaveManager {
                     this.updateAutosaveIndicator();
                 } catch (retryError) {
                     console.error('Failed to save draft after cleanup:', retryError);
-                    // Silently fail - don't interrupt user
+                    this.reportSaveFailure('Draft save failed');
                 }
+            } else {
+                this.reportSaveFailure('Draft save failed');
             }
         }
     }
@@ -169,6 +171,15 @@ class AutoSaveManager {
                 type: 'draft',
                 message: 'Черновик сохранен',
                 time: time
+            });
+        }
+    }
+
+    reportSaveFailure(message = 'Draft save failed') {
+        if (typeof this.editor?.updateSaveStatus === 'function') {
+            this.editor.updateSaveStatus({
+                type: 'error',
+                message
             });
         }
     }

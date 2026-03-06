@@ -167,6 +167,37 @@ class TestCheckDependencies:
         assert missing == []
 
 
+class TestAnalyzeTaskInArchive:
+    def test_uses_meta_name_when_top_level_name_missing(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        zip_path = _create_zip(
+            tmp_path,
+            {
+                "modules/m1/topics/t1/tasks/task_meta_name/task.json": json.dumps(
+                    {
+                        "id": "task_meta_name",
+                        "type": "test",
+                        "meta": {
+                            "id": "task_meta_name",
+                            "name": "Task From Meta",
+                        },
+                        "content": {
+                            "questions": [],
+                        },
+                    }
+                ),
+            },
+        )
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            report = svc._analyze_task_in_archive(
+                zf,
+                "modules/m1/topics/t1/tasks/task_meta_name/task.json",
+            )
+
+        assert report["status"] == "valid"
+        assert report["name"] == "Task From Meta"
+
+
 # ═══════════════════════════════════════════════════════════════════
 # _find_task_in_storage / _build_task_index
 # ═══════════════════════════════════════════════════════════════════

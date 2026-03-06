@@ -81,6 +81,16 @@ class TestLoadComplexes:
         result = svc.load_complexes()
         assert result == []
 
+    def test_backfills_ownership_metadata_for_legacy_complex(self, svc):
+        svc.complexes_file.write_text(
+            json.dumps([_valid_complex_data()]),
+            encoding="utf-8",
+        )
+        result = svc.load_complexes()
+        assert len(result) == 1
+        assert result[0].created_via == "legacy_unknown"
+        assert result[0].content_scope == "shared_local"
+
 
 # ═══════════════════════════════════════════════════════════════════
 # get_all / get_complex
@@ -111,6 +121,8 @@ class TestCreateComplex:
         c = svc.create_complex(_valid_complex_data())
         assert c.id == "c1"
         assert c.name == "Test Complex"
+        assert c.created_via == "manual_editor"
+        assert c.content_scope == "shared_local"
         # Persisted
         assert svc.complexes_file.exists()
 
@@ -127,9 +139,19 @@ class TestCreateComplex:
 
 class TestUpdateComplex:
     def test_normal(self, svc):
-        svc.create_complex(_valid_complex_data())
+        svc.create_complex(
+            {
+                **_valid_complex_data(),
+                "created_by_user_id": "owner_1",
+                "updated_by_user_id": "owner_1",
+                "created_via": "manual_editor",
+            }
+        )
         updated = svc.update_complex("c1", {"name": "Updated Name"})
         assert updated.name == "Updated Name"
+        assert updated.created_by_user_id == "owner_1"
+        assert updated.updated_by_user_id == "owner_1"
+        assert updated.created_via == "manual_editor"
 
     def test_not_found(self, svc):
         with pytest.raises(ValueError, match="not found"):

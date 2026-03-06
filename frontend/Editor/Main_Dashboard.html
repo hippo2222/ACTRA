@@ -1,11 +1,11 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 
 <head>
     <script src="../../assets/ThemeManager.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>ACTRA — Редактор</title>
+    <title>ACTRA вЂ” Р РµРґР°РєС‚РѕСЂ</title>
     <base href="/ui/editor/">
     <link rel="stylesheet" href="styles.css">
     <script>
@@ -44,7 +44,7 @@
     </script>
     <script src="ai_ux_messages.js?v=1"></script>
     <script src="import_manager.js?v=1" defer></script>
-    <script src="dashboard.js?v=8" defer></script>
+    <script src="dashboard.js?v=9" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
     <link href="../../assets/fonts.css" rel="stylesheet" />
@@ -64,7 +64,7 @@
             <h1 class="text-text-main font-bold text-lg tracking-tight">ACTRA</h1>
             <button data-role="return-main"
                 class="ml-auto h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors shadow-sm"
-                title="Вернуться на главный экран">
+                title="Р’РµСЂРЅСѓС‚СЊСЃСЏ РЅР° РіР»Р°РІРЅС‹Р№ СЌРєСЂР°РЅ">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
             </button>
         </div>
@@ -74,15 +74,15 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">add_circle</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">Новый модуль</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">РќРѕРІС‹Р№ РјРѕРґСѓР»СЊ</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
-                <button onclick="dashboard.showImportModal()"
+                <button onclick="dashboard.showImportModal()" data-role="open-import-modal"
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">upload_file</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">Импорт заданий</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">РРјРїРѕСЂС‚ Р·Р°РґР°РЅРёР№</span>
                 </button>
             </div>
             <div class="px-4 mb-4">
@@ -90,9 +90,26 @@
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
                     <span
                         class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">analytics</span>
-                    <span class="text-xs font-bold uppercase tracking-wider">РђРЅР°Р»РёР· С‚РµРѕСЂРёРё</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">Р С’Р Р…Р В°Р В»Р С‘Р В· РЎвЂљР ВµР С•РЎР‚Р С‘Р С‘</span>
                 </button>
             </div>
+            <div class="px-4 mb-4">
+                <button data-role="open-theory-hub"
+                    class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
+                    <span
+                        class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">hub</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">Theory Hub</span>
+                </button>
+            </div>
+            <div class="px-4 mb-4">
+                <button data-role="open-recovery-center"
+                    class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
+                    <span
+                        class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">history</span>
+                    <span class="text-xs font-bold uppercase tracking-wider">Р В§Р ВµРЎР‚Р Р…Р С•Р Р†Р С‘Р С”Р С‘</span>
+                </button>
+            </div>
+            <div id="editor-workspace-shortcuts" class="px-4 mb-4"></div>
             <!-- Dynamic Module List Container -->
             <div class="flex flex-col gap-1 px-3">
                 <!-- Modules will be injected here by dashboard.js -->
@@ -123,18 +140,18 @@
                     <span class="material-symbols-outlined text-[20px]">delete</span>
                 </div>
                 <div>
-                    <h3 class="text-sm font-bold text-text-main">Удалить?</h3>
+                    <h3 class="text-sm font-bold text-text-main">РЈРґР°Р»РёС‚СЊ?</h3>
                     <p class="text-xs text-text-secondary mt-1 line-clamp-2" id="sidebar-delete-target-name">Module Name
                     </p>
                 </div>
                 <div class="flex gap-2 mt-1">
                     <button onclick="dashboard.cancelDeleteConfirmation()"
                         class="flex-1 py-1.5 text-xs font-medium text-text-secondary bg-surface-2 hover:bg-bg-hover rounded-lg transition-colors">
-                        Отмена
+                        РћС‚РјРµРЅР°
                     </button>
                     <button id="sidebar-delete-confirm-btn"
                         class="flex-1 py-1.5 text-xs font-bold text-primary-contrast bg-error hover:bg-error-dark rounded-lg transition-colors shadow-sm">
-                        Удалить
+                        РЈРґР°Р»РёС‚СЊ
                     </button>
                 </div>
             </div>
@@ -145,7 +162,7 @@
             class="h-20 flex items-center justify-between px-8 bg-surface-1 border-b border-border-subtle shrink-0 sticky top-0 z-10 transition-colors">
             <nav id="header-breadcrumbs"
                 class="flex items-center gap-2 text-text-main font-bold text-2xl tracking-tight shrink-1 min-w-0 flex-1">
-                <span class="cursor-pointer hover:text-primary transition-colors">Библиотека</span>
+                <span class="cursor-pointer hover:text-primary transition-colors">Р‘РёР±Р»РёРѕС‚РµРєР°</span>
             </nav>
             <div class="flex items-center gap-8 justify-end min-w-0 shrink-0">
                 <div class="relative search-container-expanding shrink-0 rounded-lg">
@@ -154,23 +171,23 @@
                     </div>
                     <input id="editor-search-input"
                         class="block w-full rounded-lg border-0 bg-surface-2 py-2.5 pl-10 pr-4 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm sm:leading-6"
-                        placeholder="Поиск заданий, модулей или файлов..." type="text" />
+                        placeholder="РџРѕРёСЃРє Р·Р°РґР°РЅРёР№, РјРѕРґСѓР»РµР№ РёР»Рё С„Р°Р№Р»РѕРІ..." type="text" />
                 </div>
                 <div class="relative shrink-0" data-role="sort-controller">
                     <button data-role="sort-toggle"
                         class="flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors shadow-sm whitespace-nowrap shrink-0">
                         <span class="material-symbols-outlined text-[20px] text-text-secondary">sort</span>
-                        <span data-role="sort-label">По дате изменения</span>
+                        <span data-role="sort-label">РџРѕ РґР°С‚Рµ РёР·РјРµРЅРµРЅРёСЏ</span>
                         <span class="material-symbols-outlined text-[18px] text-text-disabled">expand_more</span>
                     </button>
                     <div data-role="sort-menu"
                         class="hidden absolute right-0 mt-2 w-60 rounded-xl border border-border-subtle bg-surface-1 shadow-xl z-30 py-2">
                         <p class="px-4 pb-2 text-xs font-semibold uppercase tracking-wider text-text-disabled">
-                            Сортировка</p>
+                            РЎРѕСЂС‚РёСЂРѕРІРєР°</p>
                         <button data-sort-option="date"
                             class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
                             <span class="material-symbols-outlined text-[18px] text-text-disabled mr-2">schedule</span>
-                            <span class="flex-1 text-left">По дате изменения</span>
+                            <span class="flex-1 text-left">РџРѕ РґР°С‚Рµ РёР·РјРµРЅРµРЅРёСЏ</span>
                             <span
                                 class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
                                 data-role="sort-check">check</span>
@@ -179,7 +196,7 @@
                             class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
                             <span
                                 class="material-symbols-outlined text-[18px] text-text-disabled mr-2">sort_by_alpha</span>
-                            <span class="flex-1 text-left">По алфавиту</span>
+                            <span class="flex-1 text-left">РџРѕ Р°Р»С„Р°РІРёС‚Сѓ</span>
                             <span
                                 class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
                                 data-role="sort-check">check</span>
@@ -187,7 +204,7 @@
                         <button data-sort-option="type"
                             class="flex items-center w-full px-4 py-2 text-sm text-text-secondary hover:bg-bg-hover">
                             <span class="material-symbols-outlined text-[18px] text-text-disabled mr-2">category</span>
-                            <span class="flex-1 text-left">По типу задания</span>
+                            <span class="flex-1 text-left">РџРѕ С‚РёРїСѓ Р·Р°РґР°РЅРёСЏ</span>
                             <span
                                 class="material-symbols-outlined text-[18px] text-primary opacity-0 transition-opacity"
                                 data-role="sort-check">check</span>
@@ -207,8 +224,8 @@
                         <span
                             class="material-symbols-outlined text-text-disabled group-hover:text-primary text-[28px]">add</span>
                     </div>
-                    <span class="text-text-secondary font-medium group-hover:text-primary transition-colors">Новое
-                        задание</span>
+                    <span class="text-text-secondary font-medium group-hover:text-primary transition-colors">РќРѕРІРѕРµ
+                        Р·Р°РґР°РЅРёРµ</span>
                 </button>
             </div>
         </div>
@@ -220,7 +237,7 @@
             class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <div class="bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-center justify-between mb-6">
-                    <h3 class="text-xl font-bold text-text-main">Создать новое задание</h3>
+                    <h3 class="text-xl font-bold text-text-main">РЎРѕР·РґР°С‚СЊ РЅРѕРІРѕРµ Р·Р°РґР°РЅРёРµ</h3>
                     <button onclick="dashboard.closeModals()"
                         class="text-text-disabled hover:text-text-secondary transition-colors">
                         <span class="material-symbols-outlined">close</span>
@@ -228,11 +245,11 @@
                 </div>
                 <form id="create-task-form" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Модуль</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">РњРѕРґСѓР»СЊ</label>
                         <div class="flex gap-2">
                             <select id="task-module-select"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                <option value="">Выберите модуль...</option>
+                                <option value="">Р’С‹Р±РµСЂРёС‚Рµ РјРѕРґСѓР»СЊ...</option>
                             </select>
                             <button type="button" onclick="dashboard.showModuleModal()"
                                 class="p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
@@ -242,11 +259,11 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Тема</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">РўРµРјР°</label>
                         <div class="flex gap-2">
                             <select id="task-topic-select"
                                 class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                <option value="">Выберите тему...</option>
+                                <option value="">Р’С‹Р±РµСЂРёС‚Рµ С‚РµРјСѓ...</option>
                             </select>
                             <button type="button" onclick="dashboard.showTopicModal()"
                                 class="p-2.5 bg-surface-2 hover:bg-bg-hover text-text-secondary rounded-lg transition-colors"
@@ -256,20 +273,20 @@
                         </div>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Название задания</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">РќР°Р·РІР°РЅРёРµ Р·Р°РґР°РЅРёСЏ</label>
                         <input type="text" id="task-name-input"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
-                            placeholder="Введите понятное название" required>
+                            placeholder="Р’РІРµРґРёС‚Рµ РїРѕРЅСЏС‚РЅРѕРµ РЅР°Р·РІР°РЅРёРµ" required>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Тип задания</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">РўРёРї Р·Р°РґР°РЅРёСЏ</label>
                         <select id="task-type-select"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                            <option value="click">Клик (Аннотация)</option>
-                            <option value="draw">Рисование</option>
-                            <option value="test">Тест (Выбор ответа)</option>
-                            <option value="sequence_assembly">Сборка последовательности</option>
-                            <option value="open_answer">Открытый ответ</option>
+                            <option value="click">РљР»РёРє (РђРЅРЅРѕС‚Р°С†РёСЏ)</option>
+                            <option value="draw">Р РёСЃРѕРІР°РЅРёРµ</option>
+                            <option value="test">РўРµСЃС‚ (Р’С‹Р±РѕСЂ РѕС‚РІРµС‚Р°)</option>
+                            <option value="sequence_assembly">РЎР±РѕСЂРєР° РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚Рё</option>
+                            <option value="open_answer">РћС‚РєСЂС‹С‚С‹Р№ РѕС‚РІРµС‚</option>
                         </select>
                     </div>
                 </form>
@@ -277,11 +294,11 @@
             <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
                 <button type="button" onclick="dashboard.closeModals()"
                     class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
-                    Отмена
+                    РћС‚РјРµРЅР°
                 </button>
                 <button type="button" onclick="dashboard.submitTaskForm()"
                     class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all shadow-md">
-                    Создать задание
+                    РЎРѕР·РґР°С‚СЊ Р·Р°РґР°РЅРёРµ
                 </button>
             </div>
         </div>
@@ -293,22 +310,22 @@
         <div
             class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
             <div class="bg-surface-1 px-6 pt-6 pb-4">
-                <h3 class="text-xl font-bold text-text-main mb-4">Создать новый модуль</h3>
+                <h3 class="text-xl font-bold text-text-main mb-4">РЎРѕР·РґР°С‚СЊ РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ</h3>
                 <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-1">Название модуля</label>
+                    <label class="block text-sm font-semibold text-text-secondary mb-1">РќР°Р·РІР°РЅРёРµ РјРѕРґСѓР»СЏ</label>
                     <input type="text" id="module-name-input"
                         class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
-                        placeholder="например, Анатомия грудной клетки" required>
+                        placeholder="РЅР°РїСЂРёРјРµСЂ, РђРЅР°С‚РѕРјРёСЏ РіСЂСѓРґРЅРѕР№ РєР»РµС‚РєРё" required>
                 </div>
             </div>
             <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
                 <button type="button" onclick="dashboard.closeModuleModal()"
                     class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
-                    Отмена
+                    РћС‚РјРµРЅР°
                 </button>
                 <button type="button" onclick="dashboard.submitModuleForm()"
                     class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
-                    Создать модуль
+                    РЎРѕР·РґР°С‚СЊ РјРѕРґСѓР»СЊ
                 </button>
             </div>
         </div>
@@ -320,31 +337,120 @@
         <div
             class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full">
             <div class="bg-surface-1 px-6 pt-6 pb-4">
-                <h3 class="text-xl font-bold text-text-main mb-4">Создать новую тему</h3>
+                <h3 class="text-xl font-bold text-text-main mb-4">РЎРѕР·РґР°С‚СЊ РЅРѕРІСѓСЋ С‚РµРјСѓ</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Целевой модуль</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">Р¦РµР»РµРІРѕР№ РјРѕРґСѓР»СЊ</label>
                         <select id="topic-module-select" disabled
                             class="block w-full rounded-lg border-border-subtle bg-bg-hover py-2.5 text-text-disabled sm:text-sm">
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1">Название темы</label>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1">РќР°Р·РІР°РЅРёРµ С‚РµРјС‹</label>
                         <input type="text" id="topic-name-input"
                             class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
-                            placeholder="например, Патология" required>
+                            placeholder="РЅР°РїСЂРёРјРµСЂ, РџР°С‚РѕР»РѕРіРёСЏ" required>
                     </div>
                 </div>
             </div>
             <div class="bg-surface-2 px-6 py-4 flex justify-end gap-3">
                 <button type="button" onclick="dashboard.closeTopicModal()"
                     class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
-                    Отмена
+                    РћС‚РјРµРЅР°
                 </button>
                 <button type="button" onclick="dashboard.submitTopicForm()"
                     class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
-                    Создать тему
+                    РЎРѕР·РґР°С‚СЊ С‚РµРјСѓ
                 </button>
+            </div>
+        </div>
+    </div>
+    <div id="topic-theory-modal"
+        class="hidden fixed inset-0 z-[65] overflow-y-auto modal-backdrop items-center justify-center p-4">
+        <div
+            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-surface-1 px-6 pt-6 pb-4">
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div class="min-w-0">
+                        <h3 class="text-xl font-bold text-text-main">РўРµРѕСЂРёСЏ С‚РµРјС‹</h3>
+                        <p id="topic-theory-meta" class="text-xs text-text-muted mt-1">Р’С‹Р±РµСЂРёС‚Рµ С‚РµРѕСЂРёСЋ РґР»СЏ С‚РµРјС‹.</p>
+                    </div>
+                    <button type="button" data-role="topic-theory-close"
+                        class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
+                        aria-label="Р—Р°РєСЂС‹С‚СЊ">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-semibold text-text-secondary mb-1" for="topic-theory-picker">РЎРІСЏР·Р°С‚СЊ СЃ С‚РµРѕСЂРёРµР№</label>
+                        <select id="topic-theory-picker"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                            <option value="">Р‘РµР· С‚РµРѕСЂРёРё</option>
+                        </select>
+                        <p class="text-xs text-text-muted mt-1">РЎРІСЏР·СЊ С…СЂР°РЅРёС‚СЃСЏ РЅР° СѓСЂРѕРІРЅРµ С‚РµРјС‹ Рё РЅР°СЃР»РµРґСѓРµС‚СЃСЏ РєРѕРјРїР»РµРєСЃР°РјРё РІ СЂРµР¶РёРјРµ Inherit.</p>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-text-secondary mb-1" for="topic-theory-relation">РўРёРї СЃРІСЏР·Рё</label>
+                            <select id="topic-theory-relation"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                <option value="link">РЎСЃС‹Р»РєР° (link)</option>
+                                <option value="copy">РљРѕРїРёСЏ (copy)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-text-secondary mb-1" for="topic-theory-propagation-mode">Р РµР¶РёРј СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё</label>
+                            <select id="topic-theory-propagation-mode"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                <option value="safe">Safe (С‚РѕР»СЊРєРѕ inherit)</option>
+                                <option value="inherit_only_force">Inherit force-refresh</option>
+                                <option value="all_force">All force (РІРєР»СЋС‡Р°СЏ override)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3 space-y-2">
+                        <label class="inline-flex items-center gap-2 text-sm text-text-secondary">
+                            <input id="topic-theory-apply" type="checkbox"
+                                class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary bg-surface-1">
+                            РџСЂРёРјРµРЅРёС‚СЊ Рє СЃРІСЏР·Р°РЅРЅС‹Рј РєРѕРјРїР»РµРєСЃР°Рј
+                        </label>
+                        <label class="inline-flex items-center gap-2 text-sm text-text-secondary">
+                            <input id="topic-theory-dry-run" type="checkbox"
+                                class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary bg-surface-1" checked>
+                            РўРѕР»СЊРєРѕ preview (dry-run, РєРѕРјРїР»РµРєСЃС‹ РЅРµ РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ)
+                        </label>
+                        <p id="topic-theory-propagation-summary" class="text-xs text-text-muted">
+                            Preview: вЂ”
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-surface-2 px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
+                <button id="topic-theory-preview-btn" type="button"
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    РћР±РЅРѕРІРёС‚СЊ preview
+                </button>
+                <div class="flex items-center gap-2 flex-wrap">
+                    <button id="topic-theory-open-complexes-btn" type="button"
+                        class="hidden px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        К комплексам
+                    </button>
+                    <button id="topic-theory-open-hub-btn" type="button"
+                        class="hidden px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        Theory Hub
+                    </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button type="button" data-role="topic-theory-close"
+                        class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                        РћС‚РјРµРЅР°
+                    </button>
+                    <button id="topic-theory-save-btn" type="button"
+                        class="px-5 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                        РЎРѕС…СЂР°РЅРёС‚СЊ
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -355,7 +461,7 @@
             class="bg-surface-1 rounded-2xl shadow-xl max-w-[900px] w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
             <!-- Header -->
             <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between shrink-0">
-                <h2 class="text-xl font-bold text-text-main">Импорт заданий</h2>
+                <h2 class="text-xl font-bold text-text-main">РРјРїРѕСЂС‚ Р·Р°РґР°РЅРёР№</h2>
                 <button onclick="dashboard.closeImportModal()"
                     class="text-text-disabled hover:text-text-secondary transition-colors">
                     <span class="material-symbols-outlined">close</span>
@@ -370,7 +476,7 @@
                             class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-contrast font-semibold text-sm">
                             1
                         </div>
-                        <span class="text-xs font-medium text-text-secondary">Модуль/Тема</span>
+                        <span class="text-xs font-medium text-text-secondary">РњРѕРґСѓР»СЊ/РўРµРјР°</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
@@ -380,7 +486,7 @@
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             2
                         </div>
-                        <span class="text-xs font-medium text-text-disabled">Текст</span>
+                        <span class="text-xs font-medium text-text-disabled">РўРµРєСЃС‚</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
@@ -390,7 +496,7 @@
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             3
                         </div>
-                        <span class="text-xs font-medium text-text-disabled">Превью</span>
+                        <span class="text-xs font-medium text-text-disabled">РџСЂРµРІСЊСЋ</span>
                     </div>
                     <!-- Divider -->
                     <div class="flex-1 h-[2px] bg-border-subtle mx-2"></div>
@@ -400,26 +506,151 @@
                             class="w-10 h-10 rounded-full bg-surface-2 flex items-center justify-center text-text-disabled font-semibold text-sm">
                             4
                         </div>
-                        <span class="text-xs font-medium text-text-disabled">Подтверждение</span>
+                        <span class="text-xs font-medium text-text-disabled">РџРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ</span>
                     </div>
                 </div>
             </div>
             <!-- Content Area -->
             <div class="flex-1 overflow-y-auto p-6" data-role="import-content">
                 <!-- Content will be rendered by JavaScript -->
-                <div class="text-center text-text-disabled">Загрузка...</div>
+                <div class="text-center text-text-disabled">Р—Р°РіСЂСѓР·РєР°...</div>
             </div>
             <!-- Footer -->
             <div class="px-6 py-4 border-t border-border-subtle flex items-center justify-between shrink-0" data-role="import-footer">
                 <button onclick="dashboard.importPrevStep()" data-role="import-prev"
                     class="px-4 py-2 text-text-secondary hover:text-text-main font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled>
-                    Назад
+                    РќР°Р·Р°Рґ
                 </button>
                 <button onclick="dashboard.importNextStep()" data-role="import-next"
                     class="px-6 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                    Далее
+                    Р”Р°Р»РµРµ
                 </button>
+            </div>
+        </div>
+    </div>
+    <div id="recovery-center-modal" class="hidden fixed inset-0 z-[70] modal-backdrop items-center justify-center p-4">
+        <div class="bg-surface-1 rounded-2xl shadow-xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-text-main">Р В¦Р ВµР Р…РЎвЂљРЎР‚ Р Р†Р С•РЎРѓРЎРѓРЎвЂљР В°Р Р…Р С•Р Р†Р В»Р ВµР Р…Р С‘РЎРЏ РЎвЂЎР ВµРЎР‚Р Р…Р С•Р Р†Р С‘Р С”Р С•Р Р†</h3>
+                    <p class="text-xs text-text-secondary mt-1">Р вЂєР С•Р С”Р В°Р В»РЎРЉР Р…РЎвЂ№Р Вµ Р В°Р Р†РЎвЂљР С•РЎРѓР С•РЎвЂ¦РЎР‚Р В°Р Р…Р ВµР Р…Р С‘РЎРЏ Р С‘ Р В±РЎвЂ№РЎРѓРЎвЂљРЎР‚РЎвЂ№Р в„– Р Р†Р С•Р В·Р Р†РЎР‚Р В°РЎвЂљ Р Р† РЎР‚Р В°Р В±Р С•РЎвЂљРЎС“</p>
+                </div>
+                <button data-role="close-recovery-center"
+                    class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+            <div id="recovery-center-content" class="flex-1 overflow-y-auto p-5 space-y-3">
+                <div class="text-sm text-text-secondary">Р вЂ”Р В°Р С–РЎР‚РЎС“Р В·Р С”Р В°...</div>
+            </div>
+        </div>
+    </div>
+    <div id="theory-hub-modal" class="hidden fixed inset-0 z-[72] modal-backdrop items-center justify-center p-4">
+        <div class="bg-surface-1 rounded-2xl shadow-xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
+                <div>
+                    <h3 class="text-lg font-bold text-text-main">Theory Hub</h3>
+                    <p class="text-xs text-text-secondary mt-1">Карта theory/topic/complex, conflict center и единый вход в sync-операции.</p>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button id="theory-hub-refresh-btn" type="button"
+                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-xs font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">refresh</span>
+                        Обновить
+                    </button>
+                    <button type="button" data-role="theory-hub-close"
+                        class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
+                        aria-label="Закрыть">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                </div>
+            </div>
+            <div class="px-6 py-4 border-b border-border-subtle bg-surface-2 flex flex-wrap items-center gap-3">
+                <label class="text-xs font-semibold text-text-secondary" for="theory-hub-focus-theory">Фокус теории</label>
+                <select id="theory-hub-focus-theory"
+                    class="min-w-[180px] rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-2.5 text-sm text-text-main focus:ring-2 focus:ring-primary">
+                    <option value="">Все теории</option>
+                </select>
+                <input id="theory-hub-search" type="search" autocomplete="off" spellcheck="false" placeholder="Поиск по theory/topic/complex"
+                    class="min-w-[220px] flex-1 rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-3 text-sm text-text-main placeholder:text-text-muted focus:ring-2 focus:ring-primary">
+                <label class="text-xs font-semibold text-text-secondary" for="theory-hub-ownership-filter">Ownership</label>
+                <select id="theory-hub-ownership-filter"
+                    class="min-w-[160px] rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-2.5 text-sm text-text-main focus:ring-2 focus:ring-primary">
+                    <option value="all">Все комплексы</option>
+                    <option value="mine">Моё</option>
+                    <option value="shared">Общее</option>
+                    <option value="imported">Импорт</option>
+                </select>
+                <label class="text-xs font-semibold text-text-secondary" for="theory-hub-propagation-mode">Режим sync</label>
+                <select id="theory-hub-propagation-mode"
+                    class="rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-2.5 text-sm text-text-main focus:ring-2 focus:ring-primary">
+                    <option value="safe">Safe (inherit only)</option>
+                    <option value="inherit_only_force">Inherit force-refresh</option>
+                    <option value="all_force">All force (incl. override)</option>
+                </select>
+                <label class="inline-flex items-center gap-2 text-xs text-text-secondary">
+                    <input id="theory-hub-dry-run" type="checkbox"
+                        class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary bg-surface-1">
+                    Dry-run (preview)
+                </label>
+                <button id="theory-hub-sync-all-btn" type="button"
+                    class="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-contrast text-xs font-bold hover:bg-primary-dark transition-colors shadow-sm">
+                    <span class="material-symbols-outlined text-[16px]">sync_alt</span>
+                    Синхронизировать всё
+                </button>
+                <p id="theory-hub-ownership-note" class="basis-full text-[11px] text-text-muted">Theory Hub фильтрует общую библиотеку комплексов. Прогресс по ним остаётся личным.</p>
+            </div>
+            <div id="theory-hub-summary" class="px-6 py-3 border-b border-border-subtle bg-surface-1 flex flex-wrap gap-2">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full border border-border-subtle bg-surface-2 text-xs text-text-secondary">Загрузка...</span>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <section class="lg:col-span-2 rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[260px]">
+                    <div class="flex items-center justify-between gap-3 mb-3">
+                        <h4 class="text-sm font-bold text-text-main">Граф связей theory ↔ topics ↔ complexes</h4>
+                        <p class="text-[11px] text-text-muted">Sync-кнопки учитывают выбранный mode и dry-run.</p>
+                    </div>
+                    <div id="theory-hub-map" class="space-y-2">
+                        <div class="text-sm text-text-secondary">Загрузка...</div>
+                    </div>
+                </section>
+                <div class="flex flex-col gap-4">
+                    <section class="rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <h4 class="text-sm font-bold text-text-main">Conflict Queue</h4>
+                            <p class="text-[11px] text-text-muted">Batch-resolve + переход в Builder.</p>
+                        </div>
+                        <div class="mb-3 flex flex-wrap items-center gap-2">
+                            <button id="theory-hub-select-all-btn" type="button"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-xs font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                                <span class="material-symbols-outlined text-[15px]">checklist</span>
+                                Выбрать все
+                            </button>
+                            <button id="theory-hub-sync-selected-btn" type="button"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
+                                <span class="material-symbols-outlined text-[15px]">sync</span>
+                                Sync выбранных
+                            </button>
+                            <button id="theory-hub-force-resolve-btn" type="button"
+                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-warning-light bg-warning-lighter text-xs font-semibold text-warning-darker hover:bg-warning-light transition-colors">
+                                <span class="material-symbols-outlined text-[15px]">gavel</span>
+                                Force resolve
+                            </button>
+                        </div>
+                        <div id="theory-hub-conflicts" class="space-y-2">
+                            <div class="text-sm text-text-secondary">Загрузка...</div>
+                        </div>
+                    </section>
+                    <section class="rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <h4 class="text-sm font-bold text-text-main">Impact Map</h4>
+                            <p class="text-[11px] text-text-muted">Что связано с выбранной теорией.</p>
+                        </div>
+                        <div id="theory-hub-impact" class="space-y-2">
+                            <div class="text-sm text-text-secondary">Выберите теорию, чтобы увидеть связи и быстрые действия.</div>
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
     </div>
@@ -432,3 +663,4 @@
 </body>
 
 </html>
+

@@ -14,6 +14,7 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 
 from routes._context import get_ctx
+from routes._helpers import _resolve_effective_user_id
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +25,7 @@ statistics_bp = Blueprint("statistics", __name__)
 def get_overall_stats() -> Any:
     """Get overall statistics for the current user."""
     ctx = get_ctx()
-    user_id = request.args.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(request.args.get("user_id"))
     days_arg = request.args.get("days")
     days = int(days_arg) if days_arg and days_arg.isdigit() else None
     if days == 0:
@@ -42,7 +43,7 @@ def get_overall_stats() -> Any:
 def get_time_dynamics() -> Any:
     """Get time dynamics for the activity calendar."""
     ctx = get_ctx()
-    user_id = request.args.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(request.args.get("user_id"))
     days = int(request.args.get("days", 30))
     smoothing_window = int(request.args.get("smooth", 3))
     smoothing_window = max(1, min(10, smoothing_window))
@@ -60,7 +61,7 @@ def get_time_dynamics() -> Any:
 def get_complex_statistics() -> Any:
     """Get complex statistics for the current user."""
     ctx = get_ctx()
-    user_id = request.args.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(request.args.get("user_id"))
     try:
         stats = ctx.statistics_service.get_complex_statistics(user_id)
         return jsonify({"ok": True, "complexes": stats})
@@ -73,7 +74,7 @@ def get_complex_statistics() -> Any:
 def get_recent_sessions() -> Any:
     """Get recent sessions for the current user."""
     ctx = get_ctx()
-    user_id = request.args.get("user_id") or ctx.user_id
+    user_id = _resolve_effective_user_id(request.args.get("user_id"))
     limit = int(request.args.get("limit", 10))
     try:
         sessions = ctx.statistics_service.get_recent_sessions(user_id, limit=limit)

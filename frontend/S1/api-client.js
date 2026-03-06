@@ -27,37 +27,66 @@
         return fetch(url, { ...opts, signal: controller.signal }).finally(() => clearTimeout(timer));
     }
 
+    async function parseResponseData(res) {
+        let raw = '';
+        try {
+            raw = await res.text();
+        } catch (e) {
+            return {
+                ok: false,
+                error: 'Не удалось прочитать ответ сервера'
+            };
+        }
+
+        if (!raw) {
+            return { ok: !!res.ok };
+        }
+
+        try {
+            const parsed = JSON.parse(raw);
+            if (parsed && typeof parsed === 'object') {
+                return parsed;
+            }
+            return {
+                ok: !!res.ok,
+                value: parsed
+            };
+        } catch (e) {
+            return {
+                ok: false,
+                error: res.ok ? 'Сервер вернул некорректный ответ' : `Сервер вернул ошибку (${res.status})`
+            };
+        }
+    }
+
+    async function requestJson(url, opts = {}) {
+        ensureRoutes();
+        const res = await fetchWithTimeout(url, opts);
+        const data = await parseResponseData(res);
+        return { status: res.status, data };
+    }
+
     return {
         async getCurrentTask(sessionId) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(SessionRoutes.API.GET_TASK(sessionId), {
+            return requestJson(SessionRoutes.API.GET_TASK(sessionId), {
                 method: "GET",
             });
-            const data = await res.json();
-            return { status: res.status, data };
         },
 
         async pauseSession(sessionId) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(SessionRoutes.API.PAUSE(sessionId), {
+            return requestJson(SessionRoutes.API.PAUSE(sessionId), {
                 method: "POST",
             });
-            const data = await res.json();
-            return { status: res.status, data };
         },
 
         async resumeSession(sessionId) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(SessionRoutes.API.RESUME(sessionId), {
+            return requestJson(SessionRoutes.API.RESUME(sessionId), {
                 method: "POST",
             });
-            const data = await res.json();
-            return { status: res.status, data };
         },
 
         async submitAnswer(sessionId, taskId, userInput) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(
+            return requestJson(
                 SessionRoutes.API.SUBMIT_ANSWER(sessionId),
                 {
                     method: "POST",
@@ -65,47 +94,33 @@
                     body: JSON.stringify({ task_id: taskId, user_input: userInput }),
                 }
             );
-            const data = await res.json();
-            return { status: res.status, data };
         },
 
         async nextTask(sessionId) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(
+            return requestJson(
                 SessionRoutes.API.NEXT_TASK(sessionId),
                 { method: "POST" }
             );
-            const data = await res.json();
-            return { status: res.status, data };
         },
 
         async getIterationResults(sessionId) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(
+            return requestJson(
                 SessionRoutes.API.ITERATION_RESULTS(sessionId),
                 { method: "GET" }
             );
-            const data = await res.json();
-            return { status: res.status, data };
         },
 
         async getFinalResults(sessionId) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(
+            return requestJson(
                 SessionRoutes.API.FINAL_RESULTS(sessionId),
                 { method: "GET" }
             );
-            const data = await res.json();
-            return { status: res.status, data };
         },
 
         async cancelSession(sessionId) {
-            ensureRoutes();
-            const res = await fetchWithTimeout(SessionRoutes.API.CANCEL(sessionId), {
+            return requestJson(SessionRoutes.API.CANCEL(sessionId), {
                 method: "POST",
             });
-            const data = await res.json();
-            return { status: res.status, data };
         }
     };
 }));

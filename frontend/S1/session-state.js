@@ -17,6 +17,7 @@
     const state = {
         sessionId: null,
         currentTask: null, // TaskDTO: task from /task endpoint
+        theoryContext: null,
         isLoading: false,
         canGoNext: false,
         autoSubmitting: false,

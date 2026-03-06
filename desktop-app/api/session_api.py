@@ -48,6 +48,15 @@ class SessionAPI:
         self._statistics_service = statistics_service
         self._default_user_id = default_user_id
 
+    @property
+    def default_user_id(self) -> str:
+        """Compatibility accessor for services that rebind active user context."""
+        return self._default_user_id
+
+    @default_user_id.setter
+    def default_user_id(self, value: Optional[str]) -> None:
+        self._default_user_id = str(value or "").strip() or "default_user"
+
     # ------------------------------------------------------------------
     # Базовые операции сессии
     # ------------------------------------------------------------------
@@ -747,6 +756,7 @@ class SessionAPI:
 
         return {
             "session_id": session_id,
+            "complex_id": getattr(session, "complex_id", None),
             "task_ref": current_task_ref,
             "module_id": module_id,
             "topic_id": topic_id,

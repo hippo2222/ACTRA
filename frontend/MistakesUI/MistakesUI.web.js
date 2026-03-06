@@ -200,7 +200,15 @@
     hint.className = "p-3 rounded-lg bg-info-lighter dark:bg-info-light border border-info-light dark:border-info-light";
     const hintText = document.createElement("p");
     hintText.className = "text-xs text-info-dark dark:text-info-light leading-normal";
-    hintText.innerHTML = `<span class="font-bold">Подсказка:</span> Кликайте на слова, которые кажутся вам клинически неверными в данном контексте.`;
+    const hintPrefix = document.createElement("span");
+    hintPrefix.className = "font-bold";
+    hintPrefix.textContent = "Подсказка:";
+    hintText.appendChild(hintPrefix);
+    hintText.appendChild(
+      document.createTextNode(
+        " Кликайте на слова, которые кажутся вам клинически неверными в данном контексте."
+      )
+    );
     hint.appendChild(hintText);
 
     stack.appendChild(hint);

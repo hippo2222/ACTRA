@@ -6,6 +6,7 @@
     container: null,
     root: null,
     textarea: null,
+    counter: null,
     maxLength: null,
   };
 
@@ -104,8 +105,16 @@
   function _syncCheckButtonState() {
     try {
       const btn = document.getElementById("check-answer-btn");
-      if (!btn) return;
-      btn.disabled = !_isNonEmptyAnswer();
+      if (btn) {
+        btn.disabled = !_isNonEmptyAnswer();
+      }
+      if (state.counter) {
+        if (!state.maxLength) {
+          state.counter.textContent = "";
+        } else {
+          state.counter.textContent = `${_getTextareaValue().length}/${state.maxLength}`;
+        }
+      }
     } catch (e) {
       // ignore
     }
@@ -385,18 +394,8 @@
 
     const counter = _createEl("div", "text-xs text-text-secondary dark:text-text-secondary", "");
 
-    function updateCounter() {
-      if (!counter) return;
-      if (!state.maxLength) {
-        counter.textContent = "";
-        return;
-      }
-      const used = _getTextareaValue().length;
-      counter.textContent = `${used}/${state.maxLength}`;
-    }
-
-    textarea.addEventListener("input", updateCounter);
-    updateCounter();
+    textarea.addEventListener("input", _syncCheckButtonState);
+    _syncCheckButtonState();
 
     footerRow.appendChild(counter);
 
@@ -408,6 +407,7 @@
 
     state.root = root;
     state.textarea = textarea;
+    state.counter = counter;
 
     try {
       textarea.focus();
@@ -435,8 +435,8 @@
   OpenAnswerUI.restoreInput = function restoreInput(draft) {
     try {
       if (!draft || typeof draft !== "object") return;
-      const answer = draft.answer || "";
-      if (state.textarea && answer) {
+      const answer = draft.answer != null ? String(draft.answer) : "";
+      if (state.textarea) {
         state.textarea.value = answer;
         _syncCheckButtonState();
       }
@@ -451,6 +451,7 @@
     state.container = null;
     state.root = null;
     state.textarea = null;
+    state.counter = null;
     state.maxLength = null;
     // Note: Event listeners are attached to DOM elements that will be removed,
     // so they will be garbage collected automatically.

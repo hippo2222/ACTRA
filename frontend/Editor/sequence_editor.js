@@ -86,13 +86,18 @@ class SequenceEditor extends BaseEditor {
         const toast = document.createElement('div');
         const palette = variant === 'error'
             ? { bg: 'bg-surface-2 border-l-4 border-error text-error-text', shadow: 'shadow-md' }
-            : { bg: 'bg-success-lighter border-l-4 border-success text-success-text', shadow: 'shadow-md' };
+            : variant === 'warning'
+                ? { bg: 'bg-warning-lighter border-l-4 border-warning-light text-warning-text', shadow: 'shadow-md' }
+                : { bg: 'bg-success-lighter border-l-4 border-success text-success-text', shadow: 'shadow-md' };
 
         toast.className = `fixed top-6 right-6 z-50 text-sm font-semibold px-4 py-3 rounded-r-lg ${palette.bg} ${palette.shadow} backdrop-blur-md transition-all border-y border-r border-border-subtle flex items-center gap-3 animate-slide-in`;
-        toast.innerHTML = `
-            <span class="material-symbols-outlined text-[20px]">${variant === 'error' ? 'report' : 'check_circle'}</span>
-            <span>${message}</span>
-        `;
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined text-[20px]';
+        icon.textContent = variant === 'error' ? 'report' : (variant === 'warning' ? 'warning' : 'check_circle');
+        const text = document.createElement('span');
+        text.textContent = message;
+        toast.appendChild(icon);
+        toast.appendChild(text);
 
         document.body.appendChild(toast);
 
@@ -101,6 +106,19 @@ class SequenceEditor extends BaseEditor {
             toast.style.transform = 'translateY(-4px)';
             setTimeout(() => toast.remove(), 300);
         }, timeout);
+    }
+
+    async confirmAction({
+        title = 'Подтверждение',
+        message = 'Вы уверены?',
+        confirmText = 'Подтвердить',
+        cancelText = 'Отмена',
+        variant = 'error',
+    } = {}) {
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
+            return NotificationUI.confirm({ title, message, confirmText, cancelText, variant });
+        }
+        return window.confirm(message);
     }
 
     async init() {
@@ -236,7 +254,7 @@ class SequenceEditor extends BaseEditor {
                     ${lIndex + 1}
                 </div>
                 <input class="level-title-input bg-transparent border-transparent hover:border-border-subtle focus:border-primary focus:ring-0 rounded text-sm font-bold text-text-main px-2 py-1 flex-1 transition-colors" 
-                       type="text" placeholder="Название уровня" value="${level.title || ""}"/>
+                       type="text" placeholder="Название уровня"/>
                 <div class="flex items-center gap-1 opacity-0 group-hover/level:opacity-100 transition-opacity">
                     <button class="p-1.5 hover:bg-surface-1 rounded text-text-muted hover:text-primary transition-colors move-up" title="Переместить вверх"><span class="material-symbols-outlined text-[20px]">arrow_upward</span></button>
                     <button class="p-1.5 hover:bg-surface-1 rounded text-text-muted hover:text-primary transition-colors move-down" title="Переместить вниз"><span class="material-symbols-outlined text-[20px]">arrow_downward</span></button>
@@ -248,6 +266,7 @@ class SequenceEditor extends BaseEditor {
         `;
 
         const titleInput = div.querySelector('.level-title-input');
+        titleInput.value = level.title || '';
         titleInput.oninput = (e) => {
             this.levels[lIndex].title = e.target.value;
             this.markUnsaved();
@@ -285,7 +304,7 @@ class SequenceEditor extends BaseEditor {
                 <span class="material-symbols-outlined text-[16px]">close</span>
             </button>
             <textarea class="block-title-input w-full text-sm font-semibold border border-border-subtle bg-transparent focus:border-primary focus:ring-0 rounded-md text-text-main placeholder-text-disabled resize-none min-h-[44px] transition-colors py-2 px-3 text-center leading-tight overflow-hidden" 
-                   rows="1" placeholder="Опишите элемент...">${item.label || ''}</textarea>
+                   rows="1" placeholder="Опишите элемент..."></textarea>
             <div class="flex justify-between pt-1 text-[11px] font-bold">
                 <button class="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-text-muted hover:text-primary hover:bg-primary-lighter transition-all move-left">
                     <span class="material-symbols-outlined text-[16px]">chevron_left</span>
@@ -336,17 +355,23 @@ class SequenceEditor extends BaseEditor {
         }
     }
 
-    deleteLevel(index) {
+    async deleteLevel(index) {
         if (this.levels.length <= 1) {
-            alert("Должен остаться минимум один уровень.");
+            this.showToast("Должен остаться минимум один уровень.", 'error');
             return;
         }
-        if (confirm("Удалить весь уровень?")) {
-            this.levels.splice(index, 1);
-            this.renderLevels();
-            this.markUnsaved();
-            this.saveStateToHistory(); // Save state for undo/redo
-        }
+        const confirmed = await this.confirmAction({
+            title: 'Удалить уровень?',
+            message: 'Будет удалён весь уровень вместе со всеми шагами.',
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
+            variant: 'error',
+        });
+        if (!confirmed) return;
+        this.levels.splice(index, 1);
+        this.renderLevels();
+        this.markUnsaved();
+        this.saveStateToHistory(); // Save state for undo/redo
     }
 
     addLevel() {
@@ -369,7 +394,7 @@ class SequenceEditor extends BaseEditor {
         const level = this.levels[lIndex];
         if (!level) return;
         if (level.items.length <= 1) {
-            alert("В уровне должен быть хотя бы один шаг.");
+            this.showToast("В уровне должен быть хотя бы один шаг.", 'error');
             return;
         }
         level.items.splice(iIndex, 1);
@@ -407,8 +432,15 @@ class SequenceEditor extends BaseEditor {
 
         const clearAllBtn = document.querySelector('#clear-all-btn');
         if (clearAllBtn) {
-            clearAllBtn.onclick = () => {
-                if (confirm("Очистить все уровни?")) {
+            clearAllBtn.onclick = async () => {
+                const confirmed = await this.confirmAction({
+                    title: 'Очистить все уровни?',
+                    message: 'Редактор оставит только один новый пустой уровень.',
+                    confirmText: 'Очистить',
+                    cancelText: 'Отмена',
+                    variant: 'error',
+                });
+                if (confirmed) {
                     this.levels = [this.createEmptyLevel()];
                     this.renderLevels();
                     this.markUnsaved();
@@ -539,6 +571,45 @@ class SequenceEditor extends BaseEditor {
         }
 
         return null; // Validation passed
+    }
+
+    getSemanticWarnings() {
+        const warnings = [];
+        const levels = Array.isArray(this.levels) ? this.levels : [];
+        const singleStepLevels = levels.filter((level) => Array.isArray(level?.items) && level.items.length === 1);
+
+        if (singleStepLevels.length > 0) {
+            warnings.push(`У ${singleStepLevels.length} уровней только по одному шагу. Проверьте, действительно ли здесь нужна многоуровневая структура.`);
+        }
+
+        if (levels.length > 1 && levels.every((level) => Array.isArray(level?.items) && level.items.length === 1)) {
+            warnings.push('Каждый уровень содержит только один шаг. Такая структура может ощущаться слишком плоской для задания на последовательность.');
+        }
+
+        const duplicates = [];
+        const seen = new Set();
+
+        levels.forEach((level) => {
+            const items = Array.isArray(level?.items) ? level.items : [];
+            items.forEach((item) => {
+                const label = String(item?.label || "").trim();
+                if (!label) return;
+                const key = label.toLowerCase();
+                if (seen.has(key)) {
+                    if (!duplicates.includes(label)) {
+                        duplicates.push(label);
+                    }
+                    return;
+                }
+                seen.add(key);
+            });
+        });
+
+        if (duplicates.length) {
+            warnings.push(`Повторяются названия шагов: ${duplicates.slice(0, 2).join(", ")}.`);
+        }
+
+        return warnings;
     }
 
     /**

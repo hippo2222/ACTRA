@@ -1041,7 +1041,45 @@ class TestEditor extends BaseEditor {
         this.updateSaveStatus(false);
     }
 
-    clearTest() {
+    async confirmAction({
+        title,
+        message,
+        confirmText = 'Подтвердить',
+        cancelText = 'Отмена',
+        variant = 'warning'
+    }) {
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
+            return NotificationUI.confirm({ title, message, confirmText, cancelText, variant });
+        }
+        return window.confirm(message);
+    }
+
+    async clearTest() {
+        const clearConfirmed = await this.confirmAction({
+            title: 'Clear test?',
+            message: 'All questions will be removed.',
+            confirmText: 'Clear',
+            cancelText: 'Cancel',
+            variant: 'warning'
+        });
+        if (!clearConfirmed) {
+            return;
+        }
+        this.questions = [this.createEmptyQuestion()];
+        this.currentQuestionIndex = 0;
+        this.renderUI();
+        return;
+
+        const confirmed = await this.confirmAction({
+            title: 'РћС‡РёСЃС‚РёС‚СЊ С‚РµСЃС‚?',
+            message: 'Р’СЃРµ РІРѕРїСЂРѕСЃС‹ Р±СѓРґСѓС‚ СѓРґР°Р»РµРЅС‹.',
+            confirmText: 'РћС‡РёСЃС‚РёС‚СЊ',
+            cancelText: 'РћС‚РјРµРЅР°',
+            variant: 'warning'
+        });
+        if (!confirmed) {
+            return;
+        }
         if (!confirm('Очистить текущий тест? Все вопросы будут удалены.')) {
             return;
         }
@@ -1051,6 +1089,36 @@ class TestEditor extends BaseEditor {
     }
 
     async deleteTest() {
+        if (!this.task) return;
+        const deleteConfirmed = await this.confirmAction({
+            title: 'Delete task?',
+            message: 'This action cannot be undone.',
+            confirmText: 'Delete',
+            cancelText: 'Cancel',
+            variant: 'error'
+        });
+        if (!deleteConfirmed) {
+            return;
+        }
+        try {
+            await this.withLoading('Deleting task...', async () => {
+                const m = this.task.task_data.meta.module;
+                const t = this.task.task_data.meta.topic;
+                const id = this.task.metadata.id;
+
+                const response = await fetch(`/api/editor/task/${encodeURIComponent(m)}/${encodeURIComponent(t)}/${encodeURIComponent(id)}`, { method: 'DELETE' });
+                const data = await response.json();
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.error || 'Failed to delete task');
+                }
+                this.showToast('Task deleted', 'success');
+                window.navigateWithTransition('/ui/editor');
+            });
+        } catch (err) {
+            this.showToast(err.message || 'Delete failed', 'error');
+        }
+        return;
+
         if (!this.task) return;
         if (!confirm('Удалить это задание? Действие необратимо.')) {
             return;
@@ -1092,10 +1160,13 @@ class TestEditor extends BaseEditor {
         };
         const toast = document.createElement('div');
         toast.className = `pointer-events-auto px-4 py-3 rounded-lg shadow-lg text-sm font-medium text-text-on-dark flex items-center gap-2 transition transform ${palette[variant] || palette.info}`;
-        toast.innerHTML = `
-            <span class="material-symbols-outlined text-[18px]">${icons[variant] || icons.info}</span>
-            <span>${message}</span>
-        `;
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined text-[18px]';
+        icon.textContent = icons[variant] || icons.info;
+        const text = document.createElement('span');
+        text.textContent = message;
+        toast.appendChild(icon);
+        toast.appendChild(text);
         toast.style.opacity = '0';
         toast.style.transform = 'translateY(10px)';
         this.toastContainer.appendChild(toast);

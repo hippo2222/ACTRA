@@ -101,6 +101,83 @@ def _normalize_complex_id(value: Any) -> Optional[str]:
     return v or None
 
 
+def _normalize_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _resolve_effective_user_id(value: Any = None, *, fallback: str = "default_user") -> str:
+    """Resolve a non-empty user id for routes that must stay functional without active profile."""
+    if isinstance(value, str):
+        candidate = value.strip()
+        if candidate:
+            return candidate
+
+    ctx_user_id = getattr(get_ctx(), "user_id", None)
+    if isinstance(ctx_user_id, str):
+        candidate = ctx_user_id.strip()
+        if candidate:
+            return candidate
+
+    return fallback
+
+
+def _build_complex_ownership_payload(
+    obj: dict,
+    *,
+    current_user_id: Optional[str] = None,
+) -> dict:
+    effective_user_id = _normalize_optional_text(current_user_id)
+    if effective_user_id is None:
+        effective_user_id = _normalize_optional_text(getattr(get_ctx(), "user_id", None))
+
+    created_by_user_id = _normalize_optional_text(obj.get("created_by_user_id"))
+    updated_by_user_id = _normalize_optional_text(obj.get("updated_by_user_id"))
+    if updated_by_user_id is None:
+        updated_by_user_id = created_by_user_id
+
+    created_via = _normalize_optional_text(obj.get("created_via")) or "legacy_unknown"
+    content_scope = _normalize_optional_text(obj.get("content_scope")) or "shared_local"
+    is_owned_by_current_user = bool(
+        created_by_user_id and effective_user_id and created_by_user_id == effective_user_id
+    )
+
+    return {
+        "scope": "workspace",
+        "content_scope": content_scope,
+        "created_by_user_id": created_by_user_id,
+        "updated_by_user_id": updated_by_user_id,
+        "created_via": created_via,
+        "has_owner": bool(created_by_user_id),
+        "is_owned_by_current_user": is_owned_by_current_user,
+        "is_shared_library": content_scope == "shared_local",
+    }
+
+
+def _serialize_complex_payload(
+    complex_obj: Any,
+    *,
+    current_user_id: Optional[str] = None,
+) -> dict:
+    obj = complex_obj.dict() if hasattr(complex_obj, "dict") else dict(complex_obj or {})
+    created_at = obj.get("created_at")
+    updated_at = obj.get("updated_at")
+    if created_at is not None:
+        obj["created_at"] = (
+            created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+        )
+    if updated_at is not None:
+        obj["updated_at"] = (
+            updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
+        )
+    obj["ownership"] = _build_complex_ownership_payload(
+        obj, current_user_id=current_user_id
+    )
+    return _enrich_complex_with_theory_link(obj)
+
+
 def _enrich_complex_with_theory_link(obj: dict) -> dict:
     """Attach cached theory metadata to complex payload for UI convenience."""
     from services.theory_service import TheoryNotFoundError  # type: ignore
@@ -135,23 +212,8 @@ def _get_complex_by_id(complex_id: str) -> Optional[dict]:
     try:
         complexes = get_ctx().complex_service.get_all_complexes()
         for c in complexes:
-            obj = c.dict()
+            obj = _serialize_complex_payload(c)
             if obj.get("id") == complex_id:
-                created_at = obj.get("created_at")
-                updated_at = obj.get("updated_at")
-                if created_at is not None:
-                    obj["created_at"] = (
-                        created_at.isoformat()
-                        if hasattr(created_at, "isoformat")
-                        else str(created_at)
-                    )
-                if updated_at is not None:
-                    obj["updated_at"] = (
-                        updated_at.isoformat()
-                        if hasattr(updated_at, "isoformat")
-                        else str(updated_at)
-                    )
-                obj = _enrich_complex_with_theory_link(obj)
                 return obj
         return None
     except Exception as exc:

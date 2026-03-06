@@ -352,6 +352,10 @@
 
                                     подборка для закрепления материала.</p>
 
+                                <p id="daily-mix-reason" class="mt-2 text-xs font-medium text-text-muted">
+
+                                    Сначала закрываем повторы, чтобы не копить просадки по памяти.</p>
+
                             </div>
 
                             <div class="flex items-end justify-between">
@@ -779,6 +783,76 @@
 
         }
 
+        function escapeHtml(value) {
+
+            return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+
+                '&': '&amp;',
+
+                '<': '&lt;',
+
+                '>': '&gt;',
+
+                '"': '&quot;',
+
+                "'": '&#39;',
+
+            }[char] || char));
+
+        }
+
+        function escapeInlineJsString(value) {
+
+            return String(value ?? '')
+
+                .replace(/\\/g, '\\\\')
+
+                .replace(/'/g, "\\'")
+
+                .replace(/"/g, '\\x22')
+
+                .replace(/&/g, '\\x26')
+
+                .replace(/\r/g, '\\r')
+
+                .replace(/\n/g, '\\n')
+
+                .replace(/\u2028/g, '\\u2028')
+
+                .replace(/\u2029/g, '\\u2029')
+
+                .replace(/</g, '\\x3C')
+
+                .replace(/>/g, '\\x3E');
+
+        }
+
+        function resetFetchedCalendarState() {
+
+            state.hasData = false;
+            state.settings.streak_days = 0;
+            state.daily_plan = {
+                daily_mix_count: 0,
+                daily_mix_minutes: 0,
+                main_focus_name: null,
+                main_focus_count: 0,
+                main_focus_minutes: 0,
+                is_adapted: false,
+            };
+            state.health_summary = {
+                overall_health: 0,
+                complexes: [],
+                critical_count: 0,
+            };
+            state.schedule = [];
+            state.activity = [];
+            state.notifications = [];
+            state.complexes = [];
+            state.restDays = {};
+            state.microcardsSummary = null;
+
+        }
+
         async function fetchTodayPlan() {
 
             const isInitialLoad = !state.loaded;
@@ -788,6 +862,8 @@
                 scheduleCalendarInitialLoading();
 
             }
+
+            resetFetchedCalendarState();
 
             try {
 
@@ -882,6 +958,8 @@
                 }
 
                 // Fetch available complexes
+
+                state.complexes = [];
 
                 const complexesRes = await fetch(`${API_BASE}/complexes`);
 
@@ -1016,6 +1094,7 @@
                 }
 
                 // Fetch microcards summary for today section CTA
+                state.microcardsSummary = null;
                 try {
                     const mcSummaryRes = await fetch(`${API_BASE}/microcards/summary`);
                     if (mcSummaryRes.ok) {
@@ -1083,7 +1162,7 @@
 
             <p class="text-sm font-medium text-error-text">Ошибка загрузки расписания</p>
 
-            <p class="text-xs text-error-text opacity-80">${message}</p>
+            <p class="text-xs text-error-text opacity-80">${escapeHtml(message)}</p>
 
         </div>
 
@@ -1247,7 +1326,7 @@
 
             try {
 
-                await fetch(`${API_BASE}/calendar/settings`, {
+                const response = await fetch(`${API_BASE}/calendar/settings`, {
 
                     method: 'POST',
 
@@ -1257,11 +1336,84 @@
 
                 });
 
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    data = {};
+                }
+
+                const ok = data.ok ?? data.success ?? response.ok;
+                if (!response.ok || !ok) {
+                    showNotification('Не удалось сохранить настройки календаря', 'error');
+                    return false;
+                }
+
+                return true;
+
             } catch (e) {
 
                 console.error('Settings update failed:', e);
+                showNotification('Ошибка сети при сохранении настроек календаря', 'error');
+                return false;
 
             }
+
+        }
+
+        async function startComplexSessionById(complexId) {
+
+            if (!complexId) {
+
+                showNotification('Комплекс не найден', 'error');
+
+                return false;
+
+            }
+
+            try {
+
+                const res = await fetch(`${API_BASE}/session/${encodeURIComponent(complexId)}/start`, {
+
+                    method: 'POST',
+
+                    headers: { 'Content-Type': 'application/json' },
+
+                    body: JSON.stringify({})
+
+                });
+
+                const data = await res.json();
+
+                const ok = data.ok ?? data.success;
+
+                if (ok && data.session_id) {
+
+                    window.navigateWithTransition(`/ui/session/${data.session_id}`);
+
+                    return true;
+
+                }
+
+                if (res.status === 409 && data.error === 'paused_session_exists' && data.session_id) {
+
+                    window.navigateWithTransition(`/ui/session/${data.session_id}`);
+
+                    return true;
+
+                }
+
+                showNotification(`Не удалось запустить комплекс: ${data.error || 'неизвестная ошибка'}`, 'error');
+
+            } catch (e) {
+
+                console.error('Failed to start session:', e);
+
+                showNotification('Ошибка сети при запуске комплекса', 'error');
+
+            }
+
+            return false;
 
         }
 
@@ -1295,47 +1447,42 @@
 
                     }
 
+                    showNotification(`Не удалось запустить Daily Mix: ${data.error || data.message || 'неизвестная ошибка'}`, 'error');
+                    return;
+
                 } catch (e) {
 
                     console.error('Failed to start Daily Mix:', e);
+                    showNotification('Ошибка сети при запуске Daily Mix', 'error');
+                    return;
 
                 }
 
-            } else if (type === 'new_material' && state.complexes.length > 0) {
+            } else if (type === 'new_material') {
+
+                if (state.complexes.length === 0) {
+
+                    showNotification('Нет доступных комплексов. Откройте список комплексов и выберите подходящий.', 'error');
+
+                    setTimeout(() => {
+
+                        window.navigateWithTransition('/ui/complexes');
+
+                    }, 250);
+
+                    return;
+
+                }
 
                 // Start first available complex
 
                 const complex = state.complexes[0];
 
-                try {
+                const started = await startComplexSessionById(complex.id);
 
-                    const res = await fetch(`${API_BASE}/session/${complex.id}/start`, {
-
-                        method: 'POST',
-
-                        headers: { 'Content-Type': 'application/json' },
-
-                        body: JSON.stringify({})
-
-                    });
-
-                    const data = await res.json();
-
-                    const ok = data.ok ?? data.success;
-
-                    if (ok && data.session_id) {
-
-                        window.navigateWithTransition(`/ui/session/${data.session_id}`);
-
-                        return;
-
-                    }
-
-                } catch (e) {
-
-                    console.error('Failed to start session:', e);
-
-                }
+                // startComplexSessionById already shows a precise error notification
+                if (started) return;
+                return;
 
             }
 
@@ -1343,13 +1490,17 @@
 
             if (!state.hasData) {
 
-                alert('Для начала обучения создайте или откройте комплекс.');
+                showNotification('Для начала обучения создайте или откройте комплекс.', 'error');
 
-                window.navigateWithTransition('/ui/complexes');
+                setTimeout(() => {
+
+                    window.navigateWithTransition('/ui/complexes');
+
+                }, 250);
 
             } else {
 
-                alert('Не удалось запустить сессию. Попробуйте позже.');
+                showNotification('Не удалось запустить сессию. Попробуйте позже.', 'error');
 
             }
 
@@ -1531,6 +1682,8 @@
 
                 <p class="text-text-secondary text-sm">Запустите любой комплекс, чтобы появилась подборка повторения.</p>
 
+                <p class="text-text-muted text-xs font-medium">Без активного комплекса система не может собрать осмысленный Daily Mix.</p>
+
                 <button onclick="window.navigateWithTransition('/ui/complexes')" class="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary transition-colors">
 
                     Перейти к комплексам
@@ -1553,9 +1706,31 @@
 
                 // Normal Daily Mix
 
+                const todayDateKey = new Date().toISOString().slice(0, 10);
+
+                const isTodayRestDay = !!state.restDays[todayDateKey];
+
+                const dailyMixReasonEl = document.getElementById('daily-mix-reason');
+
+                document.getElementById('daily-mix-badge').textContent = 'Повторение';
+
+                document.getElementById('daily-mix-desc').textContent = 'Персонализированная подборка для закрепления материала.';
+
+                document.getElementById('daily-mix-btn-text').textContent = 'Начать';
+
                 document.getElementById('daily-mix-count').textContent = plan.daily_mix_count || 0;
 
                 document.getElementById('daily-mix-time').textContent = `задач (~${plan.daily_mix_minutes || 0} мин)`;
+
+                if (dailyMixReasonEl) {
+
+                    dailyMixReasonEl.textContent = activeComplexes > 1
+
+                        ? 'Подборка собрана из активных комплексов, чтобы не копить отложенные повторы.'
+
+                        : 'Сначала закрываем повторы по активному комплексу, чтобы не терять свежий материал.';
+
+                }
 
                 if (plan.is_adapted) {
 
@@ -1567,11 +1742,27 @@
 
                     document.getElementById('subtitle').textContent = 'План обучения обновлен с учетом пропуска.';
 
+                    if (dailyMixReasonEl) {
+
+                        dailyMixReasonEl.textContent = 'Сначала закрываем накопившиеся повторы, чтобы мягко вернуть план в рабочий ритм.';
+
+                    }
+
                 }
 
                 if (!hasDailyMix) {
 
                     document.getElementById('daily-mix-desc').textContent = 'Пока нет задач на повторение. Начните проходить комплексы!';
+
+                    if (dailyMixReasonEl) {
+
+                        dailyMixReasonEl.textContent = isTodayRestDay
+
+                            ? 'Сегодня отмечен день отдыха, поэтому обязательных повторов нет.'
+
+                            : 'Срочных повторов нет: можно перейти к основному фокусу или в микрокарточки.';
+
+                    }
 
                 }
 
@@ -1819,6 +2010,8 @@
 
                 const canToggleRest = isToday || day.is_future;
 
+                const safeDayDate = escapeInlineJsString(day.date);
+
                 let borderClass = 'border-border-subtle';
 
                 let opacityClass = 'opacity-80 hover:opacity-100';
@@ -1871,6 +2064,8 @@
 
                         const taskName = (visibleTaskNames[idx] && visibleTaskNames[idx].name) || taskInfo.name;
 
+                        const safeTaskName = escapeHtml(taskName);
+
                         const checkIcon = isCompleted
 
                             ? '<span class="material-symbols-outlined text-success text-[16px]">check_circle</span>'
@@ -1883,7 +2078,7 @@
 
                         ${checkIcon}
 
-                        <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'} ${isCompleted ? 'line-through opacity-70' : ''}">${taskName}</span>
+                        <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'} ${isCompleted ? 'line-through opacity-70' : ''}">${safeTaskName}</span>
 
                     </div>
 
@@ -1897,7 +2092,7 @@
 
                     <div class="size-1.5 rounded-full ${isToday ? 'bg-text-main' : 'bg-text-secondary'}"></div>
 
-                    <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'}">${task.name}</span>
+                    <span class="text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'}">${escapeHtml(task.name)}</span>
 
                 </div>
 
@@ -1907,7 +2102,7 @@
 
                 const overflowHtml = day.has_overflow && !isExpanded
 
-                    ? `<button onclick="toggleDayExpand('${day.date}')" class="flex items-center gap-1 text-xs text-primary hover:text-primary font-medium transition-colors">
+                    ? `<button onclick="toggleDayExpand('${safeDayDate}')" class="flex items-center gap-1 text-xs text-primary hover:text-primary font-medium transition-colors">
 
                 <span class="material-symbols-outlined text-[14px]">expand_more</span>
 
@@ -1921,7 +2116,7 @@
 
                 const collapseHtml = isExpanded
 
-                    ? `<button onclick="toggleDayExpand('${day.date}')" class="flex items-center gap-1 text-xs text-text-secondary hover:text-primary font-medium transition-colors">
+                    ? `<button onclick="toggleDayExpand('${safeDayDate}')" class="flex items-center gap-1 text-xs text-text-secondary hover:text-primary font-medium transition-colors">
 
                 <span class="material-symbols-outlined text-[14px]">expand_less</span>
 
@@ -1938,6 +2133,7 @@
                     return list.map(badge => {
 
                         let badgeClass = 'bg-bg-hover text-text-secondary';
+                        const badgeLabel = escapeHtml(badge);
 
                         if (badge === 'Пропущено') badgeClass = 'bg-error-lighter text-error';
 
@@ -1945,7 +2141,7 @@
 
                         if (badge === 'Нет данных') badgeClass = 'bg-warning-light text-warning-dark border border-warning-lighter';
 
-                        return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${badge}</span></div>`;
+                        return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${badgeLabel}</span></div>`;
 
                     }).join('');
 
@@ -1955,7 +2151,7 @@
 
                 const restToggleHtml = canToggleRest ? `
 
-            <button onclick="event.stopPropagation(); toggleRestDay('${day.date}')" 
+            <button onclick="event.stopPropagation(); toggleRestDay('${safeDayDate}')" 
 
                     class="rest-day-toggle ${isRestDay ? 'active' : ''} p-1 rounded hover:bg-bg-hover transition-colors"
 
@@ -2207,7 +2403,8 @@
 
                 }
 
-                return `<div class="aspect-square rounded ${bgClass} ${extraClass} heatmap-cell tooltip" data-tooltip="${tooltip}"></div>`;
+                const safeTooltip = escapeHtml(tooltip);
+                return `<div class="aspect-square rounded ${bgClass} ${extraClass} heatmap-cell tooltip" data-tooltip="${safeTooltip}"></div>`;
 
             }).join('');
 
@@ -2310,6 +2507,9 @@
             }
 
             const notif = state.notifications[0];
+            const safeTitle = escapeHtml(notif.title || '');
+            const safeMessage = escapeHtml(notif.message || '');
+            const safeActionType = escapeInlineJsString(notif.action_type || '');
 
             container.innerHTML = `
 
@@ -2325,15 +2525,15 @@
 
                 <div>
 
-                    <p class="text-warning-dark text-sm font-medium">${notif.title}</p>
+                    <p class="text-warning-dark text-sm font-medium">${safeTitle}</p>
 
-                    <p class="text-warning-dark text-xs">${notif.message}</p>
+                    <p class="text-warning-dark text-xs">${safeMessage}</p>
 
                 </div>
 
             </div>
 
-            <button onclick="handleNotificationAction('${notif.action_type}')" class="text-xs bg-warning-lighter hover:bg-warning-light text-warning-dark px-3 py-1.5 rounded-md font-bold transition-colors">
+            <button onclick="handleNotificationAction('${safeActionType}')" class="text-xs bg-warning-lighter hover:bg-warning-light text-warning-dark px-3 py-1.5 rounded-md font-bold transition-colors">
 
                 ${notif.action_type === 'fix' ? 'Исправить' : 'Обновить'}
 
@@ -2507,9 +2707,19 @@
 
                 const fullTooltip = c.hint_title ? `${c.hint_title}\n${frequencyText}${subTooltip}` : frequencyText;
 
+                const safeComplexId = escapeHtml(c.complex_id || '');
+
+                const safeComplexName = escapeHtml(c.name || 'Комплекс');
+
+                const safeFrequencyText = escapeHtml(frequencyText);
+
+                const safeTooltip = escapeHtml(fullTooltip);
+
+                const safeHealthPercent = escapeHtml(c.health_percent);
+
                 return `
 
-        <div class="flex flex-col gap-0.5 group cursor-pointer py-1 tooltip" data-tooltip="${fullTooltip}" onclick="startUnplannedReview('${c.name}')">
+        <button type="button" class="health-review-trigger flex w-full flex-col gap-0.5 group cursor-pointer py-1 text-left bg-transparent border-0 tooltip" data-tooltip="${safeTooltip}" data-complex-id="${safeComplexId}">
 
             <div class="flex items-center justify-between">
 
@@ -2517,25 +2727,39 @@
 
                     <div class="size-2 rounded-full ${c.is_critical ? 'bg-warning-text' : (c.health_percent >= 80 ? 'bg-primary' : 'bg-primary')}"></div>
 
-                    <span class="text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors truncate max-w-[120px]">${c.name}</span>
+                    <span class="text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors truncate max-w-[120px]">${safeComplexName}</span>
 
                     ${badge}
 
                 </div>
 
-                <span class="text-xs ${c.is_critical ? 'text-warning-dark' : (c.health_percent >= 80 ? 'text-primary' : 'text-text-secondary')} font-bold">${c.health_percent}%</span>
+                <span class="text-xs ${c.is_critical ? 'text-warning-dark' : (c.health_percent >= 80 ? 'text-primary' : 'text-text-secondary')} font-bold">${safeHealthPercent}%</span>
 
             </div>
 
             <div class="flex items-center gap-2 ml-4">
 
-                <span class="text-[10px] text-text-secondary truncate">${frequencyText}</span>
+                <span class="text-[10px] text-text-secondary truncate">${safeFrequencyText}</span>
 
             </div>
 
-        </div>
+        </button>
 
     `}).join('');
+
+            const reviewTriggers = list.querySelectorAll('.health-review-trigger[data-complex-id]');
+
+            reviewTriggers.forEach((item) => {
+
+                item.addEventListener('click', () => {
+
+                    const complexId = item.getAttribute('data-complex-id');
+
+                    startUnplannedReview(complexId);
+
+                });
+
+            });
 
         }
 
@@ -2546,6 +2770,8 @@
         // =============================================================================
 
         async function setTimeLimit(minutes) {
+
+            const previousMinutes = state.settings.daily_time_limit_minutes;
 
             state.settings.daily_time_limit_minutes = minutes;
 
@@ -2563,13 +2789,21 @@
 
             try {
 
-                await updateSettings({ daily_time_limit_minutes: minutes });
-
-                await fetchTodayPlan();
+                const updated = await updateSettings({ daily_time_limit_minutes: minutes });
+                if (updated) {
+                    await fetchTodayPlan();
+                } else {
+                    state.settings.daily_time_limit_minutes = previousMinutes;
+                }
 
             } catch (e) {
 
                 console.error('Failed to refresh plan after time change:', e);
+                if (state.settings.daily_time_limit_minutes !== minutes) {
+                    state.settings.daily_time_limit_minutes = previousMinutes;
+                } else {
+                    showNotification('Лимит сохранён, но план не удалось обновить сразу', 'warning');
+                }
 
             }
 
@@ -2591,7 +2825,7 @@
 
                 if (critical) {
 
-                    startUnplannedReview(critical.name);
+                    startUnplannedReview(critical.complex_id);
 
                 }
 
@@ -2599,9 +2833,14 @@
 
         }
 
-        function startUnplannedReview(complexName) {
+        async function startUnplannedReview(complexId) {
 
-            window.navigateWithTransition('/ui/complexes');
+            const started = await startComplexSessionById(complexId);
+
+            if (started) return;
+
+            // Keep the user on Calendar so the failure reason remains visible.
+            return;
 
         }
 
@@ -2679,7 +2918,17 @@
 
                 }
 
-                const data = await response.json();
+                let data = {};
+                try {
+                    data = await response.json();
+                } catch (_) {
+                    data = {};
+                }
+
+                if (!response.ok || !data.success) {
+                    showNotification('Не удалось изменить статус дня', 'error');
+                    return;
+                }
 
                 if (data.success) {
 

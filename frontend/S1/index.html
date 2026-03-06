@@ -2,7 +2,7 @@
 <html lang="ru">
 
 <head>
-  <script src="../assets/ThemeManager.js"></script>
+  <script src="/assets/ThemeManager.js"></script>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Комплексная сессия – S1</title>
@@ -128,7 +128,7 @@
           <main class="flex-grow">
             <!-- Global status / error banner -->
             <div id="status-banner"
-              class="mb-4 hidden rounded-lg border border-warning bg-warning-lighter px-4 py-3 text-sm text-warning-dark">
+              class="mb-4 hidden rounded-lg border-2 border-warning bg-surface-1 px-4 py-3 text-sm text-text-main">
             </div>
             <!-- Pause confirmation modal -->
             <div id="pause-confirm-modal"
@@ -217,6 +217,19 @@
                 <p id="task-description" class="text-base font-normal leading-relaxed text-text-secondary">
                 </p>
               </div>
+              <div id="theory-session-banner"
+                class="mb-4 hidden rounded-xl border border-primary-light bg-primary-lighter px-4 py-3 shadow-sm">
+                <div class="flex items-start gap-3">
+                  <div
+                    class="flex size-9 shrink-0 items-center justify-center rounded-full border border-primary-light bg-surface-1 text-primary">
+                    <span class="material-symbols-outlined text-xl">menu_book</span>
+                  </div>
+                  <div class="min-w-0">
+                    <p id="theory-session-title" class="text-sm font-semibold text-primary-darker">Теория</p>
+                    <p id="theory-session-meta" class="mt-1 text-xs leading-relaxed text-primary-darker/80"></p>
+                  </div>
+                </div>
+              </div>
               <!-- Placeholder for task-specific UI (TestUI grid with question card + sidebar) -->
               <div id="task-content" class="flex flex-col gap-2">
                 <!-- Task type-specific UI will be injected here -->
@@ -284,13 +297,18 @@
           window.loadInitialTask = Main.loadInitialTask;
         } else {
           console.error("Main module not loaded");
+          const banner = document.getElementById("status-banner");
+          if (banner) {
+            banner.textContent = "Не удалось инициализировать экран сессии. Обновите страницу.";
+            banner.classList.remove("hidden");
+          }
         }
       });
     </script>
 
-    <script src="../assets/NotificationUI.js"></script>
-    <script src="../assets/ThemeSwitcherUI.js"></script>
-    <script src="../assets/ConnectionMonitor.js"></script>
+    <script src="/assets/NotificationUI.js"></script>
+    <script src="/assets/ThemeSwitcherUI.js"></script>
+    <script src="/assets/ConnectionMonitor.js"></script>
 </body>
 
 </html>

@@ -33,7 +33,7 @@
           "usePreviousSession": true
         },
         "maxTasks": 200,
-        "targetTaskTypes": ["click", "draw", "test", "sequence_assembly", "open_answer"],
+        "targetTaskTypes": ["test"],
         "targetDifficulties": [1, 2, 3],
         "autoSubmit": true,
         "autoSubmitMode": "force_success",
@@ -80,8 +80,8 @@
         { "type": "wait", "ms": 300 }
       ],
       "actions": [
-        { "type": "hover", "selector": "#close-btn", "waitMs": 120 },
-        { "type": "focus", "selector": "#close-btn", "waitMs": 120 }
+        { "type": "hover", "selector": "#to-main-btn", "waitMs": 120 },
+        { "type": "focus", "selector": "#to-main-btn", "waitMs": 120 }
       ]
     }
   ]

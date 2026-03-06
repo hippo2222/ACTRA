@@ -29,6 +29,30 @@
         return '/api/assets/avatars/1.png?trim=1&size=256';
     }
 
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char] || char));
+    }
+
+    function escapeInlineJsString(value) {
+        return escapeHtml(
+            String(value ?? '')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\r/g, '\\r')
+                .replace(/\n/g, '\\n')
+                .replace(/\u2028/g, '\\u2028')
+                .replace(/\u2029/g, '\\u2029')
+                .replace(/</g, '\\x3C')
+                .replace(/>/g, '\\x3E')
+        );
+    }
+
     function setupLoadingOverlayLogo() {
         const animatedLogo = document.getElementById('loadingLogoAnimated');
         const staticLogo = document.getElementById('loadingLogoStatic');
@@ -57,13 +81,18 @@
 
         gallery.innerHTML = files.map(file => {
             const selected = file === currentSeed;
+            const safeFileLiteral = escapeInlineJsString(file);
+            const safeSeedInputId = escapeInlineJsString(seedInputId);
+            const safePreviewId = escapeInlineJsString(previewId);
+            const safeContainerId = escapeInlineJsString(containerId);
+            const safeFilenameAttr = escapeHtml(file);
             return `
             <button class="avatar-option group relative rounded-full w-14 h-14 overflow-hidden focus:outline-none transition-all duration-200 ${selected
                     ? 'ring-2 ring-primary opacity-100'
                     : 'opacity-75 hover:opacity-100'
                 }"
-                 onclick="window._welcomeSelectAvatar('${file}', '${seedInputId}', '${previewId}', '${containerId}')"
-                 data-filename="${file}">
+                 onclick="window._welcomeSelectAvatar('${safeFileLiteral}', '${safeSeedInputId}', '${safePreviewId}', '${safeContainerId}')"
+                 data-filename="${safeFilenameAttr}">
                 <img src="/api/assets/avatars/${encodeURIComponent(file)}?trim=1&size=256" class="w-full h-full object-cover avatar-fill pointer-events-none shadow-sm" alt="Avatar">
             </button>`;
         }).join('');
@@ -306,7 +335,7 @@
         updateWelcomeHeader(mode);
     }
 
-    function updateWelcomeHeader(mode) {
+    const updateWelcomeHeaderLegacy = function (mode) {
         const title = document.getElementById('welcomeHeaderTitle');
         const subtitle = document.getElementById('welcomeHeaderSubtitle');
         if (!title || !subtitle) return;
@@ -325,12 +354,92 @@
 
         title.textContent = 'Добро пожаловать';
         subtitle.textContent = 'Выберите профиль, чтобы продолжить обучение.';
+    };
+
+    function ensureWelcomeHeaderHint() {
+        const subtitle = document.getElementById('welcomeHeaderSubtitle');
+        if (!subtitle || !subtitle.parentElement) return null;
+
+        let hint = document.getElementById('welcomeHeaderHint');
+        if (hint) return hint;
+
+        hint = document.createElement('p');
+        hint.id = 'welcomeHeaderHint';
+        hint.className = 'mt-4 mx-auto max-w-xl rounded-2xl border border-border-subtle bg-surface-1/80 px-4 py-3 text-sm font-medium text-text-secondary';
+        subtitle.insertAdjacentElement('afterend', hint);
+        return hint;
+    }
+
+    function updateWelcomeHeader(mode) {
+        const title = document.getElementById('welcomeHeaderTitle');
+        const subtitle = document.getElementById('welcomeHeaderSubtitle');
+        if (!title || !subtitle) return;
+        const hint = ensureWelcomeHeaderHint();
+
+        if (mode === 'onboarding') {
+            title.textContent = 'Добро пожаловать!';
+            subtitle.textContent = 'Похоже, вы здесь впервые. Создайте профиль, чтобы начать обучение.';
+            if (hint) {
+                hint.textContent = 'Профиль сохранит ваш прогресс, календарь, статистику и личные сессии. Комплексы, теория и колоды могут быть частью общей библиотеки этого устройства.';
+                hint.classList.remove('hidden');
+            }
+            return;
+        }
+
+        if (mode === 'login') {
+            title.textContent = 'С возвращением';
+            subtitle.textContent = 'Введите пароль, чтобы продолжить обучение.';
+            if (hint) {
+                hint.textContent = 'После входа вы вернётесь к своему прогрессу, календарю и последним действиям. Общая библиотека контента останется доступной.';
+                hint.classList.remove('hidden');
+            }
+            return;
+        }
+
+        title.textContent = 'Добро пожаловать';
+        subtitle.textContent = 'Выберите профиль, чтобы продолжить обучение.';
+        if (hint) {
+            hint.textContent = 'Профиль хранит личный прогресс и настройки. Комплексы, теория и микрокарточки могут быть частью общей локальной библиотеки.';
+            hint.classList.remove('hidden');
+        }
+    }
+
+    function showStartupLoadError(message) {
+        const title = document.getElementById('welcomeHeaderTitle');
+        const subtitle = document.getElementById('welcomeHeaderSubtitle');
+        if (title) title.textContent = 'Не удалось загрузить стартовый экран';
+        if (subtitle) subtitle.textContent = 'Повторите попытку или перезапустите приложение.';
+
+        showMode('select');
+        window.welcomeCancelCreate();
+        window.welcomeCancelPassword();
+
+        const container = document.getElementById('profilesList');
+        if (!container) return;
+        container.innerHTML = `
+            <div class="w-full max-w-xl rounded-[2rem] border border-error/20 bg-error/5 p-8 text-center shadow-xl">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-error/10 text-error">
+                    <span class="material-symbols-outlined text-[28px]">error</span>
+                </div>
+                <h3 class="text-2xl font-black text-text-main mb-3">Стартовые данные недоступны</h3>
+                <p class="text-sm text-text-secondary mb-6">${escapeHtml(message || 'Не удалось получить данные для входа.')}</p>
+                <button type="button" onclick="window.welcomeRetryInit()"
+                    class="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 font-bold text-primary-fg hover:bg-primary-hover transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">refresh</span>
+                    Повторить
+                </button>
+            </div>
+        `;
     }
 
     // --- Navigate to main ---
     function goToMain() {
         window.navigateWithTransition('/ui/main');
     }
+
+    window.welcomeRetryInit = function () {
+        window.location.reload();
+    };
 
     // --- Create profile & select ---
     async function createAndSelect(name, avatarSeed, errorElementId, consentConfig) {
@@ -370,13 +479,13 @@
 
         // Select the new profile
         const userId = data.user.user_id;
-        await apiFetch('/api/users/select', {
+        const selectResp = await apiFetch('/api/users/select', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId })
         });
 
-        return true;
+        return !!selectResp.ok;
     }
 
     async function selectUser(userId) {
@@ -507,10 +616,12 @@
         if (profile.has_password && profile.security_settings && profile.security_settings.require_password_on_login) {
             pendingPasswordUserId = userId;
             const container = document.getElementById('passwordInlineUser');
+            const safeAvatarUrl = escapeHtml(getAvatarUrl(profile.avatar_seed));
+            const safeProfileName = escapeHtml(profile.name);
             container.innerHTML = `
-                <img src="${getAvatarUrl(profile.avatar_seed)}" class="w-12 h-12 rounded-full bg-surface-2 object-cover avatar-fill ring-2 ring-primary/30 shadow-sm">
+                <img src="${safeAvatarUrl}" class="w-12 h-12 rounded-full bg-surface-2 object-cover avatar-fill ring-2 ring-primary/30 shadow-sm">
                 <div class="flex flex-col">
-                    <span class="font-black text-text-main text-lg leading-tight tracking-tight">${profile.name}</span>
+                    <span class="font-black text-text-main text-lg leading-tight tracking-tight">${safeProfileName}</span>
                     <span class="text-[10px] text-text-muted font-bold uppercase tracking-wider mt-0.5">Вход по паролю</span>
                 </div>
             `;
@@ -543,13 +654,13 @@
             return;
         }
 
-        const { ok } = await apiFetch('/api/users/verify-password', {
+        const { ok, data } = await apiFetch('/api/users/verify-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: pendingPasswordUserId, password })
         });
 
-        if (ok) {
+        if (ok && data?.verified) {
             const selected = await selectUser(pendingPasswordUserId);
             if (!selected) return;
 
@@ -579,14 +690,20 @@
             return;
         }
 
-        const userId = profiles[0].user_id;
-        const { ok } = await apiFetch('/api/users/verify-password', {
+        const user = profiles[0];
+        if (!user || !user.user_id) {
+            showError('loginError', 'Профиль не найден');
+            return;
+        }
+
+        const userId = user.user_id;
+        const { ok, data } = await apiFetch('/api/users/verify-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ user_id: userId, password })
         });
 
-        if (ok) {
+        if (ok && data?.verified) {
             const selected = await selectUser(userId);
             if (!selected) return;
 
@@ -610,6 +727,9 @@
             const hasLock = user.has_password
                 && user.security_settings
                 && user.security_settings.require_password_on_login;
+            const safeUserId = escapeInlineJsString(user.user_id);
+            const safeUserName = escapeHtml(user.name);
+            const safeAvatarUrl = escapeHtml(getAvatarUrl(user.avatar_seed));
 
             const lockBadges = hasLock
                 ? `<div class="absolute top-2 right-2 bg-text-main/80 backdrop-blur-sm rounded-full p-1.5 shadow-sm border border-white/10 z-10 transition-transform group-hover:scale-110">
@@ -620,18 +740,18 @@
             // V3 Profile Card Structure
             return `
             <button class="profile-card-v3 group flex flex-col items-center p-8 rounded-3xl text-center flex-shrink-0 cursor-pointer outline-none focus:ring-4 focus:ring-primary/20 relative overflow-hidden"
-                 onclick="window.welcomeSelectProfile('${user.user_id}')">
+                 onclick="window.welcomeSelectProfile('${safeUserId}')">
                 
                 <!-- Hover background effect -->
                 <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
                 <div class="relative mb-5 transition-transform group-hover:scale-105 duration-300 transform-gpu">
-                    <img src="${getAvatarUrl(user.avatar_seed)}" class="w-24 h-24 rounded-full object-cover avatar-fill shadow-lg ring-4 ring-surface-0 group-hover:ring-primary/40 transition-shadow" alt="${user.name}">
+                    <img src="${safeAvatarUrl}" class="w-24 h-24 rounded-full object-cover avatar-fill shadow-lg ring-4 ring-surface-0 group-hover:ring-primary/40 transition-shadow" alt="${safeUserName}">
                     ${lockBadges}
                 </div>
                 
                 <div class="w-full relative z-10">
-                    <p class="text-xl font-bold text-text-main group-hover:text-primary transition-colors truncate w-full mb-1 tracking-tight">${user.name}</p>
+                    <p class="text-xl font-bold text-text-main group-hover:text-primary transition-colors truncate w-full mb-1 tracking-tight">${safeUserName}</p>
                     <p class="text-[11px] uppercase tracking-widest font-bold text-text-muted opacity-60 group-hover:opacity-100 group-hover:text-primary transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
                         ${hasLock ? 'Требуется пароль' : 'Нажмите для входа'}
                     </p>
@@ -690,11 +810,12 @@
             const { ok, data } = await apiFetch('/api/users/should-welcome');
 
             if (!ok) {
-                goToMain();
+                showStartupLoadError('Не удалось получить список профилей и стартовый режим.');
                 return;
             }
 
             if (!data.show_welcome) {
+                const availableProfiles = Array.isArray(data.profiles) ? data.profiles : [];
                 let selectedUserId = null;
                 if (data.auto_select_user_id) {
                     const selected = await selectUser(data.auto_select_user_id);
@@ -705,6 +826,9 @@
                     const currentResp = await apiFetch('/api/users/current');
                     if (currentResp.ok && currentResp.data?.user?.user_id) {
                         selectedUserId = currentResp.data.user.user_id;
+                    } else if (data.auto_select_user_id || availableProfiles.length > 0) {
+                        showStartupLoadError('Не удалось определить активный профиль для входа.');
+                        return;
                     }
                 }
 

@@ -173,7 +173,7 @@ class OpenAnswerEditor extends BaseEditor {
 
         const text = referenceArea.value || '';
         if (!text.trim()) {
-            alert('Сначала заполните эталонный ответ, чтобы выделить ключевые слова.');
+            this.showToast('Сначала заполните эталонный ответ, чтобы выделить ключевые слова.', 'warning');
             referenceArea.focus();
             return;
         }
@@ -187,7 +187,7 @@ class OpenAnswerEditor extends BaseEditor {
         }));
 
         if (!generated.length) {
-            alert('Не удалось выделить ключевые слова. Попробуйте добавить их вручную.');
+            this.showToast('Не удалось выделить ключевые слова. Попробуйте добавить их вручную.', 'warning');
             return;
         }
 
@@ -307,14 +307,14 @@ class OpenAnswerEditor extends BaseEditor {
 
         const remainingSlots = this.maxImages - content.images.length;
         if (remainingSlots <= 0) {
-            alert(`Можно загрузить не более ${this.maxImages} изображений.`);
+            this.showToast(`Можно загрузить не более ${this.maxImages} изображений.`, 'warning');
             event.target.value = '';
             return;
         }
 
         const filesToUpload = files.slice(0, remainingSlots);
         if (filesToUpload.length < files.length) {
-            alert(`Загружено максимальное количество файлов (${this.maxImages}).`);
+            this.showToast(`Загружено максимальное количество файлов (${this.maxImages}).`, 'warning');
         }
 
         for (let file of filesToUpload) {
@@ -331,15 +331,16 @@ class OpenAnswerEditor extends BaseEditor {
                 });
 
                 const data = await response.json();
-                if (data.ok) {
+                if (response.ok !== false && data.ok) {
                     if (!this.task.task_data.content.images) this.task.task_data.content.images = [];
                     this.task.task_data.content.images.push(data.path);
                     this.markUnsaved();
                 } else {
-                    alert("Ошибка загрузки: " + data.error);
+                    this.showToast(`Ошибка загрузки: ${data.error || 'upload_failed'}`, 'error');
                 }
             } catch (error) {
                 console.error("Ошибка загрузки изображения:", error);
+                this.showToast('Ошибка загрузки изображения. Проверьте соединение и попробуйте снова.', 'error');
             }
         }
         this.renderImages();
@@ -676,10 +677,13 @@ class OpenAnswerEditor extends BaseEditor {
             : ['bg-surface-2', 'text-text-main', 'border-border-subtle'];
 
         toast.className = [...baseClasses, ...variantClasses].join(' ');
-        toast.innerHTML = `
-            <span class="material-symbols-outlined text-[18px]">${variant === 'success' ? 'task_alt' : 'info'}</span>
-            <span>${message}</span>
-        `;
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined text-[18px]';
+        icon.textContent = variant === 'success' ? 'task_alt' : 'info';
+        const text = document.createElement('span');
+        text.textContent = message;
+        toast.appendChild(icon);
+        toast.appendChild(text);
 
         document.body.appendChild(toast);
 
@@ -933,6 +937,9 @@ if (typeof window !== 'undefined') {
 
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
     document.addEventListener('DOMContentLoaded', () => {
+        if (typeof window !== 'undefined' && window.__OPEN_ANSWER_EDITOR_AUTO_INIT_DISABLED__) {
+            return;
+        }
         window.editor = new OpenAnswerEditor();
     });
 }

@@ -11,10 +11,62 @@
     'use strict';
 
     // --- Helpers ---
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char] || char));
+    }
+
+    function escapeInlineJsString(value) {
+        return escapeHtml(
+            String(value ?? '')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'")
+                .replace(/\r/g, '\\r')
+                .replace(/\n/g, '\\n')
+                .replace(/\u2028/g, '\\u2028')
+                .replace(/\u2029/g, '\\u2029')
+                .replace(/</g, '\\x3C')
+                .replace(/>/g, '\\x3E')
+        );
+    }
+
+    function showToast(message, type = 'error', duration = 2000) {
+        if (typeof NotificationUI !== 'undefined' && NotificationUI.toast) {
+            NotificationUI.toast(message, type, duration);
+            return;
+        }
+
+        const palette = {
+            success: 'bg-success text-white',
+            error: 'bg-error text-white',
+            warning: 'bg-warning text-warning-dark',
+            info: 'bg-info text-white',
+        };
+        const toast = document.createElement('div');
+        toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${palette[type] || palette.info} transition-all opacity-0 translate-y-2`;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => {
+            toast.style.transition = 'opacity 200ms, transform 200ms';
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+        });
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(8px)';
+            setTimeout(() => toast.remove(), 250);
+        }, Math.max(1200, duration));
+    }
+
     function getAvatarUrl(avatarSeed, userId) {
         if (!avatarSeed) avatarSeed = '1.png';
         if (avatarSeed.includes('.')) {
-            return `/api/assets/avatars/${avatarSeed}`;
+            return `/api/assets/avatars/${encodeURIComponent(String(avatarSeed))}`;
         }
         return '/api/assets/avatars/1.png';
     }
@@ -106,14 +158,17 @@
             listEl.innerHTML = data.items.map(user => {
                 const isActive = _currentUserId === user.user_id;
                 const avatar = getAvatarUrl(user.avatar_seed, user.user_id);
+                const userIdLiteral = escapeInlineJsString(user.user_id);
+                const safeAvatar = escapeHtml(avatar);
+                const safeName = escapeHtml(user.name || 'Гость');
                 return `
                     <div class="flex items-center gap-4 p-3 rounded-xl border ${isActive
                         ? 'border-primary bg-primary-lighter'
                         : 'border-border-subtle hover:border-primary'} cursor-pointer transition-all"
-                        onclick="selectProfile('${user.user_id}')">
-                        <img src="${avatar}" class="w-10 h-10 rounded-full bg-surface-2 object-cover" alt="${user.name}">
+                        onclick="selectProfile('${userIdLiteral}')">
+                        <img src="${safeAvatar}" class="w-10 h-10 rounded-full bg-surface-2 object-cover" alt="${safeName}">
                         <div class="flex-1 min-w-0">
-                            <div class="font-medium text-text-main truncate">${user.name}</div>
+                            <div class="font-medium text-text-main truncate">${safeName}</div>
                             <div class="text-xs text-text-muted">${isActive ? 'Текущий профиль' : ''}</div>
                         </div>
                         ${isActive
@@ -156,19 +211,14 @@
             const data = await res.json();
             if (data.ok) {
                 closeProfileModal();
-                // Toast if NotificationUI available
-                if (typeof NotificationUI !== 'undefined' && NotificationUI.toast) {
-                    NotificationUI.toast(
-                        "Profile switched",
-                        'success', 1500
-                    );
-                    setTimeout(() => window.location.reload(), 400);
-                } else {
-                    window.location.reload();
-                }
+                showToast('Профиль переключен', 'success', 1500);
+                setTimeout(() => window.location.reload(), 400);
+                return;
             }
+            showToast('Не удалось переключить профиль');
         } catch (e) {
             console.error('[SharedProfileModal] Failed to select profile:', e);
+            showToast('Ошибка сети при переключении профиля');
         }
     }
 
@@ -182,4 +232,3 @@
         window.getAvatarUrl = getAvatarUrl;
     }
 })();
-

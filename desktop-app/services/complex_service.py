@@ -22,6 +22,50 @@ from task_system.core.exceptions import TaskValidationError
 logger = logging.getLogger(__name__)
 
 
+def _normalize_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _normalize_complex_ownership_fields(
+    payload: Dict[str, Any],
+    *,
+    fallback_source: str = "legacy_unknown",
+    existing: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    existing_payload = existing if isinstance(existing, dict) else {}
+
+    created_by_user_id = _normalize_optional_text(payload.get("created_by_user_id"))
+    if created_by_user_id is None:
+        created_by_user_id = _normalize_optional_text(existing_payload.get("created_by_user_id"))
+
+    updated_by_user_id = _normalize_optional_text(payload.get("updated_by_user_id"))
+    if updated_by_user_id is None:
+        updated_by_user_id = _normalize_optional_text(existing_payload.get("updated_by_user_id"))
+    if updated_by_user_id is None:
+        updated_by_user_id = created_by_user_id
+
+    created_via = _normalize_optional_text(payload.get("created_via"))
+    if created_via is None:
+        created_via = _normalize_optional_text(existing_payload.get("created_via"))
+    if created_via is None:
+        created_via = fallback_source
+
+    content_scope = _normalize_optional_text(payload.get("content_scope"))
+    if content_scope is None:
+        content_scope = _normalize_optional_text(existing_payload.get("content_scope"))
+    if content_scope is None:
+        content_scope = "shared_local"
+
+    payload["created_by_user_id"] = created_by_user_id
+    payload["updated_by_user_id"] = updated_by_user_id
+    payload["created_via"] = created_via
+    payload["content_scope"] = content_scope
+    return payload
+
+
 class ConflictError(Exception):
     """Raised when version conflict detected during update"""
 
@@ -86,9 +130,12 @@ class ComplexService:
             for item in data:
                 try:
                     # Валидация схемы
-                    ComplexSchema.validate_or_raise(item)
+                    normalized_item = _normalize_complex_ownership_fields(
+                        dict(item), fallback_source="legacy_unknown"
+                    )
+                    ComplexSchema.validate_or_raise(normalized_item)
                     # Создание модели
-                    complex_obj = Complex(**item)
+                    complex_obj = Complex(**normalized_item)
                     self._complexes_cache[complex_obj.id] = complex_obj
                     loaded_complexes.append(complex_obj)
                 except Exception as e:
@@ -149,6 +196,10 @@ class ComplexService:
         self._ensure_initialized()
 
         # Валидация
+        complex_data = _normalize_complex_ownership_fields(
+            dict(complex_data),
+            fallback_source="manual_editor",
+        )
         ComplexSchema.validate_or_raise(complex_data)
 
         complex_id = complex_data["id"]
@@ -261,6 +312,11 @@ class ComplexService:
         # Обновляем поля
         current_data.update(updates)
         current_data["updated_at"] = datetime.utcnow()
+        current_data = _normalize_complex_ownership_fields(
+            current_data,
+            fallback_source="manual_editor",
+            existing=current_complex.dict(),
+        )
 
         # Валидация обновленных данных
         # Конвертируем datetime обратно в строки для валидации схемы (если нужно),
@@ -355,6 +411,16 @@ class ComplexService:
             current_complex = self.get_complex(complex_id)
             if current_complex:
                 self._save_history_snapshot(complex_id, current_complex.dict())
+                snapshot_data = _normalize_complex_ownership_fields(
+                    snapshot_data,
+                    fallback_source="legacy_unknown",
+                    existing=current_complex.dict(),
+                )
+            else:
+                snapshot_data = _normalize_complex_ownership_fields(
+                    snapshot_data,
+                    fallback_source="legacy_unknown",
+                )
 
             # 2. Восстанавливаем
             restored_complex = Complex(**snapshot_data)

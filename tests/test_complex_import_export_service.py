@@ -302,6 +302,20 @@ class TestImportComplexPayload:
         assert result["incoming_id"] == "c1"
         self.svc.complex_service.create_complex.assert_called_once()
 
+    def test_import_marks_complex_as_archive_import(self):
+        self.svc.complex_service.get_complex.return_value = None
+        payload = {
+            "id": "c1",
+            "name": "Test",
+            "tasks": ["mod/topic/t1"],
+            "settings": {},
+            "created_via": "manual_editor",
+        }
+        result = self.svc._import_complex_payload(payload, "skip", {})
+        assert result["status"] == "imported"
+        created_payload = self.svc.complex_service.create_complex.call_args[0][0]
+        assert created_payload["created_via"] == "archive_import"
+
     def test_existing_skip_policy(self):
         existing = MagicMock()
         existing.dict.return_value = {"id": "c1", "name": "Old", "tasks": ["mod/topic/t1"], "settings": {}}

@@ -162,6 +162,38 @@
                     </button>
                 </div>
 
+                <div class="mb-4 rounded-xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
+                    <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
+                        <label class="relative flex-1 min-w-0">
+                            <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-secondary">
+                                <span class="material-symbols-outlined text-[18px]">search</span>
+                            </span>
+                            <input id="mcDeckQuery" type="search" autocomplete="off" spellcheck="false"
+                                class="w-full rounded-lg border border-border-strong bg-bg-main py-2.5 pl-10 pr-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary-light"
+                                placeholder="Найти колоду по названию или теме" aria-label="Поиск по колодам">
+                        </label>
+                        <div class="flex flex-wrap gap-2" role="tablist" aria-label="Фильтры колод">
+                            <button type="button" class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-filter="all">Все</button>
+                            <button type="button" class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-filter="urgent">Срочно</button>
+                            <button type="button" class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-filter="new">Есть новые</button>
+                            <button type="button" class="mc-deck-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-filter="recent">Недавние</button>
+                        </div>
+                    </div>
+                    <div class="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-text-muted">Ownership</span>
+                            <div class="flex flex-wrap gap-2" role="tablist" aria-label="Фильтры ownership колод" id="mcDeckOwnershipFilters">
+                                <button type="button" class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-ownership-filter="all">Все</button>
+                                <button type="button" class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-ownership-filter="mine">Моё</button>
+                                <button type="button" class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-ownership-filter="shared">Общее</button>
+                                <button type="button" class="mc-deck-ownership-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors" data-ownership-filter="imported">Импорт</button>
+                            </div>
+                        </div>
+                        <p id="mcDeckOwnershipHint" class="text-xs text-text-muted">Колоды живут в общей библиотеке, а прогресс по ним остаётся личным.</p>
+                    </div>
+                    <p id="mcDeckFilterHint" class="mt-2 text-xs font-medium text-text-secondary">Сначала показываем колоды с самым срочным повторением.</p>
+                </div>
+
                 <!-- Deck grid -->
                 <div id="mcDeckGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                     <!-- Rendered by JS -->

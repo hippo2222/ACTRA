@@ -56,6 +56,11 @@
             animation: pulse-dot 1s ease-in-out infinite;
             background: var(--color-warning) !important;
         }
+
+        .provider-diagnostics {
+            border: 1px dashed var(--color-border-subtle);
+            background: color-mix(in srgb, var(--color-surface-1) 88%, transparent);
+        }
     </style>
 </head>
 
@@ -110,6 +115,26 @@
                 </div>
             </div>
 
+            <div id="settings-draft-banner" class="hidden mb-6 p-4 bg-warning-lighter border border-warning-light rounded-xl">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-warning text-[20px] mt-0.5">history</span>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-warning-text">Найден несохранённый черновик настроек</p>
+                        <p id="settings-draft-banner-text" class="text-xs text-warning-text mt-1">Можно восстановить последние несохранённые значения ключей.</p>
+                        <div class="mt-3 flex flex-wrap items-center gap-2">
+                            <button id="settings-draft-restore-btn"
+                                class="px-3 py-2 text-xs font-semibold rounded-lg bg-warning text-primary-fg hover:bg-warning-dark transition-colors">
+                                Восстановить черновик
+                            </button>
+                            <button id="settings-draft-discard-btn"
+                                class="px-3 py-2 text-xs font-semibold rounded-lg border border-warning-light bg-surface-1 text-warning-text hover:bg-bg-hover transition-colors">
+                                Удалить черновик
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Provider cards -->
             <div id="providers-container" class="space-y-4">
                 <div class="text-center py-12 text-text-secondary">
@@ -124,6 +149,10 @@
                     class="px-6 py-2.5 bg-primary text-primary-fg font-semibold text-sm rounded-xl hover:brightness-110 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
                     Сохранить ключи
                 </button>
+                <button id="validate-all-btn" onclick="validateAllKeys()"
+                    class="px-4 py-2.5 border border-border-subtle bg-surface-1 text-text-secondary font-semibold text-sm rounded-xl hover:bg-bg-hover transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    РџСЂРѕРІРµСЂРёС‚СЊ РІСЃРµ РєР»СЋС‡Рё
+                </button>
                 <span id="save-status" class="text-sm text-text-muted"></span>
             </div>
         </section>
@@ -136,6 +165,7 @@
         </div>
     </main>
 
+    <script src="/assets/NotificationUI.js"></script>
     <script src="/ui/settings/settings.js"></script>
 </body>
 

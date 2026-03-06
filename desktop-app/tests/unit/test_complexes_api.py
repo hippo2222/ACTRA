@@ -31,6 +31,7 @@ def test_validate_and_normalize_ok():
         "module_01/topic_01/task_002",
     ]]
     assert normalized["theory_link"] == {"theory_id": "th_abc123", "relation": "link"}
+    assert normalized["theory_mode"] == "override"
 
 
 def test_validate_and_normalize_theory_link_copy_relation():
@@ -44,6 +45,29 @@ def test_validate_and_normalize_theory_link_copy_relation():
     assert errors == []
     assert normalized is not None
     assert normalized["theory_link"] == {"theory_id": "th_copy_01", "relation": "copy"}
+    assert normalized["theory_mode"] == "override"
+
+
+def test_validate_and_normalize_default_theory_mode_inherit_without_theory_link():
+    payload = {
+        "name": "X",
+        "tasks": ["module_01/topic_01/task_001"],
+    }
+    normalized, errors = validate_and_normalize_create_payload(payload)
+    assert errors == []
+    assert normalized is not None
+    assert normalized["theory_mode"] == "inherit"
+
+
+def test_validate_and_normalize_rejects_invalid_theory_mode():
+    payload = {
+        "name": "X",
+        "tasks": ["module_01/topic_01/task_001"],
+        "theory_mode": "broken_mode",
+    }
+    normalized, errors = validate_and_normalize_create_payload(payload)
+    assert normalized is None
+    assert any(e["field"] == "theory_mode" for e in errors)
 
 
 def test_validate_and_normalize_requires_name_and_tasks():

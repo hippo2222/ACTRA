@@ -113,11 +113,6 @@ class ImportExportService:
                             arc_name = f"{arc_root}/{rel_path}".replace('\\', '/')
                             zf.write(file_path, arc_name)
                             
-                # Include difficulty settings (MISSING-8)
-                difficulty_path = self.storage.modules_dir.parent / "difficulty_config.json"
-                if difficulty_path.exists():
-                    zf.write(difficulty_path, "difficulty_config.json")
-
                 # Create and add manifest
                 manifest = {
                     "export_date": datetime.utcnow().isoformat() + "Z",
@@ -265,7 +260,7 @@ class ImportExportService:
                 return {"status": "error", "error": "Missing task ID in task.json"}
                 
             res["id"] = task_id
-            res["name"] = data.get('name', task_id)
+            res["name"] = data.get('name') or data.get('meta', {}).get('name') or task_id
             res["path"] = task_file_path
             
             # Identify intended module/topic from path if possible

@@ -27,9 +27,26 @@
     // ── Helpers ───────────────────────────────────────────────────────────
     function $(id) { return document.getElementById(id); }
     function escHtml(s) {
-        const d = document.createElement('div');
-        d.textContent = String(s ?? '');
-        return d.innerHTML;
+        return String(s ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char] || char));
+    }
+    function escJsString(s) {
+        return String(s ?? '')
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\x22')
+            .replace(/&/g, '\\x26')
+            .replace(/\r/g, '\\r')
+            .replace(/\n/g, '\\n')
+            .replace(/\u2028/g, '\\u2028')
+            .replace(/\u2029/g, '\\u2029')
+            .replace(/</g, '\\x3C')
+            .replace(/>/g, '\\x3E');
     }
     function show(el) { if (el) el.classList.remove('hidden'); }
     function hide(el) { if (el) el.classList.add('hidden'); }
@@ -37,6 +54,284 @@
         const m = Math.floor(sec / 60);
         const s = Math.floor(sec % 60);
         return m + ':' + String(s).padStart(2, '0');
+    }
+
+    function normalizeDeckSearch(value) {
+        return String(value ?? '')
+            .toLocaleLowerCase('ru-RU')
+            .trim();
+    }
+
+    function parseDeckTimestamp(value) {
+        if (!value) return 0;
+        const ts = Date.parse(value);
+        return Number.isFinite(ts) ? ts : 0;
+    }
+
+    function getDeckStats(deck) {
+        const stats = deck?.stats || {};
+        return {
+            due: Math.max(0, Number(stats.cards_due ?? 0)),
+            newCards: Math.max(0, Number(stats.cards_new ?? 0)),
+            total: Math.max(0, Number(stats.cards_total ?? 0)),
+        };
+    }
+
+    function getDeckPriorityScore(deck) {
+        const { due, newCards } = getDeckStats(deck);
+        return (due * 10) + (newCards * 4);
+    }
+
+    function isDeckRecent(deck) {
+        const meta = deck?.meta || {};
+        const updatedAt = parseDeckTimestamp(meta.updated_at || meta.created_at);
+        if (!updatedAt) return false;
+        const maxAgeMs = 14 * 24 * 60 * 60 * 1000;
+        return (Date.now() - updatedAt) <= maxAgeMs;
+    }
+
+    function getDeckTopicLabel(deck) {
+        const selector = deck?.selector || {};
+        const meta = deck?.meta || {};
+        const labels = [];
+        const metaTopic = String(meta.topic || meta.section_title || meta.title || '').trim();
+        const scope = String(selector.scope || '').trim();
+        const language = String(deck?.target_language || '').trim();
+        if (metaTopic) labels.push(metaTopic);
+        if (scope && scope !== 'all' && !labels.includes(scope)) labels.push(scope);
+        if (language && !labels.includes(language)) labels.push(language);
+        return labels.join(' · ');
+    }
+
+    function getDeckSearchText(deck) {
+        return normalizeDeckSearch([
+            deck?.name || '',
+            getDeckTopicLabel(deck),
+            deck?.id || '',
+        ].join(' '));
+    }
+
+    function getDeckOwnership(deck) {
+        const ownership = (deck && typeof deck.ownership === 'object') ? deck.ownership : {};
+        const meta = (deck && typeof deck.meta === 'object') ? deck.meta : {};
+        const createdByUserId = String(
+            ownership.created_by_user_id || meta.created_by_user_id || ''
+        ).trim();
+        const createdVia = String(
+            ownership.created_via || meta.source || ''
+        ).trim() || ((deck && deck.analysis_id) ? 'analysis_auto' : 'manual_editor');
+        return {
+            createdByUserId,
+            createdVia,
+            hasOwner: ownership.has_owner === true || !!createdByUserId,
+            isOwnedByCurrentUser: ownership.is_owned_by_current_user === true,
+        };
+    }
+
+    function getDeckCreatedViaLabel(createdVia) {
+        const normalized = String(createdVia || '').trim().toLowerCase();
+        if (normalized === 'manual_editor') return 'Editor';
+        if (normalized === 'analysis_auto') return 'AI';
+        if (normalized === 'text_import') return 'Импорт';
+        return 'Workspace';
+    }
+
+    function renderDeckOwnershipBadges(deck) {
+        const ownership = getDeckOwnership(deck);
+        const chips = [];
+        if (ownership.isOwnedByCurrentUser) {
+            chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[10px] font-semibold text-success-darker">моё</span>');
+        } else if (ownership.hasOwner) {
+            chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escHtml(ownership.createdByUserId)}</span>`);
+        }
+        chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escHtml(getDeckCreatedViaLabel(ownership.createdVia))}</span>`);
+        return chips.join('');
+    }
+
+    function isImportedDeck(deck) {
+        const createdVia = String(getDeckOwnership(deck).createdVia || '').trim().toLowerCase();
+        return createdVia === 'text_import';
+    }
+
+    function matchesDeckOwnershipFilter(deck) {
+        const ownership = getDeckOwnership(deck);
+        if (state.deckOwnershipFilter === 'mine') {
+            return ownership.isOwnedByCurrentUser;
+        }
+        if (state.deckOwnershipFilter === 'shared') {
+            return !ownership.isOwnedByCurrentUser && !isImportedDeck(deck);
+        }
+        if (state.deckOwnershipFilter === 'imported') {
+            return isImportedDeck(deck);
+        }
+        return true;
+    }
+
+    function getFilteredDecks() {
+        const query = normalizeDeckSearch(state.deckListQuery);
+        let decks = Array.isArray(state.decks) ? state.decks.slice() : [];
+
+        if (query) {
+            decks = decks.filter((deck) => getDeckSearchText(deck).includes(query));
+        }
+
+        decks = decks.filter((deck) => matchesDeckOwnershipFilter(deck));
+
+        if (state.deckListFilter === 'urgent') {
+            decks = decks
+                .filter((deck) => getDeckPriorityScore(deck) > 0)
+                .sort((a, b) => getDeckPriorityScore(b) - getDeckPriorityScore(a));
+        } else if (state.deckListFilter === 'new') {
+            decks = decks
+                .filter((deck) => getDeckStats(deck).newCards > 0)
+                .sort((a, b) => getDeckStats(b).newCards - getDeckStats(a).newCards);
+        } else if (state.deckListFilter === 'recent') {
+            decks = decks
+                .filter((deck) => isDeckRecent(deck))
+                .sort((a, b) => parseDeckTimestamp(b?.meta?.updated_at || b?.meta?.created_at) - parseDeckTimestamp(a?.meta?.updated_at || a?.meta?.created_at));
+        } else {
+            decks = decks.sort((a, b) => {
+                const scoreDiff = getDeckPriorityScore(b) - getDeckPriorityScore(a);
+                if (scoreDiff !== 0) return scoreDiff;
+                return parseDeckTimestamp(b?.meta?.updated_at || b?.meta?.created_at) - parseDeckTimestamp(a?.meta?.updated_at || a?.meta?.created_at);
+            });
+        }
+
+        return decks;
+    }
+
+    function getMostUrgentDeckId(decks) {
+        let bestDeckId = '';
+        let bestScore = 0;
+        (decks || []).forEach((deck) => {
+            const score = getDeckPriorityScore(deck);
+            const deckId = String(deck?.id || '').trim();
+            if (deckId && score > bestScore) {
+                bestScore = score;
+                bestDeckId = deckId;
+            }
+        });
+        return bestDeckId;
+    }
+
+    function setDeckEmptyMessage(title, text) {
+        const emptyState = $('mcDeckEmpty');
+        if (!emptyState) return;
+        const textBlocks = emptyState.querySelectorAll('p');
+        if (textBlocks[0]) textBlocks[0].textContent = title;
+        if (textBlocks[1]) textBlocks[1].textContent = text;
+    }
+
+    function updateDeckFilterHint(visibleCount, totalCount) {
+        const hint = $('mcDeckFilterHint');
+        const ownershipHint = $('mcDeckOwnershipHint');
+        if (!hint) return;
+        if (ownershipHint) {
+            if (state.deckOwnershipFilter === 'mine') {
+                ownershipHint.textContent = 'Показываем колоды, созданные из текущего профиля. Они всё равно живут в общей библиотеке.';
+            } else if (state.deckOwnershipFilter === 'shared') {
+                ownershipHint.textContent = 'Показываем общие колоды, созданные вне текущего профиля и не пришедшие через отдельный импорт.';
+            } else if (state.deckOwnershipFilter === 'imported') {
+                ownershipHint.textContent = 'Показываем колоды, пришедшие через текстовый импорт.';
+            } else {
+                ownershipHint.textContent = 'Колоды живут в общей библиотеке, а прогресс по ним остаётся личным.';
+            }
+        }
+        if (!totalCount) {
+            hint.textContent = 'Когда появятся колоды, здесь можно будет быстро выбрать, что повторять первым.';
+            return;
+        }
+        if (state.deckListFilter === 'urgent') {
+            hint.textContent = visibleCount
+                ? `${visibleCount} колод с ближайшим повторением. Сверху — самая срочная.`
+                : 'Срочных повторений по текущему фильтру нет.';
+            return;
+        }
+        if (state.deckListFilter === 'new') {
+            hint.textContent = visibleCount
+                ? `${visibleCount} колод с новыми карточками. Хороший режим для короткого входа.`
+                : 'Новых карточек по текущему запросу нет.';
+            return;
+        }
+        if (state.deckListFilter === 'recent') {
+            hint.textContent = visibleCount
+                ? `${visibleCount} колод, к которым ты возвращался недавно.`
+                : 'Недавних колод по текущему запросу не найдено.';
+            return;
+        }
+        if (state.deckListQuery) {
+            hint.textContent = `Найдено ${visibleCount} из ${totalCount}. Поиск работает по названию и теме колоды.`;
+            return;
+        }
+        hint.textContent = 'Сначала показываем колоды с самым срочным повторением.';
+        if (!state.deckListQuery && state.deckListFilter === 'all' && totalCount > 0) {
+            hint.textContent = 'Колоды живут в общей локальной библиотеке, а прогресс по ним остаётся личным. Сначала показываем самые срочные колоды.';
+        }
+    }
+
+    function updateDeckFilterUi() {
+        document.querySelectorAll('.mc-deck-filter-chip[data-filter]').forEach((button) => {
+            const isActive = button.dataset.filter === state.deckListFilter;
+            button.classList.toggle('bg-primary', isActive);
+            button.classList.toggle('text-primary-fg', isActive);
+            button.classList.toggle('border-primary', isActive);
+            button.classList.toggle('shadow-sm', isActive);
+            button.classList.toggle('bg-surface-1', !isActive);
+            button.classList.toggle('text-text-secondary', !isActive);
+            button.classList.toggle('border-border-subtle', !isActive);
+            button.classList.toggle('hover:bg-bg-hover', !isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    }
+
+    function updateDeckOwnershipFilterUi() {
+        document.querySelectorAll('.mc-deck-ownership-chip[data-ownership-filter]').forEach((button) => {
+            const isActive = button.dataset.ownershipFilter === state.deckOwnershipFilter;
+            button.classList.toggle('bg-primary', isActive);
+            button.classList.toggle('text-primary-fg', isActive);
+            button.classList.toggle('border-primary', isActive);
+            button.classList.toggle('shadow-sm', isActive);
+            button.classList.toggle('bg-surface-1', !isActive);
+            button.classList.toggle('text-text-secondary', !isActive);
+            button.classList.toggle('border-border-subtle', !isActive);
+            button.classList.toggle('hover:bg-bg-hover', !isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+    }
+
+    function rerenderDeckList() {
+        renderDeckListState();
+        renderDeckGrid();
+    }
+
+    function bindDeckListControls() {
+        const queryInput = $('mcDeckQuery');
+        if (queryInput) {
+            queryInput.addEventListener('input', () => {
+                state.deckListQuery = queryInput.value || '';
+                rerenderDeckList();
+            });
+        }
+
+        document.querySelectorAll('.mc-deck-filter-chip[data-filter]').forEach((button) => {
+            button.addEventListener('click', () => {
+                state.deckListFilter = button.dataset.filter || 'all';
+                updateDeckFilterUi();
+                rerenderDeckList();
+            });
+        });
+
+        document.querySelectorAll('.mc-deck-ownership-chip[data-ownership-filter]').forEach((button) => {
+            button.addEventListener('click', () => {
+                state.deckOwnershipFilter = button.dataset.ownershipFilter || 'all';
+                updateDeckOwnershipFilterUi();
+                rerenderDeckList();
+            });
+        });
+
+        updateDeckFilterUi();
+        updateDeckOwnershipFilterUi();
+        updateDeckFilterHint(0, 0);
     }
 
     // ── Toast ─────────────────────────────────────────────────────────────
@@ -82,6 +377,9 @@
         decks: [],
         decksLoading: false,
         decksError: '',
+        deckListQuery: '',
+        deckListFilter: 'all',
+        deckOwnershipFilter: 'all',
 
         // Summary from /api/microcards/summary
         summary: null,
@@ -195,9 +493,14 @@
                 state.summary = data;
                 renderSummaryStrip(data);
                 renderStreakBadge(data);
+            } else {
+                state.summary = null;
+                resetSummaryStrip();
             }
         } catch (e) {
             console.warn('[Microcards] summary fetch failed:', e);
+            state.summary = null;
+            resetSummaryStrip();
         }
     }
 
@@ -228,6 +531,19 @@
             } else if (streak >= 1) {
                 badge.classList.add('mc-streak-warm');
             }
+        }
+    }
+
+    function resetSummaryStrip() {
+        const el = (id, val) => { const e = $(id); if (e) e.textContent = val; };
+        el('mcSummaryDue', '0');
+        el('mcSummaryNew', '0');
+        el('mcSummaryToday', '—');
+        el('mcStreakDays', '—');
+
+        const badge = $('mcStreakBadge');
+        if (badge) {
+            badge.classList.remove('mc-streak-warm', 'mc-streak-hot', 'mc-streak-epic');
         }
     }
 
@@ -262,6 +578,10 @@
         const loading = $('mcDeckLoading');
         const empty = $('mcDeckEmpty');
         const error = $('mcDeckError');
+        const filteredDecks = getFilteredDecks();
+        const ownershipScopedTotal = Array.isArray(state.decks)
+            ? state.decks.filter((deck) => matchesDeckOwnershipFilter(deck)).length
+            : 0;
 
         hide(grid); hide(loading); hide(empty); hide(error);
 
@@ -272,18 +592,38 @@
             const errText = $('mcDeckErrorText');
             if (errText) errText.textContent = state.decksError;
         } else if (!state.decks.length) {
+            setDeckEmptyMessage(
+                'Нет колод микрокарточек',
+                'Создайте колоду из анализа теории в редакторе или воспользуйтесь ручным созданием.',
+            );
+            show(empty);
+        } else if (!filteredDecks.length) {
+            setDeckEmptyMessage(
+                'По этому фильтру колод нет',
+                'Снимите часть ограничений или измените поисковый запрос, чтобы увидеть другие колоды.',
+            );
             show(empty);
         } else {
             show(grid);
         }
+
+        updateDeckFilterHint(filteredDecks.length, ownershipScopedTotal || state.decks.length);
     }
 
     function renderDeckGrid() {
         const grid = $('mcDeckGrid');
-        if (!grid || !state.decks.length) return;
+        const decks = getFilteredDecks();
+        if (!grid) return;
+        if (!decks.length) {
+            grid.innerHTML = '';
+            return;
+        }
 
-        grid.innerHTML = state.decks.map(deck => {
-            const id = escHtml(String(deck.id || ''));
+        const mostUrgentDeckId = getMostUrgentDeckId(decks);
+
+        grid.innerHTML = decks.map(deck => {
+            const rawId = String(deck.id || '');
+            const idJs = escJsString(rawId);
             const name = escHtml(String(deck.name || deck.id || 'Колода'));
             const stats = deck.stats || {};
             const due = Number(stats.cards_due ?? 0);
@@ -291,19 +631,36 @@
             const total = Number(stats.cards_total ?? 0);
             const hasDue = due > 0 || newCards > 0;
             const borderClass = hasDue ? 'border-primary-light hover:border-primary' : 'border-border-strong hover:border-border-strong';
+            const isMostUrgent = rawId && rawId === mostUrgentDeckId && getDeckPriorityScore(deck) > 0;
+            const topicLabel = getDeckTopicLabel(deck);
+            const ownershipBadges = renderDeckOwnershipBadges(deck);
+            const metaHintParts = [];
+            if (topicLabel) metaHintParts.push(topicLabel);
+            if (isDeckRecent(deck)) metaHintParts.push('обновлена недавно');
+            const metaHint = escHtml(metaHintParts.join(' · '));
             const dueBadge = hasDue
                 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary border border-primary-light">${due + newCards} к повтору</span>`
                 : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-2 text-text-muted border border-border-subtle">всё пройдено</span>`;
 
+            const urgentBadge = isMostUrgent
+                ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning-lighter text-warning-text border border-warning-light">
+                        <span class="material-symbols-outlined text-[12px]">priority_high</span>
+                        Самое срочное
+                   </span>`
+                : '';
+
             return `
                 <div class="rounded-xl border ${borderClass} bg-surface-1 p-4 transition-all cursor-pointer hover:shadow-md group"
-                     onclick="mcApp.openDeck('${id}')">
+                     onclick="mcApp.openDeck('${idJs}')">
                     <div class="flex items-start justify-between gap-2 mb-3">
                         <div class="min-w-0 flex-1">
                             <h3 class="text-sm font-bold text-text-main truncate group-hover:text-primary transition-colors">${name}</h3>
+                            ${metaHint ? `<p class="mt-1 text-[11px] text-text-secondary truncate">${metaHint}</p>` : ''}
+                            ${ownershipBadges ? `<div class="mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
                         </div>
                         ${dueBadge}
                     </div>
+                    ${urgentBadge ? `<div class="mb-3">${urgentBadge}</div>` : ''}
                     <div class="flex items-center gap-3 text-[11px] text-text-secondary">
                         <span class="flex items-center gap-1">
                             <span class="material-symbols-outlined text-[14px]">pending_actions</span>
@@ -320,13 +677,13 @@
                     </div>
                     <div class="mt-3 flex gap-2">
                         <button type="button"
-                            onclick="event.stopPropagation(); mcApp.openDeck('${id}')"
+                            onclick="event.stopPropagation(); mcApp.openDeck('${idJs}')"
                             class="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-bold rounded-lg ${hasDue ? 'bg-primary text-primary-fg hover:bg-primary-hover' : 'bg-surface-2 text-text-secondary hover:bg-bg-hover'} transition-colors">
                             <span class="material-symbols-outlined text-[16px]">play_arrow</span>
                             ${hasDue ? 'Повторять' : 'Открыть'}
                         </button>
                         <button type="button"
-                            onclick="event.stopPropagation(); mcApp.openDeck('${id}', { restart: true })"
+                            onclick="event.stopPropagation(); mcApp.openDeck('${idJs}', { restart: true })"
                             class="flex items-center justify-center gap-1 px-2.5 py-2 text-xs font-semibold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors"
                             title="Начать сессию заново">
                             <span class="material-symbols-outlined text-[14px]">restart_alt</span>
@@ -383,12 +740,12 @@
                 renderCurrentCard();
             } else {
                 showToast(data.message || data.error || 'Не удалось открыть колоду', 'error');
-                switchView('decks');
+                backToDecks();
             }
         } catch (e) {
             console.error('[Microcards] openDeck failed:', e);
             showToast('Ошибка сети при открытии колоды', 'error');
-            switchView('decks');
+            backToDecks();
         }
     }
 
@@ -521,11 +878,13 @@
         }
 
         const cardId = String(card.id || '');
+        const cardIdJs = escJsString(cardId);
         if (!state.pairSelections[cardId]) state.pairSelections[cardId] = {};
         const saved = state.pairSelections[cardId];
 
         grid.innerHTML = leftItems.map(left => {
             const leftId = String(left.id || '');
+            const leftIdJs = escJsString(leftId);
             const currentVal = String(saved[leftId] || '');
             const options = rightItems.map(right => {
                 const rid = String(right.id || '');
@@ -536,7 +895,7 @@
                 <div class="flex flex-col sm:flex-row sm:items-center gap-2">
                     <div class="flex-1 text-sm text-text-main px-3 py-2 rounded-lg border border-border-strong bg-surface-2" data-pair-left="${escHtml(leftId)}">${escHtml(String(left.text || leftId))}</div>
                     <span class="hidden sm:block text-text-muted text-xs">→</span>
-                    <select onchange="mcApp.setPairSelection('${escHtml(cardId)}','${escHtml(leftId)}', this.value)"
+                    <select onchange="mcApp.setPairSelection('${cardIdJs}','${leftIdJs}', this.value)"
                         class="flex-1 rounded-lg border border-border-strong bg-surface-1 px-3 py-2 text-sm text-text-main focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all">
                         <option value="">Выберите...</option>
                         ${options}
@@ -908,6 +1267,7 @@
     // ── Init ──────────────────────────────────────────────────────────────
     async function init() {
         document.addEventListener('keydown', handleKeyDown);
+        bindDeckListControls();
 
         switchView('decks');
         await loadFeatureFlags();

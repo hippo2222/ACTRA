@@ -191,14 +191,47 @@ describe('SequenceEditor', () => {
         expect(toastSpy).toHaveBeenCalledWith(expect.stringContaining('Заполните описание шага 1'), 'warning');
     });
 
-    it('deleteLevel prevents removing the last level', () => {
+    it('saveTask surfaces semantic warnings for weak sequence structure', async () => {
+        document.querySelector('#task-name-input').value = 'Задание';
+        document.querySelector('#prompt-textarea').value = 'Инструкция';
+
+        editor.levels = [
+            {
+                levelId: 'level_1',
+                title: 'Уровень 1',
+                items: [{ id: 'elem_1', label: 'Шаг 1', target_image: '' }]
+            },
+            {
+                levelId: 'level_2',
+                title: 'Уровень 2',
+                items: [{ id: 'elem_2', label: 'Шаг 1', target_image: '' }]
+            }
+        ];
+
+        dom.window.fetch.mockResolvedValue({
+            json: () => Promise.resolve({ ok: true })
+        });
+
+        const statusSpy = vi.spyOn(editor, 'updateSaveStatus');
+        const toastSpy = vi.spyOn(editor, 'showToast').mockImplementation(() => {});
+
+        await editor.saveTask();
+
+        expect(statusSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning' }));
+        expect(toastSpy).toHaveBeenCalledWith(expect.stringContaining('замечания'), 'warning', 5200);
+        expect(toastSpy).not.toHaveBeenCalledWith('Задание сохранено', 'success');
+        expect(editor.getSemanticWarnings().join(' ')).toContain('Повторяются');
+    });
+
+    it('deleteLevel prevents removing the last level', async () => {
         editor.levels = [
             { levelId: 'level_1', title: '', items: [{ id: 'elem_1', label: 'Шаг', target_image: '' }] }
         ];
+        const toastSpy = vi.spyOn(editor, 'showToast').mockImplementation(() => {});
 
-        editor.deleteLevel(0);
+        await editor.deleteLevel(0);
 
-        expect(dom.window.alert).toHaveBeenCalledWith('Должен остаться минимум один уровень.');
+        expect(toastSpy).toHaveBeenCalledWith('Должен остаться минимум один уровень.', 'error');
         expect(editor.levels).toHaveLength(1);
     });
 
@@ -206,10 +239,11 @@ describe('SequenceEditor', () => {
         editor.levels = [
             { levelId: 'level_1', title: '', items: [{ id: 'elem_1', label: 'Шаг', target_image: '' }] }
         ];
+        const toastSpy = vi.spyOn(editor, 'showToast').mockImplementation(() => {});
 
         editor.deleteBlock(0, 0);
 
-        expect(dom.window.alert).toHaveBeenCalledWith('В уровне должен быть хотя бы один шаг.');
+        expect(toastSpy).toHaveBeenCalledWith('В уровне должен быть хотя бы один шаг.', 'error');
         expect(editor.levels[0].items).toHaveLength(1);
     });
 });

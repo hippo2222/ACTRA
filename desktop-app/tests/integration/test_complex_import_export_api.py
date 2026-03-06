@@ -143,6 +143,7 @@ def test_complex_export_endpoint_returns_bundle(client, complex_seed):
         assert manifest["export_type"] == "complexes"
         assert complex_seed["complex_id"] in manifest["entities"]["complexes"]
         assert f"complexes/{complex_seed['complex_id']}.json" in names
+        assert "difficulty_config.json" not in names
 
 
 def test_complex_import_check_and_confirm_flow(client, complex_seed):
@@ -194,6 +195,65 @@ def test_complex_import_check_and_confirm_flow(client, complex_seed):
 
     imported_complex = _headless_app_ctx.complex_service.get_complex(complex_seed["complex_id"])
     assert imported_complex is not None
+
+
+def test_complex_import_confirm_idempotent_replay(client, complex_seed):
+    export_resp = client.post(
+        "/api/complexes/export",
+        json={
+            "complex_ids": [complex_seed["complex_id"]],
+            "include_tasks": True,
+            "include_theories": True,
+        },
+    )
+    assert export_resp.status_code == 200
+    bundle_bytes = export_resp.data
+
+    _remove_seed(complex_seed["module_id"], complex_seed["complex_id"], complex_seed["theory_id"])
+
+    check_resp = client.post(
+        "/api/complexes/import/check",
+        data={"file": (io.BytesIO(bundle_bytes), "complex_bundle_replay.zip")},
+        content_type="multipart/form-data",
+    )
+    assert check_resp.status_code == 200
+    check_data = check_resp.get_json()
+    assert check_data["ok"] is True
+
+    idempotency_key = "complex-import-replay-key"
+    payload = {
+        "cache_id": check_data["cache_id"],
+        "complex_conflict_resolution": "new_id",
+        "task_conflict_resolution": "skip",
+        "theory_conflict_resolution": "reuse_if_same_hash",
+        "atomic_mode": "bundle",
+        "skip_errors": "false",
+        "idempotency_key": idempotency_key,
+    }
+
+    first_confirm = client.post(
+        "/api/complexes/import/confirm",
+        data=payload,
+        content_type="multipart/form-data",
+    )
+    assert first_confirm.status_code == 200
+    first_messages = _parse_ndjson_response(first_confirm)
+    first_result = next((msg for msg in first_messages if msg.get("type") == "result"), None)
+    assert first_result is not None
+    assert first_result["data"]["ok"] is True
+
+    replay_confirm = client.post(
+        "/api/complexes/import/confirm",
+        data=payload,
+        content_type="multipart/form-data",
+    )
+    assert replay_confirm.status_code == 200
+    replay_messages = _parse_ndjson_response(replay_confirm)
+    replay_result = next((msg for msg in replay_messages if msg.get("type") == "result"), None)
+    assert replay_result is not None
+    assert replay_result["data"]["ok"] is True
+    assert replay_result["data"]["idempotent_replay"] is True
+    assert replay_result["data"]["idempotency_key"] == idempotency_key
 
 
 def test_complex_export_endpoint_supports_multiple_complex_ids(client, complex_seed):

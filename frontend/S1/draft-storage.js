@@ -16,8 +16,20 @@
     const STORAGE_KEY_PREFIX = 'session_draft_';
     const DRAFT_EXPIRATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-    // Unique tab identifier to avoid localStorage conflicts between tabs
-    const TAB_ID = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Stable per-tab identifier (persists across reloads via sessionStorage)
+    const TAB_ID_STORAGE_KEY = 'session_draft_tab_id';
+    const TAB_ID = (function resolveTabId() {
+        const fallback = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+        try {
+            if (typeof sessionStorage === 'undefined') return fallback;
+            const existing = sessionStorage.getItem(TAB_ID_STORAGE_KEY);
+            if (existing) return existing;
+            sessionStorage.setItem(TAB_ID_STORAGE_KEY, fallback);
+            return fallback;
+        } catch (e) {
+            return fallback;
+        }
+    }());
 
     /**
      * Generate storage key for a draft
@@ -36,6 +48,14 @@
         return `${STORAGE_KEY_PREFIX}${sessionId}_${taskId}`;
     }
 
+    function getDraftKeys(sessionId, taskId) {
+        const keys = [
+            getDraftKey(sessionId, taskId),
+            getLegacyDraftKey(sessionId, taskId)
+        ];
+        return [...new Set(keys)];
+    }
+
     return {
         /**
          * Save a draft answer to localStorage
@@ -52,13 +72,17 @@
 
             try {
                 const key = getDraftKey(sessionId, taskId);
+                const legacyKey = getLegacyDraftKey(sessionId, taskId);
                 const draft = {
                     userInput,
                     timestamp: Date.now(),
                     sessionId,
                     taskId
                 };
-                localStorage.setItem(key, JSON.stringify(draft));
+                const raw = JSON.stringify(draft);
+                localStorage.setItem(key, raw);
+                // Keep legacy key in sync so older readers and cross-version restores still work.
+                localStorage.setItem(legacyKey, raw);
                 return true;
             } catch (e) {
                 console.error('Failed to save draft:', e);
@@ -79,25 +103,25 @@
             }
 
             try {
-                // Try tab-specific key first, then legacy key
-                const key = getDraftKey(sessionId, taskId);
-                let raw = localStorage.getItem(key);
-                if (!raw) {
-                    raw = localStorage.getItem(getLegacyDraftKey(sessionId, taskId));
+                for (const key of getDraftKeys(sessionId, taskId)) {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+
+                    try {
+                        const draft = JSON.parse(raw);
+                        const age = Date.now() - draft.timestamp;
+                        if (age > DRAFT_EXPIRATION_MS) {
+                            localStorage.removeItem(key);
+                            continue;
+                        }
+                        return draft.userInput;
+                    } catch (parseError) {
+                        // Remove corrupted entries so they do not keep breaking every load.
+                        localStorage.removeItem(key);
+                    }
                 }
-                if (!raw) return null;
 
-                const draft = JSON.parse(raw);
-
-                // Check if draft is expired (older than 24 hours)
-                const age = Date.now() - draft.timestamp;
-                if (age > DRAFT_EXPIRATION_MS) {
-                    // Auto-cleanup expired draft
-                    this.clearDraft(sessionId, taskId);
-                    return null;
-                }
-
-                return draft.userInput;
+                return null;
             } catch (e) {
                 console.error('Failed to load draft:', e);
                 return null;
@@ -116,8 +140,9 @@
             }
 
             try {
-                const key = getDraftKey(sessionId, taskId);
-                localStorage.removeItem(key);
+                getDraftKeys(sessionId, taskId).forEach((key) => {
+                    localStorage.removeItem(key);
+                });
                 return true;
             } catch (e) {
                 console.error('Failed to clear draft:', e);

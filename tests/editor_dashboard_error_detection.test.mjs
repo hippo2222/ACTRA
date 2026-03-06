@@ -30,6 +30,39 @@ const createFetchResponse = () => ({
   json: async () => ({ ok: true, modules: JSON.parse(JSON.stringify(sampleModules)) }),
 });
 
+describe("EditorDashboard initial route restore", () => {
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+    vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    global.fetch = vi.fn(() => Promise.resolve(createFetchResponse()));
+    window.__EDITOR_DASHBOARD_SUPPRESS_IMPORT_MANAGER_WARNING__ = true;
+    window.__EDITOR_ROUTE_STATE__ = { module: "module_error", topic: "topic_a" };
+    setupDomSkeleton();
+    window.dashboard = undefined;
+    document.dispatchEvent(new Event("DOMContentLoaded"));
+    await Promise.resolve();
+    await Promise.resolve();
+  });
+
+  afterEach(() => {
+    delete window.__EDITOR_ROUTE_STATE__;
+    delete window.__EDITOR_DASHBOARD_SUPPRESS_IMPORT_MANAGER_WARNING__;
+    vi.restoreAllMocks();
+  });
+
+  it("applies module and topic route after catalog finishes loading", () => {
+    const dashboard = window.dashboard;
+    expect(dashboard).toBeDefined();
+    expect(dashboard.activeModuleId).toBe("module_error");
+    expect(dashboard.activeTopicId).toBe("topic_a");
+
+    const cards = Array.from(document.querySelectorAll("main .grid article"));
+    expect(cards.length).toBe(2);
+  });
+});
+
 function setupDomSkeleton() {
   document.body.innerHTML = `
     <aside>
@@ -59,8 +92,11 @@ describe("EditorDashboard error detection markers", () => {
   beforeEach(async () => {
     vi.restoreAllMocks();
     vi.spyOn(window, "alert").mockImplementation(() => {});
+    vi.spyOn(console, "log").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
     global.fetch = vi.fn(() => Promise.resolve(createFetchResponse()));
+    window.__EDITOR_DASHBOARD_SUPPRESS_IMPORT_MANAGER_WARNING__ = true;
+    delete window.__EDITOR_ROUTE_STATE__;
     setupDomSkeleton();
     window.dashboard = undefined;
     document.dispatchEvent(new Event("DOMContentLoaded"));
@@ -69,6 +105,7 @@ describe("EditorDashboard error detection markers", () => {
   });
 
   afterEach(() => {
+    delete window.__EDITOR_DASHBOARD_SUPPRESS_IMPORT_MANAGER_WARNING__;
     vi.restoreAllMocks();
   });
 

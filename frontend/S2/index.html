@@ -4,7 +4,7 @@
 
 <head>
 
-  <script src="../assets/ThemeManager.js"></script>
+  <script src="/assets/ThemeManager.js"></script>
 
   <meta charset="utf-8" />
 
@@ -72,6 +72,19 @@
     .s2-task-item:hover {
       transform: translateY(-1px);
       box-shadow: var(--shadow-md);
+    }
+
+    /* light-b: raise muted text to pass AA on this page */
+    html[data-theme="light-b"] #iteration-subtitle,
+    html[data-theme="light-b"] #stat-total-label,
+    html[data-theme="light-b"] #legend-success-count,
+    html[data-theme="light-b"] #legend-failed-count,
+    html[data-theme="light-b"] #problem-tasks-description {
+      color: var(--color-text-main);
+    }
+
+    html[data-theme="light-b"] .s2-page-enter .text-text-secondary {
+      color: var(--color-text-main) !important;
     }
   </style>
 
@@ -160,7 +173,7 @@
 
                     <div class="hidden flex flex-col gap-1 rounded-lg bg-surface-2 p-4 s2-stat">
 
-                      <p class="text-sm font-medium text-text-secondary">
+                      <p id="stat-total-label" class="text-sm font-medium text-text-secondary">
 
                         Сложность
 
@@ -297,7 +310,7 @@
 
                       </h4>
 
-                      <p class="mt-2 text-sm text-text-secondary">
+                      <p id="problem-tasks-description" class="mt-2 text-sm text-text-secondary">
 
                         Задания, в которых был получен неверный ответ.
 
@@ -381,6 +394,10 @@
 
       hasNextIteration: true,
 
+      failedCount: 0,
+
+      successCount: 0,
+
     };
 
     function getSessionAndIterationFromLocation() {
@@ -406,6 +423,76 @@
       }
 
       return { sessionId, iteration };
+
+    }
+
+    function ensureNextStepHint() {
+
+      let hint = document.getElementById("next-step-hint");
+
+      if (hint) return hint;
+
+      const footer = document.querySelector("footer");
+
+      if (!footer) return null;
+
+      hint = document.createElement("p");
+
+      hint.id = "next-step-hint";
+
+      hint.className = "px-4 pb-2 text-center text-xs font-medium text-text-secondary";
+
+      footer.insertBefore(hint, footer.firstChild);
+
+      return hint;
+
+    }
+
+    function updateIterationNextStepGuidance() {
+
+      const continueBtnLabel = document.querySelector("#continue-btn .truncate");
+
+      const secondaryBtnLabel = document.querySelector("#to-complex-list-btn .truncate");
+
+      const hint = ensureNextStepHint();
+
+      let primaryText = "Продолжить";
+
+      let secondaryText = "К списку комплексов";
+
+      let hintText = "Следующий шаг откроет продолжение текущей сессии.";
+
+      if (state.hasNextIteration === false) {
+
+        primaryText = "Открыть итог по комплексу";
+
+        secondaryText = "К списку комплексов";
+
+        hintText = "Эта итерация была последней. Следующий шаг — посмотреть общий итог и решить, что делать дальше.";
+
+      } else if ((state.failedCount || 0) > 0) {
+
+        primaryText = "Продолжить и закрыть ошибки";
+
+        secondaryText = "Сделать паузу";
+
+        hintText = "Если продолжите, откроется следующая часть текущей сессии. Если хотите остановиться сейчас, можно вернуться к списку комплексов.";
+
+      } else {
+
+        primaryText = "К следующей итерации";
+
+        secondaryText = "Сделать паузу";
+
+        hintText = "Следующий шаг — новая итерация в этой же сессии.";
+
+      }
+
+      if (continueBtnLabel) continueBtnLabel.textContent = primaryText;
+
+      if (secondaryBtnLabel) secondaryBtnLabel.textContent = secondaryText;
+
+      if (hint) hint.textContent = hintText;
 
     }
 
@@ -474,6 +561,10 @@
       const success = shouldUseComputed ? computedSuccess : providedSuccess;
 
       const failed = shouldUseComputed ? computedFailed : providedFailed;
+
+      state.successCount = success;
+
+      state.failedCount = failed;
 
       const rate =
 
@@ -619,6 +710,8 @@
         CelebrationEffects.celebrate(successPercent, { isPerfect: isPerfect });
       }
 
+      updateIterationNextStepGuidance();
+
       const triggerList = document.getElementById("trigger-tasks-list");
 
       triggerList.innerHTML = "";
@@ -690,15 +783,23 @@
             const correctAns = t.correct_answer || (t.details && t.details.reference_answer) || null;
             const msg = t.message || (t.details && t.details.explanation) || null;
 
-            if (userAns) {
+            const appendAnswerDetail = (labelText, valueText, valueClass) => {
               const p = document.createElement("p");
-              p.innerHTML = `<span class="font-semibold text-text-secondary">Ваш ответ:</span> <span class="text-text-main">${userAns}</span>`;
+              const label = document.createElement("span");
+              const value = document.createElement("span");
+              label.className = "font-semibold text-text-secondary";
+              label.textContent = labelText;
+              value.className = valueClass;
+              value.textContent = String(valueText);
+              p.append(label, document.createTextNode(" "), value);
               detailDiv.appendChild(p);
+            };
+
+            if (userAns) {
+              appendAnswerDetail("Ваш ответ:", userAns, "text-text-main");
             }
             if (correctAns) {
-              const p = document.createElement("p");
-              p.innerHTML = `<span class="font-semibold text-text-secondary">Правильный:</span> <span class="text-success-dark">${correctAns}</span>`;
-              detailDiv.appendChild(p);
+              appendAnswerDetail("Правильный:", correctAns, "text-success-dark");
             }
             if (msg) {
               const p = document.createElement("p");
@@ -737,7 +838,7 @@
 
       if (!sessionId) {
 
-        NotificationUI.toast('В URL отсутствует sessionId', 'error');
+        NotificationUI.toast('Экран результатов открыт без sessionId. Вернитесь в сессию и откройте результаты заново.', 'error');
 
         return;
 
@@ -751,7 +852,7 @@
 
           console.error("Ошибка получения результатов итерации", response);
 
-          NotificationUI.toast('Не удалось загрузить результаты итерации', 'error');
+          NotificationUI.toast('Результаты итерации временно недоступны. Попробуйте открыть экран ещё раз.', 'error');
 
           return;
 
@@ -766,6 +867,8 @@
       } catch (e) {
 
         console.error("Неожиданная ошибка при загрузке результатов итерации", e);
+
+        NotificationUI.toast('Результаты итерации временно недоступны. Попробуйте открыть экран ещё раз.', 'error');
 
       }
 
@@ -822,6 +925,21 @@
           });
 
           if (confirmed) {
+            if (state.sessionId) {
+              try {
+                const cancelResp = await fetch(`/api/session/${encodeURIComponent(state.sessionId)}/cancel`, {
+                  method: "POST",
+                });
+                const cancelData = await cancelResp.json();
+                if (!cancelResp.ok || !cancelData.ok) {
+                  NotificationUI.toast('Не удалось завершить текущую сессию', 'error');
+                  return;
+                }
+              } catch (e) {
+                NotificationUI.toast('Не удалось завершить текущую сессию', 'error');
+                return;
+              }
+            }
 
             window.navigateWithTransition('/ui/complexes');
 
@@ -836,9 +954,9 @@
   </script>
 
   <script src="/assets/celebration-effects.js"></script>
-  <script src="../assets/NotificationUI.js"></script>
-  <script src="../assets/ThemeSwitcherUI.js"></script>
-  <script src="../assets/ConnectionMonitor.js"></script>
+  <script src="/assets/NotificationUI.js"></script>
+  <script src="/assets/ThemeSwitcherUI.js"></script>
+  <script src="/assets/ConnectionMonitor.js"></script>
 
 </body>
 
