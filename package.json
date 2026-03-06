@@ -1,6 +1,6 @@
 {
   "name": "actra",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "ACTRA — frontend build tooling (Tailwind CSS, Vitest)",
   "private": true,
   "directories": {

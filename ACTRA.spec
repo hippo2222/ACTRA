@@ -116,6 +116,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     icon=r'D:/Ai Ai/radioproject_git/frontend/assets/actra_white.ico',
+    version=r'D:/Ai Ai/radioproject_git/build/ACTRA_version_info.txt',
 )
 
 coll = COLLECT(
