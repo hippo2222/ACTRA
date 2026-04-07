@@ -5,22 +5,66 @@
 
 const ThemeManager = {
     themes: {
-        'light-a': { name: 'Light A (Indigo/Platinum)', isDark: false },
-        'light-b': { name: 'Light B (Spiced Orange)', isDark: false },
-        'neutral-a': { name: 'Neutral A (Earth)', isDark: false },
-        'neutral-b': { name: 'Neutral B (Green/Dusk Blue)', isDark: false },
-        'dark-a': { name: 'Dark A', isDark: true },
-        'dark-b': { name: 'Dark B', isDark: true }
+        'light-a': {
+            name: 'Контраст',
+            description: 'Светлая тема с холодным акцентом',
+            swatch: '#f6f6f8',
+            border: '#1349ec',
+            isDark: false,
+        },
+        'light-b': {
+            name: 'Тепло',
+            description: 'Мягкая светлая палитра с теплыми оттенками',
+            swatch: '#fffecb',
+            border: '#ff2e00',
+            isDark: false,
+        },
+        'neutral-a': {
+            name: 'Земля',
+            description: 'Нейтральная палитра в природных тонах',
+            swatch: '#dcc9b6',
+            border: '#6d4c3d',
+            isDark: false,
+        },
+        'neutral-b': {
+            name: 'Сумерки',
+            description: 'Спокойная нейтральная тема с мягким контрастом',
+            swatch: '#b0aac0',
+            border: '#50663c',
+            isDark: false,
+        },
+        'dark-a': {
+            name: 'Ночь',
+            description: 'Темная тема с теплыми акцентами',
+            swatch: '#141204',
+            border: '#e8985e',
+            isDark: true,
+        },
+        'dark-b': {
+            name: 'Космос',
+            description: 'Глубокая темная палитра для вечерней работы',
+            swatch: '#120d31',
+            border: '#b98ea7',
+            isDark: true,
+        }
     },
 
     init() {
         console.log('[ThemeManager] Init started');
         const savedTheme = localStorage.getItem('app-theme') || 'light-a';
         console.log('[ThemeManager] Loaded theme from storage:', savedTheme);
-        this.setTheme(savedTheme);
+        this.setTheme(savedTheme, false); // Don't persist back to storage on init
+
+        // Cross-tab synchronization
+        window.addEventListener('storage', (event) => {
+            if (event.key === 'app-theme' && event.newValue) {
+                console.log('[ThemeManager] Theme changed in another tab:', event.newValue);
+                this.setTheme(event.newValue, false);
+            }
+        });
     },
 
-    setTheme(themeId) {
+    setTheme(themeId, persist = true) {
         if (!this.themes[themeId]) {
             console.warn('[ThemeManager] Invalid theme:', themeId, 'falling back to light-a');
             themeId = 'light-a';
@@ -37,7 +81,9 @@ const ThemeManager = {
             html.classList.remove('dark');
         }
 
-        localStorage.setItem('app-theme', themeId);
+        if (persist) {
+            localStorage.setItem('app-theme', themeId);
+        }
 
         // Dispatch event for components that might need to react
         window.dispatchEvent(new CustomEvent('themechanged', { detail: { themeId, ...this.themes[themeId] } }));
@@ -49,6 +95,13 @@ const ThemeManager = {
 
     getThemeInfo(themeId) {
         return this.themes[themeId || this.getTheme()];
+    },
+
+    getThemes() {
+        return Object.entries(this.themes).map(([id, value]) => ({
+            id,
+            ...value,
+        }));
     }
 };
 
@@ -68,23 +121,27 @@ const PageTransition = {
         );
     },
 
-    _getBody() {
-        return document.body || document.documentElement || null;
+    _getTarget() {
+        return document.querySelector('[data-page-transition-root]')
+            || document.querySelector('main')
+            || document.body
+            || document.documentElement
+            || null;
     },
 
     applyEnterTransition() {
         if (this.prefersReducedMotion()) return;
-        const body = this._getBody();
-        if (!body) return;
+        const target = this._getTarget();
+        if (!target) return;
 
-        body.classList.add(this.transitionClass, this.enterClass);
+        target.classList.add(this.transitionClass, this.enterClass);
 
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-                body.classList.add(this.enterActiveClass);
-                body.classList.remove(this.enterClass);
+                target.classList.add(this.enterActiveClass);
+                target.classList.remove(this.enterClass);
                 window.setTimeout(() => {
-                    body.classList.remove(this.enterActiveClass);
+                    target.classList.remove(this.enterActiveClass);
                 }, this.durationMs + 40);
             });
         });
@@ -104,16 +161,16 @@ const PageTransition = {
             return;
         }
 
-        const body = this._getBody();
-        if (!body) {
+        const target = this._getTarget();
+        if (!target) {
             if (replace) window.location.replace(url);
             else window.location.assign(url);
             return;
         }
 
-        if (body.getAttribute(this.lockAttr) === '1') return;
-        body.setAttribute(this.lockAttr, '1');
-        body.classList.add(this.transitionClass, this.leaveClass);
+        if (target.getAttribute(this.lockAttr) === '1') return;
+        target.setAttribute(this.lockAttr, '1');
+        target.classList.add(this.transitionClass, this.leaveClass);
 
         window.setTimeout(() => {
             if (replace) window.location.replace(url);

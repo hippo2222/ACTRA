@@ -71,6 +71,20 @@ const StatisticsApp = {
         }[char] || char));
     },
 
+    compactUiLabel(value, maxLength = 56) {
+        const text = String(value ?? '').trim();
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+
+        const separatorCount = (text.match(/[_:/-]/g) || []).length;
+        const looksMachineLike = separatorCount >= 4 || /\b(session|complex|iteration|task)\b/i.test(text);
+        if (!looksMachineLike) return text;
+
+        const head = Math.max(18, Math.floor(maxLength * 0.62));
+        const tail = Math.max(10, maxLength - head - 1);
+        return `${text.slice(0, head)}…${text.slice(-tail)}`;
+    },
+
     showToast(message, type = 'error', duration = 2200) {
         const palette = {
             success: 'bg-success text-white',
@@ -266,9 +280,12 @@ const StatisticsApp = {
     updateMetricToggle() {
         const selector = document.getElementById('chart-metric-selector');
         if (!selector) return;
+        selector.classList.add('segmented-control');
         selector.querySelectorAll('.chart-toggle-btn').forEach(btn => {
             const isActive = btn.dataset.metric === this.state.currentMetric;
+            btn.classList.add('segmented-control__button');
             btn.classList.toggle('active', isActive);
+            btn.classList.toggle('is-active', isActive);
             btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
     },
@@ -430,10 +447,77 @@ const StatisticsApp = {
 
     async init() {
         console.log('[Statistics] Initializing...');
+        this.initGlobalTooltip();
         this.bindEvents();
         await this.loadUserProfile();
         await this.loadData();
         console.log('[Statistics] Init complete. State:', JSON.stringify(this.state, null, 2));
+    },
+
+    initGlobalTooltip() {
+        const el = document.createElement('div');
+        el.id = 'stats-global-tooltip';
+        el.style.cssText = [
+            'position:fixed',
+            'z-index:9999',
+            'pointer-events:none',
+            'opacity:0',
+            'transition:opacity 0.15s ease',
+            'background:rgba(15,23,42,0.92)',
+            'color:#fff',
+            'font-family:inherit',
+            'font-size:12px',
+            'line-height:1.4',
+            'font-weight:450',
+            'padding:5px 10px',
+            'border-radius:7px',
+            'max-width:240px',
+            'text-align:center',
+            'white-space:normal',
+            'box-shadow:0 4px 16px rgba(0,0,0,0.18)',
+        ].join(';');
+        document.body.appendChild(el);
+        this._globalTooltipEl = el;
+
+        const show = (target) => {
+            const text = target.getAttribute('data-tooltip');
+            if (!text) return;
+            el.textContent = text;
+            el.style.opacity = '1';
+            this._tooltipTarget = target;
+            this._positionGlobalTooltip(target);
+        };
+        const hide = () => {
+            el.style.opacity = '0';
+            this._tooltipTarget = null;
+        };
+
+        document.addEventListener('mouseover', (e) => {
+            const t = e.target.closest('[data-tooltip]');
+            if (t) show(t);
+        });
+        document.addEventListener('mouseout', (e) => {
+            const t = e.target.closest('[data-tooltip]');
+            if (t && !t.contains(e.relatedTarget)) hide();
+        });
+        document.addEventListener('mousemove', () => {
+            if (this._tooltipTarget) this._positionGlobalTooltip(this._tooltipTarget);
+        }, { passive: true });
+    },
+
+    _positionGlobalTooltip(target) {
+        const el = this._globalTooltipEl;
+        if (!el) return;
+        const r = target.getBoundingClientRect();
+        const tipW = el.offsetWidth || 200;
+        const tipH = el.offsetHeight || 30;
+        const pad = 8;
+        let x = r.left + r.width / 2 - tipW / 2;
+        let y = r.top - tipH - 8;
+        x = Math.max(pad, Math.min(x, window.innerWidth - tipW - pad));
+        if (y < pad) y = r.bottom + 8;
+        el.style.left = x + 'px';
+        el.style.top  = y + 'px';
     },
 
     async loadUserProfile() {
@@ -505,12 +589,14 @@ const StatisticsApp = {
             const flameOpacity = streakGap === 1 ? 0.4 : 1;
             const hideFlame = streakGap > 1;
             if (streak > 0) {
+                streakBadge.className = hideFlame ? 'pill-neutral pill-sm' : 'pill-warning pill-sm';
                 streakBadge.innerHTML = `
-                    <span class="material-symbols-outlined ${hideFlame ? 'opacity-0' : ''} text-warning text-sm" style="opacity:${flameOpacity};">local_fire_department</span>
-                    <span class="text-sm font-bold text-text-secondary dark:text-text-on-dark">${streak}</span>
+                    <span class="material-symbols-outlined ${hideFlame ? 'opacity-0' : ''} text-sm" style="opacity:${flameOpacity};">local_fire_department</span>
+                    <span class="text-sm font-bold">${streak}</span>
                 `;
                 streakBadge.classList.remove('hidden');
             } else {
+                streakBadge.className = 'pill-neutral pill-sm hidden';
                 streakBadge.innerHTML = '';
                 streakBadge.classList.add('hidden');
             }
@@ -519,6 +605,9 @@ const StatisticsApp = {
 
     bindEvents() {
         document.querySelectorAll('.period-btn').forEach(btn => {
+            const isActive = parseInt(btn.dataset.period) === this.state.currentPeriod;
+            btn.className = `period-btn segmented-control__button transition-all${isActive ? ' active is-active' : ''}`;
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             btn.addEventListener('click', (e) => {
                 const period = parseInt(e.currentTarget.dataset.period);
                 this.switchPeriod(period);
@@ -527,7 +616,9 @@ const StatisticsApp = {
 
         const metricSelector = document.getElementById('chart-metric-selector');
         if (metricSelector) {
+            metricSelector.classList.add('segmented-control');
             metricSelector.querySelectorAll('.chart-toggle-btn').forEach(btn => {
+                btn.classList.add('segmented-control__button');
                 btn.addEventListener('click', (e) => {
                     const metric = e.currentTarget.dataset.metric;
                     this.switchMetric(metric);
@@ -542,6 +633,7 @@ const StatisticsApp = {
 
         const periodSwitch = document.querySelector('.chart-period-switch');
         if (periodSwitch) {
+            periodSwitch.classList.add('segmented-control');
             periodSwitch.addEventListener('mouseenter', () => {
                 this.hideChartTooltip();
                 this.clearFocus('chart');
@@ -679,17 +771,8 @@ const StatisticsApp = {
 
         document.querySelectorAll('.period-btn').forEach(btn => {
             const isActive = parseInt(btn.dataset.period) === days;
-            btn.classList.toggle('active', isActive);
-
-            // Active State
-            btn.classList.toggle('bg-surface-1', isActive);
-            btn.classList.toggle('text-text-main', isActive);
-            btn.classList.toggle('shadow-sm', isActive);
-            btn.classList.toggle('border', isActive);
-            btn.classList.toggle('border-border-subtle', isActive);
-
-            // Inactive State
-            btn.classList.toggle('text-text-secondary', !isActive);
+            btn.className = `period-btn segmented-control__button transition-all${isActive ? ' active is-active' : ''}`;
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
 
         const loadCurrent = this.state.dynamicsCache[days]
@@ -797,7 +880,7 @@ const StatisticsApp = {
             }
         });
 
-        return Array.from(grouped.values())
+        const result = Array.from(grouped.values())
             .map((row) => ({
                 ...row,
                 successRate: row.successWeight > 0 ? row.successSum / row.successWeight : 0,
@@ -807,82 +890,71 @@ const StatisticsApp = {
                 if (right.complexCount !== left.complexCount) return right.complexCount - left.complexCount;
                 return (left.title || left.theoryId).localeCompare(right.title || right.theoryId, 'ru');
             });
+
+        // Show items with >0 attempts, but if none exist, show at least the recent/available ones
+        const withAttempts = result.filter(r => r.attempts > 0);
+        return withAttempts.length > 0 ? withAttempts.slice(0, 3) : result.slice(0, 3);
     },
 
     renderTheoryInsights() {
         const container = document.getElementById('theory-analytics-list');
         if (!container) return;
 
-        const insights = Array.isArray(this.state.theoryInsights) ? this.state.theoryInsights.slice(0, 3) : [];
+        let insights = Array.isArray(this.state.theoryInsights) ? this.state.theoryInsights.slice(0, 3) : [];
+
+        // Fallback: если theory_link не заполнен — строим из complexStats напрямую
         if (!insights.length) {
-            container.innerHTML = '<p class="stats-empty-copy text-sm">Теоретические связи появятся после первых связанных complex-сессий.</p>';
+            const names = this.state.complexNames || {};
+            const complexStats = this.state.complexStats || {};
+            const fallbackResult = Object.keys(complexStats)
+                .map(id => {
+                    const agg = complexStats[id].aggregated || {};
+                    const sessions = complexStats[id].recent_sessions || [];
+                    return {
+                        theoryId: id,
+                        title: names[id] || id,
+                        complexCount: 1,
+                        attempts: agg.attempts || 0,
+                        successRate: agg.success_rate || 0,
+                        latestEndTime: sessions[0]?.end_time || null,
+                    };
+                })
+                .sort((a, b) => b.attempts - a.attempts);
+
+            const fallbackWithAttempts = fallbackResult.filter(x => x.attempts > 0);
+            insights = (fallbackWithAttempts.length > 0 ? fallbackWithAttempts : fallbackResult).slice(0, 3);
+        }
+
+        if (!insights.length) {
+            container.innerHTML = '<p class="stats-empty-copy text-sm">Теоретические связи появятся после первых сессий.</p>';
             return;
         }
 
         container.innerHTML = insights.map((item) => {
             const successRate = Math.max(0, Math.min(100, Math.round((item.successRate || 0) * 100)));
-            const toneClass = successRate >= 80
-                ? 'bg-success'
-                : (successRate >= 50 ? 'bg-warning' : 'bg-error');
-            const latestLabel = item.latestEndTime ? this.escapeHtml(this.formatSessionDate(item.latestEndTime)) : 'вЂ”';
+            const toneClass = successRate >= 80 ? 'bg-success' : (successRate >= 50 ? 'bg-warning' : 'bg-error');
+            const latestLabel = item.latestEndTime ? this.escapeHtml(this.formatFullDate(item.latestEndTime)) : '—';
             const safeTitle = this.escapeHtml(item.title || item.theoryId);
-            const safeTheoryId = this.escapeHtml(item.theoryId);
             return `
-                <div class="stats-theory-card rounded-xl border border-border-subtle bg-bg-secondary p-3">
+                <div class="stats-theory-card card-elevated rounded-xl border border-border-subtle bg-bg-secondary p-3">
                     <div class="flex items-start justify-between gap-2">
-                        <div class="min-w-0">
-                            <p class="stats-theory-title text-sm font-bold text-text-main" title="${safeTitle}">${safeTitle}</p>
-                            <p class="stats-theory-id text-[10px]" title="${safeTheoryId}">${safeTheoryId}</p>
-                        </div>
-                        <span class="rounded-full border border-border-subtle px-2 py-1 text-[10px] font-semibold text-text-secondary">${item.complexCount} complexes</span>
+                        <p class="stats-theory-title text-sm font-bold text-text-main min-w-0" title="${safeTitle}">${safeTitle}</p>
+                        <span class="rounded-full border border-border-subtle px-2 py-1 text-[10px] font-semibold text-text-secondary flex-shrink-0">${item.complexCount} компл.</span>
                     </div>
                     <div class="stats-theory-meta mt-2 flex items-center justify-between gap-3 text-[11px]">
-                        <span>${item.attempts} attempts</span>
+                        <span>${item.attempts} попыток</span>
                         <span>${latestLabel}</span>
                     </div>
-                    <div class="mt-2 h-2 w-full rounded-full bg-surface-1 overflow-hidden">
+                    <div class="mt-2 h-1.5 w-full rounded-full bg-surface-1 overflow-hidden">
                         <div class="h-full ${toneClass} rounded-full transition-all duration-500" style="width:${successRate}%"></div>
                     </div>
                     <div class="mt-1 flex items-center justify-between text-[11px]">
-                        <span class="text-text-secondary">Theory-driven success</span>
+                        <span class="text-text-secondary">Успех по теории</span>
                         <span class="font-semibold text-text-main">${successRate}%</span>
-                    </div>
-                    <div class="mt-3 flex flex-wrap gap-2">
-                        <button type="button" data-action="open-theory-complexes" data-theory-id="${this.escapeHtml(item.theoryId)}"
-                            class="rounded-lg border border-border-strong bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-main transition-colors hover:border-primary hover:bg-bg-hover hover:text-primary">
-                            Complexes
-                        </button>
-                        <button type="button" data-action="open-theory-hub" data-theory-id="${this.escapeHtml(item.theoryId)}"
-                            class="rounded-lg border border-primary bg-primary px-3 py-1.5 text-xs font-semibold text-primary-fg transition-colors hover:border-primary-dark hover:bg-primary-dark">
-                            Theory Hub
-                        </button>
                     </div>
                 </div>
             `;
         }).join('');
-
-        container.querySelectorAll('[data-action="open-theory-complexes"]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const theoryId = btn.getAttribute('data-theory-id');
-                const url = theoryId ? `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}` : '/ui/complexes';
-                if (typeof window.navigateWithTransition === 'function') {
-                    window.navigateWithTransition(url);
-                } else {
-                    window.location.href = url;
-                }
-            });
-        });
-        container.querySelectorAll('[data-action="open-theory-hub"]').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const theoryId = btn.getAttribute('data-theory-id');
-                const url = theoryId ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}` : '/ui/editor?theory_hub=1';
-                if (typeof window.navigateWithTransition === 'function') {
-                    window.navigateWithTransition(url);
-                } else {
-                    window.location.href = url;
-                }
-            });
-        });
     },
 
     render() {
@@ -901,15 +973,19 @@ const StatisticsApp = {
 
     renderMetrics() {
         const stats = this.state.stats || {};
-        const hasData = this.state.hasData;
         const mcStats = stats.microcards || {};
         const learningSources = stats.learning_sources || {};
         const mcReviewsTotal = mcStats.reviews_total || 0;
         const hasTasksData = (stats.total_tasks_attempted || 0) > 0 || (stats.total_time_spent || 0) > 0;
         const hasMcData = mcReviewsTotal > 0;
         const hasStatsData = hasTasksData || hasMcData;
+        const combinedTimeSec = learningSources.combined?.time_spent_seconds || stats.total_time_spent || 0;
+        const hasTimeData = combinedTimeSec > 0;
+        const hasStreakData = (stats.activity_streak_days || stats.streak_days || 0) > 0
+            || (stats.activity_streak_best || stats.streak_best || 0) > 0
+            || hasStatsData;
 
-        console.log('[Statistics] renderMetrics - stats:', stats, 'hasData:', hasData);
+        console.log('[Statistics] renderMetrics - stats:', stats, 'hasStatsData:', hasStatsData, 'hasTimeData:', hasTimeData);
 
         const toggleMetricEmpty = (valueId, emptyId, hasMetricData) => {
             const valueEl = document.getElementById(valueId);
@@ -931,7 +1007,6 @@ const StatisticsApp = {
         document.getElementById('tasks-total').textContent = `/ ${totalTasks}`;
 
         // Time: combined (tasks + microcards) via learning_sources
-        const combinedTimeSec = learningSources.combined?.time_spent_seconds || stats.total_time_spent || 0;
         const hours = Math.floor(combinedTimeSec / 3600);
         const minutes = Math.floor((combinedTimeSec % 3600) / 60);
         document.getElementById('time-hours').textContent = hours;
@@ -942,7 +1017,7 @@ const StatisticsApp = {
         if (timeHint) {
             const taskTimeSec = learningSources.tasks?.time_spent_seconds || stats.total_time_spent || 0;
             const mcTimeSec = learningSources.microcards?.time_spent_seconds || 0;
-            if (taskTimeSec > 0 && mcTimeSec > 0) {
+            if (hasTimeData && taskTimeSec > 0 && mcTimeSec > 0) {
                 const taskMin = Math.round(taskTimeSec / 60);
                 const mcMin = Math.round(mcTimeSec / 60);
                 timeHint.textContent = `(${taskMin} + ${mcMin} мин)`;
@@ -973,23 +1048,7 @@ const StatisticsApp = {
                 const pct = Math.round(rate * 100);
                 mcBadge.textContent = `${mcStats.decks_active || 0} колод`;
                 mcBadge.classList.remove('hidden');
-                mcBadge.className = mcBadge.className
-                    .replace(/\bborder-\S+/g, '')
-                    .replace(/\bborder\b/g, '')
-                    .replace(/bg-\S+/g, '')
-                    .replace(/text-\S+/g, '')
-                    .trim();
-                mcBadge.classList.add(
-                    'text-xs',
-                    'px-2',
-                    'py-1',
-                    'rounded-full',
-                    'font-bold',
-                    'border',
-                    'bg-surface-1',
-                    'text-text-main',
-                    pct >= 80 ? 'border-success-light' : pct >= 50 ? 'border-warning-light' : 'border-error-light'
-                );
+                mcBadge.className = `pill-sm ${pct >= 80 ? 'pill-success' : pct >= 50 ? 'pill-warning' : 'pill-danger'}`;
             } else {
                 mcBadge.classList.add('hidden');
             }
@@ -997,35 +1056,35 @@ const StatisticsApp = {
 
         // Toggle empty states per card
         toggleMetricEmpty('metric-tasks-value', 'metric-tasks-empty', hasTasksData);
-        toggleMetricEmpty('metric-time-value', 'metric-time-empty', hasStatsData);
+        toggleMetricEmpty('metric-time-value', 'metric-time-empty', hasTimeData);
         toggleMetricEmpty('metric-microcards-value', 'metric-microcards-empty', hasMcData);
-        toggleMetricEmpty('metric-streak-value', 'metric-streak-empty', hasStatsData);
+        toggleMetricEmpty('metric-streak-value', 'metric-streak-empty', hasStreakData);
 
         ['metric-tasks', 'metric-time', 'metric-microcards', 'metric-streak'].forEach((id) => {
             const card = document.getElementById(id);
             if (!card) return;
             const isEmpty = (id === 'metric-tasks') ? !hasTasksData
+                : (id === 'metric-time') ? !hasTimeData
                 : (id === 'metric-microcards') ? !hasMcData
-                : !hasStatsData;
+                : !hasStreakData;
             card.classList.toggle('metric-card--empty', isEmpty);
         });
 
-        this.updateMetricStyles(hasStatsData, hasMcData);
+        this.updateMetricStyles(hasTasksData, hasTimeData, hasMcData, hasStreakData);
     },
 
-    updateMetricStyles(hasData, hasMcData) {
+    updateMetricStyles(hasTasksData, hasTimeData, hasMcData, hasStreakData) {
         const metricConfigs = [
-            { id: 'metric-tasks', iconId: 'metric-tasks-icon', color: 'info', useHasData: true },
-            { id: 'metric-time', iconId: 'metric-time-icon', color: 'secondary', useHasData: true },
-            { id: 'metric-microcards', iconId: 'metric-microcards-icon', color: 'success', useHasMc: true },
-            { id: 'metric-streak', iconId: 'metric-streak-icon', color: 'accent', useHasData: true }
+            { iconId: 'metric-tasks-icon', color: 'info', active: hasTasksData },
+            { iconId: 'metric-time-icon', color: 'secondary', active: hasTimeData },
+            { iconId: 'metric-microcards-icon', color: 'success', active: hasMcData },
+            { iconId: 'metric-streak-icon', color: 'accent', active: hasStreakData }
         ];
 
         metricConfigs.forEach(config => {
             const iconEl = document.getElementById(config.iconId);
             if (!iconEl) return;
-            const active = config.useHasMc ? hasMcData : hasData;
-            if (active) {
+            if (config.active) {
                 iconEl.classList.remove('bg-bg-secondary', 'text-text-muted');
                 iconEl.classList.add(`bg-${config.color}-light`, `text-${config.color}-dark`);
             } else {
@@ -1161,9 +1220,9 @@ const StatisticsApp = {
                 if (isFocused) cls.push('chart-point--focused');
 
                 fireIcons.push(
-                    `<text x="${fireX.toFixed(2)}" y="${fireY.toFixed(2)}" 
-                        text-anchor="middle" dominant-baseline="middle" 
-                        font-size="18" class="${cls.join(' ')}" 
+                    `<text x="${fireX.toFixed(2)}" y="${fireY.toFixed(2)}"
+                        text-anchor="middle" dominant-baseline="middle"
+                        font-size="18" class="${cls.join(' ')}"
                         data-index="${idx}"
                         role="img" aria-label="Best day achievement"
                         style="cursor: pointer;">🔥</text>`
@@ -1262,7 +1321,7 @@ const StatisticsApp = {
                         <stop offset="100%" stop-color="#93c5fd" />
                     </linearGradient>
                 </defs>
-                
+
                 <g transform="translate(${margin.left}, ${margin.top})">
                     ${axisLine}
                     ${axisTicks ? `<g>${axisTicks}</g>` : ''}
@@ -1539,15 +1598,18 @@ const StatisticsApp = {
     },
 
     updateChartLayoutState(hasData) {
+        const chartCard = document.getElementById('chart-card');
         const chartContent = document.getElementById('chart-content');
         const emptyChart = document.getElementById('empty-chart');
         const summary = document.getElementById('chart-summary');
 
         if (hasData) {
+            if (chartCard) chartCard.classList.remove('stats-chart-card--empty');
             if (chartContent) chartContent.classList.remove('hidden');
             if (emptyChart) emptyChart.classList.add('hidden');
             if (summary) summary.classList.remove('hidden');
         } else {
+            if (chartCard) chartCard.classList.add('stats-chart-card--empty');
             if (chartContent) chartContent.classList.add('hidden');
             if (emptyChart) emptyChart.classList.remove('hidden');
             if (summary) summary.classList.add('hidden');
@@ -1597,25 +1659,34 @@ const StatisticsApp = {
             return;
         }
 
-        container.innerHTML = types.map(type => {
+        const rows = types.map(type => {
             const config = typeConfig[type] || { name: formatLabel(type), color: 'slate' };
             const data = byType[type] || { attempts: 0, average_score: 0 };
-            const rate = data.attempts > 0 ? Math.round(data.average_score) : 0;
             const hasTypeData = data.attempts > 0;
+            if (!hasTypeData) return null; // Filter out inactive types
+
+            const rate = Math.round(data.average_score);
             const safeName = this.escapeHtml(config.name);
 
             return `
                 <div class="stats-performance-row">
                     <div class="stats-row-top text-sm">
-                        <span class="stats-row-label ${hasTypeData ? 'text-text-main' : 'stats-row-label--muted'}">${safeName}</span>
-                        <span class="stats-row-value ${hasTypeData ? 'text-text-main' : 'stats-row-value--muted'}">${hasTypeData ? rate + '%' : '&mdash;'}</span>
+                        <span class="stats-row-label text-text-main">${safeName}</span>
+                        <span class="stats-row-value text-text-main">${rate}%</span>
                     </div>
-                    <div class="h-2 w-full bg-bg-secondary rounded-full overflow-hidden">
-                        <div class="h-full bg-primary rounded-full transition-all duration-500" style="width: ${rate}%"></div>
+                    <div class="h-1.5 w-full bg-bg-secondary rounded-full overflow-hidden">
+                        <div class="h-full bg-primary rounded-full transition-all duration-1000" style="width:${rate}%"></div>
                     </div>
                 </div>
             `;
-        }).join('');
+        }).filter(Boolean);
+
+        if (rows.length === 0) {
+            container.innerHTML = '<p class="stats-empty-copy text-sm text-center py-3">Пока нет данных по типам задач.</p>';
+            return;
+        }
+
+        container.innerHTML = rows.join('');
     },
 
     normalizePerformanceTypes(byType = {}) {
@@ -1701,7 +1772,7 @@ const StatisticsApp = {
             })
             .filter(c => c.lastEndTime !== null)
             .sort((a, b) => (b.lastEndTime > a.lastEndTime ? 1 : -1))
-            .slice(0, 2);
+            .slice(0, 12);
 
         if (recentComplexes.length === 0) {
             container.innerHTML = `
@@ -1713,31 +1784,99 @@ const StatisticsApp = {
             return;
         }
 
-        container.innerHTML = recentComplexes.map((complex) => {
+        const cards = recentComplexes.map((complex) => {
             const rate = Math.round(complex.successRate * 100);
             const dateLabel = this.formatSessionDate(complex.lastEndTime);
-            const tooltip = this.escapeHtml(`Попыток: ${complex.attempts} · Успешность: ${rate}%`);
-            const safeName = this.escapeHtml(complex.name);
+            const safeName = this.escapeHtml(this.compactUiLabel(complex.name, 60));
+            const safeFullName = this.escapeHtml(complex.name);
             const safeDateLabel = this.escapeHtml(dateLabel);
+            const rateColor = rate >= 80 ? 'text-success' : rate >= 50 ? 'text-warning-dark' : 'text-error-dark';
+            const barColor = rate >= 80 ? 'bg-success' : rate >= 50 ? 'bg-warning' : 'bg-error';
 
             return `
-                <div class="stats-complex-card bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col justify-between hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="${tooltip}">
-                    <div class="min-w-0">
-                        <h4 class="stats-complex-title font-bold text-sm text-text-main leading-tight" title="${safeName}">${safeName}</h4>
-                        <p class="stats-complex-date text-[10px] mt-1">${safeDateLabel}</p>
+                <div class="stats-complex-card-compact card-elevated bg-surface-1 rounded-xl border border-border-subtle transition-all flex-shrink-0">
+                    <div class="flex items-center justify-between gap-2 mb-1.5">
+                        <h4 class="stats-complex-title font-bold text-xs text-text-main leading-tight flex-1 min-w-0" title="${safeFullName}">${safeName}</h4>
+                        <span class="text-[10px] font-bold flex-shrink-0 ${rateColor}">${rate}%</span>
                     </div>
-                    <div>
-                        <div class="flex justify-between text-[10px] font-bold mb-1 text-text-main">
-                            <span>Успешность</span>
-                            <span class="${rate >= 80 ? 'text-success' : rate >= 50 ? 'text-warning-dark' : 'text-error-dark'}">${rate}%</span>
-                        </div>
-                        <div class="h-1.5 w-full bg-bg-secondary rounded-full overflow-hidden">
-                            <div class="h-full ${rate >= 80 ? 'bg-success' : rate >= 50 ? 'bg-warning' : 'bg-error'} rounded-full transition-all duration-500" style="width: ${rate}%"></div>
-                        </div>
+                      <div class="stats-complex-meta-row mb-2">
+                          <span class="text-[10px] text-text-secondary">${safeDateLabel}</span>
+                          <span class="text-[10px] text-text-muted">${complex.attempts} попыток</span>
+                      </div>
+                    <div class="h-1 w-full bg-bg-secondary rounded-full overflow-hidden">
+                        <div class="h-full ${barColor} rounded-full" style="width:${rate}%"></div>
                     </div>
                 </div>
             `;
-        }).join('');
+        });
+
+        container.innerHTML = cards.join('');
+        this._initComplexesCarousel(recentComplexes.length);
+    },
+
+    _initComplexesCarousel(total) {
+        const nav     = document.getElementById('complexes-nav');
+        const prevBtn = document.getElementById('complexes-prev');
+        const nextBtn = document.getElementById('complexes-next');
+        const counter = document.getElementById('complexes-counter');
+        const grid    = document.getElementById('complexes-grid');
+        if (!grid) return;
+
+        if (this._carouselCleanup) this._carouselCleanup();
+
+        const PER_PAGE = 4; // 2×2 карточки на страницу
+        const totalPages = Math.ceil(total / PER_PAGE);
+        let page = 0;
+        let autoTimer = null;
+
+        const allCards = Array.from(grid.querySelectorAll('.stats-complex-card-compact'));
+
+        const goTo = (newPage) => {
+            const isFirstInit = (page === 0 && allCards.every(c => c.style.display === ''));
+            const oldPage = page;
+            page = ((newPage % totalPages) + totalPages) % totalPages;
+            const start = page * PER_PAGE;
+            const end   = start + PER_PAGE;
+
+            allCards.forEach((card, i) => {
+                const isVisible = i >= start && i < end;
+                if (isVisible) {
+                    card.style.display = '';
+                    // Trigger animation if page changed or first init
+                    if (oldPage !== page || isFirstInit) {
+                        card.classList.remove('complex-card--fade-in');
+                        void card.offsetWidth; // Force reflow
+                        card.classList.add('complex-card--fade-in');
+                    }
+                } else {
+                    card.style.display = 'none';
+                    card.classList.remove('complex-card--fade-in');
+                }
+            });
+
+            if (nav)     nav.style.display = totalPages > 1 ? 'flex' : 'none';
+            if (counter) counter.textContent = (page + 1) + '/' + totalPages;
+            if (prevBtn) prevBtn.disabled = page === 0;
+            if (nextBtn) nextBtn.disabled = page >= totalPages - 1;
+        };
+
+        const AUTO_MS       = 30000;
+        const USER_PAUSE_MS = 40000;
+        const scheduleAuto  = (delay) => {
+            clearTimeout(autoTimer);
+            if (totalPages <= 1) return;
+            autoTimer = setTimeout(() => { goTo(page + 1); scheduleAuto(); },
+                delay !== undefined ? delay : AUTO_MS);
+        };
+        const userNav = (fn) => { fn(); scheduleAuto(USER_PAUSE_MS); };
+
+        if (prevBtn) { prevBtn.onclick = null; prevBtn.onclick = () => userNav(() => goTo(page - 1)); }
+        if (nextBtn) { nextBtn.onclick = null; nextBtn.onclick = () => userNav(() => goTo(page + 1)); }
+
+        this._carouselCleanup = () => { clearTimeout(autoTimer); };
+
+        goTo(0);
+        scheduleAuto();
     },
 
     // M8: Render microcards by_card_type breakdown in performance section

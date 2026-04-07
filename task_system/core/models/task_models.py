@@ -359,6 +359,17 @@ class ErrorDetectionContent(BaseModel):
         ..., description="Presentation mode for error detection task"
     )
     prompt: str = Field(..., description="Task prompt/instruction")
+    choice_prompt: Optional[str] = Field(
+        None,
+        description="Optional prompt shown above answer options in text_choice mode",
+    )
+    subtype: Optional[str] = Field(
+        None, description="Optional duplicated subtype marker kept for editor/runtime compatibility"
+    )
+    required_correct: Optional[int] = Field(
+        1,
+        description="Optional success threshold kept for compatibility with existing click/error_detection payloads",
+    )
 
     # text_errors fields
     text: Optional[str] = Field(
@@ -717,6 +728,22 @@ TaskContent = Union[
 ]
 
 
+def get_expected_content_model(task_type: Optional[str], subtype: Optional[str] = None):
+    """Return the concrete content model for a task type/subtype pair."""
+    if not task_type:
+        return None
+
+    type_to_content = {
+        ('click', 'error_detection'): ErrorDetectionContent,
+        ('click', None): ClickTaskContent,
+        ('draw', None): DrawTaskContent,
+        ('open_answer', None): OpenAnswerTaskContent,
+        ('test', None): TestTaskContent,
+        ('sequence_assembly', None): SequenceAssemblyTaskContent,
+    }
+    return type_to_content.get((task_type, subtype)) or type_to_content.get((task_type, None))
+
+
 class ValidatedTask(BaseModel):
     """Validated task model with polymorphic content."""
     
@@ -748,16 +775,7 @@ class ValidatedTask(BaseModel):
         content = data.get('content')
         
         if task_type and content:
-            type_to_content = {
-                ('click', 'error_detection'): ErrorDetectionContent,
-                ('click', None): ClickTaskContent,
-                ('draw', None): DrawTaskContent,
-                ('open_answer', None): OpenAnswerTaskContent,
-                ('test', None): TestTaskContent,
-                ('sequence_assembly', None): SequenceAssemblyTaskContent,
-            }
-            
-            expected_content_type = type_to_content.get((task_type, subtype)) or type_to_content.get((task_type, None))
+            expected_content_type = get_expected_content_model(task_type, subtype)
             if expected_content_type:
                 # ВАЖНО: Используем точное сравнение типов вместо isinstance
                 # чтобы различать ClickTaskContent и DrawTaskContent с одинаковой структурой
@@ -826,16 +844,7 @@ class ValidatedTask(BaseModel):
             return v
         
         # Если content уже правильного типа - оставляем как есть
-        type_to_content = {
-            ('click', 'error_detection'): ErrorDetectionContent,
-            ('click', None): ClickTaskContent,
-            ('draw', None): DrawTaskContent,
-            ('open_answer', None): OpenAnswerTaskContent,
-            ('test', None): TestTaskContent,
-            ('sequence_assembly', None): SequenceAssemblyTaskContent,
-        }
-        
-        expected_content_type = type_to_content.get((task_type, subtype)) or type_to_content.get((task_type, None))
+        expected_content_type = get_expected_content_model(task_type, subtype)
         if expected_content_type:
             # ВАЖНО: Используем точное сравнение типов вместо isinstance
             v_actual_type = type(v)
@@ -868,18 +877,11 @@ class ValidatedTask(BaseModel):
         """Parse object with correct content type based on task type."""
         if isinstance(obj, dict):
             task_type = obj.get('type')
+            subtype = obj.get('subtype')
             content = obj.get('content')
             
             if task_type and content:
-                type_to_content = {
-                    'click': ClickTaskContent,
-                    'draw': DrawTaskContent,
-                    'open_answer': OpenAnswerTaskContent,
-                    'test': TestTaskContent,
-                    'sequence_assembly': SequenceAssemblyTaskContent,
-                }
-                
-                expected_content_type = type_to_content.get(task_type)
+                expected_content_type = get_expected_content_model(task_type, subtype)
                 if expected_content_type:
                     content_actual_type = type(content)
                     
@@ -913,21 +915,14 @@ class ValidatedTask(BaseModel):
     def validate_content_type_match(cls, values):
         """Validate and convert content type to match task type BEFORE parsing."""
         task_type = values.get('type')
+        subtype = values.get('subtype')
         content = values.get('content')
         
         # Если content или task_type отсутствуют, возвращаем как есть
         if not content or not task_type:
             return values
         
-        type_to_content = {
-            'click': ClickTaskContent,
-            'draw': DrawTaskContent,
-            'open_answer': OpenAnswerTaskContent,
-            'test': TestTaskContent,
-            'sequence_assembly': SequenceAssemblyTaskContent,
-        }
-        
-        expected_content_type = type_to_content.get(task_type)
+        expected_content_type = get_expected_content_model(task_type, subtype)
         if expected_content_type:
             # ВАЖНО: Используем точное сравнение типов вместо isinstance
             content_actual_type = type(content)
@@ -972,20 +967,13 @@ class ValidatedTask(BaseModel):
     def validate_content_type_match_after(cls, values):
         """Validate that content type matches task type after parsing."""
         task_type = values.get('type')
+        subtype = values.get('subtype')
         content = values.get('content')
         
         if not content:
             return values
         
-        type_to_content = {
-            'click': ClickTaskContent,
-            'draw': DrawTaskContent,
-            'open_answer': OpenAnswerTaskContent,
-            'test': TestTaskContent,
-            'sequence_assembly': SequenceAssemblyTaskContent,
-        }
-        
-        expected_content_type = type_to_content.get(task_type)
+        expected_content_type = get_expected_content_model(task_type, subtype)
         # ВАЖНО: Используем точное сравнение типов вместо isinstance
         if expected_content_type and type(content) != expected_content_type:
             # Если тип не совпадает, пробуем преобразовать

@@ -48,12 +48,27 @@ function setupGlobalDom() {
 
 let dom = setupGlobalDom();
 const OpenAnswerEditor = dom.window.OpenAnswerEditor;
+const ADD_IMAGE_LABEL = 'Add image';
+const SAMPLE_QUESTION = 'Question text';
+const SAMPLE_REFERENCE = 'Reference answer';
+const SAMPLE_HINT = 'Helpful hint';
+const SAMPLE_KEYWORDS = ['alpha', 'beta'];
+const SHORT_QUESTION = 'Short prompt';
+const SHORT_REFERENCE = 'Short reference';
+const SHORT_KEYWORDS = ['gamma'];
+const DRAFT_QUESTION = 'Draft question';
+const DRAFT_PROMPT = 'Draft prompt';
+const DRAFT_REFERENCE = 'Draft reference';
+const DRAFT_HINT = 'Draft hint';
+const SAVED_QUESTION = 'Saved question';
+const SAVED_REFERENCE = 'Saved reference';
 
 function mountEditorDom() {
     document.body.innerHTML = `
         <header>
-            <button id="back-btn"></button>
-            <h2></h2>
+            <button id="back-to-dashboard-btn"></button>
+            <h2 id="editor-title"></h2>
+            <button id="save-task-btn"></button>
         </header>
         <button id="split-keywords-btn"></button>
         <div id="keywords-section">
@@ -64,16 +79,16 @@ function mountEditorDom() {
         <textarea id="reference-textarea"></textarea>
         <textarea id="hint-textarea"></textarea>
         <input id="max-length-input" type="number" />
-        <select id="min-keywords-input">
-            <option value="1">1</option>
-            <option value="-1">all</option>
-        </select>
         <input id="sequence-order-check" type="checkbox" />
         <div id="images-container">
-            <button id="add-image-btn"><span class="add-image-label">Добавить изображение</span></button>
+            <button id="add-image-btn"><span class="add-image-label">${ADD_IMAGE_LABEL}</span></button>
         </div>
         <input id="image-upload-input" type="file" multiple />
-        <button class="bg-primary"></button>
+        <div id="image-preview-overlay" class="hidden">
+            <div id="image-preview-container"></div>
+            <img id="image-preview-img" />
+            <button id="image-preview-close" type="button"></button>
+        </div>
     `;
 }
 
@@ -91,6 +106,7 @@ describe('OpenAnswerEditor image handling and saving', () => {
         mountEditorDom();
         dom.window.alert = vi.fn();
         dom.window.fetch = vi.fn();
+        dom.window.localStorage.clear();
         editor = createEditorInstance();
         editor.task = {
             task_data: {
@@ -100,7 +116,6 @@ describe('OpenAnswerEditor image handling and saving', () => {
                     reference_answer: '',
                     hint: '',
                     max_length: 500,
-                    min_keywords: 1,
                     sequence_matters: false,
                     keywords: [],
                     images: []
@@ -147,17 +162,16 @@ describe('OpenAnswerEditor image handling and saving', () => {
     });
 
     it('saves normalized task payload and sends POST request', async () => {
-        document.querySelector('#question-textarea').value = 'Новый вопрос';
-        document.querySelector('#reference-textarea').value = 'Правильный ответ';
-        document.querySelector('#hint-textarea').value = 'Подсказка';
+        document.querySelector('#question-textarea').value = SAMPLE_QUESTION;
+        document.querySelector('#reference-textarea').value = SAMPLE_REFERENCE;
+        document.querySelector('#hint-textarea').value = SAMPLE_HINT;
         document.querySelector('#max-length-input').value = '600';
-        document.querySelector('#min-keywords-input').value = '1';
         document.querySelector('#sequence-order-check').checked = true;
 
         editor.sequenceMatters = true;
         editor.keywords = [
-            { text: 'Печень', normalized: 'печень', required: true },
-            { text: 'Здоровье', normalized: 'здоровье', required: false }
+            { text: SAMPLE_KEYWORDS[0], required: true },
+            { text: SAMPLE_KEYWORDS[1], required: true }
         ];
         editor.task.task_data.content.images = ['img1.png'];
 
@@ -171,16 +185,196 @@ describe('OpenAnswerEditor image handling and saving', () => {
         const [, options] = dom.window.fetch.mock.calls[0];
         const payload = JSON.parse(options.body);
 
-        expect(payload.content.question).toBe('Новый вопрос');
-        expect(payload.content.reference_answer).toBe('Правильный ответ');
-        expect(payload.content.hint).toBe('Подсказка');
-        expect(payload.content.max_length).toBe(500);
-        expect(payload.content.min_keywords).toBe(1);
-        expect(payload.content.require_all_keywords).toBe(false);
+        expect(payload.content.question).toBe(SAMPLE_QUESTION);
+        expect(payload.content.reference_answer).toBe(SAMPLE_REFERENCE);
+        expect(payload.content.hint).toBe(SAMPLE_HINT);
+        expect(payload.content.max_length).toBe(600);
+        expect(payload.content.min_keywords).toBeUndefined();
+        expect(payload.content.require_all_keywords).toBeUndefined();
         expect(payload.content.sequence_matters).toBe(true);
-        expect(payload.content.keywords).toEqual(['Печень']);
+        expect(payload.content.keywords).toEqual(SAMPLE_KEYWORDS);
         expect(payload.content.images).toEqual(['img1.png']);
+        expect(payload.settings.max_length).toBe(600);
 
         expect(dom.window.alert).not.toHaveBeenCalled();
+    });
+
+    it('clears answer length limit when the field is left empty', async () => {
+        editor.task.task_data.settings = { max_length: 500 };
+        document.querySelector('#question-textarea').value = SHORT_QUESTION;
+        document.querySelector('#reference-textarea').value = SHORT_REFERENCE;
+        document.querySelector('#max-length-input').value = '';
+        editor.keywords = [
+            { text: SHORT_KEYWORDS[0], required: true }
+        ];
+
+        dom.window.fetch.mockResolvedValue({
+            json: () => Promise.resolve({ ok: true })
+        });
+
+        await editor.saveTask();
+
+        const [, options] = dom.window.fetch.mock.calls[0];
+        const payload = JSON.parse(options.body);
+
+        expect(payload.content.max_length).toBeUndefined();
+        expect(payload.settings.max_length).toBeUndefined();
+    });
+
+    it('auto-restores unsaved changes during reload recovery flow', () => {
+        const toastSpy = vi.spyOn(editor, 'showToast').mockImplementation(() => {});
+        editor.initTheoryGroundingPanel = vi.fn();
+        editor.bootstrapTheoryGroundingPanel = vi.fn(() => Promise.resolve());
+        editor.shouldAutoRestoreDraft = vi.fn(() => true);
+        editor.autoSaveManager = {
+            hasFresherDraft: vi.fn(() => true),
+            loadDraft: vi.fn(() => ({
+                timestamp: '2026-03-12T10:35:00.000Z',
+                data: {
+                    content: {
+                        question: DRAFT_QUESTION,
+                        prompt: DRAFT_PROMPT,
+                        reference_answer: DRAFT_REFERENCE,
+                        hint: DRAFT_HINT,
+                        sequence_matters: true,
+                        keywords: [SAMPLE_KEYWORDS[0]],
+                        images: ['img1.png']
+                    }
+                }
+            })),
+            start: vi.fn()
+        };
+
+        editor.applyLoadedTask({
+            task_data: {
+                meta: { modified: '2026-03-12T10:20:00.000Z' },
+                content: {
+                    question: SAVED_QUESTION,
+                    reference_answer: SAVED_REFERENCE,
+                    hint: '',
+                    sequence_matters: false,
+                    keywords: [],
+                    images: []
+                }
+            },
+            metadata: { id: 'task_001', name: 'OA Task' }
+        }, { persisted: true });
+
+        expect(document.querySelector('#question-textarea').value).toBe(DRAFT_QUESTION);
+        expect(document.querySelector('#reference-textarea').value).toBe(DRAFT_REFERENCE);
+        expect(document.querySelector('#hint-textarea').value).toBe(DRAFT_HINT);
+        expect(document.querySelector('#sequence-order-check').checked).toBe(true);
+        expect(editor.hasUnsavedChanges).toBe(true);
+        expect(toastSpy).toHaveBeenCalled();
+    });
+
+    it('opens image preview and closes it with Escape', () => {
+        editor.setupImagePreviewControls();
+
+        editor.showImagePreview('/api/editor/image?path=modules/module_01/image_1.png');
+
+        const overlay = document.querySelector('#image-preview-overlay');
+        const previewImg = document.querySelector('#image-preview-img');
+        expect(overlay.classList.contains('hidden')).toBe(false);
+        expect(overlay.classList.contains('flex')).toBe(true);
+        expect(previewImg.src).toContain('/api/editor/image?path=modules/module_01/image_1.png');
+        expect(document.body.classList.contains('overflow-hidden')).toBe(true);
+
+        document.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+        expect(overlay.classList.contains('hidden')).toBe(true);
+        expect(previewImg.getAttribute('src')).toBe('');
+        expect(document.body.classList.contains('overflow-hidden')).toBe(false);
+    });
+
+    it('removes an image with undo toast and restores it on demand', () => {
+        editor.task.task_data.content.images = ['img1.png'];
+        editor.renderImages();
+
+        const deleteBtn = document.querySelector('.open-answer-image-card .delete-btn');
+        expect(deleteBtn).not.toBeNull();
+
+        deleteBtn.click();
+
+        expect(editor.task.task_data.content.images).toEqual([]);
+        const toast = document.querySelector('#open-answer-toast');
+        expect(toast).not.toBeNull();
+        expect(toast.textContent).toContain('Изображение удалено.');
+        const undoBtn = toast.querySelector('[data-toast-action="action"]');
+        expect(undoBtn).not.toBeNull();
+
+        undoBtn.click();
+
+        expect(editor.task.task_data.content.images).toEqual(['img1.png']);
+        expect(document.querySelectorAll('.open-answer-image-card')).toHaveLength(1);
+    });
+
+    it('ships readable open answer markup without mojibake in the save button and max length block', () => {
+        const html = fs.readFileSync(
+            path.resolve(process.cwd(), 'frontend/Editor/Open Answer Editor Textual Reasoning.html'),
+            'utf8'
+        );
+
+        expect(html).toContain('Максимальная длина ответа');
+        expect(html).toContain('Оставьте пустым, если ответ можно вводить без лимита');
+        expect(html).toContain('<span class="material-symbols-outlined text-[18px]">save</span>');
+    });
+
+    it('renders an analysis beacon in the header and opens the panel on demand', () => {
+        editor.task = {
+            task_data: {
+                meta: { module: 'module_01', topic: 'topic_01', id: 'task_001' },
+                content: {}
+            },
+            metadata: { id: 'task_001' }
+        };
+        editor.moduleId = 'module_01';
+        editor.topicId = 'topic_01';
+        editor.taskId = 'task_001';
+
+        dom.window.localStorage.setItem(editor.editorTheoryBridgeStorageKey, JSON.stringify({
+            intent: 'editor_link',
+            ai_run_id: 'bench_nephr_20260223'
+        }));
+
+        editor.initTheoryGroundingPanel();
+
+        const beacon = document.getElementById('editor-theory-grounding-beacon');
+        expect(beacon).not.toBeNull();
+        expect(beacon.textContent).toContain('Есть контекст анализа');
+        expect(document.getElementById('editor-theory-grounding-p8-panel')).toBeNull();
+
+        beacon.click();
+
+        const panel = document.getElementById('editor-theory-grounding-p8-panel');
+        expect(panel).not.toBeNull();
+        expect(panel.textContent).toContain('Связь с анализом');
+        expect(panel.textContent).toContain('Контекст из отчёта');
+        expect(panel.textContent).not.toContain('Coverage / Grounding');
+        expect(panel.textContent).not.toContain('warnings');
+        expect(panel.textContent).not.toContain('Применить refs из отчёта');
+    });
+
+    it('ignores stale automatic analysis context that was not explicitly sent to the editor', () => {
+        editor.task = {
+            task_data: {
+                meta: { module: 'module_01', topic: 'topic_01', id: 'task_001' },
+                content: {}
+            },
+            metadata: { id: 'task_001' }
+        };
+        editor.moduleId = 'module_01';
+        editor.topicId = 'topic_01';
+        editor.taskId = 'task_001';
+
+        dom.window.localStorage.setItem(editor.editorTheoryBridgeStorageKey, JSON.stringify({
+            source: 'theory_report',
+            ai_run_id: 'bench_nephr_legacy_auto'
+        }));
+
+        editor.initTheoryGroundingPanel();
+
+        expect(document.getElementById('editor-theory-grounding-beacon')).toBeNull();
+        expect(document.getElementById('editor-theory-grounding-p8-panel')).toBeNull();
     });
 });

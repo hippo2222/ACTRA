@@ -22,6 +22,7 @@ describe("SessionControls next task state", () => {
       isLoading: false,
       sessionId: "sess-1",
       paused: false,
+      skipBeforeUnloadPrompt: false,
       currentTask: {
         task_id: "t1",
         module_id: "m1",
@@ -30,6 +31,7 @@ describe("SessionControls next task state", () => {
         queue: { index: 0, total: 2 },
       },
       canGoNext: true,
+      currentTaskChecked: true,
     };
     window.SessionAPI = {
       nextTask: vi.fn().mockResolvedValue({
@@ -85,5 +87,31 @@ describe("SessionControls next task state", () => {
     expect(window.UIHelpers.showStatus).toHaveBeenCalledWith("Загружаем следующее задание...");
     expect(window.UIHelpers.showStatus).toHaveBeenCalledWith("network", "error");
     expect(window.TaskRenderer.renderTask).not.toHaveBeenCalled();
+  });
+
+  it("bypasses beforeunload autopause when redirecting to iteration results", async () => {
+    window.SessionAPI.nextTask = vi.fn().mockResolvedValue({
+      status: 400,
+      data: { ok: false, error: "iteration_finished" },
+    });
+    window.SessionAPI.getIterationResults = vi.fn().mockResolvedValue({
+      status: 200,
+      data: {
+        ok: true,
+        results: {
+          iteration: 1,
+          has_next_iteration: true,
+        },
+      },
+    });
+
+    const SessionControls = loadSessionControls();
+
+    await SessionControls.handleNextTask();
+
+    expect(window.SessionState.skipBeforeUnloadPrompt).toBe(true);
+    expect(window.navigateWithTransition).toHaveBeenCalledWith(
+      "/ui/session/sess-1/iteration/1"
+    );
   });
 });

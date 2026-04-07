@@ -24,6 +24,8 @@
     lines: [],
     actionHistory: [],
     tempHintTimer: null,
+    undoAttentionTimer: null,
+    undoAttentionUntil: 0,
     locked: false,
     mode: "brush",
     stage: "polygons",
@@ -47,6 +49,8 @@
     labelsLines: [],
     highlightLabelErrors: false,
     labelEval: null,
+    labelFieldFeedback: {},
+    manualLabelJudgement: null,
     soloDuringDraw: false,
     brushRadius: 8,
     maxPolygons: 0,
@@ -55,6 +59,10 @@
     metadataSnapshot: null,
     metadataModal: null,
     metadataModalKeyHandler: null,
+    pendingViewState: null,
+    reviewHost: null,
+    reviewComparisonEl: null,
+    isRuntimeSession: false,
   };
 
   const Metadata = (function () {
@@ -142,13 +150,19 @@
 
   function _requiresLabels() {
     const taskDto = state.taskDto;
-    const v =
-      (taskDto && taskDto.task_data && taskDto.task_data.content && taskDto.task_data.content.requires_labels) ||
-      (taskDto && taskDto.task_data && taskDto.task_data.requires_labels) ||
-      (taskDto && taskDto.content && taskDto.content.requires_labels);
-    if (v != null) return Boolean(v);
+    const explicit =
+      (taskDto && taskDto.task_data && taskDto.task_data.content
+        ? taskDto.task_data.content.requires_labels
+        : null) ??
+      (taskDto && taskDto.task_data ? taskDto.task_data.requires_labels : null) ??
+      (taskDto && taskDto.content ? taskDto.content.requires_labels : null);
+    if (explicit === true) return true;
     const difficulty = _getDifficultyLevel(taskDto);
-    return Number(difficulty || 1) >= 2;
+    const iteration =
+      taskDto && Number.isFinite(Number(taskDto.iteration)) ? Number(taskDto.iteration) : null;
+    const inferredLevel = Math.max(Number(difficulty) || 0, Number(iteration) || 0, 1);
+    if (inferredLevel >= 2) return true;
+    return explicit === false ? false : false;
   }
 
   function _hasAnyUserMarks() {
@@ -207,10 +221,47 @@
     return el;
   }
 
+  function _createToolbarSvgIcon(pathD, viewBox = "0 0 24 24") {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", viewBox);
+    svg.setAttribute("aria-hidden", "true");
+    svg.classList.add("h-5", "w-5", "pointer-events-none");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", pathD);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(path);
+    return svg;
+  }
+
   function _escapeHtml(text) {
     const el = document.createElement("span");
     el.textContent = text != null ? String(text) : "";
     return el.innerHTML;
+  }
+
+  function _clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function _formatReferenceLabel(label, idx) {
+    const text = String(label || "").trim();
+    if (!text) return `#${idx + 1}`;
+
+    const looksMachineLike =
+      /[_/\\]/.test(text) ||
+      /^[A-Z0-9-]+$/.test(text) ||
+      /\d{2,}/.test(text) ||
+      text.length > 18;
+
+    if (looksMachineLike) {
+      return `#${idx + 1}`;
+    }
+
+    return text.length > 16 ? `${text.slice(0, 15)}…` : text;
   }
 
   function _ensureTaskContentPath(taskDto) {
@@ -499,6 +550,57 @@
     state.contentLayer.style.transformOrigin = "0 0";
   }
 
+  function _sanitizeViewState(viewState) {
+    if (!viewState || typeof viewState !== "object") return null;
+    const nextZoom = Number(viewState.zoom);
+    const nextPanX = Number(viewState.panX);
+    const nextPanY = Number(viewState.panY);
+    return {
+      zoom: Number.isFinite(nextZoom) ? Math.max(0.25, Math.min(6, nextZoom)) : null,
+      panX: Number.isFinite(nextPanX) ? nextPanX : null,
+      panY: Number.isFinite(nextPanY) ? nextPanY : null,
+      mode: viewState.mode === "pan" ? "pan" : "brush",
+      stage: viewState.stage === "lines" ? "lines" : "polygons",
+      showRef: viewState.showRef === true,
+      showRefContours: viewState.showRefContours !== false,
+      showRefPolygons: viewState.showRefPolygons !== false,
+      showRefLines: viewState.showRefLines !== false,
+      showRefLabels: viewState.showRefLabels !== false,
+    };
+  }
+
+  function _applyRestoredViewState(viewState, options = {}) {
+    const safeViewState = _sanitizeViewState(viewState);
+    if (!safeViewState) return;
+
+    const applyViewport = options.applyViewport !== false;
+
+    _setMode(safeViewState.mode);
+    _setStage(safeViewState.stage);
+    state.showRef = safeViewState.showRef;
+    state.showRefContours = safeViewState.showRefContours;
+    state.showRefPolygons = safeViewState.showRefPolygons;
+    state.showRefLines = safeViewState.showRefLines;
+    state.showRefLabels = safeViewState.showRefLabels;
+
+    if (
+      applyViewport &&
+      safeViewState.zoom != null &&
+      safeViewState.panX != null &&
+      safeViewState.panY != null
+    ) {
+      state.zoom = safeViewState.zoom;
+      state.panX = safeViewState.panX;
+      state.panY = safeViewState.panY;
+      _applyTransform();
+    }
+
+    _renderDrawing();
+    _renderReference();
+    if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
+    if (typeof state._updateToolbar === "function") state._updateToolbar();
+  }
+
   function _clearDrawing() {
     if (!state.drawLayer) return;
     state.drawLayer.innerHTML = "";
@@ -538,6 +640,352 @@
     }
     if (!n) return null;
     return { x: x / n, y: y / n };
+  }
+
+  function _pointsLookNormalized(pointsXY) {
+    if (!Array.isArray(pointsXY) || !pointsXY.length) return false;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const xy of pointsXY) {
+      if (!xy) continue;
+      if (xy[0] > maxX) maxX = xy[0];
+      if (xy[1] > maxY) maxY = xy[1];
+    }
+    return maxX <= 1.5 && maxY <= 1.5;
+  }
+
+  function _getReviewCanvasSize() {
+    const width =
+      Number(state.img && (state.img.naturalWidth || state.img.width)) ||
+      Number((state.taskDto && state.taskDto.image_width) || 0) ||
+      640;
+    const height =
+      Number(state.img && (state.img.naturalHeight || state.img.height)) ||
+      Number((state.taskDto && state.taskDto.image_height) || 0) ||
+      360;
+    return {
+      width: Math.max(1, width),
+      height: Math.max(1, height),
+    };
+  }
+
+  function _appendReviewPath(svg, points, options) {
+    const opts = options || {};
+    const naturalW = Number(opts.naturalW) || 1;
+    const naturalH = Number(opts.naturalH) || 1;
+    const normalized = Array.isArray(points) ? points.map((p) => _normalizeXY(p)).filter(Boolean) : [];
+    if (!normalized.length) return null;
+    const isNorm = _pointsLookNormalized(normalized);
+    const scaled = normalized.map((xy) => ({
+      x: isNorm ? xy[0] * naturalW : xy[0],
+      y: isNorm ? xy[1] * naturalH : xy[1],
+    }));
+    if (!scaled.length) return null;
+    if (opts.closed && scaled.length < 3) return null;
+    if (!opts.closed && scaled.length < 2) return null;
+
+    const d = scaled
+      .map((pt, idx) => `${idx === 0 ? "M" : "L"} ${pt.x} ${pt.y}`)
+      .join(" ");
+    if (!d) return null;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", opts.closed ? `${d} Z` : d);
+    path.setAttribute("fill", opts.closed ? opts.fill || "none" : "none");
+    path.setAttribute("stroke", opts.stroke || "#2563eb");
+    path.setAttribute("stroke-width", String(opts.strokeWidth || 4));
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    if (opts.strokeDasharray) path.setAttribute("stroke-dasharray", opts.strokeDasharray);
+    if (opts.strokeOpacity != null) path.setAttribute("stroke-opacity", String(opts.strokeOpacity));
+    svg.appendChild(path);
+    return scaled;
+  }
+
+  function _buildReviewSummary(parts) {
+    const safeParts = Array.isArray(parts)
+      ? parts.filter((part) => typeof part === "string" && part.trim())
+      : [];
+    return safeParts.length ? safeParts.join(" • ") : "Без разметки";
+  }
+
+  function _normalizeReviewLabelText(value) {
+    const text = String(value == null ? "" : value).trim();
+    return text || "Без названия";
+  }
+
+  function _buildReviewLabelsBlock(titleText, items, dataTestUi) {
+    const safeItems = Array.isArray(items) ? items : [];
+    if (!safeItems.length) return null;
+
+    const block = _createEl(
+      "div",
+      "mt-3 rounded-2xl border border-border-strong bg-surface-1 px-3 py-3 shadow-sm dark:border-border-strong dark:bg-surface-1",
+      ""
+    );
+    if (dataTestUi) {
+      block.setAttribute("data-drawui", dataTestUi);
+    }
+
+    block.appendChild(
+      _createEl(
+        "div",
+        "text-xs font-semibold uppercase tracking-wide text-text-secondary dark:text-text-muted",
+        titleText || "Названия"
+      )
+    );
+
+    const list = _createEl("div", "mt-2 flex flex-col gap-2", "");
+    safeItems.forEach((item, idx) => {
+      const row = _createEl(
+        "div",
+        "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark",
+        ""
+      );
+      const prefix = item && item.kind === "freehand" ? "Линия" : "Контур";
+      row.textContent = `${prefix} ${idx + 1}: ${_normalizeReviewLabelText(item && item.label)}`;
+      list.appendChild(row);
+    });
+    block.appendChild(list);
+    return block;
+  }
+
+  function _createReviewPreviewCard(config) {
+    const opts = config || {};
+    const card = _createEl(
+      "section",
+      "rounded-2xl border border-border-strong bg-surface-2 p-3 shadow-sm dark:border-border-strong dark:bg-surface-2",
+      ""
+    );
+    if (opts.dataTestUi) {
+      card.setAttribute("data-drawui", opts.dataTestUi);
+    }
+
+    const header = _createEl("div", "mb-2 flex items-start justify-between gap-3", "");
+    const headerText = _createEl("div", "min-w-0", "");
+    const title = _createEl(
+      "div",
+      "text-sm font-semibold text-text-main dark:text-text-on-dark",
+      opts.title || ""
+    );
+    const description = _createEl(
+      "div",
+      "mt-0.5 text-xs leading-5 text-text-secondary dark:text-text-muted",
+      opts.description || ""
+    );
+    headerText.appendChild(title);
+    headerText.appendChild(description);
+    header.appendChild(headerText);
+
+    const imageUrl = opts.imageUrl ? String(opts.imageUrl) : "";
+    if (imageUrl && typeof opts.openImage === "function") {
+      const zoomBtn = document.createElement("button");
+      zoomBtn.type = "button";
+      zoomBtn.className =
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-strong bg-surface-1 text-text-main shadow-sm transition-colors hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover";
+      zoomBtn.title = "Открыть изображение";
+      zoomBtn.setAttribute("aria-label", "Открыть изображение");
+      zoomBtn.setAttribute("data-drawui", `${opts.dataTestUi || "review"}-zoom`);
+      zoomBtn.appendChild(_createEl("span", "material-symbols-outlined text-[18px]", "zoom_in"));
+      zoomBtn.addEventListener("click", () => {
+        opts.openImage(imageUrl, opts.title || "Разбор ответа");
+      });
+      header.appendChild(zoomBtn);
+    }
+
+    card.appendChild(header);
+
+    const frame = _createEl(
+      "div",
+      "relative overflow-hidden rounded-2xl border border-border-strong bg-surface-1 shadow-inner dark:border-border-strong dark:bg-surface-1",
+      ""
+    );
+    frame.style.aspectRatio = `${opts.naturalW || 1} / ${opts.naturalH || 1}`;
+    frame.style.minHeight = "220px";
+    frame.setAttribute("data-drawui", `${opts.dataTestUi || "review"}-frame`);
+
+    if (imageUrl) {
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = opts.title || "";
+      img.draggable = false;
+      img.className = "absolute inset-0 h-full w-full object-contain";
+      frame.appendChild(img);
+    } else {
+      frame.appendChild(
+        _createEl(
+          "div",
+          "absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-text-muted dark:text-text-muted",
+          "Исходное изображение недоступно"
+        )
+      );
+    }
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "absolute inset-0 h-full w-full pointer-events-none");
+    svg.setAttribute("viewBox", `0 0 ${opts.naturalW || 1} ${opts.naturalH || 1}`);
+    svg.setAttribute("preserveAspectRatio", "none");
+    frame.appendChild(svg);
+
+    if (typeof opts.renderSvg === "function") {
+      opts.renderSvg(svg);
+    }
+
+    card.appendChild(frame);
+
+    if (opts.labelsBlock) {
+      card.appendChild(opts.labelsBlock);
+    }
+    return card;
+  }
+
+  function _clearReviewComparison() {
+    if (state.reviewComparisonEl && state.reviewComparisonEl.parentNode) {
+      state.reviewComparisonEl.parentNode.removeChild(state.reviewComparisonEl);
+    }
+    state.reviewComparisonEl = null;
+    if (state.reviewHost) {
+      state.reviewHost.classList.add("hidden");
+    }
+  }
+
+  function _buildUserReviewPreviewCard(imageUrl, naturalW, naturalH) {
+    const parts = [];
+    if (Array.isArray(state.polygons) && state.polygons.length) {
+      parts.push(state.polygons.length === 1 ? "1 контур" : `${state.polygons.length} контура`);
+    }
+    if (Array.isArray(state.lines) && state.lines.length) {
+      parts.push(state.lines.length === 1 ? "1 линия" : `${state.lines.length} линии`);
+    }
+
+    const labelItems = [];
+    (state.polygons || []).forEach((_, idx) => {
+      labelItems.push({ kind: "polygon", label: state.labelsPolygons && state.labelsPolygons[idx] });
+    });
+    (state.lines || []).forEach((_, idx) => {
+      labelItems.push({ kind: "freehand", label: state.labelsLines && state.labelsLines[idx] });
+    });
+
+    return _createReviewPreviewCard({
+      dataTestUi: "review-user-preview",
+      title: "Ваш ответ",
+      description: _buildReviewSummary(parts),
+      imageUrl,
+      naturalW,
+      naturalH,
+      openImage: _openMetadataModal,
+      labelsBlock: _buildReviewLabelsBlock("Названия пользователя", labelItems, "review-user-labels"),
+      renderSvg(svg) {
+        (state.polygons || []).forEach((poly, idx) => {
+          const color = idx % 2 === 0
+            ? _getThemeColor("--color-success", "#22c55e")
+            : _getThemeColor("--color-primary", "#2563eb");
+          _appendReviewPath(svg, poly && poly.points, {
+            closed: true,
+            naturalW,
+            naturalH,
+            stroke: color,
+            fill: _withAlpha(color, 0.16),
+            strokeWidth: 4,
+          });
+        });
+        (state.lines || []).forEach((line, idx) => {
+          const color = idx % 2 === 0
+            ? _getThemeColor("--color-primary", "#2563eb")
+            : _getThemeColor("--color-info", "#0f766e");
+          _appendReviewPath(svg, line && line.points, {
+            closed: false,
+            naturalW,
+            naturalH,
+            stroke: color,
+            strokeWidth: 4,
+            strokeDasharray: "10 6",
+            strokeOpacity: 0.94,
+          });
+        });
+      },
+    });
+  }
+
+  function _buildReferenceReviewPreviewCard(imageUrl, naturalW, naturalH) {
+    const targets = _getReferenceTargets(state.taskDto);
+    const polygons = targets.filter((target) => target.shape === "polygon").length;
+    const lines = targets.filter((target) => target.shape === "freehand").length;
+    const parts = [];
+    if (polygons) parts.push(polygons === 1 ? "1 контур" : `${polygons} контура`);
+    if (lines) parts.push(lines === 1 ? "1 линия" : `${lines} линии`);
+
+    return _createReviewPreviewCard({
+      dataTestUi: "review-reference-preview",
+      title: "Эталон",
+      description: _buildReviewSummary(parts),
+      imageUrl,
+      naturalW,
+      naturalH,
+      openImage: _openMetadataModal,
+      labelsBlock: _buildReviewLabelsBlock("Эталонные названия", targets, "review-reference-labels"),
+      renderSvg(svg) {
+        targets.forEach((target, idx) => {
+          const isBad = state.badRefTargets instanceof Set && state.badRefTargets.has(idx);
+          const baseColor = isBad
+            ? _getThemeColor("--color-error", "#ef4444")
+            : idx % 2 === 0
+              ? _getThemeColor("--color-accent", "#a855f7")
+              : _getThemeColor("--color-warning", "#f59e0b");
+          _appendReviewPath(svg, target && target.points, {
+            closed: target && target.shape === "polygon",
+            naturalW,
+            naturalH,
+            stroke: baseColor,
+            fill: target && target.shape === "polygon" ? _withAlpha(baseColor, isBad ? 0.12 : 0.18) : "none",
+            strokeWidth: isBad ? 5 : 4,
+            strokeDasharray: target && target.shape === "freehand" ? "10 6" : null,
+            strokeOpacity: 0.94,
+          });
+        });
+      },
+    });
+  }
+
+  function _renderReviewComparison(result) {
+    _clearReviewComparison();
+    if (!state.reviewHost) return;
+    if (state.isRuntimeSession) return;
+
+    const imageUrl = _resolveImageUrl(state.taskDto);
+    const canvasSize = _getReviewCanvasSize();
+    const section = _createEl(
+      "section",
+      "rounded-[28px] border border-border-strong bg-surface-1/80 p-4 shadow-sm dark:border-border-strong dark:bg-surface-1/80",
+      ""
+    );
+    section.setAttribute("data-drawui", "review-comparison");
+
+    section.appendChild(
+      _createEl(
+        "div",
+        "text-base font-semibold text-text-main dark:text-text-on-dark",
+        result && result.success === true ? "Разбор ответа" : "Разбор ошибок"
+      )
+    );
+    section.appendChild(
+      _createEl(
+        "div",
+        "mt-1 text-sm leading-6 text-text-secondary dark:text-text-muted",
+        result && result.success === true
+          ? "Сохраняем рядом ваш рисунок и эталон, чтобы можно было быстро сверить форму и направление линий."
+          : "Показываем ваш рисунок и эталон прямо поверх исходного изображения, чтобы различия были видны без текстовых описаний."
+      )
+    );
+
+    const grid = _createEl("div", "mt-4 grid gap-3 xl:grid-cols-2", "");
+    grid.appendChild(_buildUserReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
+    grid.appendChild(_buildReferenceReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
+    section.appendChild(grid);
+
+    state.reviewHost.classList.remove("hidden");
+    state.reviewHost.appendChild(section);
+    state.reviewComparisonEl = section;
   }
 
   function _getReferenceTargets(taskDto) {
@@ -753,11 +1201,13 @@
       }
 
       if (state.showRefLabels) {
-        const textValue = label || `#${idx + 1}`;
+        const textValue = _formatReferenceLabel(label, idx);
         if (labelPos && typeof labelPos.x === "number" && typeof labelPos.y === "number") {
+          const labelX = _clamp(labelPos.x, 18, naturalW - 18);
+          const labelY = _clamp(labelPos.y, 18, naturalH - 18);
           const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-          text.setAttribute("x", String(labelPos.x));
-          text.setAttribute("y", String(labelPos.y));
+          text.setAttribute("x", String(labelX));
+          text.setAttribute("y", String(labelY));
           text.setAttribute("fill", labelFill);
           text.setAttribute("stroke", labelStroke);
           text.setAttribute("stroke-width", "4");
@@ -955,6 +1405,250 @@
     return dx * dx + dy * dy;
   }
 
+  function _getNaturalCoordinateScale(options) {
+    const opts = options || {};
+    if (Number.isFinite(Number(opts.coordinateScale)) && Number(opts.coordinateScale) > 0) {
+      return Number(opts.coordinateScale);
+    }
+
+    const img = opts.img || state.img;
+    if (!img) return 1;
+
+    const naturalW = Number(opts.naturalWidth != null ? opts.naturalWidth : img.naturalWidth || img.width || 0);
+    const naturalH = Number(opts.naturalHeight != null ? opts.naturalHeight : img.naturalHeight || img.height || 0);
+    const rect =
+      opts.rect ||
+      (typeof img.getBoundingClientRect === "function" ? img.getBoundingClientRect() : null);
+
+    if (!rect || !rect.width || !rect.height || !naturalW || !naturalH) {
+      return 1;
+    }
+
+    const scaleX = naturalW / rect.width;
+    const scaleY = naturalH / rect.height;
+    const scale = Math.max(scaleX, scaleY);
+    return Number.isFinite(scale) && scale > 0 ? scale : 1;
+  }
+
+  const _CLOSE_STROKE_DISTANCE_PX = 14;
+  const _MIN_CLOSED_STROKE_POINTS = 5;
+  const _MIN_CLOSED_STROKE_EXCURSION_PX = 18;
+
+  function _getClosedStrokePoints(points, options) {
+    if (!Array.isArray(points) || points.length < _MIN_CLOSED_STROKE_POINTS) return null;
+    const coordinateScale = _getNaturalCoordinateScale(options);
+    const closeStrokeDistancePx = _CLOSE_STROKE_DISTANCE_PX * coordinateScale;
+    const minClosedStrokeExcursionPx = _MIN_CLOSED_STROKE_EXCURSION_PX * coordinateScale;
+    const start = points[0];
+    let hadMeaningfulExcursion = false;
+    for (let idx = 1; idx < points.length; idx += 1) {
+      const distSq = _distanceSq(start, points[idx]);
+      if (distSq >= minClosedStrokeExcursionPx * minClosedStrokeExcursionPx) {
+        hadMeaningfulExcursion = true;
+      }
+      if (
+        idx >= (_MIN_CLOSED_STROKE_POINTS - 1) &&
+        hadMeaningfulExcursion &&
+        distSq <= closeStrokeDistancePx * closeStrokeDistancePx
+      ) {
+        return points.slice(0, idx + 1);
+      }
+    }
+    return null;
+  }
+
+  function _buildLabelFieldFeedback(details) {
+    const feedback = {};
+    if (!details || typeof details !== "object") return feedback;
+
+    function setFeedback(kind, idx, tone, text) {
+      if ((kind !== "polygon" && kind !== "line") || !Number.isInteger(idx) || idx < 0) return;
+      const safeText = String(text || "").trim();
+      if (!safeText) return;
+      feedback[`${kind}:${idx}`] = { tone, text: safeText };
+    }
+
+    const manual = details.manual_label_judgement;
+    const softByOrderedIndex = new Map();
+    if (manual && Array.isArray(manual.soft_mismatches)) {
+      manual.soft_mismatches.forEach((item) => {
+        const orderedIndex = Number(item && item.index);
+        if (!Number.isInteger(orderedIndex)) return;
+        const omittedPhrase = String(item && item.omitted_phrase ? item.omitted_phrase : "").trim();
+        const correctAnswer = String(item && item.correct_answer ? item.correct_answer : "").trim();
+        softByOrderedIndex.set(
+          orderedIndex,
+          omittedPhrase
+            ? `Пропущено: ${omittedPhrase}. Эталон: ${correctAnswer}`
+            : `Эталон: ${correctAnswer}`
+        );
+      });
+    }
+
+    const unmatchedByOrderedIndex = new Map();
+    const labelEval = details.labels;
+    if (labelEval && Array.isArray(labelEval.unmatched_labels)) {
+      labelEval.unmatched_labels.forEach((item) => {
+        const orderedIndex = Number(item && item[0]);
+        if (!Number.isInteger(orderedIndex)) return;
+        const correctAnswer = String(item && item[2] ? item[2] : "").trim();
+        unmatchedByOrderedIndex.set(
+          orderedIndex,
+          correctAnswer ? `Эталон: ${correctAnswer}` : "Это название не совпало с эталоном."
+        );
+      });
+    }
+
+    const polygonResults = Array.isArray(details.polygon_results) ? details.polygon_results : [];
+    polygonResults.forEach((resultItem, orderedIndex) => {
+      const matchedIdx = Number(resultItem && resultItem.matched_polygon_idx);
+      if (!Number.isInteger(matchedIdx) || matchedIdx < 0) return;
+      if (softByOrderedIndex.has(orderedIndex)) {
+        setFeedback("polygon", matchedIdx, "warning", softByOrderedIndex.get(orderedIndex));
+      } else if (unmatchedByOrderedIndex.has(orderedIndex)) {
+        setFeedback("polygon", matchedIdx, "error", unmatchedByOrderedIndex.get(orderedIndex));
+      }
+    });
+
+    const lineResults = Array.isArray(details.line_results) ? details.line_results : [];
+    const lineOffset = polygonResults.length;
+    lineResults.forEach((resultItem, lineIndex) => {
+      const orderedIndex = lineOffset + lineIndex;
+      const matchedIdx = Number(resultItem && resultItem.matched_line_idx);
+      if (!Number.isInteger(matchedIdx) || matchedIdx < 0) return;
+      if (softByOrderedIndex.has(orderedIndex)) {
+        setFeedback("line", matchedIdx, "warning", softByOrderedIndex.get(orderedIndex));
+      } else if (unmatchedByOrderedIndex.has(orderedIndex)) {
+        setFeedback("line", matchedIdx, "error", unmatchedByOrderedIndex.get(orderedIndex));
+      }
+    });
+
+    return feedback;
+  }
+
+  function _getLockedLabelFeedback(kind, idx) {
+    if (!state.locked) return null;
+    const key = `${kind}:${idx}`;
+    return state.labelFieldFeedback && state.labelFieldFeedback[key]
+      ? state.labelFieldFeedback[key]
+      : null;
+  }
+
+  function _renderJudgementPrompt(result) {
+    _clearReviewComparison();
+    if (!state.reviewHost || !state.isRuntimeSession) return;
+    if (!result || !result.details || typeof result.details !== "object") return;
+    if (result.details.requires_user_judgement !== true) return;
+
+    const review = result.details.manual_label_judgement;
+    const mismatches = review && Array.isArray(review.soft_mismatches) ? review.soft_mismatches : [];
+    if (!mismatches.length) return;
+
+    const section = _createEl(
+      "section",
+      "rounded-[24px] border border-warning-light bg-warning-lighter p-4 shadow-sm",
+      ""
+    );
+    section.setAttribute("data-drawui", "label-judgement");
+
+    section.appendChild(
+      _createEl(
+        "div",
+        "text-base font-semibold text-warning-dark",
+        "Нужно решить, засчитывать ли ответ"
+      )
+    );
+
+    section.appendChild(
+      _createEl(
+        "div",
+        "mt-1 text-sm leading-6 text-warning-darker",
+        String(review.message || "В названии цели пропущено 1–2 слова. Оцените ответ сами.").trim()
+      )
+    );
+
+    const list = _createEl("div", "mt-3 flex flex-col gap-2", "");
+    mismatches.forEach((item, mismatchIdx) => {
+      const card = _createEl(
+        "div",
+        "rounded-xl border border-warning-light bg-surface-1 px-3 py-3 shadow-sm",
+        ""
+      );
+      const omittedPhrase = String(item && item.omitted_phrase ? item.omitted_phrase : "").trim();
+      const userAnswer = String(item && item.user_answer ? item.user_answer : "").trim();
+      const correctAnswer = String(item && item.correct_answer ? item.correct_answer : "").trim();
+
+      card.appendChild(
+        _createEl(
+          "div",
+          "text-xs font-semibold uppercase tracking-wide text-warning-dark",
+          `Название ${mismatchIdx + 1}`
+        )
+      );
+      card.appendChild(
+        _createEl("div", "mt-1 text-sm font-medium text-text-main dark:text-text-on-dark", `Ваш ответ: ${userAnswer}`)
+      );
+      card.appendChild(
+        _createEl("div", "mt-1 text-sm text-text-secondary dark:text-text-muted", `Эталон: ${correctAnswer}`)
+      );
+      if (omittedPhrase) {
+        card.appendChild(
+          _createEl("div", "mt-2 text-sm text-warning-darker", `Пропущено: ${omittedPhrase}`)
+        );
+      }
+      list.appendChild(card);
+    });
+    section.appendChild(list);
+
+    const actions = _createEl("div", "mt-4 flex flex-col gap-2 sm:flex-row", "");
+    const acceptBtn = _createEl(
+      "button",
+      "flex-1 rounded-xl border border-success-light bg-success-light px-4 py-3 text-sm font-semibold text-success-dark transition-colors hover:bg-success-light/80",
+      "Засчитать как верное"
+    );
+    const rejectBtn = _createEl(
+      "button",
+      "flex-1 rounded-xl border border-border-strong bg-surface-1 px-4 py-3 text-sm font-semibold text-text-main transition-colors hover:bg-surface-2 dark:text-text-on-dark",
+      "Оставить как неверное"
+    );
+
+    acceptBtn.addEventListener("click", () => {
+      try {
+        if (
+          global &&
+          global.SessionControls &&
+          typeof global.SessionControls.handleDrawLabelJudgementChoice === "function"
+        ) {
+          global.SessionControls.handleDrawLabelJudgementChoice("accept");
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
+
+    rejectBtn.addEventListener("click", () => {
+      try {
+        if (
+          global &&
+          global.SessionControls &&
+          typeof global.SessionControls.handleDrawLabelJudgementChoice === "function"
+        ) {
+          global.SessionControls.handleDrawLabelJudgementChoice("reject");
+        }
+      } catch (e) {
+        // ignore
+      }
+    });
+
+    actions.appendChild(acceptBtn);
+    actions.appendChild(rejectBtn);
+    section.appendChild(actions);
+
+    state.reviewHost.classList.remove("hidden");
+    state.reviewHost.appendChild(section);
+    state.reviewComparisonEl = section;
+  }
+
   function _renderLabelsInputs(_ev) {
     const container = state.labelsContainer;
     if (!container) return;
@@ -1010,15 +1704,36 @@
         if (typeof state._updateToolbar === "function") state._updateToolbar();
       });
 
+      const lockedFeedback = _getLockedLabelFeedback(kind, idx);
       if (state.locked && state.highlightLabelErrors) {
         const v = String(input.value || "").trim();
         if (!v) {
           input.classList.add("border-error");
         }
       }
+      if (lockedFeedback) {
+        if (lockedFeedback.tone === "warning") {
+          input.classList.add("border-warning-light", "bg-warning-lighter");
+        } else {
+          input.classList.add("border-error-light", "bg-error-lighter");
+        }
+
+        const note = _createEl(
+          "div",
+          lockedFeedback.tone === "warning"
+            ? "text-xs leading-5 text-warning-darker"
+            : "text-xs leading-5 text-error-text",
+          lockedFeedback.text
+        );
+        wrap._lockedFeedbackNote = note;
+      }
 
       wrap.appendChild(lbl);
       wrap.appendChild(input);
+      if (wrap._lockedFeedbackNote) {
+        wrap.appendChild(wrap._lockedFeedbackNote);
+        delete wrap._lockedFeedbackNote;
+      }
       return wrap;
     }
 
@@ -1040,6 +1755,11 @@
     state.labelsLines = [];
     state.actionHistory = [];
     state.activeStroke = null;
+    state.undoAttentionUntil = 0;
+    if (state.undoAttentionTimer) {
+      clearTimeout(state.undoAttentionTimer);
+      state.undoAttentionTimer = null;
+    }
     state.stage = "polygons";
     _renderDrawing();
     _renderReference();
@@ -1094,6 +1814,11 @@
     state.lines = [];
     state.actionHistory = [];
     state.activeStroke = null;
+    state.undoAttentionUntil = 0;
+    if (state.undoAttentionTimer) {
+      clearTimeout(state.undoAttentionTimer);
+      state.undoAttentionTimer = null;
+    }
     state.locked = false;
     state.mode = "brush";
     state.stage = "polygons";
@@ -1104,6 +1829,8 @@
     state.panStart = null;
     state.showRef = false;
     state.showRefContours = true;
+    state.showRefPolygons = true;
+    state.showRefLines = true;
     state.showRefLabels = true;
     state.showUserMarks = true;
     state.badRefTargets = null;
@@ -1111,6 +1838,12 @@
     state.labelsLines = [];
     state.highlightLabelErrors = false;
     state.labelEval = null;
+    state.labelFieldFeedback = {};
+    state.manualLabelJudgement = null;
+    state.pendingViewState = null;
+    state.reviewHost = null;
+    state.reviewComparisonEl = null;
+    state.isRuntimeSession = false;
 
     _recalcLimitsFromTask(taskDto);
 
@@ -1122,7 +1855,12 @@
       style.textContent = `
         @keyframes drawuiFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes drawuiSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes drawuiUndoAttention {
+          0%, 100% { box-shadow: inset 0 0 0 1px var(--drawui-undo-border, transparent), 0 0 0 0 var(--drawui-undo-ring, transparent); }
+          50% { box-shadow: inset 0 0 0 1px var(--drawui-undo-border, transparent), 0 0 0 4px var(--drawui-undo-ring, transparent); }
+        }
         .drawui-card-entry { animation: drawuiSlideUp 250ms ease-out forwards; }
+        .drawui-undo-attention { animation: drawuiUndoAttention 780ms ease-in-out infinite; }
       `;
       document.head.appendChild(style);
     }
@@ -1149,10 +1887,15 @@
     });
     state.metadataApi = metadata.api;
     _syncMetadataToTaskDto();
+    const isRuntimeSession = !!document.getElementById("check-answer-btn");
+    state.isRuntimeSession = isRuntimeSession;
+    state.showRefLabels = !isRuntimeSession;
 
     const imgUrl = _resolveImageUrl(taskDto);
 
     const wrapperRow = _createEl("div", "flex gap-4", "");
+    const reviewHost = _createEl("div", "hidden", "");
+    reviewHost.setAttribute("data-drawui", "review-host");
 
     const wrapper = _createEl(
       "div",
@@ -1189,7 +1932,7 @@
     function toolBtn(icon, title) {
       const b = _createEl(
         "button",
-        "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover transition-colors focus:outline-none",
+        "flex items-center justify-center w-full h-12 sm:h-14 overflow-hidden border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover transition-all hover:-translate-y-[1px] focus:outline-none",
         ""
       );
       b.title = title;
@@ -1201,7 +1944,7 @@
 
     const topGroup = _createEl(
       "div",
-      "flex flex-col bg-surface-1 dark:bg-surface-2 rounded-lg shadow-sm border border-border-strong dark:border-border-strong overflow-hidden divide-y divide-border-strong dark:divide-border-strong",
+      "flex flex-col bg-surface-1 dark:bg-surface-2 rounded-xl shadow-sm border border-border-strong dark:border-border-strong overflow-hidden divide-y divide-border-strong dark:divide-border-strong",
       ""
     );
 
@@ -1212,7 +1955,7 @@
 
     const midGroup = _createEl(
       "div",
-      "flex flex-col bg-surface-1 dark:bg-surface-2 rounded-lg shadow-sm border border-border-strong dark:border-border-strong overflow-hidden divide-y divide-border-strong dark:divide-border-strong",
+      "flex flex-col bg-surface-1 dark:bg-surface-2 rounded-xl shadow-sm border border-border-strong dark:border-border-strong overflow-hidden divide-y divide-border-strong dark:divide-border-strong",
       ""
     );
 
@@ -1227,11 +1970,19 @@
 
     const undoWrap = toolBtn("arrow_undo", "Отменить");
     undoWrap.b.className =
-      "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover hover:text-primary transition-colors focus:outline-none";
+      "flex items-center justify-center w-full h-12 sm:h-14 overflow-hidden border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover hover:text-primary transition-colors focus:outline-none";
+    if (undoWrap.s) {
+      undoWrap.s.remove();
+      undoWrap.b.appendChild(
+        _createToolbarSvgIcon("M9 14 4 9l5-5M4 9h9a7 7 0 0 1 0 14h-1")
+      );
+    }
+    undoWrap.b.style.transition =
+      "transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease, color 160ms ease, border-color 160ms ease, opacity 160ms ease";
 
     const clearBtn = _createEl(
       "button",
-      "flex flex-col items-center justify-center w-full h-14 bg-error-light dark:bg-error-light rounded-lg border-2 border-border-strong dark:border-border-strong text-error-text dark:text-error-lighter hover:bg-error-light dark:hover:bg-error-light transition-colors",
+      "flex flex-col items-center justify-center w-full h-14 overflow-hidden bg-error-light dark:bg-error-light rounded-xl border-2 border-border-strong dark:border-border-strong text-error-text dark:text-error-lighter shadow-sm hover:bg-error-light dark:hover:bg-error-light transition-all hover:-translate-y-[1px]",
       ""
     );
     clearBtn.title = "Очистить";
@@ -1251,7 +2002,7 @@
 
     const hint = _createEl(
       "div",
-      "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-info-lighter dark:bg-info-light border border-info-light dark:border-info-light rounded-lg text-sm text-info-dark dark:text-info-light",
+      "flex items-start gap-3 p-3.5 min-h-[64px] transition-colors duration-150 ease-out bg-info-lighter dark:bg-info-light border border-info-light dark:border-info-light rounded-xl text-sm text-info-dark shadow-sm dark:text-info-light",
       ""
     );
     hint.setAttribute("data-drawui", "hint");
@@ -1263,12 +2014,12 @@
     function _setHint(kind, html) {
       if (kind === "warn") {
         hint.className =
-          "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-warning-lighter dark:bg-warning-light border border-warning-light dark:border-warning-light rounded-lg text-sm text-warning-darker dark:text-warning-lighter";
+          "flex items-start gap-3 p-3.5 min-h-[64px] transition-colors duration-150 ease-out bg-warning-lighter dark:bg-warning-light border border-warning-light dark:border-warning-light rounded-xl text-sm text-warning-darker shadow-sm dark:text-warning-lighter";
         hintIcon.className = "material-symbols-outlined text-warning dark:text-warning-light";
         hintIcon.textContent = "warning";
       } else {
         hint.className =
-          "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-info-lighter dark:bg-info-light border border-info-light dark:border-info-light rounded-lg text-sm text-info-dark dark:text-info-light";
+          "flex items-start gap-3 p-3.5 min-h-[64px] transition-colors duration-150 ease-out bg-info-lighter dark:bg-info-light border border-info-light dark:border-info-light rounded-xl text-sm text-info-dark shadow-sm dark:text-info-light";
         hintIcon.className = "material-symbols-outlined text-info dark:text-info-light";
         hintIcon.textContent = "info";
       }
@@ -1287,11 +2038,52 @@
       }, 2500);
     }
 
+    function _syncUndoButtonState() {
+      const canUndo =
+        (Array.isArray(state.actionHistory) && state.actionHistory.length > 0) ||
+        (Array.isArray(state.activeStroke) && state.activeStroke.length > 0);
+      undoWrap.b.style.opacity = canUndo ? "1" : "0.4";
+      undoWrap.b.style.pointerEvents = canUndo ? "auto" : "none";
+
+      const shouldHighlight = canUndo && Date.now() < (state.undoAttentionUntil || 0);
+      if (shouldHighlight) {
+        const accentColor = _getThemeColor("--color-warning", "#d97706");
+        undoWrap.b.style.backgroundColor = _withAlpha(accentColor, 0.1);
+        undoWrap.b.style.color = accentColor;
+        undoWrap.b.style.setProperty("--drawui-undo-border", _withAlpha(accentColor, 0.85));
+        undoWrap.b.style.setProperty("--drawui-undo-ring", _withAlpha(accentColor, 0.22));
+        undoWrap.b.classList.add("drawui-undo-attention");
+        undoWrap.b.style.transform = "scale(1.03)";
+      } else {
+        undoWrap.b.style.backgroundColor = "";
+        undoWrap.b.style.color = "";
+        undoWrap.b.style.removeProperty("--drawui-undo-border");
+        undoWrap.b.style.removeProperty("--drawui-undo-ring");
+        undoWrap.b.classList.remove("drawui-undo-attention");
+        undoWrap.b.style.transform = "";
+      }
+    }
+
+    function _flashUndoButtonAttention() {
+      state.undoAttentionUntil = Date.now() + 1400;
+      if (state.undoAttentionTimer) {
+        clearTimeout(state.undoAttentionTimer);
+        state.undoAttentionTimer = null;
+      }
+      _syncUndoButtonState();
+      state.undoAttentionTimer = setTimeout(() => {
+        state.undoAttentionTimer = null;
+        state.undoAttentionUntil = 0;
+        _syncUndoButtonState();
+      }, 1450);
+    }
+
     const labelsContainer = _createEl("div", "", "");
 
-    if (metadata && metadata.rootEl) root.appendChild(metadata.rootEl);
+    if (!isRuntimeSession && metadata && metadata.rootEl) root.appendChild(metadata.rootEl);
     root.appendChild(wrapperRow);
     root.appendChild(hint);
+    root.appendChild(reviewHost);
     root.appendChild(labelsContainer);
 
     img.addEventListener("load", () => {
@@ -1310,9 +2102,15 @@
       state.panX = (viewportRect.width - naturalW * state.zoom) / 2;
       state.panY = (viewportRect.height - naturalH * state.zoom) / 2;
 
-      _applyTransform();
-      _renderDrawing();
-      _renderReference();
+      if (state.pendingViewState) {
+        const pendingViewState = state.pendingViewState;
+        state.pendingViewState = null;
+        _applyRestoredViewState(pendingViewState, { applyViewport: true });
+      } else {
+        _applyTransform();
+        _renderDrawing();
+        _renderReference();
+      }
     });
 
     viewport.addEventListener(
@@ -1346,12 +2144,12 @@
 
     function _activeBtn(btn) {
       btn.className =
-        "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-primary-lighter dark:border-border-strong dark:bg-primary-dark text-primary dark:text-primary-light font-medium transition-colors focus:outline-none";
+        "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-primary-lighter dark:border-border-strong dark:bg-primary-dark text-primary dark:text-primary-light font-medium shadow-sm transition-colors focus:outline-none";
     }
 
     function _inactiveBtn(btn) {
       btn.className =
-        "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover transition-colors focus:outline-none";
+        "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover transition-all hover:-translate-y-[1px] focus:outline-none";
       const m = btn.querySelector("div");
       if (m && m.classList && m.classList.contains("absolute")) m.remove();
     }
@@ -1365,11 +2163,7 @@
         _activeBtn(panBtnWrap.b);
       }
 
-      const canUndo =
-        (Array.isArray(state.actionHistory) && state.actionHistory.length > 0) ||
-        (Array.isArray(state.activeStroke) && state.activeStroke.length > 0);
-      undoWrap.b.style.opacity = canUndo ? "1" : "0.4";
-      undoWrap.b.style.pointerEvents = canUndo ? "auto" : "none";
+      _syncUndoButtonState();
     };
 
     brushBtnWrap.b.addEventListener("click", () => _setMode("brush"));
@@ -1447,13 +2241,15 @@
         }
         if (pts.length < 2) return;
 
-        const isClosed = pts.length >= 3 && _distanceSq(pts[0], pts[pts.length - 1]) <= 14 * 14;
+        const closedStrokePoints = _getClosedStrokePoints(pts);
+        const isClosed = !!closedStrokePoints;
 
         if (state.stage === "polygons") {
           if (!isClosed) {
             _flashHint("Контур должен быть замкнут. Замкни линию и отпусти мышь.");
             return;
           }
+          pts = closedStrokePoints;
           if (state.maxPolygons > 0 && state.polygons.length >= state.maxPolygons) {
             _flashHint("Достигнут лимит контуров. Перейди к штрихам или нажми «Проверить». ");
             if (state.maxLines > 0) _setStage("lines");
@@ -1476,7 +2272,8 @@
 
         if (state.stage === "lines") {
           if (state.maxLines > 0 && state.lines.length >= state.maxLines) {
-            _flashHint("Достигнут лимит штрихов. Нажми «Проверить» для завершения.");
+            _flashHint("Достигнут лимит штрихов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний штрих. ");
+            _flashUndoButtonAttention();
             return;
           }
 
@@ -1490,6 +2287,26 @@
         }
       } catch (e) {
         if (_debugEnabled()) console.warn("[DrawUI] finalize stroke failed", e);
+      }
+    }
+
+    function _onPointerUp() {
+      if (!state.isPointerDown) return;
+      state.isPointerDown = false;
+
+      if (state.mode === "pan") {
+        state.panStart = null;
+        if (state.imageWrapper) state.imageWrapper.style.cursor = "grab";
+      }
+
+      if (state.mode === "brush") {
+        _finalizeStroke();
+        state.activeStroke = null;
+        state.soloDuringDraw = false;
+        _renderDrawing();
+        if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
+        if (typeof state._updateToolbar === "function") state._updateToolbar();
+        _renderLabelsInputs(null);
       }
     }
 
@@ -1507,6 +2324,8 @@
     state.refLayer = refLayer;
     state.labelsContainer = labelsContainer;
     state.labelsInputs = [];
+    state.reviewHost = reviewHost;
+    state.reviewComparisonEl = null;
     if (state.metadataApi && typeof state.metadataApi.setLocked === "function") {
       state.metadataApi.setLocked(state.locked);
     }
@@ -1536,6 +2355,93 @@
     container.appendChild(root);
   };
 
+  DrawUI.restoreInput = function restoreInput(draft) {
+    if (!draft || typeof draft !== "object") return;
+
+    function _normalizePoint(point) {
+      if (!point) return null;
+      const x = Number(Array.isArray(point) ? point[0] : point.x);
+      const y = Number(Array.isArray(point) ? point[1] : point.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      return [x, y];
+    }
+
+    function _normalizePointsCollection(items, minPoints) {
+      if (!Array.isArray(items)) return [];
+      return items
+        .map((item) => {
+          const rawPoints = Array.isArray(item && item.points) ? item.points : [];
+          const points = rawPoints.map(_normalizePoint).filter(Boolean);
+          return points.length >= minPoints ? { points } : null;
+        })
+        .filter(Boolean);
+    }
+
+    state.polygons = _normalizePointsCollection(draft.polygons, 3);
+    state.lines = _normalizePointsCollection(draft.lines, 2);
+    state.labelsPolygons = Array.isArray(draft.labels_polygons)
+      ? draft.labels_polygons.map((s) => String(s || ""))
+      : [];
+    state.labelsLines = Array.isArray(draft.labels_lines)
+      ? draft.labels_lines.map((s) => String(s || ""))
+      : [];
+    state.activeStroke = null;
+    state.isPointerDown = false;
+    state.panStart = null;
+    state.soloDuringDraw = false;
+    state.locked = false;
+    state.highlightLabelErrors = false;
+    state.labelEval = null;
+    state.labelFieldFeedback = {};
+    state.manualLabelJudgement = null;
+    state.badRefTargets = null;
+    state.showRef = false;
+    state.showRefContours = true;
+    state.showRefPolygons = true;
+    state.showRefLines = true;
+    state.showUserMarks = true;
+    state.userLinesCheckedStyle = false;
+
+    if (Number.isFinite(Number(draft.brush_radius)) && Number(draft.brush_radius) > 0) {
+      state.brushRadius = Number(draft.brush_radius);
+    }
+
+    const restoredActionHistory = Array.isArray(draft.action_history)
+      ? draft.action_history
+          .map((item) => String(item && item.kind ? item.kind : "").trim())
+          .filter((kind) => kind === "polygon" || kind === "line")
+          .map((kind) => ({ kind }))
+      : [];
+
+    state.actionHistory = restoredActionHistory.length
+      ? restoredActionHistory
+      : [
+          ...state.polygons.map(() => ({ kind: "polygon" })),
+          ...state.lines.map(() => ({ kind: "line" })),
+        ];
+
+    _ensureLabelsLengths();
+
+    if (state.maxPolygons > 0 && state.polygons.length < state.maxPolygons) {
+      _setStage("polygons");
+    } else if (state.maxLines > 0) {
+      _setStage("lines");
+    } else {
+      _setStage("polygons");
+    }
+
+    _setMode("brush");
+    _renderDrawing();
+    _renderReference();
+    _renderLabelsInputs(null);
+    _updateMetadataTotals();
+    if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
+    if (typeof state._updateToolbar === "function") state._updateToolbar();
+    if (state.metadataApi && typeof state.metadataApi.setLocked === "function") {
+      state.metadataApi.setLocked(false);
+    }
+  };
+
   DrawUI.getUserAnswerPayload = function getUserAnswerPayload() {
     _syncMetadataToTaskDto();
     const taskDto = state.taskDto;
@@ -1546,6 +2452,11 @@
     if (state.img) {
       payload.image_width = state.img.naturalWidth || null;
       payload.image_height = state.img.naturalHeight || null;
+      if (typeof state.img.getBoundingClientRect === "function") {
+        const rect = state.img.getBoundingClientRect();
+        payload.display_width = rect && Number.isFinite(rect.width) ? rect.width : null;
+        payload.display_height = rect && Number.isFinite(rect.height) ? rect.height : null;
+      }
     }
 
     payload.brush_radius = state.brushRadius != null ? state.brushRadius : 8;
@@ -1608,11 +2519,39 @@
     return payload;
   };
 
+  DrawUI.getViewState = function getViewState() {
+    return {
+      zoom: state.zoom,
+      panX: state.panX,
+      panY: state.panY,
+      mode: state.mode,
+      stage: state.stage,
+      showRef: !!state.showRef,
+      showRefContours: state.showRefContours !== false,
+      showRefPolygons: state.showRefPolygons !== false,
+      showRefLines: state.showRefLines !== false,
+      showRefLabels: state.showRefLabels !== false,
+    };
+  };
+
+  DrawUI.restoreViewState = function restoreViewState(viewState) {
+    const safeViewState = _sanitizeViewState(viewState);
+    if (!safeViewState) return;
+
+    const canApplyViewport =
+      !!(state.img && state.img.complete && (state.img.naturalWidth || 0) > 0);
+    state.pendingViewState = canApplyViewport ? null : safeViewState;
+    _applyRestoredViewState(safeViewState, { applyViewport: canApplyViewport });
+  };
+
   DrawUI.applyCheckFeedback = function applyCheckFeedback(result) {
     state.locked = true;
     if (state.metadataApi && typeof state.metadataApi.setLocked === "function") {
       state.metadataApi.setLocked(true);
     }
+    state.labelEval = null;
+    state.labelFieldFeedback = {};
+    state.manualLabelJudgement = null;
 
     if (!result || !result.details || typeof result.details !== "object") {
       return;
@@ -1621,6 +2560,12 @@
     const details = result.details;
     const error = details.error || null;
     const stage = details.stage || null;
+    state.labelEval = details.labels && typeof details.labels === "object" ? details.labels : null;
+    state.labelFieldFeedback = _buildLabelFieldFeedback(details);
+    state.manualLabelJudgement =
+      details.manual_label_judgement && typeof details.manual_label_judgement === "object"
+        ? details.manual_label_judgement
+        : null;
 
     if (stage === "polygons" || error === "polygons_missing") {
       state.locked = false;
@@ -1659,6 +2604,7 @@
     _renderLabelsInputs(null);
     _renderDrawing();
     _renderReference();
+    _renderReviewComparison(result);
     if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
     if (typeof state._updateToolbar === "function") state._updateToolbar();
   };
@@ -1687,6 +2633,9 @@
       polygons: [],
       lines: [],
       actionHistory: [],
+      tempHintTimer: null,
+      undoAttentionTimer: null,
+      undoAttentionUntil: 0,
       activeStroke: null,
       locked: false,
       mode: "brush",
@@ -1698,6 +2647,8 @@
       panStart: null,
       showRef: false,
       showRefContours: true,
+      showRefPolygons: true,
+      showRefLines: true,
       showRefLabels: true,
       showUserMarks: true,
       badRefTargets: null,
@@ -1706,6 +2657,8 @@
       labelsInputs: [],
       highlightLabelErrors: false,
       labelEval: null,
+      labelFieldFeedback: {},
+      manualLabelJudgement: null,
       soloDuringDraw: false,
       brushRadius: 8,
       maxPolygons: 0,
@@ -1714,6 +2667,10 @@
       metadataSnapshot: null,
       metadataModal: null,
       metadataModalKeyHandler: null,
+      pendingViewState: null,
+      reviewHost: null,
+      reviewComparisonEl: null,
+      isRuntimeSession: false,
       _themeListener: null,
     });
 
@@ -1733,6 +2690,7 @@
     DrawUI.__testing = {
       state,
       syncMetadataToTaskDto: () => _syncMetadataToTaskDto(),
+      getClosedStrokePoints: (points) => _getClosedStrokePoints(points),
     };
   }
 

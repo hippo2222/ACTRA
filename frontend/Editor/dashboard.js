@@ -70,33 +70,14 @@ class EditorDashboard {
         this.topicTheoryCatalog = [];
         this.topicTheoryModalBound = false;
         this.topicTheorySyncInFlight = new Set();
-
-        this.theoryHubBound = false;
-        this.theoryHubSyncInFlight = new Set();
-        this.pendingTheoryHubOpen = false;
-        this.pendingTheoryHubFocusId = '';
-        this.theoryTrainingBridgeStorageKey = 'theory_training_bridge_v1';
-
-        this.theoryHubState = {
-            loading: false,
-            topicRows: [],
-            theoryRows: [],
-            complexRows: [],
-            queueRows: [],
-            summary: null,
-            focusTheoryId: '',
-            ownershipFilter: 'all',
-            searchQuery: '',
-            selectedComplexIds: [],
-            theoryCatalog: [],
-        };
+        this.pendingMicrocardsManual = false;
 
         this.init();
     }
 
     createAllTasksElement() {
         const button = document.createElement('button');
-        button.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-2 text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left';
+        button.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left';
         button.dataset.allTasksButton = 'true';
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">all_inclusive</span>
@@ -129,8 +110,11 @@ class EditorDashboard {
         // }
 
         const lastView = this.loadDashboardState();
-        this.captureTheoryHubDeepLinkFromUrl();
-        this.loadCatalog(); // No await here, it's handled by the promise chain
+
+        this.loadCatalog().then(() => {
+            // Clean up orphaned drafts after catalog is loaded
+            this.cleanupOrphanedDrafts();
+        }); // Clean orphaned drafts after catalog loads
         this.setupEventListeners();
         this.setupPageExitSafety();
         this.setupThemeListener();
@@ -149,15 +133,14 @@ class EditorDashboard {
 
         // Apply initial state from URL or saved state after catalog loads
         const routeState = window.__EDITOR_ROUTE_STATE__ || {};
+        if (routeState.microcards_manual === '1') {
+            this.pendingMicrocardsManual = true;
+        }
+
         if (routeState.module && routeState.topic) {
             this.pendingInitialView = { moduleId: routeState.module, topicId: routeState.topic };
         } else if (routeState.module) {
             this.pendingInitialView = { moduleId: routeState.module, topicId: null };
-        } else if (lastView) {
-            this.pendingInitialView = {
-                moduleId: lastView.moduleId || null,
-                topicId: lastView.topicId || null
-            };
         } else {
             this.renderGrid();
         }
@@ -198,6 +181,13 @@ class EditorDashboard {
         return 'info';
     }
 
+    showToast(msg, severity = 'info') {
+        this.showVoiceToast({
+            severity: severity,
+            what: msg
+        });
+    }
+
     showVoiceToast({ severity = 'info', what = '', impact = '', next = '', timeout = 4200 } = {}) {
         const message = this.composeFeedbackMessage({ what, impact, next });
         if (!message) return;
@@ -219,6 +209,45 @@ class EditorDashboard {
     makeTaskUniqueId(moduleId, topicId, taskId) {
         if (!moduleId || !topicId || !taskId) return '';
         return `${moduleId}:${topicId}:${taskId}`;
+    }
+
+    getCanonicalTaskId(taskLike) {
+        if (!taskLike || typeof taskLike !== 'object') return '';
+
+        const taskMetaId = String(taskLike.task_data?.meta?.id || taskLike.meta?.id || taskLike.metadata?.id || '').trim();
+        if (taskMetaId) return taskMetaId;
+
+        const rawPath = String(taskLike.path || taskLike.metadata?.path || '').replace(/\\/g, '/');
+        const pathMatch = rawPath.match(/(?:^|\/)tasks\/([^/]+)\/task\.json$/);
+        if (pathMatch?.[1]) return String(pathMatch[1]).trim();
+
+        return String(taskLike.taskId || taskLike.id || '').trim();
+    }
+
+    normalizeCatalogTask(task, context = {}) {
+        const canonicalId = this.getCanonicalTaskId(task);
+        const legacyId = String(task?.legacy_id || task?.id || '').trim();
+        return {
+            ...task,
+            ...context,
+            id: canonicalId || task?.id,
+            legacy_id: legacyId && legacyId !== canonicalId ? legacyId : (task?.legacy_id || ''),
+        };
+    }
+
+    getTaskBootstrapStorageKey(moduleId, topicId, taskId) {
+        if (!moduleId || !topicId || !taskId) return '';
+        return `editor_task_bootstrap_${moduleId}_${topicId}_${taskId}`;
+    }
+
+    storeTaskBootstrap(moduleId, topicId, taskId, task) {
+        const key = this.getTaskBootstrapStorageKey(moduleId, topicId, taskId);
+        if (!key) return;
+        try {
+            sessionStorage.setItem(key, JSON.stringify(task));
+        } catch (error) {
+            console.warn('[Dashboard] Failed to store task bootstrap', error);
+        }
     }
 
     normalizeShortcutTask(taskLike = {}) {
@@ -390,15 +419,11 @@ class EditorDashboard {
         const favoriteEntries = Object.values(this.favoriteTaskMap || {})
             .map((item) => this.getWorkspaceTaskByUniqueId(item.uniqueId) || item)
             .slice(0, 5);
-        const recentEntries = (this.recentTasks || [])
-            .map((item) => this.getWorkspaceTaskByUniqueId(item.uniqueId) || item)
-            .filter((item) => item && !favoriteEntries.some((fav) => fav.uniqueId === item.uniqueId))
-            .slice(0, 5);
         const importEntries = this.getImportHistoryEntries(3);
-        const recoveryDrafts = this.collectRecoveryDrafts();
+        const recoveryDrafts = this.getVisibleRecoveryDrafts();
 
         host.replaceChildren();
-        if (!favoriteEntries.length && !recentEntries.length && !importEntries.length && !recoveryDrafts.length) {
+        if (!favoriteEntries.length && !importEntries.length) {
             host.classList.add('hidden');
             this.updateRecoveryCenterTrigger(recoveryDrafts);
             return;
@@ -408,14 +433,8 @@ class EditorDashboard {
         if (favoriteEntries.length) {
             host.appendChild(this.createShortcutSection('Избранное', favoriteEntries));
         }
-        if (recentEntries.length) {
-            host.appendChild(this.createShortcutSection('Недавние', recentEntries));
-        }
         if (importEntries.length) {
             host.appendChild(this.createImportHistorySection('Последние импорты', importEntries));
-        }
-        if (recoveryDrafts.length) {
-            host.appendChild(this.createRecoverySummarySection('Черновики', recoveryDrafts));
         }
         this.updateRecoveryCenterTrigger(recoveryDrafts);
     }
@@ -478,11 +497,11 @@ class EditorDashboard {
             const tone = this.getImportHistoryTone(entry.status);
             const toneClass =
                 tone === 'success'
-                    ? 'text-success-darker bg-success-lighter border-success-light'
+                    ? 'text-success bg-success-lighter border-success-light'
                     : tone === 'warning'
-                        ? 'text-warning-darker bg-warning-lighter border-warning-light'
+                        ? 'text-warning bg-warning-lighter border-warning-light'
                         : tone === 'error'
-                            ? 'text-error-text bg-error-lighter border-error-light'
+                            ? 'text-error bg-error-lighter border-error-light'
                             : 'text-text-secondary bg-bg-tertiary border-border-subtle';
             const statusLabel =
                 tone === 'success'
@@ -598,12 +617,12 @@ class EditorDashboard {
         const trigger = document.querySelector('[data-role="open-recovery-center"]');
         if (!trigger) return;
 
-        const allDrafts = Array.isArray(drafts) ? drafts : this.collectRecoveryDrafts();
+        const allDrafts = Array.isArray(drafts) ? drafts : this.getVisibleRecoveryDrafts();
         const total = allDrafts.length;
         let badge = trigger.querySelector('[data-role="recovery-draft-count"]');
         if (total <= 0) {
             trigger.removeAttribute('data-has-recovery');
-            trigger.title = 'Центр черновиков';
+            trigger.title = 'Черновики комплексов и отдельные черновики заданий';
             if (badge) badge.remove();
             return;
         }
@@ -619,7 +638,7 @@ class EditorDashboard {
         const complexCount = Math.max(0, total - taskCount);
         badge.textContent = total > 99 ? '99+' : String(total);
         trigger.dataset.hasRecovery = 'true';
-        trigger.title = `Черновики: ${total} (задач ${taskCount}, комплексов ${complexCount})`;
+        trigger.title = `Отдельные черновики: ${total} (заданий ${taskCount}, комплексов ${complexCount})`;
     }
 
     updateTheoryHubTrigger(summary = null) {
@@ -633,7 +652,7 @@ class EditorDashboard {
         let badge = trigger.querySelector('[data-role="theory-hub-queue-count"]');
         if (queueCount <= 0) {
             trigger.removeAttribute('data-has-theory-queue');
-            trigger.title = 'Theory Hub';
+            trigger.title = 'Центр теории';
             if (badge) badge.remove();
             return;
         }
@@ -662,7 +681,7 @@ class EditorDashboard {
 
         badge.textContent = queueCount > 99 ? '99+' : String(queueCount);
         trigger.dataset.hasTheoryQueue = 'true';
-        trigger.title = `Theory Hub: queue ${queueCount}, conflicts ${conflictCount}`;
+        trigger.title = `Центр теории: изменений ${queueCount}, подборок ${conflictCount}`;
     }
 
     loadDashboardState() {
@@ -753,6 +772,7 @@ class EditorDashboard {
                 this.renderSidebar(); // Moved here to ensure catalog is loaded before rendering sidebar
                 this.applyPendingInitialView();
                 await this.applyPendingTheoryHubIntent();
+                this.applyPendingMicrocardsManualIntent();
             } else {
                 this.log(`Server returned error: ${data.error}`);
                 this.showVoiceToast({
@@ -795,6 +815,17 @@ class EditorDashboard {
         this.renderGrid();
     }
 
+    applyPendingMicrocardsManualIntent() {
+        if (!this.pendingMicrocardsManual) return;
+        this.pendingMicrocardsManual = false;
+        this.showMicrocardsManualEditor();
+    }
+
+    showMicrocardsManualEditor() {
+        if (!this.importManager) return;
+        this.showTheoryAnalysisModal('microcards_manual');
+    }
+
     captureTheoryHubDeepLinkFromUrl() {
         try {
             const params = new URLSearchParams(window.location.search || '');
@@ -810,8 +841,9 @@ class EditorDashboard {
     async applyPendingTheoryHubIntent() {
         if (!this.pendingTheoryHubOpen) return;
         this.pendingTheoryHubOpen = false;
-        await this.showTheoryHub({
-            focusTheoryId: this.pendingTheoryHubFocusId || '',
+        this.navigateToTheoryCenter({
+            scope: 'complexes',
+            query: this.pendingTheoryHubFocusId || '',
         });
         this.pendingTheoryHubFocusId = '';
     }
@@ -841,10 +873,7 @@ class EditorDashboard {
             });
         }
 
-        const theoryHubBtn = document.querySelector('[data-role="open-theory-hub"]');
-        if (theoryHubBtn) {
-            theoryHubBtn.addEventListener('click', () => this.showTheoryHub());
-        }
+
 
         const recoveryBtn = document.querySelector('[data-role="open-recovery-center"]');
         if (recoveryBtn) {
@@ -1094,7 +1123,7 @@ class EditorDashboard {
         if (this.activeModuleId) {
             const separator1 = document.createElement('span');
             separator1.className = 'text-text-disabled mx-1 font-normal text-xl';
-            separator1.textContent = 'вЂє';
+            separator1.textContent = '›';
             nav.appendChild(separator1);
 
             const module = this.catalog.find(m => m.id === this.activeModuleId);
@@ -1110,7 +1139,7 @@ class EditorDashboard {
             if (this.activeTopicId) {
                 const separator2 = document.createElement('span');
                 separator2.className = 'text-text-disabled mx-1 font-normal text-xl shrink-0 anim-scale-in';
-                separator2.textContent = 'вЂє';
+                separator2.textContent = '›';
                 nav.appendChild(separator2);
 
                 const topic = (module?.topics || []).find(t => t.id === this.activeTopicId);
@@ -1385,6 +1414,64 @@ class EditorDashboard {
         return String(value || '').trim().toLowerCase() === 'copy' ? 'copy' : 'link';
     }
 
+    buildTheoryEditorUrl(theoryId, options = {}) {
+        const normalizedTheoryId = String(theoryId || '').trim();
+        const url = new URL('/ui/editor/Theory_Editor.html', window.location.origin);
+        if (normalizedTheoryId) {
+            url.searchParams.set('theory_id', normalizedTheoryId);
+        }
+
+        const mapping = {
+            context: 'context',
+            moduleId: 'module_id',
+            topicId: 'topic_id',
+            moduleName: 'module_name',
+            topicName: 'topic_name',
+            complexId: 'complex_id',
+            complexName: 'complex_name',
+            returnUrl: 'return_url',
+        };
+
+        Object.entries(mapping).forEach(([sourceKey, targetKey]) => {
+            const value = String(options?.[sourceKey] || '').trim();
+            if (!value) return;
+            url.searchParams.set(targetKey, value);
+        });
+
+        return `${url.pathname}${url.search}`;
+    }
+
+    navigateToTheoryEditor(theoryId, options = {}) {
+        const url = this.buildTheoryEditorUrl(theoryId, options);
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition(url);
+            return;
+        }
+        window.location.href = url;
+    }
+
+    buildTheoryCenterUrl(options = {}) {
+        const url = new URL('/ui/theory-center', window.location.origin);
+        const scope = String(options.scope || '').trim();
+        const moduleId = String(options.moduleId || '').trim();
+        const state = String(options.state || '').trim();
+        const query = String(options.query || '').trim();
+        if (scope) url.searchParams.set('scope', scope);
+        if (moduleId) url.searchParams.set('module_id', moduleId);
+        if (state) url.searchParams.set('state', state);
+        if (query) url.searchParams.set('q', query);
+        return `${url.pathname}${url.search}`;
+    }
+
+    navigateToTheoryCenter(options = {}) {
+        const url = this.buildTheoryCenterUrl(options);
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition(url);
+            return;
+        }
+        window.location.href = url;
+    }
+
     setupTopicTheoryModalControls() {
         if (this.topicTheoryModalBound) return;
         const modal = document.getElementById('topic-theory-modal');
@@ -1400,19 +1487,21 @@ class EditorDashboard {
             }
         });
 
-        const applyToggle = document.getElementById('topic-theory-apply');
-        if (applyToggle) {
-            applyToggle.addEventListener('change', () => this.syncTopicTheoryPropagationControls());
-        }
-
         const picker = document.getElementById('topic-theory-picker');
         if (picker) {
             picker.addEventListener('change', () => this.syncTopicTheoryContextActions());
         }
 
-        const previewBtn = document.getElementById('topic-theory-preview-btn');
-        if (previewBtn) {
-            previewBtn.addEventListener('click', () => this.refreshTopicTheoryPreview());
+        const relationSelect = document.getElementById('topic-theory-relation');
+        const relationHint = document.getElementById('topic-theory-relation-hint');
+        if (relationSelect && relationHint) {
+            const updateHint = () => {
+                relationHint.textContent = relationSelect.value === 'copy'
+                    ? 'Независимая копия — дальнейшие изменения в теории не попадут в комплекс.'
+                    : 'Связанные комплексы-наследники обновляются автоматически в безопасном режиме.';
+            };
+            relationSelect.addEventListener('change', updateHint);
+            updateHint();
         }
 
         const saveBtn = document.getElementById('topic-theory-save-btn');
@@ -1420,54 +1509,40 @@ class EditorDashboard {
             saveBtn.addEventListener('click', () => this.submitTopicTheoryForm());
         }
 
-        const openHubBtn = document.getElementById('topic-theory-open-hub-btn');
-        if (openHubBtn) {
-            openHubBtn.addEventListener('click', () => {
-                const theoryId = this.getTopicTheoryModalSelectedTheoryId();
-                if (!theoryId) return;
-                const url = `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`;
-                this.closeTopicTheoryModal();
-                if (typeof window.navigateWithTransition === 'function') {
-                    window.navigateWithTransition(url);
-                    return;
+
+        const clearBtn = document.getElementById('topic-theory-clear-btn');
+        if (clearBtn) {
+            clearBtn.addEventListener('click', () => {
+                const picker = document.getElementById('topic-theory-picker');
+                if (picker) {
+                    picker.value = '';
+                    this.syncTopicTheoryContextActions();
                 }
-                window.location.href = url;
             });
+        }
+
+        const createNewBtn = document.getElementById('topic-theory-create-new-btn');
+        if (createNewBtn) {
+            createNewBtn.addEventListener('click', () => this.createAndLinkTopicTheory());
+        }
+
+        const editContentBtn = document.getElementById('topic-theory-edit-content-btn');
+        if (editContentBtn) {
+            editContentBtn.addEventListener('click', () => this.openTopicTheoryEditor());
         }
 
         const openComplexesBtn = document.getElementById('topic-theory-open-complexes-btn');
         if (openComplexesBtn) {
-            openComplexesBtn.addEventListener('click', () => {
-                const theoryId = this.getTopicTheoryModalSelectedTheoryId();
-                if (!theoryId) return;
-                const url = `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
-                this.closeTopicTheoryModal();
-                if (typeof window.navigateWithTransition === 'function') {
-                    window.navigateWithTransition(url);
-                    return;
-                }
-                window.location.href = url;
-            });
+            openComplexesBtn.addEventListener('click', () => this.openTopicTheoryRelatedComplexes());
+        }
+
+        const openCenterBtn = document.getElementById('topic-theory-open-center-btn');
+        if (openCenterBtn) {
+            openCenterBtn.addEventListener('click', () => this.openTopicTheoryCenter());
         }
 
         this.topicTheoryModalBound = true;
-        this.syncTopicTheoryPropagationControls();
         this.syncTopicTheoryContextActions();
-    }
-
-    syncTopicTheoryPropagationControls() {
-        const applyEl = document.getElementById('topic-theory-apply');
-        const dryRunEl = document.getElementById('topic-theory-dry-run');
-        const modeEl = document.getElementById('topic-theory-propagation-mode');
-        const enabled = Boolean(applyEl?.checked);
-        if (dryRunEl) {
-            dryRunEl.disabled = !enabled;
-            dryRunEl.classList.toggle('opacity-60', !enabled);
-        }
-        if (modeEl) {
-            modeEl.disabled = !enabled;
-            modeEl.classList.toggle('opacity-60', !enabled);
-        }
     }
 
     getTopicTheoryModalSelectedTheoryId() {
@@ -1498,31 +1573,210 @@ class EditorDashboard {
 
     syncTopicTheoryContextActions() {
         const theoryId = this.getTopicTheoryModalSelectedTheoryId();
-        const openHubBtn = document.getElementById('topic-theory-open-hub-btn');
-        const openComplexesBtn = document.getElementById('topic-theory-open-complexes-btn');
         const hasTheory = !!theoryId;
-        const note = this.ensureTopicTheoryWorkspaceNote();
-        const noteText = note?.querySelector('#topic-theory-workspace-note-text');
 
-        [openHubBtn, openComplexesBtn].forEach((btn) => {
-            if (!btn) return;
-            btn.classList.toggle('hidden', !hasTheory);
-            btn.disabled = !hasTheory;
-            btn.classList.toggle('opacity-60', !hasTheory);
-        });
+        const infoBlock = document.getElementById('topic-theory-current-info');
+        const emptyBlock = document.getElementById('topic-theory-empty-state');
+        const titleEl = document.getElementById('topic-theory-current-title');
+        const openComplexesBtn = document.getElementById('topic-theory-open-complexes-btn');
+        const workspaceNote = this.ensureTopicTheoryWorkspaceNote();
+        const workspaceNoteText = document.getElementById('topic-theory-workspace-note-text');
 
-        if (noteText) {
-            noteText.textContent = hasTheory
-                ? 'Связь темы живёт в общей библиотеке. Комплексы в режиме Inherit унаследуют этот theory-context, а их прогресс останется личным.'
-                : 'Связь темы хранится в общей библиотеке. Выберите теорию, чтобы комплексы в режиме Inherit получили единый theory-context.';
+        if (infoBlock && emptyBlock) {
+            infoBlock.classList.toggle('hidden', !hasTheory);
+            emptyBlock.classList.toggle('hidden', hasTheory);
         }
+
+        if (hasTheory && titleEl) {
+            // Find title in catalog
+            const theory = this.topicTheoryCatalog?.find(t => t.id === theoryId);
+            titleEl.textContent = theory ? (theory.title || theory.id) : theoryId;
+        }
+
+        // Summary visibility
+        const summaryEl = document.getElementById('topic-theory-propagation-summary');
+        if (summaryEl) {
+            summaryEl.classList.toggle('hidden', !String(summaryEl.textContent || '').trim());
+        }
+
+        if (openComplexesBtn) {
+            openComplexesBtn.classList.toggle('hidden', !hasTheory);
+            openComplexesBtn.disabled = !hasTheory;
+        }
+
+        if (workspaceNote) {
+            workspaceNote.classList.remove('hidden');
+        }
+        if (workspaceNoteText) {
+            workspaceNoteText.textContent = hasTheory
+                ? 'Эта теория живет в общей библиотеке материалов. Комплексы, унаследовавшие тему, будут брать ее как основной источник.'
+                : 'Теории хранятся в общей библиотеке. Вы можете выбрать готовый материал или сначала создать новую теорию.';
+        }
+    }
+
+    showCreateTheoryModal(defaultTitle = '') {
+        return new Promise((resolve) => {
+            const modal = document.getElementById('create-theory-modal');
+            const input = document.getElementById('create-theory-title-input');
+            const confirmBtn = document.getElementById('create-theory-confirm-btn');
+            
+            if (!modal || !input || !confirmBtn) {
+                resolve(null);
+                return;
+            }
+
+            // Set default value
+            input.value = defaultTitle;
+            
+            // Close handlers
+            const closeModal = (result) => {
+                modal.classList.add('closing');
+                setTimeout(() => {
+                    modal.close();
+                    modal.classList.remove('closing');
+                    resolve(result);
+                }, 200);
+            };
+
+            // Confirm handler
+            const handleConfirm = () => {
+                const value = input.value.trim();
+                closeModal(value || null);
+            };
+
+            // Cancel handlers
+            const handleCancel = () => closeModal(null);
+
+            // Enter key handler
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirm();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCancel();
+                }
+            };
+
+            // Attach event listeners
+            confirmBtn.onclick = handleConfirm;
+            input.onkeydown = handleKeyDown;
+            
+            const closeButtons = modal.querySelectorAll('[data-role="create-theory-close"]');
+            closeButtons.forEach(btn => btn.onclick = handleCancel);
+
+            // Show modal
+            modal.showModal();
+            setTimeout(() => input.focus(), 100);
+
+            // Cleanup on close
+            modal.addEventListener('close', () => {
+                confirmBtn.onclick = null;
+                input.onkeydown = null;
+                closeButtons.forEach(btn => btn.onclick = null);
+            }, { once: true });
+        });
+    }
+
+    async createAndLinkTopicTheory() {
+        if (!this.topicTheoryModalState.topicId) return;
+        const topic = this.getTopicRow(this.topicTheoryModalState.moduleId, this.topicTheoryModalState.topicId);
+        const defaultTitle = `${topic?.name || this.topicTheoryModalState.topicId} — Теория`;
+
+        // Show custom modal instead of browser prompt
+        const title = await this.showCreateTheoryModal(defaultTitle);
+        if (!title) return; // Cancelled
+
+        const saveBtn = document.getElementById('topic-theory-save-btn');
+        if (saveBtn) saveBtn.disabled = true;
+
+        try {
+            const resp = await fetch('/api/theories', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    title: title.trim() || defaultTitle,
+                    description: `Автоматически созданная теория для темы ${topic?.name || this.topicTheoryModalState.topicId}`
+                })
+            });
+            const data = await resp.json();
+            if (!resp.ok || !data.ok) throw new Error(data.error || 'Failed to create theory');
+
+            const newTheoryId = data.item.id;
+            
+            // Reload catalog to include the new one
+            await this.loadTopicTheoryCatalog(true);
+
+            // Select it in picker
+            const picker = document.getElementById('topic-theory-picker');
+            if (picker) {
+                picker.value = newTheoryId;
+            }
+
+            this.syncTopicTheoryContextActions();
+            this.setTopicTheorySummary('Теория создана и выбрана. Нажмите «Сохранить» для привязки к теме.', 'success');
+
+        } catch (error) {
+            console.error('Failed to create and link theory:', error);
+            this.setTopicTheorySummary('Ошибка: не удалось создать теорию. Попробуйте снова.', 'error');
+        } finally {
+            if (saveBtn) saveBtn.disabled = false;
+        }
+    }
+
+    openTopicTheoryEditor() {
+        const theoryId = this.getTopicTheoryModalSelectedTheoryId();
+        if (!theoryId) return;
+
+        const moduleId = this.topicTheoryModalState.moduleId;
+        const topicId = this.topicTheoryModalState.topicId;
+        const module = this.catalog.find((item) => item.id === moduleId);
+        const topic = this.getTopicRow(moduleId, topicId);
+        const returnUrl = moduleId || topicId
+            ? `/ui/editor?module=${encodeURIComponent(moduleId || '')}&topic=${encodeURIComponent(topicId || '')}`
+            : '/ui/editor';
+
+        this.closeTopicTheoryModal();
+        this.navigateToTheoryEditor(theoryId, {
+            context: 'topic',
+            moduleId,
+            topicId,
+            moduleName: module?.name || '',
+            topicName: topic?.name || '',
+            returnUrl,
+        });
+    }
+
+    openTopicTheoryRelatedComplexes() {
+        const theoryId = this.getTopicTheoryModalSelectedTheoryId();
+        if (!theoryId) return;
+
+        const url = `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
+        this.closeTopicTheoryModal();
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition(url);
+            return;
+        }
+        window.location.href = url;
+    }
+
+    openTopicTheoryCenter() {
+        const moduleId = this.topicTheoryModalState.moduleId;
+        const topicId = this.topicTheoryModalState.topicId;
+        const topic = this.getTopicRow(moduleId, topicId);
+        this.closeTopicTheoryModal();
+        this.navigateToTheoryCenter({
+            scope: 'topics',
+            moduleId,
+            query: topic?.name || topicId || '',
+        });
     }
 
     setTopicTheorySummary(message, tone = 'muted') {
         const summaryEl = document.getElementById('topic-theory-propagation-summary');
         if (!summaryEl) return;
 
-        summaryEl.textContent = message || 'Preview: -';
+        summaryEl.textContent = message || '';
         summaryEl.classList.remove(
             'text-text-muted',
             'text-text-secondary',
@@ -1542,16 +1796,14 @@ class EditorDashboard {
     }
 
     formatTopicTheorySummary(summary, options = {}) {
-        const isDryRun = options.dryRun !== undefined ? Boolean(options.dryRun) : Boolean(summary?.dry_run);
+        void options;
         const impacted = Number(summary?.impacted_complexes || 0);
         const updated = Number(summary?.updated || 0);
-        const wouldUpdate = Number(summary?.would_update || 0);
         const skipped = Number(summary?.skipped || 0);
+        const compositeCount = Number(summary?.composite_count || 0);
         const mode = String(summary?.mode || 'safe');
-        if (isDryRun) {
-            return `Preview (${mode}): затронуто ${impacted}, будет обновлено ${wouldUpdate}, без изменений ${skipped}.`;
-        }
-        return `Синхронизация (${mode}): затронуто ${impacted}, обновлено ${updated}, без изменений ${skipped}.`;
+        const compositeSuffix = compositeCount > 0 ? `, составных наборов ${compositeCount}` : '';
+        return `Обновление комплексов (${mode}): затронуто ${impacted}, обновлено ${updated}, без изменений ${skipped}${compositeSuffix}.`;
     }
 
     async loadTopicTheoryCatalog(force = false) {
@@ -1600,16 +1852,52 @@ class EditorDashboard {
     closeTopicTheoryModal() {
         const modal = document.getElementById('topic-theory-modal');
         if (!modal) return;
-        const content = modal.querySelector('.bg-surface-1');
-        if (content) content.classList.remove('animate-scale-in');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
-        this.topicTheoryModalState = {
-            moduleId: null,
-            topicId: null,
-            loading: false,
-            saving: false,
+
+        let handleEnd = null;
+
+        const handleClose = () => {
+            if (typeof modal.close === 'function') {
+                try {
+                    modal.close();
+                } catch (error) {
+                    console.warn('[Dashboard] Failed to close topic theory dialog', error);
+                }
+            }
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            modal.classList.remove('closing');
+            this.topicTheoryModalState = {
+                moduleId: null,
+                topicId: null,
+                loading: false,
+                saving: false,
+            };
+            if (handleEnd) {
+                modal.removeEventListener('animationend', handleEnd);
+            }
         };
+
+        if (typeof modal.close !== 'function' || !modal.open) {
+            handleClose();
+            return;
+        }
+
+        modal.classList.add('closing');
+
+        handleEnd = (event) => {
+            if (event.animationName === 'scaleOut') {
+                handleClose();
+            }
+        };
+
+        modal.addEventListener('animationend', handleEnd);
+        
+        // Timer fallback in case animationend fails
+        setTimeout(() => {
+            if (modal.classList.contains('closing')) {
+                handleClose();
+            }
+        }, 300);
     }
 
     async showTopicTheoryModal(moduleId, topicId) {
@@ -1624,9 +1912,6 @@ class EditorDashboard {
         const metaEl = document.getElementById('topic-theory-meta');
         const picker = document.getElementById('topic-theory-picker');
         const relationEl = document.getElementById('topic-theory-relation');
-        const applyEl = document.getElementById('topic-theory-apply');
-        const dryRunEl = document.getElementById('topic-theory-dry-run');
-        const modeEl = document.getElementById('topic-theory-propagation-mode');
 
         this.topicTheoryModalState = {
             moduleId,
@@ -1640,16 +1925,13 @@ class EditorDashboard {
             const topicLabel = topic?.name || topicId;
             metaEl.textContent = `${moduleLabel} / ${topicLabel}`;
         }
-        if (applyEl) applyEl.checked = false;
-        if (dryRunEl) dryRunEl.checked = true;
-        if (modeEl) modeEl.value = 'safe';
-        this.syncTopicTheoryPropagationControls();
-        this.setTopicTheorySummary('Preview: загружаем текущее состояние темы...', 'info');
+        this.setTopicTheorySummary('Загружаем текущее состояние темы...', 'info');
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        const content = modal.querySelector('.bg-surface-1');
-        if (content) content.classList.add('animate-scale-in');
+        if (typeof modal.showModal === 'function' && !modal.open) {
+            modal.showModal();
+        }
 
         await this.loadTopicTheoryCatalog(false);
 
@@ -1681,7 +1963,7 @@ class EditorDashboard {
             if (data.propagation_preview) {
                 this.setTopicTheorySummary(this.formatTopicTheorySummary(data.propagation_preview), 'muted');
             } else {
-                this.setTopicTheorySummary('Preview: данных о связанных комплексах нет.', 'muted');
+                this.setTopicTheorySummary('Нет данных о связанных комплексах.', 'muted');
             }
         } catch (error) {
             console.error('[Dashboard] Failed to load topic theory link', error);
@@ -1695,29 +1977,6 @@ class EditorDashboard {
             });
         } finally {
             this.topicTheoryModalState.loading = false;
-        }
-    }
-
-    async refreshTopicTheoryPreview() {
-        const moduleId = this.topicTheoryModalState.moduleId;
-        const topicId = this.topicTheoryModalState.topicId;
-        if (!moduleId || !topicId) return;
-        this.setTopicTheorySummary('Preview: обновляем...', 'info');
-        try {
-            const response = await fetch(
-                `/api/editor/topic/${encodeURIComponent(moduleId)}/${encodeURIComponent(topicId)}/theory-link`
-            );
-            const data = await response.json();
-            if (!response.ok || !data?.ok) {
-                throw new Error(data?.error || `HTTP ${response.status}`);
-            }
-            this.setTopicTheorySummary(
-                this.formatTopicTheorySummary(data.propagation_preview || {}),
-                'muted'
-            );
-        } catch (error) {
-            console.error('[Dashboard] Failed to refresh topic theory preview', error);
-            this.setTopicTheorySummary('Preview недоступен: ошибка загрузки.', 'error');
         }
     }
 
@@ -1738,17 +1997,11 @@ class EditorDashboard {
         if (!moduleId || !topicId || this.topicTheoryModalState.saving) return;
 
         const saveBtn = document.getElementById('topic-theory-save-btn');
-        const previewBtn = document.getElementById('topic-theory-preview-btn');
-        const applyEl = document.getElementById('topic-theory-apply');
-        const dryRunEl = document.getElementById('topic-theory-dry-run');
-        const modeEl = document.getElementById('topic-theory-propagation-mode');
-
-        const applyToComplexes = Boolean(applyEl?.checked);
         const payload = {
             theory_link: this.buildTopicTheoryLinkFromModal(),
-            apply_to_complexes: applyToComplexes,
-            dry_run: applyToComplexes ? Boolean(dryRunEl?.checked) : false,
-            propagation_mode: applyToComplexes ? String(modeEl?.value || 'safe') : 'safe',
+            apply_to_complexes: true,
+            dry_run: false,
+            propagation_mode: 'safe',
         };
 
         this.topicTheoryModalState.saving = true;
@@ -1756,7 +2009,6 @@ class EditorDashboard {
             saveBtn.disabled = true;
             saveBtn.classList.add('opacity-70');
         }
-        if (previewBtn) previewBtn.disabled = true;
         this.setTopicTheorySummary('Сохраняем...', 'info');
 
         try {
@@ -1773,14 +2025,14 @@ class EditorDashboard {
                 throw new Error(data?.error || `HTTP ${response.status}`);
             }
 
-            if (applyToComplexes && data.propagation && data.propagation.summary) {
+            if (data.propagation && data.propagation.summary) {
                 const summary = data.propagation.summary;
-                const conflictCount = Array.isArray(data.propagation.items)
-                    ? data.propagation.items.filter((row) => row && row.status === 'conflict').length
+                const compositeCount = Array.isArray(data.propagation.items)
+                    ? data.propagation.items.filter((row) => row && row.status === 'composite').length
                     : 0;
-                const tone = conflictCount > 0 ? 'warning' : (payload.dry_run ? 'info' : 'success');
+                const tone = compositeCount > 0 ? 'info' : 'success';
                 this.setTopicTheorySummary(
-                    this.formatTopicTheorySummary(summary, { dryRun: payload.dry_run }),
+                    this.formatTopicTheorySummary(summary),
                     tone
                 );
             } else {
@@ -1788,17 +2040,17 @@ class EditorDashboard {
             }
 
             await this.loadCatalog();
+            const propagationItems = Array.isArray(data?.propagation?.items) ? data.propagation.items : [];
+            const compositeCount = propagationItems.filter((row) => row && row.status === 'composite').length;
             this.showVoiceToast({
-                severity: applyToComplexes && payload.dry_run ? 'info' : 'success',
+                severity: compositeCount > 0 ? 'info' : 'success',
                 what: 'Связь темы с теорией сохранена.',
-                impact: applyToComplexes
-                    ? (payload.dry_run
-                        ? 'Синхронизация по комплексам выполнена в режиме preview, данные не изменены.'
-                        : 'Связанные комплексы синхронизированы по выбранным правилам.')
-                    : 'Изменение применено только к теме.',
-                next: payload.dry_run
-                    ? 'Проверьте summary и запустите синхронизацию без dry-run при необходимости.'
-                    : 'Можно закрыть окно и продолжить работу в редакторе.',
+                impact: compositeCount > 0
+                    ? 'Связанные комплексы синхронизированы; часть из них теперь использует составной набор теорий.'
+                    : 'Связанные комплексы-наследники синхронизированы автоматически.',
+                next: compositeCount > 0
+                    ? 'Многотемные комплексы могут иметь несколько теорий одновременно. Это нормальный сценарий.'
+                    : 'Настройки темы успешно обновлены.',
             });
             this.closeTopicTheoryModal();
         } catch (error) {
@@ -1816,7 +2068,6 @@ class EditorDashboard {
                 saveBtn.disabled = false;
                 saveBtn.classList.remove('opacity-70');
             }
-            if (previewBtn) previewBtn.disabled = false;
         }
     }
 
@@ -1880,15 +2131,15 @@ class EditorDashboard {
 
             const propagationSummary = saveData?.propagation?.summary || null;
             const propagationItems = Array.isArray(saveData?.propagation?.items) ? saveData.propagation.items : [];
-            const conflictCount = propagationItems.filter((row) => row && row.status === 'conflict').length;
+            const compositeCount = propagationItems.filter((row) => row && row.status === 'composite').length;
             this.showVoiceToast({
-                severity: conflictCount > 0 ? 'warning' : 'success',
+                severity: compositeCount > 0 ? 'info' : 'success',
                 what: 'Привязка теории темы синхронизирована.',
                 impact: propagationSummary
                     ? this.formatTopicTheorySummary(propagationSummary, { dryRun: false })
                     : 'Связанные комплексы получили актуальную версию привязки.',
-                next: conflictCount > 0
-                    ? 'Откройте теорию темы и проверьте комплексы со статусом conflict.'
+                next: compositeCount > 0
+                    ? 'Часть комплексов использует несколько теорий по темам. Это нормальный составной режим.'
                     : 'Можно продолжать работу в редакторе.',
             });
 
@@ -2031,8 +2282,12 @@ class EditorDashboard {
             this.theoryHubState.focusTheoryId = requestedFocus;
         }
 
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        if (typeof modal.showModal === 'function') {
+            modal.showModal();
+        } else {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
 
         const searchEl = document.getElementById('theory-hub-search');
         if (searchEl) {
@@ -2045,16 +2300,37 @@ class EditorDashboard {
     closeTheoryHub() {
         const modal = document.getElementById('theory-hub-modal');
         if (!modal) return;
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+
+        if (typeof modal.close !== 'function') {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            return;
+        }
+
+        modal.classList.add('closing');
+        const handleEnd = (event) => {
+            if (event.animationName === 'scaleOut') {
+                modal.removeEventListener('animationend', handleEnd);
+                modal.close();
+                modal.classList.remove('closing');
+            }
+        };
+        modal.addEventListener('animationend', handleEnd);
+        
+        // Fallback
+        setTimeout(() => {
+             if (modal.classList.contains('closing')) {
+                modal.removeEventListener('animationend', handleEnd);
+                modal.close();
+                modal.classList.remove('closing');
+             }
+        }, 400);
     }
 
     readTheoryHubSyncOptions() {
-        const modeEl = document.getElementById('theory-hub-propagation-mode');
-        const dryRunEl = document.getElementById('theory-hub-dry-run');
         return {
-            propagationMode: String(modeEl?.value || 'safe'),
-            dryRun: Boolean(dryRunEl?.checked),
+            propagationMode: 'safe',
+            dryRun: false,
         };
     }
 
@@ -3160,16 +3436,14 @@ class EditorDashboard {
             const propagationItems = Array.isArray(saveData?.propagation?.items) ? saveData.propagation.items : [];
             const conflictCount = propagationItems.filter((row) => row && row.status === 'conflict').length;
             if (!silent) {
-                const severity = dryRun ? 'info' : (conflictCount > 0 ? 'warning' : 'success');
+                const severity = conflictCount > 0 ? 'warning' : 'success';
                 this.showVoiceToast({
                     severity,
-                    what: dryRun ? 'Preview sync темы завершен.' : 'Sync темы выполнен.',
+                    what: 'Sync темы выполнен.',
                     impact: propagationSummary
-                        ? this.formatTopicTheorySummary(propagationSummary, { dryRun })
+                        ? this.formatTopicTheorySummary(propagationSummary)
                         : 'Связанные комплексы получили обновления.',
-                    next: dryRun
-                        ? 'Отключите dry-run для применения.'
-                        : (conflictCount > 0 ? 'Проверьте complex entries со статусом conflict.' : 'Можно продолжать работу.'),
+                    next: conflictCount > 0 ? 'Проверьте complex entries со статусом conflict.' : 'Можно продолжать работу.',
                 });
             }
 
@@ -3238,12 +3512,10 @@ class EditorDashboard {
                 const status = String(summary?.status || 'none');
                 const severity = status === 'conflict'
                     ? 'warning'
-                    : (dryRun ? 'info' : 'success');
+                    : 'success';
                 this.showVoiceToast({
                     severity,
-                    what: dryRun
-                        ? `Preview sync комплекса ${complexId} завершен.`
-                        : `Sync комплекса ${complexId} выполнен.`,
+                    what: `Sync комплекса ${complexId} выполнен.`,
                     impact: `Статус: ${status}, action: ${action || 'none'}${reason ? `, reason: ${reason}` : ''}.`,
                     next: status === 'conflict'
                         ? 'Проверьте темы комплекса и выровняйте theory-link.'
@@ -3326,16 +3598,14 @@ class EditorDashboard {
             await this.refreshTheoryHubData();
             const severity = failedCount > 0
                 ? 'warning'
-                : (options.dryRun ? 'info' : (conflictCount > 0 ? 'warning' : 'success'));
+                : (conflictCount > 0 ? 'warning' : 'success');
             this.showVoiceToast({
                 severity,
-                what: options.dryRun ? 'Sync all preview завершен.' : 'Sync all выполнен.',
+                what: 'Sync all выполнен.',
                 impact: `Тем обработано: ${topicRows.length}, успешно: ${successCount}, пропущено (без теории): ${skippedNoTheoryCount}, с ошибками: ${failedCount}, conflicts: ${conflictCount}.`,
                 next: failedCount > 0
                     ? 'Проверьте лог и повторите sync для проблемных тем.'
-                    : (options.dryRun
-                        ? 'Отключите dry-run для применения изменений.'
-                        : 'Theory Hub обновлен по текущему состоянию.'),
+                    : 'Theory Hub обновлен по текущему состоянию.',
             });
         } finally {
             syncAllBtn.disabled = false;
@@ -3400,14 +3670,12 @@ class EditorDashboard {
             this.showVoiceToast({
                 severity: failedCount > 0
                     ? 'warning'
-                    : (effectiveOptions.dryRun ? 'info' : (conflictCount > 0 ? 'warning' : 'success')),
+                    : (conflictCount > 0 ? 'warning' : 'success'),
                 what: effectiveOptions.propagationMode === 'all_force'
                     ? 'Force resolve очереди завершён.'
                     : 'Batch sync очереди завершён.',
                 impact: `Обработано complexes: ${candidateIds.length}, успех: ${successCount}, conflicts: ${conflictCount}, errors: ${failedCount}.`,
-                next: effectiveOptions.dryRun
-                    ? 'Отключите dry-run, чтобы применить изменения.'
-                    : 'Theory Hub обновлён по текущему состоянию.',
+                next: 'Theory Hub обновлён по текущему состоянию.',
             });
         } finally {
             toggleTargets.forEach((btn) => {
@@ -3476,7 +3744,9 @@ class EditorDashboard {
                 theoryTitle: String(theoryRow?.title || normalizedTheoryId).trim() || normalizedTheoryId,
                 complexId,
                 origin: 'editor_theory_hub',
-                returnUrl: `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(normalizedTheoryId)}`,
+                returnUrl: this.buildTheoryEditorUrl(normalizedTheoryId, {
+                    returnUrl: '/ui/editor',
+                }),
             });
             if (typeof window.navigateWithTransition === 'function') {
                 window.navigateWithTransition(`/ui/session/${encodeURIComponent(sessionId)}`);
@@ -3488,7 +3758,7 @@ class EditorDashboard {
             this.showVoiceToast({
                 severity: 'error',
                 what: 'Старт тренировки не выполнен.',
-                impact: 'Сценарий «из теории в complexВ» не состоялся.',
+                impact: 'Сценарий «из теории в complex» не состоялся.',
                 next: 'Проверьте complex entry и повторите запуск.',
             });
         }
@@ -3556,7 +3826,7 @@ class EditorDashboard {
 
     async createNewTask(module_id, topic_id, task_name, task_type) {
         try {
-            const response = await fetch('/api/editor/task/new', {
+            const response = await fetch('/api/editor/task/bootstrap', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -3569,13 +3839,14 @@ class EditorDashboard {
 
             const data = await response.json();
             if (data.ok) {
-                console.log("Task created:", data.task_id);
-                // Reload catalog and re-render
-                await this.loadCatalog();
-                this.renderSidebar();
-
-                // Switch to editor
-                window.navigateWithTransition(this.getEditorUrl(task_type, module_id, topic_id, data.task_id, true));
+                this.storeTaskBootstrap(module_id, topic_id, data.task_id, data.task);
+                window.navigateWithTransition(
+                    this.getEditorUrl(task_type, module_id, topic_id, data.task_id, {
+                        isNew: true,
+                        taskType: task_type,
+                        taskName: task_name,
+                    })
+                );
             } else {
                 this.showVoiceToast({
                     severity: 'error',
@@ -3595,7 +3866,7 @@ class EditorDashboard {
         }
     }
 
-    getEditorUrl(type, module, topic, id, isNew = false) {
+    getEditorUrl(type, module, topic, id, options = false) {
         let editorPage = '';
         if (type === 'click' || type === 'click_task') editorPage = 'Point_Annotation.html';
         if (type === 'draw' || type === 'draw_task') editorPage = 'Point_Annotation.html';
@@ -3603,8 +3874,29 @@ class EditorDashboard {
         if (type === 'sequence_assembly') editorPage = 'Sequence Assembly Editor Procedural Steps.html';
         if (type === 'open_answer') editorPage = 'Open Answer Editor Textual Reasoning.html';
 
-        const newFlag = isNew ? '&new=1' : '';
-        return `${editorPage}?module=${module}&topic=${topic}&task=${id}${newFlag}`;
+        const normalizedOptions = typeof options === 'boolean' ? { isNew: options } : (options || {});
+        const params = new URLSearchParams({
+            module,
+            topic,
+            task: id,
+        });
+        if (normalizedOptions.isNew) {
+            params.set('new', '1');
+        }
+        if (normalizedOptions.taskType) {
+            params.set('task_type', normalizedOptions.taskType);
+        }
+        if (normalizedOptions.taskName) {
+            params.set('task_name', normalizedOptions.taskName);
+        }
+        if (normalizedOptions.restoreDraft) {
+            params.set('restore_draft', '1');
+        }
+        if (!editorPage) {
+            return '';
+        }
+        const encodedEditorPage = encodeURIComponent(editorPage);
+        return `/ui/editor/${encodedEditorPage}?${params.toString()}`;
     }
 
     renderSidebar() {
@@ -3624,7 +3916,7 @@ class EditorDashboard {
             hint.innerHTML = `
                 <span class="material-symbols-outlined text-2xl text-text-disabled">folder_open</span>
                 <p class="editor-sidebar-empty-copy text-xs font-medium">Модулей пока нет.</p>
-                <p class="editor-sidebar-empty-copy text-xs">Нажмите В«+В» чтобы создать первый модуль</p>
+                <p class="editor-sidebar-empty-copy text-xs">Нажмите «+» чтобы создать первый модуль</p>
             `;
             navContainer.appendChild(hint);
         }
@@ -3648,19 +3940,19 @@ class EditorDashboard {
                 module.topics.forEach(topic => {
                     if (topic.tasks) {
                         topic.tasks.forEach(task => {
-                            allTasks.push({
-                                ...task,
+                            allTasks.push(this.normalizeCatalogTask(task, {
                                 moduleId: module.id,
                                 moduleName: module.name || module.id,
                                 topicId: topic.id,
                                 topicName: topic.name || topic.id,
                                 created_at: task.created_at || task.createdAt || task.meta?.created_at
-                            });
+                            }));
                         });
                     }
                 });
             }
         });
+        allTasks.push(...this.collectDraftOnlyTasks());
         return allTasks;
     }
 
@@ -3672,6 +3964,7 @@ class EditorDashboard {
         const isFiltered = Array.isArray(tasks);
         const sourceTasks = tasks ?? this.collectAllTasks();
         const tasksToRender = this.sortTasks(sourceTasks);
+        const taskDraftIds = this.collectTaskDraftIds();
 
         gridContainer.innerHTML = '';
         if (addBtn) {
@@ -3681,7 +3974,7 @@ class EditorDashboard {
         if (!tasksToRender.length) {
             const emptyCard = this.createEmptyStateCard(
                 isFiltered && this.currentSearchQuery
-                    ? `По запросу В«${this.currentSearchQuery.trim()}В» ничего не найдено`
+                    ? `По запросу «${this.currentSearchQuery.trim()}» ничего не найдено`
                     : 'Задания не найдены'
             );
             gridContainer.appendChild(emptyCard);
@@ -3689,7 +3982,10 @@ class EditorDashboard {
         }
 
         tasksToRender.forEach(task => {
-            const card = this.createTaskCard(task);
+            const uniqueId = this.makeTaskUniqueId(task.moduleId, task.topicId, task.id);
+            const card = this.createTaskCard(task, {
+                hasDraft: taskDraftIds.has(uniqueId),
+            });
             gridContainer.appendChild(card);
         });
     }
@@ -3709,13 +4005,13 @@ class EditorDashboard {
         this.updateHeaderBreadcrumbs();
         this.updateUrlState();
 
-        const topicTasks = (topic.tasks || []).map(task => ({
-            ...task,
+        const topicTasks = (topic.tasks || []).map(task => this.normalizeCatalogTask(task, {
             moduleId: module.id,
             moduleName: module.name || module.id,
             topicId: topic.id,
             topicName: topic.name || topic.id
         }));
+        topicTasks.push(...this.collectDraftOnlyTasks({ moduleId: module.id, topicId: topic.id }));
 
         this.renderGrid(topicTasks);
     }
@@ -3732,23 +4028,25 @@ class EditorDashboard {
         this.updateUrlState();
 
         const moduleTasks = (module.topics || []).flatMap(topic =>
-            (topic.tasks || []).map(task => ({
-                ...task,
+            (topic.tasks || []).map(task => this.normalizeCatalogTask(task, {
                 moduleId: module.id,
                 moduleName: module.name || module.id,
                 topicId: topic.id,
                 topicName: topic.name || topic.id
             }))
         );
+        moduleTasks.push(...this.collectDraftOnlyTasks({ moduleId: module.id }));
 
         this.renderGrid(moduleTasks);
     }
 
-    createTaskCard(task) {
+    createTaskCard(task, options = {}) {
         const article = document.createElement('article');
         const isErrorDetection = this.isErrorDetectionTask(task);
         const baseCardClasses = 'group rounded-xl p-5 flex flex-col h-[200px] border transition-all hover:shadow-xl hover:translate-y-[-4px] relative animate-slide-up shadow-sm cursor-pointer task-card';
         const cardTheme = 'bg-surface-2 border-border-subtle hover:border-primary';
+        const hasDraft = Boolean(options.hasDraft);
+        const isDraftOnly = Boolean(task.isDraftOnly);
 
         // Check selection state
         const uniqueId = `${task.moduleId}:${task.topicId}:${task.id}`;
@@ -3778,40 +4076,46 @@ class EditorDashboard {
         const errorBadgeClass = isDark
             ? 'bg-error-dark text-error-lighter ring-1 ring-inset ring-error-lighter'
             : 'bg-error-light text-error-darker ring-1 ring-inset ring-error-darker';
+        const draftBadgeClass = 'border border-warning-light bg-warning-lighter text-warning-darker';
 
         article.innerHTML = `
-            <div class="absolute top-3 left-3 z-10">
-                <button type="button" data-action="favorite-task"
-                    class="h-8 w-8 inline-flex items-center justify-center rounded-lg border ${isFavorite ? 'border-warning bg-warning-light text-warning-dark' : 'border-border-subtle bg-surface-1 text-text-disabled'} hover:border-warning hover:text-warning transition-colors">
-                    <span class="material-symbols-outlined text-[17px]">${isFavorite ? 'star' : 'star_outline'}</span>
-                </button>
-            </div>
-            <div class="absolute top-3 right-3 z-10 ${this.selectionMode ? 'block' : 'hidden group-hover:block'}">
-                <input type="checkbox" 
-                    class="w-5 h-5 text-primary rounded border-border-strong focus:ring-primary task-checkbox transition-transform hover:scale-110"
-                    ${isSelected ? 'checked' : ''}
-                >
-            </div>
-        
-            <div class="flex justify-between items-start mb-3">
-                <div class="flex gap-2">
-                    <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${typeClass}">
-                        ${safeTypeLabel}
-                    </span>
-                    ${isErrorDetection ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${errorBadgeClass}">
-                        <span class="material-symbols-outlined leading-none" style="font-size: 18px;">bug_report</span>
-                        Ошибки
-                    </span>` : ""}
+            <div class="flex justify-between items-start mb-3 gap-3">
+                <div class="flex items-start gap-2 flex-1 min-w-0">
+                    <button type="button" data-action="favorite-task"
+                        class="h-8 w-8 inline-flex shrink-0 items-center justify-center rounded-lg border ${isFavorite ? 'border-warning bg-warning-light text-warning-dark' : 'border-border-subtle bg-surface-1 text-text-disabled'} hover:border-warning hover:text-warning transition-colors">
+                        <span class="material-symbols-outlined text-[17px]">${isFavorite ? 'star' : 'star_outline'}</span>
+                    </button>
+                    <div class="flex flex-wrap gap-1.5 pt-1">
+                        <span class="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${typeClass}">
+                            ${safeTypeLabel}
+                        </span>
+                        ${hasDraft ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${draftBadgeClass}">
+                            <span class="material-symbols-outlined leading-none" style="font-size: 16px;">edit_note</span>
+                            Черновик
+                        </span>` : ""}
+                        ${isErrorDetection ? `<span class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${errorBadgeClass}">
+                            <span class="material-symbols-outlined leading-none" style="font-size: 18px;">bug_report</span>
+                            Ошибки
+                        </span>` : ""}
+                    </div>
                 </div>
-                <div class="status-indicator-published" title="Published"></div>
+                <div class="flex items-center gap-3 shrink-0">
+                    <div class="${isDraftOnly ? 'w-2.5 h-2.5 rounded-full bg-warning ring-2 ring-warning-light' : 'status-indicator-published'}" title="${isDraftOnly ? 'Только локальный черновик' : 'Published'}"></div>
+                    <div class="${this.selectionMode ? 'block' : 'hidden group-hover:block'}">
+                        <input type="checkbox" 
+                            class="w-5 h-5 text-primary rounded border-border-strong focus:ring-primary task-checkbox transition-transform hover:scale-110"
+                            ${isSelected ? 'checked' : ''}
+                        >
+                    </div>
+                </div>
             </div>
-            <div class="flex-1">
-                <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer">${safeTaskName}</h3>
-                <p class="text-text-secondary text-xs font-medium">Создано ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` В· Изм. ${updatedLabel}` : ''}</p>
+            <div class="flex-1 min-w-0">
+                <h3 class="editor-task-card-title text-text-main text-lg font-bold mb-2 group-hover:text-primary transition-colors cursor-pointer truncate">${safeTaskName}</h3>
+                <p class="text-text-secondary text-xs font-medium truncate">Создано ${createdLabel}${updatedLabel && updatedLabel !== createdLabel ? ` В· Изм. ${updatedLabel}` : ''}</p>
             </div>
             <div class="flex gap-2 mt-4 flex-wrap items-center">
-                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal">${safeModuleLabel}</span>
-                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal">${safeTopicLabel}</span>
+                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal whitespace-nowrap">${safeModuleLabel}</span>
+                <span class="editor-task-card-chip inline-flex items-center rounded bg-surface-1 px-2 py-1 text-xs font-medium text-text-secondary border-2 border-border-normal whitespace-nowrap">${safeTopicLabel}</span>
             </div>
         `;
 
@@ -3846,8 +4150,12 @@ class EditorDashboard {
                 checkbox.checked = !checkbox.checked;
                 this.handleTaskSelection(uniqueId, checkbox.checked, e.shiftKey);
             } else {
-                // Normal navigation
-                this.loadTask(task.moduleId, task.topicId, task.id);
+                this.openTaskEntry(
+                    { ...task, hasDraft },
+                    task.moduleId,
+                    task.topicId,
+                    { preferDraft: hasDraft }
+                );
             }
         });
 
@@ -3860,7 +4168,7 @@ class EditorDashboard {
         const safeMessage = this.escapeHtml(message);
         const safeQuery = this.escapeHtml(this.currentSearchQuery.trim());
         const details = this.currentSearchQuery && this.currentSearchQuery.trim()
-            ? `<p class="editor-grid-empty-detail text-xs">Запрос: В«${this.currentSearchQuery.trim()}В»</p>`
+            ? `<p class="editor-grid-empty-detail text-xs">Запрос: «${this.currentSearchQuery.trim()}»</p>`
             : '';
         const safeDetails = details && this.currentSearchQuery
             ? details.replace(this.currentSearchQuery.trim(), safeQuery)
@@ -3874,7 +4182,7 @@ class EditorDashboard {
     }
 
     formatCreatedDate(value) {
-        if (!value) return 'вЂ”';
+        if (!value) return '—';
         const date = new Date(value);
         if (Number.isNaN(date.getTime())) {
             return value;
@@ -4004,7 +4312,7 @@ class EditorDashboard {
             label: task.type || 'Task',
             className: isDark
                 ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
-                : 'bg-info-light text-info-darker ring-1 ring-inset ring-info-darker'
+                : 'bg-info-light text-info ring-1 ring-inset ring-info'
         };
 
         if (task.type === 'click' || task.type === 'click_task') {
@@ -4012,7 +4320,7 @@ class EditorDashboard {
                 label: 'Клик',
                 className: isDark
                     ? 'bg-secondary-dark text-secondary-lighter ring-1 ring-inset ring-secondary-lighter'
-                    : 'bg-secondary-light text-secondary-darker ring-1 ring-inset ring-secondary-darker'
+                    : 'bg-secondary-light text-secondary ring-1 ring-inset ring-secondary'
             };
         }
         if (task.type === 'draw' || task.type === 'draw_task') {
@@ -4020,7 +4328,7 @@ class EditorDashboard {
                 label: 'Рисование',
                 className: isDark
                     ? 'bg-success-dark text-success-lighter ring-1 ring-inset ring-success-lighter'
-                    : 'bg-success-light text-success-darker ring-1 ring-inset ring-success-darker'
+                    : 'bg-success-light text-success ring-1 ring-inset ring-success'
             };
         }
         if (task.type === 'test') {
@@ -4028,7 +4336,7 @@ class EditorDashboard {
                 label: 'Тест',
                 className: isDark
                     ? 'bg-warning-dark text-warning-lighter ring-1 ring-inset ring-warning-lighter'
-                    : 'bg-warning-light text-warning-darker ring-1 ring-inset ring-warning-darker'
+                    : 'bg-warning-light text-warning ring-1 ring-inset ring-warning'
             };
         }
         if (task.type === 'sequence_assembly') {
@@ -4036,7 +4344,7 @@ class EditorDashboard {
                 label: 'Последовательность',
                 className: isDark
                     ? 'bg-primary-dark text-primary-lighter ring-1 ring-inset ring-primary-lighter'
-                    : 'bg-primary-lighter text-primary-darker ring-1 ring-inset ring-primary-darker'
+                    : 'bg-primary-lighter text-primary ring-1 ring-inset ring-primary'
             };
         }
         if (task.type === 'open_answer') {
@@ -4044,7 +4352,7 @@ class EditorDashboard {
                 label: 'Открытый ответ',
                 className: isDark
                     ? 'bg-info-dark text-info-lighter ring-1 ring-inset ring-info-lighter'
-                    : 'bg-info-light text-info-darker ring-1 ring-inset ring-info-darker'
+                    : 'bg-info-light text-info ring-1 ring-inset ring-info'
             };
         }
         return base;
@@ -4320,10 +4628,10 @@ class EditorDashboard {
 
         // Add "New Topic" button at the bottom of children
         const addTopicBtn = document.createElement('button');
-        addTopicBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-1.5 text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
+        addTopicBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTopicBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Добавить тему</span>
+            <span class="editor-sidebar-tree-label text-sm font-medium">Добавить тему</span>
         `;
         addTopicBtn.onclick = (e) => {
             e.stopPropagation();
@@ -4344,7 +4652,7 @@ class EditorDashboard {
         const theoryId = theoryLink && typeof theoryLink.theory_id === 'string' ? theoryLink.theory_id : '';
         const hasTheoryLink = Boolean(theoryId);
         const theoryBadge = hasTheoryLink
-            ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary-light bg-primary-lighter text-primary-darker" title="У темы есть привязка к теории"><span class="material-symbols-outlined text-[13px]">menu_book</span></span>'
+            ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full border border-primary-light bg-primary-lighter text-primary" title="У темы есть привязка к теории"><span class="material-symbols-outlined text-[13px]">menu_book</span></span>'
             : '';
 
         const button = document.createElement('button');
@@ -4378,7 +4686,7 @@ class EditorDashboard {
             syncTheoryAction.dataset.topicId = topic.id;
             syncTheoryAction.addEventListener('click', (event) => {
                 event.stopPropagation();
-                this.syncTopicTheoryToComplexes(moduleId, topic.id, syncTheoryAction);
+                this.showSyncTheoryConfirmation(moduleId, topic.id, syncTheoryAction, topic.name);
             });
 
             const theoryAction = document.createElement('span');
@@ -4410,10 +4718,23 @@ class EditorDashboard {
 
         if (topic.tasks && topic.tasks.length > 0) {
             topic.tasks.forEach(task => {
-                const taskEl = this.createTaskElement(task, moduleId, topic.id);
+                const taskEl = this.createTaskElement(
+                    this.normalizeCatalogTask(task, {
+                        moduleId,
+                        moduleName: this.catalog.find((m) => m.id === moduleId)?.name || moduleId,
+                        topicId: topic.id,
+                        topicName: topic.name || topic.id,
+                    }),
+                    moduleId,
+                    topic.id
+                );
                 tasksContainer.appendChild(taskEl);
             });
         }
+        this.collectDraftOnlyTasks({ moduleId, topicId: topic.id }).forEach((task) => {
+            const draftTaskEl = this.createTaskElement(task, moduleId, topic.id);
+            tasksContainer.appendChild(draftTaskEl);
+        });
 
         const toggleTasks = () => {
             const isHidden = tasksContainer.classList.contains('hidden');
@@ -4459,10 +4780,10 @@ class EditorDashboard {
 
         // Add "New Task" button at the bottom of tasks
         const addTaskBtn = document.createElement('button');
-        addTaskBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-1.5 text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
+        addTaskBtn.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-primary hover:bg-bg-hover rounded-lg transition-all w-full text-left mt-1';
         addTaskBtn.innerHTML = `
             <span class="material-symbols-outlined text-[18px]">add_circle</span>
-            <span class="editor-sidebar-tree-label text-[11px] font-bold uppercase tracking-wider">Добавить задание</span>
+            <span class="editor-sidebar-tree-label text-sm font-medium">Добавить задание</span>
         `;
         addTaskBtn.onclick = (e) => {
             e.stopPropagation();
@@ -4483,7 +4804,7 @@ class EditorDashboard {
 
     createTaskElement(task, moduleId, topicId) {
         const button = document.createElement('button');
-        const baseClasses = 'editor-sidebar-tree-button flex items-center gap-2 px-3 py-2 rounded-lg w-full text-left transition-colors';
+        const baseClasses = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] rounded-lg w-full text-left transition-colors';
         const tone = 'text-text-secondary hover:text-text-main hover:bg-bg-hover';
         button.className = `${baseClasses} ${tone}`;
 
@@ -4497,11 +4818,12 @@ class EditorDashboard {
 
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">${icon}</span>
-            <span class="editor-sidebar-tree-label truncate text-sm font-normal flex-1">${task.name || task.id}</span>
+            <span class="editor-sidebar-tree-label truncate text-sm font-medium flex-1">${task.name || task.id}</span>
+            ${task.isDraftOnly ? '<span class="inline-flex h-5 items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-1.5 py-0 text-[10px] font-semibold leading-none text-warning-darker">Черновик</span>' : ''}
         `;
 
         button.addEventListener('click', () => {
-            this.loadTask(moduleId, topicId, task.id);
+            this.openTaskEntry(task, moduleId, topicId);
         });
 
         return button;
@@ -4587,7 +4909,7 @@ class EditorDashboard {
         }
     }
 
-    async loadTask(moduleId, topicId, taskId) {
+    async loadTask(moduleId, topicId, taskId, options = {}) {
         try {
             const response = await fetch(`/api/editor/task/${moduleId}/${topicId}/${taskId}`);
             const data = await response.json();
@@ -4605,7 +4927,7 @@ class EditorDashboard {
                     topicName: topicFromCatalog?.name || topicId,
                     type: data.task?.task_data?.type || data.task?.task_data?.task_type || ''
                 });
-                this.switchEditor(data.task);
+                this.switchEditor(data.task, options);
             } else {
                 console.error("Failed to load task:", data.error);
                 this.showVoiceToast({
@@ -4626,9 +4948,12 @@ class EditorDashboard {
         }
     }
 
-    switchEditor(task) {
+    switchEditor(task, options = {}) {
         const type = task.task_data.type || task.task_data.task_type;
-        console.log(`Switching to ${type} editor for task: ${task.metadata.id}`);
+        const taskMeta = task?.task_data?.meta || {};
+        const rootMeta = task?.metadata || {};
+        const canonicalTaskId = taskMeta.id || rootMeta.id || task?.task_data?.id;
+        console.log(`Switching to ${type} editor for task: ${canonicalTaskId}`);
 
         let editorPage = '';
         if (type === 'click' || type === 'click_task') editorPage = 'Point_Annotation.html';
@@ -4638,11 +4963,9 @@ class EditorDashboard {
         if (type === 'open_answer') editorPage = 'Open Answer Editor Textual Reasoning.html';
 
         if (editorPage) {
-            const taskMeta = task?.task_data?.meta || {};
-            const rootMeta = task?.metadata || {};
             let m = taskMeta.module || rootMeta.module;
             let t = taskMeta.topic || rootMeta.topic;
-            const id = task.metadata.id;
+            const id = canonicalTaskId;
 
             if ((!m || !t) && typeof rootMeta.path === 'string') {
                 const normalizedPath = rootMeta.path.replace(/\\/g, '/');
@@ -4653,11 +4976,15 @@ class EditorDashboard {
                 }
             }
 
-            if (!m || !t) {
-                console.error('Cannot open editor: missing module/topic in task metadata', task);
+            if (!m || !t || !id) {
+                console.error('Cannot open editor: missing module/topic/task metadata', task);
                 return;
             }
-            window.navigateWithTransition(`${editorPage}?module=${m}&topic=${t}&task=${id}`);
+            window.navigateWithTransition(
+                this.getEditorUrl(type, m, t, id, {
+                    restoreDraft: Boolean(options.restoreDraft),
+                })
+            );
         }
     }
 
@@ -4699,7 +5026,7 @@ class EditorDashboard {
         }
     }
 
-    showTheoryAnalysisModal() {
+    showTheoryAnalysisModal(intent = 'analysis') {
         const modal = document.getElementById('import-modal');
         if (!modal) {
             console.error('[Dashboard] Theory analysis modal not found');
@@ -4709,9 +5036,15 @@ class EditorDashboard {
         modal.classList.remove('hidden');
 
         if (this.importManager) {
-            this.importManager.openTheoryAnalysisMode().catch((e) => {
-                console.error('[Dashboard] Failed to open theory analysis mode:', e);
-            });
+            if (intent === 'microcards_manual') {
+                this.importManager.openManualMicrocardsEditor().catch((e) => {
+                    console.error('[Dashboard] Failed to open manual microcards editor:', e);
+                });
+            } else {
+                this.importManager.openTheoryAnalysisMode().catch((e) => {
+                    console.error('[Dashboard] Failed to open theory analysis mode:', e);
+                });
+            }
         } else {
             console.error('[Dashboard] ImportManager not initialized');
         }
@@ -4802,12 +5135,25 @@ class EditorDashboard {
                     if (!raw) continue;
                     const parsed = JSON.parse(raw);
                     if (!parsed || !parsed.moduleId || !parsed.topicId || !parsed.taskId) continue;
+                    const draftTaskName =
+                        typeof parsed.taskName === 'string' && parsed.taskName.trim()
+                            ? parsed.taskName.trim()
+                            : (
+                                (parsed.data && typeof parsed.data === 'object' && typeof parsed.data.name === 'string' && parsed.data.name.trim())
+                                || (parsed.data && typeof parsed.data === 'object' && parsed.data.meta && typeof parsed.data.meta.name === 'string' && parsed.data.meta.name.trim())
+                                || ''
+                            );
                     drafts.push({
                         kind: 'task',
                         storageKey: key,
                         moduleId: parsed.moduleId,
                         topicId: parsed.topicId,
                         taskId: parsed.taskId,
+                        taskName: draftTaskName,
+                        moduleName: typeof parsed.moduleName === 'string' ? parsed.moduleName : '',
+                        topicName: typeof parsed.topicName === 'string' ? parsed.topicName : '',
+                        taskType: typeof parsed.taskType === 'string' ? parsed.taskType : this.inferTaskTypeFromDraftPayload(parsed.data),
+                        draftData: parsed.data && typeof parsed.data === 'object' ? parsed.data : null,
                         timestamp: Number(parsed.timestamp || 0),
                     });
                     continue;
@@ -4832,6 +5178,210 @@ class EditorDashboard {
         return drafts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
     }
 
+    inferTaskTypeFromDraftPayload(payload) {
+        if (!payload || typeof payload !== 'object') return '';
+        const rawType = String(payload.type || payload.task_type || payload.taskType || '').trim();
+        if (rawType) return rawType;
+
+        const content = payload.content && typeof payload.content === 'object' ? payload.content : {};
+        if (Array.isArray(payload.annotations) || Array.isArray(content.annotations) || payload.errorDetection) {
+            return 'click';
+        }
+        if (Array.isArray(content.regions) || Array.isArray(payload.regions)) {
+            return 'draw';
+        }
+        if (Array.isArray(content.questions) || Array.isArray(payload.questions)) {
+            return 'test';
+        }
+        if (Array.isArray(content.levels) || Array.isArray(payload.levels) || Array.isArray(content.elements)) {
+            return 'sequence_assembly';
+        }
+        if (typeof content.question === 'string' || Array.isArray(content.keywords)) {
+            return 'open_answer';
+        }
+        return '';
+    }
+
+    collectTaskDraftIds() {
+        const taskDraftIds = new Set();
+        this.collectRecoveryDrafts().forEach((item) => {
+            if (item?.kind !== 'task') return;
+            const context = this.getCatalogTaskContext(item.moduleId, item.topicId, item.taskId);
+            const effectiveTaskId = this.getCanonicalTaskId(context.task) || item.taskId;
+            const uniqueId = this.makeTaskUniqueId(item.moduleId, item.topicId, effectiveTaskId);
+            if (uniqueId) {
+                taskDraftIds.add(uniqueId);
+            }
+        });
+        return taskDraftIds;
+    }
+
+    getCatalogTaskContext(moduleId, topicId, taskId = null) {
+        const module = (this.catalog || []).find((item) => item.id === moduleId) || null;
+        const topic = (module?.topics || []).find((item) => item.id === topicId) || null;
+        let task = taskId ? (topic?.tasks || []).find((item) => item.id === taskId) || null : null;
+
+        if (!task && taskId) {
+            task = (topic?.tasks || []).find((item) => String(item?.legacy_id || '').trim() === String(taskId || '').trim()) || null;
+        }
+
+        if (!task && taskId) {
+            const normalizedSuffix = `/tasks/${taskId}/task.json`;
+            task = (topic?.tasks || []).find((item) => {
+                const path = String(item?.path || '').replace(/\\/g, '/');
+                return path.endsWith(normalizedSuffix);
+            }) || null;
+        }
+
+        return {
+            module,
+            topic,
+            task,
+            moduleName: module?.name || moduleId || 'Без модуля',
+            topicName: topic?.name || topicId || 'Без темы',
+        };
+    }
+
+    getVisibleRecoveryDrafts() {
+        return this.collectRecoveryDrafts()
+            .map((item) => {
+                if (item?.kind === 'task') {
+                    const context = this.getCatalogTaskContext(item.moduleId, item.topicId, item.taskId);
+                    const taskExists = Boolean(context.task);
+                    const resolvedTaskId = this.getCanonicalTaskId(context.task) || item.taskId;
+                    const moduleName = context.module?.name || item.moduleName || context.moduleName;
+                    const topicName = context.topic?.name || item.topicName || context.topicName;
+                    return {
+                        ...item,
+                        taskExists,
+                        resolvedTaskId,
+                        moduleName,
+                        topicName,
+                        title: context.task?.name || item.taskName || item.taskId || 'Черновик задания',
+                        subtitle: `${moduleName} / ${topicName}`,
+                    };
+                }
+
+                return {
+                    ...item,
+                    title: item.complexId && item.complexId !== 'new'
+                        ? `Комплекс: ${item.complexId}`
+                        : 'Новый комплекс (черновик)',
+                    subtitle: 'Конструктор комплексов',
+                };
+            });
+    }
+
+    collectDraftOnlyTasks(options = {}) {
+        const { moduleId = null, topicId = null } = options;
+        return this.collectRecoveryDrafts()
+            .filter((item) => item?.kind === 'task')
+            .map((item) => {
+                const context = this.getCatalogTaskContext(item.moduleId, item.topicId, item.taskId);
+                if (context.task) return null;
+                if (moduleId && item.moduleId !== moduleId) return null;
+                if (topicId && item.topicId !== topicId) return null;
+
+                const taskType = String(item.taskType || '').trim();
+                const taskLabel = String(item.taskName || item.taskId || '').trim() || 'Черновик задания';
+                const isoTimestamp = Number(item.timestamp || 0) > 0
+                    ? new Date(Number(item.timestamp)).toISOString()
+                    : '';
+
+                return {
+                    id: item.taskId,
+                    name: taskLabel,
+                    type: taskType,
+                    moduleId: item.moduleId,
+                    moduleName: context.module?.name || item.moduleName || context.moduleName,
+                    topicId: item.topicId,
+                    topicName: context.topic?.name || item.topicName || context.topicName,
+                    created_at: isoTimestamp,
+                    updated_at: isoTimestamp,
+                    isDraftOnly: true,
+                    draftTimestamp: Number(item.timestamp || 0),
+                    taskType,
+                };
+            })
+            .filter(Boolean)
+            .sort((left, right) => (right.draftTimestamp || 0) - (left.draftTimestamp || 0));
+    }
+
+    cleanupOrphanedDrafts() {
+        try {
+            const drafts = this.collectRecoveryDrafts().filter((item) => item?.kind === 'task');
+            let cleanedCount = 0;
+            const DRAFT_RETENTION_DAYS = 7; // Keep drafts for 7 days for crash recovery
+            const retentionMs = DRAFT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+
+            drafts.forEach((draft) => {
+                const context = this.getCatalogTaskContext(draft.moduleId, draft.topicId, draft.taskId);
+                
+                // If module or topic doesn't exist, it's definitely orphaned
+                if (!context.module || !context.topic) {
+                    console.log(`[Dashboard] Cleaning orphaned draft (no module/topic): ${draft.storageKey}`);
+                    localStorage.removeItem(draft.storageKey);
+                    cleanedCount++;
+                    return;
+                }
+                
+                // If task doesn't exist in the topic's task list, check if it's a recent draft
+                if (!context.task) {
+                    const draftAge = Date.now() - (draft.timestamp || 0);
+                    const isRecentDraft = draftAge < retentionMs;
+                    
+                    if (isRecentDraft) {
+                        // Keep recent drafts for crash recovery - user might not have saved yet
+                        console.log(`[Dashboard] Preserving recent draft (${Math.round(draftAge / (24 * 60 * 60 * 1000))} days old): ${draft.storageKey}`);
+                        return;
+                    }
+                    
+                    // Delete old orphaned drafts
+                    console.log(`[Dashboard] Cleaning old orphaned draft (${Math.round(draftAge / (24 * 60 * 60 * 1000))} days old): ${draft.storageKey}`);
+                    localStorage.removeItem(draft.storageKey);
+                    cleanedCount++;
+                }
+            });
+
+            if (cleanedCount > 0) {
+                console.log(`[Dashboard] Cleaned ${cleanedCount} orphaned draft(s)`);
+            }
+        } catch (e) {
+            console.warn('[Dashboard] Failed to cleanup orphaned drafts', e);
+        }
+    }
+
+    openTaskEntry(task, moduleId, topicId, options = {}) {
+        if (!task) return;
+        const preferDraft = Boolean(options.preferDraft || task.hasDraft);
+
+        if (task.isDraftOnly) {
+            const taskType = String(task.taskType || task.type || '').trim();
+            if (!taskType) {
+                this.showVoiceToast({
+                    severity: 'warning',
+                    what: 'Черновик не открыт.',
+                    impact: 'Не удалось определить тип задания для этого черновика.',
+                    next: 'Создайте черновик заново или сохраните новый черновик из редактора.',
+                });
+                return;
+            }
+            window.navigateWithTransition(
+                this.getEditorUrl(taskType, moduleId, topicId, task.id, {
+                    isNew: true,
+                    restoreDraft: true,
+                    taskType,
+                    taskName: task.name || task.id,
+                })
+            );
+            return;
+        }
+
+        this.loadTask(moduleId, topicId, this.getCanonicalTaskId(task) || task.id, {
+            restoreDraft: preferDraft,
+        });
+    }
+
     formatRecoveryTime(timestamp) {
         const date = new Date(Number(timestamp || 0));
         if (Number.isNaN(date.getTime())) return 'время неизвестно';
@@ -4839,17 +5389,11 @@ class EditorDashboard {
     }
 
     renderRecoveryCenter() {
-        const drafts = this.collectRecoveryDrafts();
+        const drafts = this.getVisibleRecoveryDrafts();
         this.updateRecoveryCenterTrigger(drafts);
 
         const host = document.getElementById('recovery-center-content');
         if (!host) return;
-        const taskLookup = new Map(
-            this.collectAllTasks().map((task) => [
-                this.makeTaskUniqueId(task.moduleId, task.topicId, task.id),
-                task,
-            ])
-        );
 
         host.replaceChildren();
         if (!drafts.length) {
@@ -4857,8 +5401,8 @@ class EditorDashboard {
             empty.className = 'rounded-xl border border-border-subtle bg-surface-2 p-6 text-center';
             empty.innerHTML = `
                 <span class="material-symbols-outlined text-3xl text-text-disabled">history_toggle_off</span>
-                <p class="text-sm font-semibold text-text-secondary mt-2">Черновики не найдены</p>
-                <p class="text-xs text-text-secondary mt-1">Когда автосохранение создаст черновики, они появятся здесь.</p>
+                <p class="text-sm font-semibold text-text-secondary mt-2">Черновиков для восстановления нет</p>
+                <p class="text-xs text-text-secondary mt-1">Когда появятся локальные черновики задач или комплексов, они будут показаны здесь.</p>
             `;
             host.appendChild(empty);
             return;
@@ -4869,22 +5413,13 @@ class EditorDashboard {
             card.className = 'editor-recovery-card rounded-xl border border-border-subtle bg-surface-2 p-4 flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4';
             card.dataset.recoveryIndex = String(index);
 
-            let title = '';
-            let subtitle = '';
-            let targetHint = '';
-            if (item.kind === 'task') {
-                const uniqueId = this.makeTaskUniqueId(item.moduleId, item.topicId, item.taskId);
-                const task = taskLookup.get(uniqueId);
-                title = task?.name || item.taskId;
-                subtitle = `${task?.moduleName || item.moduleId} / ${task?.topicName || item.topicId}`;
-                targetHint = 'Откроется редактор задания';
-            } else {
-                title = item.complexId && item.complexId !== 'new'
-                    ? `Комплекс: ${item.complexId}`
-                    : 'Новый комплекс (черновик)';
-                subtitle = 'Complex Builder';
-                targetHint = 'Откроется конструктор комплексов';
-            }
+            const title = item.title || 'Черновик';
+            const subtitle = item.subtitle || 'Источник не определён';
+            const targetHint = item.kind === 'task'
+                ? (item.taskExists
+                    ? 'Откроется задача и предложит восстановить локальный черновик'
+                    : 'Откроется редактор черновика задания')
+                : 'Откроется конструктор комплексов';
 
             card.innerHTML = `
                 <div class="min-w-0 flex-1">
@@ -4934,7 +5469,21 @@ class EditorDashboard {
         if (!item) return;
         if (item.kind === 'task') {
             this.closeRecoveryCenter();
-            this.loadTask(item.moduleId, item.topicId, item.taskId);
+            if (item.taskExists) {
+                this.loadTask(item.moduleId, item.topicId, item.resolvedTaskId || item.taskId, {
+                    restoreDraft: true,
+                });
+                return;
+            }
+            this.openTaskEntry({
+                id: item.taskId,
+                name: item.title || item.taskName || item.taskId,
+                type: item.taskType,
+                taskType: item.taskType,
+                moduleId: item.moduleId,
+                topicId: item.topicId,
+                isDraftOnly: true,
+            }, item.moduleId, item.topicId, { preferDraft: true });
             return;
         }
 
@@ -5027,6 +5576,18 @@ class EditorDashboard {
             });
 
             const data = await response.json();
+            
+            // Clean up localStorage drafts for deleted tasks (even if backend delete failed)
+            let draftsCleanedCount = 0;
+            tasksToDelete.forEach(task => {
+                const draftKey = `task_draft_${task.module_id}_${task.topic_id}_${task.task_id}`;
+                if (localStorage.getItem(draftKey)) {
+                    localStorage.removeItem(draftKey);
+                    draftsCleanedCount++;
+                    console.log(`[Dashboard] Removed draft for deleted task: ${draftKey}`);
+                }
+            });
+            
             if (data.ok) {
                 this.selectedTasks.clear();
                 this.cancelSelection();
@@ -5036,9 +5597,13 @@ class EditorDashboard {
                 this.renderSidebar();
                 this.refreshCurrentView();
 
+                const successMessage = draftsCleanedCount > 0
+                    ? `Удалено заданий: ${data.deleted}. Очищено черновиков: ${draftsCleanedCount}.`
+                    : `Удалено заданий: ${data.deleted}.`;
+
                 this.showVoiceToast({
                     severity: 'success',
-                    what: `Удалено заданий: ${data.deleted}.`,
+                    what: successMessage,
                     impact: 'Выбранные элементы удалены из библиотеки.',
                     next: 'Каталог обновлён автоматически.',
                 });
@@ -5243,17 +5808,74 @@ class EditorDashboard {
 
     cancelDeleteConfirmation() {
         const overlay = document.getElementById('sidebar-blur-overlay');
-        const modal = document.getElementById('sidebar-delete-modal');
-        const content = document.getElementById('sidebar-delete-modal-content');
+        const modal = document.getElementById('sidebar-delete-modal-content');
+        const container = document.getElementById('sidebar-delete-modal');
 
-        if (overlay && modal && content) {
+        if (overlay && modal && container) {
             overlay.classList.add('opacity-0');
-            content.classList.remove('scale-100', 'opacity-100');
-            content.classList.add('scale-95', 'opacity-0');
+            modal.classList.remove('scale-100', 'opacity-100');
+            modal.classList.add('scale-95', 'opacity-0');
 
             setTimeout(() => {
                 overlay.classList.add('hidden');
-                modal.classList.add('hidden');
+                container.classList.add('hidden');
+            }, 200);
+        }
+    }
+
+    showSyncTheoryConfirmation(moduleId, topicId, actionEl, topicName) {
+        const container = document.getElementById('topic-sync-confirm-modal');
+        const overlay = document.getElementById('topic-sync-blur-overlay');
+        const content = document.getElementById('topic-sync-modal-content');
+        const targetLabel = document.getElementById('topic-sync-confirm-target');
+        const confirmBtn = document.getElementById('topic-sync-confirm-btn');
+        const cancelBtn = document.getElementById('topic-sync-cancel-btn');
+
+        if (!container || !overlay || !content) return;
+
+        if (targetLabel) targetLabel.textContent = topicName || topicId;
+
+        container.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            overlay.classList.add('opacity-100');
+            overlay.classList.remove('opacity-0');
+            content.classList.add('scale-100', 'opacity-100');
+            content.classList.remove('scale-95', 'opacity-0');
+        });
+
+        const performSync = async () => {
+            confirmBtn.disabled = true;
+            confirmBtn.classList.add('opacity-70');
+            confirmBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-lg">sync</span>';
+            
+            try {
+                await this.syncTopicTheoryToComplexes(moduleId, topicId, actionEl);
+                this.cancelSyncConfirmation();
+            } finally {
+                confirmBtn.disabled = false;
+                confirmBtn.classList.remove('opacity-70');
+                confirmBtn.innerHTML = 'Подтвердить обновление';
+            }
+        };
+
+        confirmBtn.onclick = performSync;
+        cancelBtn.onclick = () => this.cancelSyncConfirmation();
+        overlay.onclick = () => this.cancelSyncConfirmation();
+    }
+
+    cancelSyncConfirmation() {
+        const container = document.getElementById('topic-sync-confirm-modal');
+        const overlay = document.getElementById('topic-sync-blur-overlay');
+        const content = document.getElementById('topic-sync-modal-content');
+
+        if (container && overlay && content) {
+            overlay.classList.add('opacity-0');
+            overlay.classList.remove('opacity-100');
+            content.classList.add('scale-95', 'opacity-0');
+            content.classList.remove('scale-100', 'opacity-100');
+
+            setTimeout(() => {
+                container.classList.add('hidden');
             }, 200);
         }
     }
@@ -5457,6 +6079,14 @@ class EditorDashboard {
 
 document.addEventListener('DOMContentLoaded', () => {
     window.dashboard = new EditorDashboard();
+
+    // Theory Center navigation button (sidebar footer)
+    const theoryCenterBtn = document.getElementById('theory-center-sidebar-btn');
+    if (theoryCenterBtn) {
+        theoryCenterBtn.addEventListener('click', () => {
+            window.dashboard.navigateToTheoryCenter({ scope: 'topics' });
+        });
+    }
 
     document.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;

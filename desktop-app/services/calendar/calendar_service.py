@@ -478,9 +478,11 @@ class CalendarService:
         # Проверяем пропуск вчера (но адаптируем только один раз)
         yesterday = (date.today() - timedelta(days=1)).isoformat()
         already_adapted_today = settings.last_adapted_date == date.today()
+        last_activity_date = settings.last_activity_date
         is_adapted = (
             yesterday not in activity
-            and settings.last_activity_date is not None
+            and last_activity_date is not None
+            and last_activity_date < date.today()
             and not already_adapted_today
         )
         
@@ -1153,12 +1155,20 @@ class CalendarService:
         activity[today_iso]["seconds_spent"] += int(response_time_seconds)
         
         activity[today_iso] = _normalize_activity_entry(activity[today_iso])
+        settings = self.get_settings()
+        streak_meta = self._apply_activity_streak_for_date(
+            settings=settings,
+            activity=activity,
+            activity_date=today,
+        )
         self._save_json(self.activity_path, activity)
         
         return {
             "success": True,
             "attempt": attempt.to_dict(),
             "progress": progress.to_dict(),
+            "activity_date": today_iso,
+            "streak_days": streak_meta.get("streak_days", 0),
         }
 
     # =========================================================================

@@ -193,7 +193,7 @@ def network_status() -> Any:
     """Return connectivity info for offline-first UX hints."""
     try:
         h = _mh()
-        internet_online = h["get_cached_internet_connectivity"](force=False)
+        internet_online = h["get_cached_internet_connectivity"](force=False, allow_stale=True)
         feedback_settings = h["feedback_email_settings"]()
         feedback_missing = h["validate_feedback_email_settings"](
             feedback_settings, require_recipients=True

@@ -12,9 +12,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict
 
-from flask import Blueprint, jsonify, send_from_directory
+from flask import Blueprint, jsonify, redirect, send_from_directory
 
-from routes._context import get_extra
+from routes._context import get_ctx, get_extra
 
 logger = logging.getLogger(__name__)
 
@@ -246,6 +246,57 @@ def serve_mistakesui_static(filename: str) -> Any:
 
 
 # ---------------------------------------------------------------------------
+# Theory Center UI
+# ---------------------------------------------------------------------------
+
+@static_bp.route("/ui/theory-center", methods=["GET"])
+@static_bp.route("/ui/theory-center/", methods=["GET"])
+def serve_theory_center_ui() -> Any:
+    """Serve the standalone Theory Center overview UI."""
+    dirs = _get_ui_dirs()
+    EDITOR_UI_DIR = dirs.get("EDITOR_UI_DIR")
+    if not EDITOR_UI_DIR or not EDITOR_UI_DIR.exists():
+        logger.error("[HTTP] EDITOR_UI_DIR does not exist: %s", EDITOR_UI_DIR)
+        return jsonify({"ok": False, "error": "editor_ui_not_found"}), 500
+
+    resp = send_from_directory(EDITOR_UI_DIR, "Theory_Center.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
+
+
+@static_bp.route("/ui/editor/theory_center.js", methods=["GET"])
+def serve_theory_center_js() -> Any:
+    """Serve the Theory Center JavaScript directly."""
+    dirs = _get_ui_dirs()
+    EDITOR_UI_DIR = dirs.get("EDITOR_UI_DIR")
+    if not EDITOR_UI_DIR or not EDITOR_UI_DIR.exists():
+        logger.error("[HTTP] EDITOR_UI_DIR does not exist: %s", EDITOR_UI_DIR)
+        return jsonify({"ok": False, "error": "editor_ui_not_found"}), 500
+    return send_from_directory(EDITOR_UI_DIR, "theory_center.js")
+
+
+@static_bp.route("/ui/theory-editor", methods=["GET"])
+@static_bp.route("/ui/theory-editor/", methods=["GET"])
+def serve_theory_editor_ui() -> Any:
+    """Serve the Theory Editor UI."""
+    dirs = _get_ui_dirs()
+    EDITOR_UI_DIR = dirs.get("EDITOR_UI_DIR")
+    if not EDITOR_UI_DIR or not EDITOR_UI_DIR.exists():
+        logger.error("[HTTP] EDITOR_UI_DIR does not exist: %s", EDITOR_UI_DIR)
+        return jsonify({"ok": False, "error": "editor_ui_not_found"}), 500
+
+    resp = send_from_directory(EDITOR_UI_DIR, "Theory_Editor.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
+
+
+# ---------------------------------------------------------------------------
 # Editor UI
 # ---------------------------------------------------------------------------
 
@@ -458,6 +509,44 @@ def serve_session_ui(session_id: str) -> Any:
     The session_id is consumed by the frontend JS — we only need to serve the HTML here.
     """
     dirs = _get_ui_dirs()
+    try:
+        ctx = get_ctx()
+        session_api = getattr(ctx, "session_api", None)
+        requested_user_id = getattr(ctx, "user_id", None)
+        if session_api is not None:
+            session = session_api.get_session(session_id, user_id=requested_user_id)
+            if session is not None:
+                ui_state = getattr(session, "ui_state", None) or {}
+                ui_screen_type = (
+                    ui_state.get("screen_type")
+                    if isinstance(ui_state, dict)
+                    else None
+                )
+                should_redirect = bool(getattr(session, "paused", False)) or ui_screen_type in {
+                    "iteration_results",
+                    "final_results",
+                }
+                if should_redirect:
+                    resume_target = session_api.get_resume_target(session)
+                    resume_url = (
+                        resume_target.get("url")
+                        if isinstance(resume_target, dict)
+                        else None
+                    )
+                    session_url = f"/ui/session/{session_id}"
+                    if isinstance(resume_url, str) and resume_url and resume_url != session_url:
+                        logger.info(
+                            "[HTTP] serve_session_ui redirect session_id=%s -> %s",
+                            session_id,
+                            resume_url,
+                        )
+                        return redirect(resume_url)
+    except Exception:
+        logger.exception(
+            "[HTTP] Failed to resolve resume target for session %s before serving S1",
+            session_id,
+        )
+
     S1_UI_DIR = dirs.get("S1_UI_DIR")
     if not S1_UI_DIR or not S1_UI_DIR.exists():
         return jsonify({"ok": False, "error": "s1_ui_not_found"}), 500

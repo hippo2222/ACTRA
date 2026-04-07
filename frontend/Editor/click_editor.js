@@ -75,6 +75,11 @@ class ClickEditor extends BaseEditor {
         this.choicePromptAreaWrapper = null;
         this.choicePromptToggleInitialized = false;
         this.choicePromptTextarea = null;
+        this.additionalInfoToggleBtn = null;
+        this.additionalInfoContent = null;
+        this.additionalInfoToggleIcon = null;
+        this.additionalInfoToggleInitialized = false;
+        this.additionalInfoSectionOpen = true;
 
         this.initialTaskSnapshot = null;
         // this.hasUnsavedChanges = false; // Now inherited from BaseEditor
@@ -128,6 +133,14 @@ class ClickEditor extends BaseEditor {
         this.displayImageHeight = 0;
         this.annotationHighlights = new Map();
         this.highlightTimers = new Map();
+        this.statusBadgeTimer = null;
+        this.toastHideTimer = null;
+        this.toastDismissCallback = null;
+        this.pendingDeletedAnnotationUndo = null;
+        this.toolbarTooltipEl = null;
+        this.toolbarTooltipTimer = null;
+        this.toolbarTooltipTarget = null;
+        this.toolbarTooltipDismissBound = false;
 
         // Additional info (legacy placeholder)
         this.additionalInfo = { type: "none", text: "", images: [] };
@@ -141,6 +154,19 @@ class ClickEditor extends BaseEditor {
             console.error("Critical initialization error:", err);
             this.showFatalError("Ошибка инициализации редактора: " + err.message);
         });
+    }
+
+    getDifficultyAuthoringMountPoint() {
+        return document.querySelector('aside .p-5.flex.flex-col.gap-4')
+            || document.querySelector('aside .p-6.flex.flex-col.gap-8');
+    }
+
+    getDifficultyAuthoringLayoutVariant() {
+        return 'sidebar-compact';
+    }
+
+    getDifficultyAuthoringInsertMode() {
+        return 'append';
     }
 
     initAnnotationPalette() {
@@ -168,7 +194,8 @@ class ClickEditor extends BaseEditor {
     // ---------------------------------------------------------------------
     // Additional info helpers
     // ---------------------------------------------------------------------
-    normalizeAdditionalInfo(raw) {
+    normalizeAdditionalInfo(raw, options = {}) {
+        const { preserveEmptyType = false } = options;
         const empty = { type: "none", text: "", images: [] };
         if (!raw || typeof raw !== "object") return empty;
 
@@ -213,15 +240,17 @@ class ClickEditor extends BaseEditor {
             else type = "none";
         }
 
-        if (type === "text" && !text) return empty;
-        if (type === "image" && !images.length) return empty;
-        if (type === "combined" && !text && !images.length) return empty;
+        if (!preserveEmptyType) {
+            if (type === "text" && !text) return empty;
+            if (type === "image" && !images.length) return empty;
+            if (type === "combined" && !text && !images.length) return empty;
+        }
 
         return { type, text, images };
     }
 
-    serializeAdditionalInfo() {
-        const normalized = this.normalizeAdditionalInfo(this.additionalInfo);
+    serializeAdditionalInfo(source = this.additionalInfo) {
+        const normalized = this.normalizeAdditionalInfo(source);
         if (!normalized || normalized.type === "none") return null;
 
         const payload = { type: normalized.type };
@@ -236,19 +265,73 @@ class ClickEditor extends BaseEditor {
         return payload;
     }
 
+    buildLiveAdditionalInfoState() {
+        const live = this.normalizeAdditionalInfo(this.additionalInfo, { preserveEmptyType: true });
+
+        if (this.additionalTypeSelect) {
+            const value = String(this.additionalTypeSelect.value || "none").toLowerCase();
+            live.type = ["none", "text", "image", "combined"].includes(value) ? value : "none";
+        }
+
+        if (this.additionalTextArea && (live.type === "text" || live.type === "combined")) {
+            live.text = String(this.additionalTextArea.value || "");
+        }
+
+        if (live.type === "none") {
+            live.text = "";
+            live.images = [];
+        } else if (live.type === "text") {
+            live.images = [];
+        } else if (live.type === "image") {
+            live.text = "";
+        }
+
+        return this.normalizeAdditionalInfo(live, { preserveEmptyType: true });
+    }
+
     // Legacy helper stubs to unblock error_detection flow
     getTaskContentForSave() {
         return this.ensureTaskContentObject();
     }
 
+    buildLiveSettingsSnapshot() {
+        const sourceSettings = this.task?.task_data?.settings;
+        const snapshot =
+            sourceSettings && typeof sourceSettings === "object"
+                ? JSON.parse(JSON.stringify(sourceSettings))
+                : {};
+
+        if (this.isErrorDetectionTask()) {
+            delete snapshot.success_threshold;
+            delete snapshot.allowed_difficulties;
+            delete snapshot.available_difficulties;
+            return snapshot;
+        }
+
+        const rawThreshold = this.requiredCorrectInput
+            ? parseInt(this.requiredCorrectInput.value, 10)
+            : Number(
+                this.task?.task_data?.settings?.success_threshold ??
+                this.task?.task_data?.content?.required_correct
+            );
+
+        if (Number.isFinite(rawThreshold) && rawThreshold >= 1) {
+            snapshot.success_threshold = rawThreshold;
+        } else {
+            delete snapshot.success_threshold;
+        }
+
+        return snapshot;
+    }
+
     getTaskSettingsForSave() {
-        return this.task?.task_data?.settings || {};
+        return this.buildLiveSettingsSnapshot();
     }
 
     renderAdditionalInfo() {
         if (!this.additionalTypeSelect) return;
 
-        const normalized = this.normalizeAdditionalInfo(this.additionalInfo);
+        const normalized = this.normalizeAdditionalInfo(this.additionalInfo, { preserveEmptyType: true });
         this.additionalInfo = normalized;
 
         this.additionalTypeSelect.value = normalized.type;
@@ -426,6 +509,8 @@ class ClickEditor extends BaseEditor {
         this.choicePromptToggleBtn = document.querySelector("[data-choice-prompt-toggle]");
         this.choicePromptAreaWrapper = document.querySelector("[data-choice-prompt-area]");
         this.requiredCorrectInput = document.querySelector("#required-correct-input");
+        this.requiredCorrectContext = document.querySelector("#required-correct-context");
+        this.requiredCorrectHint = document.querySelector("#required-correct-hint");
         this.modeSwitch = document.querySelector("#click-mode-switch");
         this.modeTextBtn = document.querySelector("#mode-text-btn");
         this.modeErrorsBtn = document.querySelector("#mode-errors-btn");
@@ -448,6 +533,10 @@ class ClickEditor extends BaseEditor {
         this.annotationList = document.querySelector("#annotation-list");
         this.annotationBadge = document.querySelector("[data-annotations-count]");
         this.statusBadge = document.querySelector("[data-drawing-status]");
+        this.statusBadgeText = document.querySelector("[data-drawing-status-text]");
+        this.statusBadgeIcon = document.querySelector("[data-drawing-status-icon]");
+        this.toolbarRow = document.querySelector("#toolbar-row");
+        this.toolbarStatusRow = document.querySelector("#toolbar-status-row");
 
         this.finishBtn = document.querySelector("#finish-polygon-btn");
         this.deleteLastPointBtn = document.querySelector("#delete-last-point-btn");
@@ -470,6 +559,9 @@ class ClickEditor extends BaseEditor {
         this.additionalImagesEmpty = document.querySelector("#additional-images-empty");
         this.additionalAddImageBtn = document.querySelector("#additional-add-image-btn");
         this.additionalImageInput = document.querySelector("#additional-image-input");
+        this.additionalInfoToggleBtn = document.querySelector("#additional-info-toggle-btn");
+        this.additionalInfoContent = document.querySelector("#additional-info-content");
+        this.additionalInfoToggleIcon = document.querySelector("#additional-info-toggle-icon");
         this.imagePreviewModal = document.querySelector("#image-preview-modal");
         this.imagePreviewImg = document.querySelector("#image-preview-img");
         this.imagePreviewClose = document.querySelector("#image-preview-close");
@@ -480,15 +572,44 @@ class ClickEditor extends BaseEditor {
     }
 
     async init() {
-        const urlParams = new URLSearchParams(window.location.search);
-        this.moduleId = urlParams.get("module");
-        this.topicId = urlParams.get("topic");
-        this.taskId = urlParams.get("task");
-        this.isNewTaskParam = urlParams.get("new") === "1" || urlParams.get("is_new") === "1";
+        const context = this.getTaskContext();
+        this.moduleId = context.moduleId;
+        this.topicId = context.topicId;
+        this.taskId = context.taskId;
+        this.isNewTaskParam = Boolean(context.isNewTask);
+        this.restoreDraftIntent = Boolean(context.restoreDraft);
+        this.taskTypeParam = String(context.taskType || "").trim();
+        this.taskNameParam = String(context.taskName || "").trim();
 
         if (!this.moduleId || !this.topicId || !this.taskId) {
             console.error("Missing task parameters in URL");
             this.showFatalError("Неверная ссылка: отсутствуют параметры задания (module, topic, task)");
+            return;
+        }
+
+        if (this.isNewTaskParam) {
+            try {
+                const response = await fetch(`/api/editor/task/${this.moduleId}/${this.topicId}/${this.taskId}`);
+                const data = await response.json();
+                if (response.ok && data?.ok && data.task) {
+                    await this.loadTask(this.moduleId, this.topicId, this.taskId);
+                    this.cleanupPersistedTaskRoute();
+                    return;
+                }
+            } catch (error) {
+                console.warn("[ClickEditor] Existing task load failed, trying bootstrap", error);
+            }
+
+            const bootstrap =
+                this.readTaskBootstrap(this.moduleId, this.topicId, this.taskId) ||
+                await this.fetchTaskBootstrap(this.moduleId, this.topicId, this.taskId, this.taskTypeParam, this.taskNameParam);
+
+            if (!bootstrap) {
+                this.showFatalError("Черновик не найден. Откройте создание задания заново.");
+                return;
+            }
+
+            await this.hydrateTask(bootstrap, { persisted: false });
             return;
         }
 
@@ -505,71 +626,146 @@ class ClickEditor extends BaseEditor {
                 return;
             }
 
-            this.task = data.task;
-
-            // ===== AUTOSAVE INITIALIZATION START =====
-            // Initialize autosave manager (copied from BaseEditor logic)
-            if (!this.autoSaveManager) {
-                this.autoSaveManager = new AutoSaveManager(this, { interval: 30000 });
-            }
-
-            // Check for fresher draft
-            const lastSaved = this.task.task_data?.meta?.modified || 0;
-            if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
-                const shouldRestoreDraft = await this.confirmAction({
-                    title: "Восстановить черновик?",
-                    message: "Найдена более новая локальная копия (черновик).",
-                    confirmText: "Восстановить",
-                    cancelText: "Оставить серверную",
-                    variant: "info"
-                });
-                if (shouldRestoreDraft) {
-                    const draft = this.autoSaveManager.loadDraft();
-                    if (draft && draft.data) {
-                        this.restoreState(draft.data);
-                        this.autoSaveManager.start();
-                        this.markUnsaved();
-                        return; // Skip standard loading if draft restored
-                    }
-                }
-            }
-            this.autoSaveManager.start();
-            // ===== AUTOSAVE INITIALIZATION END =====
-
-            this.detectTaskType();
-            this.resetImageMetrics();
-            this.resetHighlightState();
-            this.resetErrorDetectionState();
-            this.hydrateErrorDetectionStateFromTask();
-            const rawAnnotations = this.extractAnnotationsFromContent();
-            this.annotations = this.normalizeAnnotations(rawAnnotations);
-            this.additionalInfo = this.normalizeAdditionalInfo(this.task.task_data?.content?.additionalInfo);
-            this.additionalInfoDirty = false;
-            this.setupModeSwitch();
-            this.renderUI();
-            setTimeout(() => {
-                this.initialTaskSnapshot = this.captureTaskSnapshot();
-                this.hasUnsavedChanges = false;
-                this.updateSaveStatus(false);
-            }, 0);
-            this.updateErrorsSubpaneVisibility();
+            await this.hydrateTask(data.task, { persisted: true });
         } catch (error) {
             console.error("Error fetching task:", error);
             this.showFatalError("Ошибка сети или сервера: " + error.message);
         }
     }
 
+    async hydrateTask(task, options = {}) {
+        const { persisted = true } = options;
+        this.task = task;
+        this.hasPersistedTask = Boolean(persisted);
+
+        if (!this.autoSaveManager) {
+            this.autoSaveManager = new AutoSaveManager(this, { interval: 30000 });
+        }
+
+        const lastSaved = persisted ? (this.task.task_data?.meta?.modified || 0) : 0;
+        if (this.autoSaveManager.hasFresherDraft(lastSaved)) {
+            const draft = this.autoSaveManager.loadDraft();
+            if (this.shouldAutoRestoreDraft(draft)) {
+                this.restoreState(draft.data);
+                this.showToast(this.getAutoRestoreDraftToastMessage(), "info");
+                this.autoSaveManager.start();
+                this.hasUnsavedChanges = true;
+                if (this.restoreDraftIntent) {
+                    this.restoreDraftIntent = false;
+                    this.cleanupPersistedTaskRoute();
+                }
+                return;
+            }
+
+            const recoveryCopy = this.buildDraftRecoveryCopy(draft, lastSaved);
+            const shouldRestoreDraft = await this.confirmAction({
+                title: recoveryCopy.title,
+                message: recoveryCopy.message,
+                confirmText: recoveryCopy.confirmText,
+                cancelText: recoveryCopy.cancelText,
+                variant: "info"
+            });
+            if (shouldRestoreDraft) {
+                if (draft && draft.data) {
+                    this.restoreState(draft.data);
+                    this.autoSaveManager.start();
+                    this.hasUnsavedChanges = true;
+                    return;
+                }
+            }
+        }
+
+        this.autoSaveManager.start();
+        if (this.restoreDraftIntent) {
+            this.restoreDraftIntent = false;
+            this.cleanupPersistedTaskRoute();
+        }
+        this.detectTaskType();
+        this.resetImageMetrics();
+        this.resetHighlightState();
+        this.resetErrorDetectionState();
+        this.hydrateErrorDetectionStateFromTask();
+        const rawAnnotations = this.extractAnnotationsFromContent();
+        this.annotations = this.normalizeAnnotations(rawAnnotations);
+        this.additionalInfo = this.normalizeAdditionalInfo(this.task.task_data?.content?.additionalInfo);
+        this.additionalInfoDirty = false;
+        this.setupModeSwitch();
+        this.renderUI();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn("[ClickEditor] difficulty authoring refresh failed", error);
+        });
+        setTimeout(() => {
+            this.initialTaskSnapshot = this.captureTaskSnapshot();
+            this.hasUnsavedChanges = false;
+            this.updateSaveStatus(false);
+        }, 0);
+        this.updateErrorsSubpaneVisibility();
+    }
+
     // ===== AUTOSAVE & UNDO/REDO SUPPORT =====
+
+    buildLiveContentSnapshot() {
+        const sourceContent = this.ensureTaskContentObject() || {};
+        const snapshot = JSON.parse(JSON.stringify(sourceContent));
+        
+        // Ensure image is preserved even if stringification was flaky
+        if (sourceContent.image) {
+            snapshot.image = sourceContent.image;
+        }
+        
+        const isErrorDetection = this.isErrorDetectionTask();
+
+        if (this.promptArea) {
+            snapshot.prompt = this.promptArea.value ?? "";
+        }
+
+        if (this.choicePromptTextarea) {
+            const currentChoicePrompt = this.choicePromptTextarea.value ?? "";
+            if (isErrorDetection) {
+                const mode = this.errorDetection?.mode || snapshot.mode || "text_errors";
+                if (mode === "text_choice") {
+                    snapshot.choice_prompt = currentChoicePrompt || snapshot.prompt || "";
+                } else {
+                    delete snapshot.choice_prompt;
+                }
+            } else {
+                snapshot.choice_prompt = currentChoicePrompt || snapshot.prompt || "";
+            }
+        }
+
+        if (this.requiredCorrectInput && !isErrorDetection) {
+            const requiredCorrect = parseInt(this.requiredCorrectInput.value, 10);
+            if (Number.isFinite(requiredCorrect)) {
+                snapshot.required_correct = requiredCorrect;
+            }
+        }
+
+        if (!isErrorDetection) {
+            snapshot.annotations = JSON.parse(JSON.stringify(this.annotations || []));
+        }
+
+        const liveAdditionalInfo = this.buildLiveAdditionalInfoState();
+        const additionalPayload = this.serializeAdditionalInfo(liveAdditionalInfo);
+        if (additionalPayload) {
+            snapshot.additionalInfo = additionalPayload;
+        } else {
+            delete snapshot.additionalInfo;
+        }
+
+        return snapshot;
+    }
 
     captureState() {
         return {
             // Core task data
-            content: this.getTaskContentForSave(),
+            content: this.buildLiveContentSnapshot(),
             settings: this.getTaskSettingsForSave(),
 
             // Editor specific state
             annotations: JSON.parse(JSON.stringify(this.annotations)),
-            additionalInfo: this.serializeAdditionalInfo(),
+            additionalInfo: JSON.parse(JSON.stringify(
+                this.buildLiveAdditionalInfoState()
+            )),
 
             // Error detection state
             errorDetection: JSON.parse(JSON.stringify(this.errorDetection)),
@@ -599,9 +795,7 @@ class ClickEditor extends BaseEditor {
         }
 
         // Restore additional info
-        if (state.additionalInfo) {
-            this.additionalInfo = state.additionalInfo;
-        }
+        this.additionalInfo = this.normalizeAdditionalInfo(state.additionalInfo, { preserveEmptyType: true });
 
         // Restore Error detection state
         if (state.errorDetection) {
@@ -621,6 +815,9 @@ class ClickEditor extends BaseEditor {
         // Re-render everything
         this.detectTaskType();
         this.renderUI();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn("[ClickEditor] difficulty authoring refresh failed", error);
+        });
         this.markUnsaved();
     }
 
@@ -726,10 +923,21 @@ class ClickEditor extends BaseEditor {
             (Array.isArray(content.error_spans) && content.error_spans.length ? "error_detection" : null);
         const isErrorDetection = inferredSubtype === "error_detection";
 
+        console.log('[DEBUG] hydrateErrorDetectionStateFromTask:', {
+            taskData_subtype: taskData.subtype,
+            content_subtype: content.subtype,
+            content_mode: content.mode,
+            metadataSubtype,
+            inferredSubtype,
+            isErrorDetection
+        });
+
         if (!isErrorDetection) {
+            console.log('[DEBUG] Not error detection task, returning early');
             return;
         }
 
+        console.log('[DEBUG] Setting errorDetection.enabled = true, currentMode = "errors"');
         this.errorDetection.enabled = true;
         this.errorDetection.mode = content.mode === "text_choice" ? "text_choice" : "text_errors";
         this.errorDetection.text = typeof content.text === "string" ? content.text : "";
@@ -936,6 +1144,9 @@ class ClickEditor extends BaseEditor {
         }
         this.populateErrorsPaneFromState();
         this.populateReferencePaneFromState();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn("[ClickEditor] difficulty authoring refresh failed", error);
+        });
     }
 
     initErrorsPaneComponents() {
@@ -949,6 +1160,7 @@ class ClickEditor extends BaseEditor {
         this.errorsRequiredCorrectInput = scope.querySelector("[data-errors-required-correct]");
         this.errorsRequiredCurrentLabel = scope.querySelector("[data-errors-required-current]");
         this.errorsTotalCountLabel = scope.querySelector("[data-errors-total-count]");
+        this.errorsRequireAllCheckbox = scope.querySelector("[data-errors-require-all]");
         this.errorsClearAllBtn = scope.querySelector("[data-errors-clear-all]");
         this.errorsSpanList = scope.querySelector("[data-errors-span-list]");
         this.errorsSpanEmptyState = scope.querySelector("[data-errors-spans-empty]");
@@ -1026,6 +1238,10 @@ class ClickEditor extends BaseEditor {
         }
         if (this.errorsTextEditor) {
             this.errorsTextEditor.value = this.errorDetection.text || "";
+        }
+        if (this.errorsRequireAllCheckbox) {
+            const requireAll = this.task?.task_data?.content?.require_all_errors ?? true;
+            this.errorsRequireAllCheckbox.checked = requireAll;
         }
         this.updateErrorsTotalCount();
         this.refreshErrorsRequiredCorrectUI(true);
@@ -1937,6 +2153,8 @@ class ClickEditor extends BaseEditor {
 
         // Активное состояние по умолчанию выбираем по состоянию задания
         const defaultMode = this.errorDetection.enabled ? "errors" : "text";
+        console.log('[DEBUG] setupModeSwitch: defaultMode =', defaultMode, 'errorDetection.enabled =', this.errorDetection.enabled);
+        // Don't await here - let it load async in background
         this.setModeToggleActive(defaultMode);
 
         // Переключение только если не заблокировано
@@ -1955,7 +2173,7 @@ class ClickEditor extends BaseEditor {
         this.setModeToggleDisabled(isExistingTask && !isMarkedNew);
     }
 
-    setModeToggleActive(mode) {
+    async setModeToggleActive(mode) {
         if (!this.modeTextBtn || !this.modeErrorsBtn) return;
         const activeClasses = "bg-surface-1 text-text-main shadow-sm";
         const inactiveClasses = "text-text-muted hover:text-text-secondary";
@@ -1978,7 +2196,7 @@ class ClickEditor extends BaseEditor {
             this.modeErrorsBtn.classList.remove(...activeClasses.split(" "));
         }
 
-        this.updateModePaneVisibility();
+        await this.updateModePaneVisibility();
         this.updateSubtaskToggleVisibility();
     }
 
@@ -2102,16 +2320,20 @@ class ClickEditor extends BaseEditor {
 
     async updateModePaneVisibility() {
         const isErrors = this.currentMode === "errors";
+        console.log('[DEBUG] updateModePaneVisibility: currentMode =', this.currentMode, 'isErrors =', isErrors);
         if (isErrors) {
+            console.log('[DEBUG] Loading errors pane...');
             await this.ensureErrorsPaneLoaded();
             this.currentSubtaskMode = this.getSubpaneKeyForMode(this.errorDetection.mode);
             this.updateSubtaskButtons();
             this.updateErrorsSubpaneVisibility();
         }
         if (this.clickModePane) {
+            console.log('[DEBUG] Setting clickModePane hidden =', isErrors);
             this.clickModePane.classList.toggle("hidden", isErrors);
         }
         if (this.errorsModePane) {
+            console.log('[DEBUG] Setting errorsModePane hidden =', !isErrors);
             this.errorsModePane.classList.toggle("hidden", !isErrors);
         }
         this.updateSubtaskToggleVisibility();
@@ -2261,6 +2483,8 @@ class ClickEditor extends BaseEditor {
 
     renderUI() {
         if (!this.task) return;
+        
+        const content = this.task.task_data?.content || {};
 
         if (this.modeSwitch) {
             this.modeSwitch.classList.toggle("hidden", this.isDrawTask);
@@ -2289,9 +2513,17 @@ class ClickEditor extends BaseEditor {
 
         if (this.requiredCorrectInput) {
             const content = this.task.task_data?.content || {};
-            this.requiredCorrectInput.value = content.required_correct || 1;
+            const settings = this.task.task_data?.settings || {};
+            const rawThreshold = Number(settings.success_threshold);
+            const fallbackThreshold = Number(content.required_correct);
+            const resolvedThreshold =
+                Number.isFinite(rawThreshold) && rawThreshold >= 1
+                    ? rawThreshold
+                    : (Number.isFinite(fallbackThreshold) && fallbackThreshold >= 1 ? fallbackThreshold : 1);
+            this.requiredCorrectInput.value = resolvedThreshold;
             this.enforceRequiredCorrectBounds({ clampToMax: true });
         }
+        this.initAdditionalInfoToggle();
         this.renderAdditionalInfo();
 
         const imagePath = this.task.task_data?.content?.image;
@@ -2319,6 +2551,8 @@ class ClickEditor extends BaseEditor {
         } else if (this.img) {
             this.img.classList.add("hidden");
             this.imagePlaceholder?.classList.remove("hidden");
+            this.resetImageMetrics();
+            this.applyEmptyCanvasStageSize();
             this.resetViewport();
             this.renderAnnotations();
         }
@@ -2332,9 +2566,15 @@ class ClickEditor extends BaseEditor {
         this.renderAdditionalInfo();
         this.updateSaveStatus(this.hasUnsavedChanges);
         this.updateLabelVisibilityUI();
+        
+        // Ensure correct pane is visible based on currentMode set by setupModeSwitch
+        // This is async but won't block rendering
+        this.updateModePaneVisibility();
     }
 
     setupEventListeners() {
+        this.initToolbarTooltips();
+
         if (this.previewBtn) {
             this.previewBtn.addEventListener("click", () => {
                 this.goBack();
@@ -2471,13 +2711,19 @@ class ClickEditor extends BaseEditor {
 
         window.addEventListener("resize", () => {
             this.hasCenteredImage = false;
-            this.recalculateImageMetrics(true);
+            if (this.img && !this.img.classList.contains("hidden")) {
+                this.recalculateImageMetrics(true);
+            } else {
+                this.resetImageMetrics();
+                this.applyEmptyCanvasStageSize();
+                this.resetViewport();
+            }
             this.renderAnnotations();
         });
 
         window.addEventListener("keydown", (event) => this.handleKeyDown(event));
 
-        this.statusBadge?.classList.add("opacity-0");
+        this.updateStatusBadge("Режим ожидания");
 
         this.updateToolButtons();
         this.updateCursorState();
@@ -2519,6 +2765,30 @@ class ClickEditor extends BaseEditor {
         });
         update();
         this.choicePromptToggleInitialized = true;
+    }
+
+    updateAdditionalInfoToggleUi() {
+        if (this.additionalInfoContent) {
+            this.additionalInfoContent.classList.toggle("hidden", !this.additionalInfoSectionOpen);
+        }
+        if (this.additionalInfoToggleIcon) {
+            this.additionalInfoToggleIcon.textContent = this.additionalInfoSectionOpen ? "expand_less" : "expand_more";
+        }
+        if (this.additionalInfoToggleBtn) {
+            this.additionalInfoToggleBtn.setAttribute("aria-expanded", this.additionalInfoSectionOpen ? "true" : "false");
+        }
+    }
+
+    initAdditionalInfoToggle() {
+        if (!this.additionalInfoToggleBtn || !this.additionalInfoContent) return;
+        if (!this.additionalInfoToggleInitialized) {
+            this.additionalInfoToggleBtn.addEventListener("click", () => {
+                this.additionalInfoSectionOpen = !this.additionalInfoSectionOpen;
+                this.updateAdditionalInfoToggleUi();
+            });
+            this.additionalInfoToggleInitialized = true;
+        }
+        this.updateAdditionalInfoToggleUi();
     }
 
     loadLabelDisplayMode() {
@@ -2645,7 +2915,7 @@ class ClickEditor extends BaseEditor {
         this.updateCursorState();
         this.updateDrawingControlsState();
         this.updateStatusBadge(
-            tool === "polygon" ? "Режим: прямолинейное лассо" : "Режим: свободное рисование"
+            tool === "polygon" ? "Режим: прямолинейное лассо" : "Режим: линии и линейные контуры"
         );
     }
 
@@ -2663,6 +2933,19 @@ class ClickEditor extends BaseEditor {
         const crosshair = !this.isMiddlePanning && ["polygon", "freehand"].includes(this.currentTool);
         this.canvasContainer.classList.toggle("drawing-crosshair", crosshair);
         this.canvasContainer.classList.toggle("grabbing", this.isMiddlePanning);
+    }
+
+    validateTask() {
+        if (!this.annotations || this.annotations.length === 0) {
+            return "Необходимо добавить хотя бы одну область или линию";
+        }
+        for (let i = 0; i < this.annotations.length; i++) {
+            const label = (this.annotations[i].label || "").trim();
+            if (!label) {
+                return `У объекта #${i + 1} отсутствует подпись. Пожалуйста, укажите её в списке справа.`;
+            }
+        }
+        return null;
     }
 
     logScaleEvent(event, payload = {}) {
@@ -2747,7 +3030,7 @@ class ClickEditor extends BaseEditor {
 
         this.currentPolygonPoints.push(coords);
         this.updateDrawingControlsState();
-        this.updateStatusBadge(`Точек в контуре: ${this.currentPolygonPoints.length}`);
+        this.updateStatusBadge(this.getPolygonProgressMessage(), { tone: "info" });
         this.renderAnnotations();
     }
 
@@ -2853,19 +3136,154 @@ class ClickEditor extends BaseEditor {
         this.selectedAnnotationIndex = -1;
         this.resetVertexEditingState();
         this.updateDrawingControlsState();
-        this.updateStatusBadge("Добавьте минимум 3 точки для завершения");
+        this.updateStatusBadge(this.getPolygonProgressMessage(), { tone: "info" });
     }
 
     removeLastPoint() {
         if (!this.currentPolygonPoints.length) return;
         this.currentPolygonPoints.pop();
         if (!this.currentPolygonPoints.length) {
-            this.updateStatusBadge("Контур очищен, начните заново");
+            this.updateStatusBadge("Контур очищен, начните заново.", { tone: "warning" });
         } else {
-            this.updateStatusBadge(`Точек в контуре: ${this.currentPolygonPoints.length}`);
+            this.updateStatusBadge(this.getPolygonProgressMessage(), { tone: "info" });
         }
         this.updateDrawingControlsState();
         this.renderAnnotations();
+    }
+
+    getPolygonProgressMessage() {
+        const pointsCount = this.currentPolygonPoints.length;
+        if (pointsCount <= 0) {
+            return "Поставьте минимум 3 точки, чтобы замкнуть контур.";
+        }
+        if (pointsCount < 3) {
+            return `Точек: ${pointsCount} из 3. Добавьте ещё ${3 - pointsCount}.`;
+        }
+        return `Контур готов. Нажмите «Завершить контур» или сделайте двойной клик.`;
+    }
+
+    cloneAnnotation(annotation) {
+        if (!annotation || typeof annotation !== "object") return null;
+        try {
+            return JSON.parse(JSON.stringify(annotation));
+        } catch (error) {
+            console.warn("[ClickEditor] Failed to clone annotation", error);
+            return null;
+        }
+    }
+
+    queueDeletedAnnotationUndo(annotation, index) {
+        const annotationCopy = this.cloneAnnotation(annotation);
+        if (!annotationCopy) return;
+
+        this.pendingDeletedAnnotationUndo = {
+            annotation: annotationCopy,
+            index: Number.isInteger(index) ? index : this.annotations.length
+        };
+
+        const kindLabel = annotationCopy.type === "freehand" ? "Линия" : "Контур";
+        const customLabel = String(annotationCopy.label || "").trim();
+        const message = customLabel
+            ? `${kindLabel} «${customLabel}» удалён.`
+            : `${kindLabel} удалён.`;
+
+        this.showToast(message, "warning", 5000, {
+            actionLabel: "Отменить",
+            onAction: () => this.restoreDeletedAnnotation(),
+            onDismiss: () => {
+                this.pendingDeletedAnnotationUndo = null;
+            }
+        });
+    }
+
+    restoreDeletedAnnotation() {
+        if (!this.pendingDeletedAnnotationUndo) {
+            return false;
+        }
+
+        const { annotation, index } = this.pendingDeletedAnnotationUndo;
+        this.pendingDeletedAnnotationUndo = null;
+
+        const restoreIndex = Math.max(0, Math.min(index, this.annotations.length));
+        this.annotations.splice(restoreIndex, 0, annotation);
+
+        if (this.selectedAnnotationIndex >= restoreIndex) {
+            this.selectedAnnotationIndex += 1;
+        }
+        if (this.selectedVertex && this.selectedVertex.annotationIndex >= restoreIndex) {
+            this.selectedVertex = {
+                ...this.selectedVertex,
+                annotationIndex: this.selectedVertex.annotationIndex + 1
+            };
+        }
+
+        this.renderAnnotations();
+        this.renderAnnotationList();
+        this.updateAnnotationCount();
+        this.enforceRequiredCorrectBounds({ clampToMax: true });
+        this.updateDrawingControlsState();
+        this.highlightAnnotation(restoreIndex);
+        this.updateStatusBadge("Контур восстановлен.", { tone: "success" });
+        this.markUnsaved();
+        return true;
+    }
+
+    deleteAnnotation(annotationIndex, options = {}) {
+        const index = Number(annotationIndex);
+        if (!Number.isInteger(index) || index < 0 || index >= this.annotations.length) {
+            return false;
+        }
+
+        const { skipStatus = false, allowUndo = true } = options;
+        const removedAnnotation = this.annotations[index];
+        this.annotations.splice(index, 1);
+        this.clearHighlightForAnnotation(removedAnnotation, { silent: true });
+
+        if (this.selectedAnnotationIndex === index) {
+            this.selectedAnnotationIndex = -1;
+        } else if (this.selectedAnnotationIndex > index) {
+            this.selectedAnnotationIndex -= 1;
+        }
+
+        if (this.selectedVertex) {
+            if (this.selectedVertex.annotationIndex === index) {
+                this.resetVertexEditingState();
+            } else if (this.selectedVertex.annotationIndex > index) {
+                this.selectedVertex = {
+                    ...this.selectedVertex,
+                    annotationIndex: this.selectedVertex.annotationIndex - 1
+                };
+            }
+        }
+
+        this.renderAnnotations();
+        this.renderAnnotationList();
+        this.updateAnnotationCount();
+        const requiredCorrectMeta = this.enforceRequiredCorrectBounds({ clampToMax: true });
+        this.updateDrawingControlsState();
+        this.markUnsaved();
+
+        if (allowUndo) {
+            this.queueDeletedAnnotationUndo(removedAnnotation, index);
+        }
+
+        if (!skipStatus) {
+            const kindLabel = removedAnnotation?.type === "freehand" ? "Линия" : "Контур";
+            const customLabel = String(removedAnnotation?.label || "").trim();
+            const statusMessage = customLabel ? `${kindLabel} «${customLabel}» удалён.` : `${kindLabel} удалён.`;
+            this.updateStatusBadge(
+                customLabel ? `${kindLabel} «${customLabel}» удалён.` : `${kindLabel} удалён.`,
+                { tone: "warning" }
+            );
+            if (requiredCorrectMeta?.autoLowered) {
+                this.updateStatusBadge(
+                    `${statusMessage} Порог снижен до ${requiredCorrectMeta.value} из ${this.formatContourCount(requiredCorrectMeta.annotationsCount)}.`,
+                    { tone: "warning" }
+                );
+            }
+        }
+
+        return true;
     }
 
     handleDeletePointAction() {
@@ -2881,14 +3299,15 @@ class ClickEditor extends BaseEditor {
             if (annotation.points.length <= minPoints) {
                 this.updateStatusBadge(
                     `В ${annotation.type === "polygon" ? "контуре" : "линии"} должно оставаться минимум ${minPoints} точ${minPoints === 3 ? "ки" : "ки"
-                    }.`
+                    }.`,
+                    { tone: "warning" }
                 );
                 return;
             }
             annotation.points.splice(vertexIndex, 1);
             if (!annotation.points.length) {
-                this.deleteAnnotation(annotationIndex);
-                this.updateStatusBadge("Контур удалён.");
+                this.deleteAnnotation(annotationIndex, { skipStatus: true });
+                this.updateStatusBadge("Контур удалён.", { tone: "warning" });
                 return;
             }
             const nextVertexIndex = Math.min(vertexIndex, annotation.points.length - 1);
@@ -2896,7 +3315,7 @@ class ClickEditor extends BaseEditor {
                 annotation.points.length > 0 ? { annotationIndex, vertexIndex: nextVertexIndex } : null;
             this.renderAnnotations();
             this.renderAnnotationList();
-            this.updateStatusBadge(`Точка удалена. Осталось ${annotation.points.length} точек.`);
+            this.updateStatusBadge(`Точка удалена. Осталось ${annotation.points.length} точек.`, { tone: "info" });
             this.updateDrawingControlsState();
             return;
         }
@@ -2936,7 +3355,7 @@ class ClickEditor extends BaseEditor {
         this.currentPolygonPoints = [];
         this.updateAnnotationCount();
         this.updateDrawingControlsState();
-        this.updateStatusBadge("Контур добавлен. Выберите следующий участок или сохраните задачу.");
+        this.updateStatusBadge("Контур добавлен. Выберите следующий участок или сохраните задачу.", { tone: "success" });
         this.renderAnnotations();
         this.renderAnnotationList();
         this.enforceRequiredCorrectBounds({ clampToMax: true });
@@ -2957,7 +3376,7 @@ class ClickEditor extends BaseEditor {
         this.freehandPoints = [startCoords];
         this.selectedAnnotationIndex = -1;
         this.resetVertexEditingState();
-        this.updateStatusBadge("Свободное рисование: ведите мышь, зажав ЛКМ");
+        this.updateStatusBadge("Ведите мышь, зажав ЛКМ, чтобы провести линию или линейный контур.", { tone: "info" });
         this.renderAnnotations();
     }
 
@@ -2979,7 +3398,7 @@ class ClickEditor extends BaseEditor {
         if (!this.drawingFreehand) return;
         if (this.freehandPoints.length < 2) {
             this.cancelFreehandDrawing();
-            this.updateStatusBadge("Линия слишком короткая. Попробуйте ещё раз.");
+            this.updateStatusBadge("Линия слишком короткая. Попробуйте ещё раз.", { tone: "warning" });
             return;
         }
 
@@ -3000,7 +3419,7 @@ class ClickEditor extends BaseEditor {
         this.updateAnnotationCount();
         this.renderAnnotations();
         this.renderAnnotationList();
-        this.updateStatusBadge("Линия добавлена. Нажмите ЛКМ, чтобы начать новую.");
+        this.updateStatusBadge("Линия добавлена. Нажмите ЛКМ, чтобы начать новую.", { tone: "success" });
         this.enforceRequiredCorrectBounds({ clampToMax: true });
         this.markUnsaved();
     }
@@ -3009,6 +3428,24 @@ class ClickEditor extends BaseEditor {
         this.drawingFreehand = false;
         this.freehandPoints = [];
         this.resetVertexEditingState();
+    }
+
+    selectAnnotation(index, options = {}) {
+        if (index < 0 || index >= this.annotations.length) return;
+        this.selectedAnnotationIndex = index;
+        if (!options.preserveVertex) {
+            this.resetVertexEditingState();
+        }
+        this.renderAnnotations();
+        this.renderAnnotationList();
+    }
+
+    selectVertex(annotationIndex, vertexIndex) {
+        if (annotationIndex < 0 || annotationIndex >= this.annotations.length) return;
+        const annotation = this.annotations[annotationIndex];
+        if (!annotation || !annotation.points || vertexIndex < 0 || vertexIndex >= annotation.points.length) return;
+        this.selectedVertex = { annotationIndex, vertexIndex };
+        this.renderAnnotations();
     }
 
     async clearAnnotations() {
@@ -3031,6 +3468,8 @@ class ClickEditor extends BaseEditor {
         this.renderAnnotationList();
         this.updateAnnotationCount();
         this.enforceRequiredCorrectBounds({ clampToMax: true });
+        this.updateDrawingControlsState();
+        this.updateStatusBadge("Все контуры очищены.", { tone: "warning" });
         this.markUnsaved();
     }
 
@@ -3039,6 +3478,7 @@ class ClickEditor extends BaseEditor {
 
         const width = this.baseImageWidth || this.img?.offsetWidth || 0;
         const height = this.baseImageHeight || this.img?.offsetHeight || 0;
+
 
         if (!width || !height) {
             this.overlay.innerHTML = "";
@@ -3269,7 +3709,7 @@ class ClickEditor extends BaseEditor {
                     "stroke-dasharray": "6 4",
                     class: "annotation-draft annotation-draft--polygon"
                 });
-                layers.draft.appendChild(draftPath);
+                layers.draft.appendChild(polygon);
 
                 draftPoints.forEach(([x, y]) => {
                     const marker = this.createSvgElement("circle", {
@@ -3659,6 +4099,7 @@ class ClickEditor extends BaseEditor {
             const isHighlighted = this.annotationHighlights.has(ann);
             const isFreehand = ann.type === "freehand";
             const li = document.createElement("li");
+            li.dataset.annotationIndex = String(index);
             li.className = `flex flex-col gap-2 p-3 rounded-lg border transition ${isSelected ? "border-primary bg-primary-lighter shadow-sm" : "border-subtle hover:border-strong bg-surface-1"
                 }`;
             li.classList.add("annotation-list-item");
@@ -3689,7 +4130,9 @@ class ClickEditor extends BaseEditor {
             meta.appendChild(stats);
 
             const deleteBtn = document.createElement("button");
-            deleteBtn.className = "text-text-disabled hover:text-error transition-colors";
+            deleteBtn.type = "button";
+            deleteBtn.title = "Удалить контур";
+            deleteBtn.className = "delete-annotation-btn text-text-disabled hover:text-error transition-colors p-1.5 rounded-lg hover:bg-error-lighter";
             deleteBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">delete</span>';
             deleteBtn.addEventListener("click", (event) => {
                 event.stopPropagation();
@@ -3746,14 +4189,32 @@ class ClickEditor extends BaseEditor {
             input.value = ann.label || "";
             input.placeholder = isFreehand ? "Название линии" : "Название области";
             input.className =
-                "w-full border border-subtle rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary-light";
+                "annotation-label-input w-full border border-subtle rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary-light";
+            input.addEventListener("pointerdown", (event) => {
+                event.stopPropagation();
+                if (this.selectedAnnotationIndex !== index) {
+                    event.preventDefault();
+                    this.selectAnnotation(index);
+                    this.focusAnnotationLabelInput(index);
+                }
+            });
+            input.addEventListener("click", (event) => {
+                event.stopPropagation();
+            });
+            input.addEventListener("focus", (event) => {
+                event.stopPropagation();
+            });
+            input.addEventListener("keydown", (event) => {
+                event.stopPropagation();
+            });
             input.addEventListener("input", (event) => {
                 this.annotations[index].label = event.target.value;
                 this.renderAnnotations();
                 this.markUnsaved();
             });
 
-            li.addEventListener("click", () => {
+            li.addEventListener("click", (event) => {
+                if (event.target.closest("input,button")) return;
                 this.selectAnnotation(index);
             });
 
@@ -3761,6 +4222,19 @@ class ClickEditor extends BaseEditor {
             li.appendChild(actionsRow);
             li.appendChild(input);
             this.annotationList.appendChild(li);
+        });
+    }
+
+    focusAnnotationLabelInput(index) {
+        requestAnimationFrame(() => {
+            const selector = `#annotation-list [data-annotation-index="${index}"] .annotation-label-input`;
+            const input = document.querySelector(selector);
+            if (!input) return;
+            input.focus({ preventScroll: true });
+            const length = input.value.length;
+            if (typeof input.setSelectionRange === "function") {
+                input.setSelectionRange(length, length);
+            }
         });
     }
 
@@ -3832,14 +4306,47 @@ class ClickEditor extends BaseEditor {
     updateAnnotationCount() {
         if (!this.annotationBadge) return;
         const count = this.annotations.length;
-        const label = count === 1 ? "контур" : count >= 2 && count <= 4 ? "контура" : "контуров";
-        this.annotationBadge.textContent = `${count} ${label}`;
+        this.annotationBadge.textContent = this.formatContourCount(count);
+    }
+
+    getContourWord(count) {
+        return count === 1 ? "контур" : count >= 2 && count <= 4 ? "контура" : "контуров";
+    }
+
+    formatContourCount(count) {
+        return `${count} ${this.getContourWord(count)}`;
+    }
+
+    updateRequiredCorrectUi(meta = {}) {
+        if (!this.requiredCorrectInput) return;
+
+        const annotationsCount = Number.isFinite(meta.annotationsCount) ? meta.annotationsCount : this.annotations.length;
+        const hasContours = annotationsCount > 0;
+        const currentValue = parseInt(this.requiredCorrectInput.value, 10);
+        const value = Number.isFinite(meta.value) ? meta.value : (Number.isFinite(currentValue) ? currentValue : 0);
+        const contourCountText = this.formatContourCount(annotationsCount);
+
+        this.requiredCorrectInput.disabled = !hasContours;
+        if (this.requiredCorrectContext) {
+            this.requiredCorrectContext.textContent = `из ${contourCountText}`;
+        }
+        if (this.requiredCorrectHint) {
+            if (!hasContours) {
+                this.requiredCorrectHint.textContent = "Сначала добавьте хотя бы один контур.";
+            } else if (meta.autoLowered) {
+                this.requiredCorrectHint.textContent =
+                    `Порог автоматически снижен до ${value} из ${contourCountText}, потому что контуров стало меньше.`;
+            } else {
+                this.requiredCorrectHint.textContent = `Нужно отметить ${value} из ${contourCountText}.`;
+            }
+        }
     }
 
     enforceRequiredCorrectBounds(options = {}) {
         const { clampToMax = false, markIfAdjusted = false } = options;
-        if (!this.requiredCorrectInput) return;
+        if (!this.requiredCorrectInput) return null;
         const annotationsCount = this.annotations.length;
+        const previousValue = parseInt(this.requiredCorrectInput.value, 10);
 
         if (this.helpers?.clampRequiredCorrectValue) {
             const result = this.helpers.clampRequiredCorrectValue(
@@ -3850,10 +4357,20 @@ class ClickEditor extends BaseEditor {
             this.requiredCorrectInput.min = String(result.min);
             this.requiredCorrectInput.max = String(result.max);
             this.requiredCorrectInput.value = String(result.value);
+            const meta = {
+                annotationsCount,
+                value: result.value,
+                min: result.min,
+                max: result.max,
+                adjusted: result.adjusted,
+                autoLowered:
+                    clampToMax && annotationsCount > 0 && Number.isFinite(previousValue) && previousValue > result.value
+            };
+            this.updateRequiredCorrectUi(meta);
             if (markIfAdjusted && result.adjusted) {
                 this.markUnsaved();
             }
-            return;
+            return meta;
         }
 
         const minAllowed = annotationsCount === 0 ? 0 : 1;
@@ -3883,16 +4400,34 @@ class ClickEditor extends BaseEditor {
         }
 
         this.requiredCorrectInput.value = String(value);
+        const meta = {
+            annotationsCount,
+            value,
+            min: minAllowed,
+            max: Math.max(annotationsCount, minAllowed || 1),
+            adjusted,
+            autoLowered: clampToMax && annotationsCount > 0 && Number.isFinite(previousValue) && previousValue > value
+        };
+        this.updateRequiredCorrectUi(meta);
         if (markIfAdjusted && adjusted) {
             this.markUnsaved();
         }
+        return meta;
     }
 
     updateDrawingControlsState() {
         const polygonActive = this.currentTool === "polygon";
         const hasPoints = polygonActive && this.currentPolygonPoints.length > 0;
         if (this.finishBtn) {
-            this.finishBtn.disabled = !polygonActive || this.currentPolygonPoints.length < 3;
+            const canFinishPolygon = polygonActive && this.currentPolygonPoints.length >= 3;
+            this.finishBtn.disabled = !canFinishPolygon;
+            this.finishBtn.classList.toggle("bg-primary", canFinishPolygon);
+            this.finishBtn.classList.toggle("text-primary-contrast", canFinishPolygon);
+            this.finishBtn.classList.toggle("hover:bg-primary-dark", canFinishPolygon);
+            this.finishBtn.classList.toggle("shadow-md", canFinishPolygon);
+            this.finishBtn.classList.toggle("bg-primary-lighter", !canFinishPolygon);
+            this.finishBtn.classList.toggle("text-primary", !canFinishPolygon);
+            this.finishBtn.classList.toggle("hover:bg-primary", !canFinishPolygon);
         }
         if (this.deleteLastPointBtn) {
             const hasVertexSelection = Boolean(this.selectedVertex);
@@ -3903,10 +4438,63 @@ class ClickEditor extends BaseEditor {
         }
     }
 
-    updateStatusBadge() {
+    updateStatusBadge(message = "", options = {}) {
         if (!this.statusBadge) return;
-        this.statusBadge.textContent = "";
-        this.statusBadge.classList.add("opacity-0");
+        const statusTextEl = this.statusBadgeText || this.statusBadge;
+        if (this.statusBadgeTimer) {
+            clearTimeout(this.statusBadgeTimer);
+            this.statusBadgeTimer = null;
+        }
+
+        this.statusBadge.classList.remove(
+            "bg-surface-2",
+            "bg-primary-lighter",
+            "bg-success-lighter",
+            "bg-warning-lighter",
+            "bg-error-lighter",
+            "text-text-secondary",
+            "text-primary-darker",
+            "text-success-text",
+            "text-warning-text",
+            "text-error-text",
+            "border-transparent",
+            "border-primary-light",
+            "border-success-light",
+            "border-warning-light",
+            "border-error-light"
+        );
+
+        if (!message) {
+            statusTextEl.textContent = "Режим ожидания";
+            if (this.statusBadgeIcon) {
+                this.statusBadgeIcon.textContent = "info";
+            }
+            this.statusBadge.classList.add("bg-surface-2", "text-text-secondary", "border-border-subtle");
+            return;
+        }
+
+        const { tone = "neutral" } = options;
+        const toneClasses = {
+            neutral: ["bg-surface-2", "text-text-secondary", "border-border-subtle"],
+            info: ["bg-primary-lighter", "text-primary-darker", "border-primary-light"],
+            success: ["bg-success-lighter", "text-success-text", "border-success-light"],
+            warning: ["bg-warning-lighter", "text-warning-text", "border-warning-light"],
+            error: ["bg-error-lighter", "text-error-text", "border-error-light"]
+        };
+
+        const iconByTone = {
+            neutral: "info",
+            info: "tips_and_updates",
+            success: "check_circle",
+            warning: "warning",
+            error: "error"
+        };
+
+        statusTextEl.textContent = message;
+        if (this.statusBadgeIcon) {
+            this.statusBadgeIcon.textContent = iconByTone[tone] || iconByTone.neutral;
+        }
+        this.statusBadge.classList.add(...(toneClasses[tone] || toneClasses.neutral));
     }
 
     clampZoom(value) {
@@ -4031,6 +4619,36 @@ class ClickEditor extends BaseEditor {
         this.displayImageWidth = 0;
         this.displayImageHeight = 0;
         this.hasCenteredImage = false;
+    }
+
+    applyEmptyCanvasStageSize() {
+        if (!this.canvasContainer || !this.canvasStage) return;
+
+        const containerRect = this.canvasContainer.getBoundingClientRect();
+        const width = Math.min(720, Math.max(240, Math.floor(containerRect.width - 32)));
+        const height = Math.min(420, Math.max(220, Math.floor(containerRect.height - 32)));
+
+        this.baseImageWidth = width;
+        this.baseImageHeight = height;
+        this.displayImageWidth = width;
+        this.displayImageHeight = height;
+
+        this.canvasStage.style.width = `${width}px`;
+        this.canvasStage.style.height = `${height}px`;
+
+        if (this.overlay) {
+            this.overlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
+            this.overlay.setAttribute("width", width);
+            this.overlay.setAttribute("height", height);
+        }
+
+        if (this.overlayWrapper) {
+            this.overlayWrapper.style.width = `${width}px`;
+            this.overlayWrapper.style.height = `${height}px`;
+        }
+
+        this.centerImageInContainer();
+        this.hasCenteredImage = true;
     }
 
     recalculateImageMetrics(forceBase = false) {
@@ -4196,7 +4814,17 @@ class ClickEditor extends BaseEditor {
             if (!this.task.task_data.content || typeof this.task.task_data.content !== "object") {
                 this.task.task_data.content = {};
             }
-            this.task.task_data.content.image = data.path;
+            
+            // Capture live UI state (e.g. prompt, additional info) before re-rendering
+            const snapshot = this.buildLiveContentSnapshot();
+            
+            // Merge: preserve everything in current content, then overwrite with live snapshot, then set new image
+            this.task.task_data.content = {
+                ...(this.task.task_data.content || {}),
+                ...snapshot,
+                image: data.path
+            };
+            
             this.renderUI();
             this.markUnsaved();
         } catch (error) {
@@ -4209,8 +4837,12 @@ class ClickEditor extends BaseEditor {
 
     handleImageError() {
         if (!this.imagePlaceholder || !this.img) return;
+        this.resetImageMetrics();
         this.imagePlaceholder.classList.remove("hidden");
         this.img.classList.add("hidden");
+        this.applyEmptyCanvasStageSize();
+        this.resetViewport();
+        this.renderAnnotations();
         this.updateStatusBadge("Не удалось загрузить изображение");
     }
 
@@ -4287,7 +4919,13 @@ class ClickEditor extends BaseEditor {
             warnings.push(`У ${generatedLabels} контуров осталось автосгенерированное имя. Лучше заменить его на содержательную подпись.`);
         }
 
-        const requiredCorrect = this.requiredCorrectInput ? parseInt(this.requiredCorrectInput.value, 10) : Number(this.task?.task_data?.content?.required_correct || 0);
+        const requiredCorrect = this.requiredCorrectInput
+            ? parseInt(this.requiredCorrectInput.value, 10)
+            : Number(
+                this.task?.task_data?.settings?.success_threshold ??
+                this.task?.task_data?.content?.required_correct ??
+                0
+            );
         if (this.annotations.length > 1 && Number.isFinite(requiredCorrect) && requiredCorrect === this.annotations.length) {
             warnings.push('Сейчас пользователь должен отметить все контуры. Убедитесь, что такой порог действительно нужен.');
         }
@@ -4305,8 +4943,17 @@ class ClickEditor extends BaseEditor {
 
         const effectivePrompt = prompt || DEFAULT_PROMPT;
         const effectiveChoicePrompt = choicePrompt || prompt || DEFAULT_CHOICE_PROMPT;
+        
         if (isErrorDetection && !this.validateErrorDetectionBeforeSave()) {
             return;
+        }
+
+        if (!isErrorDetection) {
+            const validationError = this.validateTask();
+            if (validationError) {
+                this.showToast(validationError, "warning");
+                return;
+            }
         }
         if (!isErrorDetection && !this.task.task_data?.content?.image) {
             this.showToast("Загрузите основное изображение задания.", "error");
@@ -4333,35 +4980,65 @@ class ClickEditor extends BaseEditor {
         if (!this.task.task_data) {
             this.task.task_data = {};
         }
+        if (!this.task.task_data.meta || typeof this.task.task_data.meta !== "object") {
+            this.task.task_data.meta = {};
+        }
         if (!this.task.task_data.content) {
             this.task.task_data.content = {};
         }
+        if (!this.task.task_data.settings || typeof this.task.task_data.settings !== "object") {
+            this.task.task_data.settings = {};
+        }
+        this.task.task_data.id = this.taskId || this.task.task_data.id;
+        if (!this.task.task_data.type) {
+            this.task.task_data.type = this.taskTypeParam || this.task.task_data?.type || "click";
+        }
+        this.task.task_data.meta.id = this.taskId || this.task.task_data.meta.id;
+        this.task.task_data.meta.module = this.moduleId || this.task.task_data.meta.module;
+        this.task.task_data.meta.topic = this.topicId || this.task.task_data.meta.topic;
+        this.task.task_data.meta.name = this.taskNameParam || this.task.metadata?.name || this.task.metadata?.id || this.taskId;
+        this.task.task_data.name = this.task.task_data.meta.name;
+        this.task.task_data.settings = this.buildLiveSettingsSnapshot();
+        const difficultySettingsOk = await this.applyDifficultyAuthoringSettings(this.task.task_data, { showValidationToast: true });
+        if (!difficultySettingsOk) {
+            const blockingState = this.getBlockingEditorState(this.task.task_data);
+            if (blockingState) {
+                this.updateSaveStatus(this.getBlockingSaveStatusOptions(blockingState));
+            } else {
+                this.updateSaveStatus();
+            }
+            return;
+        }
         this.task.task_data.content.prompt = effectivePrompt;
+        const additionalPayload = this.serializeAdditionalInfo();
         if (isErrorDetection) {
             this.enableErrorDetectionEditor();
             this.applyErrorsRequiredCorrectToContent(this.task.task_data.content);
             this.applyReferenceDataToContent(this.task.task_data.content);
             this.task.task_data.subtype = "error_detection";
             this.task.task_data.content.subtype = "error_detection";
+            delete this.task.task_data.settings.success_threshold;
             delete this.task.task_data.content.annotations;
-            delete this.task.task_data.content.additionalInfo;
             delete this.task.task_data.content.image;
             const edMode = this.errorDetection.mode || this.task.task_data.content.mode || "text_errors";
             if (edMode === "text_choice") {
                 this.task.task_data.content.choice_prompt = effectiveChoicePrompt;
             } else {
                 delete this.task.task_data.content.choice_prompt;
+                if (this.errorsRequireAllCheckbox) {
+                    this.task.task_data.content.require_all_errors = this.errorsRequireAllCheckbox.checked;
+                }
             }
         } else {
             this.task.task_data.content.choice_prompt = effectiveChoicePrompt;
             this.task.task_data.content.required_correct = requiredCorrect;
+            this.task.task_data.settings.success_threshold = requiredCorrect;
             this.task.task_data.content.annotations = this.annotations;
-            const additionalPayload = this.serializeAdditionalInfo();
-            if (additionalPayload) {
-                this.task.task_data.content.additionalInfo = additionalPayload;
-            } else {
-                delete this.task.task_data.content.additionalInfo;
-            }
+        }
+        if (additionalPayload) {
+            this.task.task_data.content.additionalInfo = additionalPayload;
+        } else {
+            delete this.task.task_data.content.additionalInfo;
         }
 
         const moduleId = this.moduleId || this.task.task_data?.meta?.module || this.task.metadata?.module;
@@ -4380,10 +5057,12 @@ class ClickEditor extends BaseEditor {
                     this.task.task_data.meta.created_at = nowIso;
                 }
             }
+            const payload = this._cloneSerializable(this.task.task_data);
+            this.sanitizeDifficultyAuthoringPayload(payload, this.difficultyAuthoring.activeMeta);
             const response = await fetch(`/api/editor/task/${moduleId}/${topicId}/${taskId}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(this.task.task_data)
+                body: JSON.stringify(payload)
             });
             const data = await response.json();
             if (data.ok) {
@@ -4391,9 +5070,17 @@ class ClickEditor extends BaseEditor {
                 if (!semanticWarnings.length) {
                     this.showToast("Задание сохранено.", "success");
                 }
+                this.hasPersistedTask = true;
+                this.isNewTaskParam = false;
                 this.initialTaskSnapshot = this.captureTaskSnapshot();
                 this.hasUnsavedChanges = false;
+                this.additionalInfoDirty = false;
                 this.updateSaveStatus(false);
+                if (this.autoSaveManager) {
+                    this.autoSaveManager.clearDraft();
+                }
+                this.clearTaskBootstrap();
+                this.cleanupPersistedTaskRoute();
                 if (semanticWarnings.length) {
                     this.updateSaveStatus({
                         type: "warning",
@@ -4413,7 +5100,7 @@ class ClickEditor extends BaseEditor {
 
     markUnsaved() {
         this.hasUnsavedChanges = true;
-        this.updateSaveStatus(true);
+        BaseEditor.prototype.updateSaveStatus.call(this);
     }
 
     captureTaskSnapshot() {
@@ -4443,50 +5130,8 @@ class ClickEditor extends BaseEditor {
     }
 
     updateSaveStatus(state) {
-        if (!this.saveStatusBadge || !this.saveStatusText || !this.saveStatusIcon) return;
-        const isObjectState = typeof state === "object" && state !== null;
-        if (isObjectState && state.type === "warning") {
-            this.saveStatusBadge.classList.remove("text-success-text", "border-success", "bg-success-lighter", "animate-pulse");
-            this.saveStatusBadge.classList.add("text-warning-text", "border-warning", "bg-warning-lighter");
-            this.saveStatusText.textContent = state.message || "Сохранено с предупреждениями";
-            this.saveStatusIcon.textContent = "warning";
-            this.saveStatusBadge.classList.remove("opacity-0");
-            if (this.saveStatusTimer) {
-                clearTimeout(this.saveStatusTimer);
-            }
-            this.saveStatusTimer = setTimeout(() => {
-                this.saveStatusBadge.classList.add("opacity-0");
-                this.saveStatusTimer = null;
-            }, 4000);
-            return;
-        }
-        const isDirty = isObjectState ? state.type === "dirty" : !!state;
-        if (isDirty) {
-            this.saveStatusBadge.classList.remove("text-success-text", "border-success", "bg-success-lighter", "animate-pulse");
-            this.saveStatusBadge.classList.add("text-warning-text", "border-warning", "bg-warning-lighter");
-            this.saveStatusText.textContent = "Есть несохранённые изменения";
-            this.saveStatusIcon.textContent = "cloud_upload";
-            this.saveStatusBadge.classList.remove("opacity-0");
-            if (this.saveStatusTimer) {
-                clearTimeout(this.saveStatusTimer);
-                this.saveStatusTimer = null;
-            }
-        } else {
-            this.saveStatusBadge.classList.remove("text-warning-text", "border-warning", "bg-warning-lighter");
-            this.saveStatusBadge.classList.add("text-success-text", "border-success", "bg-success-lighter");
-            this.saveStatusText.textContent = "Сохранено";
-            this.saveStatusIcon.textContent = "cloud_done";
-            this.saveStatusBadge.classList.add("animate-pulse");
-            this.saveStatusBadge.classList.remove("opacity-0");
-            if (this.saveStatusTimer) {
-                clearTimeout(this.saveStatusTimer);
-            }
-            this.saveStatusTimer = setTimeout(() => {
-                this.saveStatusBadge.classList.remove("animate-pulse");
-                this.saveStatusBadge.classList.add("opacity-0");
-                this.saveStatusTimer = null;
-            }, 2000);
-        }
+        const options = (typeof state === "object" && state !== null) ? state : {};
+        BaseEditor.prototype.updateSaveStatus.call(this, options);
     }
 
     async confirmAction({
@@ -4496,16 +5141,263 @@ class ClickEditor extends BaseEditor {
         cancelText = "Отмена",
         variant = "error"
     } = {}) {
+        if (typeof this.showConfirmModal === "function") {
+            return new Promise((resolve) => {
+                this.showConfirmModal({
+                    title,
+                    message,
+                    confirmText,
+                    cancelText,
+                    variant,
+                    onConfirm: () => resolve(true),
+                    onCancel: () => resolve(false),
+                });
+            });
+        }
         if (typeof NotificationUI !== "undefined" && typeof NotificationUI.confirm === "function") {
             return NotificationUI.confirm({ title, message, confirmText, cancelText, variant });
         }
         return window.confirm(message);
     }
 
-    showToast(message, variant = "success", duration = 2500) {
+    initToolbarTooltips() {
+        const containers = [this.toolbarRow, this.toolbarStatusRow].filter(Boolean);
+        if (!containers.length) {
+            return;
+        }
+
+        const targets = new Set();
+        containers.forEach((container) => {
+            container.querySelectorAll("[data-toolbar-tooltip]").forEach((el) => {
+                targets.add(el);
+            });
+        });
+
+        targets.forEach((target) => {
+            if (!(target instanceof HTMLElement) || target.dataset.toolbarTooltipBound === "1") {
+                return;
+            }
+
+            const tooltipText =
+                target.dataset.toolbarTooltip ||
+                target.getAttribute("title") ||
+                target.getAttribute("aria-label") ||
+                "";
+            if (!tooltipText.trim()) {
+                return;
+            }
+
+            target.dataset.toolbarTooltip = tooltipText.trim();
+            target.setAttribute("title", tooltipText.trim());
+            target.querySelectorAll?.("button, [tabindex], a, input, select, textarea").forEach((child) => {
+                if (child instanceof HTMLElement && !child.getAttribute("title")) {
+                    child.setAttribute("title", tooltipText.trim());
+                }
+            });
+            target.dataset.toolbarTooltipBound = "1";
+            this.bindToolbarTooltipTarget(target);
+        });
+
+        containers.forEach((container) => {
+            if (!(container instanceof HTMLElement) || container.dataset.toolbarTooltipEventsBound === "1") {
+                return;
+            }
+
+            container.addEventListener("pointerover", (event) => {
+                const target = this.resolveToolbarTooltipTarget(event.target);
+                if (!target) {
+                    return;
+                }
+                const relatedTarget = this.resolveToolbarTooltipTarget(event.relatedTarget);
+                if (relatedTarget === target) {
+                    return;
+                }
+                this.scheduleToolbarTooltip(target);
+            });
+
+            container.addEventListener("pointerout", (event) => {
+                const target = this.resolveToolbarTooltipTarget(event.target);
+                if (!target) {
+                    return;
+                }
+                const relatedTarget = this.resolveToolbarTooltipTarget(event.relatedTarget);
+                if (relatedTarget === target) {
+                    return;
+                }
+                this.hideToolbarTooltip({ immediate: true });
+            });
+
+            container.addEventListener("focusin", (event) => {
+                const target = this.resolveToolbarTooltipTarget(event.target);
+                if (target) {
+                    this.showToolbarTooltip(target, { immediate: true });
+                }
+            });
+
+            container.addEventListener("focusout", (event) => {
+                const target = this.resolveToolbarTooltipTarget(event.target);
+                if (!target) {
+                    return;
+                }
+                const relatedTarget = this.resolveToolbarTooltipTarget(event.relatedTarget);
+                if (relatedTarget === target) {
+                    return;
+                }
+                this.hideToolbarTooltip({ immediate: true });
+            });
+
+            container.addEventListener("pointerdown", () => {
+                this.hideToolbarTooltip({ immediate: true });
+            });
+
+            container.dataset.toolbarTooltipEventsBound = "1";
+        });
+
+        if (!this.toolbarTooltipDismissBound) {
+            this.toolbarTooltipDismissBound = true;
+            window.addEventListener("scroll", () => this.hideToolbarTooltip({ immediate: true }), true);
+            window.addEventListener("resize", () => this.hideToolbarTooltip({ immediate: true }));
+        }
+    }
+
+    resolveToolbarTooltipTarget(node) {
+        if (!(node instanceof HTMLElement)) {
+            return null;
+        }
+        return node.closest?.("[data-toolbar-tooltip]") || null;
+    }
+
+    bindToolbarTooltipTarget(target) {
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+
+        const bindableNodes = [target, ...target.querySelectorAll("button, [tabindex], a, input, select, textarea")];
+        bindableNodes.forEach((node) => {
+            if (!(node instanceof HTMLElement) || node.dataset.toolbarTooltipNodeBound === "1") {
+                return;
+            }
+
+            node.addEventListener("mouseenter", () => {
+                this.scheduleToolbarTooltip(target);
+            });
+            node.addEventListener("mouseleave", () => {
+                this.hideToolbarTooltip({ immediate: true });
+            });
+            node.addEventListener("focus", () => {
+                this.showToolbarTooltip(target, { immediate: true });
+            });
+            node.addEventListener("blur", () => {
+                this.hideToolbarTooltip({ immediate: true });
+            });
+            node.addEventListener("pointerdown", () => {
+                this.hideToolbarTooltip({ immediate: true });
+            });
+
+            node.dataset.toolbarTooltipNodeBound = "1";
+        });
+    }
+
+    scheduleToolbarTooltip(target) {
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+        if (this.toolbarTooltipTimer) {
+            clearTimeout(this.toolbarTooltipTimer);
+            this.toolbarTooltipTimer = null;
+        }
+        this.toolbarTooltipTimer = setTimeout(() => {
+            this.showToolbarTooltip(target);
+        }, 450);
+    }
+
+    ensureToolbarTooltip() {
+        if (this.toolbarTooltipEl) {
+            return this.toolbarTooltipEl;
+        }
+        const tooltip = document.createElement("div");
+        tooltip.id = "editor-toolbar-tooltip";
+        tooltip.className = "fixed z-[2100] pointer-events-none max-w-[18rem] rounded-xl px-3 py-2 text-xs font-medium leading-snug shadow-2xl border border-white/10 opacity-0 transition-opacity duration-150";
+        tooltip.style.background = "rgba(15, 23, 42, 0.94)";
+        tooltip.style.color = "#ffffff";
+        tooltip.style.backdropFilter = "blur(8px)";
+        document.body.appendChild(tooltip);
+        this.toolbarTooltipEl = tooltip;
+        return tooltip;
+    }
+
+    showToolbarTooltip(target, options = {}) {
+        if (!(target instanceof HTMLElement)) {
+            return;
+        }
+        const tooltipText = (target.dataset.toolbarTooltip || "").trim();
+        if (!tooltipText) {
+            return;
+        }
+        if (this.toolbarTooltipTimer) {
+            clearTimeout(this.toolbarTooltipTimer);
+            this.toolbarTooltipTimer = null;
+        }
+
+        const tooltip = this.ensureToolbarTooltip();
+        tooltip.textContent = tooltipText;
+        tooltip.classList.remove("opacity-0");
+        this.toolbarTooltipTarget = target;
+        this.positionToolbarTooltip(target);
+    }
+
+    positionToolbarTooltip(target) {
+        if (!this.toolbarTooltipEl || !(target instanceof HTMLElement)) {
+            return;
+        }
+        const rect = target.getBoundingClientRect();
+        const tooltipRect = this.toolbarTooltipEl.getBoundingClientRect();
+        const margin = 12;
+        let left = rect.left + (rect.width / 2) - (tooltipRect.width / 2);
+        left = Math.max(margin, Math.min(left, window.innerWidth - tooltipRect.width - margin));
+
+        let top = rect.top - tooltipRect.height - 10;
+        if (top < margin) {
+            top = rect.bottom + 10;
+        }
+
+        this.toolbarTooltipEl.style.left = `${Math.round(left)}px`;
+        this.toolbarTooltipEl.style.top = `${Math.round(top)}px`;
+    }
+
+    hideToolbarTooltip({ immediate = false } = {}) {
+        if (this.toolbarTooltipTimer) {
+            clearTimeout(this.toolbarTooltipTimer);
+            this.toolbarTooltipTimer = null;
+        }
+        this.toolbarTooltipTarget = null;
+        if (!this.toolbarTooltipEl) {
+            return;
+        }
+        if (immediate) {
+            this.toolbarTooltipEl.classList.add("opacity-0");
+            return;
+        }
+        const scheduleHide = typeof requestAnimationFrame === "function"
+            ? requestAnimationFrame.bind(window)
+            : (callback) => setTimeout(callback, 0);
+        scheduleHide(() => {
+            this.toolbarTooltipEl?.classList.add("opacity-0");
+        });
+    }
+
+    showToast(message, variant = "success", duration = 2500, options = {}) {
         if (typeof document === "undefined") return;
         const existing = document.querySelector("#click-editor-toast");
         if (existing) existing.remove();
+        if (this.toastHideTimer) {
+            clearTimeout(this.toastHideTimer);
+            this.toastHideTimer = null;
+        }
+        if (typeof this.toastDismissCallback === "function") {
+            this.toastDismissCallback("replaced");
+            this.toastDismissCallback = null;
+        }
 
         const palette = {
             success: { bg: "bg-success-lighter", border: "border-success-light", text: "text-success-text" },
@@ -4517,21 +5409,73 @@ class ClickEditor extends BaseEditor {
 
         const toast = document.createElement("div");
         toast.id = "click-editor-toast";
-        toast.className = `fixed top-4 right-4 z-[2000] px-4 py-3 rounded-lg shadow-lg border ${theme.bg} ${theme.border} ${theme.text} flex items-center gap-2 animate-fade-in`;
+        toast.className = `fixed bottom-4 left-4 z-[2000] max-w-[min(32rem,calc(100vw-1.5rem))] px-4 py-3 rounded-xl shadow-xl border ${theme.bg} ${theme.border} ${theme.text} flex items-start gap-3 animate-fade-in`;
         const icon = document.createElement("span");
-        icon.className = "material-symbols-outlined text-[20px]";
+        icon.className = "material-symbols-outlined text-[20px] mt-0.5 shrink-0";
         icon.textContent = variant === "error" ? "error" : (variant === "warning" ? "warning" : "check_circle");
+        const content = document.createElement("div");
+        content.className = "min-w-0 flex-1";
         const text = document.createElement("span");
-        text.className = "text-sm font-medium";
+        text.className = "text-sm font-medium leading-snug";
         text.textContent = message;
+        content.appendChild(text);
         toast.appendChild(icon);
-        toast.appendChild(text);
-        document.body.appendChild(toast);
+        toast.appendChild(content);
+        const controls = document.createElement("div");
+        controls.className = "flex items-start gap-2 shrink-0";
 
-        setTimeout(() => {
+        let dismissed = false;
+        const cleanup = () => {
+            if (this.toastHideTimer) {
+                clearTimeout(this.toastHideTimer);
+                this.toastHideTimer = null;
+            }
+            this.toastDismissCallback = null;
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        };
+        const dismiss = (reason = "timeout") => {
+            if (dismissed) return;
+            dismissed = true;
             toast.classList.add("opacity-0", "transition-opacity", "duration-300");
-            setTimeout(() => toast.remove(), 320);
-        }, duration);
+            this.toastDismissCallback = null;
+            setTimeout(cleanup, 320);
+            if (typeof options?.onDismiss === "function") {
+                options.onDismiss(reason);
+            }
+        };
+
+        if (options?.actionLabel && typeof options.onAction === "function") {
+            const actionBtn = document.createElement("button");
+            actionBtn.type = "button";
+            actionBtn.className = "shrink-0 inline-flex items-center justify-center rounded-md border border-current/20 px-3 py-1.5 text-xs font-bold hover:bg-surface-1/70 transition-colors";
+            actionBtn.setAttribute("data-toast-action", "undo");
+            actionBtn.textContent = options.actionLabel;
+            actionBtn.addEventListener("click", () => {
+                if (dismissed) return;
+                dismissed = true;
+                this.toastDismissCallback = null;
+                cleanup();
+                options.onAction();
+            });
+            controls.appendChild(actionBtn);
+        }
+
+        const closeBtn = document.createElement("button");
+        closeBtn.type = "button";
+        closeBtn.className = "inline-flex h-7 w-7 items-center justify-center rounded-md border border-current/15 text-current/80 hover:bg-surface-1/70 hover:text-current transition-colors";
+        closeBtn.setAttribute("data-toast-action", "close");
+        closeBtn.setAttribute("aria-label", "Закрыть уведомление");
+        closeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">close</span>';
+        closeBtn.addEventListener("click", () => dismiss("manual"));
+        controls.appendChild(closeBtn);
+
+        toast.appendChild(controls);
+
+        document.body.appendChild(toast);
+        this.toastDismissCallback = typeof options?.onDismiss === "function" ? options.onDismiss : null;
+        this.toastHideTimer = setTimeout(() => dismiss("timeout"), duration);
     }
 }
 

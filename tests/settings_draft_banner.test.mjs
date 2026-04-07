@@ -1,0 +1,266 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { JSDOM } from 'jsdom';
+import fs from 'fs';
+import path from 'path';
+
+function loadScript(filePath) {
+  return fs.readFileSync(path.resolve(process.cwd(), filePath), 'utf8');
+}
+
+function defineGlobal(name, value) {
+  Object.defineProperty(global, name, {
+    value,
+    configurable: true,
+    writable: true,
+  });
+}
+
+function setupDom() {
+  const html = `<!DOCTYPE html>
+    <html>
+      <body>
+        <div id="theme-options"></div>
+        <div id="theme-save-status" class="hidden"></div>
+        <div id="settings-profile-caption"></div>
+        <div id="settings-footer-profile-note"></div>
+        <div id="providers-container"></div>
+        <div id="settings-draft-banner" class="hidden"></div>
+        <div id="settings-draft-banner-text"></div>
+        <button id="settings-draft-restore-btn" type="button"></button>
+        <button id="settings-draft-discard-btn" type="button"></button>
+        <button id="save-keys-btn" type="button"></button>
+        <button id="validate-all-btn" type="button"></button>
+        <div id="save-status" class="hidden"></div>
+      </body>
+    </html>`;
+
+  const dom = new JSDOM(html, {
+    url: 'http://localhost',
+    runScripts: 'dangerously',
+    resources: 'usable',
+  });
+
+  defineGlobal('window', dom.window);
+  defineGlobal('document', dom.window.document);
+  defineGlobal('HTMLElement', dom.window.HTMLElement);
+  defineGlobal('Node', dom.window.Node);
+  defineGlobal('CustomEvent', dom.window.CustomEvent);
+  defineGlobal('navigator', dom.window.navigator);
+  defineGlobal('localStorage', dom.window.localStorage);
+  return dom;
+}
+
+async function flushPromises(rounds = 8) {
+  for (let index = 0; index < rounds; index += 1) {
+    await Promise.resolve();
+  }
+}
+
+describe('settings draft banner', () => {
+  let dom;
+  let toastVoiceSpy;
+
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    dom = setupDom();
+    toastVoiceSpy = vi.fn();
+
+    dom.window.ThemeManager = {
+      getThemes: () => [],
+      getTheme: () => 'light-a',
+      setTheme: vi.fn(),
+    };
+
+    dom.window.NotificationUI = {
+      toastVoice: toastVoiceSpy,
+      toast: vi.fn(),
+      voiceMessage: vi.fn(({ what = '', impact = '', next = '' } = {}) => [what, impact, next].filter(Boolean).join(' ')),
+      resolveVariant: vi.fn((value) => value || 'info'),
+    };
+
+    defineGlobal('ThemeManager', dom.window.ThemeManager);
+    defineGlobal('NotificationUI', dom.window.NotificationUI);
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  function installFetchMock() {
+    const fetchMock = vi.fn(async (input, init = {}) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+      const method = String(init?.method || 'GET').toUpperCase();
+
+      if (url === '/api/users/current') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, user: { user_id: 'u1', name: 'Анна' } }),
+        };
+      }
+
+      if (url === '/api/ui/settings' && method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+        };
+      }
+
+      if (url === '/api/users/ai-keys') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ok: true,
+            providers: {
+              openrouter: {
+                label: 'OpenRouter',
+                hint: 'Основной провайдер',
+                has_key: true,
+                masked: 'sk-***',
+              },
+              gemini: {
+                label: 'Gemini',
+                hint: 'Резервный провайдер',
+                has_key: false,
+              },
+              groq: {
+                label: 'Groq',
+                hint: 'Дополнительный провайдер',
+                has_key: false,
+              },
+            },
+          }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    dom.window.fetch = fetchMock;
+    defineGlobal('fetch', fetchMock);
+    return fetchMock;
+  }
+
+  it('shows banner summary for an existing draft on load', async () => {
+    installFetchMock();
+    dom.window.localStorage.setItem('settings_ai_keys_draft_v1', JSON.stringify({
+      savedAt: Date.UTC(2026, 3, 7, 10, 15, 0),
+      values: { openrouter: 'sk-live' },
+      pendingRemovals: { gemini: true },
+    }));
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    const banner = dom.window.document.getElementById('settings-draft-banner');
+    const bannerText = dom.window.document.getElementById('settings-draft-banner-text');
+
+    expect(banner.classList.contains('hidden')).toBe(false);
+    expect(bannerText.textContent).toContain('значений: 1');
+    expect(bannerText.textContent).toContain('отметок удаления: 1');
+  });
+
+  it('restores draft values into the form and announces recovery', async () => {
+    installFetchMock();
+    dom.window.localStorage.setItem('settings_ai_keys_draft_v1', JSON.stringify({
+      savedAt: Date.UTC(2026, 3, 7, 10, 15, 0),
+      values: { openrouter: 'sk-restored' },
+      pendingRemovals: { openrouter: true },
+    }));
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    dom.window.document.getElementById('settings-draft-restore-btn').click();
+    await flushPromises();
+
+    const input = dom.window.document.getElementById('key-input-openrouter');
+    const removalNote = dom.window.document.body.textContent;
+
+    expect(input.value).toBe('sk-restored');
+    expect(removalNote).toContain('Ключ будет удален после сохранения.');
+    expect(toastVoiceSpy).toHaveBeenCalledWith(expect.objectContaining({
+      severity: 'info',
+      what: 'Черновик настроек восстановлен.',
+    }));
+  });
+
+  it('discards the draft and hides the banner', async () => {
+    installFetchMock();
+    dom.window.localStorage.setItem('settings_ai_keys_draft_v1', JSON.stringify({
+      savedAt: Date.UTC(2026, 3, 7, 10, 15, 0),
+      values: { openrouter: 'sk-live' },
+      pendingRemovals: {},
+    }));
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    dom.window.document.getElementById('settings-draft-discard-btn').click();
+    await flushPromises();
+
+    const banner = dom.window.document.getElementById('settings-draft-banner');
+
+    expect(dom.window.localStorage.getItem('settings_ai_keys_draft_v1')).toBeNull();
+    expect(banner.classList.contains('hidden')).toBe(true);
+    expect(banner.hidden).toBe(true);
+    expect(banner.style.display).toBe('none');
+    expect(toastVoiceSpy).toHaveBeenCalledWith(expect.objectContaining({
+      severity: 'info',
+      what: 'Черновик настроек удалён.',
+    }));
+    expect(toastVoiceSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears the draft automatically when all draft changes are removed', async () => {
+    installFetchMock();
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    const input = dom.window.document.getElementById('key-input-openrouter');
+    input.value = 'sk-temp';
+    input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    await flushPromises();
+
+    expect(dom.window.localStorage.getItem('settings_ai_keys_draft_v1')).not.toBeNull();
+
+    input.value = '';
+    input.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    await flushPromises();
+
+    const banner = dom.window.document.getElementById('settings-draft-banner');
+    expect(dom.window.localStorage.getItem('settings_ai_keys_draft_v1')).toBeNull();
+    expect(banner.classList.contains('hidden')).toBe(true);
+  });
+
+  it('binds draft actions even when the script loads after DOMContentLoaded', async () => {
+    installFetchMock();
+    dom.window.localStorage.setItem('settings_ai_keys_draft_v1', JSON.stringify({
+      savedAt: Date.UTC(2026, 3, 7, 10, 15, 0),
+      values: { openrouter: 'sk-live' },
+      pendingRemovals: {},
+    }));
+
+    Object.defineProperty(dom.window.document, 'readyState', {
+      configurable: true,
+      value: 'complete',
+    });
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    await flushPromises();
+
+    const banner = dom.window.document.getElementById('settings-draft-banner');
+    expect(banner.classList.contains('hidden')).toBe(false);
+
+    dom.window.document.getElementById('settings-draft-discard-btn').click();
+    await flushPromises();
+
+    expect(dom.window.localStorage.getItem('settings_ai_keys_draft_v1')).toBeNull();
+    expect(banner.classList.contains('hidden')).toBe(true);
+    expect(toastVoiceSpy).toHaveBeenCalledTimes(1);
+  });
+});

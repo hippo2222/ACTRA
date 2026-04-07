@@ -35,12 +35,14 @@
 
     const DIAGNOSTICS_STORAGE_KEY = 'settings_provider_diagnostics_v1';
     const KEYS_DRAFT_STORAGE_KEY = 'settings_ai_keys_draft_v1';
+    const THEME_STATUS_RESET_MS = 3200;
 
     let _providersData = {};
     let _validationState = {}; // provider -> 'idle' | 'validating' | 'valid' | 'invalid'
     let _pendingRemovals = {}; // provider -> true if the stored key should be deleted on save
     let _providerDiagnostics = {}; // provider -> { status, checkedAt }
     let _draftWriteLocked = false;
+    let _isSavingTheme = false;
 
     function composeFeedbackMessage({ what = '', impact = '', next = '' } = {}) {
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.voiceMessage === 'function') {
@@ -241,6 +243,8 @@
         const draft = readKeysDraft();
         if (!draft) {
             banner.classList.add('hidden');
+            banner.hidden = true;
+            banner.style.display = 'none';
             return;
         }
 
@@ -256,6 +260,207 @@
         const summary = summaryParts.length ? summaryParts.join(', ') : 'изменений';
         bannerText.textContent = `Черновик от ${formatDraftTime(draft.savedAt)} (${summary}). Можно восстановить или удалить его.`;
         banner.classList.remove('hidden');
+        banner.hidden = false;
+        banner.style.display = '';
+    }
+
+    function getThemeCatalog() {
+        if (window.ThemeManager && typeof window.ThemeManager.getThemes === 'function') {
+            return window.ThemeManager.getThemes();
+        }
+
+        return [
+            { id: 'light-a', name: 'Контраст', description: 'Светлая тема с холодным акцентом', swatch: '#f6f6f8', border: '#1349ec', isDark: false },
+            { id: 'light-b', name: 'Тепло', description: 'Мягкая светлая палитра с теплыми оттенками', swatch: '#fffecb', border: '#ff2e00', isDark: false },
+            { id: 'neutral-a', name: 'Земля', description: 'Нейтральная палитра в природных тонах', swatch: '#dcc9b6', border: '#6d4c3d', isDark: false },
+            { id: 'neutral-b', name: 'Сумерки', description: 'Спокойная нейтральная тема с мягким контрастом', swatch: '#b0aac0', border: '#50663c', isDark: false },
+            { id: 'dark-a', name: 'Ночь', description: 'Темная тема с теплыми акцентами', swatch: '#141204', border: '#e8985e', isDark: true },
+            { id: 'dark-b', name: 'Космос', description: 'Глубокая темная палитра для вечерней работы', swatch: '#120d31', border: '#b98ea7', isDark: true },
+        ];
+    }
+
+    function setThemeSaveStatus(message = '', tone = 'neutral') {
+        const statusEl = document.getElementById('theme-save-status');
+        if (!statusEl) return;
+
+        if (!message) {
+            statusEl.textContent = '';
+            statusEl.className = 'hidden';
+            return;
+        }
+
+        const classMap = {
+            neutral: 'pill-neutral pill-sm',
+            success: 'pill-success pill-sm',
+            error: 'pill-danger pill-sm',
+        };
+
+        statusEl.textContent = message;
+        statusEl.className = classMap[tone] || classMap.neutral;
+    }
+
+    function updateProfileCaption(user) {
+        const captionEl = document.getElementById('settings-profile-caption');
+        const footerNoteEl = document.getElementById('settings-footer-profile-note');
+        const fallbackCaption = 'Тема сохраняется для текущего профиля.';
+        const fallbackFooter = 'Настройки сохраняются в профиле текущего пользователя.';
+
+        if (!captionEl && !footerNoteEl) return;
+
+        if (!user || !user.name) {
+            if (captionEl) captionEl.textContent = fallbackCaption;
+            if (footerNoteEl) footerNoteEl.textContent = fallbackFooter;
+            return;
+        }
+
+        const safeName = String(user.name).trim() || 'текущего профиля';
+        if (captionEl) {
+            captionEl.textContent = `Тема и ключи сохраняются для профиля «${safeName}».`;
+        }
+        if (footerNoteEl) {
+            footerNoteEl.textContent = `Тема и API-ключи сохраняются в профиле «${safeName}».`;
+        }
+    }
+
+    function renderThemeOptions(selectedThemeId) {
+        const container = document.getElementById('theme-options');
+        if (!container) return;
+
+        const activeThemeId = selectedThemeId
+            || (window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a');
+        const themes = getThemeCatalog();
+        const disabledAttr = _isSavingTheme ? 'disabled aria-disabled="true"' : '';
+
+        container.innerHTML = themes.map((theme) => {
+            const isActive = theme.id === activeThemeId;
+            const paletteRail = theme.isDark
+                ? `linear-gradient(135deg, ${theme.swatch || '#111827'} 0%, rgba(255,255,255,0.08) 100%)`
+                : `linear-gradient(135deg, ${theme.swatch || '#f8fafc'} 0%, rgba(255,255,255,0.92) 100%)`;
+
+            return `
+                <button type="button" data-theme-option="${escapeHtml(theme.id)}"
+                    class="group flex w-full flex-col rounded-2xl border p-4 text-left transition-all ${isActive
+                        ? 'border-primary bg-primary-lighter shadow-md'
+                        : 'border-border-subtle bg-surface-1 hover:border-primary hover:-translate-y-0.5'} ${_isSavingTheme ? 'cursor-wait opacity-70' : ''}"
+                    ${disabledAttr}>
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="h-10 w-10 shrink-0 rounded-xl border shadow-inner"
+                                style="background:${paletteRail};border-color:${theme.border || '#94a3b8'}"></div>
+                            <div class="min-w-0">
+                                <div class="truncate font-semibold text-text-main">${escapeHtml(theme.name || theme.id)}</div>
+                                <div class="mt-1 text-xs text-text-secondary">${escapeHtml(theme.description || '')}</div>
+                            </div>
+                        </div>
+                        <span class="material-symbols-outlined shrink-0 ${isActive ? 'text-primary' : 'text-text-muted'}">
+                            ${isActive ? 'check_circle' : 'palette'}
+                        </span>
+                    </div>
+                    <div class="mt-4 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="h-3 w-3 rounded-full border" style="background:${theme.swatch || '#f8fafc'};border-color:${theme.border || '#94a3b8'}"></span>
+                            <span class="text-xs font-medium text-text-secondary">${theme.isDark ? 'Темная' : 'Светлая'}</span>
+                        </div>
+                        <span class="text-[11px] font-semibold ${isActive ? 'text-primary' : 'text-text-secondary'}">
+                            ${isActive ? 'Выбрано' : 'Применить'}
+                        </span>
+                    </div>
+                </button>
+            `;
+        }).join('');
+
+        container.querySelectorAll('[data-theme-option]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const themeId = button.getAttribute('data-theme-option');
+                if (!themeId) return;
+                void saveThemePreference(themeId);
+            });
+        });
+    }
+
+    async function loadProfileThemeContext() {
+        renderThemeOptions();
+
+        const [userData, settingsData] = await Promise.all([
+            fetch('/api/users/current')
+                .then((response) => response.json())
+                .catch(() => null),
+            fetch('/api/ui/settings')
+                .then((response) => response.json())
+                .catch(() => null),
+        ]);
+
+        if (userData?.ok && userData.user) {
+            updateProfileCaption(userData.user);
+        } else {
+            updateProfileCaption(null);
+        }
+
+        const themeId = settingsData?.ok && settingsData.settings?.theme
+            ? settingsData.settings.theme
+            : (window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a');
+
+        if (window.ThemeManager && window.ThemeManager.getTheme() !== themeId) {
+            window.ThemeManager.setTheme(themeId);
+        }
+
+        renderThemeOptions(themeId);
+    }
+
+    async function saveThemePreference(themeId) {
+        if (!themeId || _isSavingTheme) return;
+
+        const previousThemeId = window.ThemeManager
+            ? window.ThemeManager.getTheme()
+            : 'light-a';
+
+        if (themeId === previousThemeId) {
+            renderThemeOptions(themeId);
+            setThemeSaveStatus('Эта тема уже выбрана', 'neutral');
+            setTimeout(() => setThemeSaveStatus(''), THEME_STATUS_RESET_MS);
+            return;
+        }
+
+        _isSavingTheme = true;
+        renderThemeOptions(themeId);
+        setThemeSaveStatus('Сохраняем тему...', 'neutral');
+
+        if (window.ThemeManager) {
+            window.ThemeManager.setTheme(themeId);
+        }
+
+        try {
+            const response = await fetch('/api/ui/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ settings: { theme: themeId } }),
+            });
+            const data = await response.json();
+
+            if (!response.ok || !data.ok) {
+                throw new Error(data?.error || 'theme_save_failed');
+            }
+
+            renderThemeOptions(themeId);
+            setThemeSaveStatus('Тема сохранена', 'success');
+        } catch (error) {
+            console.error('[Settings] Failed to save theme:', error);
+            if (window.ThemeManager) {
+                window.ThemeManager.setTheme(previousThemeId);
+            }
+            renderThemeOptions(previousThemeId);
+            setThemeSaveStatus('Не удалось сохранить тему', 'error');
+            showVoiceToast({
+                severity: 'error',
+                what: 'Сохранение темы завершилось ошибкой.',
+                impact: 'Профиль остался на прежней теме.',
+                next: 'Повторите попытку позже.',
+            });
+        } finally {
+            _isSavingTheme = false;
+            renderThemeOptions(window.ThemeManager ? window.ThemeManager.getTheme() : previousThemeId);
+            setTimeout(() => setThemeSaveStatus(''), THEME_STATUS_RESET_MS);
+        }
     }
 
     function resetProviderState() {
@@ -357,13 +562,13 @@
                             autocomplete="off" spellcheck="false"
                             data-provider="${name}">
                         <button onclick="toggleKeyVisibility('${name}')" type="button"
-                            class="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-secondary hover:bg-surface-2 transition-colors"
+                            class="icon-button-muted absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary transition-colors"
                             title="Показать или скрыть ключ">
                             <span class="material-symbols-outlined text-[18px]" id="eye-icon-${name}">visibility_off</span>
                         </button>
                     </div>
                     <button onclick="validateKey('${name}')"
-                        class="settings-provider-action flex shrink-0 items-center rounded-lg border border-border-strong bg-surface-1 px-3 py-2 text-xs font-semibold text-text-secondary transition-colors hover:bg-surface-2 ${markedForRemoval ? 'opacity-50 cursor-not-allowed' : ''}"
+                        class="settings-provider-action icon-button-muted flex shrink-0 items-center text-xs font-semibold ${markedForRemoval ? 'opacity-50 cursor-not-allowed' : ''}"
                         id="validate-btn-${name}"
                         ${markedForRemoval ? 'disabled' : ''}
                         title="Проверить ключ">
@@ -372,7 +577,7 @@
                     ${hasKey || markedForRemoval ? `
                     <button onclick="toggleKeyRemoval('${name}')"
                         type="button"
-                        class="settings-provider-action flex shrink-0 items-center rounded-lg border border-border-strong bg-surface-1 px-3 py-2 text-xs font-semibold transition-colors hover:bg-surface-2 ${markedForRemoval ? 'text-warning-dark border-warning-light' : 'text-error'}"
+                        class="settings-provider-action icon-button-muted flex shrink-0 items-center text-xs font-semibold ${markedForRemoval ? 'text-warning-dark border-warning-light' : 'text-error'}"
                         title="${markedForRemoval ? 'Отменить удаление' : 'Удалить сохраненный ключ'}">
                         <span class="material-symbols-outlined text-[16px]">${markedForRemoval ? 'undo' : 'delete'}</span>
                     </button>` : ''}
@@ -411,23 +616,36 @@
     }
 
     function renderStatusBadge(status, hasKey, markedForRemoval = false) {
+        let toneClass = 'pill-neutral';
+        let label = 'Не настроен';
+
         if (markedForRemoval) {
-            return '<span class="status-dot bg-warning"></span><span class="text-xs text-warning-text font-medium">Будет удален</span>';
+            toneClass = 'pill-warning';
+            label = 'Будет удален';
+        } else {
+            switch (status) {
+                case 'validating':
+                    toneClass = 'pill-warning';
+                    label = 'Проверка...';
+                    break;
+                case 'valid':
+                    toneClass = 'pill-success';
+                    label = 'Работает';
+                    break;
+                case 'invalid':
+                    toneClass = 'pill-danger';
+                    label = 'Недействителен';
+                    break;
+                default:
+                    if (hasKey) {
+                        toneClass = 'pill-success';
+                        label = 'Настроен';
+                    }
+                    break;
+            }
         }
 
-        switch (status) {
-            case 'validating':
-                return '<span class="status-dot bg-warning"></span><span class="text-xs text-warning-text font-medium">Проверка...</span>';
-            case 'valid':
-                return '<span class="status-dot bg-success"></span><span class="text-xs text-success-text font-medium">Работает</span>';
-            case 'invalid':
-                return '<span class="status-dot bg-error"></span><span class="text-xs text-error font-medium">Недействителен</span>';
-            default:
-                if (hasKey) {
-                    return '<span class="status-dot bg-success"></span><span class="text-xs text-success-text font-medium">Настроен</span>';
-                }
-                return '<span class="status-dot bg-border-strong"></span><span class="text-xs text-text-main font-medium">Не настроен</span>';
-        }
+        return `<span class="${toneClass} pill-sm">${label}</span>`;
     }
 
     function renderProviderDiagnostics(providerName, validationStatus, hasKey, markedForRemoval) {
@@ -462,15 +680,17 @@
             line = 'Ключ не задан. Без него AI-генерация будет недоступна.';
         }
 
-        return `<div class="provider-diagnostics mt-3 rounded-lg px-3 py-2 text-[12px] leading-relaxed ${toneClass}">${escapeHtml(line)}</div>`;
+        return `<div class="provider-diagnostics panel-row panel-row--soft mt-3 rounded-lg px-3 py-2 text-[12px] leading-relaxed ${toneClass}">${escapeHtml(line)}</div>`;
     }
 
     function renderError(message) {
         return `
-        <div class="text-center py-12">
-            <span class="material-symbols-outlined text-error text-[32px]">error</span>
-            <p class="text-sm text-text-secondary mt-2">${escapeHtml(message)}</p>
-            <button onclick="loadKeys()" class="mt-3 text-sm text-primary hover:underline">Повторить</button>
+        <div class="empty-state-card empty-state-card--compact py-12">
+            <span class="empty-state-card__icon material-symbols-outlined text-[32px]">error</span>
+            <p class="empty-state-card__copy text-sm">${escapeHtml(message)}</p>
+            <div class="empty-state-card__actions">
+                <button onclick="loadKeys()" class="btn-secondary text-sm">Повторить</button>
+            </div>
         </div>`;
     }
 
@@ -484,17 +704,18 @@
         const hasProviderInputs = PROVIDERS_ORDER.some((name) => !!document.getElementById(`key-input-${name}`));
         if (!hasProviderInputs) {
             statusEl.textContent = 'Сначала загрузите ключи';
-            statusEl.className = 'text-sm text-error font-medium';
+            statusEl.className = 'pill-danger pill-sm';
             showToast('Не удалось загрузить текущие ключи. Сначала повторите загрузку.', 'error');
             setTimeout(() => {
                 statusEl.textContent = '';
+                statusEl.className = 'hidden';
             }, 4000);
             return;
         }
 
         btn.disabled = true;
         statusEl.textContent = 'Сохранение...';
-        statusEl.className = 'text-sm text-text-secondary font-medium';
+        statusEl.className = 'pill-neutral pill-sm';
 
         const payload = {};
         for (const name of PROVIDERS_ORDER) {
@@ -517,17 +738,17 @@
 
             if (data.ok) {
                 statusEl.textContent = 'Сохранено!';
-                statusEl.className = 'text-sm text-success-text font-medium';
+                statusEl.className = 'pill-success pill-sm';
                 await loadKeys();
                 return;
             }
 
             statusEl.textContent = data.error || 'Ошибка сохранения';
-            statusEl.className = 'text-sm text-error font-medium';
+            statusEl.className = 'pill-danger pill-sm';
         } catch (e) {
             console.error('[Settings] Save failed:', e);
             statusEl.textContent = 'Ошибка сети';
-            statusEl.className = 'text-sm text-error font-medium';
+            statusEl.className = 'pill-danger pill-sm';
         } finally {
             btn.disabled = false;
             setTimeout(() => {
@@ -586,21 +807,24 @@
         const hasProviderInputs = PROVIDERS_ORDER.some((name) => !!document.getElementById(`key-input-${name}`));
         if (!hasProviderInputs) {
             statusEl.textContent = 'Сначала загрузите ключи';
-            statusEl.className = 'text-sm text-error font-medium';
+            statusEl.className = 'pill-danger pill-sm';
             showVoiceToast({
                 severity: 'blocking',
                 what: 'Не удалось сохранить ключи.',
                 impact: 'Текущее состояние ключей осталось без изменений.',
                 next: 'Сначала повторите загрузку страницы настроек.',
             });
-            setTimeout(() => { statusEl.textContent = ''; }, 4000);
+            setTimeout(() => {
+                statusEl.textContent = '';
+                statusEl.className = 'hidden';
+            }, 4000);
             return;
         }
 
         btn.disabled = true;
         if (validateAllBtn) validateAllBtn.disabled = true;
         statusEl.textContent = 'Сохранение...';
-        statusEl.className = 'text-sm text-text-secondary font-medium';
+        statusEl.className = 'pill-neutral pill-sm';
 
         const payload = {};
         const removedProviders = [];
@@ -627,7 +851,7 @@
                 removedProviders.forEach((provider) => clearProviderDiagnostics(provider));
                 clearKeysDraft();
                 statusEl.textContent = 'Сохранено';
-                statusEl.className = 'text-sm text-success-text font-medium';
+                statusEl.className = 'pill-success pill-sm';
                 showVoiceToast({
                     severity: 'success',
                     what: 'Ключи сохранены.',
@@ -641,7 +865,7 @@
             }
 
             statusEl.textContent = data.error || 'Ошибка сохранения';
-            statusEl.className = 'text-sm text-error font-medium';
+            statusEl.className = 'pill-danger pill-sm';
             showVoiceToast({
                 severity: 'error',
                 what: 'Сохранение ключей завершилось ошибкой.',
@@ -651,7 +875,7 @@
         } catch (e) {
             console.error('[Settings] Save failed:', e);
             statusEl.textContent = 'Ошибка сети';
-            statusEl.className = 'text-sm text-error font-medium';
+            statusEl.className = 'pill-danger pill-sm';
             showVoiceToast({
                 severity: 'error',
                 what: 'Сохранение ключей недоступно из-за сетевой ошибки.',
@@ -663,6 +887,7 @@
             if (validateAllBtn) validateAllBtn.disabled = false;
             setTimeout(() => {
                 statusEl.textContent = '';
+                statusEl.className = 'hidden';
             }, 4000);
         }
     }
@@ -917,22 +1142,40 @@
     window.restoreSettingsDraft = restoreDraftFromStorage;
     window.discardSettingsDraft = discardDraftFromStorage;
 
-    document.addEventListener('DOMContentLoaded', () => {
+    function initSettingsPage() {
+        if (document.body && document.body.dataset.settingsInitialized === '1') {
+            return;
+        }
+        if (document.body) {
+            document.body.dataset.settingsInitialized = '1';
+        }
+
         const restoreBtn = document.getElementById('settings-draft-restore-btn');
         if (restoreBtn) {
-            restoreBtn.addEventListener('click', () => {
+            restoreBtn.onclick = () => {
                 restoreDraftFromStorage();
-            });
+            };
         }
 
         const discardBtn = document.getElementById('settings-draft-discard-btn');
         if (discardBtn) {
-            discardBtn.addEventListener('click', () => {
+            discardBtn.onclick = () => {
                 discardDraftFromStorage();
-            });
+            };
         }
 
+        window.addEventListener('themechanged', (event) => {
+            renderThemeOptions(event.detail?.themeId);
+        });
+
+        void loadProfileThemeContext();
         loadKeys();
         updateDraftBanner();
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initSettingsPage, { once: true });
+    } else {
+        initSettingsPage();
+    }
 })();

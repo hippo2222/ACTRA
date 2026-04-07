@@ -15,6 +15,7 @@ from task_system.core.models.task_models import (
     TaskMetadata,
     ValidatedTask,
     ClickTaskContent,
+    ErrorDetectionContent,
     DrawTaskContent,
     OpenAnswerTaskContent,
     TestTaskContent,
@@ -58,6 +59,7 @@ class TaskLoader:
         
         # Register content models by task type
         self._content_models = {
+            ('click', 'error_detection'): ErrorDetectionContent,
             'click': ClickTaskContent,
             'draw': DrawTaskContent,
             'open_answer': OpenAnswerTaskContent,
@@ -217,8 +219,9 @@ class TaskLoader:
             PydanticValidationError: If validation fails
             ValueError: If task type is unknown
         """
-        # Get content model for task type
-        content_model = self._content_models.get(task_type)
+        # Get content model for task type/subtype
+        task_subtype = raw_data.get('subtype')
+        content_model = self._content_models.get((task_type, task_subtype)) or self._content_models.get(task_type)
         
         if not content_model:
             raise ValueError(f"Unknown task type: {task_type}")
@@ -258,6 +261,7 @@ class TaskLoader:
         validated_task = ValidatedTask(
             id=raw_data.get('id', task_json_path.parent.name),
             type=task_type,
+            subtype=task_subtype,
             meta=TaskMetadata(**raw_data.get('meta', {})),
             content=validated_content,
             settings=raw_data.get('settings')

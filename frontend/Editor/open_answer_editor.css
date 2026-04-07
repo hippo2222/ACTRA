@@ -11,14 +11,180 @@
     border-radius: 3px;
 }
 
+.open-answer-editor-header {
+    font-family: var(--font-family-display);
+}
+
+.open-answer-editor-header,
+.open-answer-editor-header button,
+.open-answer-editor-header .status-cluster__label,
+.open-answer-editor-header .status-cluster__detail {
+    font-family: var(--font-family-display);
+}
+
+.open-answer-editor-header__main {
+    min-width: 0;
+    flex: 1 1 auto;
+    gap: 0.75rem;
+}
+
+.open-answer-editor-header__title-row {
+    min-width: 0;
+}
+
+#editor-title {
+    flex: 1 1 auto;
+    margin: 0;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.875rem !important;
+    line-height: 1.2;
+    font-weight: 700;
+}
+
+.open-answer-editor-header__title-row #save-status-container {
+    flex: 0 1 auto;
+    margin-left: auto;
+    min-height: 2.5rem;
+    max-inline-size: min(100%, 22rem);
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    padding-inline: 1rem;
+}
+
+.open-answer-editor-header__title-row #save-status-container .status-cluster__label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    text-align: center;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+    font-size: 0.875rem !important;
+    line-height: 1.2;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.open-answer-editor-header__title-row #save-status-container .status-cluster__detail {
+    display: none !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2;
+}
+
+.open-answer-editor-header__title-row #save-status-container .status-cluster__dot {
+    display: none;
+}
+
+.open-answer-editor-header__title-row #save-status-container .status-cluster__body {
+    display: flex;
+    flex-direction: row;
+    width: auto;
+    min-height: 100%;
+    gap: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+}
+
+.open-answer-editor-header__actions {
+    flex: 0 0 auto;
+    margin-left: auto;
+    gap: 0.75rem;
+}
+
+#question-textarea::placeholder,
+#reference-textarea::placeholder,
+#hint-textarea::placeholder,
+#max-length-input::placeholder {
+    color: color-mix(in srgb, var(--color-text-secondary) 76%, var(--color-text-main) 24%) !important;
+    opacity: 1;
+}
+
+#reference-textarea + div span.text-xs.text-text-muted.italic,
+#reference-textarea + .border-t.border-border-subtle.bg-surface-2.p-3 > span.text-xs.text-text-muted.italic,
+#selected-count-badge,
+#keywords-container > p.text-sm.text-text-muted.italic,
+#max-length-input + p,
+.w-\[320px\] p.text-xs.text-text-muted,
+#images-container #add-image-btn .add-image-label {
+    color: var(--color-text-secondary) !important;
+}
+
+#reference-textarea + div span.text-xs.text-text-muted.italic,
+#reference-textarea + .border-t.border-border-subtle.bg-surface-2.p-3 > span.text-xs.text-text-muted.italic {
+    color: color-mix(in srgb, var(--color-text-main) 82%, var(--color-text-secondary) 18%) !important;
+}
+
+#selected-count-badge {
+    color: var(--color-text-main) !important;
+}
+
+.keyword-tag {
+    border-color: color-mix(in srgb, var(--color-border-strong) 52%, var(--color-primary-light) 48%);
+    color: var(--color-text-main);
+}
+
+.keyword-tag.pill-neutral {
+    background: color-mix(in srgb, var(--color-surface-1) 86%, var(--color-primary-light) 14%);
+    border-color: color-mix(in srgb, var(--color-border-strong) 44%, var(--color-primary-light) 56%);
+    color: var(--color-text-main);
+}
+
+.keyword-tag.pill-info,
+.keyword-tag.active {
+    background: color-mix(in srgb, var(--color-info-dark) 82%, var(--color-surface-1) 18%);
+    border-color: color-mix(in srgb, var(--color-info) 70%, var(--color-border-strong) 30%);
+    color: var(--color-text-on-dark);
+}
+
+.keyword-tag:hover,
+.keyword-tag:focus-visible,
+.keyword-tag:active {
+    color: inherit;
+}
+
+.keyword-tag.pill-info:hover,
+.keyword-tag.pill-info:focus-visible,
+.keyword-tag.pill-info:active,
+.keyword-tag.active:hover,
+.keyword-tag.active:focus-visible,
+.keyword-tag.active:active {
+    background: color-mix(in srgb, var(--color-info-dark) 72%, var(--color-surface-1) 28%);
+    border-color: color-mix(in srgb, var(--color-info) 78%, var(--color-border-strong) 22%);
+    color: var(--color-text-on-dark);
+}
+
+@media (max-width: 1440px) {
+    .open-answer-editor-header {
+        flex-wrap: wrap;
+        height: auto;
+        min-height: 4rem;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .open-answer-editor-header__main {
+        flex: 1 1 100%;
+    }
+
+    .open-answer-editor-header__title-row {
+        width: 100%;
+    }
+}
+
 .keyword-tag {
     transition: all 0.2s;
     user-select: none;
 }
 
 .keyword-tag.active {
-    background-color: var(--color-primary);
-    color: var(--color-primary-fg);
-    box-shadow: 0 4px 12px var(--color-primary-light);
-    border-color: transparent;
+    box-shadow: var(--shadow-sm);
 }

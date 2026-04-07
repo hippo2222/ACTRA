@@ -399,3 +399,117 @@ class TestDeltaImageHelpers:
         remap = {"old/img.png": "new/img.png"}
         result = svc._remap_delta_images(delta, remap)
         assert result["ops"][0]["insert"]["image"] == "new/img.png"
+
+
+class TestNormalizeTheoryImageRefs:
+    def test_removes_missing_delta_and_meta_refs(self, svc):
+        existing = svc.data_dir / "fixtures" / "keep.png"
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_bytes(b"fake-png")
+        existing_ref = existing.relative_to(svc.data_dir).as_posix()
+        missing_ref = "fixtures/missing.png"
+
+        created = svc.create_theory(
+            {
+                "title": "With broken refs",
+                "images": [existing_ref, missing_ref],
+                "delta": {
+                    "ops": [
+                        {"insert": "Before\n"},
+                        {"insert": {"image": existing_ref}},
+                        {"insert": "\n"},
+                        {"insert": {"image": missing_ref}},
+                        {"insert": "\n"},
+                    ]
+                },
+            }
+        )
+
+        report = svc.normalize_theory_image_refs(created["id"])
+
+        assert report["changed"] is True
+        assert report["removed_delta_image_ops"] == 1
+        assert report["removed_delta_image_refs"] == [missing_ref]
+        assert report["removed_meta_images"] == [missing_ref]
+
+        updated = svc.get_theory(created["id"])
+        image_refs = [
+            op["insert"]["image"]
+            for op in updated["delta"]["ops"]
+            if isinstance(op.get("insert"), dict) and isinstance(op["insert"].get("image"), str)
+        ]
+        assert image_refs == [existing_ref]
+        assert updated["images"] == [existing_ref]
+
+    def test_dry_run_reports_changes_without_writing(self, svc):
+        missing_ref = "fixtures/missing-only.png"
+        created = svc.create_theory(
+            {
+                "title": "Dry run",
+                "images": [missing_ref],
+                "delta": {"ops": [{"insert": {"image": missing_ref}}, {"insert": "\n"}]},
+            }
+        )
+
+        report = svc.normalize_theory_image_refs(created["id"], dry_run=True)
+
+        assert report["changed"] is True
+        assert report["removed_delta_image_ops"] == 1
+        assert report["removed_delta_image_refs"] == [missing_ref]
+        assert report["removed_meta_images"] == [missing_ref]
+
+        untouched = svc.get_theory(created["id"])
+        assert untouched["images"] == [missing_ref]
+        image_refs = [
+            op["insert"]["image"]
+            for op in untouched["delta"]["ops"]
+            if isinstance(op.get("insert"), dict) and isinstance(op["insert"].get("image"), str)
+        ]
+        assert image_refs == [missing_ref]
+
+    def test_bulk_report_counts_changed_theories(self, svc):
+        existing = svc.data_dir / "fixtures" / "keep-2.png"
+        existing.parent.mkdir(parents=True, exist_ok=True)
+        existing.write_bytes(b"fake-png")
+        existing_ref = existing.relative_to(svc.data_dir).as_posix()
+
+        broken = svc.create_theory(
+            {
+                "title": "Broken",
+                "images": ["fixtures/missing-2.png"],
+                "delta": {"ops": [{"insert": {"image": "fixtures/missing-2.png"}}, {"insert": "\n"}]},
+            }
+        )
+        clean = svc.create_theory(
+            {
+                "title": "Clean",
+                "images": [existing_ref],
+                "delta": {"ops": [{"insert": {"image": existing_ref}}, {"insert": "\n"}]},
+            }
+        )
+
+        report = svc.normalize_theories_image_refs([broken["id"], clean["id"]], dry_run=True)
+
+        assert report["ok"] is True
+        assert report["theories_scanned"] == 2
+        assert report["theories_changed"] == 1
+        assert report["removed_delta_image_ops_total"] == 1
+        assert report["removed_delta_image_refs_total"] == 1
+        assert report["removed_meta_images_total"] == 1
+
+
+def test_delete_theory_removes_directory_permanently(svc):
+    created = svc.create_theory(
+        {
+            "title": "Delete me",
+            "delta": {"ops": [{"insert": "Delete before remove\n"}]},
+        }
+    )
+
+    result = svc.delete_theory(created["id"])
+
+    assert result["id"] == created["id"]
+    assert not (svc.theories_dir / created["id"]).exists()
+    assert "archived_path" not in result
+    with pytest.raises(TheoryNotFoundError):
+        svc.get_theory(created["id"])

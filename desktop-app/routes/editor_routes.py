@@ -15,6 +15,7 @@ Endpoints:
 - POST   /api/editor/test/import                          - Import test from file
 - POST   /api/editor/test/export                          - Export test to file
 - POST   /api/editor/logs/scale                           - Save scale log
+- POST   /api/editor/task/bootstrap                       - Reserve task id + build unsaved editor payload
 - POST   /api/editor/task/new                             - Create new task
 - POST   /api/editor/module/new                           - Create new module
 - POST   /api/editor/topic/new                            - Create new topic
@@ -53,7 +54,11 @@ from task_system.models.test_parser import TestFileParser
 from task_system.models.test_task import TestTask
 
 from routes._context import get_ctx, get_extra
-from routes._helpers import _make_safe_id, _resolve_editor_image_path
+from routes._helpers import (
+    _compute_inherited_theory_for_topics,
+    _make_safe_id,
+    _resolve_editor_image_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -215,6 +220,26 @@ def get_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
         return jsonify({"ok": False, "error": "task_load_failed"}), 500
 
 
+@editor_bp.route("/api/editor/difficulty-meta", methods=["GET"])
+def editor_difficulty_meta() -> Any:
+    """Return difficulty authoring metadata for a task type/subtype."""
+    try:
+        task_type = str(request.args.get("task_type") or "").strip()
+        subtype = str(request.args.get("subtype") or "").strip() or None
+        if not task_type:
+            return jsonify({"ok": False, "error": "task_type_required"}), 400
+
+        difficulty_manager = getattr(get_ctx(), "difficulty_manager", None)
+        if difficulty_manager is None:
+            return jsonify({"ok": False, "error": "difficulty_manager_unavailable"}), 503
+
+        meta = difficulty_manager.get_task_difficulty_metadata(task_type, subtype)
+        return jsonify({"ok": True, "meta": meta})
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to resolve difficulty metadata: %s", exc)
+        return jsonify({"ok": False, "error": "difficulty_meta_failed"}), 500
+
+
 @editor_bp.route("/api/editor/task/<module_id>/<topic_id>/<task_id>", methods=["POST"])
 def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
     """Save updated task data from the editor."""
@@ -328,55 +353,6 @@ def _json_like_equal(left: Any, right: Any) -> bool:
     return left == right
 
 
-def _compute_inherited_theory_for_topics(
-    topic_refs: Set[Tuple[str, str]],
-) -> Dict[str, Any]:
-    storage = get_ctx().storage_service
-    topic_rows: List[Dict[str, Any]] = []
-    unique_theory_links: Dict[str, Dict[str, Any]] = {}
-
-    for module_id, topic_id in sorted(topic_refs):
-        theory_link = storage.get_topic_theory_link(module_id, topic_id)
-        theory_id = (
-            str(theory_link.get("theory_id") or "").strip()
-            if isinstance(theory_link, dict)
-            else ""
-        )
-        topic_rows.append(
-            {
-                "module_id": module_id,
-                "topic_id": topic_id,
-                "theory_id": theory_id or None,
-            }
-        )
-        if theory_id and isinstance(theory_link, dict):
-            unique_theory_links[theory_id] = dict(theory_link)
-
-    if not unique_theory_links:
-        return {
-            "status": "none",
-            "inherited_theory_link": None,
-            "theory_ids": [],
-            "topic_rows": topic_rows,
-        }
-
-    if len(unique_theory_links) == 1:
-        theory_id = next(iter(unique_theory_links.keys()))
-        return {
-            "status": "ok",
-            "inherited_theory_link": unique_theory_links[theory_id],
-            "theory_ids": [theory_id],
-            "topic_rows": topic_rows,
-        }
-
-    return {
-        "status": "conflict",
-        "inherited_theory_link": None,
-        "theory_ids": sorted(unique_theory_links.keys()),
-        "topic_rows": topic_rows,
-    }
-
-
 def _sync_topic_theory_to_complexes(
     module_id: str,
     topic_id: str,
@@ -397,6 +373,7 @@ def _sync_topic_theory_to_complexes(
         "updated": 0,
         "would_update": 0,
         "skipped": 0,
+        "composite_count": 0,
     }
 
     target_ref = (module_id, topic_id)
@@ -430,6 +407,8 @@ def _sync_topic_theory_to_complexes(
 
         inherited = _compute_inherited_theory_for_topics(topic_refs)
         inherited_status = inherited.get("status")
+        if inherited_status == "composite":
+            summary["composite_count"] += 1
 
         updates: Dict[str, Any] = {
             "theory_sync_status": inherited_status,
@@ -450,10 +429,14 @@ def _sync_topic_theory_to_complexes(
             updates["theory_link"] = inherited.get("inherited_theory_link")
         elif inherited_status == "none":
             updates["theory_link"] = None
+        elif inherited_status == "composite":
+            updates["theory_link"] = None
+            updates["theory_sync_meta"]["composite_topics"] = inherited.get("topic_rows") or []
+            updates["theory_sync_meta"]["composite_theory_links"] = (
+                inherited.get("inherited_theory_links") or []
+            )
         else:
-            # conflict: keep current complex theory_link untouched
-            updates.pop("theory_link", None)
-            updates["theory_sync_meta"]["conflict_topics"] = inherited.get("topic_rows") or []
+            updates["theory_link"] = None
 
         changed_keys = []
         for key, next_value in updates.items():
@@ -1237,6 +1220,36 @@ def create_editor_task() -> Any:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@editor_bp.route("/api/editor/task/bootstrap", methods=["POST"])
+def bootstrap_editor_task() -> Any:
+    """Reserve a task id and build an unsaved draft payload without creating task.json."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+    try:
+        payload = request.json or {}
+        module_id = payload.get("module_id")
+        topic_id = payload.get("topic_id")
+        task_name = payload.get("task_name")
+        task_type = payload.get("task_type")
+        preferred_task_id = payload.get("task_id") or None
+
+        if not all([module_id, topic_id, task_name, task_type]):
+            return jsonify({"ok": False, "error": "missing_required_fields"}), 400
+
+        bootstrap = ctx.storage_service.build_task_draft_bootstrap(
+            module_id,
+            topic_id,
+            task_name,
+            task_type,
+            preferred_task_id=preferred_task_id,
+        )
+        return jsonify({"ok": True, **bootstrap})
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to bootstrap editor task: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @editor_bp.route("/api/editor/module/new", methods=["POST"])
 def create_editor_module() -> Any:
     ctx = get_ctx()
@@ -1431,7 +1444,8 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
             normalized_theory_link,
         )
 
-        apply_to_complexes = bool(payload.get("apply_to_complexes"))
+        raw_apply_to_complexes = payload.get("apply_to_complexes")
+        apply_to_complexes = True if raw_apply_to_complexes is None else bool(raw_apply_to_complexes)
         mode = _normalize_propagation_mode(payload.get("propagation_mode"))
         dry_run = bool(payload.get("dry_run"))
         propagation_result = None
@@ -1497,11 +1511,41 @@ def upload_editor_image() -> Any:
         images_dir = task_dir / "images"
         images_dir.mkdir(parents=True, exist_ok=True)
 
+        upload_hasher = hashlib.sha256()
+        while True:
+            chunk = file.stream.read(8192)
+            if not chunk:
+                break
+            upload_hasher.update(chunk)
+        upload_digest = upload_hasher.hexdigest()
+        file.stream.seek(0)
+
+        def _hash_existing_image(path: Path) -> Optional[str]:
+            try:
+                hasher = hashlib.sha256()
+                with open(path, "rb") as fh:
+                    while True:
+                        chunk = fh.read(8192)
+                        if not chunk:
+                            break
+                        hasher.update(chunk)
+                return hasher.hexdigest()
+            except Exception:
+                return None
+
         file_path = images_dir / filename
+        stem = Path(filename).stem
+        suffix = Path(filename).suffix
+        candidate_paths = [file_path]
+        candidate_paths.extend(sorted(images_dir.glob(f"{stem}_*{suffix}")))
+        for candidate in candidate_paths:
+            if candidate.exists() and _hash_existing_image(candidate) == upload_digest:
+                relative_path = os.path.relpath(candidate, get_ctx().data_dir).replace("\\", "/")
+                logger.info("[HTTP] Reused identical image for task %s: %s", task_id, relative_path)
+                return jsonify({"ok": True, "path": relative_path, "reused": True})
+
         counter = 1
         while file_path.exists():
-            stem = Path(filename).stem
-            suffix = Path(filename).suffix
             file_path = images_dir / f"{stem}_{counter:02d}{suffix}"
             counter += 1
 

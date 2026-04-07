@@ -2,8 +2,6 @@
  * ACTRA Open Answer Editor
  */
 
-const DEFAULT_MAX_LENGTH = 1000;
-
 class OpenAnswerEditor extends BaseEditor {
     constructor() {
         super(); // Call BaseEditor constructor
@@ -19,6 +17,10 @@ class OpenAnswerEditor extends BaseEditor {
         this.imagePreviewOverlay = null;
         this.imagePreviewImg = null;
         this.imagePreviewCloseBtn = null;
+        this.toastHideTimer = null;
+        this.toastDismissTimer = null;
+        this.toastDismissCallback = null;
+        this.pendingDeletedImageUndo = null;
         this.handleGlobalKeyDown = (event) => {
             if (event.key === 'Escape') {
                 this.hideImagePreview();
@@ -29,17 +31,7 @@ class OpenAnswerEditor extends BaseEditor {
     }
 
     async init() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const moduleId = urlParams.get('module');
-        const topicId = urlParams.get('topic');
-        const taskId = urlParams.get('task');
-
-        if (moduleId && topicId && taskId) {
-            await this.loadTask(moduleId, topicId, taskId);
-        } else {
-            console.error("Missing task parameters in URL");
-        }
-
+        await this.initTaskFromUrlContext();
         this.setupEventListeners();
         this.setupDirtyTracking();
         this.setupBeforeUnloadWarning();
@@ -56,12 +48,6 @@ class OpenAnswerEditor extends BaseEditor {
         if (!Array.isArray(content.images)) {
             content.images = [];
         }
-
-        // Set max_length with default
-        const storedMaxLength = Number(content.max_length);
-        content.max_length = Number.isFinite(storedMaxLength) && storedMaxLength > 0
-            ? storedMaxLength
-            : DEFAULT_MAX_LENGTH;
 
         // Load keywords
         this.keywords = content.keywords || [];
@@ -101,15 +87,10 @@ class OpenAnswerEditor extends BaseEditor {
         if (hintArea) hintArea.value = content.hint || "";
 
         // Settings
-        const minKeywordsInput = document.querySelector('#min-keywords-input');
-        if (minKeywordsInput) {
-            const hasStoredValue = typeof content.min_keywords === 'number' && !Number.isNaN(content.min_keywords);
-            const requireAll = content.require_all_keywords === true || !hasStoredValue;
-            if (requireAll) {
-                minKeywordsInput.value = "-1";
-            } else {
-                minKeywordsInput.value = content.min_keywords.toString();
-            }
+        const maxLengthInput = document.querySelector('#max-length-input');
+        if (maxLengthInput) {
+            const resolvedMaxLength = this.resolveStoredMaxLength();
+            maxLengthInput.value = resolvedMaxLength ? resolvedMaxLength.toString() : "";
         }
 
         const sequenceToggle = document.querySelector('#sequence-order-check');
@@ -125,6 +106,65 @@ class OpenAnswerEditor extends BaseEditor {
         this.renderImages();
         this.applyAutoResize();
         this.isRendering = false;
+    }
+
+    resolveStoredMaxLength() {
+        if (!this.task?.task_data) return null;
+
+        const content = this.task.task_data.content || {};
+        const settings = this.task.task_data.settings || {};
+        const candidates = [
+            content.max_length,
+            content.maxLength,
+            settings.max_length,
+            settings.maxLength,
+        ];
+
+        for (const candidate of candidates) {
+            const parsed = Number(candidate);
+            if (Number.isInteger(parsed) && parsed > 0) {
+                return parsed;
+            }
+        }
+
+        return null;
+    }
+
+    readMaxLengthPreference() {
+        const input = document.querySelector('#max-length-input');
+        if (!input) {
+            return { isSet: false, value: null, invalid: false };
+        }
+
+        const rawValue = String(input.value || '').trim();
+        if (!rawValue) {
+            return { isSet: false, value: null, invalid: false };
+        }
+
+        const parsed = Number(rawValue);
+        if (!Number.isInteger(parsed) || parsed < 1) {
+            return { isSet: true, value: null, invalid: true };
+        }
+
+        return { isSet: true, value: parsed, invalid: false };
+    }
+
+    syncLegacyMaxLength(maxLength) {
+        const taskData = this.task?.task_data;
+        if (!taskData) return;
+
+        const settings = (taskData.settings && typeof taskData.settings === 'object')
+            ? taskData.settings
+            : (taskData.settings = {});
+
+        if (maxLength == null) {
+            delete settings.max_length;
+            delete settings.maxLength;
+            return;
+        }
+
+        settings.max_length = maxLength;
+        delete settings.maxLength;
     }
 
     renderKeywords() {
@@ -145,7 +185,7 @@ class OpenAnswerEditor extends BaseEditor {
             if (isRequired) selectedCount++;
 
             const btn = document.createElement('button');
-            btn.className = `px-3 py-1 rounded-full text-sm font-medium border transition-all keyword-tag animate-pop-in hover:scale-105 ${isRequired ? 'active bg-primary text-primary-contrast shadow-sm ring-2 ring-primary border-transparent' : 'bg-surface-2 text-text-muted hover:bg-bg-hover border-border-subtle'}`;
+            btn.className = `keyword-tag pill pill-sm animate-pop-in hover:scale-105 ${isRequired ? 'active pill-info shadow-sm' : 'pill-neutral'}`;
             btn.textContent = text;
 
             btn.onclick = () => {
@@ -159,7 +199,7 @@ class OpenAnswerEditor extends BaseEditor {
 
         if (!this.keywords.length) {
             const placeholder = document.createElement('p');
-            placeholder.className = 'text-sm text-text-muted italic';
+            placeholder.className = 'open-answer-keywords-placeholder text-sm text-text-muted italic';
             placeholder.textContent = 'Добавьте ключевые слова или используйте кнопку «Разбить на ключевые слова».';
             container.appendChild(placeholder);
         }
@@ -187,7 +227,7 @@ class OpenAnswerEditor extends BaseEditor {
         }));
 
         if (!generated.length) {
-            this.showToast('Не удалось выделить ключевые слова. Попробуйте добавить их вручную.', 'warning');
+            this.showToast('Не удалось выделить ключевые слова. Проверьте эталонный ответ и попробуйте снова.', 'warning');
             return;
         }
 
@@ -214,7 +254,7 @@ class OpenAnswerEditor extends BaseEditor {
 
         images.forEach((path, index) => {
             const div = document.createElement('div');
-            div.className = 'open-answer-image-card group relative aspect-square bg-surface-2 rounded-lg border border-border-subtle overflow-hidden animate-scale-in hover:shadow-lg transition-all hover:translate-y-[-2px]';
+            div.className = 'open-answer-image-card card-elevated group relative aspect-square overflow-hidden animate-scale-in hover:translate-y-[-2px]';
 
             const fullPath = `/api/editor/image?path=${encodeURIComponent(path)}`;
 
@@ -224,10 +264,10 @@ class OpenAnswerEditor extends BaseEditor {
                 </div>
                 <img alt="Reference Image" class="absolute inset-0 w-full h-full object-cover" src="${fullPath}" />
                 <div class="absolute inset-0 bg-scrim opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                    <button class="p-1.5 bg-surface-1 hover:bg-surface-1 text-text-main rounded-full backdrop-blur-sm transition-colors view-btn shadow-sm">
+                    <button class="icon-button-muted view-btn shadow-sm">
                         <span class="material-symbols-outlined text-[18px]">visibility</span>
                     </button>
-                    <button class="p-1.5 bg-error hover:bg-error-dark text-text-on-dark rounded-full backdrop-blur-sm transition-colors delete-btn shadow-sm">
+                    <button class="icon-button-muted delete-btn border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error shadow-sm">
                         <span class="material-symbols-outlined text-[18px]">delete</span>
                     </button>
                 </div>
@@ -235,11 +275,7 @@ class OpenAnswerEditor extends BaseEditor {
 
             const deleteBtn = div.querySelector('.delete-btn');
             if (deleteBtn) {
-                deleteBtn.onclick = () => {
-                    this.task.task_data.content.images.splice(index, 1);
-                    this.renderImages();
-                    this.markUnsaved();
-                };
+                deleteBtn.onclick = () => this.deleteImageAtIndex(index);
             }
 
             const viewBtn = div.querySelector('.view-btn');
@@ -252,8 +288,15 @@ class OpenAnswerEditor extends BaseEditor {
 
         if (!images.length) {
             const emptyState = document.createElement('div');
-            emptyState.className = 'images-empty-state col-span-4 text-sm text-text-muted border border-dashed border-border-subtle rounded-lg py-6 text-center';
+            emptyState.className = 'images-empty-state empty-state-card empty-state-card--compact col-span-4';
             emptyState.textContent = 'Изображения не добавлены';
+            emptyState.innerHTML = `
+                <span class="empty-state-card__icon">
+                    <span class="material-symbols-outlined text-[22px]">imagesmode</span>
+                </span>
+                <h4 class="empty-state-card__title">Изображения не добавлены</h4>
+                <p class="empty-state-card__copy">Добавьте до ${this.maxImages} ссылок или изображений для задачи.</p>
+            `;
             container.insertBefore(emptyState, referenceNode);
         }
 
@@ -347,6 +390,47 @@ class OpenAnswerEditor extends BaseEditor {
         event.target.value = '';
     }
 
+    deleteImageAtIndex(index) {
+        if (!this.task?.task_data?.content || !Array.isArray(this.task.task_data.content.images)) {
+            return false;
+        }
+        if (index < 0 || index >= this.task.task_data.content.images.length) {
+            return false;
+        }
+
+        const [removedImage] = this.task.task_data.content.images.splice(index, 1);
+        if (!removedImage) {
+            return false;
+        }
+
+        this.pendingDeletedImageUndo = { index, path: removedImage };
+        this.renderImages();
+        this.markUnsaved();
+        this.showToast('Изображение удалено.', 'info', 5000, {
+            actionLabel: 'Отменить',
+            closeable: true,
+            onAction: () => this.restoreDeletedImage(),
+        });
+        return true;
+    }
+
+    restoreDeletedImage() {
+        const pending = this.pendingDeletedImageUndo;
+        if (!pending || !this.task?.task_data?.content) {
+            return false;
+        }
+        const images = Array.isArray(this.task.task_data.content.images)
+            ? this.task.task_data.content.images
+            : (this.task.task_data.content.images = []);
+        const nextIndex = Math.max(0, Math.min(pending.index, images.length));
+        images.splice(nextIndex, 0, pending.path);
+        this.pendingDeletedImageUndo = null;
+        this.renderImages();
+        this.markUnsaved();
+        this.showToast('Изображение восстановлено.', 'success');
+        return true;
+    }
+
     /**
      * Validate task before saving (BaseEditor abstract method)
      * @returns {string|null} Error message if validation fails, null if valid
@@ -357,12 +441,8 @@ class OpenAnswerEditor extends BaseEditor {
 
         const referenceArea = document.querySelector('#reference-textarea');
         const referenceAnswer = referenceArea ? referenceArea.value.trim() : "";
-
-        const minKeywordsInput = document.querySelector('#min-keywords-input');
-        let minKeywords = minKeywordsInput ? parseInt(minKeywordsInput.value, 10) : -1;
-        if (Number.isNaN(minKeywords)) {
-            minKeywords = -1;
-        }
+        const maxLengthInput = document.querySelector('#max-length-input');
+        const maxLengthPreference = this.readMaxLengthPreference();
 
         // Validate prompt
         if (!prompt) {
@@ -376,6 +456,11 @@ class OpenAnswerEditor extends BaseEditor {
             return "Ошибка: эталонный ответ не должен быть пустым.";
         }
 
+        if (maxLengthPreference.invalid) {
+            if (maxLengthInput) maxLengthInput.focus();
+            return "Ошибка: максимальная длина ответа должна быть целым числом не меньше 1 или пустым полем.";
+        }
+
         // Validate keywords
         const normalizedKeywords = this.keywords
             .map((kw) => this.normalizeKeywordItem(kw))
@@ -385,22 +470,10 @@ class OpenAnswerEditor extends BaseEditor {
             return "Ошибка: добавьте хотя бы одно ключевое слово для проверки.";
         }
 
-        const requireAllKeywords = minKeywords === -1;
-
-        if (!requireAllKeywords && (isNaN(minKeywords) || minKeywords < 1)) {
-            if (minKeywordsInput) minKeywordsInput.focus();
-            return "Ошибка: минимальное количество ключевых слов должно быть не меньше 1.";
-        }
-
         const keywordsTexts = normalizedKeywords.map((kw) => kw.text).filter(Boolean);
 
         if (!keywordsTexts.length) {
             return "Ошибка: выберите хотя бы одно ключевое слово.";
-        }
-
-        if (!requireAllKeywords && minKeywords > keywordsTexts.length) {
-            if (minKeywordsInput) minKeywordsInput.focus();
-            return `Ошибка: минимальное количество ключевых слов (${minKeywords}) не может превышать общее число ключевых слов (${keywordsTexts.length}).`;
         }
 
         return null; // Validation passed
@@ -421,27 +494,16 @@ class OpenAnswerEditor extends BaseEditor {
         const hint = hintField ? hintField.value.trim() : "";
 
         const content = this.task.task_data.content;
-        const maxLengthValue = Number(content?.max_length);
-        const maxLength = Number.isFinite(maxLengthValue) && maxLengthValue > 0
-            ? maxLengthValue
-            : DEFAULT_MAX_LENGTH;
-
-        const minKeywordsInput = document.querySelector('#min-keywords-input');
-        let minKeywords = minKeywordsInput ? parseInt(minKeywordsInput.value, 10) : -1;
-        if (Number.isNaN(minKeywords)) {
-            minKeywords = -1;
-        }
+        const maxLengthPreference = this.readMaxLengthPreference();
+        const maxLength = maxLengthPreference.isSet && !maxLengthPreference.invalid
+            ? maxLengthPreference.value
+            : null;
 
         const normalizedKeywords = this.keywords
             .map((kw) => this.normalizeKeywordItem(kw))
             .filter((kw) => kw && kw.required);
 
-        const requireAllKeywords = minKeywords === -1;
         const keywordsTexts = normalizedKeywords.map((kw) => kw.text).filter(Boolean);
-
-        if (requireAllKeywords) {
-            minKeywords = keywordsTexts.length || 1;
-        }
 
         // Build content
         content.question = prompt;
@@ -454,14 +516,20 @@ class OpenAnswerEditor extends BaseEditor {
             delete content.hint;
         }
 
-        content.max_length = maxLength;
-        content.min_keywords = minKeywords;
-        content.require_all_keywords = requireAllKeywords;
+        if (maxLength != null) {
+            content.max_length = maxLength;
+        } else {
+            delete content.max_length;
+            delete content.maxLength;
+        }
+        delete content.min_keywords;
+        delete content.require_all_keywords;
         content.sequence_matters = this.sequenceMatters;
         content.keywords = keywordsTexts;
         content.images = Array.isArray(content.images)
             ? content.images.slice(0, this.maxImages)
             : [];
+        this.syncLegacyMaxLength(maxLength);
 
         return this.task.task_data;
     }
@@ -632,7 +700,7 @@ class OpenAnswerEditor extends BaseEditor {
             '#question-textarea',
             '#reference-textarea',
             '#hint-textarea',
-            '#min-keywords-input'
+            '#max-length-input',
         ];
 
         selectors.forEach((selector) => {
@@ -656,11 +724,20 @@ class OpenAnswerEditor extends BaseEditor {
         super.markUnsaved();
     }
 
-    showToast(message, variant = 'success', duration = 2500) {
+    showToast(message, variant = 'success', duration = 2500, options = {}) {
         const existing = document.querySelector('#open-answer-toast');
         if (existing) {
             existing.remove();
         }
+        if (this.toastHideTimer) {
+            clearTimeout(this.toastHideTimer);
+            this.toastHideTimer = null;
+        }
+        if (this.toastDismissTimer) {
+            clearTimeout(this.toastDismissTimer);
+            this.toastDismissTimer = null;
+        }
+        this.toastDismissCallback = null;
 
         const toast = document.createElement('div');
         toast.id = 'open-answer-toast';
@@ -674,24 +751,77 @@ class OpenAnswerEditor extends BaseEditor {
 
         const variantClasses = variant === 'success'
             ? ['bg-success-lighter', 'text-success-text', 'border-success-text']
-            : ['bg-surface-2', 'text-text-main', 'border-border-subtle'];
+            : variant === 'warning'
+                ? ['bg-warning-lighter', 'text-warning-text', 'border-warning-text']
+                : variant === 'error'
+                    ? ['bg-error-lighter', 'text-error-text', 'border-error-text']
+                    : ['bg-surface-2', 'text-text-main', 'border-border-subtle'];
 
         toast.className = [...baseClasses, ...variantClasses].join(' ');
         const icon = document.createElement('span');
         icon.className = 'material-symbols-outlined text-[18px]';
-        icon.textContent = variant === 'success' ? 'task_alt' : 'info';
+        icon.textContent = variant === 'success' ? 'task_alt' : variant === 'warning' ? 'warning' : variant === 'error' ? 'error' : 'info';
         const text = document.createElement('span');
+        text.className = 'flex-1';
         text.textContent = message;
         toast.appendChild(icon);
         toast.appendChild(text);
 
+        if (options.actionLabel && typeof options.onAction === 'function') {
+            const actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.dataset.toastAction = 'action';
+            actionBtn.className = 'ml-2 inline-flex items-center rounded-md border border-current/20 px-2 py-1 text-xs font-semibold hover:bg-scrim-soft transition-colors';
+            actionBtn.textContent = options.actionLabel;
+            actionBtn.onclick = () => {
+                const action = options.onAction;
+                this.toastDismissCallback = null;
+                try {
+                    action();
+                } finally {
+                    toast.remove();
+                }
+            };
+            toast.appendChild(actionBtn);
+        }
+
+        if (options.closeable) {
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.dataset.toastAction = 'close';
+            closeBtn.className = 'ml-1 inline-flex h-7 w-7 items-center justify-center rounded-full hover:bg-scrim-soft transition-colors';
+            closeBtn.setAttribute('aria-label', 'Закрыть уведомление');
+            closeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">close</span>';
+            closeBtn.onclick = () => {
+                this.toastDismissCallback = null;
+                toast.remove();
+            };
+            toast.appendChild(closeBtn);
+        }
+
         document.body.appendChild(toast);
 
-        setTimeout(() => {
+        this.toastHideTimer = setTimeout(() => {
             toast.classList.add('opacity-0', 'translate-y-2');
         }, Math.max(duration - 250, 0));
 
-        setTimeout(() => toast.remove(), duration);
+        this.toastDismissCallback = () => {
+            toast.remove();
+            this.toastDismissCallback = null;
+            if (this.toastHideTimer) {
+                clearTimeout(this.toastHideTimer);
+                this.toastHideTimer = null;
+            }
+            if (this.toastDismissTimer) {
+                clearTimeout(this.toastDismissTimer);
+                this.toastDismissTimer = null;
+            }
+        };
+        this.toastDismissTimer = setTimeout(() => {
+            if (this.toastDismissCallback) {
+                this.toastDismissCallback();
+            }
+        }, duration);
     }
 
     setupImagePreviewControls() {
@@ -886,6 +1016,7 @@ class OpenAnswerEditor extends BaseEditor {
         this.imagePreviewOverlay.classList.remove('hidden');
         this.imagePreviewOverlay.classList.add('flex');
         document.body.classList.add('overflow-hidden');
+        document.addEventListener('keydown', this.handleGlobalKeyDown);
     }
 
     hideImagePreview() {
@@ -910,6 +1041,7 @@ class OpenAnswerEditor extends BaseEditor {
         s.opacity = '';
 
         document.body.classList.remove('overflow-hidden');
+        document.removeEventListener('keydown', this.handleGlobalKeyDown);
     }
 
     applyAutoResize() {

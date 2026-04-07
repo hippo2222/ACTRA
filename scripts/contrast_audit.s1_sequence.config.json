@@ -1,0 +1,107 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_s1_sequence",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": true,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "S1 sequence - answering",
+      "url": "/ui/SequenceUI/audit.html",
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "return typeof SequenceUI !== 'undefined' && !!document.getElementById('task-content');",
+          "timeout": 30000
+        },
+        {
+          "type": "evaluate",
+          "script": "const content=document.getElementById('task-content'); if(!content || typeof SequenceUI === 'undefined'){ return { ok:false, error:'sequenceui_or_task_content_missing' }; } const task={ task_type:'sequence_assembly', difficulty:1, task_data:{ task_type:'sequence_assembly', settings:{ difficulty:1, level_order_matters:true }, content:{ prompt:'Arrange the elements by levels', settings:{ difficulty:1, level_order_matters:true }, elements:[ { id:'wolf_a', text:'Wolf' }, { id:'wolf_b', text:'Wolf' }, { id:'dog', text:'Dog' } ], levels:[ { level_id:'wild', label:'Wild', blocks:['slot_1'] }, { level_id:'domestic', label:'Domestic', blocks:['slot_1'] } ] } } }; content.innerHTML=''; SequenceUI.render(content, task); return { ok: !!content.querySelector('[data-sequenceui=\"task-prompt\"]') };",
+          "waitMs": 120
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-sequenceui='available-item']", "waitMs": 100 },
+        { "type": "focus", "selector": "[data-sequenceui='available-item']", "waitMs": 100 }
+      ]
+    },
+    {
+      "name": "S1 sequence - selected",
+      "url": "/ui/SequenceUI/audit.html",
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "return typeof SequenceUI !== 'undefined' && !!document.getElementById('task-content');",
+          "timeout": 30000
+        },
+        {
+          "type": "evaluate",
+          "script": "const content=document.getElementById('task-content'); if(!content || typeof SequenceUI === 'undefined'){ return { ok:false, error:'sequenceui_or_task_content_missing' }; } const task={ task_type:'sequence_assembly', difficulty:1, task_data:{ task_type:'sequence_assembly', settings:{ difficulty:1, level_order_matters:false }, content:{ prompt:'Arrange the elements by levels', settings:{ difficulty:1, level_order_matters:false }, elements:[ { id:'wolf_a', text:'Wolf' }, { id:'wolf_b', text:'Wolf' }, { id:'dog', text:'Dog' } ], levels:[ { level_id:'wild', label:'Wild', blocks:['slot_1'] }, { level_id:'domestic', label:'Domestic', blocks:['slot_1'] } ] } } }; content.innerHTML=''; SequenceUI.render(content, task); const firstItem=content.querySelector('[data-sequenceui=\"available-item\"]'); if(firstItem){ firstItem.click(); } return { ok: !!content.querySelector('[data-sequenceui=\"available-item\"]') };",
+          "waitMs": 120
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-sequenceui='levels-list'] .cursor-pointer", "waitMs": 100 },
+        { "type": "focus", "selector": "[data-sequenceui='available-item']", "waitMs": 100 }
+      ]
+    },
+    {
+      "name": "S1 sequence - review success",
+      "url": "/ui/SequenceUI/audit.html",
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "return typeof SequenceUI !== 'undefined' && !!document.getElementById('task-content');",
+          "timeout": 30000
+        },
+        {
+          "type": "evaluate",
+          "script": "const content=document.getElementById('task-content'); if(!content || typeof SequenceUI === 'undefined'){ return { ok:false, error:'sequenceui_or_task_content_missing' }; } const task={ task_type:'sequence_assembly', difficulty:1, task_data:{ task_type:'sequence_assembly', settings:{ difficulty:1, level_order_matters:false }, content:{ prompt:'Arrange the elements by levels', settings:{ difficulty:1, level_order_matters:false }, elements:[ { id:'wolf_a', text:'Wolf' }, { id:'dog', text:'Dog' } ], levels:[ { level_id:'wild', label:'Wild', blocks:['slot_1'] }, { level_id:'domestic', label:'Domestic', blocks:['slot_1'] } ] } } }; content.innerHTML=''; SequenceUI.render(content, task); const items=content.querySelectorAll('[data-sequenceui=\"available-item\"]'); let panels=content.querySelectorAll('[data-sequenceui=\"levels-list\"] .cursor-pointer'); if(items[0] && panels[0]){ items[0].click(); panels[0].click(); } const nextItem=content.querySelector('[data-sequenceui=\"available-item\"]'); panels=content.querySelectorAll('[data-sequenceui=\"levels-list\"] .cursor-pointer'); if(nextItem && panels[0]){ nextItem.click(); panels[0].click(); } SequenceUI.applyCheckFeedback({ success:true, details:{ correct_levels:[ { level_id:'wild', blocks:['wolf_a'] }, { level_id:'domestic', blocks:['dog'] } ], correct_blocks_by_level:{ wild:['wolf_a'], domestic:['dog'] }, incorrect_levels:[], user_levels:[ { level_id:'wild', blocks:['wolf_a'] }, { level_id:'domestic', blocks:['dog'] } ] } }); return { ok:true };",
+          "waitMs": 140
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-sequenceui='levels-list'] button", "waitMs": 100 },
+        { "type": "focus", "selector": "[data-sequenceui='levels-list'] button", "waitMs": 100 }
+      ]
+    },
+    {
+      "name": "S1 sequence - review failure",
+      "url": "/ui/SequenceUI/audit.html",
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        {
+          "type": "waitForFunction",
+          "script": "return typeof SequenceUI !== 'undefined' && !!document.getElementById('task-content');",
+          "timeout": 30000
+        },
+        {
+          "type": "evaluate",
+          "script": "const content=document.getElementById('task-content'); if(!content || typeof SequenceUI === 'undefined'){ return { ok:false, error:'sequenceui_or_task_content_missing' }; } const task={ task_type:'sequence_assembly', difficulty:1, task_data:{ task_type:'sequence_assembly', settings:{ difficulty:1, level_order_matters:false }, content:{ prompt:'Arrange the elements by levels', settings:{ difficulty:1, level_order_matters:false }, elements:[ { id:'wolf_a', text:'Wolf' }, { id:'dog', text:'Dog' } ], levels:[ { level_id:'wild', label:'Wild', blocks:['slot_1'] }, { level_id:'domestic', label:'Domestic', blocks:['slot_1'] } ] } } }; content.innerHTML=''; SequenceUI.render(content, task); const items=content.querySelectorAll('[data-sequenceui=\"available-item\"]'); let panels=content.querySelectorAll('[data-sequenceui=\"levels-list\"] .cursor-pointer'); if(items[1] && panels[0]){ items[1].click(); panels[0].click(); } const nextItem=content.querySelector('[data-sequenceui=\"available-item\"]'); panels=content.querySelectorAll('[data-sequenceui=\"levels-list\"] .cursor-pointer'); if(nextItem && panels[0]){ nextItem.click(); panels[0].click(); } SequenceUI.applyCheckFeedback({ success:false, details:{ correct_levels:[ { level_id:'wild', blocks:['wolf_a'] }, { level_id:'domestic', blocks:['dog'] } ], correct_blocks_by_level:{ wild:['wolf_a'], domestic:['dog'] }, incorrect_levels:[1], user_levels:[ { level_id:'wild', blocks:['dog'] }, { level_id:'domestic', blocks:['wolf_a'] } ] } }); return { ok:true };",
+          "waitMs": 140
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-sequenceui='levels-list'] button", "waitMs": 100 },
+        { "type": "focus", "selector": "[data-sequenceui='levels-list'] button", "waitMs": 100 }
+      ]
+    }
+  ]
+}

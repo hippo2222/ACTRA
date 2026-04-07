@@ -21,16 +21,16 @@ DEFAULT_TARGETS: Tuple[Path, ...] = (
 
 # Common mojibake signatures:
 # - U+FFFD replacement character
-# - "вЂ" fragment seen in broken em-dash/ellipsis decoding
-# - "â€" fragment from UTF-8 text decoded as Latin-1/Windows-1252
+# - a broken cp1251 fragment that typically starts with U+0432 U+0402
+# - a broken Latin-1/Windows-1252 fragment that typically starts with U+00E2 U+20AC
 SUSPICIOUS_SUBSTRINGS: Tuple[Tuple[str, str], ...] = (
     ("\ufffd", "replacement_char"),
     ("\u0432\u0402", "cp1251_fragment"),
     ("\u00e2\u20ac", "latin1_utf8_fragment"),
 )
 
-# Repeating "РxСy..." sequence is a strong sign of UTF-8 Russian text
-# decoded as cp1251.
+# Repeating sequences built from U+0420/U+0421 pairs are a strong sign of
+# UTF-8 Russian text decoded as cp1251.
 SUSPICIOUS_REGEXES: Tuple[Tuple[re.Pattern[str], str], ...] = (
     (
         re.compile(r"(?:[\u0420\u0421][\u0410-\u042F\u0430-\u044F\u0401\u0451]){4,}"),

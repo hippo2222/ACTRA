@@ -43,4 +43,92 @@ describe("OpenAnswerUI restoreInput", () => {
     expect(document.getElementById("check-answer-btn").disabled).toBe(true);
     expect(container.textContent).toContain("0/5");
   });
+
+  it("renders a constrained preview and opens a lightbox with zoom controls", () => {
+    const container = document.getElementById("open-answer-root");
+
+    OpenAnswerUI.render(container, {
+      task_data: {
+        content: {
+          title: "Question",
+          question: "Inspect image",
+          image_path: "/uploads/chart.png",
+        },
+      },
+    });
+
+    const preview = container.querySelector(".group.relative");
+    expect(preview).toBeTruthy();
+    expect(preview.className).toContain("max-w-3xl");
+    expect(container.textContent).not.toContain("Inspect image");
+    expect(container.textContent).not.toContain("Пустой ответ отправить нельзя");
+
+    const openViewerButton = container.querySelector(
+      'button[aria-label="Open image viewer"]'
+    );
+    expect(openViewerButton).toBeTruthy();
+
+    openViewerButton.click();
+
+    const lightboxImg = document.body.lastElementChild.querySelector("img");
+    Object.defineProperty(lightboxImg, "naturalWidth", {
+      configurable: true,
+      value: 1600,
+    });
+    Object.defineProperty(lightboxImg, "naturalHeight", {
+      configurable: true,
+      value: 900,
+    });
+    lightboxImg.dispatchEvent(new window.Event("load"));
+
+    const zoomIn = document.querySelector('button[aria-label="Zoom in"]');
+    const zoomOut = document.querySelector('button[aria-label="Zoom out"]');
+    const fit = document.querySelector('button[aria-label="Fit to screen"]');
+    const close = document.querySelector(
+      'button[aria-label="Close image viewer"]'
+    );
+
+    expect(zoomIn).toBeTruthy();
+    expect(zoomOut).toBeTruthy();
+    expect(fit).toBeTruthy();
+    expect(close).toBeTruthy();
+    expect(document.body.textContent).toContain("100%");
+
+    zoomIn.click();
+    expect(document.body.textContent).toContain("115%");
+  });
+
+  it("does not render an empty footer row when no max length is configured", () => {
+    const container = document.getElementById("open-answer-root");
+
+    OpenAnswerUI.render(container, {
+      task_data: {
+        content: {
+          question: "Question without limit",
+        },
+      },
+    });
+
+    expect(container.querySelector("textarea + div")).toBeNull();
+  });
+
+  it("locks the textarea after check feedback is applied", () => {
+    const container = document.getElementById("open-answer-root");
+
+    OpenAnswerUI.render(container, {
+      task_data: {
+        content: {
+          question: "Question",
+        },
+      },
+    });
+
+    OpenAnswerUI.restoreInput({ answer: "draft answer" });
+    OpenAnswerUI.applyCheckFeedback({ success: false });
+
+    const textarea = container.querySelector("textarea");
+    expect(textarea.readOnly).toBe(true);
+    expect(textarea.disabled).toBe(true);
+    expect(document.getElementById("check-answer-btn").disabled).toBe(true);
+  });
 });

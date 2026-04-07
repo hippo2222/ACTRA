@@ -400,6 +400,7 @@ class StatisticsService:
                 for entry in complex_completions
                 if (entry or {}).get("date") == anchor_date_iso
             )
+            completed_complexes_period = len(filtered_completions)
             
             # Предрасчёт gap (всегда по полной истории для корректного стрика)
             completion_dates_set = set(e.get("date") for e in complex_completions if e.get("date"))
@@ -611,6 +612,7 @@ class StatisticsService:
                 "streak_best": best_streak,
                 "streak_gap": streak_gap,
                 "completed_complexes_today": completed_complexes_today,
+                "completed_complexes_period": completed_complexes_period,
                 "activity_streak_days": _safe_int(activity_streak.get("activity_streak_days"), minimum=0),
                 "activity_streak_best": _safe_int(activity_streak.get("activity_streak_best"), minimum=0),
                 "microcards": microcards_stats,
@@ -639,6 +641,8 @@ class StatisticsService:
                 "total_time_spent": 0,
                 "by_task_type": {},
                 "last_updated": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "completed_complexes_today": 0,
+                "completed_complexes_period": 0,
                 "activity_streak_days": 0,
                 "activity_streak_best": 0,
                 "microcards": self._empty_microcards_overall_payload(),
@@ -815,6 +819,11 @@ class StatisticsService:
             progress_data = self.progress_service.progress_manager.get_progress_data()
             task_history = progress_data.get("task_history", {})
             activity_map = self._load_calendar_activity(user_id)
+            completion_count_map: Dict[str, int] = defaultdict(int)
+            for entry in progress_data.get("complex_completions", []) or []:
+                date_key = (entry or {}).get("date")
+                if date_key:
+                    completion_count_map[date_key] += 1
             completion_dates_set = set(
                 (entry or {}).get("date")
                 for entry in progress_data.get("complex_completions", []) or []
@@ -999,6 +1008,7 @@ class StatisticsService:
                     "date": date_key,
                     "attempts": tasks_count,
                     "total_attempts": stats["total_attempts"],
+                    "completed_complexes": _safe_int(completion_count_map.get(date_key), minimum=0),
                     "success_rate": round(success_rate, 3),
                     "success_rate_start": round(success_rate_start, 3),
                     "success_rate_delta": round(success_delta, 3),
@@ -1355,6 +1365,25 @@ class StatisticsService:
             complex_stats = statistics[complex_id]
             aggregated = complex_stats["aggregated"]
             recent_sessions = complex_stats["recent_sessions"]
+
+            # Idempotency guard: `/api/session/<id>/final-results` can be read
+            # multiple times for the same completed session (API, S3 boot, audit checks).
+            # Complex-level aggregates must not grow on repeated reads of the same session.
+            existing_session = next(
+                (
+                    item for item in recent_sessions
+                    if isinstance(item, dict)
+                    and str(item.get("session_id") or "").strip() == str(recent_summary.session_id or "").strip()
+                ),
+                None,
+            )
+            if existing_session is not None:
+                self.logger.debug(
+                    "Skipping duplicate complex statistics update for session %s in complex %s",
+                    recent_summary.session_id,
+                    complex_id,
+                )
+                return True
             
             # Обновляем агрегаторы
             # attempts += session_result.total_tasks

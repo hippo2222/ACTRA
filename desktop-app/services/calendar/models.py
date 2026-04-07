@@ -450,6 +450,10 @@ class DailyPlan:
     is_adapted: bool = False  # После пропуска
     
     def to_dict(self) -> Dict[str, Any]:
+        main_focus_name = self.main_focus_complex_name
+        if not main_focus_name and self.main_focus:
+            main_focus_name = self.main_focus.complex_name
+
         return {
             "date": self.date.isoformat(),
             "daily_mix": [t.to_dict() for t in self.daily_mix],
@@ -461,7 +465,10 @@ class DailyPlan:
             "daily_mix_estimated_minutes": self.daily_mix_estimated_minutes,
             # Alias for frontend naming
             "daily_mix_minutes": self.daily_mix_estimated_minutes,
+            "main_focus_name": main_focus_name,
+            "main_focus_count": self.main_focus_tasks_count,
             "main_focus_estimated_minutes": self.main_focus_estimated_minutes,
+            "main_focus_minutes": self.main_focus_estimated_minutes,
             "status": self.status.value,
             "is_adapted": self.is_adapted,
         }

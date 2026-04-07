@@ -22,6 +22,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from services.progress_service import ProgressService
 from services.statistics_service import StatisticsService
+from task_system.core.models.complex_models import RecentSessionSummary
 
 
 class TestStatisticsService(unittest.TestCase):
@@ -686,6 +687,45 @@ class TestStatisticsService(unittest.TestCase):
         self.assertEqual(stats["total_tasks_attempted"], stats2["total_tasks_attempted"])
         self.assertAlmostEqual(stats["success_rate"], stats2["success_rate"], places=2)
         self.assertAlmostEqual(stats["average_score"], stats2["average_score"], places=1)
+
+    def test_update_complex_stats_is_idempotent_for_same_session(self):
+        """Повторный учёт одной и той же session_id не должен раздувать complex statistics."""
+        summary = RecentSessionSummary(
+            session_id="session_repeat_guard",
+            end_time=datetime.utcnow(),
+            duration_seconds=42,
+            success_rate=0.5,
+            total_tasks=2,
+            mastered_tasks=1,
+            failed_tasks=1,
+            total_iterations=1,
+        )
+
+        self.assertTrue(
+            self.statistics_service.update_complex_stats(
+                session_result=summary,
+                user_id=self.user_id,
+                complex_id="complex_repeat_guard",
+            )
+        )
+        self.assertTrue(
+            self.statistics_service.update_complex_stats(
+                session_result=summary,
+                user_id=self.user_id,
+                complex_id="complex_repeat_guard",
+            )
+        )
+
+        complex_stats = self.statistics_service.get_complex_statistics(self.user_id)
+        complex_entry = complex_stats["complex_repeat_guard"]
+        aggregated = complex_entry["aggregated"]
+        recent_sessions = complex_entry["recent_sessions"]
+
+        self.assertEqual(aggregated["attempts"], 2)
+        self.assertEqual(aggregated["wins"], 1)
+        self.assertAlmostEqual(aggregated["success_rate"], 0.5, places=3)
+        self.assertEqual(len(recent_sessions), 1)
+        self.assertEqual(recent_sessions[0]["session_id"], "session_repeat_guard")
 
 
 if __name__ == '__main__':

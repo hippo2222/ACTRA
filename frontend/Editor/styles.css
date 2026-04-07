@@ -613,6 +613,28 @@ body {
     background-color: transparent;
 }
 
+.test-editor-header__title {
+    min-width: 0;
+}
+
+.test-editor-header__actions {
+    flex: 0 0 auto;
+    min-width: 0;
+}
+
+.test-editor-header__status {
+    flex: 0 0 12.75rem;
+    width: 12.75rem;
+    max-width: 12.75rem;
+    min-width: 12.75rem;
+    justify-content: flex-start;
+}
+
+.test-editor-header__status .status-cluster__label,
+.test-editor-header__status .status-cluster__detail {
+    max-width: 100%;
+}
+
 #save-status-indicator {
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }

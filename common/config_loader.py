@@ -5,11 +5,15 @@ Loads configuration from config.json and provides default values.
 
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 logger = logging.getLogger(__name__)
+
+TRAINER_DATA_ROOT_ENV = "TRAINER_DATA_ROOT"
+TRAINER_TASK_SYSTEM_ROOT_ENV = "TRAINER_TASK_SYSTEM_ROOT"
 
 
 def _get_application_dir() -> Path:
@@ -49,6 +53,39 @@ def _resolve_path_with_packaged_data_fallback(base_dir: Path, raw_path: str) -> 
     return base_dir / path
 
 
+def _apply_environment_overrides(config: Dict[str, Any], base_dir: Path) -> Dict[str, Any]:
+    """Apply optional environment-based path overrides for isolated runtimes."""
+    resolved = dict(config or {})
+
+    data_root_override = str(os.environ.get(TRAINER_DATA_ROOT_ENV, "") or "").strip()
+    if data_root_override:
+        resolved["data_root"] = str(
+            _resolve_path_with_packaged_data_fallback(base_dir, data_root_override).resolve()
+        )
+        logger.info(
+            "Using %s override for data_root: %s",
+            TRAINER_DATA_ROOT_ENV,
+            resolved["data_root"],
+        )
+
+    task_system_root_override = str(
+        os.environ.get(TRAINER_TASK_SYSTEM_ROOT_ENV, "") or ""
+    ).strip()
+    if task_system_root_override:
+        resolved["task_system_root"] = str(
+            _resolve_path_with_packaged_data_fallback(
+                base_dir, task_system_root_override
+            ).resolve()
+        )
+        logger.info(
+            "Using %s override for task_system_root: %s",
+            TRAINER_TASK_SYSTEM_ROOT_ENV,
+            resolved["task_system_root"],
+        )
+
+    return resolved
+
+
 def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
     """
     Загружает конфигурацию из config.json.
@@ -86,6 +123,7 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         "data_root": str(_resolve_path_with_packaged_data_fallback(base_dir, "data").resolve()),
         "task_system_root": str((base_dir / "task_system").resolve())
     }
+    default_config = _apply_environment_overrides(default_config, base_dir)
     
     # Пытаемся загрузить config.json
     if not config_file.exists():
@@ -113,6 +151,8 @@ def load_config(config_path: Optional[str] = None) -> Dict[str, Any]:
         else:
             config["task_system_root"] = default_config["task_system_root"]
         
+        config = _apply_environment_overrides(config, base_dir)
+
         # Валидация конфигурации
         validate_config(config)
         

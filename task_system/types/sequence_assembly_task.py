@@ -3,6 +3,7 @@
 Пользователь должен расставить элементы в правильной последовательности
 """
 
+from collections import Counter
 from typing import Dict, List, Any
 from ..core.base.task_type import BaseTaskType
 from ..core.base.task_evaluator import BaseTaskEvaluator
@@ -12,6 +13,97 @@ from ..core.base.task_ui import BaseTaskUI
 class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
     """Оценщик для заданий на сборку схем"""
     
+    @staticmethod
+    def _normalize_semantic_text(value: Any) -> str:
+        normalized = " ".join(str(value or "").strip().lower().split())
+        translit_map = str.maketrans({
+            "\u0451": "\u0435",
+            "\u0439": "\u0438",
+            "\u0456": "\u0438",
+            "\u0457": "\u0438",
+            "i": "\u0438",
+        })
+        return normalized.translate(translit_map)
+
+    def _canonicalize_semantic_value(self, explicit_key: Any, raw_text: Any = None, raw_image: Any = None) -> str:
+        explicit_value = str(explicit_key or "").strip()
+        if explicit_value:
+            lowered = explicit_value.lower()
+            if lowered.startswith("text:"):
+                normalized_explicit_text = self._normalize_semantic_text(explicit_value.split(":", 1)[1])
+                if normalized_explicit_text:
+                    return f"text:{normalized_explicit_text}"
+            elif lowered.startswith("image:"):
+                normalized_explicit_image = explicit_value.split(":", 1)[1].strip().replace("\\", "/")
+                if normalized_explicit_image:
+                    return f"image:{normalized_explicit_image}"
+            return explicit_value
+
+        normalized_text = self._normalize_semantic_text(raw_text)
+        if normalized_text:
+            return f"text:{normalized_text}"
+
+        normalized_image = str(raw_image or "").strip().replace("\\", "/")
+        if normalized_image:
+            return f"image:{normalized_image}"
+
+        return ""
+
+    def _build_element_semantic_map(self, reference_data: Dict[str, Any]) -> Dict[str, str]:
+        semantic_map: Dict[str, str] = {}
+        for element in reference_data.get("elements", []) or []:
+            if not isinstance(element, dict):
+                continue
+            element_id = str(element.get("id") or "").strip()
+            if not element_id:
+                continue
+            explicit_key = str(
+                element.get("semantic_key")
+                or element.get("semanticKey")
+                or ""
+            ).strip()
+            semantic_value = self._canonicalize_semantic_value(
+                explicit_key,
+                raw_text=element.get("text"),
+                raw_image=element.get("image"),
+            )
+            semantic_map[element_id] = semantic_value or f"id:{element_id}"
+        return semantic_map
+
+    def _normalize_block_refs(self, blocks: List[Any], semantic_map: Dict[str, str], block_names: Dict[str, Any] = None) -> List[str]:
+        normalized: List[str] = []
+        normalized_block_names = block_names if isinstance(block_names, dict) else {}
+        for raw_block in blocks or []:
+            if raw_block is None:
+                normalized.append("__missing__")
+                continue
+            block_id = str(raw_block)
+            semantic_value = semantic_map.get(block_id)
+            if not semantic_value:
+                typed_name = self._normalize_semantic_text(normalized_block_names.get(block_id))
+                if typed_name:
+                    semantic_value = f"text:{typed_name}"
+            normalized.append(semantic_value or f"id:{block_id}")
+        return normalized
+
+    def _count_matching_blocks(self, user_blocks: List[Any], correct_blocks: List[Any], semantic_map: Dict[str, str], sequence_matters: bool, user_block_names: Dict[str, Any] = None) -> int:
+        normalized_user = self._normalize_block_refs(user_blocks, semantic_map, user_block_names)
+        normalized_correct = self._normalize_block_refs(correct_blocks, semantic_map)
+        if sequence_matters:
+            return sum(
+                1
+                for idx, block in enumerate(normalized_user)
+                if idx < len(normalized_correct) and block == normalized_correct[idx]
+            )
+        return sum((Counter(normalized_user) & Counter(normalized_correct)).values())
+
+    def _blocks_match(self, user_blocks: List[Any], correct_blocks: List[Any], semantic_map: Dict[str, str], sequence_matters: bool, user_block_names: Dict[str, Any] = None) -> bool:
+        normalized_user = self._normalize_block_refs(user_blocks, semantic_map, user_block_names)
+        normalized_correct = self._normalize_block_refs(correct_blocks, semantic_map)
+        if sequence_matters:
+            return normalized_user == normalized_correct
+        return Counter(normalized_user) == Counter(normalized_correct)
+
     def evaluate(self, user_input: Any, reference_data: Any) -> Dict[str, Any]:
         """Оценивает правильность последовательности элементов по уровням"""
         if not isinstance(user_input, dict) or not isinstance(reference_data, dict):
@@ -28,6 +120,7 @@ class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
         correct_levels = reference_data.get('levels', [])
         sequence_matters = reference_data.get('sequence_within_level_matters', False)
         level_order_matters = reference_data.get('level_order_matters', False)
+        semantic_map = self._build_element_semantic_map(reference_data)
         
         # Обратная совместимость: если нет levels, но есть sequence
         if not user_levels and 'sequence' in user_input:
@@ -74,6 +167,7 @@ class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
             # Порядок уровней важен - проверяем строгое соответствие позиций
             for i, (user_level, correct_level) in enumerate(zip(user_levels, correct_levels)):
                 user_blocks = user_level.get("blocks", [])
+                user_block_names = user_level.get("block_names", {})
                 correct_blocks_list = correct_level.get("blocks", [])
                 user_level_id = user_level.get("level_id", "")
                 correct_level_id = correct_level.get("level_id", "")
@@ -88,9 +182,10 @@ class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
                 
                 if sequence_matters:
                     # Строгое совпадение последовательности внутри уровня
-                    if user_blocks == correct_blocks_list:
+                    if self._blocks_match(user_blocks, correct_blocks_list, semantic_map, True, user_block_names):
                         correct_blocks += len(correct_blocks_list)
                     else:
+                        correct_blocks += self._count_matching_blocks(user_blocks, correct_blocks_list, semantic_map, True, user_block_names)
                         # Последовательность неправильная
                         incorrect_sequences.append({
                             'level': i + 1,
@@ -100,32 +195,52 @@ class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
                         })
                 else:
                     # Проверяем только наличие блоков в уровне (порядок не важен)
-                    user_blocks_set = set(user_blocks)
-                    correct_blocks_set = set(correct_blocks_list)
-                    if user_blocks_set == correct_blocks_set:
+                    if self._blocks_match(user_blocks, correct_blocks_list, semantic_map, False, user_block_names):
                         correct_blocks += len(correct_blocks_list)
                     else:
                         # Блоки в неправильном уровне
+                        correct_blocks += self._count_matching_blocks(user_blocks, correct_blocks_list, semantic_map, False, user_block_names)
                         incorrect_levels.append(i + 1)
         else:
             # Порядок уровней не важен - сопоставляем по level_id
             correct_levels_dict = {level.get("level_id", ""): level for level in correct_levels}
+            used_correct_level_ids = set()
             
             for idx, user_level in enumerate(user_levels):
                 user_level_id = user_level.get("level_id", "")
                 user_blocks = user_level.get("blocks", [])
-                
+                user_block_names = user_level.get("block_names", {})
+
+                matched_correct_level = None
+                matched_correct_level_id = ""
+
                 if user_level_id in correct_levels_dict:
-                    correct_level = correct_levels_dict[user_level_id]
+                    matched_correct_level = correct_levels_dict[user_level_id]
+                    matched_correct_level_id = user_level_id
+                else:
+                    for candidate_level in correct_levels:
+                        candidate_level_id = candidate_level.get("level_id", "")
+                        if candidate_level_id in used_correct_level_ids:
+                            continue
+                        candidate_blocks = candidate_level.get("blocks", [])
+                        if self._blocks_match(user_blocks, candidate_blocks, semantic_map, sequence_matters, user_block_names):
+                            matched_correct_level = candidate_level
+                            matched_correct_level_id = candidate_level_id
+                            break
+
+                if matched_correct_level is not None:
+                    used_correct_level_ids.add(matched_correct_level_id)
+                    correct_level = matched_correct_level
                     correct_blocks_list = correct_level.get("blocks", [])
                     
                     total_blocks += len(correct_blocks_list)
                     
                     if sequence_matters:
                         # Строгое совпадение последовательности внутри уровня
-                        if user_blocks == correct_blocks_list:
+                        if self._blocks_match(user_blocks, correct_blocks_list, semantic_map, True, user_block_names):
                             correct_blocks += len(correct_blocks_list)
                         else:
+                            correct_blocks += self._count_matching_blocks(user_blocks, correct_blocks_list, semantic_map, True, user_block_names)
                             # Последовательность неправильная
                             incorrect_sequences.append({
                                 'level': idx + 1,
@@ -135,12 +250,11 @@ class SequenceAssemblyTaskEvaluator(BaseTaskEvaluator):
                             })
                     else:
                         # Проверяем только наличие блоков в уровне (порядок не важен)
-                        user_blocks_set = set(user_blocks)
-                        correct_blocks_set = set(correct_blocks_list)
-                        if user_blocks_set == correct_blocks_set:
+                        if self._blocks_match(user_blocks, correct_blocks_list, semantic_map, False, user_block_names):
                             correct_blocks += len(correct_blocks_list)
                         else:
                             # Блоки в неправильном уровне
+                            correct_blocks += self._count_matching_blocks(user_blocks, correct_blocks_list, semantic_map, False, user_block_names)
                             incorrect_levels.append(idx + 1)
                 else:
                     # Уровень с несуществующим level_id
@@ -351,4 +465,3 @@ class SequenceAssemblyTaskType(BaseTaskType):
                     return False
         
         return True
-

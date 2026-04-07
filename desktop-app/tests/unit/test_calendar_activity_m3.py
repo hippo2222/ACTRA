@@ -119,6 +119,51 @@ def test_complete_session_uses_shared_streak_helper_and_persists_streak_active()
         shutil.rmtree(tmp_dir)
 
 
+def test_record_task_attempt_updates_streak_and_marks_day_active():
+    svc, tmp_dir = _make_calendar_service()
+    try:
+        result = svc.record_task_attempt(
+            task_id="task_001",
+            complex_id="complex_alpha",
+            user_grading=1,
+            response_time_seconds=42,
+        )
+
+        assert result["success"] is True
+        assert result["streak_days"] == 1
+        today_iso = date.today().isoformat()
+
+        history = svc.get_activity_history()
+        assert history[today_iso]["tasks_attempted"] == 1
+        assert history[today_iso]["tasks_solved"] == 1
+        assert history[today_iso]["seconds_spent"] == 42
+        assert history[today_iso]["streak_active"] is True
+
+        settings = svc.get_settings()
+        assert settings.streak_days == 1
+        assert settings.last_activity_date is not None
+        assert settings.last_activity_date.isoformat() == today_iso
+    finally:
+        shutil.rmtree(tmp_dir)
+
+
+def test_get_today_plan_keeps_same_day_streak_after_task_attempt():
+    svc, tmp_dir = _make_calendar_service()
+    try:
+        svc.record_task_attempt(
+            task_id="task_001",
+            complex_id="complex_alpha",
+            user_grading=1,
+            response_time_seconds=30,
+        )
+
+        payload = svc.get_today_plan(task_pool={})
+        assert payload["streak_info"]["days"] == 1
+        assert payload["settings"]["streak_days"] == 1
+    finally:
+        shutil.rmtree(tmp_dir)
+
+
 def test_heatmap_does_not_mark_microcards_only_day_as_missed():
     svc, tmp_dir = _make_calendar_service()
     try:

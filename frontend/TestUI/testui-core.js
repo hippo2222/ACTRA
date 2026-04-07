@@ -2,6 +2,29 @@
 // Exposes TestUICore global used by TestUI.web.js and potentially Trainer.
 
 (function (global) {
+  function isImageOnlyAnswer(answer) {
+    if (!answer || typeof answer !== "object") return false;
+    const image = answer.image;
+    return !!(
+      answer.image_path ||
+      answer.image_url ||
+      (image && typeof image === "object" && (image.url || image.path))
+    );
+  }
+
+  function areAllQuestionsImageOnly(rawQuestions) {
+    if (!Array.isArray(rawQuestions) || !rawQuestions.length) return false;
+    return rawQuestions.every((question) => {
+      if (!question || typeof question !== "object") return false;
+      const answers = Array.isArray(question.answers)
+        ? question.answers
+        : question.content && Array.isArray(question.content.answers)
+          ? question.content.answers
+          : [];
+      return answers.length > 0 && answers.every(isImageOnlyAnswer);
+    });
+  }
+
   function extractQuestions(task) {
     if (!task || !task.task_data) {
       return { questions: [], rawQuestions: [], testType: null };
@@ -41,11 +64,17 @@
       content && Object.prototype.hasOwnProperty.call(content, "show_options")
         ? !!content.show_options
         : true;
-    const isOpenMode = requiresTextInput || !showOptions;
 
     const difficultyFromTask =
       (task && (task.difficulty || (task.task_data && task.task_data.difficulty))) ||
       null;
+    const imageOnlyQuestions = areAllQuestionsImageOnly(rawQuestions);
+    const isOpenMode =
+      requiresTextInput ||
+      !showOptions ||
+      (!imageOnlyQuestions &&
+        typeof difficultyFromTask === "number" &&
+        difficultyFromTask >= 2);
 
     return {
       questions,

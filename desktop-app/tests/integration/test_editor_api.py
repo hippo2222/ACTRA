@@ -88,8 +88,154 @@ def temp_open_answer_task():
         _headless_app_ctx.storage_service.reload_modules()
 
 
+@pytest.fixture
+def temp_editor_topic():
+    """Создает временный модуль и тему без задач для draft-first сценариев."""
+    modules_dir = Path(_headless_app_ctx.storage_service.modules_dir)
+    module_id = f"module_bootstrap_{uuid.uuid4().hex[:8]}"
+    topic_id = f"topic_bootstrap_{uuid.uuid4().hex[:8]}"
+
+    module_dir = modules_dir / module_id
+    topic_dir = module_dir / "topics" / topic_id
+
+    try:
+        (module_dir / "topics").mkdir(parents=True, exist_ok=True)
+        (topic_dir / "tasks").mkdir(parents=True, exist_ok=True)
+
+        (module_dir / "module.json").write_text(
+            json.dumps({"id": module_id, "name": module_id, "topics": []}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        (topic_dir / "topic.json").write_text(
+            json.dumps({"id": topic_id, "name": topic_id, "tasks": []}, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
+        _headless_app_ctx.storage_service.reload_modules()
+        yield module_id, topic_id, topic_dir
+    finally:
+        shutil.rmtree(module_dir, ignore_errors=True)
+        _headless_app_ctx.storage_service.reload_modules()
+
+
+def test_task_bootstrap_creates_unsaved_payload_and_first_save_materializes_task(client, temp_editor_topic):
+    module_id, topic_id, topic_dir = temp_editor_topic
+
+    bootstrap_resp = client.post(
+        "/api/editor/task/bootstrap",
+        json={
+            "module_id": module_id,
+            "topic_id": topic_id,
+            "task_name": "Draft First Test",
+            "task_type": "test",
+        },
+    )
+    assert bootstrap_resp.status_code == 200
+    bootstrap_data = bootstrap_resp.get_json()
+    assert bootstrap_data["ok"] is True
+
+    task_id = bootstrap_data["task_id"]
+    task_payload = bootstrap_data["task"]["task_data"]
+    task_dir = topic_dir / "tasks" / task_id
+    task_json = task_dir / "task.json"
+
+    assert task_id
+    assert task_payload["meta"]["name"] == "Draft First Test"
+    assert bootstrap_data["task"]["is_new"] is True
+    assert not task_json.exists()
+
+    task_payload["content"] = {
+        "questions": [
+            {
+                "id": 0,
+                "question": "Сколько будет 2+2?",
+                "answers": [
+                    {"id": "a", "text": "4", "correct": True},
+                    {"id": "b", "text": "5", "correct": False},
+                ],
+            }
+        ],
+        "test_type": "multiple_choice",
+        "settings": {
+            "shuffle_questions": False,
+            "shuffle_answers": False,
+            "time_limit": None,
+            "passing_score": 70,
+        },
+    }
+
+    save_resp = client.post(f"/api/editor/task/{module_id}/{topic_id}/{task_id}", json=task_payload)
+    assert save_resp.status_code == 200
+    assert save_resp.get_json()["ok"] is True
+    assert task_json.exists()
+    saved = json.loads(task_json.read_text(encoding="utf-8"))
+    assert saved["id"] == task_id
+    assert saved["meta"]["id"] == task_id
+    assert saved["meta"]["name"] == "Draft First Test"
+
+    catalog_resp = client.get("/api/editor/catalog")
+    catalog_data = catalog_resp.get_json()
+    module = next(item for item in catalog_data["modules"] if item["id"] == module_id)
+    topic = next(item for item in module["topics"] if item["id"] == topic_id)
+    assert any(task["id"] == task_id for task in topic["tasks"])
+
+    get_resp = client.get(f"/api/editor/task/{module_id}/{topic_id}/{task_id}")
+    assert get_resp.status_code == 200
+    loaded = get_resp.get_json()["task"]["task_data"]
+    assert loaded["meta"]["name"] == "Draft First Test"
+    assert loaded["content"]["questions"][0]["question"] == "Сколько будет 2+2?"
+
+
+def test_save_task_normalizes_legacy_root_id_for_catalog(client, temp_editor_topic):
+    module_id, topic_id, topic_dir = temp_editor_topic
+    task_id = "legacy_click_task"
+    legacy_uuid = str(uuid.uuid4())
+    payload = TaskIO.new_task("test", name="Legacy Name", module=module_id, topic=topic_id).to_dict()
+
+    payload["id"] = legacy_uuid
+    payload.pop("name", None)
+    payload["meta"].pop("id", None)
+    payload["meta"]["name"] = "Legacy Name"
+    payload["content"] = {
+        "questions": [
+            {
+                "id": 0,
+                "question": "2+3?",
+                "answers": [
+                    {"id": "a", "text": "5", "correct": True},
+                    {"id": "b", "text": "6", "correct": False},
+                ],
+            }
+        ],
+        "test_type": "multiple_choice",
+        "settings": {
+            "shuffle_questions": False,
+            "shuffle_answers": False,
+            "time_limit": None,
+            "passing_score": 70,
+        },
+    }
+
+    save_resp = client.post(f"/api/editor/task/{module_id}/{topic_id}/{task_id}", json=payload)
+    assert save_resp.status_code == 200
+    assert save_resp.get_json()["ok"] is True
+
+    task_json = topic_dir / "tasks" / task_id / "task.json"
+    saved = json.loads(task_json.read_text(encoding="utf-8"))
+    assert saved["id"] == task_id
+    assert saved["meta"]["id"] == task_id
+    assert saved["meta"]["name"] == "Legacy Name"
+
+    catalog_resp = client.get("/api/editor/catalog")
+    catalog_data = catalog_resp.get_json()
+    module = next(item for item in catalog_data["modules"] if item["id"] == module_id)
+    topic = next(item for item in module["topics"] if item["id"] == topic_id)
+    task = next(item for item in topic["tasks"] if item["id"] == task_id)
+    assert task["name"] == "Legacy Name"
+
+
 def test_open_answer_save_load_roundtrip(client, temp_open_answer_task):
-    """ED-2 regression: open_answer save with all fields, reload, verify persistence."""
+    """ED-2 regression: open_answer save persists canonical fields and strips removed legacy knobs."""
     module_id, topic_id, task_id, task_dir = temp_open_answer_task
     task_json = task_dir / "task.json"
     payload = json.loads(task_json.read_text(encoding="utf-8"))
@@ -105,6 +251,9 @@ def test_open_answer_save_load_roundtrip(client, temp_open_answer_task):
         "require_all_keywords": False,
         "sequence_matters": True,
         "images": [],
+        "image": None,
+        "sample_answers": None,
+        "min_length": None,
     }
 
     resp = client.post(f"/api/editor/task/{module_id}/{topic_id}/{task_id}", json=payload)
@@ -119,9 +268,12 @@ def test_open_answer_save_load_roundtrip(client, temp_open_answer_task):
     assert c["reference_answer"] == "Рентгенография ОГК"
     assert c["hint"] == "Подсказка"
     assert c["max_length"] == 500
-    assert c["min_keywords"] == 1
-    assert c["require_all_keywords"] is False
     assert c["sequence_matters"] is True
+    assert "min_keywords" not in c
+    assert "require_all_keywords" not in c
+    assert "image" not in c
+    assert "sample_answers" not in c
+    assert "min_length" not in c
 
     # Verify reload via GET
     get_resp = client.get(f"/api/editor/task/{module_id}/{topic_id}/{task_id}")
@@ -164,7 +316,7 @@ def test_open_answer_save_copies_images(client, temp_open_answer_task):
 
 
 def test_open_answer_evaluator_reads_saved_data(client, temp_open_answer_task):
-    """Verify saved data is consumable by normalize + evaluator."""
+    """Verify canonical open_answer saves normalize into an evaluator-friendly answer key."""
     module_id, topic_id, task_id, task_dir = temp_open_answer_task
     task_json = task_dir / "task.json"
     payload = json.loads(task_json.read_text(encoding="utf-8"))
@@ -175,8 +327,6 @@ def test_open_answer_evaluator_reads_saved_data(client, temp_open_answer_task):
         "keywords": ["детоксикация", "фильтрация"],
         "reference_answer": "Печень выполняет детоксикацию и фильтрацию",
         "max_length": 500,
-        "min_keywords": 1,
-        "require_all_keywords": False,
         "sequence_matters": False,
     }
 
@@ -192,14 +342,68 @@ def test_open_answer_evaluator_reads_saved_data(client, temp_open_answer_task):
 
     assert answer_key["keywords"] == ["детоксикация", "фильтрация"]
     assert answer_key["reference_answer"] == "Печень выполняет детоксикацию и фильтрацию"
-    assert answer_key["min_keywords"] == 1
-    assert answer_key["require_all_keywords"] is False
+    assert answer_key["max_length"] == 500
+    assert "min_keywords" not in answer_key
+    assert "require_all_keywords" not in answer_key
 
     # Evaluate
     from services.task_evaluator_service import TaskEvaluatorService
     evaluator = TaskEvaluatorService()
     result = evaluator.evaluate_open_answer_task({"answer": "детоксикация"}, answer_key)
-    assert result.success is True  # min_keywords=1, found 1
+    assert result.success is False
+    too_long = evaluator.evaluate_open_answer_task({"answer": "a" * 501}, answer_key)
+    assert too_long.success is False
+    assert too_long.details["error"] == "answer_too_long"
+
+
+def test_open_answer_save_strips_null_schema_noise(client, temp_open_answer_task):
+    """New open_answer saves should not retain null-only fields from unrelated schema branches."""
+    module_id, topic_id, task_id, task_dir = temp_open_answer_task
+    task_json = task_dir / "task.json"
+    payload = json.loads(task_json.read_text(encoding="utf-8"))
+
+    payload["content"] = {
+        "question": "Назовите метод исследования",
+        "prompt": "Назовите метод исследования",
+        "keywords": ["рентген"],
+        "reference_answer": "Рентгенография",
+        "hint": None,
+        "max_length": None,
+        "min_keywords": 1,
+        "require_all_keywords": False,
+        "sequence_matters": False,
+        "images": [],
+        "image": None,
+        "sample_answers": None,
+        "min_length": None,
+    }
+    payload["settings"] = {
+        "difficulty": 1,
+        "time_limit": None,
+        "allow_hints": False,
+        "tolerancePx": None,
+        "overlapThreshold": None,
+        "success_threshold": None,
+    }
+
+    resp = client.post(f"/api/editor/task/{module_id}/{topic_id}/{task_id}", json=payload)
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
+
+    saved = json.loads(task_json.read_text(encoding="utf-8"))
+    content = saved["content"]
+    settings = saved["settings"]
+
+    assert "hint" not in content
+    assert "max_length" not in content
+    assert "image" not in content
+    assert "sample_answers" not in content
+    assert "min_length" not in content
+    assert "min_keywords" not in content
+    assert "require_all_keywords" not in content
+    assert "tolerancePx" not in settings
+    assert "overlapThreshold" not in settings
+    assert "success_threshold" not in settings
 
 
 def test_open_answer_import_execute_with_keywords(client, temp_open_answer_task):
@@ -556,3 +760,95 @@ def test_editor_save_copies_click_additional_info_images(client, temp_test_task)
     for image_path in additional["images"]:
         assert image_path.startswith("modules/")
         assert (Path(_headless_app_ctx.data_dir) / image_path).exists()
+
+
+def test_editor_save_click_threshold_syncs_settings_and_preserves_metadata(client, temp_test_task):
+    module_id, topic_id, task_id, task_dir = temp_test_task
+    task_json = task_dir / "task.json"
+    payload = json.loads(task_json.read_text(encoding="utf-8"))
+
+    source_dir = task_dir / "tmp_click_threshold"
+    source_dir.mkdir(exist_ok=True)
+    main_image = source_dir / "main_threshold.png"
+    main_image.write_text("threshold-main", encoding="utf-8")
+
+    created_iso = "2025-01-02T03:04:05+00:00"
+    payload["type"] = "click"
+    payload["meta"] = {
+        "id": task_id,
+        "name": "Click Threshold Test",
+        "module": module_id,
+        "topic": topic_id,
+        "created": created_iso,
+        "custom_marker": "keep-me",
+    }
+    payload["settings"] = {}
+    payload["content"] = {
+        "prompt": "Найдите области",
+        "image": str(main_image),
+        "required_correct": 2,
+        "annotations": [
+            {
+                "type": "polygon",
+                "label": "Область 1",
+                "points": [[0, 0], [12, 0], [0, 12]],
+            },
+            {
+                "type": "polygon",
+                "label": "Область 2",
+                "points": [[20, 20], [32, 20], [20, 32]],
+            },
+        ],
+    }
+
+    resp = client.post(f"/api/editor/task/{module_id}/{topic_id}/{task_id}", json=payload)
+    assert resp.status_code == 200
+    assert resp.get_json()["ok"] is True
+
+    saved = json.loads(task_json.read_text(encoding="utf-8"))
+    assert saved["content"]["required_correct"] == 2
+    assert saved["settings"]["success_threshold"] == 2
+    assert saved["meta"]["created"] == created_iso
+    assert saved["meta"]["created_at"] == created_iso
+    assert saved["meta"]["custom_marker"] == "keep-me"
+    assert isinstance(saved["meta"].get("modified"), str)
+    assert saved["meta"]["modified"]
+
+
+def test_editor_upload_image_reuses_identical_file_instead_of_creating_suffix(client, temp_test_task):
+    module_id, topic_id, task_id, task_dir = temp_test_task
+    images_dir = task_dir / "images"
+
+    upload_payload = {
+        "module": module_id,
+        "topic": topic_id,
+        "task": task_id,
+    }
+    first = client.post(
+        "/api/editor/upload-image",
+        data={
+            **upload_payload,
+            "file": (io.BytesIO(b"same-image-bits"), "diagram.png"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert first.status_code == 200
+    first_data = first.get_json()
+    assert first_data["ok"] is True
+
+    second = client.post(
+        "/api/editor/upload-image",
+        data={
+            **upload_payload,
+            "file": (io.BytesIO(b"same-image-bits"), "diagram.png"),
+        },
+        content_type="multipart/form-data",
+    )
+    assert second.status_code == 200
+    second_data = second.get_json()
+    assert second_data["ok"] is True
+    assert second_data["reused"] is True
+    assert second_data["path"] == first_data["path"]
+
+    stored_files = sorted(path.name for path in images_dir.glob("diagram*.png"))
+    assert stored_files == ["diagram.png"]

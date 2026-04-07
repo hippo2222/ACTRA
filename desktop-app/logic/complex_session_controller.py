@@ -12,6 +12,7 @@ Complex Session Controller - Контроллер сессии выполнен�
 
 import logging
 import time
+from copy import deepcopy
 from typing import Optional, Dict, Any, Callable
 from datetime import datetime
 
@@ -42,264 +43,423 @@ class ComplexSessionController:
         
         self.current_session_id: Optional[str] = None
         self.current_task_ref: Optional[str] = None
-        
-        # ITERATION MISMATCH PROTECTION: Track iteration for current task
+
+        # Track iteration/task UI state for safe restore and debounced persistence.
         self._current_task_iteration: Optional[int] = None
-        
-        # ИСПРАВЛЕНИЕ: Флаг для отслеживания показа результатов итерации
-        # Это предотвращает повторный показ результатов одной и той же итерации
         self._last_shown_iteration: Optional[int] = None
-        
-        # ИСПРАВЛЕНИЕ: Оптимизация частоты сохранения состояния UI
-        self._last_ui_state: Optional[Dict[str, Any]] = None  # Последнее сохраненное состояние
-        self._last_save_time: Optional[float] = None  # Время последнего сохранения
-        self._save_debounce_timer: Optional[Any] = None  # Таймер для debouncing
-        self._state_saved_recently: bool = False  # Флаг недавнего сохранения
-        self._save_debounce_delay: float = 0.5  # Задержка debouncing в секундах (500ms)
-        self._recent_save_threshold: float = 1.0  # Порог для "недавнего сохранения" в секундах
-        
-        # Callbacks для UI
+        self._last_ui_state: Optional[Dict[str, Any]] = None
+        self._last_save_time: Optional[float] = None
+        self._save_debounce_timer: Optional[Any] = None
+        self._state_saved_recently: bool = False
+        self._save_debounce_delay: float = 0.5
+        self._recent_save_threshold: float = 1.0
+
+        # UI callbacks
         self.on_task_changed: Optional[Callable] = None
         self.on_session_completed: Optional[Callable] = None
         self.on_iteration_completed: Optional[Callable] = None
-        self.on_complex_completed: Optional[Callable] = None  # Callback для завершения комплекса (все задания на максимальной сложности)
+        self.on_complex_completed: Optional[Callable] = None
         self.on_error: Optional[Callable[[str], None]] = None
-        
+
+    @staticmethod
+    def _filter_test_questions_for_partial_retry(
+        task_data_full: Dict[str, Any],
+        failed_indices: list[int],
+    ) -> Dict[str, Any]:
+        """Keep only failed test questions for retry and preserve original indices."""
+        if not isinstance(task_data_full, dict) or not failed_indices:
+            return task_data_full
+
+        filtered_payload = deepcopy(task_data_full)
+        task_data = filtered_payload.get("task_data") or {}
+        if not isinstance(task_data, dict) or task_data.get("type") != "test":
+            return filtered_payload
+
+        failed_index_set = set(failed_indices)
+
+        def _filter_question_list(raw_questions: Any) -> Any:
+            if not isinstance(raw_questions, list) or not raw_questions:
+                return raw_questions
+
+            filtered_questions = []
+            for original_index, question in enumerate(raw_questions):
+                if original_index not in failed_index_set:
+                    continue
+
+                if isinstance(question, dict):
+                    question_copy = dict(question)
+                    question_copy["_partial_retry_original_index"] = original_index
+                    filtered_questions.append(question_copy)
+                else:
+                    filtered_questions.append(question)
+
+            return filtered_questions or raw_questions
+
+        content = task_data.get("content") or {}
+        if isinstance(content, dict):
+            content = dict(content)
+            content["questions"] = _filter_question_list(content.get("questions") or [])
+            task_data = dict(task_data)
+            task_data["content"] = content
+            filtered_payload["task_data"] = task_data
+
+        answer_key = filtered_payload.get("answer_key")
+        if isinstance(answer_key, dict):
+            answer_key = dict(answer_key)
+            if isinstance(answer_key.get("questions"), list):
+                answer_key["questions"] = _filter_question_list(answer_key.get("questions") or [])
+            elif isinstance(answer_key.get("content"), dict):
+                answer_key_content = dict(answer_key.get("content") or {})
+                answer_key_content["questions"] = _filter_question_list(
+                    answer_key_content.get("questions") or []
+                )
+                answer_key["content"] = answer_key_content
+            elif isinstance(answer_key.get("task_data"), dict):
+                answer_key_task_data = dict(answer_key.get("task_data") or {})
+                answer_key_task_data["questions"] = _filter_question_list(
+                    answer_key_task_data.get("questions") or []
+                )
+                answer_key["task_data"] = answer_key_task_data
+            filtered_payload["answer_key"] = answer_key
+
+        return filtered_payload
+
+    def _apply_test_partial_retry_filter(
+        self,
+        *,
+        session: Optional[ComplexSession],
+        task_ref: str,
+        is_retry: bool,
+        task_data_full: Dict[str, Any],
+        context_label: str,
+    ) -> Dict[str, Any]:
+        """Apply TEST partial-retry filtering to both task_data and answer_key when needed."""
+        if not isinstance(task_data_full, dict) or not is_retry or session is None:
+            return task_data_full
+
+        try:
+            failed_subtests = getattr(session, "test_failed_subtests", None) or {}
+            failed_indices = failed_subtests.get(task_ref) or []
+            if failed_indices:
+                return self._filter_test_questions_for_partial_retry(
+                    task_data_full,
+                    failed_indices,
+                )
+        except Exception as e:
+            logger.warning(
+                "[%s] Failed to apply partial retry for test task %s: %s",
+                context_label,
+                task_ref,
+                e,
+            )
+
+        return task_data_full
+
+    @staticmethod
+    def _format_test_result_message(correct_count: int, total_count: int) -> str:
+        """Keep TEST summary text consistent with evaluator output."""
+        if total_count <= 0:
+            return "❌ Проверьте ответы"
+
+        if correct_count >= total_count:
+            return f"✅ Правильно! {correct_count}/{total_count} ответов"
+
+        incorrect_count = max(0, total_count - correct_count)
+        return (
+            f"❌ Есть ошибки: {incorrect_count} из {total_count} с ошибкой, "
+            f"верно {correct_count}"
+        )
+
+    def _sync_evaluation_result_with_session_result(self, evaluation_result: Any, session_result: Any) -> None:
+        """Mirror final session-level status back into the evaluation payload for web UI."""
+        if evaluation_result is None or session_result is None:
+            return
+
+        evaluation_result.success = bool(getattr(session_result, "success", getattr(evaluation_result, "success", False)))
+
+        original_details = getattr(evaluation_result, "details", {}) or {}
+        merged_details = dict(original_details) if isinstance(original_details, dict) else {}
+        session_details = getattr(session_result, "details", None)
+        if isinstance(session_details, dict) and session_details:
+            merged_details.update(session_details)
+        evaluation_result.details = merged_details
+
+        task_type = None
+        current_task = getattr(self.task_controller, "current_task", None)
+        if current_task is not None:
+            task_type = getattr(current_task, "task_type", None)
+        if not task_type and isinstance(merged_details, dict):
+            task_type = merged_details.get("task_type")
+
+        if task_type == "test" or (
+            isinstance(merged_details, dict)
+            and "correct_count" in merged_details
+            and "total_count" in merged_details
+        ):
+            try:
+                correct_count = int(merged_details.get("correct_count"))
+                total_count = int(merged_details.get("total_count"))
+            except Exception:
+                correct_count = None
+                total_count = None
+
+            if correct_count is not None and total_count is not None:
+                evaluation_result.message = self._format_test_result_message(
+                    correct_count,
+                    total_count,
+                )
+            elif evaluation_result.success:
+                evaluation_result.message = "✅ Правильно!"
+            return
+
+        if evaluation_result.success:
+            message = str(getattr(evaluation_result, "message", "") or "")
+            if any(
+                marker in message
+                for marker in (
+                    "Введите текстовые ответы",
+                    "Не выбраны ответы",
+                    "Нет вопросов",
+                )
+            ):
+                evaluation_result.message = "✅ Правильно!"
+
     def start_session(self, complex_id: str, user_id: str, start_iteration: int = 1) -> bool:
-        """
-        Начинает новую сессию.
-        """
-        logger.info(f"[ComplexSessionController.start_session] ========== НАЧАЛО start_session ==========")
-        logger.info(f"[ComplexSessionController.start_session] complex_id={complex_id}, user_id={user_id}, start_iteration={start_iteration}")
-        
+        """Start a new complex session."""
+        logger.info(
+            "[ComplexSessionController.start_session] start_session complex_id=%s user_id=%s start_iteration=%s",
+            complex_id,
+            user_id,
+            start_iteration,
+        )
         try:
             session = self.session_manager.start_session(complex_id, user_id, start_iteration)
             self.current_session_id = session.id
-            
-            logger.info(f"[ComplexSessionController.start_session] Сессия создана: session_id={session.id}, "
-                       f"iteration={session.iteration}, queue_length={len(session.queue) if session.queue else 0}")
-            
-            # Загружаем первое задание
-            logger.info("[ComplexSessionController.start_session] Загружаем первое задание")
+
+            logger.info(
+                "[ComplexSessionController.start_session] Created session id=%s iteration=%s queue_length=%s",
+                session.id,
+                session.iteration,
+                len(session.queue) if session.queue else 0,
+            )
+
             self._load_next_task()
-            
-            logger.info(f"[ComplexSessionController.start_session] ========== КОНЕЦ start_session ==========")
             return True
         except Exception as e:
-            logger.error(f"[ComplexSessionController.start_session] Failed to start session: {e}", exc_info=True)
+            logger.error("[ComplexSessionController.start_session] Failed to start session: %s", e, exc_info=True)
             if self.on_error:
                 self.on_error(str(e))
             return False
-    
+
     def restore_session(self, complex_id: str, user_id: str) -> bool:
-        """
-        Восстанавливает существующую сессию из файла.
-        
-        Args:
-            complex_id: ID комплекса
-            user_id: ID пользователя
-        
-        Returns:
-            bool: True если восстановление успешно, False в противном случае
-        """
-        logger.info(f"[ComplexSessionController.restore_session] ========== НАЧАЛО restore_session ==========")
-        logger.info(f"[ComplexSessionController.restore_session] complex_id={complex_id}, user_id={user_id}")
-        
+        """Restore an existing complex session from storage."""
+        logger.info(
+            "[ComplexSessionController.restore_session] restore_session complex_id=%s user_id=%s",
+            complex_id,
+            user_id,
+        )
+
         try:
-            # Загружаем сессию из файла
-            logger.info("[ComplexSessionController.restore_session] Загружаем сессию из репозитория")
             session = self.session_manager.session_repository.load_session(complex_id, user_id)
-            
             if not session:
-                logger.warning(f"[ComplexSessionController.restore_session] Session not found for complex {complex_id}")
+                logger.warning(
+                    "[ComplexSessionController.restore_session] Session not found for complex %s",
+                    complex_id,
+                )
                 return False
-            
-            logger.info(f"[ComplexSessionController.restore_session] Сессия загружена: session_id={session.id}, "
-                       f"iteration={session.iteration}, queue_length={len(session.queue) if session.queue else 0}, "
-                       f"current_task_index={session.current_task_index}, completed_tasks={len(session.completed_tasks)}")
-            
-            # Проверяем, что комплекс все еще существует
+
+            logger.info(
+                "[ComplexSessionController.restore_session] Loaded session id=%s iteration=%s queue_length=%s current_task_index=%s completed_tasks=%s",
+                session.id,
+                session.iteration,
+                len(session.queue) if session.queue else 0,
+                session.current_task_index,
+                len(session.completed_tasks),
+            )
+
             complex_obj = self.complex_service.get_complex(complex_id)
             if not complex_obj:
-                logger.warning(f"[ComplexSessionController.restore_session] Complex {complex_id} not found - deleting session")
-                # Удаляем сессию для несуществующего комплекса
+                logger.warning(
+                    "[ComplexSessionController.restore_session] Complex %s not found, deleting stored session",
+                    complex_id,
+                )
                 self.session_manager.session_repository.delete_session(complex_id, user_id)
                 if self.on_error:
-                    self.on_error("Комплекс был удален. Сессия отменена.")
+                    self.on_error("Комплекс не найден. Сессия удалена.")
                 return False
-            
-            # Восстанавливаем сессию в памяти
-            logger.info("[ComplexSessionController.restore_session] Восстанавливаем сессию в памяти")
+
             self.session_manager.restore_session(session)
             self.current_session_id = session.id
-            
-            logger.info(f"[ComplexSessionController.restore_session] Сессия восстановлена в памяти: current_session_id={self.current_session_id}")
-            
-            # ИСПРАВЛЕНИЕ: Проверяем состояние UI перед загрузкой задания
-            # Если состояние = "iteration_results", не загружаем задание - UI сам покажет экран результатов
+
             ui_state = self.restore_ui_state()
-            logger.info(f"[ComplexSessionController.restore_session] Состояние UI: {ui_state}")
-            
-            # Если сохранился экран результатов задачи, а очередь есть — не залипаем на повторном показе
+            logger.info("[ComplexSessionController.restore_session] UI state: %s", ui_state)
+
             if ui_state and ui_state.get("screen_type") == "task_results":
-                logger.info("[ComplexSessionController.restore_session] UI state = task_results; очищаем, чтобы продолжить очередь")
-                self.clear_ui_state()
-                ui_state = None
-            
+                logger.info(
+                    "[ComplexSessionController.restore_session] UI state = task_results; keeping saved result state for S1 reload restore"
+                )
+
             if ui_state and ui_state.get("screen_type") == "iteration_results":
-                logger.info(f"[ComplexSessionController.restore_session] UI state = iteration_results, не загружаем задание - UI покажет экран результатов")
-                # Не загружаем задание - AdaptiveSessionScreen.on_show() обработает состояние UI
+                logger.info(
+                    "[ComplexSessionController.restore_session] UI state = iteration_results; skip task loading so UI can render results"
+                )
                 return True
-            
-            # Загружаем текущее задание (если очередь не пуста)
+
             if session.queue and session.current_task_index < len(session.queue):
-                # Загружаем задание, на котором остановились
-                logger.info(f"[ComplexSessionController.restore_session] Загружаем текущее задание (индекс {session.current_task_index})")
+                logger.info(
+                    "[ComplexSessionController.restore_session] Loading current task at index %s",
+                    session.current_task_index,
+                )
                 self._load_current_task()
             else:
-                # Очередь пуста или индекс вышел за пределы - загружаем следующее
-                logger.info("[ComplexSessionController.restore_session] Очередь пуста или индекс вышел за пределы - загружаем следующее задание")
+                logger.info(
+                    "[ComplexSessionController.restore_session] Queue empty or index out of bounds; loading next task"
+                )
                 self._load_next_task()
-            
-            logger.info(f"[ComplexSessionController.restore_session] ========== КОНЕЦ restore_session ==========")
+
             return True
-            
         except Exception as e:
-            logger.error(f"Failed to restore session: {e}")
+            logger.error("Failed to restore session: %s", e)
             if self.on_error:
                 self.on_error(f"Ошибка восстановления сессии: {e}")
             return False
-    
+
     def _load_current_task(self):
         """
-        Загружает текущее задание из сессии (для восстановления).
-        Использует task_ref из ui_state, если доступен, иначе использует current_task_index.
+        Загружает текущее задание из очереди без инкремента.
+        Синхронизируется через queue-slot из ui_state, чтобы retry-логика
+        и сохраненный task_ref не расходились с фактически открытым заданием.
         """
         if not self.current_session_id:
             return
-        
+
         session = self.session_manager.get_session(self.current_session_id)
         if not session or not session.queue:
             return
-        
-        # ИСПРАВЛЕНИЕ: Сначала проверяем task_ref из ui_state
+
+        queue = session.queue
         task_index = None
-        ui_state = self.restore_ui_state()
-        if ui_state and ui_state.get("task_ref"):
-            task_ref_from_state = ui_state.get("task_ref")
-            logger.info(f"[_load_current_task] Найден task_ref в ui_state: {task_ref_from_state}")
-            
-            # Ищем индекс задания в очереди по task_ref
-            for idx, queued_task in enumerate(session.queue):
+        ui_state = self.restore_ui_state() or {}
+        task_ref_from_state = ui_state.get("task_ref") if isinstance(ui_state, dict) else None
+        ui_task_index = ui_state.get("task_index") if isinstance(ui_state, dict) else None
+
+        if isinstance(ui_task_index, int) and 0 <= ui_task_index < len(queue):
+            queued_from_state = queue[ui_task_index]
+            if not task_ref_from_state or queued_from_state.task_ref == task_ref_from_state:
+                task_index = ui_task_index
+                logger.info(
+                    "[_load_current_task] Restoring queue slot from ui_state: index=%s, task_ref=%s",
+                    task_index,
+                    queued_from_state.task_ref,
+                )
+
+        current_index = getattr(session, "current_task_index", 0)
+        if not isinstance(current_index, int):
+            current_index = 0
+
+        if task_index is None and task_ref_from_state:
+            logger.info(f"[_load_current_task] Found task_ref in ui_state: {task_ref_from_state}")
+            for idx, queued_task in enumerate(queue):
                 if queued_task.task_ref == task_ref_from_state:
                     task_index = idx
-                    logger.info(f"[_load_current_task] Найден индекс задания в очереди: {task_index} (было current_task_index={session.current_task_index})")
-                    break
-            
-            if task_index is None:
-                logger.warning(f"[_load_current_task] task_ref {task_ref_from_state} не найден в очереди, используем current_task_index={session.current_task_index}")
-        
-        # Если task_ref не найден в ui_state или не найден в очереди, используем current_task_index
-        if task_index is None:
-            task_index = session.current_task_index
-        
-        # Синхронизируем current_task_index с найденным индексом
-        if task_index is not None and task_index != session.current_task_index:
-            # Не откатываемся назад, если в сессии индекс уже продвинут дальше
-            if task_index < session.current_task_index:
-                logger.info(f"[_load_current_task] Найденный индекс {task_index} < текущего {session.current_task_index}, "
-                            f"не откатываем current_task_index")
-            else:
-                logger.info(f"[_load_current_task] Синхронизируем current_task_index: {session.current_task_index} -> {task_index}")
-                session.current_task_index = task_index
-        
-        # Берем задание по найденному индексу (не увеличиваем индекс)
-        if task_index < len(session.queue):
-            queued_task = session.queue[task_index]
-            task_ref = queued_task.task_ref
-            difficulty = queued_task.difficulty
-            
-            self.current_task_ref = task_ref
-            
-            # Парсим task_ref
-            try:
-                parts = task_ref.split('/')
-                if len(parts) >= 3:
-                    module_id = parts[0]
-                    topic_id = parts[1]
-                    task_id = parts[-1]
-                    
-                    # Загружаем данные задания
-                    task_data_full = self.storage_service.load_task(module_id, topic_id, task_id)
-                    
-                    if not task_data_full:
-                        raise ValueError(f"Task not found: {task_ref}")
-                    
-                    # Если это ретрай тестового задания и в сессии есть информация
-                    # о заваленных под-вопросах, подрезаем questions до этих индексов
-                    try:
-                        if (
-                            hasattr(session, 'test_failed_subtests')
-                            and session.test_failed_subtests
-                            and queued_task.is_retry
-                        ):
-                            failed_indices = session.test_failed_subtests.get(task_ref) or []
-                            td = task_data_full.get('task_data') or {}
-                            if td.get('type') == 'test' and failed_indices:
-                                content = td.get('content') or {}
-                                questions = content.get('questions') or []
-                                if isinstance(questions, list) and questions:
-                                    filtered = [
-                                        q for i, q in enumerate(questions)
-                                        if i in failed_indices
-                                    ]
-                                    if filtered:
-                                        # Подменяем только в загруженном экземпляре (на диске ничего не меняем)
-                                        content['questions'] = filtered
-                                        td['content'] = content
-                                        task_data_full['task_data'] = td
-                    except Exception as e:
-                        logger.warning(
-                            "[_load_current_task] Failed to apply partial retry for test task %s: %s",
-                            task_ref,
-                            e,
-                        )
-
-                    # Устанавливаем уровень сложности
-                    self.task_controller._explicit_difficulty_level = difficulty
-                    
-                    # Загружаем задание в TaskController
-                    self.task_controller.load_task(
-                        module_id=module_id,
-                        topic_id=topic_id,
-                        task_id=task_id,
-                        task_data=task_data_full['task_data'],
-                        answer_key=task_data_full['answer_key']
+                    logger.info(
+                        "[_load_current_task] Resolved task_ref %s to queue index %s",
+                        task_ref_from_state,
+                        task_index,
                     )
-                    
-                    # Уведомляем UI
-                    if self.on_task_changed:
-                        self.on_task_changed({
-                            "task_ref": task_ref,
-                            "difficulty": difficulty,
-                            "is_retry": queued_task.is_retry,
-                            "index": session.current_task_index,
-                            "total": len(session.queue),
-                            "iteration": session.iteration
-                        })
-                    
-                    # Сохраняем состояние UI: загрузка текущего задания (для восстановления)
-                    # Не сохраняем здесь, если уже есть состояние task_results - оно будет сохранено при проверке
-                    if not session.ui_state or session.ui_state.get("screen_type") != "task_results":
-                        self.save_ui_state("task", task_ref=task_ref)
-                else:
-                    raise ValueError(f"Invalid task reference format: {task_ref}")
-                    
-            except Exception as e:
-                logger.error(f"Error loading current task {task_ref}: {e}")
-                if self.on_error:
-                    self.on_error(f"Ошибка загрузки задания: {e}")
-            
+                    break
+            if task_index is None:
+                logger.warning(
+                    "[_load_current_task] task_ref %s was not found in queue, falling back to current_task_index=%s",
+                    task_ref_from_state,
+                    session.current_task_index,
+                )
+            elif not isinstance(ui_task_index, int) and task_index < current_index:
+                logger.info(
+                    "[_load_current_task] Ignoring stale ui_state task_ref at index %s in favour of advanced current_task_index=%s",
+                    task_index,
+                    current_index,
+                )
+                task_index = current_index
+
+        if task_index is None:
+            task_index = max(0, min(current_index, len(queue) - 1))
+            logger.info(
+                "[_load_current_task] Falling back to effective queue index %s from current_task_index=%s",
+                task_index,
+                current_index,
+            )
+
+        if task_index is None or task_index < 0 or task_index >= len(queue):
+            logger.warning("[_load_current_task] Cannot restore task: invalid queue index %s", task_index)
+            return
+
+        if isinstance(getattr(session, "current_task_index", None), int) and task_index > session.current_task_index:
+            logger.info(
+                "[_load_current_task] Advancing stale current_task_index: %s -> %s",
+                session.current_task_index,
+                task_index,
+            )
+            session.current_task_index = task_index
+
+        queued_task = queue[task_index]
+        task_ref = queued_task.task_ref
+        difficulty = queued_task.difficulty
+
+        self.current_task_ref = task_ref
+        self._current_queue_index = task_index
+
+        try:
+            parts = task_ref.split('/')
+            if len(parts) < 3:
+                raise ValueError(f"Invalid task reference format: {task_ref}")
+
+            module_id = parts[0]
+            topic_id = parts[1]
+            task_id = parts[-1]
+            task_data_full = self.storage_service.load_task(module_id, topic_id, task_id)
+            if not task_data_full:
+                raise ValueError(f"Task not found: {task_ref}")
+
+            task_data_full = self._apply_test_partial_retry_filter(
+                session=session,
+                task_ref=task_ref,
+                is_retry=bool(queued_task.is_retry),
+                task_data_full=task_data_full,
+                context_label="_load_current_task",
+            )
+
+            self.task_controller._explicit_difficulty_level = difficulty
+            self.task_controller.load_task(
+                module_id=module_id,
+                topic_id=topic_id,
+                task_id=task_id,
+                task_data=task_data_full['task_data'],
+                answer_key=task_data_full['answer_key']
+            )
+
+            if self.on_task_changed:
+                self.on_task_changed({
+                    "task_ref": task_ref,
+                    "difficulty": difficulty,
+                    "is_retry": queued_task.is_retry,
+                    "index": task_index,
+                    "total": len(queue),
+                    "iteration": session.iteration,
+                })
+
+            if not session.ui_state or session.ui_state.get("screen_type") != "task_results":
+                self.save_ui_state(
+                    "task",
+                    task_ref=task_ref,
+                    task_index=task_index,
+                    sync_progress=True,
+                )
+        except Exception as e:
+            logger.error(f"Error loading current task {task_ref}: {e}")
+            if self.on_error:
+                self.on_error(f"Ошибка загрузки задания: {e}")
+
     def _load_next_task(self):
         """
         Загружает следующее задание из менеджера сессии.
@@ -344,11 +504,19 @@ class ComplexSessionController:
                 # загрузим следующий task
                 queued_task = session.queue[next_index]
                 self.current_task_ref = queued_task.task_ref
+                self._current_queue_index = next_index
                 try:
                     parts = queued_task.task_ref.split("/")
                     if len(parts) >= 3:
                         module_id, topic_id, task_id = parts[0], parts[1], parts[-1]
                         task_data_full = self.storage_service.load_task(module_id, topic_id, task_id)
+                        task_data_full = self._apply_test_partial_retry_filter(
+                            session=session,
+                            task_ref=queued_task.task_ref,
+                            is_retry=bool(queued_task.is_retry),
+                            task_data_full=task_data_full,
+                            context_label="_load_next_task.daily_mix",
+                        )
                         self.task_controller._explicit_difficulty_level = queued_task.difficulty
                         self.task_controller.load_task(
                             module_id=module_id,
@@ -368,7 +536,12 @@ class ComplexSessionController:
                                     "iteration": session.iteration,
                                 }
                             )
-                        self.save_ui_state("task", task_ref=queued_task.task_ref)
+                        self.save_ui_state(
+                            "task",
+                            task_ref=queued_task.task_ref,
+                            task_index=next_index,
+                            sync_progress=True,
+                        )
                         return
                 except Exception:
                     logger.exception("[ComplexSessionController._load_next_task][daily_mix] Failed to load next task")
@@ -480,17 +653,23 @@ class ComplexSessionController:
                     logger.warning(f"[ComplexSessionController._load_next_task] Продолжаем показ результатов итерации {completed_iteration} несмотря на ошибку")
                     # Не прерываем выполнение - показываем результаты итерации даже при ошибке
                 
-                # ИСПРАВЛЕНИЕ: Очищаем состояние UI от task_results перед показом результатов итерации
-                # Это гарантирует, что при восстановлении после нажатия "Продолжить" будет загружено первое задание следующей итерации
-                logger.info("[ComplexSessionController._load_next_task] Очищаем состояние UI от task_results перед показом результатов итерации")
+                # Критично фиксируем экран S2 до callback'а, чтобы результаты итерации переживали рестарт сервера.
+                logger.info(
+                    "[ComplexSessionController._load_next_task] Сохраняем состояние UI: iteration_results, iteration=%s",
+                    completed_iteration,
+                )
                 try:
-                    ui_state_before = self.restore_ui_state()
-                    logger.debug(f"[ComplexSessionController._load_next_task] Состояние UI до очистки: {ui_state_before}")
-                    self.clear_ui_state()
-                    ui_state_after = self.restore_ui_state()
-                    logger.debug(f"[ComplexSessionController._load_next_task] Состояние UI после очистки: {ui_state_after}")
+                    self.save_ui_state(
+                        "iteration_results",
+                        iteration_number=completed_iteration,
+                        force=True,
+                    )
                 except Exception as e:
-                    logger.warning(f"[ComplexSessionController._load_next_task] Ошибка при очистке состояния UI: {e}", exc_info=True)
+                    logger.warning(
+                        "[ComplexSessionController._load_next_task] Ошибка при сохранении состояния iteration_results: %s",
+                        e,
+                        exc_info=True,
+                    )
                 
                 # Следующая итерация сгенерирована, но мы еще не загружаем задание
                 # Сначала показываем результаты завершенной итерации
@@ -533,6 +712,7 @@ class ComplexSessionController:
                    f"index={next_task_info.get('index')}/{next_task_info.get('total')}")
         
         self.current_task_ref = task_ref
+        self._current_queue_index = next_task_info.get("index")
         
         # ITERATION MISMATCH PROTECTION: Store iteration for this task
         session = self.session_manager.get_session(self.current_session_id)
@@ -554,6 +734,14 @@ class ComplexSessionController:
                 
                 if not task_data_full:
                     raise ValueError(f"Task not found: {task_ref}")
+
+                task_data_full = self._apply_test_partial_retry_filter(
+                    session=session,
+                    task_ref=task_ref,
+                    is_retry=bool(next_task_info.get("is_retry")),
+                    task_data_full=task_data_full,
+                    context_label="_load_next_task",
+                )
                     
                 # Устанавливаем явный уровень сложности в TaskController
                 # Это важно, так как TaskController по умолчанию может использовать другой уровень
@@ -577,7 +765,12 @@ class ComplexSessionController:
                 
                 # Сохраняем состояние UI: переход к новому заданию
                 logger.info(f"[ComplexSessionController._load_next_task] Сохраняем состояние UI: task, task_ref={task_ref}")
-                self.save_ui_state("task", task_ref=task_ref)
+                self.save_ui_state(
+                    "task",
+                    task_ref=task_ref,
+                    task_index=next_task_info.get("index"),
+                    sync_progress=True,
+                )
             else:
                 raise ValueError(f"Invalid task reference format: {task_ref}")
                 
@@ -596,6 +789,9 @@ class ComplexSessionController:
             logger.warning("Cannot submit answer: session or task not loaded")
             return None  # Явно возвращаем None
             
+        previous_defer_progress = bool(getattr(self.task_controller, "defer_progress_persistence", False))
+        self.task_controller.defer_progress_persistence = True
+
         try:
             # 1. Оцениваем ответ через TaskController
             evaluation_result = self.task_controller.submit_answer(user_input)
@@ -610,7 +806,30 @@ class ComplexSessionController:
             
             task_ref = self.current_task_ref
             difficulty = evaluation_result.details.get('difficulty', 1)
-            
+
+            requires_user_judgement = bool(
+                isinstance(evaluation_result.details, dict)
+                and evaluation_result.details.get('requires_user_judgement')
+            )
+            if requires_user_judgement:
+                logger.debug(
+                    "[ComplexSessionController.submit_answer] Pending user judgement for %s; skip session finalization",
+                    task_ref,
+                )
+                try:
+                    self.save_ui_state(
+                        "task_results",
+                        task_ref=task_ref,
+                        task_index=getattr(self, "_current_queue_index", None),
+                        evaluation_result=evaluation_result,
+                        user_input=user_input,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        f"[ComplexSessionController.submit_answer] Ошибка при сохранении pending-состояния UI: {e}"
+                    )
+                return evaluation_result
+             
             session_result = self.session_manager.submit_result(
                 self.current_session_id,
                 {
@@ -628,16 +847,26 @@ class ComplexSessionController:
             # Это важно для web-HTTP-слоя: SessionAPI._serialize_evaluation_result
             # смотрит на evaluation_result.success, а не на SessionTaskResult.
             try:
-                if session_result is not None and hasattr(session_result, "success"):
-                    evaluation_result.success = bool(getattr(session_result, "success"))
+                self._sync_evaluation_result_with_session_result(
+                    evaluation_result,
+                    session_result,
+                )
             except Exception:
-                logger.exception("[ComplexSessionController.submit_answer] Failed to sync evaluation_result.success with session_result.success")
+                logger.exception(
+                    "[ComplexSessionController.submit_answer] Failed to sync evaluation_result with session_result"
+                )
             
             # ИСПРАВЛЕНИЕ: Сохраняем состояние UI после отправки ответа
             # Это гарантирует, что состояние будет сохранено даже если пользователь закроет приложение
             logger.debug("[ComplexSessionController.submit_answer] Сохраняем состояние UI после отправки ответа")
             try:
-                self.save_ui_state("task_results", task_ref=task_ref, evaluation_result=evaluation_result)
+                self.save_ui_state(
+                    "task_results",
+                    task_ref=task_ref,
+                    task_index=getattr(self, "_current_queue_index", None),
+                    evaluation_result=evaluation_result,
+                    user_input=user_input,
+                )
             except Exception as e:
                 logger.warning(f"[ComplexSessionController.submit_answer] Ошибка при сохранении состояния UI: {e}")
             
@@ -650,7 +879,60 @@ class ComplexSessionController:
             if self.on_error:
                 self.on_error(f"Ошибка проверки ответа: {e}")
             return None  # Явно возвращаем None при ошибке
+        finally:
+            self.task_controller.defer_progress_persistence = previous_defer_progress
                 
+    def _resolve_current_queue_index(self, session) -> Optional[int]:
+        """Resolve the exact queue slot for the currently shown task."""
+        queue = getattr(session, "queue", None) or []
+        if not queue:
+            return None
+
+        queue_index = getattr(self, "_current_queue_index", None)
+        if isinstance(queue_index, int) and 0 <= queue_index < len(queue):
+            queued_task = queue[queue_index]
+            if not self.current_task_ref or queued_task.task_ref == self.current_task_ref:
+                return queue_index
+
+        current_index = getattr(session, "current_task_index", 0)
+        if not isinstance(current_index, int):
+            return None
+
+        fallback_index = current_index - 1 if current_index > 0 else 0
+        if 0 <= fallback_index < len(queue):
+            queued_task = queue[fallback_index]
+            if not self.current_task_ref or queued_task.task_ref == self.current_task_ref:
+                return fallback_index
+
+        return None
+
+    @staticmethod
+    def _queue_occurrence_ordinal(session, task_ref: str, queue_index: Optional[int]) -> int:
+        """Return 1-based occurrence number of task_ref within the queue up to queue_index."""
+        if queue_index is None:
+            return 1
+
+        queue = getattr(session, "queue", None) or []
+        occurrences = 0
+        last_index = min(queue_index, len(queue) - 1)
+        for idx in range(last_index + 1):
+            queued_task = queue[idx]
+            if getattr(queued_task, "task_ref", None) == task_ref:
+                occurrences += 1
+
+        return max(1, occurrences)
+
+    @staticmethod
+    def _completed_attempts_in_iteration(session, task_ref: str, iteration_index: Optional[int]) -> int:
+        """Count how many attempts of task_ref were already submitted in the target iteration."""
+        completed_tasks = getattr(session, "completed_tasks", None) or []
+        return sum(
+            1
+            for result in completed_tasks
+            if getattr(result, "task_ref", None) == task_ref
+            and getattr(result, "iteration_index", None) == iteration_index
+        )
+
     def next_task(self):
         """
         Переход к следующему заданию (вызывается из UI).
@@ -663,11 +945,22 @@ class ComplexSessionController:
             session = self.session_manager.get_session(self.current_session_id)
             if session:
                 # Проверяем, есть ли результат для текущего задания в текущей итерации
-                current_task_submitted = any(
-                    result.task_ref == self.current_task_ref and
-                    result.iteration_index == session.iteration
-                    for result in session.completed_tasks
+                task_iteration = self._current_task_iteration
+                if task_iteration is None:
+                    task_iteration = self._get_session_iteration(session)
+
+                queue_index = self._resolve_current_queue_index(session)
+                occurrence_ordinal = self._queue_occurrence_ordinal(
+                    session,
+                    self.current_task_ref,
+                    queue_index,
                 )
+                completed_attempts = self._completed_attempts_in_iteration(
+                    session,
+                    self.current_task_ref,
+                    task_iteration,
+                )
+                current_task_submitted = completed_attempts >= occurrence_ordinal
                 
                 if not current_task_submitted:
                     # Задание не было отправлено — откладываем в конец очереди
@@ -841,21 +1134,19 @@ class ComplexSessionController:
             }
             
             # Добавляем данные в зависимости от типа экрана
+            sync_progress = bool(kwargs.get("sync_progress"))
             if screen_type in ("task", "task_results"):
                 task_ref = kwargs.get("task_ref") or self.current_task_ref
+                task_index = kwargs.get("task_index")
                 if task_ref:
                     new_ui_state["task_ref"] = task_ref
-                    
-                    # Для результатов задач не трогаем current_task_index, чтобы не сдвигать очередь новой итерации
-                    if screen_type != "task_results":
-                        # ИСПРАВЛЕНИЕ: Синхронизируем current_task_index с task_ref только если:
-                        # 1. Текущий индекс указывает на задание, которое не соответствует task_ref
-                        # 2. ИЛИ текущий индекс вне диапазона очереди
-                        # НЕ синхронизируем, если текущий индекс уже указывает на правильное задание
-                        # И не откатываем индекс назад при повторяющихся заданиях
+                    if isinstance(task_index, int):
+                        new_ui_state["task_index"] = task_index
+                        self._current_queue_index = task_index
+
+                    if screen_type != "task_results" and sync_progress:
                         skip_sync_due_to_iteration = False
                         try:
-                            # Если есть информация об итерации результата и она меньше текущей - не синхронизируем
                             matching_results = [
                                 r for r in session.completed_tasks
                                 if getattr(r, "task_ref", None) == task_ref
@@ -866,69 +1157,112 @@ class ComplexSessionController:
                                 current_iter = self._get_session_iteration(session)
                                 if result_iter is not None and current_iter is not None and result_iter < current_iter:
                                     skip_sync_due_to_iteration = True
-                                    logger.info("[ComplexSessionController.save_ui_state] Пропускаем синхронизацию current_task_index: результат из прошлой итерации "
-                                                f"(result_iter={result_iter}, current_iter={current_iter}, task_ref={task_ref})")
+                                    logger.info(
+                                        "[ComplexSessionController.save_ui_state] Skipping current_task_index sync for previous-iteration result: result_iter=%s current_iter=%s task_ref=%s",
+                                        result_iter,
+                                        current_iter,
+                                        task_ref,
+                                    )
                         except Exception as e:
-                            logger.debug(f"[ComplexSessionController.save_ui_state] Не удалось определить итерацию для task_ref={task_ref}: {e}")
-                        
-                        if skip_sync_due_to_iteration:
-                            pass
-                        else:
-                            if session.queue:
+                            logger.debug(f"[ComplexSessionController.save_ui_state] Failed to detect iteration for task_ref={task_ref}: {e}")
+
+                        if not skip_sync_due_to_iteration and session.queue:
+                            if isinstance(task_index, int):
+                                if 0 <= task_index < len(session.queue):
+                                    indexed_task = session.queue[task_index]
+                                    if getattr(indexed_task, "task_ref", None) == task_ref:
+                                        current_idx = session.current_task_index
+                                        expected_idx = (
+                                            task_index
+                                            if getattr(session, "complex_id", None) == "daily_mix"
+                                            else min(len(session.queue), task_index + 1)
+                                        )
+                                        if not isinstance(current_idx, int) or current_idx < expected_idx:
+                                            logger.info(
+                                                "[ComplexSessionController.save_ui_state] Advancing current_task_index: %s -> %s (explicit task_index=%s for %s)",
+                                                current_idx,
+                                                expected_idx,
+                                                task_index,
+                                                task_ref,
+                                            )
+                                            session.current_task_index = expected_idx
+                                    else:
+                                        logger.warning(
+                                            "[ComplexSessionController.save_ui_state] task_index=%s points to %s instead of %s; keeping current_task_index=%s",
+                                            task_index,
+                                            getattr(indexed_task, "task_ref", None),
+                                            task_ref,
+                                            session.current_task_index,
+                                        )
+                                else:
+                                    logger.warning(
+                                        "[ComplexSessionController.save_ui_state] task_index=%s is out of queue bounds (len=%s)",
+                                        task_index,
+                                        len(session.queue),
+                                    )
+                            else:
                                 current_idx = session.current_task_index
-                                # Если индекс уже вышел за пределы очереди, не трогаем его,
-                                # чтобы логика завершения итерации могла сработать корректно.
                                 if current_idx >= len(session.queue):
                                     logger.debug(
-                                        "[ComplexSessionController.save_ui_state] current_task_index=%s вне диапазона (queue_len=%s), "
-                                        "не синхронизируем по task_ref=%s",
+                                        "[ComplexSessionController.save_ui_state] current_task_index=%s is outside queue_len=%s; skip sync for task_ref=%s",
                                         current_idx,
                                         len(session.queue),
                                         task_ref,
                                     )
                                 else:
-                                    # Проверяем, указывает ли текущий индекс на правильное задание
-                                    if current_idx < len(session.queue):
-                                        current_queued_task = session.queue[current_idx]
-                                        if current_queued_task.task_ref == task_ref:
-                                            # Текущий индекс уже указывает на правильное задание - не синхронизируем
-                                            logger.debug(f"[ComplexSessionController.save_ui_state] current_task_index={current_idx} уже указывает на task_ref={task_ref}, пропускаем синхронизацию")
-                                        else:
-                                            # Текущий индекс указывает на другое задание - ищем правильный индекс
-                                            found_idx = None
-                                            for idx, queued_task in enumerate(session.queue):
-                                                if queued_task.task_ref == task_ref:
-                                                    found_idx = idx
-                                                    # ИСПРАВЛЕНИЕ: Используем найденный индекс только если он >= текущего
-                                                    # Это предотвращает откат индекса назад при повторяющихся заданиях
-                                                    if found_idx >= current_idx:
-                                                        if session.current_task_index != found_idx:
-                                                            logger.info(f"[ComplexSessionController.save_ui_state] Синхронизируем current_task_index: "
-                                                                       f"{session.current_task_index} -> {found_idx} (по task_ref={task_ref})")
-                                                            session.current_task_index = found_idx
-                                                        break
-                                            if found_idx is None or found_idx < current_idx:
-                                                logger.warning(f"[ComplexSessionController.save_ui_state] task_ref {task_ref} не найден в очереди после индекса {current_idx}, оставляем текущий индекс")
+                                    current_queued_task = session.queue[current_idx]
+                                    if current_queued_task.task_ref == task_ref:
+                                        logger.debug(
+                                            "[ComplexSessionController.save_ui_state] current_task_index=%s already points to task_ref=%s",
+                                            current_idx,
+                                            task_ref,
+                                        )
+                                    else:
+                                        found_idx = None
+                                        for idx, queued_task in enumerate(session.queue):
+                                            if queued_task.task_ref == task_ref:
+                                                found_idx = idx
+                                                if found_idx >= current_idx:
+                                                    if session.current_task_index != found_idx:
+                                                        logger.info(
+                                                            "[ComplexSessionController.save_ui_state] Syncing current_task_index: %s -> %s (task_ref=%s)",
+                                                            session.current_task_index,
+                                                            found_idx,
+                                                            task_ref,
+                                                        )
+                                                        session.current_task_index = found_idx
+                                                break
+                                        if found_idx is None or found_idx < current_idx:
+                                            logger.warning(
+                                                "[ComplexSessionController.save_ui_state] task_ref %s was not found in queue after current_idx=%s; keeping current_task_index",
+                                                task_ref,
+                                                current_idx,
+                                            )
                 else:
                     logger.warning("Cannot save UI state: task_ref not provided")
                     return False
-                
+
+                user_input = kwargs.get("user_input")
+                if user_input is not None:
+                    new_ui_state["user_input"] = user_input
+
+                view_state = kwargs.get("view_state")
+                if view_state is not None:
+                    new_ui_state["view_state"] = view_state
+
                 if screen_type == "task_results":
                     evaluation_result = kwargs.get("evaluation_result")
                     if evaluation_result:
-                        # Сериализуем результат проверки в JSON-совместимый формат
                         if hasattr(evaluation_result, 'dict'):
-                            # Pydantic модель
                             new_ui_state["evaluation_result"] = evaluation_result.dict()
                         elif hasattr(evaluation_result, '__dict__'):
-                            # Обычный объект
                             new_ui_state["evaluation_result"] = self._serialize_evaluation_result(evaluation_result)
                         elif isinstance(evaluation_result, dict):
                             new_ui_state["evaluation_result"] = evaluation_result
                         else:
                             logger.warning(f"Cannot serialize evaluation_result: {type(evaluation_result)}")
                             return False
-            
+
             elif screen_type == "iteration_results":
                 iteration_number = kwargs.get("iteration_number")
                 if iteration_number is not None:
@@ -943,8 +1277,11 @@ class ComplexSessionController:
                 state_changed = (
                     self._last_ui_state.get("screen_type") != new_ui_state.get("screen_type") or
                     self._last_ui_state.get("task_ref") != new_ui_state.get("task_ref") or
+                    self._last_ui_state.get("task_index") != new_ui_state.get("task_index") or
                     self._last_ui_state.get("iteration_number") != new_ui_state.get("iteration_number") or
-                    self._last_ui_state.get("evaluation_result") != new_ui_state.get("evaluation_result")
+                    self._last_ui_state.get("evaluation_result") != new_ui_state.get("evaluation_result") or
+                    self._last_ui_state.get("user_input") != new_ui_state.get("user_input") or
+                    self._last_ui_state.get("view_state") != new_ui_state.get("view_state")
                 )
                 
                 if not state_changed:
@@ -1098,3 +1435,4 @@ class ComplexSessionController:
                 logger.debug(f"Session auto-saved: {session.id}")
         except Exception as e:
             logger.warning(f"Error auto-saving session: {e}")
+

@@ -64,6 +64,10 @@ class TheoryService:
         "link",
         "blockquote",
         "code",
+        "width",
+        "rotate",
+        "float",
+        "flip",
     }
     MAX_DELTA_OPS = 20000
     MAX_TOTAL_TEXT = 250000
@@ -77,6 +81,47 @@ class TheoryService:
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
+
+    def _summarize_delta(self, theory_dir: Path) -> Dict[str, Any]:
+        """Return basic stats about the Delta content (images, text)."""
+        summary: Dict[str, Any] = {
+            "image_count": 0,
+            "text_chars": 0,
+            "has_text": False,
+            "ops_count": 0,
+        }
+
+        delta_path = theory_dir / "body.delta.json"
+        if not delta_path.exists():
+            return summary
+
+        try:
+            delta = self._read_json(delta_path)
+            ops = delta.get("ops", []) if isinstance(delta, dict) else []
+            summary["ops_count"] = len(ops)
+            image_paths = set()
+
+            for op in ops:
+                if not isinstance(op, dict):
+                    continue
+                insert = op.get("insert")
+                if isinstance(insert, dict) and "image" in insert:
+                    image_path = insert["image"]
+                    if self._image_ref_exists(image_path):
+                        image_paths.add(image_path)
+                    continue
+                if isinstance(insert, str):
+                    stripped = insert.replace("\n", "").strip()
+                    if stripped:
+                        summary["text_chars"] += len(stripped)
+
+            summary["image_count"] = len(image_paths)
+            summary["has_text"] = summary["text_chars"] > 0
+        except Exception:
+            # Return whatever we have accumulated so far
+            pass
+
+        return summary
 
     def list_theories(self, query: Optional[str] = None) -> List[Dict[str, Any]]:
         q = (query or "").strip().lower()
@@ -98,6 +143,7 @@ class TheoryService:
             if q and q not in title.lower() and q not in theory_id.lower():
                 continue
 
+            delta_summary = self._summarize_delta(theory_dir)
             items.append(
                 {
                     "id": theory_id,
@@ -105,7 +151,14 @@ class TheoryService:
                     "created_at": meta.get("created_at"),
                     "updated_at": meta.get("updated_at"),
                     "version": meta.get("version"),
-                    "image_count": len(meta.get("images") or []),
+                    "image_count": delta_summary.get("image_count", 0),
+                    "has_text": bool(delta_summary.get("has_text")),
+                    "has_content": bool(
+                        delta_summary.get("has_text")
+                        or (delta_summary.get("image_count") or 0) > 0
+                    ),
+                    "text_chars": int(delta_summary.get("text_chars") or 0),
+                    "ops_count": int(delta_summary.get("ops_count") or 0),
                 }
             )
 
@@ -278,6 +331,23 @@ class TheoryService:
         self._write_json_atomic(theory_dir / "body.delta.json", cloned_delta)
         return self.get_theory(theory_id)
 
+    def delete_theory(self, theory_id: str) -> Dict[str, Any]:
+        theory_dir = self._resolve_theory_dir(theory_id)
+        meta_path = theory_dir / "theory.json"
+        if not meta_path.exists():
+            raise TheoryNotFoundError("theory_not_found")
+
+        meta = self._read_json(meta_path)
+        now = datetime.utcnow()
+        timestamp = now.strftime("%Y%m%d_%H%M%S_%f")
+
+        shutil.rmtree(str(theory_dir))
+        return {
+            "id": str(meta.get("id") or theory_id),
+            "title": str(meta.get("title") or "").strip(),
+            "deleted_at": now.isoformat(),
+        }
+
     def add_image(self, theory_id: str, upload: FileStorage) -> Dict[str, Any]:
         if upload is None:
             raise TheoryValidationError("file_required")
@@ -381,6 +451,112 @@ class TheoryService:
         self._write_json_atomic(meta_path, restored_meta)
         self._write_json_atomic(delta_path, restored_delta)
         return self.get_theory(theory_id)
+
+    def normalize_theory_image_refs(
+        self,
+        theory_id: str,
+        *,
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """Remove broken image references from one theory."""
+        theory_dir = self._resolve_theory_dir(theory_id)
+        meta_path = theory_dir / "theory.json"
+        delta_path = theory_dir / "body.delta.json"
+        if not meta_path.exists():
+            raise TheoryNotFoundError("theory_not_found")
+
+        meta = self._read_json(meta_path)
+        current_delta = (
+            self._read_json(delta_path) if delta_path.exists() else {"ops": [{"insert": "\n"}]}
+        )
+        normalized_delta, removed_delta_refs, removed_delta_ops = self._prune_missing_delta_images(
+            current_delta
+        )
+        normalized_images, removed_meta_images = self._prune_missing_images_list(
+            meta.get("images")
+        )
+
+        changed = (
+            removed_delta_ops > 0
+            or bool(removed_meta_images)
+            or normalized_delta != current_delta
+            or normalized_images != list(meta.get("images") or [])
+        )
+
+        result: Dict[str, Any] = {
+            "theory_id": str(meta.get("id") or theory_id),
+            "title": str(meta.get("title") or "").strip(),
+            "changed": changed,
+            "dry_run": dry_run,
+            "removed_delta_image_ops": removed_delta_ops,
+            "removed_delta_image_refs": removed_delta_refs,
+            "removed_meta_images": removed_meta_images,
+        }
+
+        if not changed or dry_run:
+            return result
+
+        self._save_history_snapshot(theory_id, meta, current_delta)
+
+        now = datetime.utcnow().isoformat()
+        meta["id"] = meta.get("id") or theory_id
+        meta["delta_path"] = "body.delta.json"
+        meta["images"] = normalized_images
+        meta["updated_at"] = now
+        meta["version"] = now
+
+        self._write_json_atomic(meta_path, meta)
+        self._write_json_atomic(delta_path, normalized_delta)
+
+        result["version"] = now
+        return result
+
+    def normalize_theories_image_refs(
+        self,
+        theory_ids: Optional[List[str]] = None,
+        *,
+        dry_run: bool = False,
+    ) -> Dict[str, Any]:
+        """Normalize broken image references across selected or all theories."""
+        if theory_ids is None:
+            targets = sorted(
+                theory_dir.name
+                for theory_dir in self.theories_dir.iterdir()
+                if theory_dir.is_dir() and (theory_dir / "theory.json").exists()
+            )
+        else:
+            targets = []
+            for theory_id in theory_ids:
+                normalized = self._normalize_theory_id(theory_id)
+                if normalized and normalized not in targets:
+                    targets.append(normalized)
+
+        items: List[Dict[str, Any]] = []
+        errors: List[Dict[str, str]] = []
+        for theory_id in targets:
+            try:
+                items.append(self.normalize_theory_image_refs(theory_id, dry_run=dry_run))
+            except Exception as exc:
+                logger.exception("Failed to normalize theory image refs for %s: %s", theory_id, exc)
+                errors.append({"theory_id": theory_id, "error": str(exc)})
+
+        return {
+            "ok": not errors,
+            "dry_run": dry_run,
+            "theories_scanned": len(targets),
+            "theories_changed": sum(1 for item in items if item.get("changed")),
+            "removed_delta_image_ops_total": sum(
+                int(item.get("removed_delta_image_ops") or 0) for item in items
+            ),
+            "removed_delta_image_refs_total": sum(
+                len(item.get("removed_delta_image_refs") or []) for item in items
+            ),
+            "removed_meta_images_total": sum(
+                len(item.get("removed_meta_images") or []) for item in items
+            ),
+            "items": items,
+            "errors": errors,
+        }
 
     # ------------------------------------------------------------------
     # Internals
@@ -527,6 +703,57 @@ class TheoryService:
             if sanitized and sanitized not in clean:
                 clean.append(sanitized)
         return clean
+
+    def _image_ref_exists(self, raw_value: Any) -> bool:
+        if not isinstance(raw_value, str):
+            return False
+        sanitized = self._sanitize_image_ref(raw_value)
+        if not sanitized:
+            return False
+        try:
+            target = (self.data_dir / sanitized).resolve()
+            target.relative_to(self.data_dir.resolve())
+        except ValueError:
+            return False
+        return target.exists() and target.is_file()
+
+    def _prune_missing_images_list(self, raw_images: Any) -> tuple[List[str], List[str]]:
+        clean_images = self._sanitize_images_list(raw_images)
+        kept: List[str] = []
+        removed: List[str] = []
+        for image_ref in clean_images:
+            if self._image_ref_exists(image_ref):
+                kept.append(image_ref)
+            elif image_ref not in removed:
+                removed.append(image_ref)
+        return kept, removed
+
+    def _prune_missing_delta_images(
+        self, raw_delta: Any
+    ) -> tuple[Dict[str, Any], List[str], int]:
+        delta = self._sanitize_delta(raw_delta)
+        clean_ops: List[Dict[str, Any]] = []
+        removed_refs: List[str] = []
+        removed_ops = 0
+
+        for op in delta.get("ops", []):
+            if not isinstance(op, dict) or "insert" not in op:
+                continue
+            insert = op.get("insert")
+            if isinstance(insert, dict):
+                image_ref = insert.get("image")
+                if isinstance(image_ref, str):
+                    sanitized = self._sanitize_image_ref(image_ref)
+                    if sanitized and not self._image_ref_exists(sanitized):
+                        removed_ops += 1
+                        if sanitized not in removed_refs:
+                            removed_refs.append(sanitized)
+                        continue
+            clean_ops.append(op)
+
+        if not clean_ops:
+            clean_ops = [{"insert": "\n"}]
+        return self._sanitize_delta({"ops": clean_ops}), removed_refs, removed_ops
 
     def _save_history_snapshot(
         self, theory_id: str, meta: Dict[str, Any], delta: Dict[str, Any]

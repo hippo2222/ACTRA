@@ -1,669 +1,339 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 
 <head>
-
   <script src="/assets/ThemeManager.js"></script>
-
   <meta charset="utf-8" />
-
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <title>Итоговые результаты комплекса</title>
 
-  <style>
-    .material-symbols-outlined {
-
-      font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
-
-    }
-
-    /* Page entrance */
-    .s3-page-enter {
-      animation: a-slide-up 0.45s ease-out both;
-    }
-
-    /* Summary stat stagger */
-    .s3-stat {
-      animation: a-slide-up 0.4s ease-out both;
-    }
-
-    .s3-stat:nth-child(1) {
-      animation-delay: 0.05s;
-    }
-
-    .s3-stat:nth-child(2) {
-      animation-delay: 0.10s;
-    }
-
-    .s3-stat:nth-child(3) {
-      animation-delay: 0.15s;
-    }
-
-    .s3-stat:nth-child(4) {
-      animation-delay: 0.20s;
-    }
-
-    /* Section entrance */
-    .s3-section-enter {
-      animation: a-slide-up 0.4s ease-out 0.15s both;
-    }
-
-    /* Motivational message */
-    .s3-motivational {
-      animation: a-scale-in 0.5s ease-out 0.25s both;
-    }
-
-    /* Footer buttons */
-    .s3-btn {
-      transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
-    }
-
-    .s3-btn:active {
-      transform: scale(0.97);
-    }
-
-    .s3-btn:hover {
-      box-shadow: var(--shadow-md);
-    }
-
-    .s3-shell-row {
-      width: 100%;
-      align-items: stretch;
-    }
-
-    .s3-toolbar {
-      gap: 1rem;
-    }
-
-    .s3-toolbar-main {
-      min-width: 0;
-      flex: 1 1 auto;
-    }
-
-    .s3-toolbar-title {
-      min-width: 0;
-    }
-
-    .s3-toolbar-meta {
-      min-width: 0;
-      max-width: 18rem;
-      text-align: right;
-      white-space: normal;
-      overflow-wrap: anywhere;
-    }
-
-    .s3-action-btn {
-      width: 100%;
-      min-width: 0;
-      min-height: 2.5rem;
-    }
-
-    .s3-action-label {
-      display: block;
-      white-space: normal;
-      line-height: 1.25;
-      text-align: center;
-    }
-
-    .s3-problem-task {
-      min-width: 0;
-      align-items: flex-start;
-    }
-
-    .s3-problem-task-main {
-      min-width: 0;
-      flex: 1 1 auto;
-    }
-
-    .s3-problem-task-name {
-      display: -webkit-box;
-      overflow: hidden;
-      -webkit-box-orient: vertical;
-      -webkit-line-clamp: 2;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-    }
-
-    .s3-problem-task-count {
-      flex-shrink: 0;
-      text-align: right;
-    }
-
-    #complex-name,
-    #results-title,
-    #motivational-text,
-    #problem-empty-copy,
-    #iterations-empty-hint {
-      overflow-wrap: anywhere;
-      word-break: break-word;
-    }
-
-    #iterations-grid,
-    #problem-tasks-list {
-      min-width: 0;
-    }
-
-    #results-badge {
-      border: 1px solid var(--color-border-strong);
-      background: var(--color-surface-1);
-      padding: 0.25rem 0.625rem;
-      border-radius: 9999px;
-      color: var(--color-text-main);
-      font-weight: 700;
-    }
-
-    #session-status,
-    .s3-muted-stat-label,
-    .s3-section-caption {
-      font-weight: 600;
-    }
-
-    #iterations-placeholder,
-    #problem-empty-hint {
-      border: 1px solid var(--color-border-strong);
-      background: var(--color-surface-1);
-    }
-
-    @media (min-width: 640px) {
-      .s3-action-btn {
-        width: auto;
-        min-width: 160px;
-      }
-
-      .s3-action-btn--wide {
-        min-width: 180px;
-      }
-    }
-
-    @media (max-width: 767px) {
-      .s3-toolbar {
-        flex-wrap: wrap;
-        padding: 1rem 1.25rem;
-      }
-
-      .s3-toolbar-meta {
-        max-width: none;
-        text-align: left;
-      }
-    }
-
-    @media (min-width: 1024px) and (max-height: 920px) {
-      .s3-compact-shell {
-        gap: 0.875rem;
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
-      }
-
-      .s3-toolbar {
-        margin-bottom: 0.75rem;
-      }
-    }
-
-    /* light-b: raise muted text + border contrast to pass AA */
-    html[data-theme="light-b"] #session-status,
-    html[data-theme="light-b"] #session-id-label,
-    html[data-theme="light-b"] #results-badge,
-    html[data-theme="light-b"] .s3-muted-stat-label,
-    html[data-theme="light-b"] .s3-section-caption,
-    html[data-theme="light-b"] #problem-empty-copy {
-      color: var(--color-text-main);
-    }
-
-    html[data-theme="light-b"] #motivational-message {
-      border-color: var(--color-border-strong);
-    }
-  </style>
-
   <link href="/assets/tailwind.css" rel="stylesheet" />
-
   <link href="/assets/fonts.css" rel="stylesheet" />
-
   <link href="/assets/lightB-variables.css" rel="stylesheet" />
-
   <link href="/assets/lightB-components.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
-
+  <link href="/assets/s3-results.css" rel="stylesheet" />
 </head>
 
-<body class="min-h-screen overflow-x-hidden overflow-y-auto bg-bg-main font-display text-text-main antialiased selection:bg-primary-light">
+<body class="s3-body">
 
-  <div class="group/design-root relative flex min-h-screen w-full flex-col overflow-x-hidden">
+  <!-- ── PAGE ROOT ──────────────────────────────────────── -->
+  <div class="s3-page-root">
+    <div class="s3-page-frame s3-page-enter">
 
-    <div class="layout-container flex min-h-screen grow flex-col">
+      <!-- ── TOOLBAR ──────────────────────────────────────── -->
+      <header class="s3-toolbar">
 
-      <div class="s3-shell-row flex flex-1 justify-center py-3 sm:px-4 md:px-8 lg:px-10 xl:py-4">
+        <div class="s3-toolbar-identity">
+          <p class="s3-kicker">Комплекс</p>
+          <h1 class="s3-toolbar-title" id="complex-name">Комплекс</h1>
+        </div>
 
-        <div class="layout-content-container flex w-full max-w-[1680px] flex-1 flex-col px-0">
+        <nav class="s3-toolbar-nav" id="results-nav" aria-label="Навигация после сессии" hidden>
+          <button id="to-main-btn" class="btn-primary s3-btn s3-btn--wide">
+            <span class="material-symbols-outlined" aria-hidden="true">home</span>
+            <span class="s3-btn-label">На главную</span>
+          </button>
 
-          <header
-            class="s3-toolbar mb-3 flex items-center justify-between rounded-xl border-2 border-border-strong bg-surface-2 px-6 py-3 shadow-sm xl:mb-4 sm:px-8 lg:px-10">
+          <button id="to-complexes-btn" class="btn-secondary s3-btn s3-btn--wide">
+            <span class="material-symbols-outlined" aria-hidden="true">list</span>
+            <span class="s3-btn-label">К комплексам</span>
+          </button>
 
-            <div class="s3-toolbar-main flex items-center gap-3 text-text-main">
+          <button id="to-theory-hub-btn" class="btn-secondary s3-btn s3-btn--wide s3-btn--theory hidden">
+            <span class="material-symbols-outlined" aria-hidden="true">edit_square</span>
+            <span class="s3-btn-label">К теории</span>
+          </button>
+        </nav>
 
-              <span class="brand-logo size-6" style="color:var(--color-primary)" aria-hidden="true"></span>
+        <button id="close-btn" class="s3-icon-btn" aria-label="Закрыть">
+          <span class="material-symbols-outlined">close</span>
+        </button>
 
-              <div class="s3-toolbar-title">
+      </header>
 
-                <h1 class="text-xl font-bold leading-tight tracking-[-0.015em] text-text-main xl:text-2xl">
+      <!-- ── MAIN ─────────────────────────────────────────── -->
+      <main class="s3-main">
 
-                  <span id="complex-name">Комплекс</span>
+        <!-- Summary hero -->
+        <section class="s3-hero card-elevated" aria-label="Итоги сессии">
 
-                </h1>
+          <div class="s3-hero-head">
+            <div class="s3-hero-copy">
+              <span class="pill pill--neutral text-xs" id="results-badge">Итоги</span>
+              <h2 class="s3-hero-title" id="results-title">Результаты комплекса</h2>
+            </div>
+          </div>
 
-                <p id="session-status" class="text-sm font-medium text-text-secondary">
+          <div class="s3-stat-grid">
 
-                  Сессия завершена
-
-                </p>
-
+            <div class="s3-stat-card s3-stat" aria-label="Количество итераций">
+              <div class="s3-stat-label-row">
+                <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">sync</span>
+                <span class="s3-stat-label">Итераций</span>
               </div>
-
+              <p class="s3-stat-value" id="summary-iterations">—</p>
             </div>
 
-            <span id="session-id-label" class="s3-toolbar-meta text-xs font-semibold text-text-secondary">Сессия
-
-              —</span>
-
-          </header>
-
-          <main class="flex flex-1 flex-col">
-
-            <div class="px-0 py-0">
-
-              <div class="s3-compact-shell s3-page-enter flex flex-col gap-3 px-4 py-3 md:px-6 lg:px-8 xl:px-10 xl:py-4">
-
-                <div class="rounded-xl bg-surface-2 p-6 shadow-md transition-shadow duration-200 hover:shadow-lg">
-
-                  <div class="mb-3 flex items-start justify-between gap-3">
-
-                    <h2 id="results-title" class="text-xl font-bold text-text-main xl:text-2xl">
-
-                      Результаты комплекса
-
-                    </h2>
-
-                    <span id="results-badge" class="text-xs font-medium text-text-secondary dark:text-text-secondary">Итоги</span>
-
-                  </div>
-
-                  <div class="grid grid-cols-1 gap-3 text-left sm:grid-cols-2 xl:grid-cols-4">
-
-                    <div class="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 s3-stat">
-
-                      <div class="flex items-center gap-2 text-text-secondary">
-
-                        <span class="material-symbols-outlined text-base">sync</span>
-
-                        <p class="s3-muted-stat-label text-sm font-medium">Итераций</p>
-
-                      </div>
-
-                      <p id="summary-iterations" class="text-3xl font-bold text-text-main">
-
-                        —
-
-                      </p>
-
-                    </div>
-
-                    <div class="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 s3-stat">
-
-                      <div class="flex items-center gap-2 text-text-secondary">
-
-                        <span class="material-symbols-outlined text-base">list_alt</span>
-
-                        <p class="s3-muted-stat-label text-sm font-medium">Всего заданий</p>
-
-                      </div>
-
-                      <p id="summary-unique-tasks" class="text-3xl font-bold text-text-main">
-
-                        —
-
-                      </p>
-
-                    </div>
-
-                    <div class="flex flex-col gap-1 rounded-lg border-2 border-success bg-surface-1 p-3 s3-stat">
-
-                      <div class="flex items-center gap-2 text-text-main">
-
-                        <span class="material-symbols-outlined text-base">check_circle</span>
-
-                        <p class="text-sm font-medium">Верных ответов</p>
-
-                      </div>
-
-                      <p id="summary-completed-tasks" class="text-3xl font-extrabold text-text-main">
-
-                        —
-
-                      </p>
-
-                      <p id="summary-success-rate" class="text-sm font-semibold text-text-main">
-
-                        —
-
-                      </p>
-
-                    </div>
-
-                    <div class="flex flex-col gap-1 rounded-lg bg-surface-2 p-3 s3-stat">
-
-                      <div class="flex items-center gap-2 text-text-secondary">
-
-                        <span class="material-symbols-outlined text-base">schedule</span>
-
-                        <p class="s3-muted-stat-label text-sm font-medium">Время</p>
-
-                      </div>
-
-                      <p id="summary-total-time" class="text-3xl font-bold text-text-main">
-
-                        —
-
-                      </p>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                <div id="motivational-message"
-                  class="rounded-xl bg-primary-light/30 border border-primary-light px-6 py-4 text-center hidden s3-motivational">
-                  <p id="motivational-text" class="text-base font-semibold text-text-main"></p>
-                </div>
-
-                <div class="s3-section-enter grid grid-cols-1 items-start gap-4 lg:grid-cols-[3fr_2fr]">
-
-                  <div id="iterations-card"
-                    class="flex flex-col rounded-xl border border-border-strong bg-surface-2 p-3 shadow-sm transition-shadow duration-200 hover:shadow-md xl:p-4">
-
-                    <div class="mb-3 flex items-start justify-between gap-3">
-
-                      <h3 class="text-lg font-bold text-text-main">
-
-                        Динамика по итерациям
-
-                      </h3>
-
-                      <span class="s3-section-caption text-xs text-text-secondary">Прогресс</span>
-
-                    </div>
-
-                    <div class="relative">
-
-                      <div id="iterations-placeholder"
-                        class="flex flex-col items-center justify-center gap-1.5 rounded-lg bg-surface-1 px-4 py-4 text-center text-text-secondary">
-
-                        <span class="material-symbols-outlined text-4xl text-text-muted">trending_up</span>
-
-                        <p class="text-base font-semibold">Динамика ещё не собрана</p>
-
-                        <p class="text-sm text-text-secondary">Здесь появится прогресс
-
-                          по итерациям</p>
-
-                      </div>
-
-                      <p id="iterations-empty-hint" class="hidden mb-2 text-sm text-text-secondary">
-
-                        Данных по итерациям нет.
-
-                      </p>
-
-                      <div id="iterations-grid" class="w-full">
-
-                        <!-- iteration cards will be injected here -->
-
-                      </div>
-
-                    </div>
-
-                  </div>
-
-                  <div id="problem-card"
-                    class="flex flex-col rounded-xl bg-surface-2 p-4 shadow-sm transition-shadow duration-200 hover:shadow-md">
-
-                    <div class="mb-2 flex items-start justify-between gap-3">
-
-                      <h3 class="text-lg font-bold text-text-main">
-
-                        Проблемные задания
-
-                      </h3>
-
-                      <span class="s3-section-caption text-xs text-text-secondary">Ошибки</span>
-
-                    </div>
-
-                    <div id="problem-empty-hint"
-                      class="mt-2 flex min-h-[120px] items-center justify-center text-center">
-
-                      <div class="flex flex-col items-center gap-1">
-
-                        <span class="material-symbols-outlined text-3xl text-success">check_circle</span>
-
-                        <p id="problem-empty-copy" class="text-sm text-text-secondary">Все задания выполнены
-
-                          без ошибок!</p>
-
-                      </div>
-
-                    </div>
-
-                    <ul id="problem-tasks-list" class="mt-2 flex-grow space-y-2">
-
-                      <!-- problem tasks injected here -->
-
-                    </ul>
-
-                  </div>
-
-                </div>
-
+            <div class="s3-stat-card s3-stat" aria-label="Всего заданий">
+              <div class="s3-stat-label-row">
+                <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">list_alt</span>
+                <span class="s3-stat-label">Всего заданий</span>
               </div>
-
+              <p class="s3-stat-value" id="summary-unique-tasks">—</p>
             </div>
 
-          </main>
-
-          <footer class="border-t border-border-strong px-4 pb-3 pt-3 md:px-6 lg:px-10 xl:px-12">
-
-            <div class="flex flex-wrap items-stretch justify-center gap-3">
-
-              <button id="to-main-btn"
-                class="s3-action-btn s3-btn flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg bg-primary px-6 py-2 text-sm font-bold leading-normal tracking-[0.015em] text-primary-fg shadow-md transition hover:brightness-110">
-                <span class="material-symbols-outlined text-[18px]">home</span>
-                <span class="s3-action-label">На главную</span>
-              </button>
-              <button id="to-complexes-btn"
-                class="s3-action-btn s3-btn flex cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border-2 border-border-strong bg-surface-2 px-6 py-2 text-sm font-bold leading-normal tracking-[0.015em] text-text-main shadow-sm transition hover:bg-bg-hover">
-                <span class="material-symbols-outlined text-[18px]">list</span>
-                <span class="s3-action-label">К комплексам</span>
-              </button>
-              <button id="to-theory-hub-btn"
-                class="s3-action-btn s3-action-btn--wide s3-btn hidden cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-lg border border-primary-light bg-primary-lighter px-6 py-2 text-sm font-bold leading-normal tracking-[0.015em] text-primary-darker shadow-sm transition hover:bg-primary-light">
-                <span class="material-symbols-outlined text-[18px]">account_tree</span>
-                <span class="s3-action-label">К Theory Hub</span>
-              </button>
-              <button id="close-btn" class="hidden">
-
-                <span class="s3-action-label">Закрыть</span>
-
-              </button>
-
+            <div class="s3-stat-card s3-stat-card--success s3-stat" aria-label="Верных ответов">
+              <div class="s3-stat-label-row">
+                <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">check_circle</span>
+                <span class="s3-stat-label">Верных ответов</span>
+              </div>
+              <p class="s3-stat-value" id="summary-completed-tasks">—</p>
+              <p class="s3-stat-sub" id="summary-success-rate">—</p>
             </div>
 
-          </footer>
+            <div class="s3-stat-card s3-stat" aria-label="Затраченное время">
+              <div class="s3-stat-label-row">
+                <span class="material-symbols-outlined s3-stat-icon" aria-hidden="true">schedule</span>
+                <span class="s3-stat-label">Время</span>
+              </div>
+              <p class="s3-stat-value" id="summary-total-time">—</p>
+            </div>
+
+          </div>
+
+        </section>
+
+        <!-- Dynamics + Problem columns -->
+        <div class="s3-content-grid s3-section-enter">
+
+          <!-- Iterations panel -->
+          <section class="s3-panel card-elevated" id="iterations-card" aria-label="Динамика по итерациям">
+
+            <header class="s3-panel-head">
+              <div class="s3-panel-copy">
+                <h3 class="s3-panel-title">Динамика по итерациям</h3>
+              </div>
+            </header>
+
+            <!-- Empty placeholder (shown by default, hidden when data arrives) -->
+            <div class="s3-empty-state" id="iterations-placeholder">
+              <span class="material-symbols-outlined s3-empty-icon">trending_up</span>
+              <p class="s3-empty-title">Динамика ещё не собрана</p>
+              <p class="s3-empty-sub">Здесь появится прогресс по итерациям</p>
+            </div>
+
+            <p class="s3-hint hidden" id="iterations-empty-hint">Данных по итерациям нет.</p>
+
+            <div class="s3-iteration-grid" id="iterations-grid" aria-live="polite"></div>
+
+          </section>
+
+          <!-- Problem tasks panel -->
+          <section class="s3-panel card-elevated" id="problem-card" aria-label="Проблемные задания">
+
+            <header class="s3-panel-head">
+              <div class="s3-panel-copy">
+                <h3 class="s3-panel-title">Проблемные задания</h3>
+              </div>
+              <div class="s3-panel-actions">
+                <button
+                  id="problem-review-open-btn"
+                  class="btn-secondary s3-btn hidden"
+                  aria-label="Открыть полный разбор ошибок">
+                  <span class="material-symbols-outlined text-sm" aria-hidden="true">fact_check</span>
+                  <span>Разобрать ошибки</span>
+                </button>
+              </div>
+            </header>
+
+            <!-- Empty success state -->
+            <div class="s3-empty-state s3-empty-state--success" id="problem-empty-hint">
+              <span class="material-symbols-outlined s3-empty-icon s3-empty-icon--success">check_circle</span>
+              <p class="s3-empty-title" id="problem-empty-copy">Все задания выполнены без ошибок!</p>
+            </div>
+
+            <ul class="s3-problem-list" id="problem-tasks-list" aria-live="polite"></ul>
+
+          </section>
 
         </div>
 
-      </div>
+      </main>
+
+    </div><!-- /.s3-page-frame -->
+  </div><!-- /.s3-page-root -->
+
+
+  <!-- ── PROBLEM REVIEW DIALOG ─────────────────────────── -->
+  <div class="s3-backdrop" id="problem-review-backdrop" role="dialog" aria-modal="true" aria-label="Разбор ошибок" hidden>
+    <div class="s3-dialog">
+
+      <header class="s3-dialog-head">
+        <div class="s3-dialog-copy">
+          <h2 class="s3-dialog-title">Разбор ошибок</h2>
+          <p class="s3-dialog-sub">Задания с наибольшим количеством неверных ответов</p>
+        </div>
+        <button class="s3-icon-btn" id="problem-review-close-btn" aria-label="Закрыть">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </header>
+
+      <div class="s3-dialog-body" id="problem-review-list"></div>
 
     </div>
-
   </div>
 
+
+  <!-- ── SCRIPTS ───────────────────────────────────────── -->
   <script>
 
+    /* ─── API ────────────────────────────────────────────────── */
     const api = {
-
       async getFinalResults(sessionId) {
-
-        const res = await fetch(
-
-          `/api/session/${encodeURIComponent(sessionId)}/final-results`
-
-        );
-
+        const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}/final-results`);
         return res.json();
-
       },
-
+      async getIterationResults(sessionId, iteration) {
+        const query = new URLSearchParams();
+        if (iteration != null) query.set("iteration", String(iteration));
+        const suffix = query.toString() ? `?${query.toString()}` : "";
+        const res = await fetch(`/api/session/${encodeURIComponent(sessionId)}/iteration-results${suffix}`);
+        return res.json();
+      },
       async getComplex(complexId) {
-
-        const res = await fetch(
-
-          `/api/complexes/${encodeURIComponent(complexId)}`
-
-        );
-
+        const res = await fetch(`/api/complexes/${encodeURIComponent(complexId)}`);
         return res.json();
-
       },
-
     };
 
+    /* ─── STATE ──────────────────────────────────────────────── */
     const state = {
-
       sessionId: null,
-
       latestSummary: null,
-
+      latestResultsPayload: null,
+      complexMeta: null,
       theoryBridge: null,
-
+      problemReviewLookup: new Map(),
+      problemReviewOpen: false,
+      problemReviewGroups: null,
+      problemReviewPromise: null,
     };
 
+    /* ─── ROUTING HELPERS ────────────────────────────────────── */
     function getSessionFromLocation() {
-
       const url = new URL(window.location.href);
-
       const segments = url.pathname.split("/").filter(Boolean);
-
-      // Ожидаемый путь: /ui/session/{session_id}/results
-
       const len = segments.length;
-
       if (len >= 4 && segments[len - 3] === "session" && segments[len - 1] === "results") {
-
         return segments[len - 2];
-
       }
-
-      // fallback: ?sessionId=
-
       return url.searchParams.get("sessionId");
-
     }
 
     function getTheoryBridgeStorageKey(sessionId) {
-
       return `theory_training_bridge_v1:${String(sessionId || "").trim()}`;
+    }
 
+    function buildTheoryEditorUrl(theoryId, returnUrl = "") {
+      const normalizedTheoryId = String(theoryId || "").trim();
+      const url = new URL("/ui/editor/Theory_Editor.html", window.location.origin);
+      if (normalizedTheoryId) url.searchParams.set("theory_id", normalizedTheoryId);
+      const normalizedReturnUrl = String(returnUrl || "").trim();
+      if (normalizedReturnUrl) url.searchParams.set("return_url", normalizedReturnUrl);
+      return `${url.pathname}${url.search}`;
+    }
+
+    function buildTheoryCenterUrl(theoryId = "") {
+      const normalizedTheoryId = String(theoryId || "").trim();
+      const url = new URL("/ui/theory-center", window.location.origin);
+      url.searchParams.set("scope", "complexes");
+      if (normalizedTheoryId) url.searchParams.set("q", normalizedTheoryId);
+      return `${url.pathname}${url.search}`;
+    }
+
+    function normalizeTheoryBridgeReturnUrl(rawValue, theoryId) {
+      const raw = String(rawValue || "").trim();
+      if (!raw) return buildTheoryEditorUrl(theoryId);
+      try {
+        const parsed = new URL(raw, window.location.origin);
+        if (String(parsed.searchParams.get("theory_hub") || "").trim() === "1") {
+          return buildTheoryCenterUrl(String(parsed.searchParams.get("theory_id") || theoryId || "").trim());
+        }
+        return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+      } catch (error) {
+        if (raw.includes("theory_hub=1")) return buildTheoryCenterUrl(theoryId);
+        return raw;
+      }
     }
 
     function loadTheoryBridgeContext(sessionId) {
-
       const normalizedSessionId = String(sessionId || "").trim();
-
       if (!normalizedSessionId || typeof sessionStorage === "undefined") return null;
-
       try {
-
         const raw = sessionStorage.getItem(getTheoryBridgeStorageKey(normalizedSessionId));
-
         if (!raw) return null;
-
         const parsed = JSON.parse(raw);
-
         if (!parsed || typeof parsed !== "object") return null;
-
         const theoryId = String(parsed.theoryId || "").trim();
-
         if (!theoryId) return null;
-
         return {
-
           ...parsed,
-
           theoryId,
-
           theoryTitle: String(parsed.theoryTitle || "").trim() || theoryId,
-
-          returnUrl: String(parsed.returnUrl || `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`),
-
+          returnUrl: normalizeTheoryBridgeReturnUrl(parsed.returnUrl, theoryId),
         };
-
       } catch (error) {
-
         console.warn("Failed to load theory bridge context", error);
-
         return null;
-
       }
-
     }
 
+    /* ─── THEORY BRIDGE ──────────────────────────────────────── */
     function syncTheoryBridgeAction() {
-
       const theoryBtn = document.getElementById("to-theory-hub-btn");
 
-      if (!theoryBtn) return;
+      if (!theoryBtn) {
+        return;
+      }
 
       const theoryBridge = state.theoryBridge;
 
       if (!theoryBridge || !theoryBridge.theoryId) {
-
         theoryBtn.classList.add("hidden");
-
         return;
-
       }
 
       theoryBtn.classList.remove("hidden");
+      theoryBtn.title = `Открыть теорию: ${theoryBridge.theoryId}`;
 
-      theoryBtn.title = `Вернуться в Theory Hub: ${theoryBridge.theoryId}`;
-
-      const label = theoryBtn.querySelector(".s3-action-label");
-
+      const label = theoryBtn.querySelector(".s3-btn-label");
       const theoryLabel = String(theoryBridge.theoryTitle || theoryBridge.theoryId || "").trim() || theoryBridge.theoryId;
-
       if (label) label.textContent = `К теории ${theoryLabel}`;
-
     }
 
     async function hydrateTheoryBridgeFromResults(summary) {
-
-      if (state.theoryBridge && state.theoryBridge.theoryId) return;
+      if (state.theoryBridge && state.theoryBridge.theoryId && state.complexMeta) return;
 
       const complexId = String(summary?.complex_id || "").trim();
-
       if (!complexId) return;
 
       try {
-
         const data = await api.getComplex(complexId);
-
         const item = data?.item && typeof data.item === "object" ? data.item : null;
-
         const theoryLink = item && typeof item.theory_link === "object" ? item.theory_link : null;
 
-        const theoryId = String(theoryLink?.theory_id || "").trim();
+        const rawComplexName =
+          item?.display_name || item?.name || item?.title || item?.complex_name ||
+          summary?.complex_name || summary?.complex_id || complexId;
 
+        state.complexMeta = {
+          complexId,
+          rawName: String(rawComplexName || "").trim() || complexId,
+          displayName: buildDisplayLabel(rawComplexName || complexId, "Комплекс", 84),
+        };
+
+        const theoryId = String(theoryLink?.theory_id || "").trim();
         if (!theoryId) return;
 
         state.theoryBridge = {
@@ -671,55 +341,40 @@
           theoryTitle: String(theoryLink?.title_cache || "").trim() || theoryId,
           complexId,
           origin: "s3_complex_theory_link",
-          returnUrl: `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`,
+          returnUrl: buildTheoryEditorUrl(theoryId),
         };
 
         syncTheoryBridgeAction();
-
       } catch (error) {
-
         console.warn("Failed to hydrate theory bridge from final results", error);
-
       }
-
     }
 
+    /* ─── GUIDANCE ───────────────────────────────────────────── */
     function updateFinalResultGuidance(summary, successRate) {
-
       state.latestSummary = summary || null;
 
       const motEl = document.getElementById("motivational-message");
-
       const motText = document.getElementById("motivational-text");
-
-      const mainBtnLabel = document.querySelector("#to-main-btn .s3-action-label");
-
-      const complexesBtnLabel = document.querySelector("#to-complexes-btn .s3-action-label");
+      const mainBtnLabel = document.querySelector("#to-main-btn .s3-btn-label");
+      const complexesBtnLabel = document.querySelector("#to-complexes-btn .s3-btn-label");
 
       const failedAttempts = Math.max(0, Number(summary?.failedAttempts || 0));
 
-      let message = 'Следующий лучший шаг — вернуться на главную: там проще выбрать, что делать дальше без лишних поисков.';
+      let message = "Следующий лучший шаг — вернуться на главную: там проще выбрать, что делать дальше без лишних поисков.";
 
       if (failedAttempts > 0) {
-
-        message = 'Комплекс завершён. Вернитесь на главную, чтобы выбрать следующее действие, а затем закрепите слабые места через календарь или повторение.';
-
+        message = "Комплекс завершён. Вернитесь на главную, чтобы выбрать следующее действие, а затем закрепите слабые места через календарь или повторение.";
       } else if ((successRate || 0) >= 90) {
-
-        message = 'Сильный проход. На главной вы быстрее всего выберете, продолжать ли новым комплексом или коротким повторением.';
-
+        message = "Сильный проход. На главной вы быстрее всего выберете, продолжать ли новым комплексом или коротким повторением.";
       } else if ((successRate || 0) > 0) {
-
-        message = 'Результат уже есть. Следующий разумный шаг — открыть главную и выбрать, что закрепить сегодня.';
-
+        message = "Результат уже есть. Следующий разумный шаг — открыть главную и выбрать, что закрепить сегодня.";
       }
 
       if (state.theoryBridge && state.theoryBridge.theoryId) {
-
         message = failedAttempts > 0
-          ? 'Комплекс завершён. Вернитесь в Theory Hub, чтобы сверить ошибки с нужной теорией и сразу продолжить цикл.'
-          : 'Комплекс завершён. Theory Hub уже знает, с какой теорией вы работали, поэтому можно сразу вернуться к связанному контексту.';
-
+          ? "Комплекс завершён. Вернитесь к теории, чтобы сверить ошибки с нужным материалом и сразу продолжить цикл."
+          : "Комплекс завершён. Связанный материал уже известен, поэтому можно сразу вернуться к нужной теории.";
       }
 
       if (motEl && motText) {
@@ -727,716 +382,1071 @@
         motEl.classList.remove("hidden");
       }
 
-      if (mainBtnLabel) mainBtnLabel.textContent = 'Что делать дальше';
-
-      if (complexesBtnLabel && failedAttempts > 0) {
-        complexesBtnLabel.textContent = 'Выбрать другой комплекс';
-      } else if (complexesBtnLabel) {
-        complexesBtnLabel.textContent = 'К комплексам';
-      }
-
+      if (mainBtnLabel) mainBtnLabel.textContent = "Вернуться на главную";
+      if (complexesBtnLabel) complexesBtnLabel.textContent = "К другим комплексам";
     }
 
+    /* ─── UTILS ──────────────────────────────────────────────── */
     function toNumberOrNull(v) {
-
       if (v == null) return null;
-
       const n = Number(v);
-
       return Number.isFinite(n) ? n : null;
-
     }
 
     function safeDate(v) {
-
       if (!v) return null;
-
       const d = new Date(v);
-
       return Number.isFinite(d.getTime()) ? d : null;
-
     }
 
     function formatDuration(seconds) {
-
       const s = toNumberOrNull(seconds);
-
       if (s == null || s < 0) return "—";
-
       const hh = Math.floor(s / 3600);
-
       const mm = Math.floor((s % 3600) / 60);
-
       const ss = Math.floor(s % 60);
-
       const pad = (x) => String(x).padStart(2, "0");
-
       return hh > 0 ? `${hh}:${pad(mm)}:${pad(ss)}` : `${mm}:${pad(ss)}`;
-
     }
 
     function computeDurationSecondsFromTimestamps(startTime, endTime) {
-
       const start = safeDate(startTime);
-
       const end = safeDate(endTime);
-
       if (!start || !end) return null;
-
       const diffMs = end.getTime() - start.getTime();
-
       if (!Number.isFinite(diffMs) || diffMs < 0) return null;
-
       return Math.round(diffMs / 1000);
+    }
 
+    function formatAttempts(successful, total) {
+      const s = toNumberOrNull(successful);
+      const t = toNumberOrNull(total);
+      if (s == null && t == null) return "—";
+      if (t == null) return String(s ?? "—");
+      return `${s ?? "—"} / ${t}`;
+    }
+
+    function normalizeRatePercent(rate, successful, total) {
+      let r = toNumberOrNull(rate);
+      if (r == null) {
+        const s = toNumberOrNull(successful);
+        const t = toNumberOrNull(total);
+        if (s != null && t != null && t > 0) r = Math.round((s / t) * 100);
+      }
+      if (r == null) return null;
+      if (r > 1 && r <= 100) return Math.round(r);
+      if (r >= 0 && r <= 1) return Math.round(r * 100);
+      return Math.min(100, Math.max(0, Math.round(r)));
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function isObject(value) {
+      return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+    }
+
+    function compactText(value, maxLen = 240) {
+      const text = String(value ?? "").replace(/\s+/g, " ").trim();
+      if (!text) return "";
+      if (text.length <= maxLen) return text;
+      return `${text.slice(0, Math.max(1, maxLen - 1)).trimEnd()}…`;
+    }
+
+    function pickBestArray(...candidates) {
+      let emptyArray = null;
+      for (const candidate of candidates) {
+        if (!Array.isArray(candidate)) continue;
+        if (candidate.length > 0) return candidate;
+        if (emptyArray == null) emptyArray = candidate;
+      }
+      return emptyArray || [];
+    }
+
+    function setClassHidden(element, hidden) {
+      if (!element) return;
+      const shouldHide = Boolean(hidden);
+      element.classList.toggle("hidden", shouldHide);
+      element.hidden = shouldHide;
+      element.style.display = shouldHide ? "none" : "";
+    }
+
+    function buildDisplayLabel(raw, fallback = "—", maxLen = 60) {
+      const s = String(raw || "").trim();
+      if (!s) return fallback;
+      if (s.length <= maxLen) return s;
+      return s.slice(0, maxLen - 1) + "…";
     }
 
     function normalizeFinalSummary(data) {
-
       const d = data && typeof data === "object" ? data : {};
 
       const totalIterations =
-
-        toNumberOrNull(d.total_iterations) ??
-
+        toNumberOrNull(d.total_iterations ?? d.totalIterations) ??
         (Array.isArray(d.difficulty_progression) ? d.difficulty_progression.length : null) ??
-
-        toNumberOrNull(d.iterations_count) ??
-
+        toNumberOrNull(d.iterations_count ?? d.iteration_count) ??
         (Array.isArray(d.iterations) ? d.iterations.length : null) ??
-
         0;
 
       let totalTasks =
-
-        toNumberOrNull(d.total_tasks) ??
-
-        toNumberOrNull(d.unique_tasks) ??
-
-        toNumberOrNull(d.tasks_total) ??
-
+        toNumberOrNull(d.total_tasks ?? d.totalTasks ?? d.unique_tasks ?? d.tasks_total) ??
         0;
 
       const successfulTasks =
-
-        toNumberOrNull(d.successful_tasks_count) ??
-
-        toNumberOrNull(d.successful_tasks) ??
-
-        toNumberOrNull(d.completed_tasks) ??
-
+        toNumberOrNull(
+          d.successful_tasks_count ?? d.successful_tasks ?? d.successfulTasks ?? d.completed_tasks ?? d.successes
+        ) ??
         0;
 
-      const failedAttempts =
-
-        toNumberOrNull(d.failed_tasks) ??
-
-        toNumberOrNull(d.tasks_failed) ??
-
+      const failedAttemptsRaw =
+        toNumberOrNull(d.failed_tasks ?? d.failedAttempts ?? d.tasks_failed ?? d.tasksFailed) ??
         null;
 
-      // Если total_tasks отсутствует/нулевой, но есть успехи/ошибки попыток — восстанавливаем.
-
-      if ((totalTasks == null || totalTasks === 0) && (successfulTasks || failedAttempts)) {
-
-        totalTasks = (successfulTasks || 0) + (failedAttempts || 0);
-
+      if ((totalTasks == null || totalTasks === 0) && (successfulTasks || failedAttemptsRaw)) {
+        totalTasks = (successfulTasks || 0) + (failedAttemptsRaw || 0);
       }
 
       const computedFailedAttempts = Math.max(0, (totalTasks || 0) - (successfulTasks || 0));
 
+      const successRate = normalizeRatePercent(
+        d.success_rate ?? d.successRate,
+        successfulTasks,
+        totalTasks
+      );
+
       const durationSeconds =
-
-        toNumberOrNull(d.duration_seconds) ??
-
-        computeDurationSecondsFromTimestamps(d.start_time, d.end_time);
+        toNumberOrNull(d.duration_seconds ?? d.durationSeconds) ??
+        computeDurationSecondsFromTimestamps(d.start_time ?? d.startTime, d.end_time ?? d.endTime);
 
       return {
-
-        sessionId: d.session_id || state.sessionId || null,
-
-        complexId: d.complex_name || d.complex_id || "—",
-
-        totalIterations,
-
+        sessionId: d.session_id || d.sessionId || state.sessionId || null,
+        complexName: d.complex_name || d.complexName || d.complex_id || d.complexId || "—",
+        totalIterations: totalIterations || 0,
         totalTasks: totalTasks || 0,
-
         successfulTasks: successfulTasks || 0,
-
-        failedAttempts: failedAttempts != null ? failedAttempts : computedFailedAttempts,
-
-        tasksMasteredCount: toNumberOrNull(d.tasks_mastered_count) ?? null,
-
-        tasksFailedCount: toNumberOrNull(d.tasks_failed_count) ?? null,
-
+        failedAttempts: failedAttemptsRaw != null ? failedAttemptsRaw : computedFailedAttempts,
+        successRate,
         difficultyProgression: Array.isArray(d.difficulty_progression) ? d.difficulty_progression : null,
-
-        iterations: Array.isArray(d.iterations) ? d.iterations : null,
-
-        problemTasks:
-
-          (Array.isArray(d.problem_tasks) && d.problem_tasks) ||
-
-          (Array.isArray(d.risky_tasks) && d.risky_tasks) ||
-
-          null,
-
+        iterations: pickBestArray(d.iterations, d.iteration_details, d.iterationDetails),
+        problemTasks: pickBestArray(d.problemTasks, d.problem_tasks, d.risky_tasks),
         durationSeconds,
-
+        isSingleIteration: Boolean(d.isSingleIteration ?? d.is_single_iteration ?? (totalIterations === 1)),
       };
+    }
 
+    function formatErrorCountLabel(errors) {
+      const n = Math.max(0, Number(errors) || 0);
+      if (n === 0) return "нет ошибок";
+      if (n === 1) return "1 ошибка";
+      if (n >= 2 && n <= 4) return `${n} ошибки`;
+      return `${n} ошибок`;
     }
 
     function getSuccessColorClasses(rate) {
-      if (rate >= 90) return { text: "text-text-main", badge: "bg-surface-1 border border-border-strong", bar: "bg-success-light" };
-      if (rate >= 80) return { text: "text-text-main", badge: "bg-surface-1 border border-border-strong", bar: "bg-success-light" };
-      if (rate >= 70) return { text: "text-text-main", badge: "bg-surface-1 border border-border-strong", bar: "bg-warning-lighter" };
-      return { text: "text-text-main", badge: "bg-surface-1 border border-border-strong", bar: "bg-error-light" };
+      if (rate == null) return { badge: "", bar: "s3-progress-bar--neutral" };
+      if (rate >= 80) return { badge: "s3-badge--success", bar: "s3-progress-bar--success" };
+      if (rate >= 50) return { badge: "s3-badge--warning", bar: "s3-progress-bar--warning" };
+      return { badge: "s3-badge--error", bar: "s3-progress-bar--error" };
     }
 
-    function formatAttempts(success, total) {
-
-      const s = toNumberOrNull(success) ?? 0;
-
-      const t = toNumberOrNull(total);
-
-      if (t == null) return `${s} успешных`;
-
-      return `${s}/${t}`;
-
+    function buildProblemTaskPresentation(task, errors) {
+      const rawName = String(task?.task_name || task?.name || task?.title || task?.id || "—").trim();
+      const label = buildDisplayLabel(rawName, "Задание", 72);
+      const hint = errors > 0
+        ? `Ошибок за все итерации: ${errors}`
+        : "Задание вызвало затруднения";
+      return { rawName, label, hint };
     }
 
-    function escapeHtml(value) {
-
-      return String(value ?? "").replace(/[&<>"']/g, (char) => ({
-
-        "&": "&amp;",
-
-        "<": "&lt;",
-
-        ">": "&gt;",
-
-        '"': "&quot;",
-
-        "'": "&#39;",
-
-      }[char] || char));
-
+    function getProblemTaskKey(task) {
+      return String(
+        task?.task_ref ||
+        task?.taskRef ||
+        task?.id ||
+        task?.task_id ||
+        task?.key ||
+        task?.name ||
+        task?.title ||
+        ""
+      ).trim();
     }
 
-    function normalizeRatePercent(rateValue, successValue, totalValue) {
+    function normalizeAnswer(value) {
+      if (value == null) return "";
+      if (typeof value === "string") return value.trim();
+      if (typeof value === "number" || typeof value === "boolean") return String(value);
+      if (Array.isArray(value)) {
+        return value.map(normalizeAnswer).filter(Boolean).join(", ");
+      }
+      if (isObject(value)) {
+        const candidate = [
+          value.text,
+          value.label,
+          value.value,
+          value.answer,
+          value.correct_answer,
+          value.user_answer,
+        ].find((item) => String(item ?? "").trim());
+        return candidate ? String(candidate).trim() : "";
+      }
+      return "";
+    }
 
-      const explicitRate = toNumberOrNull(rateValue);
-
-      if (explicitRate != null) {
-
-        const normalized = explicitRate <= 1
-
-          ? Math.round(explicitRate * 100)
-
-          : Math.round(explicitRate);
-
-        return Math.max(0, Math.min(100, normalized));
-
+    function normalizeReviewLines(value) {
+      if (value == null) return [];
+      if (Array.isArray(value)) {
+        return value
+          .map((item) => normalizeAnswer(item))
+          .map((item) => item.replace(/\s+/g, " ").trim())
+          .filter(Boolean);
       }
 
-      const success = Math.max(0, toNumberOrNull(successValue) ?? 0);
-
-      const total = Math.max(0, toNumberOrNull(totalValue) ?? 0);
-
-      if (total <= 0) return 0;
-
-      return Math.max(0, Math.min(100, Math.round((success / total) * 100)));
-
+      const text = normalizeAnswer(value);
+      if (!text) return [];
+      return text
+        .split(/\r?\n/)
+        .map((line) => line.replace(/\s+/g, " ").trim())
+        .filter(Boolean);
     }
 
-    function renderSessionResults(data) {
+    function resolveReviewImageUrl(value) {
+      const raw = String(value == null ? "" : value).trim();
+      if (!raw) return "";
+      if (/^https?:\/\//i.test(raw) || raw.startsWith("/")) return raw;
+      return `/api/local-image?path=${encodeURIComponent(raw)}`;
+    }
 
-      const summary = normalizeFinalSummary(data);
+    function isGenericOptionLabel(value) {
+      return /^вариант\s+\d+$/i.test(String(value == null ? "" : value).trim());
+    }
 
-      document.getElementById("session-id-label").textContent = `Сессия ${summary.sessionId || "—"
+    function normalizeReviewItems(value) {
+      if (!Array.isArray(value)) return [];
+      return value
+        .map((item) => {
+          if (!isObject(item)) {
+            const textValue = normalizeAnswer(item);
+            return textValue ? { type: "text", text: textValue, imageUrl: "", fallbackLabel: "" } : null;
+          }
 
-        }`;
+          const textValue = normalizeAnswer(
+            item.text ||
+            item.label ||
+            item.value ||
+            item.title
+          );
+          const imageRaw = String(
+            item.image_url ||
+            item.imageUrl ||
+            item.image_path ||
+            item.imagePath ||
+            item.image ||
+            item.src ||
+            ""
+          ).trim();
+          const optionIndex = toNumberOrNull(item.option_index ?? item.optionIndex);
+          const fallbackLabel = normalizeAnswer(item.fallback_label || item.fallbackLabel);
+          const imageUrl = imageRaw ? resolveReviewImageUrl(imageRaw) : "";
+          if (!textValue && !imageUrl) return null;
+          return {
+            type: item.type || item.kind || (imageUrl ? "choice_option" : "text"),
+            text: textValue,
+            imageUrl,
+            imagePath: imageRaw,
+            optionIndex,
+            fallbackLabel,
+          };
+        })
+        .filter(Boolean);
+    }
 
-      const complexNameEl = document.getElementById("complex-name");
+    function normalizeReviewEntry(value, taskName, prompt, fallbackUserAnswer, fallbackCorrectAnswer, explanation) {
+      const source = isObject(value) ? value : {};
+      const reviewPrompt = compactText(
+        source.prompt ||
+        source.question ||
+        prompt,
+        320
+      );
+      const userLines = normalizeReviewLines(
+        source.user_lines ||
+        source.userLines ||
+        source.user_answer ||
+        source.userAnswer ||
+        fallbackUserAnswer
+      );
+      const referenceLines = normalizeReviewLines(
+        source.reference_lines ||
+        source.referenceLines ||
+        source.correct_answer ||
+        source.correctAnswer ||
+        fallbackCorrectAnswer
+      );
+      const userItems = normalizeReviewItems(source.user_items || source.userItems);
+      const referenceItems = normalizeReviewItems(source.reference_items || source.referenceItems);
+      const note = compactText(source.note || source.explanation || explanation, 220);
 
-      if (complexNameEl) complexNameEl.textContent = summary.complexId || "—";
+      return {
+        title: buildDisplayLabel(source.title || taskName, taskName || "Задание", 96),
+        prompt: reviewPrompt,
+        userLabel: compactText(source.user_label || source.userLabel, 48) || "Твоё решение",
+        referenceLabel: compactText(source.reference_label || source.referenceLabel, 48) || "Референс",
+        userLines,
+        referenceLines,
+        userItems,
+        referenceItems,
+        note,
+      };
+    }
 
-      const iterationsNum = summary.totalIterations ?? 0;
-      const totalTasksNum = summary.totalTasks ?? 0;
-      const successfulTasksNumber = summary.successfulTasks ?? 0;
+    function hasNormalizedReviewContent(review) {
+      if (!review || typeof review !== "object") return false;
+      return Boolean(
+        String(review.prompt || "").trim() ||
+        (Array.isArray(review.userLines) && review.userLines.length) ||
+        (Array.isArray(review.referenceLines) && review.referenceLines.length) ||
+        (Array.isArray(review.userItems) && review.userItems.length) ||
+        (Array.isArray(review.referenceItems) && review.referenceItems.length)
+      );
+    }
 
-      const successRate =
+    function normalizeReview(value, taskName, prompt, fallbackUserAnswer, fallbackCorrectAnswer, explanation) {
+      const source = isObject(value) ? value : {};
+      const review = normalizeReviewEntry(
+        source,
+        taskName,
+        prompt,
+        fallbackUserAnswer,
+        fallbackCorrectAnswer,
+        explanation
+      );
 
-        summary.totalTasks && summary.totalTasks > 0
+      review.entries = Array.isArray(source.entries)
+        ? source.entries
+            .map((entry) => normalizeReviewEntry(
+              entry,
+              review.title || taskName,
+              review.prompt || prompt,
+              "",
+              "",
+              explanation
+            ))
+            .filter(hasNormalizedReviewContent)
+        : [];
 
-          ? normalizeRatePercent(null, successfulTasksNumber, summary.totalTasks)
+      return review;
+    }
 
-          : null;
+    function normalizeIterationReviewTask(task, index, iterationNumber) {
+      const source = isObject(task) ? task : {};
+      const details = isObject(source.details) ? source.details : {};
+      const nestedTask = isObject(source.task) ? source.task : {};
+      const taskData = isObject(source.task_data)
+        ? source.task_data
+        : isObject(nestedTask.task_data)
+          ? nestedTask.task_data
+          : {};
+      const content = isObject(taskData.content) ? taskData.content : {};
+      const taskName = source.task_name ||
+        source.taskName ||
+        source.name ||
+        source.title ||
+        details.name ||
+        details.title ||
+        taskData.name ||
+        taskData.title;
+      const name = buildDisplayLabel(
+        taskName,
+        `Задание ${Number(index) + 1}`,
+        84
+      );
+      const prompt = compactText(
+        source.question ||
+        source.prompt ||
+        source.task_text ||
+        source.text ||
+        details.question ||
+        details.prompt ||
+        details.task_text ||
+        taskData.question ||
+        taskData.prompt ||
+        content.question ||
+        content.prompt ||
+        content.text ||
+        content.task_text,
+        260
+      );
+      const success =
+        source.success === true || details.success === true
+          ? true
+          : source.success === false || details.success === false
+            ? false
+            : false;
+      const userAnswer = normalizeAnswer(
+        source.user_answer ||
+        source.userAnswer ||
+        details.user_answer ||
+        details.userAnswer ||
+        details.answer
+      );
+      const correctAnswer = normalizeAnswer(
+        source.correct_answer ||
+        source.correctAnswer ||
+        details.correct_answer ||
+        details.correctAnswer
+      );
+      const explanation = normalizeAnswer(
+        source.feedback ||
+        source.message ||
+        source.result_note ||
+        details.feedback ||
+        details.message ||
+        details.explanation ||
+        details.result_note
+      );
+      const review = normalizeReview(
+        source.review || details.review,
+        name,
+        prompt,
+        userAnswer,
+        correctAnswer,
+        explanation
+      );
 
-      // Animated stat counters via CelebrationEffects
-      if (typeof CelebrationEffects !== 'undefined') {
-        CelebrationEffects.animateCounter(
-          document.getElementById("summary-iterations"), iterationsNum);
-        CelebrationEffects.animateCounter(
-          document.getElementById("summary-unique-tasks"), totalTasksNum);
-        CelebrationEffects.animateCounter(
-          document.getElementById("summary-completed-tasks"), successfulTasksNumber);
-        const successRateEl = document.getElementById("summary-success-rate");
-        if (successRateEl && successRate != null) {
-          CelebrationEffects.animateCounter(
-            successRateEl, successRate, { suffix: '% успеха' });
-        } else if (successRateEl) {
-          successRateEl.textContent = "—";
+      return {
+        key: source.key || source.id || `task-${iterationNumber}-${index}`,
+        taskRef: getProblemTaskKey(source),
+        name,
+        rawName: String(taskName || name || "").trim(),
+        prompt,
+        success,
+        userAnswer,
+        correctAnswer,
+        review,
+        iteration: iterationNumber,
+      };
+    }
+
+    function hasReviewData(task) {
+      if (!task || typeof task !== "object") return false;
+      return Boolean(
+        hasNormalizedReviewContent(task.review) ||
+        (Array.isArray(task.review && task.review.entries) && task.review.entries.some(hasNormalizedReviewContent)) ||
+        String(task.userAnswer || "").trim() ||
+        String(task.correctAnswer || "").trim()
+      );
+    }
+
+    function expandReviewTasks(tasks) {
+      if (!Array.isArray(tasks)) return [];
+
+      const expanded = [];
+      tasks.forEach((task, taskIndex) => {
+        const review = task && isObject(task.review) ? task.review : null;
+        const entries =
+          review && Array.isArray(review.entries)
+            ? review.entries.filter(hasNormalizedReviewContent)
+            : [];
+
+        if (entries.length) {
+          entries.forEach((entry, entryIndex) => {
+            expanded.push({
+              ...task,
+              key: `${task.key || `task-${taskIndex}`}-review-${entryIndex}`,
+              review: entry,
+            });
+          });
+          return;
         }
-      } else {
-        document.getElementById("summary-iterations").textContent = String(iterationsNum);
-        document.getElementById("summary-unique-tasks").textContent = String(totalTasksNum);
-        document.getElementById("summary-completed-tasks").textContent = String(successfulTasksNumber);
-        const successRateEl = document.getElementById("summary-success-rate");
-        if (successRateEl) {
-          successRateEl.textContent =
-            successRate != null ? `${successRate}% успеха` : "—";
-        }
+
+        expanded.push(task);
+      });
+
+      return expanded.filter(hasReviewData);
+    }
+
+    function getIterationNumbersForReview(summary) {
+      const fromIterations = Array.isArray(summary?.iterations)
+        ? summary.iterations
+            .map((item) => toNumberOrNull(item?.iteration ?? item?.index))
+            .filter((value) => value != null && value > 0)
+        : [];
+      if (fromIterations.length) {
+        return Array.from(new Set(fromIterations)).sort((a, b) => a - b);
       }
 
-      document.getElementById("summary-total-time").textContent =
-        summary.durationSeconds != null ? formatDuration(summary.durationSeconds) : "—";
+      const totalIterations = Math.max(0, toNumberOrNull(summary?.totalIterations) || 0);
+      return Array.from({ length: totalIterations }, (_, idx) => idx + 1);
+    }
 
-      // Play celebration effects (final results — extra celebration)
-      if (typeof CelebrationEffects !== 'undefined' && successRate != null) {
-        const isPerfect = summary.failedAttempts === 0 && totalTasksNum > 0;
-        CelebrationEffects.celebrate(successRate, {
-          isPerfect: isPerfect,
-          isFinalResults: true
+    async function loadProblemReviewGroups(summary) {
+      if (!summary?.sessionId) return [];
+      if (Array.isArray(state.problemReviewGroups)) return state.problemReviewGroups;
+      if (state.problemReviewPromise) return state.problemReviewPromise;
+
+      const iterationNumbers = getIterationNumbersForReview(summary);
+      if (!iterationNumbers.length) {
+        state.problemReviewGroups = [];
+        return [];
+      }
+
+      state.problemReviewPromise = Promise.all(
+        iterationNumbers.map(async (iterationNumber) => {
+          try {
+            const payload = await api.getIterationResults(summary.sessionId, iterationNumber);
+            if (!payload?.ok || !isObject(payload.results)) return [];
+            const rawTasks = pickBestArray(
+              payload.results.iteration_results,
+              payload.results.tasks,
+              payload.results.task_results
+            );
+            const normalizedTasks = rawTasks
+              .map((task, index) => normalizeIterationReviewTask(task, index, iterationNumber))
+              .filter(Boolean)
+              .filter((task) => !task.success);
+            return expandReviewTasks(normalizedTasks);
+          } catch (error) {
+            console.error(`Не удалось загрузить разбор ошибок для итерации ${iterationNumber}`, error);
+            return [];
+          }
+        })
+      )
+        .then((parts) => {
+          const seededGroups = new Map();
+
+          (summary.problemTasks || []).forEach((task, index) => {
+            const key = getProblemTaskKey(task);
+            if (!key) return;
+            const errors = Math.max(0, Number(task?.errors ?? task?.failures ?? task?.failed ?? 0) || 0);
+            const presentation = buildProblemTaskPresentation(task, errors);
+            seededGroups.set(key, {
+              key,
+              name: presentation.rawName || presentation.label,
+              label: presentation.label,
+              totalErrors: errors,
+              entries: [],
+              order: index,
+            });
+          });
+
+          parts.flat().forEach((task) => {
+            const key = getProblemTaskKey(task) || `${task.name}-${task.iteration}-${task.key}`;
+            let group = seededGroups.get(key);
+            if (!group) {
+              group = {
+                key,
+                name: task.rawName || task.name,
+                label: buildDisplayLabel(task.rawName || task.name, "Задание", 72),
+                totalErrors: 0,
+                entries: [],
+                order: Number.MAX_SAFE_INTEGER,
+              };
+              seededGroups.set(key, group);
+            }
+
+            group.entries.push(task);
+            group.totalErrors = Math.max(group.totalErrors, group.entries.length);
+            if (!group.name && task.name) group.name = task.name;
+          });
+
+          const groups = Array.from(seededGroups.values())
+            .filter((group) => group.totalErrors > 0 || group.entries.length > 0)
+            .map((group) => ({
+              ...group,
+              entries: group.entries.sort((a, b) => {
+                const iterDiff = (a.iteration || 0) - (b.iteration || 0);
+                if (iterDiff !== 0) return iterDiff;
+                return String(a.name || "").localeCompare(String(b.name || ""), "ru");
+              }),
+            }))
+            .sort((a, b) => {
+              const errorDiff = (b.totalErrors || 0) - (a.totalErrors || 0);
+              if (errorDiff !== 0) return errorDiff;
+              const orderDiff = (a.order || 0) - (b.order || 0);
+              if (orderDiff !== 0) return orderDiff;
+              return String(a.name || "").localeCompare(String(b.name || ""), "ru");
+            });
+
+          state.problemReviewGroups = groups;
+          return groups;
+        })
+        .finally(() => {
+          state.problemReviewPromise = null;
         });
+
+      return state.problemReviewPromise;
+    }
+
+    function filterReviewLinesForDisplay(lines, items) {
+      const safeLines = Array.isArray(lines) ? lines.filter(Boolean) : [];
+      const hasImageItems = Array.isArray(items) && items.some((item) => item && item.imageUrl);
+      if (!hasImageItems) return safeLines;
+      return safeLines.filter((line) => !isGenericOptionLabel(line));
+    }
+
+    function createProblemReviewMediaItem(item) {
+      const card = document.createElement("article");
+      card.className = item && item.imageUrl
+        ? "s3-review-media-card s3-review-media-card--image"
+        : "s3-review-media-card s3-review-media-card--text";
+
+      const titleTextRaw = item && item.text ? String(item.text).trim() : "";
+      const fallbackText = item && item.fallbackLabel ? String(item.fallbackLabel).trim() : "";
+      const titleText = item && item.imageUrl && isGenericOptionLabel(titleTextRaw)
+        ? ""
+        : titleTextRaw || (!item || item.imageUrl ? "" : fallbackText);
+
+      if (item && item.imageUrl) {
+        const image = document.createElement("img");
+        image.className = "s3-review-media-image";
+        image.src = item.imageUrl;
+        image.alt = titleText || fallbackText || "Вариант ответа";
+        image.loading = "lazy";
+        card.appendChild(image);
       }
 
-      // UX-23: Show motivational message
-      const motEl = document.getElementById("motivational-message");
-      const motText = document.getElementById("motivational-text");
-      if (motEl && motText) {
-        const messages = [
-          "Отличная работа! Каждый пройденный комплекс — шаг к мастерству.",
-          "Вы прошли комплекс! Регулярная практика — ключ к успеху.",
-          "Комплекс завершён. Продолжайте в том же духе!",
-          "Хорошая работа! Практика делает совершенным."
-        ];
-        motText.textContent = messages[Math.floor(Math.random() * messages.length)];
-        motEl.classList.remove("hidden");
+      if (titleText) {
+        const caption = document.createElement("p");
+        caption.className = "s3-review-media-caption";
+        caption.textContent = titleText;
+        card.appendChild(caption);
+      }
+
+      return card;
+    }
+
+    function appendProblemReviewAnswerContent(container, label, lines, items, toneClass) {
+      const answerCard = document.createElement("div");
+      answerCard.className = `s3-review-answer ${toneClass}`;
+
+      const answerLabel = document.createElement("p");
+      answerLabel.className = "s3-review-answer-label";
+      answerLabel.textContent = label;
+      answerCard.appendChild(answerLabel);
+
+      const safeItems = Array.isArray(items) ? items.filter(Boolean) : [];
+      if (safeItems.length) {
+        const mediaGrid = document.createElement("div");
+        mediaGrid.className = "s3-review-media-grid";
+        safeItems.forEach((item) => {
+          mediaGrid.appendChild(createProblemReviewMediaItem(item));
+        });
+        answerCard.appendChild(mediaGrid);
+      }
+
+      const visibleLines = filterReviewLinesForDisplay(lines, safeItems);
+      if (visibleLines.length) {
+        visibleLines.forEach((line) => {
+          const answerCopy = document.createElement("p");
+          answerCopy.className = "s3-review-answer-copy";
+          answerCopy.textContent = line;
+          answerCard.appendChild(answerCopy);
+        });
+      } else if (!safeItems.length) {
+        const answerCopy = document.createElement("p");
+        answerCopy.className = "s3-review-answer-copy";
+        answerCopy.textContent = "—";
+        answerCard.appendChild(answerCopy);
+      }
+
+      container.appendChild(answerCard);
+    }
+
+    function renderProblemReviewStatus(list, title, subtitle = "") {
+      if (!list) return;
+      list.innerHTML = `
+        <div class="s3-empty-state s3-empty-state--dialog">
+          <span class="material-symbols-outlined s3-empty-icon">fact_check</span>
+          <p class="s3-empty-title">${escapeHtml(title)}</p>
+          ${subtitle ? `<p class="s3-empty-sub">${escapeHtml(subtitle)}</p>` : ""}
+        </div>
+      `;
+    }
+
+    /* ─── STATIC LAYOUT NORMALIZATION ───────────────────────── */
+    function normalizeStaticLayout() {
+      const resultsNav = document.getElementById("results-nav");
+      if (resultsNav) resultsNav.hidden = true;
+    }
+
+    /* ─── RENDER ─────────────────────────────────────────────── */
+    function renderSessionResultsModern(data) {
+      const summary = normalizeFinalSummary(data);
+      if (!summary) return;
+      state.latestSummary = summary;
+      state.problemReviewGroups = null;
+      state.problemReviewPromise = null;
+
+      // Complex name
+      const complexNameEl = document.getElementById("complex-name");
+      if (complexNameEl) {
+        const name =
+          state.complexMeta?.displayName ||
+          buildDisplayLabel(summary.complexName || "Комплекс", "Комплекс", 84);
+        complexNameEl.textContent = name;
+        document.title = `Итоги — ${name}`;
+      }
+
+      // Stats
+      const totalTasksNum = toNumberOrNull(summary.totalTasks);
+      const iterationsNum = toNumberOrNull(summary.totalIterations);
+      const successfulTasksNumber = toNumberOrNull(summary.successfulTasks);
+      const successRate = normalizeRatePercent(summary.successRate, successfulTasksNumber, totalTasksNum);
+
+      if (summary.isSingleIteration) {
+        const iterationsEl = document.getElementById("summary-iterations");
+        const tasksEl = document.getElementById("summary-unique-tasks");
+        const completedEl = document.getElementById("summary-completed-tasks");
+        const successRateEl = document.getElementById("summary-success-rate");
+        if (iterationsEl) iterationsEl.textContent = "1";
+        if (tasksEl) tasksEl.textContent = String(totalTasksNum ?? "—");
+        if (completedEl) completedEl.textContent = String(successfulTasksNumber ?? "—");
+        if (successRateEl) successRateEl.textContent = successRate != null ? `${successRate}% успеха` : "—";
+      } else {
+        const iterationsEl = document.getElementById("summary-iterations");
+        const tasksEl = document.getElementById("summary-unique-tasks");
+        const completedEl = document.getElementById("summary-completed-tasks");
+        const successRateEl = document.getElementById("summary-success-rate");
+        if (iterationsEl) iterationsEl.textContent = String(iterationsNum ?? "—");
+        if (tasksEl) tasksEl.textContent = String(totalTasksNum ?? "—");
+        if (completedEl) completedEl.textContent = String(successfulTasksNumber ?? "—");
+        if (successRateEl) successRateEl.textContent = successRate != null ? `${successRate}% успеха` : "—";
+      }
+
+      const totalTimeEl = document.getElementById("summary-total-time");
+      if (totalTimeEl) {
+        totalTimeEl.textContent = summary.durationSeconds != null ? formatDuration(summary.durationSeconds) : "—";
+      }
+
+      if (typeof CelebrationEffects !== "undefined" && successRate != null) {
+        CelebrationEffects.celebrate(successRate, {
+          isPerfect: summary.failedAttempts === 0 && totalTasksNum > 0,
+          isFinalResults: true,
+        });
       }
 
       updateFinalResultGuidance(summary, successRate);
-
       syncTheoryBridgeAction();
 
+      // Header navigation visibility
+      const resultsNav = document.getElementById("results-nav");
+      if (resultsNav) resultsNav.hidden = false;
+
+      // Iterations grid
       const iterationsGrid = document.getElementById("iterations-grid");
-
       const iterationsEmptyHint = document.getElementById("iterations-empty-hint");
-
       const iterationsPlaceholder = document.getElementById("iterations-placeholder");
 
-      iterationsGrid.innerHTML = "";
+      if (iterationsGrid) {
+        iterationsGrid.className = "s3-iteration-grid";
+        iterationsGrid.innerHTML = "";
+      }
 
-      if (Array.isArray(summary.iterations) && summary.iterations.length > 0) {
+      const hasIterations = iterationsGrid && Array.isArray(summary.iterations) && summary.iterations.length > 0;
+      setClassHidden(iterationsGrid, !hasIterations);
+      setClassHidden(iterationsPlaceholder, Boolean(hasIterations));
+      setClassHidden(iterationsEmptyHint, Boolean(hasIterations));
 
-        if (iterationsPlaceholder) iterationsPlaceholder.classList.add("hidden");
-
-        if (iterationsEmptyHint) iterationsEmptyHint.classList.add("hidden");
-
-        const count = summary.iterations.length;
-
-        if (count <= 4) {
-
-          iterationsGrid.className = "grid gap-3";
-
-          if (count === 1) iterationsGrid.className += " grid-cols-1";
-
-          else if (count === 2) iterationsGrid.className += " grid-cols-1 sm:grid-cols-2";
-
-          else if (count === 3) iterationsGrid.className += " grid-cols-1 sm:grid-cols-2 lg:grid-cols-3";
-
-          else iterationsGrid.className += " grid-cols-1 sm:grid-cols-2 lg:grid-cols-4";
-
-        } else {
-
-          iterationsGrid.className = "flex flex-col gap-2";
-
-        }
+      if (hasIterations) {
 
         summary.iterations.forEach((it) => {
-
-          const successRate = normalizeRatePercent(
-
-            it && it.success_rate,
-
-            it && (it.successful_tasks ?? it.successes),
-
-            it && (it.total_tasks ?? it.tasks_total)
-
+          const iterationRate = normalizeRatePercent(
+            it?.success_rate,
+            it?.successful_tasks ?? it?.successes,
+            it?.total_tasks ?? it?.tasks_total
           );
-
-          const errors = Math.max(0, toNumberOrNull(it && (it.failed_tasks ?? it.errors)) ?? 0);
-
-          const iterNumber = (it && (it.iteration ?? it.index)) ?? "?";
-
+          const errors = Math.max(0, toNumberOrNull(it?.failed_tasks ?? it?.errors) ?? 0);
+          const iterNumber = (it?.iteration ?? it?.index) ?? "?";
           const durationText = formatDuration(
-
-            toNumberOrNull(it.duration_seconds) ??
-
-            computeDurationSecondsFromTimestamps(it.start_time, it.end_time)
-
+            toNumberOrNull(it?.duration_seconds) ??
+            computeDurationSecondsFromTimestamps(it?.start_time, it?.end_time)
           );
-
           const scoreText = formatAttempts(
-
-            it.successful_tasks ?? it.successes,
-
-            it.total_tasks ?? it.tasks_total
-
+            it?.successful_tasks ?? it?.successes,
+            it?.total_tasks ?? it?.tasks_total
           );
 
-          const safeIterNumber = escapeHtml(iterNumber);
-
-          const safeDurationText = escapeHtml(durationText);
-
-          const safeScoreText = escapeHtml(scoreText);
+          const colorClasses = getSuccessColorClasses(iterationRate);
 
           const card = document.createElement("div");
-
-          if (count <= 4) {
-
-            card.className =
-
-              "flex flex-col gap-2 rounded-lg border-2 border-border-strong bg-surface-1 p-4 shadow-sm transition duration-200 hover:shadow-lg hover:-translate-y-1";
-
-            card.innerHTML = `
-
-                <div class="flex items-center justify-between gap-2 mb-1">
-
-                  <p class="text-base font-bold text-text-main dark:text-text-main">Итерация ${safeIterNumber}</p>
-
-                  <span class="rounded-md ${getSuccessColorClasses(successRate).badge} px-2.5 py-1 text-xs font-bold">${successRate}%</span>
-
-                </div>
-
-                <div class="w-full bg-surface-2 rounded-full h-2 mb-2">
-
-                  <div class="task-chip ${getSuccessColorClasses(successRate).bar} h-2 rounded-full transition-all duration-500" style="width: ${successRate}%"></div>
-
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 text-sm">
-
-                  <div class="flex flex-col gap-0.5">
-
-                    <span class="text-xs text-text-secondary uppercase tracking-wide">Время</span>
-
-                    <span class="font-semibold text-text-main">${safeDurationText}</span>
-
-                  </div>
-
-                  <div class="flex flex-col gap-0.5">
-
-                    <span class="text-xs text-text-secondary uppercase tracking-wide">Счёт</span>
-
-                    <span class="font-semibold text-text-main">${safeScoreText}</span>
-
-                  </div>
-
-                </div>
-
-                ${errors > 0 ? `
-
-                  <div class="mt-2 flex items-center gap-1.5 rounded-md bg-error-light px-3 py-1.5">
-
-                    <span class="material-symbols-outlined text-sm text-error">error</span>
-
-                    <span class="text-xs font-medium text-error-text">${errors} ошибок</span>
-
-                  </div>
-
-                ` : ''}
-
-              `;
-
-          } else {
-
-            card.className =
-
-              "flex items-center justify-between gap-4 rounded-lg border-2 border-border-strong bg-surface-1 px-4 py-3 shadow-sm transition hover:shadow-md";
-
-            card.innerHTML = `
-
-                <div class="flex items-center gap-3 flex-1 min-w-0">
-
-                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${getSuccessColorClasses(successRate).badge}">
-
-                    <span class="text-sm font-bold ${getSuccessColorClasses(successRate).text}">${safeIterNumber}</span>
-
-                  </div>
-
-                  <div class="flex-1 min-w-0">
-
-                    <div class="w-full bg-surface-2 rounded-full h-1.5">
-
-                      <div class="task-chip ${getSuccessColorClasses(successRate).bar} h-1.5 rounded-full transition-all duration-300" style="width: ${successRate}%"></div>
-
-                    </div>
-
-                  </div>
-
-                </div>
-
-                <div class="flex items-center gap-4 sm:gap-6 text-sm shrink-0">
-
-                  <div class="text-center">
-
-                    <p class="text-xs text-text-secondary mb-0.5">Успех</p>
-
-                    <p class="font-bold ${getSuccessColorClasses(successRate).text}">${successRate}%</p>
-
-                  </div>
-
-                  <div class="text-center hidden sm:block">
-
-                    <p class="text-xs text-text-secondary mb-0.5">Время</p>
-
-                    <p class="font-semibold text-text-main">${safeDurationText}</p>
-
-                  </div>
-
-                  <div class="text-center hidden sm:block">
-
-                    <p class="text-xs text-text-secondary mb-0.5">Счёт</p>
-
-                    <p class="font-semibold text-text-main">${safeScoreText}</p>
-
-                  </div>
-
-                  ${errors > 0 ? `
-
-                    <div class="flex items-center gap-1 text-error-text">
-
-                      <span class="material-symbols-outlined text-base">error</span>
-
-                      <span class="font-bold">${errors}</span>
-
-                    </div>
-
-                  ` : ''}
-
-                </div>
-
-              `;
-
-          }
-
+          card.className = "s3-iteration-card";
+          card.innerHTML = `
+            <div class="s3-iteration-head">
+              <p class="s3-iteration-name">Итерация ${escapeHtml(iterNumber)}</p>
+              <span class="s3-badge ${colorClasses.badge}">${iterationRate ?? "—"}%</span>
+            </div>
+            <div class="s3-progress-track" role="progressbar" aria-valuenow="${iterationRate ?? 0}" aria-valuemin="0" aria-valuemax="100">
+              <div class="s3-progress-fill ${colorClasses.bar}" style="width:${iterationRate ?? 0}%"></div>
+            </div>
+            <div class="s3-iteration-kpi-row">
+              <div class="s3-kpi">
+                <p class="s3-kpi-label">Время</p>
+                <p class="s3-kpi-value">${escapeHtml(durationText)}</p>
+              </div>
+              <div class="s3-kpi">
+                <p class="s3-kpi-label">Счёт</p>
+                <p class="s3-kpi-value">${escapeHtml(scoreText)}</p>
+              </div>
+            </div>
+            ${errors > 0 ? `
+              <div class="s3-iteration-errors">
+                <span class="material-symbols-outlined" aria-hidden="true">error</span>
+                <span>${formatErrorCountLabel(errors)}</span>
+              </div>
+            ` : ""}
+          `;
           iterationsGrid.appendChild(card);
-
         });
-
       } else {
-
-        // Нет данных для динамики
-
-        if (iterationsPlaceholder) iterationsPlaceholder.classList.remove("hidden");
-
-        if (iterationsEmptyHint) iterationsEmptyHint.classList.remove("hidden");
-
+        setClassHidden(iterationsPlaceholder, false);
+        setClassHidden(iterationsEmptyHint, false);
       }
 
-      // Синхронизируем высоту после рендера: динамика не ниже проблем, но без лишней пустоты
-
-      const syncHeights = () => {
-
-        try {
-
-          const dynCard = document.getElementById("iterations-card");
-
-          const probCard = document.getElementById("problem-card");
-
-          if (dynCard && probCard) {
-
-            dynCard.style.minHeight = ""; // сброс
-
-            const problemsH = probCard.scrollHeight;
-
-            const dynamicH = dynCard.scrollHeight;
-
-            if (problemsH > dynamicH) {
-
-              dynCard.style.minHeight = `${problemsH}px`;
-
-            }
-
-          }
-
-        } catch (e) {
-
-          // ignore
-
-        }
-
-      };
-
-      requestAnimationFrame(syncHeights);
-
-      setTimeout(syncHeights, 80);
-
-      if (typeof ResizeObserver !== "undefined") {
-
-        try {
-
-          const observer = new ResizeObserver(() => syncHeights());
-
-          const dynCard = document.getElementById("iterations-card");
-
-          const probCard = document.getElementById("problem-card");
-
-          if (dynCard) observer.observe(dynCard);
-
-          if (probCard) observer.observe(probCard);
-
-        } catch (e) {
-
-          // ignore
-
-        }
-
-      }
-
+      // Problem tasks
       const problemList = document.getElementById("problem-tasks-list");
-
       const problemEmptyHint = document.getElementById("problem-empty-hint");
+      const problemReviewBtn = document.getElementById("problem-review-open-btn");
 
-      problemList.innerHTML = "";
+      if (problemList) problemList.innerHTML = "";
 
-      if (Array.isArray(summary.problemTasks) && summary.problemTasks.length > 0) {
+      const hasProblemTasks = problemList && Array.isArray(summary.problemTasks) && summary.problemTasks.length > 0;
+      setClassHidden(problemList, !hasProblemTasks);
+      setClassHidden(problemEmptyHint, Boolean(hasProblemTasks));
+      setClassHidden(problemReviewBtn, !hasProblemTasks);
 
-        if (problemEmptyHint) problemEmptyHint.classList.add("hidden");
+      if (hasProblemTasks) {
 
-        summary.problemTasks.forEach((t) => {
+        summary.problemTasks.forEach((task) => {
+          const errors = Math.max(0, Number(task?.errors ?? task?.failures ?? task?.failed ?? 0) || 0);
+          const taskPresentation = buildProblemTaskPresentation(task, errors);
 
-          const li = document.createElement("li");
+          const item = document.createElement("li");
+          item.className = "s3-problem-task";
+          item.title = taskPresentation.rawName;
 
-          li.className =
+          item.innerHTML = `
+            <div class="s3-problem-task-main">
+              <span class="s3-problem-task-icon" aria-hidden="true">
+                <span class="material-symbols-outlined">warning</span>
+              </span>
+              <div class="s3-problem-task-copy">
+                <span class="s3-problem-task-name" title="${escapeHtml(taskPresentation.rawName)}">${escapeHtml(taskPresentation.label)}</span>
+                <span class="s3-problem-task-hint">${escapeHtml(taskPresentation.hint)}</span>
+              </div>
+            </div>
+            <div class="s3-problem-task-count">
+              <span>${formatErrorCountLabel(errors)}</span>
+            </div>
+          `;
 
-            "s3-problem-task flex flex-col gap-3 rounded-lg border-2 border-border-strong bg-surface-2 px-4 py-3 shadow-sm transition duration-200 hover:shadow-md hover:-translate-y-0.5 sm:flex-row sm:justify-between";
-
-          const errors = (t && (t.errors ?? t.failures ?? t.failed ?? 0)) ?? 0;
-
-          const displayName =
-
-            (t && (t.task_name || (t.meta && (t.meta.name || t.meta.title)) || t.task_ref || t.task_id)) ||
-
-            "Задание";
-
-          const leftDiv = document.createElement("div");
-          leftDiv.className = "s3-problem-task-main flex items-start gap-2";
-          const warnIcon = document.createElement("span");
-          warnIcon.className = "material-symbols-outlined text-error";
-          warnIcon.textContent = "warning";
-          const nameSpan = document.createElement("span");
-          nameSpan.className = "s3-problem-task-name text-sm font-semibold text-text-main";
-          nameSpan.textContent = displayName;
-          leftDiv.appendChild(warnIcon);
-          leftDiv.appendChild(nameSpan);
-
-          const rightDiv = document.createElement("div");
-          rightDiv.className = "s3-problem-task-count whitespace-nowrap text-sm font-semibold text-text-secondary";
-          const errBold = document.createElement("span");
-          errBold.className = "font-bold";
-          errBold.textContent = String(errors);
-          rightDiv.appendChild(errBold);
-          rightDiv.appendChild(document.createTextNode(" ошибок"));
-
-          li.appendChild(leftDiv);
-          li.appendChild(rightDiv);
-
-          problemList.appendChild(li);
-
+          problemList.appendChild(item);
         });
 
+        // Build review dialog lookup
+        state.problemReviewLookup = new Map(
+          summary.problemTasks.map((t) => [t?.id ?? t?.task_id, t])
+        );
       } else {
-
-        if (problemEmptyHint) problemEmptyHint.classList.remove("hidden");
-
+        setClassHidden(problemEmptyHint, false);
+        setClassHidden(problemReviewBtn, true);
       }
-
     }
 
+    /* ─── PROBLEM REVIEW DIALOG ──────────────────────────────── */
+    async function openProblemReviewDialog(problemTasks) {
+      const backdrop = document.getElementById("problem-review-backdrop");
+      const list = document.getElementById("problem-review-list");
+      if (!backdrop || !list) return;
+
+      renderProblemReviewStatus(
+        list,
+        "Собираем ошибки со всех итераций",
+        "Подтягиваем те же разборы, которые показываются на S2 после ошибочных ответов."
+      );
+
+      backdrop.hidden = false;
+      backdrop.classList.add("is-open");
+      state.problemReviewOpen = true;
+      document.body.style.overflow = "hidden";
+
+      const groups = await loadProblemReviewGroups(state.latestSummary);
+      if (!state.problemReviewOpen) return;
+
+      list.innerHTML = "";
+
+      if (!Array.isArray(groups) || !groups.length) {
+        renderProblemReviewStatus(
+          list,
+          "Разбор ошибок пока недоступен",
+          "Ошибки в списке есть, но подробные материалы для разбора не были сохранены."
+        );
+        return;
+      }
+
+      groups.forEach((group) => {
+        const card = document.createElement("div");
+        card.className = "s3-review-card";
+
+        const meta = document.createElement("div");
+        meta.className = "s3-review-card-meta";
+
+        const title = document.createElement("h3");
+        title.className = "s3-review-card-title";
+        title.textContent = group.label || buildDisplayLabel(group.name, "Задание", 72);
+        meta.appendChild(title);
+
+        const badge = document.createElement("span");
+        badge.className = "s3-badge s3-badge--error";
+        badge.textContent = formatErrorCountLabel(group.totalErrors || group.entries.length);
+        meta.appendChild(badge);
+        card.appendChild(meta);
+
+        const note = document.createElement("p");
+        note.className = "s3-review-note";
+        note.textContent = "Разбор собран по всем итерациям комплекса.";
+        card.appendChild(note);
+
+        if (!group.entries.length) {
+          const emptyCopy = document.createElement("p");
+          emptyCopy.className = "s3-review-note";
+          emptyCopy.textContent = "Для этого задания сохранился счётчик ошибок, но не сохранились подробные ответы.";
+          card.appendChild(emptyCopy);
+          list.appendChild(card);
+          return;
+        }
+
+        group.entries.forEach((entry, entryIndex) => {
+          const section = document.createElement("section");
+          section.className = "s3-review-attempt";
+
+          const attemptMeta = document.createElement("div");
+          attemptMeta.className = "s3-review-attempt-meta";
+          attemptMeta.textContent = group.entries.length > 1
+            ? `Итерация ${entry.iteration || "—"} · ошибка ${entryIndex + 1}`
+            : `Итерация ${entry.iteration || "—"}`;
+          section.appendChild(attemptMeta);
+
+          if (entry.review?.prompt) {
+            const question = document.createElement("p");
+            question.className = "s3-review-question";
+            question.textContent = entry.review.prompt;
+            section.appendChild(question);
+          }
+
+          if (entry.review?.note) {
+            const entryNote = document.createElement("p");
+            entryNote.className = "s3-review-note";
+            entryNote.textContent = entry.review.note;
+            section.appendChild(entryNote);
+          }
+
+          const answers = document.createElement("div");
+          answers.className = "s3-review-answers";
+
+          appendProblemReviewAnswerContent(
+            answers,
+            entry.review?.userLabel || "Твоё решение",
+            entry.review?.userLines || [],
+            entry.review?.userItems || [],
+            "s3-review-answer--user"
+          );
+          appendProblemReviewAnswerContent(
+            answers,
+            entry.review?.referenceLabel || "Референс",
+            entry.review?.referenceLines || [],
+            entry.review?.referenceItems || [],
+            "s3-review-answer--reference"
+          );
+
+          section.appendChild(answers);
+          card.appendChild(section);
+        });
+
+        list.appendChild(card);
+      });
+    }
+
+    function closeProblemReviewDialog() {
+      const backdrop = document.getElementById("problem-review-backdrop");
+      if (!backdrop) return;
+      backdrop.hidden = true;
+      backdrop.classList.remove("is-open");
+      state.problemReviewOpen = false;
+      document.body.style.overflow = "";
+    }
+
+    /* ─── LOAD ───────────────────────────────────────────────── */
     async function loadSessionResults() {
-
       const sessionId = getSessionFromLocation();
-
       state.sessionId = sessionId;
-
       state.theoryBridge = loadTheoryBridgeContext(sessionId);
-
       syncTheoryBridgeAction();
 
       if (!sessionId) {
-
         console.error("sessionId отсутствует в URL");
-
-        NotificationUI.toast('Экран итогов открыт без sessionId. Вернитесь в сессию и откройте результаты заново.', 'error');
-
+        NotificationUI.toast("Экран итогов открыт без sessionId. Вернитесь в сессию и откройте результаты заново.", "error");
         return;
-
       }
 
       try {
-
         const response = await api.getFinalResults(sessionId);
-
         if (!response.ok) {
-
           console.error("Ошибка получения финальных результатов", response);
-
-          NotificationUI.toast('Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.', 'error');
-
+          NotificationUI.toast("Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.", "error");
           return;
-
         }
-
         await hydrateTheoryBridgeFromResults(response.results);
-
-        renderSessionResults(response.results);
-
+        renderSessionResultsModern(response.results);
       } catch (e) {
-
         console.error("Неожиданная ошибка при загрузке финальных результатов", e);
-
-        NotificationUI.toast('Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.', 'error');
-
+        NotificationUI.toast("Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.", "error");
       }
-
     }
 
+    /* ─── INIT ───────────────────────────────────────────────── */
     window.addEventListener("DOMContentLoaded", () => {
+      normalizeStaticLayout();
 
-      document.getElementById("close-btn").addEventListener("click", () => {
-        if (window.opener) { window.close(); }
+      document.getElementById("close-btn")?.addEventListener("click", () => {
+        if (window.opener) window.close();
         window.navigateWithTransition("/ui/main");
       });
 
-      // UX-24: Clear navigation buttons
-      document.getElementById("to-main-btn").addEventListener("click", () => {
+      document.getElementById("to-main-btn")?.addEventListener("click", () => {
         window.navigateWithTransition("/ui/main");
       });
-      document.getElementById("to-complexes-btn").addEventListener("click", () => {
+
+      document.getElementById("to-complexes-btn")?.addEventListener("click", () => {
         window.navigateWithTransition("/ui/complexes");
       });
-      document.getElementById("to-theory-hub-btn").addEventListener("click", () => {
-        const returnUrl = state.theoryBridge?.returnUrl || (state.theoryBridge?.theoryId
-          ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(state.theoryBridge.theoryId)}`
-          : "/ui/editor?theory_hub=1");
+
+      document.getElementById("to-theory-hub-btn")?.addEventListener("click", () => {
+        const returnUrl = state.theoryBridge?.returnUrl || buildTheoryEditorUrl(state.theoryBridge?.theoryId || "");
         window.navigateWithTransition(returnUrl);
       });
 
-      loadSessionResults();
+      document.getElementById("problem-review-open-btn")?.addEventListener("click", () => {
+        openProblemReviewDialog(state.latestSummary?.problemTasks || []);
+      });
 
+      document.getElementById("problem-review-close-btn")?.addEventListener("click", () => {
+        closeProblemReviewDialog();
+      });
+
+      document.getElementById("problem-review-backdrop")?.addEventListener("click", (e) => {
+        if (e.target === e.currentTarget) closeProblemReviewDialog();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && state.problemReviewOpen) closeProblemReviewDialog();
+      });
+
+      loadSessionResults();
     });
 
   </script>
@@ -1447,5 +1457,4 @@
   <script src="/assets/ConnectionMonitor.js"></script>
 
 </body>
-
 </html>

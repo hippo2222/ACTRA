@@ -111,6 +111,71 @@ class TestD1_Level2GateSync(unittest.TestCase):
 
         self.assertEqual(result.details.get("level"), 2)
 
+    def test_difficulty2_image_only_options_stays_level1(self):
+        """difficulty=2 with image-only answer options should stay in choice mode."""
+        user_input = {"answers": {"0": 0}, "text_answers": {}}
+        answer_key = {
+            "questions": [
+                {
+                    "id": 0,
+                    "text": "Выберите изображение",
+                    "answers": [
+                        {"text": "A", "correct": True, "image_path": "img/a.png"},
+                        {"text": "B", "correct": False, "image_path": "img/b.png"},
+                    ],
+                }
+            ]
+        }
+        task_data = {
+            "settings": {"difficulty": 2},
+            "content": {"show_options": True, "requires_text_input": False},
+        }
+
+        result = self.service.evaluate_test_task(user_input, answer_key, task_data)
+
+        self.assertEqual(result.details.get("level"), 1)
+        self.assertTrue(result.success)
+
+    def test_difficulty2_mixed_text_and_image_only_questions_uses_hybrid_evaluation(self):
+        """difficulty=2 mixed tests should evaluate image-only questions via answers and text questions via text_answers."""
+        user_input = {
+            "answers": {"0": 0},
+            "text_answers": {"1": "Променевий"},
+        }
+        answer_key = {
+            "questions": [
+                {
+                    "id": 0,
+                    "text": "Выберите изображение",
+                    "answers": [
+                        {"text": "A", "correct": True, "image_path": "img/a.png"},
+                        {"text": "B", "correct": False, "image_path": "img/b.png"},
+                    ],
+                },
+                {
+                    "id": 1,
+                    "text": "Какой нерв поврежден?",
+                    "answers": [
+                        {"text": "Променевий", "correct": True},
+                        {"text": "Ліктьовий", "correct": False},
+                    ],
+                    "keywords": ["променевий"],
+                },
+            ]
+        }
+        task_data = {
+            "settings": {"difficulty": 2},
+            "content": {"show_options": True, "requires_text_input": False},
+        }
+
+        result = self.service.evaluate_test_task(user_input, answer_key, task_data)
+
+        self.assertEqual(result.details.get("level"), 2)
+        self.assertTrue(result.success)
+        self.assertEqual(result.details["per_question"]["0"]["status"], "correct")
+        self.assertEqual(result.details["per_question"]["0"]["user_option_ids"], [0])
+        self.assertEqual(result.details["per_question"]["1"]["status"], "correct")
+
     # ----- Regression: existing triggers still work -----
 
     def test_requires_text_input_still_triggers_level2(self):
@@ -368,8 +433,95 @@ class TestExistingL1L2Regression(unittest.TestCase):
         self.assertFalse(result.success)
         self.assertEqual(result.score, 50.0)
         self.assertEqual(result.details["correct_count"], 1)
+        self.assertEqual(result.message, "❌ Есть ошибки: 1 из 2 с ошибкой, верно 1")
         self.assertEqual(len(result.details["failed_subtests"]), 1)
         self.assertEqual(result.details["failed_subtests"][0]["question_id"], "1")
+
+    def test_l1_partial_retry_uses_filtered_total_and_original_indices(self):
+        """L1 partial retry should evaluate only retried questions but keep original failed indices."""
+        user_input = {"answers": {"q2": 0, "q3": 0}}
+        answer_key = {
+            "questions": [
+                {
+                    "id": "q2",
+                    "_partial_retry_original_index": 1,
+                    "answers": [{"text": "B", "correct": True}, {"text": "X", "correct": False}],
+                },
+                {
+                    "id": "q3",
+                    "_partial_retry_original_index": 2,
+                    "answers": [{"text": "C", "correct": True}, {"text": "Y", "correct": False}],
+                },
+            ]
+        }
+        task_data = {"content": {}}
+
+        result = self.service.evaluate_test_task(user_input, answer_key, task_data)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.details["correct_count"], 2)
+        self.assertEqual(result.details["total_count"], 2)
+        self.assertEqual(result.message, "✅ Правильно! 2/2 ответов")
+        self.assertEqual(result.details["failed_subtests"], [])
+
+        user_input_with_error = {"answers": {"q2": 0, "q3": 1}}
+        result_with_error = self.service.evaluate_test_task(
+            user_input_with_error,
+            answer_key,
+            task_data,
+        )
+
+        self.assertFalse(result_with_error.success)
+        self.assertEqual(result_with_error.details["correct_count"], 1)
+        self.assertEqual(result_with_error.details["total_count"], 2)
+        self.assertEqual(
+            result_with_error.details["failed_subtests"],
+            [{"question_id": "q3", "index": 2}],
+        )
+
+    def test_l1_partial_message_avoids_ambiguous_correct_ratio(self):
+        """L1: 1/3 correct should produce an unambiguous summary."""
+        user_input = {"answers": {"0": 0, "1": 1, "2": 1}}
+        answer_key = {
+            "questions": [
+                {"id": 0, "answers": [{"text": "A", "correct": True}, {"text": "B", "correct": False}]},
+                {"id": 1, "answers": [{"text": "C", "correct": True}, {"text": "D", "correct": False}]},
+                {"id": 2, "answers": [{"text": "E", "correct": True}, {"text": "F", "correct": False}]},
+            ]
+        }
+        task_data = {"content": {}}
+
+        result = self.service.evaluate_test_task(user_input, answer_key, task_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.details["correct_count"], 1)
+        self.assertEqual(result.details["total_count"], 3)
+        self.assertEqual(result.message, "❌ Есть ошибки: 2 из 3 с ошибкой, верно 1")
+
+    def test_l2_partial_message_avoids_ambiguous_correct_ratio(self):
+        """L2: partial open answers should use the same summary format."""
+        user_input = {
+            "text_answers": {
+                "q1": "печень",
+                "q2": "неверный ответ",
+                "q3": "",
+            }
+        }
+        answer_key = {
+            "questions": [
+                {"id": "q1", "keywords": ["печень"], "reference_answer": "печень"},
+                {"id": "q2", "keywords": ["почка"], "reference_answer": "почка"},
+                {"id": "q3", "keywords": ["сердце"], "reference_answer": "сердце"},
+            ]
+        }
+        task_data = {"content": {"requires_text_input": True}}
+
+        result = self.service.evaluate_test_task(user_input, answer_key, task_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.details["correct_count"], 1)
+        self.assertEqual(result.details["total_count"], 3)
+        self.assertEqual(result.message, "❌ Есть ошибки: 2 из 3 с ошибкой, верно 1")
 
     def test_l1_multiple_choice_set_comparison(self):
         """L1 multiple_choice: must select ALL correct and ONLY correct."""

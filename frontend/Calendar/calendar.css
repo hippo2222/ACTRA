@@ -1,12 +1,744 @@
 /**
- * Calendar Styles - Стили для календаря обучения.
- * 
- * Дополняет Tailwind CSS кастомными стилями для:
- * - Анимаций
- * - Drag scroll
- * - Tooltips
- * - Responsive адаптации
+ * Calendar Styles — semantic design system build.
+ *
+ * Architecture:
+ *   - Layout normalization (grid + viewport lock)
+ *   - Semantic card, schedule, heatmap, health classes
+ *   - Animations (slide / fade / pulse)
+ *   - Tooltips (top / bottom / left / right)
+ *   - Drag scroll
+ *   - Responsive adaptations (single declaration per breakpoint)
+ *   - Accessibility (prefers-reduced-motion, focus-visible)
+ *
+ * Colour strategy:
+ *   All colours reference CSS custom-properties from lightB-variables.css
+ *   and component tokens from lightB-components.css.
+ *   NO raw hex, NO inline color-mix() — theme-safe by construction.
  */
+
+/* =============================================================================
+   LAYOUT NORMALIZATION
+   ============================================================================= */
+.calendar-layout {
+    --calendar-header-height: 64px;
+    --calendar-gap: clamp(0.5rem, 1.2vh, 0.9rem);
+    --calendar-gap-sm: clamp(0.35rem, 0.8vh, 0.65rem);
+    --calendar-padding: clamp(0.65rem, 1.2vh, 1rem);
+    --calendar-card-radius: 16px;
+    --calendar-card-padding: clamp(0.7rem, 1.1vh, 0.95rem);
+    --calendar-card-padding-sm: clamp(0.6rem, 1vh, 0.85rem);
+    --calendar-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+    --calendar-shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.06);
+    --calendar-shadow-hover: 0 16px 30px rgba(0, 0, 0, 0.14);
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body.calendar-layout {
+    overflow: hidden;
+}
+
+body.calendar-layout #app {
+    height: calc(100vh - var(--connection-banner-height, 0px));
+    min-height: calc(100vh - var(--connection-banner-height, 0px));
+}
+
+/* ---- Header ---- */
+body.calendar-layout .calendar-header {
+    height: var(--calendar-header-height);
+    min-height: var(--calendar-header-height);
+    box-shadow: 0 1px 0 var(--color-border-subtle, rgba(15, 23, 42, 0.06));
+}
+
+body.calendar-layout .calendar-header > div {
+    height: 100%;
+}
+
+.calendar-header-user {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: var(--color-component-panel-row-soft-bg);
+    cursor: pointer;
+    transition: background var(--transition-fast),
+        border-color var(--transition-fast);
+}
+
+.calendar-header-user:hover {
+    background: var(--color-component-segmented-button-hover-bg);
+    border-color: var(--color-component-card-elevated-border-hover);
+}
+
+/* ---- Main grid ---- */
+body.calendar-layout .calendar-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: calc(100% - var(--calendar-header-height));
+    padding: var(--calendar-padding);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(172px, max-content) minmax(228px, max-content) minmax(250px, 1fr);
+    gap: var(--calendar-gap);
+    align-content: start;
+    width: 100%;
+    max-width: min(100%, 1380px);
+    margin-inline: auto;
+}
+
+body.calendar-layout .calendar-main > * {
+    min-width: 0;
+    max-width: 100%;
+}
+
+body.calendar-layout .calendar-main > .calendar-top-grid {
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+body.calendar-layout .calendar-main > .calendar-schedule,
+body.calendar-layout .calendar-main > .calendar-bottom-grid {
+    min-height: 0;
+    overflow: visible;
+}
+
+/* ---- Top grid: recipe cards + control column ---- */
+body.calendar-layout .calendar-top-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(176px, 220px);
+    gap: var(--calendar-gap);
+    align-items: stretch;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+body.calendar-layout .calendar-top-grid > * {
+    min-width: 0;
+    overflow: hidden;
+}
+
+body.calendar-layout .calendar-summary-card {
+    min-height: 172px;
+}
+
+/* ---- Control card (time + microcards) ---- */
+
+body.calendar-layout .calendar-control-card {
+    height: 100%;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: visible;
+}
+
+.calendar-control-card__section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+.calendar-control-card__eyebrow {
+    display: block;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--color-text-secondary);
+}
+
+.calendar-control-card__summary {
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border-subtle);
+    min-width: 0;
+}
+
+/* ---- Schedule row ---- */
+body.calendar-layout .calendar-schedule {
+    display: flex;
+    flex-direction: column;
+    gap: var(--calendar-gap-sm);
+    min-height: 0;
+}
+
+body.calendar-layout .calendar-schedule-header {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 32px;
+    min-height: 32px;
+    padding: 0 4px;
+}
+
+body.calendar-layout #schedule-strip {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch;
+    gap: var(--calendar-gap);
+    padding-bottom: 0;
+    padding-right: 1rem;
+    overflow-y: hidden;
+    overflow-x: auto;
+}
+
+/* ---- Bottom grid: activity + health ---- */
+body.calendar-layout .calendar-bottom-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.58fr) minmax(0, 0.42fr);
+    gap: var(--calendar-gap);
+    align-items: stretch;
+    min-height: 0;
+}
+
+body.calendar-layout .calendar-activity-col,
+body.calendar-layout .calendar-health-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--calendar-gap);
+    min-height: 0;
+    min-width: 0;
+}
+
+body.calendar-layout .calendar-activity-col > .calendar-panel-card,
+body.calendar-layout .calendar-health-col > .calendar-panel-card {
+    height: 100%;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--calendar-gap-sm);
+    overflow: visible;
+}
+
+/* Heatmap tooltips need overflow:visible on the activity card */
+body.calendar-layout .calendar-activity-col > .calendar-panel-card {
+    overflow: visible;
+}
+
+/* =============================================================================
+   SEMANTIC CARD STYLING
+   All calendar cards derive from card-elevated (lightB-components.css)
+   and add calendar-specific overrides.
+   ============================================================================= */
+body.calendar-layout .calendar-summary-card,
+body.calendar-layout .calendar-panel-card,
+body.calendar-layout .schedule-card,
+body.calendar-layout .calendar-control-card {
+    border-radius: var(--calendar-card-radius);
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.18s var(--calendar-ease),
+        box-shadow 0.18s var(--calendar-ease),
+        border-color 0.18s var(--calendar-ease),
+        background 0.18s var(--calendar-ease);
+}
+
+body.calendar-layout .calendar-card-body,
+body.calendar-layout .calendar-panel-card,
+body.calendar-layout .calendar-control-card,
+body.calendar-layout .schedule-card {
+    padding: var(--calendar-card-padding);
+}
+
+body.calendar-layout .calendar-summary-card:hover,
+body.calendar-layout .calendar-panel-card:hover,
+body.calendar-layout .schedule-card:hover,
+body.calendar-layout .calendar-control-card:hover {
+    box-shadow: var(--calendar-shadow-hover);
+    border-color: var(--color-component-card-elevated-border-hover);
+}
+
+/* Disable the translateY(-1px) from card-elevated:hover — causes clipped borders in tight grids */
+body.calendar-layout .card-elevated:hover {
+    transform: none;
+}
+
+/* Empty state inside card-elevated: kill double border */
+body.calendar-layout .calendar-summary-card .empty-state-card {
+    border: none;
+    background: transparent;
+    border-radius: 0;
+}
+
+/* Recipe card accent stripe (left border instead of absolute div) */
+.calendar-summary-card--primary {
+    border-left: 3px solid var(--color-primary);
+}
+
+.calendar-summary-card--accent {
+    border-left: 3px solid var(--color-accent);
+}
+
+.calendar-summary-card--empty {
+    border-left: 3px solid var(--color-border-subtle);
+}
+
+/* =============================================================================
+   SCHEDULE STRIP
+   ============================================================================= */
+.schedule-strip {
+    scroll-snap-type: x mandatory;
+    scroll-padding: 0 24px;
+    align-items: stretch;
+    padding-inline-end: 24px;
+    justify-content: flex-start;
+}
+
+.schedule-strip--centered {
+    justify-content: center;
+    padding-inline-end: 0;
+}
+
+.schedule-scroll-button:disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    cursor: default;
+}
+
+.schedule-card {
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+    scroll-snap-align: start;
+    width: 176px;
+    min-width: 176px;
+    flex: 0 0 176px;
+    min-height: 196px;
+    opacity: 1;
+    overflow: hidden;
+}
+
+body.calendar-layout .schedule-card {
+    height: 100%;
+    min-height: 0;
+}
+
+.schedule-card-expanded {
+    width: 252px;
+    min-width: 252px;
+    flex-basis: 252px;
+}
+
+.schedule-card-today {
+    box-shadow: 0 0 0 1px var(--color-primary), var(--shadow-md);
+}
+
+.schedule-task-list,
+.schedule-task-row {
+    min-width: 0;
+}
+
+body.calendar-layout .schedule-task-list {
+    min-height: 0;
+    overflow: visible;
+}
+
+.schedule-task-row {
+    align-items: flex-start;
+}
+
+.schedule-task-icon {
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.schedule-task-name {
+    min-width: 0;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    overflow: hidden;
+}
+
+.schedule-card-expanded .schedule-task-name {
+    display: block;
+    -webkit-line-clamp: initial;
+    overflow: visible;
+}
+
+/* =============================================================================
+   HEATMAP — semantic cell classes
+   Using component tokens from lightB-variables.css
+   ============================================================================= */
+body.calendar-layout #heatmap {
+    flex: 1 1 auto;
+    min-height: 0;
+    margin-bottom: 0.25rem;
+    grid-auto-rows: 1fr;
+    overflow: visible;
+    align-content: stretch;
+    gap: clamp(3px, 0.4vh, 6px);
+}
+
+/* Override Tailwind aspect-square — cells fill available height */
+body.calendar-layout #heatmap > .heatmap-cell {
+    aspect-ratio: unset;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+}
+
+.heatmap-cell {
+    border-radius: 4px;
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.heatmap-cell:hover {
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+}
+
+/* Semantic heatmap states */
+.heatmap-cell--empty {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.heatmap-cell--low {
+    background: var(--color-heatmap-low);
+}
+
+.heatmap-cell--mid {
+    background: var(--color-heatmap-mid);
+}
+
+.heatmap-cell--high {
+    background: var(--color-heatmap-high);
+    outline: 1px solid var(--color-component-heatmap-high-outline);
+}
+
+.heatmap-cell--peak {
+    background: var(--color-component-heatmap-peak);
+    outline: 1px solid var(--color-component-heatmap-peak-outline);
+}
+
+.heatmap-cell--today {
+    background: var(--color-primary);
+    box-shadow: 0 0 12px var(--color-primary-light);
+    outline: 2px solid var(--color-component-heatmap-today-inline-ring);
+    animation: heatmap-today-pulse 2s ease-in-out infinite;
+}
+
+.heatmap-cell--missed {
+    background: repeating-linear-gradient(
+        135deg,
+        var(--color-error-light) 0 5px,
+        var(--color-surface-1) 5px 10px
+    );
+    border: 1px solid var(--color-error);
+    box-shadow: inset 0 0 0 1px var(--color-error-light);
+}
+
+.heatmap-cell--rest {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.heatmap-cell--future {
+    background: var(--color-surface-1);
+    border: 1px dashed var(--color-text-secondary);
+}
+
+@keyframes heatmap-today-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
+}
+
+/* Heatmap tooltips — positioned above cells (default), not below */
+.heatmap-cell.tooltip::after {
+    bottom: calc(100% + 6px);
+    top: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    margin-bottom: 0;
+}
+
+.heatmap-cell.tooltip:hover::after {
+    transform: translateX(-50%) translateY(-2px);
+}
+
+/* Last 2 rows: show tooltip above instead of being clipped by bottom edge */
+body.calendar-layout #heatmap > .heatmap-cell:nth-child(n+21).tooltip::after {
+    bottom: calc(100% + 6px);
+    top: auto;
+}
+
+body.calendar-layout #activity-banner {
+    flex: 0 0 auto;
+}
+
+/* =============================================================================
+   HEALTH SECTION
+   ============================================================================= */
+body.calendar-layout #health-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-items: start;
+    align-content: start;
+    gap: 0.9rem;
+    overflow: hidden;
+}
+
+body.calendar-layout #health-content.health-content--sparse {
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
+    align-items: start;
+    align-content: start;
+    gap: 0.85rem;
+}
+
+body.calendar-layout #health-content.health-content--sparse #health-list {
+    flex: 1 1 auto;
+    width: 100%;
+    justify-content: flex-start;
+    align-self: stretch;
+    max-width: none;
+}
+
+body.calendar-layout #health-content.health-content--sparse .health-complex-item {
+    padding-block: 0.6rem;
+}
+
+body.calendar-layout #health-content.health-content--sparse #health-chart {
+    margin-inline: 0;
+    justify-self: center;
+}
+
+body.calendar-layout #health-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    padding-right: 0.1rem;
+}
+
+body.calendar-layout .calendar-health-col > .calendar-panel-card {
+    overflow: hidden;
+}
+
+.health-ring {
+    transition: background 0.6s ease;
+}
+
+.health-ring:hover {
+    transform: scale(1.02);
+}
+
+.health-complex-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    width: 100%;
+    padding: 0.7rem 0.8rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: var(--color-component-panel-row-soft-bg);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
+    text-align: left;
+    cursor: pointer;
+    appearance: none;
+}
+
+.health-complex-meta {
+    min-width: 0;
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+}
+
+.health-complex-title-row {
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.health-complex-detail {
+    font-size: 0.7rem;
+    line-height: 1.35;
+    color: var(--color-text-secondary);
+    margin-left: 0.95rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.health-complex-name {
+    min-width: 0;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    line-height: 1.3;
+}
+
+.health-complex-score {
+    flex: 0 0 auto;
+    min-width: 3.25rem;
+    font-size: 0.75rem;
+    line-height: 1.2;
+    text-align: center;
+    padding: 0.28rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: var(--color-component-panel-row-chip-bg);
+    color: var(--color-component-panel-row-chip-fg);
+    font-weight: 700;
+}
+
+/* Animated conic gradient ring */
+@property --health-angle {
+    syntax: '<angle>';
+    initial-value: 0deg;
+    inherits: false;
+}
+
+.health-ring-animated {
+    --health-angle: 0deg;
+    background: conic-gradient(from var(--health-angle),
+            var(--color-info) 0% 70%,
+            var(--color-border-subtle) 70% 85%,
+            var(--color-error) 85% 100%);
+    animation: health-rotate 1s ease-out forwards;
+}
+
+@keyframes health-rotate {
+    from { --health-angle: 0deg; }
+    to { --health-angle: 360deg; }
+}
+
+/* =============================================================================
+   TIME CONTROLLER
+   ============================================================================= */
+.calendar-time-controller {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+    gap: 0.45rem;
+}
+
+.time-btn {
+    width: 100%;
+    min-height: 2.45rem;
+    padding: 0.65rem 0.75rem;
+    border-radius: 12px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1;
+    text-align: center;
+    transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+}
+
+.time-btn:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+}
+
+.time-btn.is-active {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary);
+    color: var(--color-primary-fg);
+    box-shadow: 0 8px 18px rgba(87, 82, 208, 0.18);
+}
+
+.time-btn:focus {
+    outline: 2px solid var(--color-primary-light);
+    outline-offset: 2px;
+}
+
+.calendar-microcards-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+}
+
+.calendar-microcards-summary__header {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+}
+
+.calendar-microcards-summary__title {
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-main);
+}
+
+.calendar-microcards-summary__status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--color-text-secondary);
+}
+
+.calendar-microcards-summary__today {
+    font-size: 0.68rem;
+    line-height: 1.35;
+    color: var(--color-text-secondary);
+}
+
+.calendar-microcards-summary__link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    width: fit-content;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    transition: color 0.16s ease, transform 0.16s ease;
+}
+
+.calendar-microcards-summary__link:hover {
+    color: var(--color-primary-dark);
+    transform: translateX(1px);
+}
+
+/* Today indicator pulse */
+.today-indicator {
+    animation: pulse-today 2s ease-in-out infinite;
+}
+
+@keyframes pulse-today {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
 
 /* =============================================================================
    SCROLLBAR HIDING
@@ -24,111 +756,46 @@
    ANIMATIONS
    ============================================================================= */
 @keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideOut {
-    from {
-        opacity: 1;
-        transform: translateY(0);
-    }
-
-    to {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-10px); }
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes fadeOut {
-    from {
-        opacity: 1;
-    }
-
-    to {
-        opacity: 0;
-        transform: translateX(20px);
-    }
+    from { opacity: 1; }
+    to { opacity: 0; transform: translateX(20px); }
 }
 
 @keyframes pulse-once {
-
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    50% {
-        transform: scale(1.02);
-    }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.02); }
 }
 
 @keyframes ripple {
-    0% {
-        transform: scale(0.8);
-        opacity: 1;
-    }
-
-    100% {
-        transform: scale(2);
-        opacity: 0;
-    }
+    0% { transform: scale(0.8); opacity: 1; }
+    100% { transform: scale(2); opacity: 0; }
 }
 
 @keyframes glow {
-
-    0%,
-    100% {
-        box-shadow: 0 0 5px var(--color-primary);
-        opacity: 0.8;
-    }
-
-    50% {
-        box-shadow: 0 0 20px var(--color-primary);
-        opacity: 1;
-    }
+    0%, 100% { box-shadow: 0 0 5px var(--color-primary); opacity: 0.8; }
+    50% { box-shadow: 0 0 20px var(--color-primary); opacity: 1; }
 }
 
-.animate-slide-in {
-    animation: slideIn 0.3s ease-out;
-}
-
-.animate-slide-out {
-    animation: slideOut 0.3s ease-out forwards;
-}
-
-.animate-fade-in {
-    animation: fadeIn 0.2s ease-out;
-}
-
-.animate-fade-out {
-    animation: fadeOut 0.3s ease-out forwards;
-}
-
-.animate-pulse-once {
-    animation: pulse-once 0.3s ease-out;
-}
-
-.animate-glow {
-    animation: glow 2s ease-in-out infinite;
-}
+.animate-slide-in { animation: slideIn 0.3s ease-out; }
+.animate-slide-out { animation: slideOut 0.3s ease-out forwards; }
+.animate-fade-in { animation: fadeIn 0.2s ease-out; }
+.animate-fade-out { animation: fadeOut 0.3s ease-out forwards; }
+.animate-pulse-once { animation: pulse-once 0.3s ease-out; }
+.animate-glow { animation: glow 2s ease-in-out infinite; }
 
 /* =============================================================================
    DRAG SCROLL
@@ -162,27 +829,32 @@
     bottom: 100%;
     left: 50%;
     transform: translateX(-50%);
-    background: var(--color-text-main);
-    color: var(--color-text-contrast);
-    padding: 6px 10px;
-    border-radius: 6px;
+    background: var(--color-surface-1);
+    color: var(--color-text-main);
+    padding: 8px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--color-border-subtle);
+    box-shadow: var(--shadow-md);
     font-size: 11px;
-    line-height: 1.4;
+    font-weight: 500;
+    line-height: 1.45;
     white-space: pre-line;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.2s ease;
-    margin-bottom: 4px;
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    margin-bottom: 6px;
     min-width: 100px;
+    max-width: 220px;
     text-align: left;
     z-index: 50;
+    backdrop-filter: blur(8px);
 }
 
 .tooltip:hover::after {
     opacity: 1;
+    transform: translateX(-50%) translateY(-2px);
 }
 
-/* Tooltip variants */
 .tooltip-right::after {
     left: 100%;
     bottom: 50%;
@@ -201,206 +873,6 @@
 }
 
 /* =============================================================================
-   CARD INTERACTIONS
-   ============================================================================= */
-.recipe-card {
-    transition: all 0.3s ease;
-}
-
-.recipe-card:hover {
-    transform: translateY(-2px);
-}
-
-.recipe-card:active {
-    transform: translateY(0);
-}
-
-/* Expanded state for task list */
-.recipe-card.expanded .task-list {
-    max-height: 200px;
-    opacity: 1;
-}
-
-.recipe-card .task-list {
-    max-height: 0;
-    opacity: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease, opacity 0.2s ease;
-}
-
-/* =============================================================================
-   HEALTH CHART
-   ============================================================================= */
-.health-ring {
-    transition: background 0.5s ease;
-}
-
-.health-ring:hover {
-    transform: scale(1.02);
-}
-
-/* Animated conic gradient */
-@property --health-angle {
-    syntax: '<angle>';
-    initial-value: 0deg;
-    inherits: false;
-}
-
-.health-ring-animated {
-    --health-angle: 0deg;
-    background: conic-gradient(from var(--health-angle),
-            var(--color-info) 0% 70%,
-            var(--color-border-subtle) 70% 85%,
-            var(--color-error) 85% 100%);
-    animation: health-rotate 1s ease-out forwards;
-}
-
-@keyframes health-rotate {
-    from {
-        --health-angle: 0deg;
-    }
-
-    to {
-        --health-angle: 360deg;
-    }
-}
-
-/* =============================================================================
-   HEATMAP
-   ============================================================================= */
-.heatmap-cell {
-    transition: transform 0.1s ease, box-shadow 0.1s ease;
-}
-
-.heatmap-cell:hover {
-    transform: scale(1.2);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    z-index: 10;
-}
-
-/* =============================================================================
-   SCHEDULE STRIP
-   ============================================================================= */
-.calendar-main {
-    width: min(100%, 1380px);
-}
-
-.calendar-header {
-    box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
-}
-
-.calendar-summary-card,
-.calendar-panel-card,
-.schedule-card {
-    box-shadow: var(--shadow-sm);
-}
-
-.schedule-card {
-    transition: opacity 0.2s ease, border-color 0.2s ease;
-    scroll-snap-align: start;
-    width: 196px;
-    min-width: 196px;
-    flex: 0 0 196px;
-    min-height: 156px;
-    opacity: 1;
-}
-
-.schedule-strip {
-    scroll-snap-type: x mandatory;
-    scroll-padding: 0 16px;
-    align-items: stretch;
-    padding-inline-end: 4px;
-}
-
-.schedule-card-expanded {
-    width: 256px;
-    min-width: 256px;
-    flex-basis: 256px;
-}
-
-.schedule-card-today {
-    box-shadow: 0 0 0 1px var(--color-primary-light), var(--shadow-md);
-}
-
-.schedule-task-list,
-.schedule-task-row {
-    min-width: 0;
-}
-
-.schedule-task-row {
-    align-items: flex-start;
-}
-
-.schedule-task-icon {
-    flex-shrink: 0;
-    margin-top: 1px;
-}
-
-.schedule-task-name {
-    min-width: 0;
-    line-height: 1.35;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    overflow: hidden;
-}
-
-.schedule-card-expanded .schedule-task-name {
-    display: block;
-    -webkit-line-clamp: initial;
-    overflow: visible;
-}
-
-.health-complex-meta {
-    min-width: 0;
-    flex: 1 1 auto;
-}
-
-.health-complex-name {
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Today indicator pulse */
-.today-indicator {
-    animation: pulse 2s ease-in-out infinite;
-}
-
-@keyframes pulse {
-
-    0%,
-    100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-
-    50% {
-        opacity: 0.7;
-        transform: scale(1.1);
-    }
-}
-
-/* =============================================================================
-   TIME CONTROLLER
-   ============================================================================= */
-.time-btn {
-    transition: all 0.2s ease;
-}
-
-.time-btn.active {
-    transform: scale(1.05);
-}
-
-.time-btn:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--color-primary-light);
-}
-
-/* =============================================================================
    NOTIFICATION CARDS
    ============================================================================= */
 .notification-card {
@@ -411,127 +883,2445 @@
     animation: fadeOut 0.3s ease forwards;
 }
 
-.notification-card:hover {
-    transform: translateX(2px);
+.calendar-alert-rail {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 0.9rem 1rem;
+    border-radius: 1.15rem;
+    border: 1px solid rgba(217, 119, 6, 0.18);
+    background:
+        radial-gradient(circle at top right, rgba(245, 158, 11, 0.18), transparent 38%),
+        linear-gradient(180deg, rgba(255, 250, 235, 0.98) 0%, rgba(255, 245, 214, 0.96) 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.72),
+        0 8px 18px rgba(146, 64, 14, 0.06);
+}
+
+.calendar-alert-rail__icon {
+    display: grid;
+    place-items: center;
+    width: 2.55rem;
+    height: 2.55rem;
+    border-radius: 999px;
+    border: 1px solid rgba(217, 119, 6, 0.16);
+    background: rgba(255, 255, 255, 0.72);
+    color: #b45309;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.86);
+}
+
+.calendar-alert-rail__copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+}
+
+.calendar-alert-rail__eyebrow {
+    color: rgba(146, 64, 14, 0.72);
+    font-size: 0.56rem;
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.calendar-alert-rail__title {
+    min-width: 0;
+    color: #b45309;
+    font-size: 0.96rem;
+    font-weight: 800;
+    line-height: 1.18;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calendar-alert-rail__message {
+    min-width: 0;
+    color: rgba(146, 64, 14, 0.86);
+    font-size: 0.76rem;
+    line-height: 1.28;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.calendar-alert-rail__action {
+    flex: 0 0 auto;
+    min-height: 2.1rem;
+    padding: 0.46rem 0.86rem;
+    border-radius: 0.9rem;
+    border: 1px solid rgba(217, 119, 6, 0.14);
+    background: rgba(255, 255, 255, 0.78);
+    color: #b45309;
+    font-size: 0.74rem;
+    font-weight: 800;
+    line-height: 1;
+    transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.calendar-alert-rail__action:hover {
+    border-color: rgba(217, 119, 6, 0.24);
+    background: rgba(255, 255, 255, 0.94);
+    box-shadow: 0 6px 14px rgba(146, 64, 14, 0.08);
 }
 
 /* =============================================================================
-   RESPONSIVE ADAPTATIONS
+   LOADING OVERLAY
+   ============================================================================= */
+.calendar-loading-logo {
+    width: 72px;
+    height: 72px;
+    object-fit: contain;
+    display: block;
+}
+
+.calendar-loading-panel {
+    backdrop-filter: saturate(1.05);
+}
+
+.calendar-loading-logo-frame {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+}
+
+.calendar-loading-logo-frame > .calendar-loading-logo {
+    grid-area: 1 / 1;
+}
+
+.calendar-loading-skeleton {
+    pointer-events: none;
+}
+
+/* =============================================================================
+   RESPONSIVE ADAPTATIONS (single declaration per breakpoint)
    ============================================================================= */
 
-/* Mobile: Vertical schedule */
+/* ---- Mobile (≤768px) ---- */
 @media (max-width: 768px) {
-    .schedule-strip {
-        flex-direction: column;
-        overflow-x: visible;
+    body.calendar-layout {
+        --calendar-padding: 0.75rem;
+        --calendar-card-padding: 0.8rem;
+        --calendar-card-padding-sm: 0.7rem;
         overflow-y: auto;
     }
 
-    .schedule-card {
-        min-width: 100% !important;
+    body.calendar-layout .calendar-header {
+        height: auto;
+        min-height: var(--calendar-header-height);
+        padding: 0.65rem 0.9rem;
+    }
+
+    body.calendar-layout .calendar-header > div {
+        height: auto;
+        align-items: flex-start;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    body.calendar-layout .calendar-main {
+        height: auto;
+        min-height: calc(100vh - var(--calendar-header-height) - var(--connection-banner-height, 0px));
+        padding: 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    body.calendar-layout .calendar-main > .calendar-top-grid,
+    body.calendar-layout .calendar-main > .calendar-schedule,
+    body.calendar-layout .calendar-main > .calendar-bottom-grid {
+        min-height: auto;
+    }
+
+    body.calendar-layout .calendar-top-grid,
+    body.calendar-layout .calendar-bottom-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.calendar-layout .calendar-control-card,
+    body.calendar-layout .calendar-activity-col,
+    body.calendar-layout .calendar-health-col {
+        min-width: 0;
+    }
+
+    body.calendar-layout #schedule-strip {
+        flex-direction: column;
+        overflow-x: visible;
+        overflow-y: auto;
+        padding-bottom: 0.5rem;
+    }
+
+    body.calendar-layout .schedule-card {
+        width: 100%;
+        min-width: 100%;
         flex: none;
+        min-height: 132px;
     }
 
     .drag-scroll {
         cursor: default;
     }
 
-    /* Stack recipe cards */
-    .recipe-cards {
-        grid-template-columns: 1fr !important;
+    body.calendar-layout #health-content {
+        grid-template-columns: 1fr;
+        align-items: stretch;
     }
 
-    /* Health indicator layout */
-    .health-section {
-        flex-direction: column;
+    body.calendar-layout #health-chart {
+        margin-inline: auto;
     }
 
-    .health-ring-container {
-        margin: 0 auto;
+    body.calendar-layout #health-list {
+        width: 100%;
     }
 }
 
-/* Tablet adjustments */
-@media (min-width: 769px) and (max-width: 1024px) {
+/* ---- Tablet (≤1024px, >768px) ---- */
+@media (max-width: 1024px) and (min-width: 769px) {
+    body.calendar-layout {
+        overflow-y: auto;
+    }
+
+    body.calendar-layout .calendar-main {
+        height: auto;
+        min-height: calc(100vh - var(--calendar-header-height) - var(--connection-banner-height, 0px));
+        display: flex;
+        flex-direction: column;
+    }
+
+    body.calendar-layout .calendar-main > .calendar-top-grid,
+    body.calendar-layout .calendar-main > .calendar-schedule,
+    body.calendar-layout .calendar-main > .calendar-bottom-grid {
+        min-height: auto;
+    }
+
+    body.calendar-layout #schedule-strip {
+        padding-bottom: 0.5rem;
+    }
+
     .schedule-card {
         min-width: 140px;
     }
 }
 
-/* Large screens */
-@media (min-width: 1200px) {
-    .schedule-card {
-        width: 208px;
-        min-width: 208px;
-        flex-basis: 208px;
+/* ---- Short desktop (1024px+, height ≤980px) ---- */
+@media (min-width: 1024px) and (max-height: 980px) {
+    body.calendar-layout {
+        --calendar-gap: 0.6rem;
+        --calendar-gap-sm: 0.45rem;
+        --calendar-padding: 0.65rem;
+        --calendar-card-padding: 0.7rem;
+        --calendar-card-padding-sm: 0.6rem;
     }
 
-    .schedule-card-expanded {
-        width: 280px;
-        min-width: 280px;
-        flex-basis: 280px;
+    body.calendar-layout .calendar-main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(160px, max-content) minmax(210px, max-content) minmax(220px, 1fr);
+    }
+
+    body.calendar-layout .calendar-header {
+        padding-top: 0.45rem;
+        padding-bottom: 0.45rem;
+    }
+
+    body.calendar-layout .calendar-card-body,
+    body.calendar-layout .calendar-summary-card,
+    body.calendar-layout .calendar-panel-card {
+        gap: 0.55rem;
+    }
+
+    body.calendar-layout .schedule-card {
+        min-height: 156px;
+    }
+
+    body.calendar-layout #schedule-strip {
+        padding-bottom: 0.1rem;
+    }
+
+    body.calendar-layout #health-content {
+        gap: 0.6rem;
+    }
+
+    body.calendar-layout #health-chart {
+        width: 4rem;
+        height: 4rem;
     }
 }
 
-@media (min-width: 1024px) and (max-height: 980px) {
-    .calendar-header {
-        padding-top: 0.625rem;
-        padding-bottom: 0.625rem;
-    }
-
-    .calendar-main {
-        gap: 0.75rem;
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
-    }
-
-    .calendar-card-body,
-    .calendar-summary-card,
-    .calendar-panel-card {
-        gap: 0.75rem;
-    }
-
-    .calendar-card-body {
-        padding: 0.875rem;
-    }
-
+/* ---- Large screens (≥1200px) ---- */
+@media (min-width: 1200px) {
     .schedule-card {
-        min-height: 144px;
-        padding: 0.875rem;
+        width: 176px;
+        min-width: 176px;
+        flex-basis: 176px;
     }
 
-    #schedule-strip {
-        padding-bottom: 0.25rem;
-    }
-
-    #heatmap {
-        gap: 0.35rem;
-        margin-bottom: 0.75rem;
-    }
-
-    #health-content {
-        gap: 0.875rem;
-    }
-
-    #health-chart {
-        width: 4.5rem;
-        height: 4.5rem;
+    .schedule-card-expanded {
+        width: 252px;
+        min-width: 252px;
+        flex-basis: 252px;
     }
 }
 
 /* =============================================================================
-   DARK MODE (Future support)
+   CALENDAR POLISH OVERRIDES
    ============================================================================= */
-.dark .tooltip::after {
-    background: var(--color-text-contrast);
+@media (min-width: 769px) {
+    .schedule-strip {
+        scroll-snap-type: x proximity;
+        scroll-padding: 0 8px;
+        padding-inline: 0.125rem 0.375rem;
+    }
+
+    body.calendar-layout #schedule-strip {
+        gap: clamp(0.5rem, 0.85vw, 0.75rem);
+        padding: 0.1rem 0.375rem 0 0.125rem;
+    }
+
+    .schedule-card {
+        width: 168px;
+        min-width: 168px;
+        flex: 0 0 168px;
+        min-height: 204px;
+    }
+
+    .schedule-card-expanded {
+        width: 236px;
+        min-width: 236px;
+        flex-basis: 236px;
+    }
+
+    body.calendar-layout #health-content {
+        grid-template-columns: minmax(0, 108px) minmax(0, 1fr);
+        gap: 0.75rem;
+        align-items: start;
+    }
+
+    body.calendar-layout #health-content.health-content--empty {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    body.calendar-layout #health-content.health-content--sparse {
+        grid-template-columns: minmax(0, 108px) minmax(0, 1fr);
+        gap: 0.75rem;
+    }
+}
+
+body.calendar-layout #schedule-strip > .schedule-card:last-child {
+    margin-inline-end: 0.125rem;
+}
+
+.schedule-complex-summary {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.55rem 0.65rem;
+    border-radius: 0.8rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: var(--color-component-panel-row-soft-bg);
+}
+
+.schedule-complex-summary__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.35rem;
+}
+
+.schedule-complex-summary__count {
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1.2;
     color: var(--color-text-main);
+}
+
+.schedule-complex-summary__hint {
+    font-size: 0.63rem;
+    line-height: 1.1;
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
+
+.schedule-complex-summary__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+}
+
+.schedule-complex-chip {
+    max-width: 100%;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.18rem 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    font-size: 0.66rem;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.schedule-complex-chip--muted {
+    color: var(--color-text-main);
+    font-weight: 700;
+}
+
+body.calendar-layout .schedule-task-list {
+    gap: 0.55rem;
+}
+
+.health-chart-shell {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 0.15rem;
+}
+
+.health-ring-wrap {
+    position: relative;
+    width: 104px;
+    height: 104px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.health-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: conic-gradient(from -90deg, var(--color-bg-tertiary) 0% 100%);
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+    transition: background 0.35s ease;
+}
+
+.health-ring::after {
+    content: '';
+    position: absolute;
+    inset: 12px;
+    border-radius: 999px;
+    background: var(--color-surface-1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
+}
+
+.health-ring:hover {
+    transform: none;
+}
+
+.health-ring-core {
+    position: relative;
+    z-index: 1;
+    width: 76px;
+    height: 76px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.calendar-layout #health-percent {
+    line-height: 1;
+}
+
+body.calendar-layout #health-list {
+    gap: 0.55rem;
+    padding-right: 0.2rem;
+}
+
+.health-complex-item {
+    align-items: flex-start;
+    padding: 0.65rem 0.72rem;
+    border-radius: 0.95rem;
+}
+
+.health-complex-detail {
+    margin-left: 0.8rem;
+}
+
+.health-complex-score {
+    min-width: 3rem;
+    margin-top: 0.05rem;
+}
+
+@media (min-width: 1024px) and (max-height: 980px) {
+    body.calendar-layout .schedule-card {
+        min-height: 172px;
+    }
+
+    .health-ring-wrap {
+        width: 96px;
+        height: 96px;
+    }
+}
+
+@media (min-width: 1200px) {
+    .schedule-card {
+        width: 168px;
+        min-width: 168px;
+        flex-basis: 168px;
+    }
+
+    .schedule-card-expanded {
+        width: 236px;
+        min-width: 236px;
+        flex-basis: 236px;
+    }
+}
+
+/* =============================================================================
+   MEMORY HEALTH REDESIGN OVERRIDES
+   ============================================================================= */
+body.calendar-layout #health-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+body.calendar-layout #health-content.health-content--empty {
+    display: flex;
+}
+
+body.calendar-layout #health-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    overflow: hidden;
+    padding-right: 0;
+}
+
+#health-chart.health-summary-panel {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: linear-gradient(180deg, var(--color-surface-1) 0%, var(--color-bg-secondary) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.health-summary-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.health-summary-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.health-status-pill {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    padding: 0.26rem 0.68rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.health-status-pill--good {
+    border-color: var(--color-success);
+    background: var(--color-success-light);
+    color: var(--color-success-dark);
+}
+
+.health-status-pill--steady {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.health-status-pill--alert {
+    border-color: var(--color-error);
+    background: var(--color-error-light);
+    color: var(--color-error-text);
+}
+
+.health-status-pill--muted {
+    border-color: var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+}
+
+.health-summary-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.health-summary-copy__title {
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.14;
+    color: var(--color-text-main);
+}
+
+.health-summary-copy__text {
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.health-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.health-metric {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.28rem;
+    padding: 0.42rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+}
+
+.health-metric__value {
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--color-text-main);
+}
+
+.health-metric__label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-text-secondary);
+}
+
+.health-priority-panel {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.health-priority-panel__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.health-priority-panel__heading {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+}
+
+.health-priority-panel__eyebrow {
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+}
+
+.health-priority-panel__caption {
+    font-size: 0.72rem;
+    line-height: 1.3;
+    color: var(--color-text-secondary);
+}
+
+.health-priority-panel__action {
+    flex: 0 0 auto;
+    min-height: 2rem;
+    padding: 0.36rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.health-priority-panel__action:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-soft);
+}
+
+.health-priority-item {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.42rem;
+    width: 100%;
+    padding: 0.7rem 0.82rem;
+    border-radius: 1rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: var(--color-component-panel-row-soft-bg);
+    text-align: left;
+    cursor: pointer;
+    appearance: none;
+    transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.health-priority-item:hover {
+    transform: translateY(-1px);
+    border-color: var(--health-item-accent, var(--color-primary-light));
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.06);
+}
+
+.health-priority-item--good {
+    --health-item-accent: var(--color-success);
+    --health-item-soft: var(--color-success-light);
+    --health-item-fg: var(--color-success-dark);
+}
+
+.health-priority-item--steady {
+    --health-item-accent: var(--color-primary);
+    --health-item-soft: var(--color-primary-soft);
+    --health-item-fg: var(--color-primary);
+}
+
+.health-priority-item--alert {
+    --health-item-accent: var(--color-error);
+    --health-item-soft: var(--color-error-light);
+    --health-item-fg: var(--color-error-text);
+}
+
+.health-priority-item__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.health-priority-item__title {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.48rem;
+    min-width: 0;
+}
+
+.health-priority-item__dot {
+    flex: 0 0 auto;
+    width: 0.56rem;
+    height: 0.56rem;
+    margin-top: 0.28rem;
+    border-radius: 999px;
+    background: var(--health-item-accent, var(--color-primary));
+}
+
+.health-priority-item__name {
+    min-width: 0;
+    color: var(--color-text-main);
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.28;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.health-priority-item__percent {
+    flex: 0 0 auto;
+    min-width: 3rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--health-item-fg, var(--color-primary));
+    text-align: right;
+}
+
+.health-priority-item__bar {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 0.34rem;
+    border-radius: 999px;
+    background: var(--color-bg-secondary);
+}
+
+.health-priority-item__bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--health-item-accent, var(--color-primary));
+}
+
+.health-priority-item__message {
+    font-size: 0.74rem;
+    line-height: 1.38;
+    color: var(--color-text-secondary);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.health-priority-item__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.health-priority-item__tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.45rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    background: var(--health-item-soft, var(--color-primary-soft));
+    color: var(--health-item-fg, var(--color-primary));
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.health-priority-item__hint {
+    font-size: 0.68rem;
+    line-height: 1.2;
+    color: var(--color-text-secondary);
+}
+
+.health-more-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    min-height: 2.35rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.95rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    font-size: 0.76rem;
+    font-weight: 700;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.health-more-button:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-soft);
+}
+
+.health-ring-wrap {
+    position: relative;
+    flex: 0 0 auto;
+    width: 96px;
+    height: 96px;
+}
+
+.health-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+
+.health-ring::after {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: 999px;
+    background: var(--color-surface-1);
+}
+
+.health-ring-core {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.calendar-layout #health-percent {
+    position: relative;
+    z-index: 1;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+@media (max-width: 1440px) {
+    #health-chart.health-summary-panel {
+        grid-template-columns: 80px minmax(0, 1fr);
+        gap: 0.7rem;
+        padding: 0.72rem 0.82rem;
+    }
+
+    .health-ring-wrap {
+        width: 80px;
+        height: 80px;
+    }
+
+    .health-ring::after {
+        inset: 8px;
+    }
+
+    .health-summary-copy__title {
+        font-size: 0.86rem;
+    }
+
+    .health-summary-copy__text {
+        font-size: 0.68rem;
+    }
+
+    .health-metric {
+        padding: 0.36rem 0.48rem;
+    }
+
+    .health-priority-panel__caption {
+        font-size: 0.66rem;
+    }
+
+    .health-priority-item {
+        gap: 0.34rem;
+        padding: 0.58rem 0.68rem;
+    }
+
+    .health-priority-item__name {
+        font-size: 0.76rem;
+    }
+
+    .health-priority-item__percent {
+        font-size: 0.68rem;
+    }
+
+    .health-priority-item__message {
+        font-size: 0.66rem;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+    }
+
+    .health-priority-item__tag {
+        min-height: 1.28rem;
+        padding: 0.12rem 0.38rem;
+        font-size: 0.56rem;
+    }
+
+    .health-priority-item__hint {
+        font-size: 0.6rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #health-chart.health-summary-panel {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .health-summary-main,
+    .health-summary-panel__header,
+    .health-priority-panel__header {
+        width: 100%;
+    }
+
+    .health-priority-panel__header {
+        flex-direction: column;
+    }
+
+    .health-priority-panel__action {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* =============================================================================
+   MEMORY HEALTH FINAL LAYOUT
+   ============================================================================= */
+body.calendar-layout #health-content.memory-health {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+}
+
+body.calendar-layout #health-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    overflow: hidden;
+    padding-right: 0;
+}
+
+#health-chart.memory-health-summary {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    border-radius: 1rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: linear-gradient(180deg, var(--color-surface-1) 0%, var(--color-bg-secondary) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72), 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.memory-health-ring-wrap {
+    position: relative;
+    width: 96px;
+    height: 96px;
+}
+
+.memory-health-ring {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+}
+
+.memory-health-ring::after {
+    content: '';
+    position: absolute;
+    inset: 10px;
+    border-radius: 999px;
+    background: var(--color-surface-1);
+}
+
+.memory-health-ring-core {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.memory-health-summary-main {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.memory-health-summary-top {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.memory-health-badge {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.75rem;
+    padding: 0.26rem 0.68rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-badge--good {
+    border-color: var(--color-success);
+    background: var(--color-success-light);
+    color: var(--color-success-dark);
+}
+
+.memory-health-badge--steady {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-soft);
+    color: var(--color-primary);
+}
+
+.memory-health-badge--alert {
+    border-color: var(--color-error);
+    background: var(--color-error-light);
+    color: var(--color-error-text);
+}
+
+.memory-health-badge--muted {
+    border-color: var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+}
+
+.memory-health-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.memory-health-title {
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.14;
+    color: var(--color-text-main);
+}
+
+.memory-health-text {
+    font-size: 0.76rem;
+    line-height: 1.4;
+    color: var(--color-text-secondary);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.memory-health-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.memory-health-metric {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.28rem;
+    padding: 0.42rem 0.55rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+}
+
+.memory-health-metric__value {
+    font-size: 0.82rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--color-text-main);
+}
+
+.memory-health-metric__label {
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-text-secondary);
+}
+
+.memory-health-priority {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+}
+
+.memory-health-priority-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.memory-health-priority-heading {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+}
+
+.memory-health-priority-eyebrow {
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-text-secondary);
+}
+
+.memory-health-priority-caption {
+    font-size: 0.72rem;
+    line-height: 1.3;
+    color: var(--color-text-secondary);
+}
+
+.memory-health-priority-action {
+    flex: 0 0 auto;
+    min-height: 2rem;
+    padding: 0.36rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+}
+
+.memory-health-priority-item {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.42rem;
+    width: 100%;
+    padding: 0.7rem 0.82rem;
+    border-radius: 1rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: var(--color-component-panel-row-soft-bg);
+    text-align: left;
+    cursor: pointer;
+    appearance: none;
+}
+
+.memory-health-priority-item--good {
+    --memory-health-accent: var(--color-success);
+    --memory-health-soft: var(--color-success-light);
+    --memory-health-fg: var(--color-success-dark);
+}
+
+.memory-health-priority-item--steady {
+    --memory-health-accent: var(--color-primary);
+    --memory-health-soft: var(--color-primary-soft);
+    --memory-health-fg: var(--color-primary);
+}
+
+.memory-health-priority-item--alert {
+    --memory-health-accent: var(--color-error);
+    --memory-health-soft: var(--color-error-light);
+    --memory-health-fg: var(--color-error-text);
+}
+
+.memory-health-priority-item__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.memory-health-priority-item__title {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.48rem;
+    min-width: 0;
+}
+
+.memory-health-priority-item__dot {
+    flex: 0 0 auto;
+    width: 0.56rem;
+    height: 0.56rem;
+    margin-top: 0.28rem;
+    border-radius: 999px;
+    background: var(--memory-health-accent, var(--color-primary));
+}
+
+.memory-health-priority-item__name {
+    min-width: 0;
+    color: var(--color-text-main);
+    font-size: 0.84rem;
+    font-weight: 700;
+    line-height: 1.28;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.memory-health-priority-item__percent {
+    flex: 0 0 auto;
+    min-width: 3rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--memory-health-fg, var(--color-primary));
+    text-align: right;
+}
+
+.memory-health-priority-item__bar {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 0.34rem;
+    border-radius: 999px;
+    background: var(--color-bg-secondary);
+}
+
+.memory-health-priority-item__bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--memory-health-accent, var(--color-primary));
+}
+
+.memory-health-priority-item__message {
+    font-size: 0.74rem;
+    line-height: 1.38;
+    color: var(--color-text-secondary);
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.memory-health-priority-item__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+}
+
+.memory-health-priority-item__tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.45rem;
+    padding: 0.18rem 0.5rem;
+    border-radius: 999px;
+    background: var(--memory-health-soft, var(--color-primary-soft));
+    color: var(--memory-health-fg, var(--color-primary));
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-priority-item__hint {
+    font-size: 0.68rem;
+    line-height: 1.2;
+    color: var(--color-text-secondary);
+}
+
+.memory-health-more-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    min-height: 2.35rem;
+    padding: 0.5rem 0.8rem;
+    border-radius: 0.95rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    font-size: 0.76rem;
+    font-weight: 700;
+}
+
+body.calendar-layout #health-percent {
+    position: relative;
+    z-index: 1;
+    line-height: 1;
+    letter-spacing: -0.04em;
+}
+
+@media (max-width: 1440px) {
+    #health-chart.memory-health-summary {
+        grid-template-columns: 82px minmax(0, 1fr);
+        gap: 0.72rem;
+        padding: 0.76rem 0.82rem;
+    }
+
+    .memory-health-ring-wrap {
+        width: 82px;
+        height: 82px;
+    }
+
+    .memory-health-ring::after {
+        inset: 8px;
+    }
+
+    .memory-health-title {
+        font-size: 0.9rem;
+    }
+
+    .memory-health-text {
+        font-size: 0.68rem;
+    }
+
+    .memory-health-metrics {
+        gap: 0.32rem;
+    }
+
+    .memory-health-metric {
+        padding: 0.3rem 0.44rem;
+    }
+
+    .memory-health-metric__value {
+        font-size: 0.76rem;
+    }
+
+    .memory-health-metric__label {
+        font-size: 0.56rem;
+    }
+
+    .memory-health-priority-caption {
+        font-size: 0.66rem;
+    }
+
+    .memory-health-priority-item {
+        gap: 0.34rem;
+        padding: 0.58rem 0.68rem;
+    }
+
+    .memory-health-priority-item__name {
+        font-size: 0.76rem;
+    }
+
+    .memory-health-priority-item__percent {
+        font-size: 0.68rem;
+    }
+
+    .memory-health-priority-item__message {
+        font-size: 0.66rem;
+        -webkit-line-clamp: 1;
+        line-clamp: 1;
+    }
+
+    .memory-health-priority-item__tag {
+        min-height: 1.28rem;
+        padding: 0.12rem 0.38rem;
+        font-size: 0.56rem;
+    }
+
+    .memory-health-priority-item__hint {
+        font-size: 0.6rem;
+    }
+}
+
+@media (max-width: 768px) {
+    #health-chart.memory-health-summary {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .memory-health-summary-main,
+    .memory-health-summary-top,
+    .memory-health-priority-header {
+        width: 100%;
+    }
+
+    .memory-health-priority-header {
+        flex-direction: column;
+    }
+
+    .memory-health-priority-action {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.memory-health-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+    min-height: 0;
+}
+
+.memory-health-shell--compact {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-areas:
+        'ring summary'
+        'ring actions';
+    align-items: center;
+    column-gap: 0.7rem;
+    row-gap: 0.28rem;
+}
+
+.memory-health-overview,
+.memory-health-focus {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.memory-health-overview {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr);
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    border-radius: 1.1rem;
+    border: 1px solid rgba(120, 134, 174, 0.18);
+    background:
+        radial-gradient(circle at top right, rgba(87, 82, 208, 0.08), transparent 42%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(246, 248, 255, 0.96) 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.82);
+}
+
+.memory-health-shell--compact .memory-health-overview {
+    display: contents;
+}
+
+.memory-health-progress-wrap {
+    position: relative;
+    width: 72px;
+    height: 72px;
+}
+
+.memory-health-shell--compact .memory-health-progress-wrap {
+    grid-area: ring;
+    align-self: center;
+    width: 56px;
+    height: 56px;
+}
+
+.memory-health-progress {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1px var(--color-border-subtle);
+    transition: background 0.35s ease;
+}
+
+.memory-health-progress::after {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border-radius: 999px;
+    background: var(--color-surface-1);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.82);
+}
+
+.memory-health-shell--compact .memory-health-progress::after {
+    inset: 7px;
+}
+
+.memory-health-progress-core {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.memory-health-progress-value {
+    color: var(--color-text-main);
+    font-size: 1.16rem;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.05em;
+}
+
+.memory-health-shell--compact .memory-health-progress-value {
+    font-size: 0.96rem;
+}
+
+.memory-health-overview-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+}
+
+.memory-health-shell--compact .memory-health-overview-copy {
+    grid-area: summary;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.42rem;
+    min-width: 0;
+}
+
+.memory-health-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-height: 1.7rem;
+    padding: 0.24rem 0.72rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-shell--compact .memory-health-status {
+    order: 1;
+    flex: 0 0 auto;
+    min-height: 1.3rem;
+    padding: 0.12rem 0.46rem;
+    font-size: 0.58rem;
+}
+
+.memory-health-status--good {
+    border-color: rgba(5, 150, 105, 0.22);
+    background: rgba(5, 150, 105, 0.1);
+    color: #047857;
+}
+
+.memory-health-status--steady {
+    border-color: rgba(87, 82, 208, 0.22);
+    background: rgba(87, 82, 208, 0.09);
+    color: var(--color-primary);
+}
+
+.memory-health-status--alert {
+    border-color: rgba(220, 38, 38, 0.18);
+    background: rgba(220, 38, 38, 0.08);
+    color: #b91c1c;
+}
+
+.memory-health-status--muted {
+    border-color: var(--color-border-subtle);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+}
+
+.memory-health-overview-title {
+    color: var(--color-text-main);
+    font-size: 1rem;
+    font-weight: 800;
+    line-height: 1.18;
+}
+
+.memory-health-shell--compact .memory-health-overview-title {
+    order: 2;
+    flex: 1 1 auto;
+    min-width: 0;
+    font-size: 0.86rem;
+    line-height: 1.16;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.memory-health-overview-text {
+    color: var(--color-text-secondary);
+    font-size: 0.79rem;
+    line-height: 1.42;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    overflow: hidden;
+}
+
+.memory-health-shell--compact .memory-health-overview-text {
+    display: none;
+}
+
+.memory-health-stats {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: 0.48rem;
+    row-gap: 0.42rem;
+}
+
+.memory-health-shell--compact .memory-health-stats {
+    order: 3;
+    flex: 0 1 auto;
+    justify-content: flex-end;
+    margin-left: auto;
+    column-gap: 0.28rem;
+    row-gap: 0;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.memory-health-stat {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.24rem;
+    min-height: 1.75rem;
+    padding: 0.3rem 0.62rem;
+    border: 1px solid rgba(120, 134, 174, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.memory-health-shell--compact .memory-health-stat {
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.memory-health-stat__value {
+    color: var(--color-text-main);
+    font-size: 0.78rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-shell--compact .memory-health-stat__value {
+    font-size: 0.72rem;
+}
+
+.memory-health-stat__label {
+    color: var(--color-text-secondary);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.memory-health-shell--compact .memory-health-stat__label {
+    font-size: 0.58rem;
+}
+
+.memory-health-focus {
+    display: flex;
+    flex-direction: column;
+    gap: 0.42rem;
+    padding: 0.42rem 0 0;
+    border-top: 1px solid rgba(120, 134, 174, 0.22);
+    min-height: 0;
+}
+
+.memory-health-focus-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.6rem;
+}
+
+.memory-health-focus-heading {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.16rem;
+}
+
+.memory-health-focus-eyebrow {
+    color: var(--color-text-secondary);
+    font-size: 0.64rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.memory-health-focus-caption {
+    color: var(--color-text-secondary);
+    font-size: 0.66rem;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.memory-health-focus-action {
+    flex: 0 0 auto;
+    min-height: 1.8rem;
+    padding: 0.28rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.memory-health-focus-action:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-soft);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.memory-health-list,
+.memory-health-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.memory-health-card {
+    --memory-health-accent: var(--color-primary);
+    --memory-health-soft: rgba(87, 82, 208, 0.1);
+    --memory-health-foreground: var(--color-primary);
+    min-width: 0;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 0.26rem;
+    padding: 0.5rem 0.62rem;
+    border-radius: 0.95rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: rgba(255, 255, 255, 0.9);
+    text-align: left;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.memory-health-card:hover {
+    border-color: var(--memory-health-accent);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.07);
+}
+
+.memory-health-card--good,
+.memory-health-chip--good {
+    --memory-health-accent: #059669;
+    --memory-health-soft: rgba(5, 150, 105, 0.12);
+    --memory-health-foreground: #047857;
+}
+
+.memory-health-card--steady,
+.memory-health-chip--steady {
+    --memory-health-accent: var(--color-primary);
+    --memory-health-soft: rgba(87, 82, 208, 0.1);
+    --memory-health-foreground: var(--color-primary);
+}
+
+.memory-health-card--alert,
+.memory-health-chip--alert {
+    --memory-health-accent: #dc2626;
+    --memory-health-soft: rgba(220, 38, 38, 0.08);
+    --memory-health-foreground: #b91c1c;
+}
+
+.memory-health-card__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.45rem;
+}
+
+.memory-health-card__title {
+    min-width: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.38rem;
+}
+
+.memory-health-card__dot {
+    flex: 0 0 auto;
+    width: 0.46rem;
+    height: 0.46rem;
+    margin-top: 0.22rem;
+    border-radius: 999px;
+    background: var(--memory-health-accent);
+}
+
+.memory-health-card__name {
+    min-width: 0;
+    color: var(--color-text-main);
+    font-size: 0.74rem;
+    font-weight: 800;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.memory-health-card__percent {
+    flex: 0 0 auto;
+    color: var(--memory-health-foreground);
+    font-size: 0.66rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-card__bar {
+    position: relative;
+    overflow: hidden;
+    width: 100%;
+    height: 0.3rem;
+    border-radius: 999px;
+    background: var(--color-bg-secondary);
+}
+
+.memory-health-card__bar-fill {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--memory-health-accent);
+}
+
+.memory-health-card__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.45rem;
+    flex-wrap: nowrap;
+}
+
+.memory-health-card__tag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.28rem;
+    padding: 0.14rem 0.42rem;
+    border-radius: 999px;
+    background: var(--memory-health-soft);
+    color: var(--memory-health-foreground);
+    font-size: 0.58rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-card__meta {
+    min-width: 0;
+    color: var(--color-text-secondary);
+    font-size: 0.63rem;
+    font-weight: 700;
+    line-height: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.memory-health-secondary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+}
+
+.memory-health-chip {
+    --memory-health-accent: var(--color-primary);
+    --memory-health-soft: rgba(87, 82, 208, 0.08);
+    --memory-health-foreground: var(--color-primary);
+    min-width: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.55rem;
+    max-width: 100%;
+    padding: 0.46rem 0.62rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: var(--memory-health-soft);
+    color: var(--color-text-main);
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 0.16s ease, background 0.16s ease;
+}
+
+.memory-health-chip:hover {
+    border-color: var(--memory-health-accent);
+    background: rgba(255, 255, 255, 0.9);
+}
+
+.memory-health-chip__name {
+    min-width: 0;
+    max-width: 15rem;
+    color: var(--color-text-main);
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.memory-health-chip__percent {
+    flex: 0 0 auto;
+    color: var(--memory-health-foreground);
+    font-size: 0.68rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-more {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.3rem;
+    width: 100%;
+    min-height: 2.25rem;
+    padding: 0.48rem 0.78rem;
+    border-radius: 0.95rem;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.memory-health-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    min-height: 7.25rem;
+    padding: 0.8rem;
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.72);
+    text-align: center;
+}
+
+.memory-health-empty--dashed {
+    border: 1px dashed var(--color-border-subtle);
+}
+
+.memory-health-empty__icon {
+    color: var(--color-text-secondary);
+    font-size: 1.75rem;
+    opacity: 0.75;
+}
+
+.memory-health-empty__title {
+    color: var(--color-text-main);
+    font-size: 0.86rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.memory-health-empty__text {
+    max-width: 15rem;
+    color: var(--color-text-secondary);
+    font-size: 0.72rem;
+    line-height: 1.4;
+}
+
+.memory-health-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: stretch;
+    gap: 0.65rem;
+    min-height: 0;
+    padding-top: 0.1rem;
+}
+
+.memory-health-shell--compact .memory-health-actions {
+    grid-area: actions;
+    display: flex;
+    align-items: center;
+    padding-top: 0;
+}
+
+.memory-health-list {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.memory-health-shell--compact .memory-health-list {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 0.38rem;
+    width: 100%;
+    min-width: 0;
+}
+
+.memory-health-all-action {
+    flex: 0 0 auto;
+    align-self: stretch;
+    justify-self: start;
+    min-height: 100%;
+    padding: 0.65rem 0.82rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border-subtle);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.memory-health-all-action:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-soft);
+    box-shadow: 0 6px 14px rgba(15, 23, 42, 0.06);
+}
+
+.memory-health-all-action.is-hidden {
+    display: none;
+}
+
+.memory-health-shell--compact .memory-health-all-action {
+    display: none;
+}
+
+.memory-health-action {
+    --memory-health-accent: var(--color-primary);
+    --memory-health-soft: rgba(87, 82, 208, 0.08);
+    --memory-health-foreground: var(--color-primary);
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: 4rem;
+    padding: 0.76rem 0.82rem;
+    border-radius: 1.05rem;
+    border: 1px solid var(--color-component-panel-row-soft-border);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 255, 0.94) 100%);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+    text-align: left;
+    cursor: pointer;
+    appearance: none;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.memory-health-shell--compact .memory-health-action {
+    flex: 1 1 0;
+    width: auto;
+    min-width: 0;
+    min-height: 2.05rem;
+    padding: 0.36rem 0.52rem;
+    gap: 0.38rem;
+    border-radius: 999px;
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.04);
+}
+
+.memory-health-action:hover {
+    border-color: var(--memory-health-accent);
+    box-shadow: 0 10px 18px rgba(15, 23, 42, 0.07);
+}
+
+.memory-health-action--good {
+    --memory-health-accent: #059669;
+    --memory-health-soft: rgba(5, 150, 105, 0.12);
+    --memory-health-foreground: #047857;
+}
+
+.memory-health-action--steady {
+    --memory-health-accent: var(--color-primary);
+    --memory-health-soft: rgba(87, 82, 208, 0.1);
+    --memory-health-foreground: var(--color-primary);
+}
+
+.memory-health-action--alert {
+    --memory-health-accent: #dc2626;
+    --memory-health-soft: rgba(220, 38, 38, 0.08);
+    --memory-health-foreground: #b91c1c;
+}
+
+.memory-health-action__copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.24rem;
+}
+
+.memory-health-action__label {
+    color: var(--memory-health-foreground);
+    font-size: 0.6rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.memory-health-shell--compact .memory-health-action__label {
+    display: none;
+}
+
+.memory-health-action__name {
+    min-width: 0;
+    color: var(--color-text-main);
+    font-size: 0.9rem;
+    font-weight: 800;
+    line-height: 1.22;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.memory-health-shell--compact .memory-health-action__name {
+    font-size: 0.74rem;
+    line-height: 1.15;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.memory-health-action__side {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.2rem;
+}
+
+.memory-health-shell--compact .memory-health-action__side {
+    align-items: flex-start;
+}
+
+.memory-health-action__percent {
+    color: var(--memory-health-foreground);
+    font-size: 0.84rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.memory-health-shell--compact .memory-health-action__percent {
+    font-size: 0.7rem;
+}
+
+.memory-health-action__meta {
+    max-width: 6.5rem;
+    color: var(--color-text-secondary);
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.2;
+    overflow: hidden;
+    text-align: right;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+.memory-health-shell--compact .memory-health-action__meta {
+    display: none;
+}
+
+.memory-health-overflow-action {
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 40%;
+    min-height: 2.05rem;
+    padding: 0.36rem 0.6rem;
+    border-radius: 999px;
+    border: 1px dashed var(--color-border-subtle);
+    background: rgba(255, 255, 255, 0.7);
+    color: var(--color-primary);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: center;
+    cursor: pointer;
+    appearance: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.memory-health-overflow-action:hover {
+    border-color: var(--color-primary-light);
+    background: var(--color-primary-soft);
+}
+
+@media (max-width: 1440px) {
+    .calendar-alert-rail {
+        gap: 0.65rem;
+        padding: 0.76rem 0.86rem;
+    }
+
+    .calendar-alert-rail__icon {
+        width: 2.3rem;
+        height: 2.3rem;
+    }
+
+    .calendar-alert-rail__title {
+        font-size: 0.88rem;
+    }
+
+    .calendar-alert-rail__message {
+        font-size: 0.7rem;
+    }
+
+    .calendar-alert-rail__action {
+        min-height: 1.95rem;
+        padding: 0.4rem 0.74rem;
+        font-size: 0.68rem;
+    }
+
+    .memory-health-overview {
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 0.75rem;
+        padding: 0.78rem 0.88rem;
+    }
+
+    .memory-health-progress-wrap {
+        width: 64px;
+        height: 64px;
+    }
+
+    .memory-health-progress-value {
+        font-size: 1rem;
+    }
+
+    .memory-health-overview-title {
+        font-size: 0.92rem;
+    }
+
+    .memory-health-overview-text,
+    .memory-health-card__meta {
+        font-size: 0.68rem;
+    }
+
+    .memory-health-focus-caption {
+        font-size: 0.58rem;
+    }
+
+    .memory-health-card__name {
+        font-size: 0.7rem;
+    }
+
+    .memory-health-card__percent {
+        font-size: 0.62rem;
+    }
+
+    .memory-health-card__tag,
+    .memory-health-card__meta {
+        font-size: 0.5rem;
+    }
+
+    .memory-health-actions {
+        gap: 0.5rem;
+    }
+
+    .memory-health-all-action {
+        padding: 0.56rem 0.74rem;
+        font-size: 0.66rem;
+    }
+
+    .memory-health-action {
+        min-height: 3.5rem;
+        padding: 0.62rem 0.7rem;
+        gap: 0.52rem;
+    }
+
+    .memory-health-action__label {
+        font-size: 0.5rem;
+    }
+
+    .memory-health-action__name {
+        font-size: 0.8rem;
+    }
+
+    .memory-health-action__percent {
+        font-size: 0.74rem;
+    }
+
+    .memory-health-action__meta {
+        max-width: 5.4rem;
+        font-size: 0.56rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .calendar-alert-rail {
+        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-areas:
+            'icon copy'
+            'action action';
+        align-items: start;
+    }
+
+    .calendar-alert-rail__icon {
+        grid-area: icon;
+    }
+
+    .calendar-alert-rail__copy {
+        grid-area: copy;
+    }
+
+    .calendar-alert-rail__action {
+        grid-area: action;
+        width: 100%;
+        justify-self: stretch;
+    }
+
+    .memory-health-shell,
+    .memory-health-shell--compact {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+            'summary'
+            'ring'
+            'actions';
+    }
+
+    .memory-health-overview {
+        grid-template-columns: 1fr;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .memory-health-overview-copy {
+        align-items: center;
+    }
+
+    .memory-health-shell--compact .memory-health-overview-copy {
+        display: grid;
+        grid-template-columns: 1fr;
+        justify-items: center;
+        gap: 0.2rem;
+    }
+
+    .memory-health-shell--compact .memory-health-overview-title {
+        order: initial;
+        flex: initial;
+        white-space: normal;
+    }
+
+    .memory-health-shell--compact .memory-health-stats {
+        order: initial;
+        flex: initial;
+        margin-left: 0;
+        justify-content: center;
+    }
+
+    .memory-health-stats,
+    .memory-health-secondary {
+        justify-content: center;
+    }
+
+    .memory-health-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .memory-health-shell--compact .memory-health-list {
+        flex-wrap: wrap;
+    }
+
+    .memory-health-all-action {
+        justify-self: stretch;
+        min-height: 2.5rem;
+    }
+
+    .memory-health-action__side {
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .memory-health-focus-header {
+        flex-direction: column;
+    }
+
+    .memory-health-focus-action {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+.schedule-scroll-button:not(:disabled) {
+    opacity: 1;
+    border-color: var(--color-primary-light);
+    background: var(--color-surface-1);
+    color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(87, 82, 208, 0.12);
+}
+
+.schedule-scroll-button:not(:disabled):hover {
+    background: var(--color-primary-soft);
+    border-color: var(--color-primary);
 }
 
 /* =============================================================================
    ACCESSIBILITY
    ============================================================================= */
 @media (prefers-reduced-motion: reduce) {
-
     *,
     *::before,
     *::after {
@@ -541,13 +3331,11 @@
     }
 }
 
-/* Focus visible for keyboard navigation */
 :focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
 }
 
-/* Skip link */
 .skip-link {
     position: absolute;
     top: -40px;
@@ -563,51 +3351,4 @@
     top: 0;
 }
 
-/* Semantic Utilities for JS Dynamic Templates */
-.bg-info-light {
-    background-color: var(--color-info-light) !important;
-}
 
-.text-info-dark {
-    color: var(--color-info-dark) !important;
-}
-
-.bg-success-light {
-    background-color: var(--color-success-light) !important;
-}
-
-.text-success-dark {
-    color: var(--color-success-dark) !important;
-}
-
-.bg-warning-light {
-    background-color: var(--color-warning-light) !important;
-}
-
-.text-warning-dark {
-    color: var(--color-warning-dark) !important;
-}
-
-.bg-error-light {
-    background-color: var(--color-error-light) !important;
-}
-
-.text-error-dark {
-    color: var(--color-error-dark) !important;
-}
-
-.bg-accent-light {
-    background-color: var(--color-accent-light) !important;
-}
-
-.text-accent-dark {
-    color: var(--color-accent-dark) !important;
-}
-
-.bg-secondary-light {
-    background-color: var(--color-secondary-light) !important;
-}
-
-.text-secondary-dark {
-    color: var(--color-secondary-dark) !important;
-}

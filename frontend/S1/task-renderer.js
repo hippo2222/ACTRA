@@ -164,6 +164,34 @@
         return pickEffectiveTaskType(SessionState.currentTask);
     }
 
+    function buildTaskDraftStorageKey(task) {
+        if (!task || typeof task !== "object") return null;
+
+        const taskRef =
+            task.task_ref
+                ? String(task.task_ref)
+                : (task.module_id && task.topic_id && task.task_id)
+                    ? `${task.module_id}/${task.topic_id}/${task.task_id}`
+                    : null;
+        const queueIndex =
+            task.queue && Number.isInteger(task.queue.index)
+                ? task.queue.index
+                : null;
+        const iteration =
+            Number.isInteger(task.iteration)
+                ? task.iteration
+                : null;
+        const iterationSuffix = iteration != null ? `#iter${iteration}` : "";
+
+        if (taskRef && queueIndex != null) {
+            return `${taskRef}@${queueIndex}${iterationSuffix}`;
+        }
+        if (task.task_id != null) {
+            return `${String(task.task_id)}${iterationSuffix}`;
+        }
+        return taskRef ? `${taskRef}${iterationSuffix}` : null;
+    }
+
     // Restore Draft Helper
 
     function restoreDraftToUI(taskType, draft) {
@@ -174,11 +202,29 @@
                 SequenceUI.restoreInput(draft);
             } else if (taskType === "click" && typeof ClickUI !== "undefined" && typeof ClickUI.restoreInput === "function") {
                 ClickUI.restoreInput(draft);
+            } else if (taskType === "draw" && typeof DrawUI !== "undefined" && typeof DrawUI.restoreInput === "function") {
+                DrawUI.restoreInput(draft);
             } else if (taskType === "open_answer" && typeof OpenAnswerUI !== "undefined" && typeof OpenAnswerUI.restoreInput === "function") {
                 OpenAnswerUI.restoreInput(draft);
             }
         } catch (e) {
             console.error("Failed to restore draft:", e);
+        }
+    }
+
+    function restoreViewStateToUI(taskType, viewState) {
+        try {
+            if (taskType === "test" && typeof TestUI !== "undefined" && typeof TestUI.restoreViewState === "function") {
+                TestUI.restoreViewState(viewState);
+            } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.restoreViewState === "function") {
+                SequenceUI.restoreViewState(viewState);
+            } else if (taskType === "click" && typeof ClickUI !== "undefined" && typeof ClickUI.restoreViewState === "function") {
+                ClickUI.restoreViewState(viewState);
+            } else if (taskType === "draw" && typeof DrawUI !== "undefined" && typeof DrawUI.restoreViewState === "function") {
+                DrawUI.restoreViewState(viewState);
+            }
+        } catch (e) {
+            console.error("Failed to restore view state:", e);
         }
     }
 
@@ -191,13 +237,76 @@
         }
     }
 
+    function getTaskTypeLabel(task, effectiveTaskType) {
+        const rawType = getRawTaskType(task);
+        const visibleTaskType = rawType || effectiveTaskType;
+        const subtype = getTaskSubtype(task);
+        if (visibleTaskType === "click" && subtype === "error_detection") {
+            return "Поиск ошибок";
+        }
+        switch (visibleTaskType) {
+            case "test":
+                return "Тест";
+            case "sequence_assembly":
+                return "Последовательность";
+            case "click":
+                return "Клик";
+            case "draw":
+                return "Рисование";
+            case "open_answer":
+                return "Открытый ответ";
+            default:
+                return "Задание";
+        }
+    }
+
+    function getHeaderTitleControls() {
+        return {
+            titleEl: document.getElementById("current-task-title"),
+            toggleEl: document.getElementById("current-task-title-toggle"),
+        };
+    }
+
+    function syncHeaderTitleTooltip() {
+        const { titleEl, toggleEl } = getHeaderTitleControls();
+        if (titleEl) {
+            titleEl.classList.remove("is-expanded");
+        }
+        if (toggleEl) {
+            toggleEl.classList.add("hidden");
+            toggleEl.hidden = true;
+            toggleEl.style.display = "none";
+            toggleEl.textContent = "";
+            toggleEl.setAttribute("aria-expanded", "false");
+            toggleEl.setAttribute("aria-hidden", "true");
+        }
+    }
+
+    function bindHeaderTitleToggle() {
+        syncHeaderTitleTooltip();
+    }
+
+    function scheduleHeaderTitleToggleSync() {
+        const runSync = () => syncHeaderTitleTooltip();
+
+        if (typeof requestAnimationFrame === "function") {
+            requestAnimationFrame(runSync);
+        } else {
+            runSync();
+        }
+    }
+
     function resetExtendedResultBlocks(parts) {
         const {
             keywordsBox,
             userAnswerBox,
             referenceWrap,
             referenceText,
-            referenceTitle
+            referenceTitle,
+            decisionContext,
+            decisionActions,
+            decisionAcceptBtn,
+            decisionRejectBtn
         } = parts || {};
 
         if (keywordsBox) {
@@ -213,6 +322,103 @@
         if (referenceText) referenceText.textContent = "";
         if (referenceTitle) referenceTitle.textContent = "";
         if (referenceWrap) referenceWrap.classList.add("hidden");
+
+        if (decisionContext) {
+            clearElementChildren(decisionContext);
+            decisionContext.classList.add("hidden");
+        }
+
+        if (decisionAcceptBtn) decisionAcceptBtn.onclick = null;
+        if (decisionRejectBtn) decisionRejectBtn.onclick = null;
+        if (decisionActions) decisionActions.classList.add("hidden");
+    }
+
+    function renderDrawManualJudgementContext(parts, detailsObj) {
+        const {
+            decisionContext,
+            decisionActions,
+            decisionAcceptBtn,
+            decisionRejectBtn
+        } = parts || {};
+
+        const review =
+            detailsObj && detailsObj.manual_label_judgement && typeof detailsObj.manual_label_judgement === "object"
+                ? detailsObj.manual_label_judgement
+                : null;
+        const mismatches = review && Array.isArray(review.soft_mismatches)
+            ? review.soft_mismatches
+            : [];
+
+        if (!decisionContext || !mismatches.length) return false;
+
+        const list = document.createElement("div");
+        list.className = "flex flex-col gap-3";
+
+        mismatches.forEach((item, mismatchIdx) => {
+            const userAnswer = String(item && item.user_answer != null ? item.user_answer : "").trim();
+            const correctAnswer = String(item && item.correct_answer != null ? item.correct_answer : "").trim();
+            const omittedPhrase = String(item && item.omitted_phrase != null ? item.omitted_phrase : "").trim();
+
+            const card = document.createElement("div");
+            card.className = "rounded-lg border border-warning-light bg-surface-1 px-4 py-3 shadow-sm";
+
+            const heading = document.createElement("p");
+            heading.className = "text-xs font-bold uppercase tracking-wider text-warning-dark";
+            heading.textContent = `Название ${mismatchIdx + 1}`;
+            card.appendChild(heading);
+
+            const userLine = document.createElement("p");
+            userLine.className = "mt-2 text-sm font-medium text-text-main";
+            userLine.textContent = `Ваш ответ: ${userAnswer || "—"}`;
+            card.appendChild(userLine);
+
+            const referenceLine = document.createElement("p");
+            referenceLine.className = "mt-1 text-sm text-text-secondary leading-relaxed";
+            referenceLine.textContent = `Эталон: ${correctAnswer || "—"}`;
+            card.appendChild(referenceLine);
+
+            if (omittedPhrase) {
+                const omittedLine = document.createElement("p");
+                omittedLine.className = "mt-2 text-sm text-warning-darker leading-relaxed";
+                omittedLine.textContent = `Пропущено: ${omittedPhrase}`;
+                card.appendChild(omittedLine);
+            }
+
+            list.appendChild(card);
+        });
+
+        decisionContext.appendChild(list);
+        decisionContext.classList.remove("hidden");
+
+        if (decisionAcceptBtn) {
+            decisionAcceptBtn.onclick = function () {
+                if (
+                    typeof SessionControls !== "undefined" &&
+                    SessionControls &&
+                    typeof SessionControls.handleDrawLabelJudgementChoice === "function"
+                ) {
+                    SessionControls.handleDrawLabelJudgementChoice("accept");
+                }
+            };
+        }
+
+        if (decisionRejectBtn) {
+            decisionRejectBtn.onclick = function () {
+                if (
+                    typeof SessionControls !== "undefined" &&
+                    SessionControls &&
+                    typeof SessionControls.handleDrawLabelJudgementChoice === "function"
+                ) {
+                    SessionControls.handleDrawLabelJudgementChoice("reject");
+                }
+            };
+        }
+
+        if (decisionActions) {
+            decisionActions.classList.remove("hidden");
+        }
+
+        return true;
     }
 
     function renderUnsupportedTaskFallback(taskContent, taskType, taskId) {
@@ -256,9 +462,180 @@
         return `url("${escaped}")`;
     }
 
+    function escapeHtml(value) {
+        return String(value == null ? "" : value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
+    function escapeRegex(value) {
+        return String(value == null ? "" : value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function renderReferenceAnswerWithKeywordHighlights(referenceAnswerText, detailsObj) {
+        const rawText = String(referenceAnswerText == null ? "" : referenceAnswerText);
+        const keywords = Array.isArray(detailsObj && detailsObj.keywords)
+            ? detailsObj.keywords
+                .map((keyword) => String(keyword || "").trim())
+                .filter(Boolean)
+            : [];
+        if (!rawText || keywords.length === 0) {
+            return escapeHtml(rawText);
+        }
+
+        const foundSet = new Set(
+            (Array.isArray(detailsObj && detailsObj.found_keywords) ? detailsObj.found_keywords : [])
+                .map((keyword) => String(keyword || "").trim().toLowerCase())
+                .filter(Boolean)
+        );
+        const normalizedText = rawText.toLowerCase();
+        const highlights = [];
+        let cursor = 0;
+
+        function isRangeFree(start, end) {
+            return !highlights.some((item) => start < item.end && end > item.start);
+        }
+
+        function findOccurrence(keyword, startIndex) {
+            const normalizedKeyword = keyword.toLowerCase();
+            let index = normalizedText.indexOf(normalizedKeyword, startIndex);
+            while (index !== -1) {
+                const end = index + normalizedKeyword.length;
+                if (isRangeFree(index, end)) {
+                    return { start: index, end };
+                }
+                index = normalizedText.indexOf(normalizedKeyword, index + normalizedKeyword.length);
+            }
+            return null;
+        }
+
+        for (const keyword of keywords) {
+            const normalizedKeyword = keyword.toLowerCase();
+            const sequentialMatch = findOccurrence(keyword, cursor);
+            const fallbackMatch = sequentialMatch || findOccurrence(keyword, 0);
+            if (!fallbackMatch) continue;
+
+            highlights.push({
+                ...fallbackMatch,
+                normalizedKeyword,
+                isFound: foundSet.has(normalizedKeyword),
+            });
+            cursor = fallbackMatch.end;
+        }
+
+        if (highlights.length === 0) {
+            return escapeHtml(rawText);
+        }
+
+        highlights.sort((left, right) => left.start - right.start);
+        let html = "";
+        let lastIndex = 0;
+
+        for (const highlight of highlights) {
+            if (highlight.start > lastIndex) {
+                html += escapeHtml(rawText.slice(lastIndex, highlight.start));
+            }
+            const className = highlight.isFound
+                ? "rounded-md border border-success/30 bg-success-light/35 px-1 py-0.5 font-semibold text-success-darker"
+                : "rounded-md border border-error/30 bg-error-light/30 px-1 py-0.5 font-semibold text-error-darker";
+            html += `<span class="${className}">${escapeHtml(rawText.slice(highlight.start, highlight.end))}</span>`;
+            lastIndex = highlight.end;
+        }
+
+        if (lastIndex < rawText.length) {
+            html += escapeHtml(rawText.slice(lastIndex));
+        }
+
+        return html;
+    }
+
     // Result Display Helper
 
+    function normalizeSequenceEvaluationMessage(messageText, detailsObj) {
+        if (!messageText || !detailsObj || detailsObj.levels_order_correct !== true) {
+            return messageText;
+        }
+
+        const totalLevelsRaw =
+            Number(detailsObj.total_levels) ||
+            (Array.isArray(detailsObj.correct_levels_data) ? detailsObj.correct_levels_data.length : 0);
+        const totalLevels = Number.isFinite(totalLevelsRaw) && totalLevelsRaw > 0 ? totalLevelsRaw : 0;
+        if (!totalLevels) {
+            return messageText;
+        }
+
+        return messageText.replace(
+            /(\()(\d+)\/(\d+)(\s+уровней\s+правильно)/u,
+            (match, open, shownCount, totalFromText, suffix) => {
+                const shown = Number(shownCount);
+                const total = Number(totalFromText);
+                if (!Number.isFinite(shown) || !Number.isFinite(total)) {
+                    return match;
+                }
+                if (shown === total && total === totalLevels) {
+                    return match;
+                }
+                return `${open}${totalLevels}/${totalLevels}${suffix}`;
+            }
+        );
+    }
+
     function showEvaluationResult(result) {
+        function buildToleranceExplanation(candidate) {
+            if (!candidate || typeof candidate !== "object") return "";
+            if (candidate.tolerance_explanation != null) {
+                const direct = String(candidate.tolerance_explanation).trim();
+                if (direct) return direct;
+            }
+
+            const toleranceType =
+                candidate.tolerance_type != null
+                    ? String(candidate.tolerance_type).trim().toLowerCase()
+                    : "";
+            const rawKinds = Array.isArray(candidate.normalization_kinds)
+                ? candidate.normalization_kinds
+                : [];
+            const kindLabels = [];
+            rawKinds.forEach((kind) => {
+                const key = String(kind || "").trim().toLowerCase();
+                const labelMap = { layout: "раскладки", yo: "е/ё", y_i: "ы/і" };
+                const label = labelMap[key];
+                if (label && !kindLabels.includes(label)) kindLabels.push(label);
+            });
+            const normalizedSuffix = kindLabels.length
+                ? kindLabels.length === 1
+                    ? kindLabels[0]
+                    : kindLabels.length === 2
+                        ? `${kindLabels[0]} и ${kindLabels[1]}`
+                        : `${kindLabels.slice(0, -1).join(", ")} и ${kindLabels[kindLabels.length - 1]}`
+                : "текста";
+
+            if (toleranceType === "typo") return "Ответ засчитан с учетом опечатки.";
+            if (toleranceType === "ending") return "Ответ засчитан с учетом формы слова.";
+            if (toleranceType === "both") return "Ответ засчитан с учетом формы слова и опечатки.";
+            if (toleranceType === "normalized") return `Ответ засчитан после нормализации ${normalizedSuffix}.`;
+            return "";
+        }
+
+        function extractToleranceExplanation(detailsObj) {
+            if (!detailsObj || typeof detailsObj !== "object") return "";
+            const candidates = [
+                detailsObj,
+                detailsObj.label,
+                detailsObj.labels,
+                detailsObj.level_names,
+                detailsObj.block_names,
+            ];
+            for (const candidate of candidates) {
+                const explanation = buildToleranceExplanation(candidate);
+                if (explanation) return explanation;
+            }
+            return "";
+        }
+
         const box = document.getElementById("result-box");
         const inner = document.getElementById("result-inner");
         const header = document.getElementById("result-header");
@@ -269,6 +646,10 @@
         const details = document.getElementById("result-details");
         const keywordsBox = document.getElementById("result-keywords");
         const userAnswerBox = document.getElementById("result-user-answer");
+        const decisionContext = document.getElementById("result-decision-context");
+        const decisionActions = document.getElementById("result-decision-actions");
+        const decisionAcceptBtn = document.getElementById("result-decision-accept");
+        const decisionRejectBtn = document.getElementById("result-decision-reject");
         const referenceWrap = document.getElementById("result-reference");
         const referenceText = document.getElementById("result-reference-text");
         const referenceTitle = document.getElementById("result-reference-title");
@@ -289,6 +670,10 @@
                 resetExtendedResultBlocks({
                     keywordsBox,
                     userAnswerBox,
+                    decisionContext,
+                    decisionActions,
+                    decisionAcceptBtn,
+                    decisionRejectBtn,
                     referenceWrap,
                     referenceText,
                     referenceTitle
@@ -309,6 +694,10 @@
             resetExtendedResultBlocks({
                 keywordsBox,
                 userAnswerBox,
+                decisionContext,
+                decisionActions,
+                decisionAcceptBtn,
+                decisionRejectBtn,
                 referenceWrap,
                 referenceText,
                 referenceTitle
@@ -323,44 +712,67 @@
             requestAnimationFrame(() => box.classList.remove("result-entering"));
         }
 
+        const detailsObj = result && result.details && typeof result.details === "object" ? result.details : null;
+        const pendingUserJudgement = !!(detailsObj && detailsObj.requires_user_judgement === true);
         const success = result.success === true;
         if (inner) {
             inner.className =
                 "flex flex-col rounded-xl border-l-4 border overflow-hidden shadow-sm " +
-                (success
-                    ? "border-l-success border-border-strong bg-surface-2"
-                    : "border-l-error border-border-strong bg-surface-2");
+                (pendingUserJudgement
+                    ? "border-l-warning border-border-strong bg-surface-2"
+                    : success
+                        ? "border-l-success border-border-strong bg-surface-2"
+                        : "border-l-error border-border-strong bg-surface-2");
         }
 
         if (header) {
             header.className =
                 "flex items-center gap-3 px-5 py-3.5 border-b border-border-subtle " +
-                (success
-                    ? "bg-success-light/30"
-                    : "bg-error-light/30");
+                (pendingUserJudgement
+                    ? "bg-warning-lighter"
+                    : success
+                        ? "bg-success-light/30"
+                        : "bg-error-light/30");
         }
 
         if (iconWrap) {
             iconWrap.className =
                 "flex items-center justify-center size-9 rounded-full shrink-0 border border-border-strong " +
-                (success
-                    ? "bg-surface-1 text-success-dark"
-                    : "bg-surface-1 text-error-dark");
+                (pendingUserJudgement
+                    ? "bg-surface-1 text-warning-dark"
+                    : success
+                        ? "bg-surface-1 text-success-dark"
+                        : "bg-surface-1 text-error-dark");
         }
 
         // Animated SVG icons via SuccessEffects
-        if (typeof SuccessEffects !== 'undefined' && iconWrap) {
+        if (pendingUserJudgement && iconWrap) {
+            if (typeof iconWrap.replaceChildren === "function") {
+                iconWrap.replaceChildren();
+            } else {
+                iconWrap.textContent = "";
+            }
+            const pendingIcon = icon || document.createElement("span");
+            pendingIcon.id = pendingIcon.id || "result-icon";
+            pendingIcon.className = "material-symbols-outlined text-[20px]";
+            pendingIcon.textContent = "help";
+            iconWrap.appendChild(pendingIcon);
+        } else if (typeof SuccessEffects !== 'undefined' && iconWrap) {
             if (success) {
                 SuccessEffects.renderAnimatedCheckmark(iconWrap);
             } else {
                 SuccessEffects.renderAnimatedCross(iconWrap);
             }
         } else if (icon) {
-            icon.textContent = success ? "check" : "close";
+            icon.textContent = pendingUserJudgement ? "help" : success ? "check" : "close";
         }
 
         if (title) {
-            title.textContent = success ? "\u041e\u0442\u0432\u0435\u0442 \u043f\u0440\u0438\u043d\u044f\u0442" : "\u041e\u0442\u0432\u0435\u0442 \u043d\u0435\u0432\u0435\u0440\u043d\u044b\u0439";
+            title.textContent = pendingUserJudgement
+                ? "Нужно ваше решение"
+                : success
+                    ? "\u041e\u0442\u0432\u0435\u0442 \u043f\u0440\u0438\u043d\u044f\u0442"
+                    : "\u041e\u0442\u0432\u0435\u0442 \u043d\u0435\u0432\u0435\u0440\u043d\u044b\u0439";
             title.className =
                 "text-sm font-bold leading-tight " +
                 "text-text-main dark:text-text-on-dark";
@@ -368,11 +780,13 @@
 
         // Streak badge (only on success)
         if (typeof SuccessEffects !== 'undefined' && header) {
-            SuccessEffects.renderStreakBadge(header, success ? SuccessEffects.getStreak() : 0);
+            SuccessEffects.renderStreakBadge(
+                header,
+                !pendingUserJudgement && success ? SuccessEffects.getStreak() : 0
+            );
         }
 
         let messageText = result && result.message ? String(result.message) : "";
-        const detailsObj = result && result.details && typeof result.details === "object" ? result.details : null;
 
         // Logic for Sequence Assembly Hints
         try {
@@ -381,9 +795,51 @@
                 (SessionState && SessionState.currentTask && SessionState.currentTask.difficulty) || 1
                 // simplified lookup
             );
+            if (
+                currentTaskType === "test" &&
+                detailsObj &&
+                Number.isFinite(Number(detailsObj.correct_count)) &&
+                Number.isFinite(Number(detailsObj.total_count))
+            ) {
+                const correctCount = Number(detailsObj.correct_count);
+                const totalCount = Number(detailsObj.total_count);
+                const incorrectCount = Math.max(0, totalCount - correctCount);
+                if (totalCount > 0) {
+                    if (correctCount >= totalCount) {
+                        messageText = `✅ Правильно! ${correctCount}/${totalCount} ответов`;
+                    } else {
+                        messageText = `❌ Есть ошибки: ${incorrectCount} из ${totalCount} с ошибкой, верно ${correctCount}`;
+                    }
+                }
+            }
+            if (currentTaskType === "sequence_assembly") {
+                messageText = normalizeSequenceEvaluationMessage(messageText, detailsObj);
+            }
             if (currentTaskType === "sequence_assembly" && difficulty === 2) {
                 if (messageText && messageText.toLowerCase().includes("\u043d\u0435\u0432\u0435\u0440\u043d\u043e\u0435 \u043a\u043e\u043b\u0438\u0447\u0435\u0441\u0442\u0432\u043e \u0443\u0440\u043e\u0432\u043d\u0435\u0439")) {
                     messageText = "\u0421\u0442\u0440\u0443\u043a\u0442\u0443\u0440\u0430 \u0443\u0440\u043e\u0432\u043d\u0435\u0439 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0441\u043e\u0432\u043f\u0430\u0434\u0430\u0435\u0442. \u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0433\u0440\u0443\u043f\u043f\u0438\u0440\u043e\u0432\u0430\u0442\u044c \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u044b \u043f\u043e \u0443\u0440\u043e\u0432\u043d\u044f\u043c \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.";
+                }
+            }
+        } catch (e) {
+            // ignore
+        }
+        try {
+            const currentTaskType = getCurrentEffectiveTaskType();
+            const rawTaskType = SessionState && SessionState.currentTask
+                ? getRawTaskType(SessionState.currentTask)
+                : null;
+            const isDrawTask =
+                currentTaskType === "draw" ||
+                (rawTaskType === "draw" && currentTaskType === "click");
+            if (pendingUserJudgement && isDrawTask && detailsObj) {
+                const review =
+                    detailsObj.manual_label_judgement && typeof detailsObj.manual_label_judgement === "object"
+                        ? detailsObj.manual_label_judgement
+                        : null;
+                if (!messageText) {
+                    messageText = review && review.message
+                        ? String(review.message)
+                        : "В одном или нескольких названиях пропущено 1–2 слова. Решите, считать ли ответ верным.";
                 }
             }
         } catch (e) {
@@ -394,12 +850,17 @@
         const extra =
             (detailsObj && (detailsObj.explanation != null ? String(detailsObj.explanation) : "")) ||
             (detailsObj && (detailsObj.raw != null ? String(detailsObj.raw) : "")) ||
+            extractToleranceExplanation(detailsObj) ||
             "";
         if (details) details.textContent = extra;
 
         resetExtendedResultBlocks({
             keywordsBox,
             userAnswerBox,
+            decisionContext,
+            decisionActions,
+            decisionAcceptBtn,
+            decisionRejectBtn,
             referenceWrap,
             referenceText,
             referenceTitle
@@ -409,35 +870,6 @@
         try {
             const currentTaskType = getCurrentEffectiveTaskType();
             if (currentTaskType === "open_answer" && detailsObj) {
-                const allKw = Array.isArray(detailsObj.keywords) ? detailsObj.keywords : [];
-                const foundSet = new Set((detailsObj.found_keywords || []).map(k => String(k).toLowerCase()));
-                const missingSet = new Set((detailsObj.missing_keywords || []).map(k => String(k).toLowerCase()));
-
-                if (keywordsBox && allKw.length > 0) {
-                    keywordsBox.innerHTML = "";
-                    keywordsBox.classList.remove("hidden");
-
-                    const kwTitle = document.createElement("h4");
-                    kwTitle.className = "text-xs font-bold uppercase tracking-wider text-text-secondary";
-                    kwTitle.textContent = "\u041a\u043b\u044e\u0447\u0435\u0432\u044b\u0435 \u0441\u043b\u043e\u0432\u0430";
-                    keywordsBox.appendChild(kwTitle);
-
-                    const kwRow = document.createElement("div");
-                    kwRow.className = "flex flex-wrap gap-1.5";
-
-                    for (const kw of allKw) {
-                        const tag = document.createElement("span");
-                        const kwLower = String(kw).toLowerCase();
-                        const isFound = foundSet.has(kwLower);
-                        tag.className = isFound
-                            ? "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-success-light text-success-darker border border-success"
-                            : "inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium bg-error-light text-error-darker border border-error";
-                        tag.textContent = (isFound ? "\u2713 " : "\u2717 ") + kw;
-                        kwRow.appendChild(tag);
-                    }
-                    keywordsBox.appendChild(kwRow);
-                }
-
                 const userAnswerText =
                     detailsObj.user_answer != null ? String(detailsObj.user_answer) : "";
                 if (userAnswerBox && userAnswerText) {
@@ -459,11 +891,33 @@
                 if (referenceWrap && referenceAnswerText) {
                     referenceWrap.classList.remove("hidden");
                     if (referenceTitle) referenceTitle.textContent = "\u042d\u0442\u0430\u043b\u043e\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442";
-                    if (referenceText) referenceText.textContent = referenceAnswerText;
+                    if (referenceText) {
+                        referenceText.innerHTML = renderReferenceAnswerWithKeywordHighlights(referenceAnswerText, detailsObj);
+                    }
                 }
             }
         } catch (e) {
             console.warn("[TaskRenderer] Keywords/reference render error:", e);
+        }
+
+        try {
+            const currentTaskType = getCurrentEffectiveTaskType();
+            const rawTaskType = SessionState && SessionState.currentTask
+                ? getRawTaskType(SessionState.currentTask)
+                : null;
+            const isDrawTask =
+                currentTaskType === "draw" ||
+                (rawTaskType === "draw" && currentTaskType === "click");
+            if (isDrawTask && pendingUserJudgement && detailsObj) {
+                renderDrawManualJudgementContext({
+                    decisionContext,
+                    decisionActions,
+                    decisionAcceptBtn,
+                    decisionRejectBtn
+                }, detailsObj);
+            }
+        } catch (e) {
+            console.warn("[TaskRenderer] Draw judgement render error:", e);
         }
     }
 
@@ -514,22 +968,48 @@
         const refEl = document.getElementById("task-ref-label");
         const descEl = document.getElementById("task-description");
         const imgEl = document.getElementById("task-image");
+        const currentTaskTitleEl =
+            document.getElementById("current-task-title") || document.getElementById("complex-title");
+        const currentTaskTypeEl =
+            document.getElementById("current-task-type") || document.getElementById("session-subtitle");
+        const taskProgressMetaEl =
+            document.getElementById("task-progress-meta") || document.getElementById("task-header-meta");
+        const taskHeaderBlock = document.getElementById("task-header-block");
+        const taskHeaderLabelEl = document.getElementById("task-header-label");
         const progressLabel = document.getElementById("progress-label");
         const difficultyLabel = document.getElementById("difficulty-label");
         const progressBar = document.getElementById("progress-bar");
+        const currentTaskTitleToggleEl = document.getElementById("current-task-title-toggle");
 
         if (!task) {
             if (SessionState) SessionState.currentTask = null;
+            if (SessionState) SessionState.currentTaskChecked = false;
+            if (SessionState) SessionState.currentEvaluationResult = null;
+            if (SessionState) SessionState.pendingManualJudgement = false;
             UIHelpers.setCanGoNext(false);
             if (titleEl) titleEl.textContent = "\u041d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439";
             if (metaEl) metaEl.textContent = "";
             if (refEl) refEl.textContent = "";
             if (descEl) descEl.textContent = "";
+            if (currentTaskTitleEl) {
+                currentTaskTitleEl.textContent = "\u041d\u0435\u0442 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b\u0445 \u0437\u0430\u0434\u0430\u043d\u0438\u0439";
+                currentTaskTitleEl.classList.remove("is-expanded");
+            }
+            if (currentTaskTypeEl) currentTaskTypeEl.textContent = "\u2013";
+            if (taskProgressMetaEl) taskProgressMetaEl.textContent = "";
+            if (currentTaskTitleToggleEl) {
+                currentTaskTitleToggleEl.classList.add("hidden");
+                currentTaskTitleToggleEl.setAttribute("aria-expanded", "false");
+            }
+            if (taskHeaderLabelEl) taskHeaderLabelEl.textContent = "Что нужно сделать";
             if (imgEl) {
                 imgEl.style.backgroundImage = "none";
             }
-            if (progressLabel) progressLabel.textContent = "\u0417\u0430\u0434\u0430\u043d\u0438\u0435: -";
-            if (difficultyLabel) difficultyLabel.textContent = "\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: -";
+            if (progressLabel) progressLabel.textContent = "\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u2013";
+            if (difficultyLabel) {
+                difficultyLabel.textContent = "\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: -";
+                difficultyLabel.classList.add("hidden");
+            }
             if (progressBar) progressBar.style.width = "0%";
             const checkBtn = document.getElementById("check-answer-btn");
             if (checkBtn) {
@@ -538,6 +1018,7 @@
             }
             const taskHeaderMeta = document.getElementById("task-header-meta");
             if (taskHeaderMeta) taskHeaderMeta.classList.add("hidden");
+            if (taskHeaderBlock) taskHeaderBlock.classList.add("hidden");
             const statusBanner = document.getElementById("status-banner");
             if (statusBanner) {
                 statusBanner.classList.add("hidden");
@@ -558,11 +1039,24 @@
         }
 
         const titleFromData =
+            task.task_name ||
+            task.name ||
             (task.task_data &&
                 (task.task_data.meta?.name ||
+                    task.task_data.meta?.title ||
                     task.task_data.name ||
-                    task.task_data.content?.task_name)) ||
-            task.task_id;
+                    task.task_data.title ||
+                    task.task_data.content?.task_name ||
+                    task.task_data.content?.title)) ||
+            "";
+
+        const questionFromData =
+            (task.task_data &&
+                (task.task_data.content?.question ||
+                    task.task_data.question ||
+                    task.task_data.content?.prompt ||
+                    task.task_data.prompt ||
+                    "")) || "";
 
         const descriptionFromData =
             (task.task_data &&
@@ -576,11 +1070,60 @@
                 (task.task_data.image_url || task.task_data.content?.image_url)) ||
             "";
 
-        if (titleEl) titleEl.textContent = titleFromData;
-        if (descEl) descEl.textContent = descriptionFromData;
+        const currentTaskType = pickEffectiveTaskType(task);
+        const rawTaskType = getRawTaskType(task);
+        const taskSubtype = getTaskSubtype(task);
+        const taskTypeLabel = getTaskTypeLabel(task, currentTaskType);
+        const normalizedTitle = String(titleFromData || "").trim();
+        const normalizedQuestion = String(questionFromData || "").trim();
+        const normalizedDescription = String(descriptionFromData || "").trim();
+        const isOpenAnswerTask = currentTaskType === "open_answer";
+        const keepPromptInsideTaskSurface =
+            currentTaskType === "sequence_assembly" || currentTaskType === "open_answer";
+        const preferredTitle =
+            normalizedTitle ||
+            (!keepPromptInsideTaskSurface ? normalizedQuestion : "") ||
+            String(task.task_name || task.name || task.task_id || "").trim() ||
+            "Задание";
+        const headerTitle = preferredTitle;
+        const headerMeta = isOpenAnswerTask
+            ? (normalizedTitle && normalizedTitle !== normalizedQuestion
+                ? normalizedTitle
+                : "Открытый ответ")
+            : `Итерация ${task.iteration ?? "?"}`;
+        const headerDescription = isOpenAnswerTask
+            ? ((normalizedDescription && normalizedDescription !== normalizedQuestion)
+                ? normalizedDescription
+                : "")
+            : descriptionFromData;
+        const shouldShowInstructionBlock = (
+            !!normalizedQuestion &&
+            normalizedQuestion !== headerTitle &&
+            rawTaskType === "click" &&
+            taskSubtype !== "error_detection"
+        );
+        const shouldInlineClickInstruction = rawTaskType === "click";
+        const instructionMeta = normalizedTitle && normalizedTitle !== normalizedQuestion
+            ? normalizedTitle
+            : "";
+        const instructionDescription = normalizedDescription &&
+            normalizedDescription !== normalizedQuestion &&
+            normalizedDescription !== instructionMeta
+            ? normalizedDescription
+            : "";
+
+        if (titleEl) titleEl.textContent = headerTitle;
+        if (descEl) descEl.textContent = headerDescription;
         if (refEl)
             refEl.textContent = `${task.module_id}/${task.topic_id}/${task.task_id}`;
-        if (metaEl) metaEl.textContent = `\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f ${task.iteration ?? "?"}`;
+        if (metaEl) metaEl.textContent = headerMeta;
+        if (currentTaskTitleEl) {
+            currentTaskTitleEl.textContent = headerTitle;
+            currentTaskTitleEl.setAttribute("title", headerTitle);
+            currentTaskTitleEl.setAttribute("aria-label", headerTitle);
+        }
+        if (currentTaskTypeEl) currentTaskTypeEl.textContent = taskTypeLabel;
+        bindHeaderTitleToggle();
 
         if (imgEl) {
             if (imageUrlFromData) {
@@ -595,16 +1138,24 @@
         const index = task.queue?.index ?? 0;
         const total = task.queue?.total ?? 0;
         if (progressLabel) {
-            progressLabel.textContent =
+            const progressParts = [];
+            if (taskTypeLabel) {
+                progressParts.push(taskTypeLabel);
+            }
+            progressParts.push(
                 total && index != null
                     ? `\u0417\u0430\u0434\u0430\u043d\u0438\u0435 ${index + 1} \u0438\u0437 ${total}`
-                    : "\u0417\u0430\u0434\u0430\u043d\u0438\u0435: -";
+                    : "\u0417\u0430\u0434\u0430\u043d\u0438\u0435 \u2013"
+            );
+            progressParts.push(`\u0418\u0442\u0435\u0440\u0430\u0446\u0438\u044f ${task.iteration ?? "?"}`);
+            progressLabel.textContent = progressParts.join(" \u2022 ");
         }
 
         const difficulty = task.difficulty ?? null;
         if (difficultyLabel) {
             difficultyLabel.textContent =
                 difficulty != null ? `\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: ${difficulty}` : "\u0421\u043b\u043e\u0436\u043d\u043e\u0441\u0442\u044c: -";
+            difficultyLabel.classList.remove("hidden");
         }
 
         const taskHeaderMeta = document.getElementById("task-header-meta");
@@ -617,23 +1168,38 @@
             taskHeaderMeta.textContent = `${qInfo} - ${iterInfo}`;
             taskHeaderMeta.classList.remove("hidden");
         }
-
-        const currentTaskType = pickEffectiveTaskType(task);
-        const taskHeaderBlock = document.getElementById("task-header-block");
-        if (
-            taskHeaderBlock &&
-            (currentTaskType === "test" ||
-                currentTaskType === "sequence_assembly" ||
-                currentTaskType === "click")
-        ) {
-            taskHeaderBlock.classList.add("hidden");
-        } else if (taskHeaderBlock) {
-            taskHeaderBlock.classList.remove("hidden");
+        if (taskProgressMetaEl) {
+            const metaParts = [];
+            if (total && index != null) metaParts.push(`Задание ${index + 1} из ${total}`);
+            metaParts.push(`Итерация ${task.iteration ?? "?"}`);
+            taskProgressMetaEl.textContent = metaParts.join(" • ");
+            taskProgressMetaEl.textContent = "";
+            taskProgressMetaEl.classList.add("hidden");
         }
 
-        if (taskHeaderMeta && currentTaskType === "click") {
-            taskHeaderMeta.classList.add("hidden");
+        if (taskHeaderBlock) {
+            taskHeaderBlock.classList.toggle("hidden", !shouldShowInstructionBlock || shouldInlineClickInstruction);
         }
+        if (taskHeaderLabelEl) {
+            taskHeaderLabelEl.textContent = shouldShowInstructionBlock ? "Что нужно сделать" : "Задание";
+        }
+        if (shouldShowInstructionBlock) {
+            if (titleEl) titleEl.textContent = normalizedQuestion;
+            if (metaEl) {
+                metaEl.textContent = instructionMeta;
+                metaEl.classList.toggle("hidden", !instructionMeta);
+            }
+            if (descEl) {
+                descEl.textContent = instructionDescription;
+                descEl.classList.toggle("hidden", !instructionDescription);
+            }
+            if (refEl) refEl.textContent = "";
+        } else {
+            if (metaEl) metaEl.classList.toggle("hidden", !headerMeta);
+            if (descEl) descEl.classList.toggle("hidden", !headerDescription);
+        }
+
+        scheduleHeaderTitleToggleSync();
 
         const percent = total > 0 ? Math.min(100, ((index + 1) / total) * 100) : 0;
         if (progressBar) {
@@ -642,6 +1208,10 @@
 
         const taskContent = document.getElementById("task-content");
         if (taskContent) {
+            if (SessionState) SessionState.currentTaskChecked = false;
+            if (SessionState) SessionState.currentEvaluationResult = null;
+            if (SessionState) SessionState.pendingManualJudgement = false;
+            UIHelpers.setCanGoNext(false);
             taskContent.classList.add("task-entering");
             taskContent.innerHTML = "";
             taskContent.classList.remove("opacity-50", "pointer-events-none"); // Ensure interactable
@@ -773,13 +1343,20 @@
 
         // Restore draft
         try {
-            if (task && DraftStorage && SessionState && SessionState.sessionId) {
-                const draft = DraftStorage.loadDraft(SessionState.sessionId, task.task_id);
+            const hasServerRestoredInput =
+                !!(task && task.restored_user_input && typeof task.restored_user_input === "object");
+            if (!hasServerRestoredInput && task && DraftStorage && SessionState && SessionState.sessionId) {
+                const draftKey = buildTaskDraftStorageKey(task);
+                const draft = draftKey ? DraftStorage.loadDraft(SessionState.sessionId, draftKey) : null;
                 if (draft) {
                     setTimeout(() => {
                         const type = pickEffectiveTaskType(task);
                         restoreDraftToUI(type, draft);
-                        UIHelpers.showStatus("\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043d\u0435\u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442", "info");
+                        UIHelpers.showStatus(
+                            "\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043d\u0435\u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442",
+                            "info",
+                            { dismissible: true, autoHideMs: 8000 }
+                        );
                     }, 100);
                 }
             }
@@ -799,6 +1376,49 @@
         return isHandledByClickUI(SessionState.currentTask);
     }
 
+    function restoreCheckedTaskState(task, result) {
+        showEvaluationResult(result);
+        if (!task || !result) return;
+        const pendingUserJudgement = !!(
+            result.details &&
+            typeof result.details === "object" &&
+            result.details.requires_user_judgement === true
+        );
+        if (SessionState) {
+            SessionState.currentTaskChecked = !pendingUserJudgement;
+            SessionState.currentEvaluationResult = result;
+            SessionState.pendingManualJudgement = pendingUserJudgement;
+        }
+
+        const checkBtn = document.getElementById("check-answer-btn");
+        if (checkBtn) {
+            checkBtn.disabled = true;
+            checkBtn.setAttribute("aria-disabled", "true");
+            checkBtn.setAttribute("title", pendingUserJudgement ? "Сначала выберите итог проверки" : "Задание уже проверено");
+        }
+
+        try {
+            const taskType = pickEffectiveTaskType(task);
+            const subtype = getTaskSubtype(task);
+
+            if (taskType === "test" && typeof TestUI !== "undefined" && typeof TestUI.applyCheckFeedback === "function") {
+                TestUI.applyCheckFeedback(result);
+            } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.applyCheckFeedback === "function") {
+                SequenceUI.applyCheckFeedback(result);
+            } else if (taskType === "click") {
+                if (subtype !== "error_detection" && typeof ClickUI !== "undefined" && typeof ClickUI.applyCheckFeedback === "function") {
+                    ClickUI.applyCheckFeedback(result);
+                }
+            } else if (taskType === "draw" && typeof DrawUI !== "undefined" && typeof DrawUI.applyCheckFeedback === "function") {
+                DrawUI.applyCheckFeedback(result);
+            } else if (taskType === "open_answer" && typeof OpenAnswerUI !== "undefined" && typeof OpenAnswerUI.applyCheckFeedback === "function") {
+                OpenAnswerUI.applyCheckFeedback(result);
+            }
+        } catch (e) {
+            console.error("Failed to restore checked task state", e);
+        }
+    }
+
     return {
         renderTask: renderTask,
         getTaskSubtype: getTaskSubtype,
@@ -806,7 +1426,9 @@
         isValidTaskType: isValidTaskType,
         pickEffectiveTaskType: pickEffectiveTaskType,
         showEvaluationResult: showEvaluationResult,
+        restoreCheckedTaskState: restoreCheckedTaskState,
         restoreDraftToUI: restoreDraftToUI,
+        restoreViewStateToUI: restoreViewStateToUI,
         getCurrentEffectiveTaskType: getCurrentEffectiveTaskType,
         isHandledByClickUI: isHandledByClickUI,
         currentTaskHandledByClickUI: currentTaskHandledByClickUI

@@ -82,15 +82,544 @@
       row-gap: 0.5rem;
     }
 
-    .cx-filter-note {
+    .cx-controls-panel {
+      position: relative;
+      overflow: hidden;
+      border-radius: 1.5rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 68%, transparent);
+      background:
+        radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter) 60%, transparent) 0, transparent 42%),
+        linear-gradient(145deg,
+          color-mix(in srgb, var(--color-surface-1) 94%, white 6%) 0%,
+          color-mix(in srgb, var(--color-bg-main) 84%, var(--color-primary-lighter) 16%) 100%);
+      box-shadow: 0 16px 42px -22px rgba(15, 23, 42, 0.3);
+    }
+
+    .cx-controls-panel::before {
+      content: "";
+      position: absolute;
+      top: -5rem;
+      right: -4rem;
+      width: 18rem;
+      height: 18rem;
+      border-radius: 999px;
+      background: radial-gradient(circle, color-mix(in srgb, var(--color-primary-light) 32%, transparent) 0%, transparent 68%);
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .cx-controls-stack {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .cx-controls-hero {
+      display: grid;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+
+    .cx-controls-search {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-height: 3.5rem;
+      border-radius: 1rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 60%, transparent);
+      background: color-mix(in srgb, var(--color-surface-1) 88%, var(--color-bg-main) 12%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+    }
+
+    .cx-controls-search-icon {
+      position: absolute;
+      inset-block: 0;
+      left: 1rem;
+      display: flex;
+      align-items: center;
       color: var(--color-text-secondary);
+      pointer-events: none;
+    }
+
+    .cx-controls-search-input {
+      width: 100%;
+      min-height: 3.5rem;
+      padding: 0.72rem 1rem 0.72rem 3.35rem;
+      border: 0;
+      background: transparent;
+      color: var(--color-text-main);
+      font-size: 0.9rem;
+      font-weight: 600;
+      outline: none;
+    }
+
+    .cx-controls-search-input::placeholder {
+      color: var(--color-text-secondary);
+      opacity: 1;
+    }
+
+    .cx-controls-search:focus-within {
+      border-color: color-mix(in srgb, var(--color-primary) 74%, white 26%);
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.35),
+        0 0 0 3px color-mix(in srgb, var(--color-primary-light) 42%, transparent);
+    }
+
+    .cx-controls-summary-card {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.2rem;
+      min-height: 3.5rem;
+      padding: 0.72rem 0.95rem;
+      border-radius: 1rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-subtle) 76%, transparent);
+      background: linear-gradient(145deg,
+          color-mix(in srgb, var(--color-surface-1) 90%, white 10%) 0%,
+          color-mix(in srgb, var(--color-surface-2) 88%, var(--color-primary-lighter) 12%) 100%);
+    }
+
+    .cx-controls-summary-label {
+      margin: 0;
+      color: var(--color-text-secondary);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    #complex-filter-summary {
+      margin: 0;
+      color: var(--color-text-main);
+      font-size: 0.92rem;
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    .cx-controls-grid {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .cx-controls-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.7rem;
+      min-width: 0;
+      padding: 0.85rem 0.95rem;
+      border-radius: 1rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-subtle) 78%, transparent);
+      background: color-mix(in srgb, var(--color-surface-1) 88%, var(--color-bg-main) 12%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+    }
+
+    .cx-controls-section-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.6rem;
+    }
+
+    .cx-controls-kicker {
+      margin: 0 0 0.2rem;
+      color: var(--color-primary);
+      font-size: 0.68rem;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .cx-controls-heading {
+      margin: 0;
+      color: var(--color-text-main);
+      font-size: 0.94rem;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .cx-controls-caption {
+      margin: 0;
+      max-width: 19rem;
+      color: var(--color-text-secondary);
+      font-size: 0.75rem;
+      font-weight: 600;
+      line-height: 1.38;
+    }
+
+    .cx-controls-section--combined {
+      gap: 0.65rem;
+    }
+
+    .cx-controls-section-head--combined {
+      align-items: center;
+    }
+
+    .cx-control-lane {
+      display: grid;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+
+    .cx-control-lane__label {
+      color: var(--color-text-secondary);
+      font-size: 0.7rem;
+      font-weight: 900;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .cx-filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .cx-filter-row .complex-filter-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.2rem;
+      padding: 0.5rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 54%, transparent);
+      background: color-mix(in srgb, var(--color-surface-2) 86%, var(--color-bg-main) 14%);
+      color: var(--color-text-main);
+      font-size: 0.77rem;
+      font-weight: 800;
+      line-height: 1.1;
+      white-space: nowrap;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cx-filter-row .complex-filter-chip:hover,
+    .cx-filter-row .complex-filter-chip:focus-visible {
+      border-color: color-mix(in srgb, var(--color-primary-light) 68%, var(--color-border-strong) 32%);
+      color: var(--color-text-main);
+      transform: translateY(-1px);
+    }
+
+    .cx-filter-row .complex-filter-chip.pill-info {
+      border-color: color-mix(in srgb, var(--color-primary) 78%, white 22%);
+      background: linear-gradient(135deg,
+          color-mix(in srgb, var(--color-primary) 88%, black 12%) 0%,
+          color-mix(in srgb, var(--color-primary-dark) 90%, black 10%) 100%);
+      color: var(--color-text-on-dark);
+      box-shadow: 0 10px 24px -18px color-mix(in srgb, var(--color-primary-dark) 90%, transparent);
+    }
+
+    .cx-filter-row .complex-filter-chip.pill-info:hover,
+    .cx-filter-row .complex-filter-chip.pill-info:focus-visible {
+      color: var(--color-text-on-dark);
+      box-shadow: 0 14px 28px -18px color-mix(in srgb, var(--color-primary-dark) 92%, transparent);
+    }
+
+    .cx-sort-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(8.75rem, 1fr));
+      gap: 0.5rem;
+    }
+
+    .cx-sort-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 2.3rem;
+      padding: 0.55rem 0.8rem;
+      border-radius: 0.85rem;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 58%, transparent);
+      background: color-mix(in srgb, var(--color-surface-2) 84%, var(--color-bg-main) 16%);
+      color: var(--color-text-secondary);
+      font-size: 0.77rem;
+      font-weight: 800;
+      line-height: 1.2;
+      text-align: center;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+    }
+
+    .cx-sort-btn:hover,
+    .cx-sort-btn:focus-visible {
+      border-color: color-mix(in srgb, var(--color-primary-light) 66%, var(--color-border-strong) 34%);
+      color: var(--color-text-main);
+      transform: translateY(-1px);
+    }
+
+    .cx-sort-btn.active,
+    .cx-sort-btn[aria-pressed="true"] {
+      border-color: color-mix(in srgb, var(--color-primary) 78%, white 22%);
+      background: linear-gradient(135deg,
+          color-mix(in srgb, var(--color-primary-lighter) 62%, white 38%) 0%,
+          color-mix(in srgb, var(--color-primary-light) 78%, white 22%) 100%);
+      color: var(--color-primary-darker);
+      box-shadow: 0 12px 26px -20px color-mix(in srgb, var(--color-primary-dark) 80%, transparent);
+    }
+
+    .cx-filter-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.55rem;
+      padding: 0.7rem 0.8rem;
+      border-radius: 0.9rem;
+      border: 1px dashed color-mix(in srgb, var(--color-border-strong) 56%, transparent);
+      background: color-mix(in srgb, var(--color-surface-2) 74%, var(--color-bg-main) 26%);
+      color: var(--color-text-secondary);
+    }
+
+    .cx-filter-note .material-symbols-outlined {
+      flex: 0 0 auto;
+      margin-top: 0.05rem;
+      color: var(--color-primary);
+      font-size: 0.95rem;
+    }
+
+    .cx-filter-note__copy {
+      margin: 0;
+      font-size: 0.73rem;
+      font-weight: 600;
+      line-height: 1.45;
+    }
+
+    #complex-theory-banner {
+      border-radius: 1rem;
+      border: 1px solid color-mix(in srgb, var(--color-primary-light) 70%, var(--color-border-subtle) 30%);
+      background: linear-gradient(135deg,
+          color-mix(in srgb, var(--color-primary-lighter) 76%, white 24%) 0%,
+          color-mix(in srgb, var(--color-surface-1) 88%, var(--color-primary-lighter) 12%) 100%);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.32);
+    }
+
+    .cx-theory-banner__body {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .cx-theory-banner__content {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .cx-theory-banner__title {
+      margin: 0;
+      color: var(--color-primary-darker);
+      font-size: 0.92rem;
+      font-weight: 900;
+      line-height: 1.2;
+    }
+
+    .cx-theory-banner__copy {
+      margin: 0;
+      color: color-mix(in srgb, var(--color-primary-darker) 88%, var(--color-text-main) 12%);
+      font-size: 0.77rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+
+    .cx-theory-banner__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .cx-theory-banner__action {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.45rem;
+      min-height: 2.25rem;
+      padding: 0.5rem 0.85rem;
+      border-radius: 0.8rem;
+      border: 1px solid color-mix(in srgb, var(--color-primary-light) 70%, var(--color-border-subtle) 30%);
+      background: color-mix(in srgb, var(--color-surface-1) 72%, white 28%);
+      color: var(--color-primary-darker);
+      font-size: 0.76rem;
+      font-weight: 800;
+      transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .cx-theory-banner__action:hover,
+    .cx-theory-banner__action:focus-visible {
+      transform: translateY(-1px);
+      border-color: color-mix(in srgb, var(--color-primary) 74%, white 26%);
+      color: var(--color-primary-darker);
+    }
+
+    .cx-theory-banner__action--primary {
+      background: linear-gradient(135deg,
+          color-mix(in srgb, var(--color-primary) 88%, black 12%) 0%,
+          color-mix(in srgb, var(--color-primary-dark) 90%, black 10%) 100%);
+      border-color: color-mix(in srgb, var(--color-primary) 84%, white 16%);
+      color: var(--color-text-on-dark);
+    }
+
+    .cx-theory-banner__action--primary:hover,
+    .cx-theory-banner__action--primary:focus-visible {
+      color: var(--color-text-on-dark);
+    }
+
+    [data-theme^="dark"] .cx-controls-panel {
+      border-color: color-mix(in srgb, var(--color-border-strong) 74%, white 26%);
+      background:
+        radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-light) 22%, transparent) 0, transparent 40%),
+        linear-gradient(145deg,
+          color-mix(in srgb, var(--color-surface-1) 96%, black 4%) 0%,
+          color-mix(in srgb, var(--color-surface-2) 84%, var(--color-primary-dark) 16%) 100%);
+      box-shadow: 0 20px 48px -28px rgba(0, 0, 0, 0.7);
+    }
+
+    [data-theme^="dark"] .cx-controls-search,
+    [data-theme^="dark"] .cx-controls-summary-card,
+    [data-theme^="dark"] .cx-controls-section,
+    [data-theme^="dark"] .cx-filter-note {
+      border-color: color-mix(in srgb, var(--color-border-strong) 76%, white 24%);
+      box-shadow: none;
+    }
+
+    [data-theme^="dark"] .cx-controls-search {
+      background: color-mix(in srgb, var(--color-surface-2) 90%, black 10%);
+    }
+
+    [data-theme^="dark"] .cx-controls-summary-card,
+    [data-theme^="dark"] .cx-controls-section {
+      background: color-mix(in srgb, var(--color-surface-2) 88%, var(--color-surface-1) 12%);
+    }
+
+    [data-theme^="dark"] .cx-controls-kicker {
+      color: color-mix(in srgb, var(--color-primary-light) 62%, white 38%);
+    }
+
+    [data-theme^="dark"] .cx-filter-row .complex-filter-chip,
+    [data-theme^="dark"] .cx-sort-btn {
+      border-color: color-mix(in srgb, var(--color-border-strong) 74%, white 26%);
+      background: color-mix(in srgb, var(--color-surface-2) 92%, white 8%);
+      color: var(--color-text-main);
+    }
+
+    [data-theme^="dark"] .cx-sort-btn.active,
+    [data-theme^="dark"] .cx-sort-btn[aria-pressed="true"] {
+      background: linear-gradient(135deg,
+          color-mix(in srgb, var(--color-primary-dark) 86%, black 14%) 0%,
+          color-mix(in srgb, var(--color-primary) 82%, black 18%) 100%);
+      color: var(--color-text-on-dark);
+      border-color: color-mix(in srgb, var(--color-primary-light) 76%, white 24%);
+    }
+
+    [data-theme^="dark"] .cx-filter-row .complex-filter-chip.pill-info {
+      border-color: color-mix(in srgb, var(--color-primary-light) 78%, white 22%);
+      color: var(--color-text-on-dark);
+    }
+
+    [data-theme^="dark"] #complex-theory-banner {
+      background: linear-gradient(135deg,
+          color-mix(in srgb, var(--color-primary-dark) 42%, var(--color-surface-1) 58%) 0%,
+          color-mix(in srgb, var(--color-surface-2) 84%, var(--color-primary-dark) 16%) 100%);
+      border-color: color-mix(in srgb, var(--color-primary-light) 48%, var(--color-border-strong) 52%);
+    }
+
+    [data-theme^="dark"] .cx-theory-banner__title,
+    [data-theme^="dark"] .cx-theory-banner__copy {
+      color: var(--color-text-main);
+    }
+
+    [data-theme^="dark"] .cx-theory-banner__action {
+      border-color: color-mix(in srgb, var(--color-border-strong) 72%, white 28%);
+      background: color-mix(in srgb, var(--color-surface-2) 90%, white 10%);
+      color: var(--color-text-main);
+    }
+
+    [data-theme^="dark"] .cx-theory-banner__action--primary {
+      border-color: color-mix(in srgb, var(--color-primary-light) 76%, white 24%);
+      color: var(--color-text-on-dark);
+    }
+
+    [data-theme^="dark"] #back-button.icon-button-muted,
+    [data-theme^="dark"] .pin-btn.icon-button-muted {
+      background: color-mix(in srgb, var(--color-surface-2) 82%, white 18%) !important;
+      border-color: color-mix(in srgb, var(--color-border-strong) 72%, white 28%) !important;
+      color: var(--color-text-main) !important;
+    }
+
+    [data-theme^="dark"] #back-button.icon-button-muted:hover,
+    [data-theme^="dark"] .pin-btn.icon-button-muted:hover {
+      background: color-mix(in srgb, var(--color-surface-2) 58%, var(--color-primary-light) 42%) !important;
+      border-color: color-mix(in srgb, var(--color-primary-light) 76%, white 24%) !important;
+      color: var(--color-text-main) !important;
+    }
+
+    @media (min-width: 1024px) {
+      .cx-controls-hero {
+        grid-template-columns: minmax(0, 1.95fr) minmax(17rem, 0.9fr);
+      }
+
+      .cx-controls-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .cx-controls-section-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(13rem, 18rem);
+        align-items: start;
+      }
+
+      .cx-controls-section-head--combined {
+        grid-template-columns: minmax(0, 1fr) minmax(16rem, 24rem);
+      }
+
+      .cx-control-lane {
+        grid-template-columns: 6.75rem minmax(0, 1fr);
+        align-items: center;
+        column-gap: 0.75rem;
+      }
+
+      .cx-filter-row {
+        display: grid;
+        grid-template-columns: repeat(9, minmax(0, 1fr));
+      }
+
+      .cx-filter-row .complex-filter-chip {
+        width: 100%;
+        min-width: 0;
+      }
+
+      .cx-sort-grid {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
     }
 
     .cx-card-shell {
       min-width: 0;
     }
 
+    .cx-card-select-box {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(-2px) scale(0.96);
+      transition: opacity 160ms ease, transform 160ms ease;
+    }
+
+    [data-complex-card-shell]:hover .cx-card-select-box,
+    [data-complex-card-shell]:focus-within .cx-card-select-box,
+    .cx-card-select-box.is-visible {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0) scale(1);
+    }
+
     .cx-card-body {
+      min-width: 0;
+    }
+
+    .cx-card-top {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
       min-width: 0;
     }
 
@@ -98,7 +627,7 @@
       min-width: 0;
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      gap: 0.35rem;
     }
 
     .cx-card-title {
@@ -106,16 +635,25 @@
       display: -webkit-box;
       overflow: hidden;
       -webkit-line-clamp: 2;
+      line-clamp: 2;
       -webkit-box-orient: vertical;
       line-height: 1.2;
       word-break: break-word;
+    }
+
+    .cx-card-title-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.75rem;
+      min-width: 0;
     }
 
     .cx-card-badges {
       min-width: 0;
       display: flex;
       flex-wrap: wrap;
-      gap: 0.5rem;
+      gap: 0.4rem;
     }
 
     .cx-card-badge {
@@ -138,13 +676,28 @@
       flex: 0 0 auto;
     }
 
+    .cx-card-badges .pill {
+      min-height: 2rem;
+      padding: 0.38rem 0.7rem;
+      border-radius: 999px;
+      font-size: 0.74rem;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .cx-card-badges .pill .material-symbols-outlined {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
     .cx-card-description {
       color: var(--color-text-secondary);
       display: -webkit-box;
       overflow: hidden;
-      -webkit-line-clamp: 3;
+      -webkit-line-clamp: 2;
+      line-clamp: 2;
       -webkit-box-orient: vertical;
-      line-height: 1.4;
+      line-height: 1.32;
       word-break: break-word;
     }
 
@@ -152,42 +705,108 @@
       color: var(--color-text-secondary);
     }
 
-    .cx-card-actions {
+    .cx-card-meta-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+
+    .cx-card-inline-meta {
       display: flex;
       flex-wrap: wrap;
-      align-items: flex-start;
-      justify-content: space-between;
-      gap: 0.75rem;
+      align-items: center;
+      gap: 0.4rem 0.7rem;
+      min-width: 0;
+      color: var(--color-text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      line-height: 1.25;
+    }
+
+    .cx-card-inline-meta strong {
+      color: var(--color-text-main);
+      font-weight: 700;
+    }
+
+    .cx-card-inline-meta .cx-meta-divider {
+      color: var(--color-text-disabled);
+    }
+
+    .cx-card-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      overflow-x: auto;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
       border-top: 1px solid var(--color-border-subtle);
-      padding-top: 1rem;
+      padding-top: 0.85rem;
+    }
+
+    .cx-card-actions::-webkit-scrollbar {
+      display: none;
     }
 
     .cx-card-actions-primary,
     .cx-card-actions-secondary {
       min-width: 0;
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 0.75rem;
+      flex-wrap: nowrap;
+      gap: 0.5rem;
+      flex: 0 0 auto;
+    }
+
+    .cx-card-action-btn {
+      flex: 0 0 auto;
+      min-width: 0;
+      max-width: none;
+      min-height: 2.35rem;
+      padding: 0.52rem 0.82rem !important;
+      border-radius: 0.8rem;
+      font-size: 0.82rem !important;
+      line-height: 1.1;
+    }
+
+    .cx-card-action-btn .material-symbols-outlined {
+      font-size: 1.05rem !important;
+      line-height: 1;
+    }
+
+    .cx-card-action-btn .truncate {
+      display: block;
+      max-width: none;
+      white-space: nowrap;
+    }
+
+    .cx-card-action-btn--primary {
+      min-width: 8rem;
+      font-weight: 800;
+    }
+
+    .cx-card-action-btn--session {
+      min-width: 9.75rem;
+    }
+
+    .cx-card-action-btn--theory {
+      min-width: 7.5rem;
+    }
+
+    .cx-card-action-btn--wide {
+      min-width: 8.75rem;
+    }
+
+    .cx-card-action-btn--icon {
+      width: 2.42rem;
+      height: 2.42rem;
+      padding: 0 !important;
+      border-radius: 999px;
     }
 
     .cx-card-actions-secondary {
-      justify-content: flex-end;
-      flex: 1 1 18rem;
-    }
-
-    .cx-card-actions-primary {
-      flex: 1 1 24rem;
-    }
-
-    .cx-card-actions button {
-      min-width: 0;
-      max-width: 100%;
-    }
-
-    .cx-card-actions button .truncate {
-      display: block;
-      max-width: 12rem;
+      margin-left: auto;
     }
 
     .cx-detail-row {
@@ -211,13 +830,45 @@
       color: var(--color-text-secondary);
     }
 
-    @media (max-width: 767px) {
-      .cx-card-actions button .truncate {
-        max-width: 9rem;
-      }
+    /* Theory modal scrollbar */
+    #theory-modal-body::-webkit-scrollbar { width: 5px; }
+    #theory-modal-body::-webkit-scrollbar-track { background: transparent; }
+    #theory-modal-body::-webkit-scrollbar-thumb {
+      background: var(--color-border-subtle, #e2e8f0);
+      border-radius: 3px;
+    }
 
+    /* Native dialog reset — remove browser defaults */
+    #theory-viewer-dialog {
+      /* Chrome needs explicit max-width/max-height to override user-agent dialog styles */
+      max-width: min(56rem, calc(100vw - 2rem));
+      max-height: calc(100dvh - 2rem);
+    }
+    /* Prevent browser-native Escape from firing close before our animation */
+    #theory-viewer-dialog[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    @media (max-width: 767px) {
       .cx-selection-bar {
         width: calc(100vw - 1rem);
+      }
+    }
+
+    @media (min-width: 768px) {
+      .cx-card-actions {
+        gap: 0.6rem;
+      }
+    }
+
+    @media (min-width: 1200px) {
+      .cx-card-actions {
+        flex-wrap: nowrap;
+      }
+
+      .cx-card-actions-secondary {
+        margin-left: auto;
       }
     }
 
@@ -252,7 +903,7 @@
         <div class="layout-content-container cx-page-shell flex flex-col flex-1 cx-page-enter">
           <div class="flex items-center gap-3 px-4 pb-4">
             <button id="back-button"
-              class="flex items-center justify-center w-10 h-10 rounded-full hover:bg-bg-tertiary transition-colors cursor-pointer"
+              class="icon-button-muted"
               title="Назад на главную">
               <span class="material-symbols-outlined text-text-secondary">arrow_back</span>
             </button>
@@ -269,84 +920,123 @@
               Комплексы заданий</p>
             <div class="cx-toolbar-actions flex items-center gap-2">
               <button id="toggle-select-complexes"
-                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2"
+                class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium"
                 title="Выбрать несколько комплексов">
                 <span class="material-symbols-outlined text-lg">checklist</span>
                 <span class="truncate">Выбрать</span>
               </button>
               <button id="import-complexes"
-                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2">
+                class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium">
                 <span class="material-symbols-outlined text-lg">upload_file</span>
                 <span class="truncate">Импорт</span>
               </button>
+              <button id="open-theory-center"
+                class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium">
+                <span class="material-symbols-outlined text-lg">hub</span>
+                <span class="truncate">Центр теории</span>
+              </button>
               <button id="create-complex"
-                class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors">
+                class="btn-primary inline-flex min-w-[84px] items-center justify-center text-sm font-bold">
                 <span class="truncate">+ Создать комплекс</span>
               </button>
             </div>
           </div>
           <div class="px-4 mb-4">
-            <div class="rounded-xl border border-border-subtle bg-surface-1 p-3 shadow-sm">
-              <div class="flex flex-col gap-3 lg:flex-row lg:items-center">
-                <label class="relative flex-1 min-w-0">
-                  <span class="pointer-events-none absolute inset-y-0 left-3 flex items-center text-text-secondary">
-                    <span class="material-symbols-outlined text-lg">search</span>
-                  </span>
-                  <input id="complex-search-input" type="search" autocomplete="off" spellcheck="false"
-                    class="w-full rounded-lg border border-border-strong bg-bg-main py-2.5 pl-11 pr-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary-light"
-                    placeholder="Найти по названию, описанию или задаче" aria-label="Поиск по комплексам">
-                </label>
-                <p id="complex-filter-summary" class="text-xs font-medium text-text-secondary">Показаны все комплексы</p>
-              </div>
-              <div class="mt-3 flex flex-wrap gap-2" role="tablist" aria-label="Фильтры комплексов">
-                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                  data-filter="all">Все</button>
-                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                  data-filter="active">В работе</button>
-                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                  data-filter="pinned">Закреплённые</button>
-                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                  data-filter="frozen">Замороженные</button>
-                <button type="button" class="complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors"
-                  data-filter="review">Нужно повторить</button>
-              </div>
-              <div id="complex-theory-banner" class="hidden mt-3 rounded-xl border border-primary-light bg-primary-lighter px-4 py-3">
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div class="min-w-0">
-                    <p class="text-sm font-bold text-primary-darker">Theory focus</p>
-                    <p id="complex-theory-banner-copy" class="text-xs text-primary-darker">Показаны комплексы для выбранной теории.</p>
+            <div class="card-elevated cx-controls-panel p-3 md:p-4">
+              <div class="cx-controls-stack">
+                <div class="cx-controls-hero">
+                  <label class="cx-controls-search">
+                    <span class="cx-controls-search-icon" aria-hidden="true">
+                      <span class="material-symbols-outlined text-[22px]">search</span>
+                    </span>
+                    <input id="complex-search-input" type="search" autocomplete="off" spellcheck="false"
+                      class="cx-controls-search-input"
+                      placeholder="Найти комплекс по названию, описанию или конкретному заданию"
+                      aria-label="Поиск по комплексам">
+                  </label>
+                  <div class="cx-controls-summary-card">
+                    <p class="cx-controls-summary-label">Состояние каталога</p>
+                    <p id="complex-filter-summary" aria-live="polite">Показаны все комплексы</p>
                   </div>
-                  <div class="flex flex-wrap items-center gap-2">
-                    <button id="complex-theory-open-hub" type="button"
-                      class="inline-flex items-center gap-1 rounded-lg border border-primary px-3 py-1.5 text-xs font-semibold text-primary-darker transition-colors hover:bg-primary-light">
-                      <span class="material-symbols-outlined text-[15px]">account_tree</span>
-                      Theory Hub
-                    </button>
-                    <button id="complex-theory-clear" type="button"
-                      class="inline-flex items-center gap-1 rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary transition-colors hover:border-primary hover:text-primary">
-                      <span class="material-symbols-outlined text-[15px]">close</span>
-                      Сбросить
-                    </button>
+                </div>
+
+                <div class="cx-controls-grid">
+                  <section class="cx-controls-section cx-controls-section--combined" aria-label="Навигация по каталогу комплексов">
+                    <div class="cx-controls-section-head cx-controls-section-head--combined">
+                      <div>
+                        <p class="cx-controls-kicker">Навигация по каталогу</p>
+                      </div>
+                      <span aria-hidden="true"></span>
+                    </div>
+
+                    <div class="cx-control-lane">
+                      <div class="cx-control-lane__label">Фильтры</div>
+                      <div class="cx-filter-row" role="tablist" aria-label="Фильтры комплексов">
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-info shadow-sm" data-filter="all" aria-selected="true">Все</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="mine" aria-selected="false">Мои</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="shared" aria-selected="false">Общие</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="imported" aria-selected="false">Импорт</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="active" aria-selected="false">В работе</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="paused" aria-selected="false">На паузе</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="pinned" aria-selected="false">Закреплённые</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="frozen" aria-selected="false">Замороженные</button>
+                        <button type="button" class="complex-filter-chip pill pill-sm pill-neutral" data-filter="review" aria-selected="false">Нужно повторить</button>
+                      </div>
+                    </div>
+
+                    <div class="cx-control-lane">
+                      <div class="cx-control-lane__label">Сортировка</div>
+                      <div class="cx-sort-grid">
+                        <button type="button" class="cx-sort-btn active" data-sort="name-asc" aria-pressed="true">По имени ↑</button>
+                        <button type="button" class="cx-sort-btn" data-sort="name-desc" aria-pressed="false">По имени ↓</button>
+                        <button type="button" class="cx-sort-btn" data-sort="date-desc" aria-pressed="false">Сначала новые</button>
+                        <button type="button" class="cx-sort-btn" data-sort="date-asc" aria-pressed="false">Сначала старые</button>
+                        <button type="button" class="cx-sort-btn" data-sort="tasks-desc" aria-pressed="false">Больше заданий</button>
+                      </div>
+                    </div>
+
+                  </section>
+                </div>
+
+                <div id="complex-theory-banner" class="hidden px-3 py-3">
+                  <div class="cx-theory-banner__body">
+                    <div class="cx-theory-banner__content">
+                      <p class="cx-controls-kicker">Теоретический контекст</p>
+                      <p class="cx-theory-banner__title">Фокус на теории</p>
+                      <p id="complex-theory-banner-copy" class="cx-theory-banner__copy">Показаны комплексы для выбранной теории.</p>
+                    </div>
+                    <div class="cx-theory-banner__actions">
+                      <button id="complex-theory-open-hub" type="button"
+                        class="cx-theory-banner__action cx-theory-banner__action--primary">
+                        <span class="material-symbols-outlined text-[15px]">edit_square</span>
+                        Открыть теорию
+                      </button>
+                      <button id="complex-theory-clear" type="button"
+                        class="cx-theory-banner__action">
+                        <span class="material-symbols-outlined text-[15px]">close</span>
+                        Сбросить
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
           <div id="complex-selection-action-bar"
-            class="cx-selection-bar fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 p-2 shadow-2xl">
+            class="cx-selection-bar card-elevated fixed bottom-6 left-1/2 z-50 hidden -translate-x-1/2 items-center gap-3 p-2 shadow-2xl">
             <div id="complex-selection-counter" class="border-r border-border-subtle px-3 font-semibold text-text-secondary">0 выбрано</div>
             <button id="complex-select-all"
-              class="flex items-center gap-2 rounded-lg bg-surface-2 px-4 py-2 font-medium text-text-secondary transition-colors hover:bg-bg-hover">
+              class="btn-secondary inline-flex items-center gap-2 font-medium">
               <span class="material-symbols-outlined">select_all</span>
               Все
             </button>
             <button id="complex-export-selected"
-              class="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 font-medium text-primary-fg transition-colors hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50">
+              class="btn-primary inline-flex items-center gap-2 font-medium disabled:cursor-not-allowed disabled:opacity-50">
               <span class="material-symbols-outlined">archive</span>
               Экспорт
             </button>
             <button id="complex-selection-cancel"
-              class="rounded-lg p-2 text-text-secondary transition-colors hover:bg-bg-hover hover:text-text-main" title="Отмена выбора">
+              class="icon-button-muted" title="Отмена выбора">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
@@ -356,41 +1046,41 @@
             </div>
             <div class="p-4 mt-8" id="filtered-empty-state" hidden>
               <div
-                class="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed border-border-subtle bg-surface-1 px-8 py-12 text-center">
-                <div class="flex h-14 w-14 items-center justify-center rounded-full bg-bg-tertiary">
+                class="empty-state-card">
+                <div class="empty-state-card__icon">
                   <span class="material-symbols-outlined text-2xl text-text-disabled">filter_alt_off</span>
                 </div>
-                <h3 class="text-lg font-bold text-text-main">По этому фильтру ничего не найдено</h3>
-                <p class="max-w-md text-sm text-text-secondary">Попробуйте снять часть фильтров или изменить поисковый запрос.</p>
+                <h3 class="empty-state-card__title">По этому фильтру ничего не найдено</h3>
+                <p class="empty-state-card__copy max-w-md">Попробуйте снять часть фильтров или изменить поисковый запрос.</p>
               </div>
             </div>
             <div class="p-4 mt-8" id="empty-state" hidden>
               <div
-                class="flex flex-col items-center justify-center text-center gap-4 py-16 px-8 bg-surface-1 rounded-lg border border-dashed border-border-subtle">
-                <div class="flex items-center justify-center w-16 h-16 rounded-full bg-bg-tertiary">
+                class="empty-state-card">
+                <div class="empty-state-card__icon">
                   <span class="material-symbols-outlined text-3xl text-text-disabled">add_task</span>
                 </div>
-                <h3 class="text-xl font-bold text-text-main">Комплексы еще не созданы</h3>
-                <p class="text-text-secondary max-w-sm">Нажмите кнопку ниже, чтобы создать свой
+                <h3 class="empty-state-card__title">Комплексы еще не созданы</h3>
+                <p class="empty-state-card__copy max-w-sm">Нажмите кнопку ниже, чтобы создать свой
                   первый
                   комплекс заданий.</p>
                 <button
-                  class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors mt-2">
+                  class="btn-primary inline-flex min-w-[84px] items-center justify-center text-sm font-bold mt-2">
                   <span class="truncate">+ Создать комплекс</span>
                 </button>
               </div>
             </div>
             <div class="p-4 mt-8" id="error-state" hidden>
               <div
-                class="flex flex-col items-center justify-center text-center gap-4 py-16 px-8 bg-error-lighter rounded-lg border border-dashed border-error-light">
+                class="empty-state-card border-error-light bg-error-lighter">
                 <div class="flex items-center justify-center w-16 h-16 rounded-full bg-error-light">
                   <span class="material-symbols-outlined text-3xl text-status-error">error</span>
                 </div>
-                <h3 class="text-xl font-bold text-status-error-dark">Ошибка загрузки</h3>
-                <p class="text-status-error max-w-sm">Не удалось загрузить список комплексов. Пожалуйста,
+                <h3 class="empty-state-card__title text-status-error-dark">Ошибка загрузки</h3>
+                <p class="empty-state-card__copy max-w-sm text-status-error">Не удалось загрузить список комплексов. Пожалуйста,
                   проверьте соединение и попробуйте снова.</p>
                 <button id="retry-load"
-                  class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-status-error text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-status-error-dark transition-colors mt-2">
+                  class="btn-secondary inline-flex min-w-[84px] items-center justify-center text-sm font-bold mt-2 border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error">
                   <span class="truncate">Повторить</span>
                 </button>
               </div>
@@ -432,6 +1122,7 @@
             return date.toLocaleString("ru-RU", {
               day: "2-digit",
               month: "2-digit",
+              year: "numeric",
               hour: "2-digit",
               minute: "2-digit",
             });
@@ -507,6 +1198,142 @@
           let activeComplexFilter = "all";
           let activeComplexSearch = "";
           let activeTheoryFilterId = "";
+          const VALID_COMPLEX_SORT_KEYS = new Set(['name-asc', 'name-desc', 'date-desc', 'date-asc', 'tasks-desc']);
+          function normalizeComplexSortKey(sortKey) {
+            return VALID_COMPLEX_SORT_KEYS.has(sortKey) ? sortKey : 'name-asc';
+          }
+
+          let activeComplexSort = 'name-asc';
+          try {
+            sessionStorage.removeItem('cx-sort');
+          } catch(_) {}
+          let allComplexItems = [];
+          let currentComplexesUserId = "";
+          let currentComplexesUserIdPromise = null;
+
+          async function resolveCurrentComplexesUserId(forceRefresh = false) {
+            if (!forceRefresh && currentComplexesUserId) {
+              return currentComplexesUserId;
+            }
+            if (!forceRefresh && currentComplexesUserIdPromise) {
+              return currentComplexesUserIdPromise;
+            }
+
+            currentComplexesUserIdPromise = (async () => {
+              try {
+                const resp = await fetch("/api/users/current");
+                const data = await resp.json().catch(() => ({}));
+                const userId = String(data?.user?.user_id || "").trim();
+                currentComplexesUserId = userId;
+                return currentComplexesUserId;
+              } catch (error) {
+                console.warn("[Complexes] Failed to resolve current user", error);
+                return currentComplexesUserId || "";
+              } finally {
+                currentComplexesUserIdPromise = null;
+              }
+            })();
+
+            return currentComplexesUserIdPromise;
+          }
+
+          function appendUserIdQuery(path, userId) {
+            const normalizedUserId = String(userId || "").trim();
+            if (!normalizedUserId) return path;
+            const separator = path.includes("?") ? "&" : "?";
+            return `${path}${separator}user_id=${encodeURIComponent(normalizedUserId)}`;
+          }
+
+          function withUserIdPayload(payload, userId) {
+            const normalizedUserId = String(userId || "").trim();
+            if (!normalizedUserId) return payload;
+            return { ...(payload || {}), user_id: normalizedUserId };
+          }
+
+          function getComplexSortName(item) {
+            return String(item?.name || '').trim();
+          }
+
+          function getComplexSortTimestamp(item) {
+            const raw = item?.updated_at ?? item?.created_at ?? null;
+            if (raw == null || raw === '') return null;
+            if (typeof raw === 'number' && Number.isFinite(raw)) return raw;
+            const parsed = Date.parse(String(raw));
+            return Number.isFinite(parsed) ? parsed : null;
+          }
+
+          function getComplexSortTaskCount(item) {
+            return Array.isArray(item?.tasks) ? item.tasks.length : 0;
+          }
+
+          function compareComplexNames(a, b, direction = 'asc') {
+            const collator = new Intl.Collator('ru-RU', { sensitivity: 'base', numeric: true });
+            const direct = collator.compare(getComplexSortName(a), getComplexSortName(b));
+            if (direct !== 0) {
+              return direction === 'desc' ? -direct : direct;
+            }
+            return collator.compare(String(a?.id || ''), String(b?.id || ''));
+          }
+
+          function compareComplexTimestamps(a, b, direction = 'desc') {
+            const aTime = getComplexSortTimestamp(a);
+            const bTime = getComplexSortTimestamp(b);
+            if (aTime == null && bTime == null) return compareComplexNames(a, b, 'asc');
+            if (aTime == null) return 1;
+            if (bTime == null) return -1;
+            if (aTime !== bTime) {
+              return direction === 'asc' ? aTime - bTime : bTime - aTime;
+            }
+            return compareComplexNames(a, b, 'asc');
+          }
+
+          function compareComplexTaskCounts(a, b) {
+            const diff = getComplexSortTaskCount(b) - getComplexSortTaskCount(a);
+            if (diff !== 0) return diff;
+            const dateDiff = compareComplexTimestamps(a, b, 'desc');
+            if (dateDiff !== 0) return dateDiff;
+            return compareComplexNames(a, b, 'asc');
+          }
+
+          function sortComplexItems(items, sortKey) {
+            const arr = items.slice();
+            switch (normalizeComplexSortKey(sortKey)) {
+              case 'name-desc':
+                return arr.sort((a, b) => compareComplexNames(a, b, 'desc'));
+              case 'date-desc':
+                return arr.sort((a, b) => compareComplexTimestamps(a, b, 'desc'));
+              case 'date-asc':
+                return arr.sort((a, b) => compareComplexTimestamps(a, b, 'asc'));
+              case 'tasks-desc':
+                return arr.sort((a, b) => compareComplexTaskCounts(a, b));
+              default: // 'name-asc'
+                return arr.sort((a, b) => compareComplexNames(a, b, 'asc'));
+            }
+          }
+
+          function updateSortUi() {
+            const btns = document.querySelectorAll('.cx-sort-btn[data-sort]');
+            btns.forEach((btn) => {
+              const active = btn.getAttribute('data-sort') === activeComplexSort;
+              btn.classList.toggle('active', active);
+              btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
+          }
+
+          function setComplexSort(sortKey) {
+            activeComplexSort = normalizeComplexSortKey(sortKey);
+            updateSortUi();
+            if (allComplexItems.length) {
+              rerenderComplexList(allComplexItems);
+            }
+          }
+
+          function bindComplexSort() {
+            document.querySelectorAll('.cx-sort-btn[data-sort]').forEach((btn) => {
+              btn.addEventListener('click', () => setComplexSort(btn.getAttribute('data-sort')));
+            });
+            updateSortUi();
+          }
           const loadingRevealDelayMs = window.ACTRA_CONFIG?.ui?.loadingRevealDelayMs ?? 280;
 
           function readInitialTheoryFilterFromUrl() {
@@ -572,10 +1399,61 @@
 
           function resolveComplexTheorySyncStatus(complex) {
             const rawStatus = String(complex?.theory_sync_status || "").trim().toLowerCase();
-            if (rawStatus === "ok" || rawStatus === "none" || rawStatus === "conflict") return rawStatus;
+            if (rawStatus === "conflict") return "composite";
+            if (rawStatus === "ok" || rawStatus === "none" || rawStatus === "composite") return rawStatus;
+            const theoryIds = Array.isArray(complex?.theory_sync_meta?.theory_ids)
+              ? complex.theory_sync_meta.theory_ids.map((value) => String(value || "").trim()).filter(Boolean)
+              : [];
+            if (theoryIds.length > 1) return "composite";
             const theoryLink = (complex && typeof complex.theory_link === "object") ? complex.theory_link : null;
             const hasTheoryId = !!(theoryLink && typeof theoryLink.theory_id === "string" && theoryLink.theory_id);
             return hasTheoryId ? "ok" : "none";
+          }
+
+          function hasComplexTheoryTopicRefs(complex) {
+            const tasks = Array.isArray(complex?.tasks) ? complex.tasks : [];
+            return tasks.some((task) => {
+              const rawRef = typeof task === "string"
+                ? task
+                : String(task?.task_ref || task?.task_id || "").trim();
+              return rawRef.split("/").filter(Boolean).length >= 3;
+            });
+          }
+
+          function isComplexTheoryManualSyncRelevant(complex) {
+            const mode = resolveComplexTheoryMode(complex);
+            if (mode !== "inherit") return false;
+            if (!hasComplexTheoryTopicRefs(complex)) return false;
+
+            const syncMeta = (complex && typeof complex.theory_sync_meta === "object") ? complex.theory_sync_meta : {};
+            const source = String(syncMeta.source || "").trim().toLowerCase();
+            const createdVia = String(complex?.ownership?.created_via || complex?.created_via || "").trim().toLowerCase();
+            const currentSources = new Set([
+              "complex_create",
+              "complex_update",
+              "topic_propagation",
+              "single_complex_sync",
+            ]);
+
+            if (createdVia === "archive_import") return true;
+            if (!source) return true;
+            return !currentSources.has(source);
+          }
+
+          function getDeltaImageAttributes(attrs) {
+            const imageAttrs = {};
+            if (!attrs || typeof attrs !== "object") return imageAttrs;
+            const width = String(attrs.width || "").trim();
+            if (width) imageAttrs.width = width;
+            const align = String(attrs.align || "").trim();
+            if (["left", "center", "right"].includes(align)) imageAttrs.align = align;
+            const rotate = String(attrs.rotate || "").trim();
+            if (["0", "90", "180", "270"].includes(rotate)) imageAttrs.rotate = rotate;
+            const float = String(attrs.float || "").trim();
+            if (["none", "left", "right"].includes(float)) imageAttrs.float = float;
+            const flip = String(attrs.flip || "").trim();
+            if (["none", "horizontal"].includes(flip)) imageAttrs.flip = flip;
+            return imageAttrs;
           }
 
           function buildComplexTheoryBadges(complex) {
@@ -583,20 +1461,20 @@
             const syncStatus = resolveComplexTheorySyncStatus(complex);
 
             const modeBadge = mode === "inherit"
-              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
+              ? `<span class="cx-card-badge pill pill-sm pill-neutral">
                     <span class="material-symbols-outlined text-sm">account_tree</span> Наследование
                  </span>`
-              : `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+              : `<span class="cx-card-badge pill pill-sm pill-info">
                     <span class="material-symbols-outlined text-sm">tune</span> Локальная теория
                  </span>`;
 
-            const conflictBadge = syncStatus === "conflict"
-              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
-                    <span class="material-symbols-outlined text-sm">warning</span> Конфликт теорий
-                 </span>`
+            const statusBadge = syncStatus === "composite"
+              ? `<span class="cx-card-badge pill pill-sm pill-info">
+                    <span class="material-symbols-outlined text-sm">layers</span> Подборка теорий
+                  </span>`
               : "";
 
-            return { mode, syncStatus, modeBadge, conflictBadge };
+            return { mode, syncStatus, modeBadge, statusBadge };
           }
 
           function resolveComplexOwnership(complex) {
@@ -616,6 +1494,7 @@
             const isOwnedByCurrentUser = ownership.is_owned_by_current_user === true;
             return {
               createdByUserId,
+              createdByUserName: ownership.created_by_user_name || null,
               updatedByUserId,
               createdVia,
               contentScope,
@@ -628,82 +1507,55 @@
           function resolveComplexCreatedViaLabel(createdVia) {
             switch (String(createdVia || "").trim().toLowerCase()) {
               case "complex_builder":
-                return "Builder";
+                return "Конструктор";
               case "manual_editor":
-                return "Editor";
+                return "Ручной редактор";
               case "archive_import":
-                return "Импорт";
+                return "Импортировано";
+              case "analysis_auto":
+                return "Сгенерировано ИИ агентом";
               case "topic_propagation":
-                return "Sync тем";
+                return "Синхронизация тем";
               case "single_complex_sync":
-                return "Sync комплекса";
+                return "Синхронизация комплекса";
               default:
-                return "Workspace";
+                return "Внешний источник";
             }
           }
 
           function buildComplexOwnershipBadges(complex) {
             const ownership = resolveComplexOwnership(complex);
             const ownerBadge = ownership.isOwnedByCurrentUser
-              ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-success-light bg-success-lighter px-2 py-1 text-xs font-semibold text-success-darker" title="Создано из текущего профиля">
+              ? `<span class="cx-card-badge pill pill-sm pill-success" title="Создано из текущего профиля">
                     <span class="material-symbols-outlined text-sm">person</span> Моё
                  </span>`
               : ownership.hasOwner
-                ? `<span class="cx-card-badge inline-flex max-w-full items-center gap-1 rounded-full border border-border-subtle bg-surface-2 px-2 py-1 text-xs font-semibold text-text-secondary" title="Автор комплекса">
-                      <span class="material-symbols-outlined text-sm">badge</span> ${escapeHtml(ownership.createdByUserId)}
+                ? `<span class="cx-card-badge pill pill-sm pill-neutral max-w-full" title="Автор комплекса">
+                      <span class="material-symbols-outlined text-sm">badge</span> Автор: ${escapeHtml(ownership.createdByUserName || ownership.createdByUserId)}
                    </span>`
                 : "";
-            const sourceBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-main px-2 py-1 text-xs font-semibold text-text-secondary" title="Источник контента">
+            const sourceBadge = `<span class="cx-card-badge pill pill-sm pill-neutral" title="Источник контента">
                   <span class="material-symbols-outlined text-sm">inventory_2</span> ${escapeHtml(resolveComplexCreatedViaLabel(ownership.createdVia))}
                </span>`;
             return { ownership, ownerBadge, sourceBadge };
           }
 
           function ensureComplexOwnershipControls() {
-            const filterBar = document.querySelector('[role="tablist"][aria-label]');
-            if (!filterBar) return;
-
-            const injectedFilters = [
-              { id: "mine", label: "Моё" },
-              { id: "shared", label: "Общее" },
-              { id: "imported", label: "Импорт" },
-            ];
-            const anchorChip = filterBar.querySelector('.complex-filter-chip[data-filter="all"]');
-            let insertionPoint = anchorChip ? anchorChip.nextSibling : null;
-
-            injectedFilters.forEach(({ id, label }) => {
-              if (filterBar.querySelector(`.complex-filter-chip[data-filter="${id}"]`)) return;
-              const chip = document.createElement("button");
-              chip.type = "button";
-              chip.className = "complex-filter-chip rounded-lg border px-3 py-2 text-xs font-semibold transition-colors";
-              chip.setAttribute("data-filter", id);
-              chip.textContent = label;
-              if (insertionPoint) {
-                filterBar.insertBefore(chip, insertionPoint);
-              } else {
-                filterBar.appendChild(chip);
-              }
-            });
-
-            if (!document.getElementById("complex-library-note")) {
-              const note = document.createElement("p");
-              note.id = "complex-library-note";
-              note.className = "cx-filter-note mt-3 text-[11px]";
-              note.textContent = "Комплексы живут в общей локальной библиотеке. «Моё» показывает комплексы текущего профиля, «Общее» — библиотеку вне вашего профиля, «Импорт» — комплексы, пришедшие из архива.";
-              filterBar.insertAdjacentElement("afterend", note);
-            }
+            // Logic moved to HTML for stability and uniform grid layout
           }
 
           function getComplexFilterLabel(filterId) {
             switch (filterId) {
               case "mine":
-                return "моё";
+                return "мои";
               case "shared":
-                return "общее";
+                return "общие";
               case "imported":
                 return "импорт";
               case "active":
                 return "в работе";
+              case "paused":
+                return "на паузе";
               case "pinned":
                 return "закреплённые";
               case "frozen":
@@ -745,14 +1597,9 @@
             const chips = document.querySelectorAll(".complex-filter-chip[data-filter]");
             chips.forEach((chip) => {
               const isActive = chip.getAttribute("data-filter") === activeComplexFilter;
-              chip.classList.toggle("bg-primary", isActive);
-              chip.classList.toggle("text-primary-fg", isActive);
-              chip.classList.toggle("border-primary", isActive);
+              chip.classList.toggle("pill-info", isActive);
+              chip.classList.toggle("pill-neutral", !isActive);
               chip.classList.toggle("shadow-sm", isActive);
-              chip.classList.toggle("bg-surface-1", !isActive);
-              chip.classList.toggle("text-text-secondary", !isActive);
-              chip.classList.toggle("border-border-subtle", !isActive);
-              chip.classList.toggle("hover:bg-bg-hover", !isActive);
               chip.setAttribute("aria-selected", isActive ? "true" : "false");
             });
           }
@@ -792,6 +1639,8 @@
                 matchesFilter = isImported;
               } else if (activeComplexFilter === "active") {
                 matchesFilter = status === "in_progress" || isPaused;
+              } else if (activeComplexFilter === "paused") {
+                matchesFilter = isPaused;
               } else if (activeComplexFilter === "pinned") {
                 matchesFilter = isPinned;
               } else if (activeComplexFilter === "frozen") {
@@ -812,6 +1661,19 @@
               filterEmptyEl.hidden = visibleCount !== 0;
             }
             updateComplexFilterSummary(cards.length, visibleCount);
+          }
+
+          function rerenderComplexList(items) {
+            const listEl = document.getElementById("complexes-list");
+            if (!listEl) return;
+            // Re-sort already rendered cards in DOM by reordering children
+            const sortedItems = sortComplexItems(items, activeComplexSort);
+            const sortedIds = sortedItems.map((c) => normalizeComplexId(c.id));
+            sortedIds.forEach((id) => {
+              const card = listEl.querySelector(`[data-complex-card-id="${CSS.escape(id)}"]`);
+              if (card) listEl.appendChild(card);
+            });
+            applyComplexFilters();
           }
 
           function bindComplexFilters() {
@@ -835,8 +1697,10 @@
 
             const clearTheoryBtn = document.getElementById("complex-theory-clear");
             if (clearTheoryBtn) {
-              clearTheoryBtn.addEventListener("click", () => {
-                setTheoryFilter("");
+              clearTheoryBtn.addEventListener("click", (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                setTheoryFilter("", { updateUrl: true });
               });
             }
 
@@ -844,8 +1708,8 @@
             if (openTheoryHubBtn) {
               openTheoryHubBtn.addEventListener("click", () => {
                 const url = activeTheoryFilterId
-                  ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(activeTheoryFilterId)}`
-                  : "/ui/editor?theory_hub=1";
+                  ? `/ui/editor/Theory_Editor.html?theory_id=${encodeURIComponent(activeTheoryFilterId)}&return_url=${encodeURIComponent(`/ui/complexes?theory_id=${encodeURIComponent(activeTheoryFilterId)}`)}`
+                  : "/ui/editor/Theory_Editor.html";
                 window.navigateWithTransition(url);
               });
             }
@@ -862,8 +1726,9 @@
             const shouldShowBar = selectionMode || selectedComplexes.size > 0;
 
             if (toggleBtn) {
-              toggleBtn.classList.toggle("text-primary", selectionMode);
-              toggleBtn.classList.toggle("bg-primary-lighter", selectionMode);
+              toggleBtn.classList.toggle("ring-2", selectionMode);
+              toggleBtn.classList.toggle("ring-primary-light", selectionMode);
+              toggleBtn.classList.toggle("border-primary-light", selectionMode);
             }
 
             if (actionBar) {
@@ -879,7 +1744,7 @@
 
             const selectBoxes = document.querySelectorAll("[data-complex-select-box]");
             selectBoxes.forEach((el) => {
-              el.classList.toggle("hidden", !selectionMode);
+              el.classList.toggle("is-visible", selectionMode);
             });
           }
 
@@ -1060,7 +1925,7 @@
                 continue;
               }
               if (insert && typeof insert === "object" && typeof insert.image === "string") {
-                segments.push({ kind: "image", value: insert.image });
+                segments.push({ kind: "image", value: insert.image, attrs: getDeltaImageAttributes(attrs) });
               }
             }
 
@@ -1081,7 +1946,37 @@
               }
               if (segment.kind === "image" && typeof segment.value === "string") {
                 const src = localImageSrc(segment.value);
-                html += `<img src="${src}" alt="" class="max-w-full rounded border border-border-subtle my-2" />`;
+                const attrs = segment.attrs || {};
+                const width = String(attrs.width || "100%").trim() || "100%";
+                const align = String(attrs.align || "left").trim() || "left";
+                const rotate = String(attrs.rotate || "0").trim() || "0";
+                const float = String(attrs.float || "none").trim() || "none";
+                const flip = String(attrs.flip || "none").trim() || "none";
+                const flipScale = flip === "horizontal" ? " scaleX(-1)" : "";
+                const transformStyle = rotate !== "0" || flip === "horizontal"
+                  ? `transform:rotate(${rotate}deg)${flipScale};`
+                  : "";
+
+                let wrapperStyle = "";
+                if (float === "left") {
+                  wrapperStyle = "display:inline-block;float:left;margin:0 16px 8px 0;";
+                } else if (float === "right") {
+                  wrapperStyle = "display:inline-block;float:right;margin:0 0 8px 16px;";
+                } else {
+                  const textAlign = align === "center" ? "text-align:center;" : align === "right" ? "text-align:right;" : "";
+                  wrapperStyle = `display:block;${textAlign}`;
+                }
+
+                html += `
+                  <span class="theory-image-wrapper" style="${wrapperStyle}">
+                    <img
+                      src="${src}"
+                      alt=""
+                      class="rounded border border-border-subtle my-2"
+                      style="max-width:${width};width:${width};border-radius:12px;${transformStyle}"
+                    />
+                  </span>
+                `;
               }
             }
             return html || "<br>";
@@ -1147,6 +2042,11 @@
           }
           async function openTheoryModal(complexName, theoryId) {
             if (!theoryId) return;
+
+            // Remove any stale modal
+            const stale = document.getElementById("theory-viewer-dialog");
+            if (stale) stale.remove();
+
             try {
               const resp = await fetch(`/api/theories/${encodeURIComponent(theoryId)}`);
               const data = await resp.json();
@@ -1159,65 +2059,514 @@
                 });
                 return;
               }
+
               const item = data.item;
               const html = deltaToHtml(item.delta);
               const updatedAt = item.updated_at ? new Date(item.updated_at).toLocaleString("ru-RU") : "—";
-              const modal = document.createElement("div");
-              modal.className = "fixed inset-0 z-[1000] bg-scrim flex items-center justify-center p-4";
-              modal.innerHTML = `
-                <div class="bg-surface-1 w-full max-w-3xl rounded-xl shadow-xl border border-border-subtle max-h-[85vh] overflow-hidden flex flex-col">
-                  <div class="px-5 py-4 border-b border-border-subtle flex items-center justify-between">
-                    <div>
-                      <p class="text-lg font-bold text-text-main">${escapeHtml(item.title || "Теория")}</p>
-                      <p class="text-sm text-text-secondary">Комплекс: ${escapeHtml(complexName || "—")} · Обновлено: ${escapeHtml(updatedAt)}</p>
+
+              // ── Native <dialog> lives in the browser's top-layer ──────────────────
+              // Top-layer is rendered ABOVE every stacking context on the page,
+              // so backdrop-filter on ::backdrop covers 100% of content reliably,
+              // including transformed cards, sticky headers, fixed toolbars, etc.
+              // Scroll position has zero effect on top-layer elements.
+              const dialog = document.createElement("dialog");
+              dialog.id = "theory-viewer-dialog";
+              dialog.style.cssText = [
+                "border:none",
+                "padding:0",
+                "margin:auto",
+                "width:calc(100vw - 2rem)",
+                "max-width:56rem",
+                "max-height:calc(100dvh - 2rem)",
+                "border-radius:2.5rem",
+                "overflow:hidden",
+                "box-shadow:0 32px 80px -16px rgba(0,0,0,0.6)",
+                "background:var(--color-surface-1,#fff)",
+                "border:2px solid var(--color-border-strong,#cbd5e1)",
+                "display:flex",
+                "flex-direction:column",
+                "transform:scale(0.92) translateY(20px)",
+                "opacity:0",
+                "transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease",
+              ].join(";");
+
+              dialog.innerHTML = `
+                <style>
+                  /* ::backdrop lives in top-layer alongside <dialog> — guaranteed full coverage */
+                  #theory-viewer-dialog::backdrop {
+                    background: rgba(0,0,0,0.72);
+                    backdrop-filter: blur(16px) saturate(1.2);
+                    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                  }
+                  #theory-viewer-dialog[data-open]::backdrop {
+                    opacity: 1;
+                  }
+                  /* Thin scrollbar for the body */
+                  #theory-modal-body::-webkit-scrollbar { width: 5px; }
+                  #theory-modal-body::-webkit-scrollbar-track { background: transparent; }
+                  #theory-modal-body::-webkit-scrollbar-thumb {
+                    background: var(--color-border-subtle,#e2e8f0);
+                    border-radius: 3px;
+                  }
+                </style>
+
+                <!-- Header with improved theme background -->
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.5rem 2rem;border-bottom:2px solid var(--color-border-subtle,#e2e8f0);background:var(--color-bg-secondary,#f1f5f9);flex-shrink:0;">
+                  <div style="min-width:0;flex:1;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem;">
+                      <span class="material-symbols-outlined" style="font-size:17px;color:var(--color-primary,#6366f1);flex-shrink:0;">menu_book</span>
+                      <p style="font-size:1.0625rem;font-weight:800;color:var(--color-text-main,#0f172a);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.02em;">${escapeHtml(item.title || "Теория")}</p>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <button type="button" class="theory-modal-open-complexes rounded-lg px-3 py-2 border border-border-subtle bg-surface-2 text-sm font-medium text-text-secondary hover:text-primary hover:border-primary transition-colors">
-                        Комплексы
-                      </button>
-                      <button type="button" class="theory-modal-open-hub rounded-lg px-3 py-2 border border-border-subtle bg-surface-2 text-sm font-medium text-text-secondary hover:text-primary hover:border-primary transition-colors">
-                        Theory Hub
-                      </button>
-                      <button type="button" class="theory-modal-close rounded-lg p-2 hover:bg-bg-tertiary text-text-secondary">
-                        <span class="material-symbols-outlined">close</span>
-                      </button>
-                    </div>
+                    <p style="font-size:0.7rem;color:var(--color-text-secondary,#64748b);margin:0;display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;">
+                      <span class="material-symbols-outlined" style="font-size:13px;">inventory_2</span>
+                      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;">${escapeHtml(complexName || "—")}</span>
+                      <span>В·</span>
+                      <span class="material-symbols-outlined" style="font-size:13px;">history</span>
+                      <span>Обновлено: ${escapeHtml(updatedAt)}</span>
+                    </p>
                   </div>
-                  <div class="p-5 overflow-y-auto custom-scrollbar text-text-main">${html}</div>
+                  <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+                    <button type="button" id="tm-open-complexes"
+                            style="display:inline-flex;align-items:center;gap:0.35rem;height:2.1rem;padding:0 0.8rem;border-radius:0.5rem;border:1px solid var(--color-border-subtle,#e2e8f0);background:var(--color-surface-2,#f8fafc);font-size:0.8rem;font-weight:600;color:var(--color-text-secondary,#64748b);cursor:pointer;">
+                      <span class="material-symbols-outlined" style="font-size:16px;">list_alt</span>Комплексы
+                    </button>
+                    <button type="button" id="tm-open-hub"
+                            style="display:inline-flex;align-items:center;gap:0.35rem;height:2.1rem;padding:0 0.8rem;border-radius:0.5rem;border:1px solid var(--color-border-subtle,#e2e8f0);background:var(--color-surface-2,#f8fafc);font-size:0.8rem;font-weight:600;color:var(--color-text-secondary,#64748b);cursor:pointer;">
+                      <span class="material-symbols-outlined" style="font-size:16px;">edit_square</span>Редактор теории
+                    </button>
+                    <button type="button" id="tm-close"
+                            style="display:flex;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;border-radius:0.5rem;border:1px solid transparent;background:transparent;color:var(--color-text-secondary,#64748b);cursor:pointer;"
+                            aria-label="Закрыть">
+                      <span class="material-symbols-outlined" style="font-size:21px;">close</span>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Body -->
+                <div id="theory-modal-body" style="padding:1.625rem 1.75rem;overflow-y:auto;flex:1;min-height:180px;color:var(--color-text-main,#0f172a);line-height:1.7;font-size:0.9375rem;">
+                  ${html || '<div style="display:flex;align-items:center;justify-content:center;padding:4rem 0;color:var(--color-text-muted,#94a3b8);font-style:italic;">Содержимое теории отсутствует.</div>'}
                 </div>
               `;
-              modal.addEventListener("click", (e) => {
-                if (e.target === modal) modal.remove();
+
+              document.body.appendChild(dialog);
+
+              // showModal() promotes dialog into browser top-layer
+              dialog.showModal();
+
+              // Trigger entrance animation in next two frames
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  dialog.setAttribute("data-open", "");
+                  dialog.style.transform = "scale(1) translateY(0)";
+                  dialog.style.opacity = "1";
+                });
               });
-              const closeBtn = modal.querySelector(".theory-modal-close");
-              const openComplexesBtn = modal.querySelector(".theory-modal-open-complexes");
-              const openHubBtn = modal.querySelector(".theory-modal-open-hub");
-              if (closeBtn) closeBtn.addEventListener("click", () => modal.remove());
-              if (openComplexesBtn) {
-                openComplexesBtn.addEventListener("click", () => {
-                  const url = `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
-                  modal.remove();
-                  if (typeof window.navigateWithTransition === "function") {
-                    window.navigateWithTransition(url);
-                    return;
+
+              // ── Toast elevation fix ───────────────────────────────────────────────
+              // <dialog> is in the browser top-layer. Toast containers are appended to
+              // document.body and therefore render BELOW the dialog.
+              // We watch body for new fixed/absolute children while the dialog is open
+              // and immediately re-parent them into the dialog so they inherit top-layer.
+              const isToastCandidate = (el) => {
+                if (!el || el === dialog || el.tagName === "SCRIPT" || el.tagName === "STYLE") return false;
+                // Match only known notification/toast container patterns by id, class, or aria role.
+                // Do NOT match by position:fixed alone — that would grab unrelated UI (theme switcher, etc.)
+                const id = (el.id || "").toLowerCase();
+                const cls = (el.className || "").toLowerCase();
+                const role = (el.getAttribute("role") || "").toLowerCase();
+                const ariaLive = el.getAttribute("aria-live");
+                return (
+                  /toast|notification|snackbar|alert-container|message-container/.test(id) ||
+                  /toast|notification|snackbar/.test(cls) ||
+                  role === "alert" || role === "status" || role === "log" ||
+                  ariaLive === "polite" || ariaLive === "assertive"
+                );
+              };
+
+              const toastObserver = new MutationObserver((mutations) => {
+                for (const m of mutations) {
+                  for (const node of m.addedNodes) {
+                    if (node.nodeType === 1 && isToastCandidate(node)) {
+                      dialog.appendChild(node);
+                    }
                   }
-                  window.location.href = url;
+                }
+              });
+              toastObserver.observe(document.body, { childList: true });
+
+              // Also relocate any toast container that already exists in body
+              requestAnimationFrame(() => {
+                Array.from(document.body.children).forEach((el) => {
+                  if (isToastCandidate(el)) dialog.appendChild(el);
                 });
-              }
-              if (openHubBtn) {
-                openHubBtn.addEventListener("click", () => {
-                  const url = `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`;
-                  modal.remove();
-                  if (typeof window.navigateWithTransition === "function") {
-                    window.navigateWithTransition(url);
-                    return;
-                  }
-                  window.location.href = url;
+              });
+
+              const closeModal = () => {
+                toastObserver.disconnect();
+                // Return any relocated toast containers back to body so they
+                // work normally after the dialog is gone
+                Array.from(dialog.children).forEach((el) => {
+                  if (isToastCandidate(el)) document.body.appendChild(el);
                 });
-              }
-              document.body.appendChild(modal);
+                dialog.removeAttribute("data-open");
+                dialog.style.transform = "scale(0.94) translateY(10px)";
+                dialog.style.opacity = "0";
+                document.removeEventListener("keydown", escHandler);
+                setTimeout(() => {
+                  dialog.close();
+                  dialog.remove();
+                }, 280);
+              };
+
+              const escHandler = (e) => {
+                if (e.key === "Escape") { e.preventDefault(); closeModal(); }
+              };
+              document.addEventListener("keydown", escHandler);
+
+              // Close on backdrop click (click outside dialog bounds)
+              dialog.addEventListener("click", (e) => {
+                const rect = dialog.getBoundingClientRect();
+                const outside = e.clientX < rect.left || e.clientX > rect.right ||
+                                e.clientY < rect.top  || e.clientY > rect.bottom;
+                if (outside) closeModal();
+              });
+
+              dialog.querySelector("#tm-close")?.addEventListener("click", closeModal);
+
+              dialog.querySelector("#tm-open-complexes")?.addEventListener("click", () => {
+                const url = `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
+                closeModal();
+                if (typeof window.navigateWithTransition === "function") {
+                  window.navigateWithTransition(url);
+                } else {
+                  window.location.href = url;
+                }
+              });
+
+              dialog.querySelector("#tm-open-hub")?.addEventListener("click", () => {
+                const returnUrl = `${window.location.pathname}${window.location.search}`;
+                const url = `/ui/editor/Theory_Editor.html?theory_id=${encodeURIComponent(theoryId)}&return_url=${encodeURIComponent(returnUrl)}`;
+                closeModal();
+                if (typeof window.navigateWithTransition === "function") {
+                  window.navigateWithTransition(url);
+                } else {
+                  window.location.href = url;
+                }
+              });
+
             } catch (err) {
               console.error("Failed to open theory modal", err);
+              showComplexVoiceToast({
+                severity: "error",
+                what: "Окно теории не открыто.",
+                impact: "Данные теории недоступны в текущем сеансе.",
+                next: "Проверьте соединение и повторите попытку.",
+              });
+            }
+          }
+
+          async function openComplexTheoryViewer(complexName, theoryIds, options = {}) {
+            const normalizedTheoryIds = (Array.isArray(theoryIds) ? theoryIds : [theoryIds])
+              .map((item) => String(item || "").trim())
+              .filter(Boolean)
+              .filter((item, index, source) => source.indexOf(item) === index);
+            if (!normalizedTheoryIds.length) return;
+
+            const complexId = String(options?.complexId || "").trim();
+            if (normalizedTheoryIds.length === 1) {
+              await openTheoryModal(complexName, normalizedTheoryIds[0]);
+              return;
+            }
+
+            const stale = document.getElementById("theory-viewer-dialog");
+            if (stale) stale.remove();
+
+            try {
+              const theoryItems = (
+                await Promise.all(
+                  normalizedTheoryIds.map(async (theoryId, index) => {
+                    try {
+                      const resp = await fetch(`/api/theories/${encodeURIComponent(theoryId)}`);
+                      const data = await resp.json();
+                      if (!resp.ok || !data?.ok || !data?.item) return null;
+                      return {
+                        theoryId,
+                        order: index,
+                        ...data.item,
+                      };
+                    } catch (error) {
+                      console.warn("Failed to load theory item", theoryId, error);
+                      return null;
+                    }
+                  })
+                )
+              )
+                .filter(Boolean)
+                .sort((left, right) => left.order - right.order);
+
+              if (!theoryItems.length) {
+                showComplexVoiceToast({
+                  severity: "error",
+                  what: "Теории не загружены.",
+                  impact: "Просмотр подборки теорий для комплекса сейчас недоступен.",
+                  next: "Проверьте, что связанные теории существуют, и повторите попытку.",
+                });
+                return;
+              }
+
+              let activeTheoryIndex = 0;
+
+              const dialog = document.createElement("dialog");
+              dialog.id = "theory-viewer-dialog";
+              dialog.style.cssText = [
+                "border:none",
+                "padding:0",
+                "margin:auto",
+                "width:calc(100vw - 2rem)",
+                "max-width:56rem",
+                "max-height:calc(100dvh - 2rem)",
+                "border-radius:2.5rem",
+                "overflow:hidden",
+                "box-shadow:0 32px 80px -16px rgba(0,0,0,0.6)",
+                "background:var(--color-surface-1,#fff)",
+                "border:2px solid var(--color-border-strong,#cbd5e1)",
+                "display:flex",
+                "flex-direction:column",
+                "transform:scale(0.92) translateY(20px)",
+                "opacity:0",
+                "transition:transform 0.35s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s ease",
+              ].join(";");
+
+              dialog.innerHTML = `
+                <style>
+                  #theory-viewer-dialog::backdrop {
+                    background: rgba(0,0,0,0.72);
+                    backdrop-filter: blur(16px) saturate(1.2);
+                    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                  }
+                  #theory-viewer-dialog[data-open]::backdrop {
+                    opacity: 1;
+                  }
+                  #complex-theory-modal-body::-webkit-scrollbar { width: 5px; }
+                  #complex-theory-modal-body::-webkit-scrollbar-track { background: transparent; }
+                  #complex-theory-modal-body::-webkit-scrollbar-thumb {
+                    background: var(--color-border-subtle,#e2e8f0);
+                    border-radius: 3px;
+                  }
+                </style>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:1.5rem;padding:1.5rem 2rem;border-bottom:2px solid var(--color-border-subtle,#e2e8f0);background:var(--color-bg-secondary,#f1f5f9);flex-shrink:0;">
+                  <div style="min-width:0;flex:1;">
+                    <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.2rem;">
+                      <span class="material-symbols-outlined" style="font-size:17px;color:var(--color-primary,#6366f1);flex-shrink:0;">menu_book</span>
+                      <p id="complex-theory-modal-title" style="font-size:1.0625rem;font-weight:800;color:var(--color-text-main,#0f172a);margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;letter-spacing:-0.02em;">Теория</p>
+                    </div>
+                    <p style="font-size:0.7rem;color:var(--color-text-secondary,#64748b);margin:0;display:flex;align-items:center;gap:0.3rem;flex-wrap:wrap;">
+                      <span class="material-symbols-outlined" style="font-size:13px;">inventory_2</span>
+                      <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:240px;">${escapeHtml(complexName || "—")}</span>
+                      <span>В·</span>
+                      <span class="material-symbols-outlined" style="font-size:13px;">history</span>
+                      <span id="complex-theory-modal-updated">Обновлено: —</span>
+                      <span style="display:inline-flex;align-items:center;gap:0.25rem;">
+                        <span>В·</span>
+                        <span id="complex-theory-modal-count">1 из ${theoryItems.length}</span>
+                      </span>
+                    </p>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:0.4rem;flex-shrink:0;">
+                    <button type="button" id="complex-theory-open-complexes"
+                            style="display:inline-flex;align-items:center;gap:0.35rem;height:2.1rem;padding:0 0.8rem;border-radius:0.5rem;border:1px solid var(--color-border-subtle,#e2e8f0);background:var(--color-surface-2,#f8fafc);font-size:0.8rem;font-weight:600;color:var(--color-text-secondary,#64748b);cursor:pointer;">
+                      <span class="material-symbols-outlined" style="font-size:16px;">list_alt</span>Комплексы
+                    </button>
+                    <button type="button" id="complex-theory-open-hub"
+                            style="display:inline-flex;align-items:center;gap:0.35rem;height:2.1rem;padding:0 0.8rem;border-radius:0.5rem;border:1px solid var(--color-border-subtle,#e2e8f0);background:var(--color-surface-2,#f8fafc);font-size:0.8rem;font-weight:600;color:var(--color-text-secondary,#64748b);cursor:pointer;">
+                      <span class="material-symbols-outlined" style="font-size:16px;">edit_square</span>Редактор теории
+                    </button>
+                    <button type="button" id="complex-theory-close"
+                            style="display:flex;align-items:center;justify-content:center;width:2.1rem;height:2.1rem;border-radius:0.5rem;border:1px solid transparent;background:transparent;color:var(--color-text-secondary,#64748b);cursor:pointer;"
+                            aria-label="Закрыть">
+                      <span class="material-symbols-outlined" style="font-size:21px;">close</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:0.625rem;padding:1rem 1.75rem 0.75rem;border-bottom:1px solid var(--color-border-subtle,#e2e8f0);background:var(--color-surface-2,#f8fafc);flex-shrink:0;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;flex-wrap:wrap;">
+                    <p style="margin:0;font-size:0.8rem;font-weight:700;color:var(--color-text-main,#0f172a);">Теории, входящие в комплекс</p>
+                    <p style="margin:0;font-size:0.75rem;color:var(--color-text-secondary,#64748b);">Переключайтесь между теориями прямо в этом окне.</p>
+                  </div>
+                  <div id="complex-theory-modal-switcher" style="display:flex;flex-wrap:wrap;gap:0.5rem;"></div>
+                </div>
+
+                <div id="complex-theory-modal-body" style="padding:1.625rem 1.75rem;overflow-y:auto;flex:1;min-height:180px;color:var(--color-text-main,#0f172a);line-height:1.7;font-size:0.9375rem;">
+                  <div style="display:flex;align-items:center;justify-content:center;padding:4rem 0;color:var(--color-text-muted,#94a3b8);font-style:italic;">Загрузка теории...</div>
+                </div>
+              `;
+
+              document.body.appendChild(dialog);
+
+              const titleNode = dialog.querySelector("#complex-theory-modal-title");
+              const updatedNode = dialog.querySelector("#complex-theory-modal-updated");
+              const countNode = dialog.querySelector("#complex-theory-modal-count");
+              const switcherNode = dialog.querySelector("#complex-theory-modal-switcher");
+              const bodyNode = dialog.querySelector("#complex-theory-modal-body");
+
+              const renderActiveTheory = (index) => {
+                const nextIndex = Math.min(Math.max(index, 0), theoryItems.length - 1);
+                activeTheoryIndex = nextIndex;
+                const activeItem = theoryItems[activeTheoryIndex];
+                const activeHtml = deltaToHtml(activeItem.delta);
+                const updatedAt = activeItem.updated_at
+                  ? new Date(activeItem.updated_at).toLocaleString("ru-RU")
+                  : "—";
+
+                if (titleNode) {
+                  titleNode.textContent = activeItem.title || `Теория ${activeTheoryIndex + 1}`;
+                }
+                if (updatedNode) {
+                  updatedNode.textContent = `Обновлено: ${updatedAt}`;
+                }
+                if (countNode) {
+                  countNode.textContent = `${activeTheoryIndex + 1} из ${theoryItems.length}`;
+                }
+                if (bodyNode) {
+                  bodyNode.innerHTML = activeHtml || '<div style="display:flex;align-items:center;justify-content:center;padding:4rem 0;color:var(--color-text-muted,#94a3b8);font-style:italic;">Содержимое теории отсутствует.</div>';
+                }
+                if (switcherNode) {
+                  switcherNode.innerHTML = theoryItems.map((item, itemIndex) => {
+                    const isActive = itemIndex === activeTheoryIndex;
+                    const itemTitle = item.title || `Теория ${itemIndex + 1}`;
+                    return `
+                      <button type="button"
+                              class="complex-theory-switch-btn"
+                              data-theory-index="${itemIndex}"
+                              aria-pressed="${isActive ? "true" : "false"}"
+                              style="display:inline-flex;align-items:center;gap:0.45rem;max-width:100%;height:2.25rem;padding:0 0.875rem;border-radius:999px;border:1px solid ${isActive ? "var(--color-primary,#6366f1)" : "var(--color-border-subtle,#cbd5e1)"};background:${isActive ? "var(--color-primary-lighter,#eef2ff)" : "var(--color-surface-1,#fff)"};color:${isActive ? "var(--color-primary,#4f46e5)" : "var(--color-text-secondary,#475569)"};font-size:0.8rem;font-weight:${isActive ? "700" : "600"};cursor:pointer;">
+                        <span style="flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:1.3rem;height:1.3rem;border-radius:999px;background:${isActive ? "rgba(99,102,241,0.14)" : "var(--color-bg-tertiary,#e2e8f0)"};font-size:0.72rem;">${itemIndex + 1}</span>
+                        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(itemTitle)}</span>
+                      </button>
+                    `;
+                  }).join("");
+                }
+              };
+
+              dialog.showModal();
+
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  dialog.setAttribute("data-open", "");
+                  dialog.style.transform = "scale(1) translateY(0)";
+                  dialog.style.opacity = "1";
+                });
+              });
+
+              const isToastCandidate = (el) => {
+                if (!el || el === dialog || el.tagName === "SCRIPT" || el.tagName === "STYLE") return false;
+                const id = (el.id || "").toLowerCase();
+                const cls = (el.className || "").toLowerCase();
+                const role = (el.getAttribute("role") || "").toLowerCase();
+                const ariaLive = el.getAttribute("aria-live");
+                return (
+                  /toast|notification|snackbar|alert-container|message-container/.test(id) ||
+                  /toast|notification|snackbar/.test(cls) ||
+                  role === "alert" || role === "status" || role === "log" ||
+                  ariaLive === "polite" || ariaLive === "assertive"
+                );
+              };
+
+              const toastObserver = new MutationObserver((mutations) => {
+                for (const mutation of mutations) {
+                  for (const node of mutation.addedNodes) {
+                    if (node.nodeType === 1 && isToastCandidate(node)) {
+                      dialog.appendChild(node);
+                    }
+                  }
+                }
+              });
+              toastObserver.observe(document.body, { childList: true });
+
+              requestAnimationFrame(() => {
+                Array.from(document.body.children).forEach((el) => {
+                  if (isToastCandidate(el)) dialog.appendChild(el);
+                });
+              });
+
+              const closeModal = () => {
+                toastObserver.disconnect();
+                Array.from(dialog.children).forEach((el) => {
+                  if (isToastCandidate(el)) document.body.appendChild(el);
+                });
+                dialog.removeAttribute("data-open");
+                dialog.style.transform = "scale(0.94) translateY(10px)";
+                dialog.style.opacity = "0";
+                document.removeEventListener("keydown", escHandler);
+                setTimeout(() => {
+                  dialog.close();
+                  dialog.remove();
+                }, 280);
+              };
+
+              const escHandler = (event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  closeModal();
+                }
+              };
+              document.addEventListener("keydown", escHandler);
+
+              dialog.addEventListener("click", (event) => {
+                const switchButton = event.target.closest(".complex-theory-switch-btn[data-theory-index]");
+                if (switchButton) {
+                  const nextIndex = Number.parseInt(switchButton.getAttribute("data-theory-index") || "0", 10);
+                  renderActiveTheory(Number.isFinite(nextIndex) ? nextIndex : 0);
+                  return;
+                }
+
+                const rect = dialog.getBoundingClientRect();
+                const outside = event.clientX < rect.left || event.clientX > rect.right ||
+                                event.clientY < rect.top || event.clientY > rect.bottom;
+                if (outside) closeModal();
+              });
+
+              dialog.querySelector("#complex-theory-close")?.addEventListener("click", closeModal);
+
+              dialog.querySelector("#complex-theory-open-complexes")?.addEventListener("click", () => {
+                const activeTheoryId = theoryItems[activeTheoryIndex]?.theoryId || "";
+                const url = `/ui/complexes?theory_id=${encodeURIComponent(activeTheoryId)}`;
+                closeModal();
+                if (typeof window.navigateWithTransition === "function") {
+                  window.navigateWithTransition(url);
+                } else {
+                  window.location.href = url;
+                }
+              });
+
+              dialog.querySelector("#complex-theory-open-hub")?.addEventListener("click", () => {
+                const activeTheoryId = theoryItems[activeTheoryIndex]?.theoryId || "";
+                const returnUrl = `${window.location.pathname}${window.location.search}`;
+                const query = new URLSearchParams({
+                  theory_id: activeTheoryId,
+                  return_url: returnUrl,
+                });
+                if (complexId) {
+                  query.set("complex_id", complexId);
+                }
+                const url = `/ui/editor/Theory_Editor.html?${query.toString()}`;
+                closeModal();
+                if (typeof window.navigateWithTransition === "function") {
+                  window.navigateWithTransition(url);
+                } else {
+                  window.location.href = url;
+                }
+              });
+
+              renderActiveTheory(0);
+            } catch (err) {
+              console.error("Failed to open complex theory viewer", err);
               showComplexVoiceToast({
                 severity: "error",
                 what: "Окно теории не открыто.",
@@ -1874,7 +3223,7 @@
           function renderComplexesSkeleton(listEl, count = 4) {
             const cards = Array.from({ length: count }, (_, index) => `
               <div class="p-4 @container">
-                <div class="rounded-lg border border-border-subtle bg-surface-1 p-4 animate-pulse" style="animation-delay:${index * 0.04}s">
+                <div class="card-elevated rounded-lg p-4 animate-pulse" style="animation-delay:${index * 0.04}s">
                   <div class="h-6 w-1/3 rounded bg-bg-tertiary mb-2"></div>
                   <div class="h-4 w-2/3 rounded bg-bg-tertiary mb-4"></div>
                   <div class="h-4 w-1/2 rounded bg-bg-tertiary mb-6"></div>
@@ -1921,10 +3270,12 @@
             if (errorEl) errorEl.hidden = true;
             if (filterEmptyEl) filterEmptyEl.hidden = true;
             try {
-              const [complexesResp, sessionsResp, quickAccessResp] = await Promise.all([
+              const userId = await resolveCurrentComplexesUserId();
+              const [complexesResp, sessionsResp, quickAccessResp, catalogResp] = await Promise.all([
                 fetch("/api/complexes"),
-                fetch("/api/sessions/active"),
-                fetch("/api/ui/quick-access"),
+                fetch(appendUserIdQuery("/api/sessions/active", userId)),
+                fetch(appendUserIdQuery("/api/ui/quick-access", userId)),
+                fetch("/api/editor/catalog"),
               ]);
               const data = await complexesResp.json();
               let sessions = [];
@@ -1935,6 +3286,24 @@
               } catch (e) {
                 sessions = [];
               }
+              let taskNameCache = {};
+              try {
+                const cat = await catalogResp.json();
+                if (cat && cat.ok && Array.isArray(cat.modules)) {
+                  for (const mod of cat.modules) {
+                    const modId = mod.id || "";
+                    for (const topic of (mod.topics || [])) {
+                      const topicId = topic.id || "";
+                      for (const task of (topic.tasks || [])) {
+                        const taskId = task.id || "";
+                        if (modId && topicId && taskId && task.name) {
+                          taskNameCache[`${modId}/${topicId}/${taskId}`] = task.name;
+                        }
+                      }
+                    }
+                  }
+                }
+              } catch (e) { /* catalog load failed, fallback to ref-based names */ }
               try {
                 const q = await quickAccessResp.json();
                 if (q && q.ok) quickAccessData = q;
@@ -1994,6 +3363,15 @@
                   pausedMap.set(complexId, pickPreferredSession(existing, s));
                 }
               });
+              if (quickAccessData && Array.isArray(quickAccessData.items)) {
+                quickAccessData.items.forEach((item) => {
+                  const complexId = normalizeComplexId(item?.complex?.id);
+                  const pausedSession = item?.paused_session;
+                  if (!complexId || !pausedSession) return;
+                  const existing = pausedMap.get(complexId);
+                  pausedMap.set(complexId, pickPreferredSession(existing, pausedSession));
+                });
+              }
               if (items.length === 0) {
                 listEl.innerHTML = "";
                 setComplexSelectionMode(false);
@@ -2001,9 +3379,11 @@
                 updateComplexFilterSummary(0, 0);
                 return;
               }
+              allComplexItems = items;
               listEl.innerHTML = "";
+              const sortedItems = sortComplexItems(items, activeComplexSort);
               let renderIndex = 0;
-              for (const complex of items) {
+              for (const complex of sortedItems) {
                 const complexId = normalizeComplexId(complex.id);
                 const isSelected = selectedComplexes.has(complexId);
                 const card = document.createElement("div");
@@ -2015,52 +3395,67 @@
                 const tasksCount = Array.isArray(complex.tasks) ? complex.tasks.length : 0;
                 const pausedSession = pausedMap.get(complexId);
                 const isPaused = !!(pausedSession && pausedSession.paused);
-                const pausedAtLabel = formatPausedAt(pausedSession && pausedSession.paused_at);
-                const pausedProgress = pausedSession && typeof pausedSession.current_task_index === "number"
-                  ? pausedSession.current_task_index + 1
+                const pausedAtLabel = formatPausedAt(
+                  pausedSession && (
+                    pausedSession.paused_at ||
+                    pausedSession.updated_at ||
+                    pausedSession.start_time
+                  )
+                );
+                const pausedDisplayIndex = pausedSession && typeof pausedSession.display_task_index === "number"
+                  ? pausedSession.display_task_index
+                  : (pausedSession && typeof pausedSession.current_task_index === "number"
+                    ? Math.max(0, pausedSession.current_task_index - 1)
+                    : null);
+                const pausedProgress = typeof pausedDisplayIndex === "number"
+                  ? pausedDisplayIndex + 1
                   : null;
                 const pausedTotal = pausedSession && typeof pausedSession.total_tasks === "number"
                   ? pausedSession.total_tasks
                   : null;
                 const pausedBadge = isPaused
-                  ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-warning-lighter text-warning-darker border border-warning-light px-2 py-1 text-xs font-semibold">
+                  ? `<span class="cx-card-badge pill pill-sm pill-warning">
                       <span class="material-symbols-outlined text-sm">pause</span> На паузе
                     </span>`
                   : "";
                 const pausedPercent = (isPaused && pausedProgress && pausedTotal && pausedTotal > 0)
                   ? Math.round((pausedProgress / pausedTotal) * 100)
                   : 0;
-                const pausedProgressBar = (isPaused && pausedProgress && pausedTotal)
-                  ? `<div class="mt-1 h-1.5 w-full max-w-[160px] rounded-full bg-bg-secondary">
-                       <div class="h-1.5 rounded-full bg-warning transition-all" style="width: ${pausedPercent}%"></div>
-                     </div>`
+                const pausedProgressInline = (isPaused && pausedProgress && pausedTotal)
+                  ? `<span class="inline-flex items-center gap-2 whitespace-nowrap">
+                       <span>Прогресс ${pausedProgress}/${pausedTotal}</span>
+                       <span class="h-1.5 w-24 shrink-0 overflow-hidden rounded-full bg-bg-secondary">
+                         <span class="block h-1.5 rounded-full bg-warning transition-all" style="width: ${pausedPercent}%"></span>
+                       </span>
+                     </span>`
                   : "";
                 const pausedInfo = isPaused
-                  ? `<p class="text-text-secondary text-sm font-medium leading-normal">
-                      ${pausedAtLabel ? `Пауза: ${pausedAtLabel}` : "Попытка на паузе"}
-                      ${(pausedProgress && pausedTotal) ? ` · Прогресс: ${pausedProgress}/${pausedTotal}` : ""}
-                    </p>
-                    ${pausedProgressBar}`
+                  ? `<div class="cx-card-inline-meta">
+                      <span>${pausedAtLabel ? `Пауза: ${pausedAtLabel}` : "Попытка на паузе"}</span>
+                      ${pausedProgressInline}
+                    </div>`
                   : "";
                 const calendarStatus = statusByComplexId.get(complexId) || "new";
                 const isPinned = pinnedComplexIds.has(complexId);
                 const needsReview = reviewStateByComplexId.get(complexId) === true;
                 let statusBadge = "";
-                if (calendarStatus === "frozen") {
-                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
+                if (isPaused) {
+                  statusBadge = "";
+                } else if (calendarStatus === "frozen") {
+                  statusBadge = `<span class="cx-card-badge pill pill-sm pill-neutral">
                       <span class="material-symbols-outlined text-sm">ac_unit</span> Заморожен
                     </span>`;
                 } else if (calendarStatus === "in_progress") {
-                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-success-lighter text-success-darker border border-success-light px-2 py-1 text-xs font-semibold">
+                  statusBadge = `<span class="cx-card-badge pill pill-sm pill-success">
                         <span class="material-symbols-outlined text-sm">play_arrow</span> Активен
                       </span>`;
                 } else if (calendarStatus === "mastered") {
-                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+                  statusBadge = `<span class="cx-card-badge pill pill-sm pill-info">
                         <span class="material-symbols-outlined text-sm">school</span> Освоен
                       </span>`;
                 } else {
                   // New / Not Started
-                  statusBadge = `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle px-2 py-1 text-xs font-semibold">
+                  statusBadge = `<span class="cx-card-badge pill pill-sm pill-neutral">
                         <span class="material-symbols-outlined text-sm">check_box_outline_blank</span> Не начат
                       </span>`;
                 }
@@ -2072,8 +3467,8 @@
                 const freezeBtnText = calendarStatus === "frozen" ? "Разморозить" : "Заморозить";
                 const freezeBtnIcon = calendarStatus === "frozen" ? "water_drop" : "ac_unit";
                 const freezeBtnClass = calendarStatus === "frozen"
-                  ? "freeze-toggle-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-success text-sm font-medium leading-normal hover:bg-success-light transition-colors gap-2"
-                  : "freeze-toggle-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2";
+                  ? "freeze-toggle-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-success-light bg-success-lighter text-success hover:border-success hover:bg-success-lighter hover:text-success"
+                  : "freeze-toggle-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium";
                 const freezeBtnHtml = canToggleFreeze
                   ? `<button class="${freezeBtnClass}" data-complex-id="${safeComplexId}" data-status="${safeCalendarStatus}">
                       <span class="material-symbols-outlined text-lg">${freezeBtnIcon}</span>
@@ -2084,30 +3479,38 @@
                 const theoryId = theoryLink && typeof theoryLink.theory_id === "string" ? theoryLink.theory_id : "";
                 const safeTheoryId = escapeHtml(theoryId);
                 const isTheoryFocused = !!(activeTheoryFilterId && theoryId === activeTheoryFilterId);
-                const hasTheory = !!(complex.has_theory || theoryId);
                 const theoryContext = buildComplexTheoryBadges(complex);
+                const hasTheoryContext = !!(complex.has_theory || theoryId || theoryContext.syncStatus === "composite");
                 const ownershipContext = buildComplexOwnershipBadges(complex);
                 const theoryModeBadge = theoryContext.modeBadge || "";
-                const theoryConflictBadge = theoryContext.conflictBadge || "";
+                const theoryStatusBadge = theoryContext.statusBadge || "";
                 const ownerBadge = ownershipContext.ownerBadge || "";
                 const sourceBadge = ownershipContext.sourceBadge || "";
                 const theoryActionLabel = theoryContext.mode === "inherit" ? "Теория (наследование)" : "Теория";
-                const canSyncTheoryFromTopics = theoryContext.mode === "inherit";
-                const theoryBadge = hasTheory
-                  ? `<span class="cx-card-badge inline-flex items-center gap-1 rounded-full bg-primary-lighter text-primary-darker border border-primary-light px-2 py-1 text-xs font-semibold">
+                const canSyncTheoryFromTopics = isComplexTheoryManualSyncRelevant(complex);
+                const theoryBadge = hasTheoryContext
+                  ? `<span class="cx-card-badge pill pill-sm pill-info">
                       <span class="material-symbols-outlined text-sm">menu_book</span> Теория
                     </span>`
                   : "";
-                const theoryButton = hasTheory
-                  ? `<button class="theory-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-2" title="${theoryActionLabel}" data-theory-id="${safeTheoryId}" data-complex-name="${safeComplexName}">
+                const compositeTheoryIds = !theoryId && theoryContext.syncStatus === 'composite'
+                  ? (Array.isArray(complex?.theory_sync_meta?.theory_ids) ? complex.theory_sync_meta.theory_ids.map(String).filter(Boolean) : [])
+                  : [];
+                const theoryButton = theoryId
+                  ? `<button class="theory-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-primary-light bg-primary-lighter text-primary hover:border-primary hover:bg-primary-lighter hover:text-primary" title="${theoryActionLabel}" data-theory-id="${safeTheoryId}" data-complex-id="${safeComplexId}" data-complex-name="${safeComplexName}">
                       <span class="material-symbols-outlined text-lg">visibility</span>
                       <span class="truncate">Теория</span>
                     </button>`
+                  : compositeTheoryIds.length > 0
+                  ? `<button class="composite-theory-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-info-light bg-info-lighter text-info-text hover:border-info hover:bg-info-lighter hover:text-info" title="Открыть все теории комплекса (${compositeTheoryIds.length})" data-composite-ids="${escapeHtml(compositeTheoryIds.join(','))}" data-complex-id="${safeComplexId}" data-complex-name="${safeComplexName}">
+                      <span class="material-symbols-outlined text-lg">layers</span>
+                      <span class="truncate">Теории (${compositeTheoryIds.length})</span>
+                    </button>`
                   : "";
                 const theorySyncButton = canSyncTheoryFromTopics
-                  ? `<button class="theory-sync-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-2" data-complex-id="${safeComplexId}" title="Синхронизировать наследуемую теорию по темам">
+                  ? `<button class="theory-sync-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-primary-light bg-primary-lighter text-primary hover:border-primary hover:bg-primary-lighter hover:text-primary" data-complex-id="${safeComplexId}" title="Заново собрать наследуемую теорию комплекса по теориям тем из его заданий. Обычно это нужно только для ручной пересборки старых или импортированных данных.">
                       <span class="material-symbols-outlined text-lg">sync</span>
-                      <span class="truncate">Синхрониз.</span>
+                      <span class="truncate">Обновить из тем</span>
                     </button>`
                   : "";
                 const tasksList = Array.isArray(complex.tasks) ? complex.tasks : [];
@@ -2120,20 +3523,30 @@
                     return ref;
                   }),
                 ].join(" ");
-                const detailRows = tasksList.map((t, i) => {
-                  const ref = typeof t === 'string' ? t : (t.task_ref || t.task_id || '');
-                  const parts = ref.split('/');
-                  const taskName = parts.length >= 3 ? parts[2] : ref;
-                  const typeBadge = t.type ? (taskTypeLabels[t.type] || t.type) : '';
-                  return `<div class="cx-detail-row py-1.5 px-2 text-sm ${i % 2 === 0 ? 'bg-surface-2' : ''} rounded">
-                    <span class="cx-detail-title text-text-main">${i + 1}. ${escapeHtml(taskName)}</span>
-                    ${typeBadge ? `<span class="cx-detail-type text-xs">${escapeHtml(typeBadge)}</span>` : ''}
-                  </div>`;
-                }).join('');
+                 const detailRows = tasksList.map((t, i) => {
+                   const ref = typeof t === 'string' ? t : (t.task_ref || t.task_id || '');
+                   let taskName = taskNameCache[ref] || "";
+                   if (!taskName) {
+                     taskName = ref;
+                     if (ref.includes('/')) {
+                       const parts = ref.split('/');
+                       taskName = parts[parts.length - 1];
+                     }
+                     taskName = taskName.replace(/\.(json|xml|bin)$/i, '').replace(/_/g, ' ');
+                     taskName = taskName.charAt(0).toUpperCase() + taskName.slice(1);
+                   }
+
+                   const typeBadge = t.type ? (taskTypeLabels[t.type] || t.type) : '';
+                   return `<div class="cx-detail-row panel-row panel-row--soft px-3 py-2 text-sm">
+                     <span class="cx-detail-title text-text-main font-medium"><span class="text-text-disabled mr-2">#${i + 1}</span>${escapeHtml(taskName)}</span>
+                     ${typeBadge ? `<span class="cx-detail-type text-[10px] uppercase tracking-wider font-bold px-1.5 py-0.5 rounded-md bg-bg-tertiary border border-border-subtle">${escapeHtml(typeBadge)}</span>` : ''}
+                   </div>`;
+                 }).join('');
                 const safePausedSessionId = isPaused ? escapeHtml(pausedSession.session_id || "") : "";
+                const safeResumeUrl = isPaused ? escapeHtml(pausedSession?.resume_target?.url || "") : "";
                 const pinBtnClass = isPinned
-                  ? "pin-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-primary-lighter text-primary text-sm font-medium leading-normal hover:bg-primary-lighter transition-colors gap-1"
-                  : "pin-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1";
+                  ? "pin-btn icon-button-muted border-primary-light bg-primary-lighter text-primary hover:border-primary hover:bg-primary-lighter hover:text-primary"
+                  : "pin-btn icon-button-muted";
                 card.setAttribute("data-complex-search", normalizeComplexSearch(searchSource));
                 card.setAttribute("data-complex-status", calendarStatus);
                 card.setAttribute("data-complex-paused", isPaused ? "true" : "false");
@@ -2143,8 +3556,8 @@
                 card.setAttribute("data-complex-owned", ownershipContext.ownership.isOwnedByCurrentUser ? "true" : "false");
                 card.setAttribute("data-complex-imported", ownershipContext.ownership.createdVia === "archive_import" ? "true" : "false");
                 card.innerHTML = `
-            <div data-complex-card-shell class="cx-card-shell relative flex flex-col items-stretch justify-start rounded-lg shadow-sm bg-surface-1 border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : (isTheoryFocused ? "border-primary-light ring-1 ring-primary-light" : "border-border-subtle")} cx-card-inner">
-              <div data-complex-select-box class="absolute right-3 top-3 z-10 ${selectionMode ? "" : "hidden"}">
+            <div data-complex-card-shell class="cx-card-shell card-elevated relative flex flex-col items-stretch justify-start rounded-lg border ${isSelected ? "border-primary ring-2 ring-primary-lighter" : (isTheoryFocused ? "border-primary-light ring-1 ring-primary-light" : "border-border-subtle")} cx-card-inner">
+              <div data-complex-select-box class="cx-card-select-box absolute right-3 top-3 z-10 ${selectionMode ? "is-visible" : ""}">
                 <input
                   type="checkbox"
                   class="complex-select-checkbox h-5 w-5 rounded border-border-strong text-primary focus:ring-primary"
@@ -2153,50 +3566,64 @@
                   aria-label="Выбрать комплекс"
                 >
               </div>
-              <div class="cx-card-body flex w-full min-w-0 grow flex-col items-stretch justify-center gap-4 p-4">
-                <div class="flex flex-col gap-2">
+              <div class="cx-card-body flex w-full min-w-0 grow flex-col items-stretch justify-center gap-3 p-4">
+                <div class="cx-card-top">
                   <div class="cx-card-heading">
-                    <p class="cx-card-title text-text-main text-lg font-bold leading-tight tracking-[-0.015em]" title="${safeComplexName}">${safeComplexName}</p>
+                    <div class="cx-card-title-row">
+                      <p class="cx-card-title text-text-main text-lg font-bold leading-tight tracking-[-0.015em]" title="${safeComplexName}">${safeComplexName}</p>
+                    </div>
                     <div class="cx-card-badges">
                     ${pausedBadge}
                     ${statusBadge}
                     ${theoryBadge}
                     ${theoryModeBadge}
-                    ${theoryConflictBadge}
+                    ${theoryStatusBadge}
                     ${ownerBadge}
                     ${sourceBadge}
                     </div>
                   </div>
-                  <p class="cx-card-description text-base font-normal leading-normal">${safeComplexDescription}</p>
+                  <p class="cx-card-description text-[15px] font-normal">${safeComplexDescription}</p>
+                  <div class="cx-card-meta-stack">
                   ${pausedInfo}
-                  <p class="text-text-secondary text-base font-normal leading-normal">Всего заданий: ${tasksCount} · Адаптивность: ${adaptiveOn ? "Вкл" : "Выкл"}</p>
+                  <p class="cx-card-inline-meta"><span>Всего заданий: <strong>${tasksCount}</strong></span><span class="cx-meta-divider">•</span><span>Адаптивность: <strong>${adaptiveOn ? "Вкл" : "Выкл"}</strong></span></p>
+                  </div>
                 </div>
                 <div class="cx-card-actions">
                   <div class="cx-card-actions-primary">
-                    <button class="start-btn cx-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-primary text-primary-fg text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary-dark transition-colors" data-complex-id="${safeComplexId}" ${isPaused ? `data-session-id="${safePausedSessionId}"` : ""}>
+                    <button class="start-btn cx-btn cx-card-action-btn cx-card-action-btn--primary btn-primary inline-flex items-center justify-center text-sm font-bold" data-complex-id="${safeComplexId}" ${isPaused ? `data-session-id="${safePausedSessionId}" data-resume-url="${safeResumeUrl}"` : ""}>
                       <span class="truncate">${isPaused ? "Продолжить" : "Запустить"}</span>
                     </button>
-                    <button class="detail-toggle-btn flex items-center justify-center overflow-hidden rounded-lg h-10 px-3 bg-transparent text-text-secondary text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-1" data-complex-id="${safeComplexId}" title="Подробнее">
+                    ${isPaused
+                      ? `<button type="button" class="restart-session-btn cx-card-action-btn cx-card-action-btn--session btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" data-session-id="${safePausedSessionId}">
+                           <span class="material-symbols-outlined text-lg">restart_alt</span>
+                           <span class="truncate">\u041d\u0430\u0447\u0430\u0442\u044c \u0437\u0430\u043d\u043e\u0432\u043e</span>
+                         </button>
+                          <button type="button" class="delete-session-btn cx-card-action-btn cx-card-action-btn--session btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" data-session-id="${safePausedSessionId}">
+                           <span class="material-symbols-outlined text-lg">delete_forever</span>
+                           <span class="truncate">\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0441\u0435\u0441\u0441\u0438\u044e</span>
+                         </button>`
+                      : ""}
+                    <button class="detail-toggle-btn cx-card-action-btn cx-card-action-btn--theory btn-secondary inline-flex items-center justify-center gap-1 text-sm font-medium" data-complex-id="${safeComplexId}" title="\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435">
                       <span class="material-symbols-outlined text-lg">expand_more</span>
-                      <span class="truncate">Подробнее</span>
+                      <span class="truncate">\u041f\u043e\u0434\u0440\u043e\u0431\u043d\u0435\u0435</span>
                     </button>
                     ${theoryButton}
                     ${theorySyncButton}
                   </div>
                   <div class="cx-card-actions-secondary">
-                    <button class="${pinBtnClass}" data-complex-id="${safeComplexId}" title="${isPinned ? "Уже в быстром доступе" : "Закрепить в быстром доступе"}">
+                    <button class="${pinBtnClass} cx-card-action-btn cx-card-action-btn--icon" data-complex-id="${safeComplexId}" title="${isPinned ? "Уже в быстром доступе" : "Закрепить в быстром доступе"}">
                       <span class="material-symbols-outlined text-lg">push_pin</span>
                     </button>
                     ${freezeBtnHtml}
-                    <button class="export-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${safeComplexId}">
+                    <button class="export-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}">
                       <span class="material-symbols-outlined text-lg">download</span>
                       <span class="truncate">Экспорт</span>
                     </button>
-                    <button class="edit-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-text-main text-sm font-medium leading-normal hover:bg-bg-tertiary transition-colors gap-2" data-complex-id="${safeComplexId}">
+                    <button class="edit-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium" data-complex-id="${safeComplexId}">
                       <span class="material-symbols-outlined text-lg">edit</span>
                       <span class="truncate">Редактировать</span>
                     </button>
-                    <button class="delete-btn flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-transparent text-error-text text-sm font-medium leading-normal hover:bg-error-lighter transition-colors gap-2" data-complex-id="${safeComplexId}">
+                    <button class="delete-btn cx-card-action-btn cx-card-action-btn--wide btn-secondary inline-flex items-center justify-center gap-2 text-sm font-medium border-error-light bg-error-lighter text-error-text hover:border-error hover:bg-error-lighter hover:text-error" data-complex-id="${safeComplexId}" title="\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441">
                       <span class="material-symbols-outlined text-lg">delete</span>
                       <span class="truncate">Удалить</span>
                     </button>
@@ -2214,6 +3641,7 @@
                 listEl.appendChild(card);
               }
               attachActionHandlers();
+              updateSortUi();
             } catch (err) {
               console.error("Failed to load complexes", err);
               listEl.innerHTML = "";
@@ -2250,92 +3678,203 @@
             const markRecent = async (complexId) => {
               if (!complexId) return;
               try {
+                const userId = await resolveCurrentComplexesUserId();
                 await fetch("/api/ui/quick-access/recent", {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ complex_id: complexId }),
+                  body: JSON.stringify(withUserIdPayload({ complex_id: complexId }, userId)),
                 });
               } catch (e) {
                 // best-effort only
               }
             };
 
+            const resumePausedSession = async (complexId, sessionId, preferredResumeUrl = "") => {
+              const userId = await resolveCurrentComplexesUserId();
+              const resp = await fetch(`/api/session/${encodeURIComponent(sessionId)}/resume`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(withUserIdPayload({ source: "complexes_list" }, userId)),
+              });
+              const data = await resp.json().catch(() => ({}));
+              if (!resp.ok || !data.ok) {
+                showComplexVoiceToast({
+                  severity: "error",
+                  what: "\u0421\u0435\u0441\u0441\u0438\u044e \u043d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0432\u043e\u0437\u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c.",
+                  impact: "\u041f\u0435\u0440\u0435\u0445\u043e\u0434 \u0432 \u0442\u0440\u0435\u043d\u0430\u0436\u0451\u0440 \u043e\u0442\u043c\u0435\u043d\u0451\u043d.",
+                  next: data?.error ? `\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u0440\u0438\u0447\u0438\u043d\u0443 (${data.error}) \u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435.` : "\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043f\u043e\u043f\u044b\u0442\u043a\u0443 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.",
+                });
+                return false;
+              }
+              await markRecent(complexId);
+              const resumeUrl =
+                (typeof preferredResumeUrl === "string" && preferredResumeUrl) ||
+                (typeof data?.resume_target?.url === "string" && data.resume_target.url) ||
+                `/ui/session/${encodeURIComponent(sessionId)}`;
+              window.navigateWithTransition(resumeUrl);
+              return true;
+            };
+
+            const deletePausedSession = async (sessionId) => {
+              const userId = await resolveCurrentComplexesUserId();
+              const resp = await fetch(`/api/session/${encodeURIComponent(sessionId)}/cancel`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(withUserIdPayload({}, userId)),
+              });
+              const data = await resp.json().catch(() => ({}));
+              if (!resp.ok || !data.ok) {
+                showComplexVoiceToast({
+                  severity: "error",
+                  what: "\u0421\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u0443\u044e \u0441\u0435\u0441\u0441\u0438\u044e \u043d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c.",
+                  impact: "\u0421\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u0430 \u043d\u0430 \u043f\u0430\u0443\u0437\u0435 \u043f\u043e\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e.",
+                  next: data?.error ? `\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u0440\u0438\u0447\u0438\u043d\u0443 (${data.error}) \u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435.` : "\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.",
+                });
+                return false;
+              }
+              return true;
+            };
+
+            const startOrRestartSession = async (complexId, { force = false } = {}) => {
+              const userId = await resolveCurrentComplexesUserId();
+              const resp = await fetch(`/api/session/${complexId}/start`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(
+                  withUserIdPayload(force ? { force: true } : {}, userId)
+                ),
+              });
+              const data = await resp.json();
+
+              if (resp.status === 409 && data.error === "paused_session_exists" && data.session_id) {
+                const resume = await NotificationUI.confirm({
+                  title: "\u041d\u0430\u0439\u0434\u0435\u043d\u0430 \u0441\u0435\u0441\u0441\u0438\u044f \u043d\u0430 \u043f\u0430\u0443\u0437\u0435",
+                  message: "\u0414\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u0430 \u0443\u0436\u0435 \u0435\u0441\u0442\u044c \u0441\u0435\u0441\u0441\u0438\u044f \u043d\u0430 \u043f\u0430\u0443\u0437\u0435.\n\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c \u0435\u0451 \u0438\u043b\u0438 \u043d\u0430\u0447\u0430\u0442\u044c \u0437\u0430\u043d\u043e\u0432\u043e?",
+                  confirmText: "\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c",
+                  cancelText: "\u041d\u0430\u0447\u0430\u0442\u044c \u0437\u0430\u043d\u043e\u0432\u043e",
+                  variant: "primary"
+                });
+                if (resume) {
+                  const preferredResumeUrl =
+                    pausedMap.get(complexId)?.resume_target?.url ||
+                    "";
+                  return resumePausedSession(complexId, data.session_id, preferredResumeUrl);
+                }
+                return startOrRestartSession(complexId, { force: true });
+              }
+
+              if (!data.ok || !data.session_id) {
+                console.error(force ? "Failed to restart session" : "Failed to start session", data);
+                showComplexVoiceToast({
+                  severity: "error",
+                  what: "\u0421\u0435\u0441\u0441\u0438\u044f \u043d\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d\u0430.",
+                  impact: force ? "\u0421\u0442\u0430\u0440\u0430\u044f \u043f\u043e\u043f\u044b\u0442\u043a\u0430 \u043d\u0435 \u0431\u044b\u043b\u0430 \u0441\u0431\u0440\u043e\u0448\u0435\u043d\u0430." : "\u041d\u043e\u0432\u044b\u0439 \u043f\u0440\u043e\u0433\u043e\u043d \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u0430 \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u043d.",
+                  next: data?.error ? `\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u0440\u0438\u0447\u0438\u043d\u0443 (${data.error}) \u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435.` : "\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u0437\u0430\u043f\u0443\u0441\u043a \u043f\u043e\u0437\u0436\u0435.",
+                });
+                return false;
+              }
+
+              await markRecent(complexId);
+              window.navigateWithTransition(`/ui/session/${data.session_id}`);
+              return true;
+            };
+
             const startButtons = document.querySelectorAll("button.start-btn[data-complex-id]");
             startButtons.forEach((btn) => {
-              btn.addEventListener("click", async () => {
+              btn.addEventListener("click", async (event) => {
+                event.preventDefault();
+                event.stopPropagation();
                 const complexId = btn.getAttribute("data-complex-id");
                 const sessionId = btn.getAttribute("data-session-id");
+                const preferredResumeUrl = btn.getAttribute("data-resume-url") || "";
                 if (!complexId) return;
                 btn.setAttribute("disabled", "true");
                 try {
                   if (sessionId) {
-                    await markRecent(complexId);
-                    window.navigateWithTransition(`/ui/session/${sessionId}`);
-                  } else {
-                    const resp = await fetch(`/api/session/${complexId}/start`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({}),
-                    });
-                    const data = await resp.json();
-
-                    if (resp.status === 409 && data.error === "paused_session_exists" && data.session_id) {
-                      const resume = await NotificationUI.confirm({
-                        title: 'Найдена сессия на паузе',
-                        message: 'Для этого комплекса уже есть сессия на паузе.\nПродолжить её или начать заново?',
-                        confirmText: 'Продолжить',
-                        cancelText: 'Начать заново',
-                        variant: 'primary'
-                      });
-                      if (resume) {
-                        await markRecent(complexId);
-                        window.navigateWithTransition(`/ui/session/${data.session_id}`);
-                      } else {
-                        const resp2 = await fetch(`/api/session/${complexId}/start`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ force: true }),
-                        });
-                        const data2 = await resp2.json();
-                        if (!data2.ok || !data2.session_id) {
-                          console.error("Failed to force-start session", data2);
-                          showComplexVoiceToast({
-                            severity: "error",
-                            what: "Сессия не запущена.",
-                            impact: "Переход в тренажёр отменён.",
-                            next: data2?.error ? `Проверьте причину (${data2.error}) и повторите.` : "Повторите запуск позже.",
-                          });
-                          btn.removeAttribute("disabled");
-                          return;
-                        }
-                        await markRecent(complexId);
-                        window.navigateWithTransition(`/ui/session/${data2.session_id}`);
-                      }
-                      return;
-                    }
-
-                    if (!data.ok || !data.session_id) {
-                      console.error("Failed to start session", data);
-                      showComplexVoiceToast({
-                        severity: "error",
-                        what: "Сессия не запущена.",
-                        impact: "Новый прогон комплекса не создан.",
-                        next: data?.error ? `Проверьте причину (${data.error}) и повторите.` : "Повторите запуск позже.",
-                      });
+                    const resumed = await resumePausedSession(complexId, sessionId, preferredResumeUrl);
+                    if (!resumed) {
                       btn.removeAttribute("disabled");
-                      return;
                     }
-                    const newSessionId = data.session_id;
-                    await markRecent(complexId);
-                    window.navigateWithTransition(`/ui/session/${newSessionId}`);
+                  } else {
+                    const started = await startOrRestartSession(complexId);
+                    if (!started) {
+                      btn.removeAttribute("disabled");
+                    }
                   }
                 } catch (err) {
                   console.error("Error starting session", err);
                   showComplexVoiceToast({
                     severity: "error",
-                    what: "Сессия не запущена из-за сетевой ошибки.",
-                    impact: "Переход к комплексу отменён.",
-                    next: "Проверьте сеть и повторите запуск.",
+                    what: "\u0421\u0435\u0441\u0441\u0438\u044f \u043d\u0435 \u0437\u0430\u043f\u0443\u0449\u0435\u043d\u0430 \u0438\u0437-\u0437\u0430 \u0441\u0435\u0442\u0435\u0432\u043e\u0439 \u043e\u0448\u0438\u0431\u043a\u0438.",
+                    impact: "\u041f\u0435\u0440\u0435\u0445\u043e\u0434 \u043a \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u0443 \u043e\u0442\u043c\u0435\u043d\u0451\u043d.",
+                    next: "\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0441\u0435\u0442\u044c \u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u0437\u0430\u043f\u0443\u0441\u043a.",
+                  });
+                  btn.removeAttribute("disabled");
+                }
+              });
+            });
+
+            const restartButtons = document.querySelectorAll("button.restart-session-btn[data-complex-id]");
+            restartButtons.forEach((btn) => {
+              btn.addEventListener("click", async (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const complexId = btn.getAttribute("data-complex-id");
+                if (!complexId) return;
+                btn.setAttribute("disabled", "true");
+                try {
+                  const restarted = await startOrRestartSession(complexId, { force: true });
+                  if (!restarted) {
+                    btn.removeAttribute("disabled");
+                  }
+                } catch (err) {
+                  console.error("Error restarting session", err);
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "\u0421\u0435\u0441\u0441\u0438\u044e \u043d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u0435\u0440\u0435\u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c.",
+                    impact: "\u0421\u0442\u0430\u0440\u0430\u044f \u043f\u043e\u043f\u044b\u0442\u043a\u0430 \u043f\u043e\u043a\u0430 \u043e\u0441\u0442\u0430\u0451\u0442\u0441\u044f \u043d\u0430 \u043f\u0430\u0443\u0437\u0435.",
+                    next: "\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0441\u0435\u0442\u044c \u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043f\u043e\u043f\u044b\u0442\u043a\u0443.",
+                  });
+                  btn.removeAttribute("disabled");
+                }
+              });
+            });
+            const deleteSessionButtons = document.querySelectorAll("button.delete-session-btn[data-session-id]");
+            deleteSessionButtons.forEach((btn) => {
+              btn.addEventListener("click", async (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const sessionId = btn.getAttribute("data-session-id");
+                if (!sessionId) return;
+                const deleteConfirmed = await NotificationUI.confirm({
+                  title: "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u0443\u044e \u0441\u0435\u0441\u0441\u0438\u044e?",
+                  message: "\u0421\u043e\u0441\u0442\u043e\u044f\u043d\u0438\u0435 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u0430 \u043d\u0430 \u043f\u0430\u0443\u0437\u0435 \u0431\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u043e. \u0421\u0430\u043c \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u043e\u0441\u0442\u0430\u043d\u0435\u0442\u0441\u044f \u0432 \u0441\u043f\u0438\u0441\u043a\u0435.",
+                  confirmText: "\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0441\u0435\u0441\u0441\u0438\u044e",
+                  cancelText: "\u041e\u0442\u043c\u0435\u043d\u0430",
+                  variant: "error"
+                });
+                if (!deleteConfirmed) return;
+                btn.setAttribute("disabled", "true");
+                try {
+                  const deleted = await deletePausedSession(sessionId);
+                  if (!deleted) {
+                    btn.removeAttribute("disabled");
+                    return;
+                  }
+                  showComplexVoiceToast({
+                    severity: "success",
+                    what: "\u0421\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u0430\u044f \u0441\u0435\u0441\u0441\u0438\u044f \u0443\u0434\u0430\u043b\u0435\u043d\u0430.",
+                    impact: "\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u043e\u0441\u0442\u0430\u0451\u0442\u0441\u044f \u0432 \u043a\u0430\u0442\u0430\u043b\u043e\u0433\u0435 \u0431\u0435\u0437 \u043f\u0430\u0443\u0437\u044b.",
+                    next: "\u0415\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u0441\u0440\u0430\u0437\u0443 \u0437\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u0437\u0430\u043d\u043e\u0432\u043e.",
+                  });
+                  fetchComplexes();
+                } catch (err) {
+                  console.error("Error deleting paused session", err);
+                  showComplexVoiceToast({
+                    severity: "error",
+                    what: "\u0421\u043e\u0445\u0440\u0430\u043d\u0451\u043d\u043d\u0430\u044f \u0441\u0435\u0441\u0441\u0438\u044f \u043d\u0435 \u0443\u0434\u0430\u043b\u0435\u043d\u0430 \u0438\u0437-\u0437\u0430 \u0441\u0435\u0442\u0435\u0432\u043e\u0439 \u043e\u0448\u0438\u0431\u043a\u0438.",
+                    impact: "\u0421\u0442\u0430\u0442\u0443\u0441 \u043f\u0430\u0443\u0437\u044b \u043f\u043e\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d.",
+                    next: "\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0441\u0435\u0442\u044c \u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043f\u043e\u043f\u044b\u0442\u043a\u0443.",
                   });
                   btn.removeAttribute("disabled");
                 }
@@ -2496,10 +4035,11 @@
                 if (!complexId) return;
                 btn.setAttribute("disabled", "true");
                 try {
+                  const userId = await resolveCurrentComplexesUserId();
                   const resp = await fetch("/api/ui/quick-access/pin", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ complex_id: complexId }),
+                    body: JSON.stringify(withUserIdPayload({ complex_id: complexId }, userId)),
                   });
                   const data = await resp.json();
                   if (data.ok) {
@@ -2560,15 +4100,121 @@
               btn.addEventListener("click", async () => {
                 const theoryId = btn.getAttribute("data-theory-id");
                 const complexName = btn.getAttribute("data-complex-name") || "";
-                await openTheoryModal(complexName, theoryId);
+                const complexId = btn.getAttribute("data-complex-id") || "";
+                await openComplexTheoryViewer(complexName, theoryId, { complexId });
               });
             });
+
+          function openTheorySyncConfirmDialog(complexId) {
+            return new Promise((resolve) => {
+              const stale = document.getElementById("theory-sync-confirm-dialog");
+              if (stale) stale.remove();
+
+              const dialog = document.createElement("dialog");
+              dialog.id = "theory-sync-confirm-dialog";
+              dialog.style.cssText = [
+                "border:none", "padding:0", "margin:auto",
+                "width:calc(100vw - 2rem)", "max-width:28rem",
+                "border-radius:1rem",
+                "background:var(--color-surface-1,#fff)",
+                "border:1px solid var(--color-border-subtle,#e2e8f0)",
+                "box-shadow:0 20px 48px -8px rgba(0,0,0,0.35)",
+                "transform:scale(0.95) translateY(8px)",
+                "opacity:0",
+                "transition:transform 0.25s cubic-bezier(0.34,1.3,0.64,1),opacity 0.2s ease",
+                "overflow:hidden",
+              ].join(";");
+
+              dialog.innerHTML = `
+                <style>
+                  #theory-sync-confirm-dialog::backdrop {
+                    background: rgba(0,0,0,0.45);
+                    backdrop-filter: blur(6px) saturate(0.8);
+                    -webkit-backdrop-filter: blur(6px) saturate(0.8);
+                    opacity: 0;
+                    transition: opacity 0.2s ease;
+                  }
+                  #theory-sync-confirm-dialog[data-open]::backdrop { opacity: 1; }
+                </style>
+
+                <!-- Header -->
+                <div style="display:flex;align-items:flex-start;gap:0.875rem;padding:1.25rem 1.375rem 0;">
+                  <div style="flex-shrink:0;width:2.25rem;height:2.25rem;border-radius:0.625rem;background:var(--color-primary-lighter,#eef2ff);display:flex;align-items:center;justify-content:center;">
+                    <span class="material-symbols-outlined" style="font-size:18px;color:var(--color-primary,#6366f1);">sync</span>
+                  </div>
+                  <div style="min-width:0;flex:1;padding-top:0.125rem;">
+                    <p style="margin:0 0 0.25rem;font-size:0.9375rem;font-weight:800;color:var(--color-text-main,#0f172a);letter-spacing:-0.01em;">Пересобрать теорию комплекса из тем?</p>
+                    <p style="margin:0;font-size:0.8rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">Комплекс в режиме <strong style="color:var(--color-text-main,#0f172a);font-weight:600;">наследования</strong> собирает теорию из тем, связанных с его заданиями. Эта команда заново перечитает эти связи и обновит наследуемую теорию комплекса.</p>
+                  </div>
+                </div>
+
+                <!-- Explanation -->
+                <div style="margin:0.875rem 1.375rem;border-radius:0.625rem;background:var(--color-bg-tertiary,#f1f5f9);padding:0.75rem 0.875rem;display:flex;flex-direction:column;gap:0.5rem;">
+                  <div style="display:flex;align-items:flex-start;gap:0.5rem;">
+                    <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-primary,#6366f1);margin-top:1px;flex-shrink:0;">account_tree</span>
+                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">Это полезно, если комплекс был импортирован, давно не обновлялся или связи теорий в темах менялись вне обычного сценария редактирования.</p>
+                  </div>
+                  <div style="display:flex;align-items:flex-start;gap:0.5rem;">
+                    <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-primary,#6366f1);margin-top:1px;flex-shrink:0;">refresh</span>
+                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">Если всё уже актуально, ничего лишнего не произойдёт: система просто подтвердит, что пересборка не понадобилась.</p>
+                  </div>
+                  <div style="display:flex;align-items:flex-start;gap:0.5rem;">
+                    <span class="material-symbols-outlined" style="font-size:15px;color:var(--color-text-muted,#94a3b8);margin-top:1px;flex-shrink:0;">shield</span>
+                    <p style="margin:0;font-size:0.7875rem;color:var(--color-text-secondary,#64748b);line-height:1.5;">Пересборка идёт в безопасном режиме: локальная теория комплекса не будет принудительно перезаписана, если для него включён собственный режим.</p>
+                  </div>
+                </div>
+
+                <!-- Actions -->
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;padding:0 1.375rem 1.25rem;">
+                  <button id="tsc-cancel" type="button"
+                          style="height:2.25rem;padding:0 1rem;border-radius:0.5rem;border:1px solid var(--color-border-subtle,#e2e8f0);background:var(--color-surface-2,#f8fafc);font-size:0.8125rem;font-weight:600;color:var(--color-text-secondary,#64748b);cursor:pointer;transition:all 0.15s ease;">
+                    Отмена
+                  </button>
+                  <button id="tsc-confirm" type="button"
+                          style="height:2.25rem;padding:0 1.125rem;border-radius:0.5rem;border:none;background:var(--color-primary,#6366f1);font-size:0.8125rem;font-weight:700;color:#fff;cursor:pointer;display:inline-flex;align-items:center;gap:0.375rem;transition:all 0.15s ease;">
+                    <span class="material-symbols-outlined" style="font-size:16px;">sync</span>
+                    Обновить
+                  </button>
+                </div>
+              `;
+
+              document.body.appendChild(dialog);
+              dialog.showModal();
+
+              requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                  dialog.setAttribute("data-open", "");
+                  dialog.style.transform = "scale(1) translateY(0)";
+                  dialog.style.opacity = "1";
+                });
+              });
+
+              const close = (result) => {
+                dialog.removeAttribute("data-open");
+                dialog.style.transform = "scale(0.95) translateY(8px)";
+                dialog.style.opacity = "0";
+                setTimeout(() => { dialog.close(); dialog.remove(); resolve(result); }, 220);
+              };
+
+              dialog.querySelector("#tsc-cancel").addEventListener("click", () => close(false));
+              dialog.querySelector("#tsc-confirm").addEventListener("click", () => close(true));
+              dialog.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); close(false); } });
+              dialog.addEventListener("click", (e) => {
+                const r = dialog.getBoundingClientRect();
+                if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) close(false);
+              });
+            });
+          }
 
             const theorySyncButtons = document.querySelectorAll("button.theory-sync-btn[data-complex-id]");
             theorySyncButtons.forEach((btn) => {
               btn.addEventListener("click", async () => {
                 const complexId = btn.getAttribute("data-complex-id");
                 if (!complexId) return;
+
+                const confirmed = await openTheorySyncConfirmDialog(complexId);
+                if (!confirmed) return;
+
                 btn.setAttribute("disabled", "true");
                 btn.classList.add("opacity-70");
                 try {
@@ -2602,12 +4248,12 @@
                   const status = summary.status || "none";
 
                   if (action === "updated") {
-                    if (status === "conflict") {
+                    if (status === "composite") {
                       showComplexVoiceToast({
-                        severity: "warning",
-                        what: "Синхронизация завершена с конфликтом теорий.",
-                        impact: "Комплекс помечен как конфликтный, локальная теория не перезаписана.",
-                        next: "Проверьте связанные темы и выберите целевую теорию вручную.",
+                        severity: "info",
+                        what: "Синхронизация собрала несколько теорий.",
+                        impact: "Комплекс получил составной теоретический контекст по связанным темам.",
+                        next: "Это нормальный сценарий для многотемного комплекса. При желании можно задать общую теорию вручную.",
                       });
                     } else {
                       showComplexVoiceToast({
@@ -2662,12 +4308,26 @@
               });
             });
 
+            const compositeTheoryButtons = document.querySelectorAll("button.composite-theory-btn[data-complex-id]");
+            compositeTheoryButtons.forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const complexId = btn.getAttribute("data-complex-id") || "";
+                const complexName = btn.getAttribute("data-complex-name") || "";
+                const theoryIds = (btn.getAttribute("data-composite-ids") || "")
+                  .split(",")
+                  .map((item) => item.trim())
+                  .filter(Boolean);
+                await openComplexTheoryViewer(complexName, theoryIds, { complexId });
+              });
+            });
+
             syncComplexSelectionUi();
             applyComplexFilters();
           }
           document.addEventListener("DOMContentLoaded", () => {
             activeTheoryFilterId = readInitialTheoryFilterFromUrl();
             bindComplexFilters();
+            bindComplexSort();
             fetchComplexes();
             const toggleSelectBtn = document.getElementById("toggle-select-complexes");
             if (toggleSelectBtn) {
@@ -2703,6 +4363,12 @@
             if (importBtn) {
               importBtn.addEventListener("click", () => {
                 chooseComplexImportFile();
+              });
+            }
+            const theoryCenterBtn = document.getElementById("open-theory-center");
+            if (theoryCenterBtn) {
+              theoryCenterBtn.addEventListener("click", () => {
+                window.navigateWithTransition("/ui/theory-center?scope=complexes");
               });
             }
             const emptyCreateBtns = document.querySelectorAll("#empty-state button");

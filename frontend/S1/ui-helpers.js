@@ -13,13 +13,67 @@
 }(typeof self !== 'undefined' ? self : this, function (SessionState) {
     'use strict';
 
+    let statusAutoHideTimer = null;
+
     function ensureState() {
         if (!SessionState) console.warn('SessionState not found in UIHelpers');
     }
 
+    function clearStatusAutoHideTimer() {
+        if (statusAutoHideTimer) {
+            clearTimeout(statusAutoHideTimer);
+            statusAutoHideTimer = null;
+        }
+    }
+
+    function setButtonBusy(buttonId, busy, options = {}) {
+        const button = typeof buttonId === "string" ? document.getElementById(buttonId) : buttonId;
+        if (!button) return;
+
+        const labelEl = button.querySelector(".truncate") || button;
+        const defaultLabel =
+            button.dataset.defaultLabel ||
+            (labelEl ? String(labelEl.textContent || "").trim() : "");
+
+        if (!button.dataset.defaultLabel) {
+            button.dataset.defaultLabel = defaultLabel;
+        }
+
+        let spinner = button.querySelector('[data-role="busy-indicator"]');
+
+        if (!busy) {
+            if (labelEl) {
+                labelEl.textContent = button.dataset.defaultLabel || defaultLabel;
+            }
+            if (spinner) spinner.remove();
+            button.removeAttribute("aria-busy");
+            button.classList.remove("pointer-events-none");
+            return;
+        }
+
+        const busyLabel = String(options && options.label ? options.label : "Загрузка");
+        if (labelEl) {
+            labelEl.textContent = busyLabel;
+        }
+
+        if (!spinner) {
+            spinner = document.createElement("span");
+            spinner.setAttribute("data-role", "busy-indicator");
+            spinner.setAttribute("aria-hidden", "true");
+            spinner.className = "material-symbols-outlined text-[16px] leading-none animate-spin";
+            spinner.textContent = "progress_activity";
+            button.insertBefore(spinner, button.firstChild);
+        }
+
+        button.setAttribute("aria-busy", "true");
+        button.classList.add("pointer-events-none");
+    }
+
     // --- Status & feedback ---
 
-    function showStatus(message, type = "info") {
+    function showStatus(message, type = "info", options = {}) {
+        clearStatusAutoHideTimer();
+
         // Check pause state from SessionState if available
         if (SessionState && SessionState.paused && type !== "error") {
             const bannerEl = document.getElementById("status-banner");
@@ -32,14 +86,15 @@
 
         if (!message) {
             banner.classList.add("hidden");
+            banner.replaceChildren();
             return;
         }
 
-        banner.textContent = message;
+        banner.replaceChildren();
         banner.classList.remove("hidden");
 
         // Reset classes
-        banner.className = "mb-4 w-full min-w-0 rounded-lg border-2 p-4 flex items-start gap-3 break-words transition-colors duration-200";
+        banner.className = "mb-4 w-full min-w-0 rounded-lg border-2 px-4 py-3 flex items-center gap-3 break-words transition-colors duration-200";
 
         if (type === "error") {
             banner.classList.add(
@@ -57,9 +112,54 @@
                 "dark:border-warning-light", "dark:bg-surface-2", "dark:text-text-on-dark"
             );
         }
+
+        const dismissible = !!(options && options.dismissible);
+        const content = document.createElement("div");
+        content.className = dismissible
+            ? "flex w-full min-w-0 items-center justify-between gap-2"
+            : "w-full min-w-0";
+
+        const text = document.createElement("div");
+        text.className = "min-w-0 flex-1 whitespace-pre-wrap leading-snug";
+        text.textContent = message;
+        content.appendChild(text);
+
+        if (dismissible) {
+            const closeBtn = document.createElement("button");
+            closeBtn.type = "button";
+            closeBtn.className =
+                "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-border-subtle bg-transparent text-text-secondary transition-colors hover:bg-bg-hover";
+            closeBtn.setAttribute("aria-label", "Закрыть уведомление");
+            closeBtn.title = "Закрыть уведомление";
+
+            const icon = document.createElement("span");
+            icon.className = "material-symbols-outlined text-[14px] leading-none";
+            icon.textContent = "close";
+            closeBtn.appendChild(icon);
+
+            closeBtn.addEventListener("click", () => {
+                clearStatusAutoHideTimer();
+                banner.classList.add("hidden");
+                banner.replaceChildren();
+            });
+
+            content.appendChild(closeBtn);
+        }
+
+        banner.appendChild(content);
+
+        const autoHideMs = Number(options && options.autoHideMs);
+        if (Number.isFinite(autoHideMs) && autoHideMs > 0) {
+            statusAutoHideTimer = setTimeout(() => {
+                banner.classList.add("hidden");
+                banner.replaceChildren();
+                statusAutoHideTimer = null;
+            }, autoHideMs);
+        }
     }
 
     function showRetryOption(retryCallback) {
+        clearStatusAutoHideTimer();
         const banner = document.getElementById("status-banner");
         if (!banner) return;
 
@@ -170,7 +270,9 @@
         if (!SessionState) return;
         const nextBtn = document.getElementById("next-task-btn");
         if (!nextBtn) return;
-        nextBtn.disabled = SessionState.isLoading || !SessionState.canGoNext;
+        const canShowNext = !!SessionState.canGoNext && !!SessionState.currentTaskChecked;
+        nextBtn.disabled = SessionState.isLoading || !canShowNext;
+        nextBtn.classList.toggle("hidden", !canShowNext);
     }
 
     function setCanGoNext(enabled) {
@@ -242,6 +344,7 @@
     return {
         showStatus,
         showRetryOption,
+        setButtonBusy,
         openPauseModal,
         closePauseModal,
         setPauseInFlight,

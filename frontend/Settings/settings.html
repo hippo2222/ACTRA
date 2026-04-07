@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="/assets/tailwind.css" />
     <link rel="stylesheet" href="/assets/fonts.css" />
     <link rel="stylesheet" href="/assets/lightB-variables.css" />
+    <link rel="stylesheet" href="/assets/lightB-components.css" />
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
     <style>
         body {
@@ -52,14 +53,15 @@
             50% { opacity: 0.4; }
         }
 
-        .validating .status-dot {
+        .validating .status-dot,
+        .validating .pill-warning {
             animation: pulse-dot 1s ease-in-out infinite;
             background: var(--color-warning) !important;
         }
 
         .provider-diagnostics {
-            border: 1px solid var(--color-border-strong);
-            background: var(--color-surface-1);
+            border: 1px solid var(--color-component-panel-row-soft-border);
+            background: var(--color-component-panel-row-soft-bg);
             box-shadow: var(--shadow-xs);
         }
 
@@ -87,6 +89,8 @@
         }
 
         #save-status {
+            display: inline-flex;
+            align-items: center;
             color: var(--color-text-secondary);
             font-weight: 500;
         }
@@ -136,6 +140,39 @@
 
     <!-- Main content -->
     <main class="settings-shell mx-auto px-4 py-8 sm:px-6">
+        <section class="animate-fade-in mb-10">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="flex items-center justify-center w-10 h-10 rounded-xl border border-primary-light bg-surface-1 shadow-sm">
+                    <span class="material-symbols-outlined text-primary text-[22px]">palette</span>
+                </div>
+                <div class="settings-provider-heading">
+                    <h2 class="text-xl font-bold text-text-main">Тема интерфейса</h2>
+                    <p id="settings-profile-caption" class="text-sm text-text-secondary">Тема сохраняется для текущего профиля.</p>
+                </div>
+            </div>
+
+            <div class="mb-6 panel-row panel-row--soft items-start">
+                <div class="flex items-start gap-3">
+                    <span class="material-symbols-outlined text-info text-[20px] mt-0.5">light_mode</span>
+                    <div class="text-sm text-info-text">
+                        <p class="font-semibold mb-1">Смена темы перенесена сюда</p>
+                        <p class="text-xs leading-relaxed">
+                            Отдельная кнопка темы убрана с основных экранов.
+                            Теперь палитра выбирается как часть настроек профиля.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="theme-options" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-secondary">Загрузка тем...</div>
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-center gap-3">
+                <span id="theme-save-status" class="hidden"></span>
+            </div>
+        </section>
+
         <!-- AI Keys Section -->
         <section class="animate-fade-in">
             <div class="flex items-center gap-3 mb-6">
@@ -149,7 +186,7 @@
             </div>
 
             <!-- Info banner -->
-            <div class="mb-6 p-4 bg-info-lighter border border-info rounded-xl">
+            <div class="mb-6 panel-row panel-row--soft items-start">
                 <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-info text-[20px] mt-0.5">info</span>
                     <div class="text-sm text-info-text">
@@ -169,19 +206,19 @@
                 </div>
             </div>
 
-            <div id="settings-draft-banner" class="hidden mb-6 p-4 bg-warning-lighter border border-warning-light rounded-xl">
+            <div id="settings-draft-banner" class="hidden mb-6 panel-row panel-row--soft items-start">
                 <div class="flex items-start gap-3">
                     <span class="material-symbols-outlined text-warning text-[20px] mt-0.5">history</span>
                     <div class="flex-1 min-w-0">
                         <p class="text-sm font-semibold text-warning-text">Найден несохранённый черновик настроек</p>
                         <p id="settings-draft-banner-text" class="text-xs text-warning-text mt-1">Можно восстановить последние несохранённые значения ключей.</p>
                         <div class="mt-3 flex flex-wrap items-center gap-2">
-                            <button id="settings-draft-restore-btn"
-                                class="px-3 py-2 text-xs font-semibold rounded-lg bg-warning text-primary-fg hover:bg-warning-dark transition-colors">
+                            <button id="settings-draft-restore-btn" type="button"
+                                class="btn-primary px-3 py-2 text-xs font-semibold">
                                 Восстановить черновик
                             </button>
-                            <button id="settings-draft-discard-btn"
-                                class="px-3 py-2 text-xs font-semibold rounded-lg border border-warning-light bg-surface-1 text-warning-text hover:bg-bg-hover transition-colors">
+                            <button id="settings-draft-discard-btn" type="button"
+                                class="btn-secondary px-3 py-2 text-xs font-semibold">
                                 Удалить черновик
                             </button>
                         </div>
@@ -200,20 +237,20 @@
             <!-- Save button -->
             <div class="mt-8 flex flex-wrap items-center gap-4">
                 <button id="save-keys-btn" onclick="saveKeys()"
-                    class="px-6 py-2.5 bg-primary text-primary-fg font-semibold text-sm rounded-xl hover:brightness-110 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
+                    class="btn-primary px-6 py-2.5 font-semibold text-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
                     Сохранить ключи
                 </button>
                 <button id="validate-all-btn" onclick="validateAllKeys()"
-                    class="px-4 py-2.5 border border-border-subtle bg-surface-1 text-text-secondary font-semibold text-sm rounded-xl hover:bg-bg-hover transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">
-                    РџСЂРѕРІРµСЂРёС‚СЊ РІСЃРµ РєР»СЋС‡Рё
+                    class="btn-secondary px-4 py-2.5 font-semibold text-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                    Проверить все ключи
                 </button>
-                <span id="save-status" class="text-sm text-text-secondary"></span>
+                <span id="save-status" class="hidden"></span>
             </div>
         </section>
 
         <!-- Spacer -->
         <div class="mt-12 pt-8 border-t border-border-subtle">
-            <p class="text-xs text-text-secondary text-center">
+            <p id="settings-footer-profile-note" class="text-xs text-text-secondary text-center">
                 Настройки сохраняются в профиле текущего пользователя.
             </p>
         </div>

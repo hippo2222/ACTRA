@@ -75,6 +75,192 @@ def test_iteration_includes_all_tasks_and_escalates_success(session_manager, moc
     assert all(q.difficulty == 2 for q in session.queue)
     assert next_task["difficulty"] == 2
     assert next_task["task_ref"] in tasks
+
+
+def test_mixed_allowed_difficulties_follow_global_iteration_layers(session_manager, mock_services):
+    complex_service, _, difficulty_manager = mock_services
+    tasks = ["task_full", "task_sparse"]
+    _setup_complex(complex_service, tasks)
+
+    session_manager._check_task_file_exists = lambda _: True
+    session_manager._get_task_type = lambda _ref: "click"
+    difficulty_manager.get_available_levels.side_effect = (
+        lambda _task_type, task_ref: [1, 2, 3] if task_ref == "task_full" else [1, 3]
+    )
+    session_manager._load_task_metadata = lambda _ref: {}
+
+    session = session_manager.start_session("c1", "user1")
+
+    first = session_manager.get_next_task(session.id)
+    second = session_manager.get_next_task(session.id)
+    assert {first["task_ref"], second["task_ref"]} == set(tasks)
+    assert first["difficulty"] == 1
+    assert second["difficulty"] == 1
+
+    session_manager.submit_result(session.id, {"task_ref": first["task_ref"], "success": True, "difficulty": 1})
+    session_manager.submit_result(session.id, {"task_ref": second["task_ref"], "success": True, "difficulty": 1})
+
+    second_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    assert session.iteration == 2
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
+        "task_full": 2,
+        "task_sparse": 1,
+    }
+    assert {task["task_ref"]: task["difficulty"] for task in second_round} == {
+        "task_full": 2,
+        "task_sparse": 1,
+    }
+
+    for task in second_round:
+        session_manager.submit_result(
+            session.id,
+            {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
+        )
+
+    final_task = session_manager.get_next_task(session.id)
+    assert session.iteration == 3
+    queue_by_ref = {queued.task_ref: queued.difficulty for queued in session.queue}
+    assert queue_by_ref == {
+        "task_full": 3,
+        "task_sparse": 3,
+    }
+    assert final_task["task_ref"] in tasks
+    assert final_task["difficulty"] == 3
+
+
+def test_inherently_single_level_task_carries_forward_on_later_iterations(session_manager, mock_services):
+    complex_service, _, difficulty_manager = mock_services
+    tasks = ["task_full", "task_open"]
+    _setup_complex(complex_service, tasks)
+
+    session_manager._check_task_file_exists = lambda _: True
+    session_manager._get_task_type = lambda ref: "click" if ref == "task_full" else "open_answer"
+    difficulty_manager.get_available_levels.side_effect = (
+        lambda _task_type, task_ref: [1, 2, 3] if task_ref == "task_full" else [1]
+    )
+    session_manager._load_task_metadata = lambda _ref: {}
+
+    session = session_manager.start_session("c1", "user1")
+
+    first_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    assert {task["task_ref"] for task in first_round} == set(tasks)
+    assert {task["difficulty"] for task in first_round} == {1}
+
+    for task in first_round:
+        session_manager.submit_result(
+            session.id,
+            {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
+        )
+
+    second_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    assert session.iteration == 2
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
+        "task_full": 2,
+        "task_open": 1,
+    }
+
+    for task in second_round:
+        session_manager.submit_result(
+            session.id,
+            {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
+        )
+
+    session_manager.get_next_task(session.id)
+    assert session.iteration == 3
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
+        "task_full": 3,
+        "task_open": 1,
+    }
+
+
+def test_inherently_two_level_task_stays_on_max_level_in_later_iterations(session_manager, mock_services):
+    complex_service, _, difficulty_manager = mock_services
+    tasks = ["task_full", "task_test"]
+    _setup_complex(complex_service, tasks)
+
+    session_manager._check_task_file_exists = lambda _: True
+    session_manager._get_task_type = lambda ref: "click" if ref == "task_full" else "test"
+    difficulty_manager.get_available_levels.side_effect = (
+        lambda _task_type, task_ref: [1, 2, 3] if task_ref == "task_full" else [1, 2]
+    )
+    session_manager._load_task_metadata = lambda _ref: {}
+
+    session = session_manager.start_session("c1", "user1")
+
+    first_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    for task in first_round:
+        session_manager.submit_result(
+            session.id,
+            {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
+        )
+
+    second_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    assert session.iteration == 2
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
+        "task_full": 2,
+        "task_test": 2,
+    }
+
+    for task in second_round:
+        session_manager.submit_result(
+            session.id,
+            {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
+        )
+
+    session_manager.get_next_task(session.id)
+    assert session.iteration == 3
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
+        "task_full": 3,
+        "task_test": 2,
+    }
+
+
+def test_explicit_single_allowed_level_two_carries_forward_after_first_visibility(session_manager, mock_services):
+    complex_service, _, difficulty_manager = mock_services
+    tasks = ["task_full", "task_mid"]
+    _setup_complex(complex_service, tasks)
+
+    session_manager._check_task_file_exists = lambda _: True
+    session_manager._get_task_type = lambda _ref: "click"
+    difficulty_manager.get_available_levels.side_effect = (
+        lambda _task_type, task_ref: [1, 2, 3] if task_ref == "task_full" else [2]
+    )
+    session_manager._load_task_metadata = lambda _ref: {}
+
+    session = session_manager.start_session("c1", "user1")
+
+    first_task = session_manager.get_next_task(session.id)
+    assert session.iteration == 1
+    assert first_task["task_ref"] == "task_full"
+    assert first_task["difficulty"] == 1
+
+    session_manager.submit_result(session.id, {"task_ref": "task_full", "success": True, "difficulty": 1})
+
+    second_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    assert session.iteration == 2
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
+        "task_full": 2,
+        "task_mid": 2,
+    }
+
+    for task in second_round:
+        session_manager.submit_result(
+            session.id,
+            {"task_ref": task["task_ref"], "success": True, "difficulty": task["difficulty"]},
+        )
+
+    final_round = [session_manager.get_next_task(session.id), session_manager.get_next_task(session.id)]
+    assert session.iteration == 3
+    assert {queued.task_ref: queued.difficulty for queued in session.queue} == {
+        "task_full": 3,
+        "task_mid": 2,
+    }
+    assert {task["task_ref"]: task["difficulty"] for task in final_round} == {
+        "task_full": 3,
+        "task_mid": 2,
+    }
+
+
 def test_failed_task_retries_shown_in_same_iteration(session_manager, mock_services):
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task1", "task2"]
@@ -205,10 +391,10 @@ def test_generate_next_iteration_adds_error_detection_on_iteration_three(session
     queue_refs = [t.task_ref for t in session.queue]
     assert queue_refs[-1] == "task_error"
     assert session.error_detection_tasks == []
-    assert any(t.task_ref == "task_error" and t.difficulty == 2 for t in session.queue)
+    assert any(t.task_ref == "task_error" and t.difficulty == 3 for t in session.queue)
 
 
-def test_generate_next_iteration_keeps_error_detection_deferred_until_max(session_manager, mock_services):
+def test_generate_next_iteration_activates_error_detection_when_next_pass_reaches_max(session_manager, mock_services):
     complex_service, _, difficulty_manager = mock_services
     tasks = ["task_regular", "task_error"]
     complex_obj = _setup_complex(complex_service, tasks)
@@ -246,9 +432,33 @@ def test_generate_next_iteration_keeps_error_detection_deferred_until_max(sessio
 
     session_manager._generate_next_iteration(session, complex_obj)
 
-    queue_refs = [t.task_ref for t in session.queue]
-    assert "task_error" not in queue_refs
-    assert session.error_detection_tasks == ["task_error"]
+    queue_by_ref = {t.task_ref: t.difficulty for t in session.queue}
+    assert queue_by_ref == {
+        "task_regular": 2,
+        "task_error": 3,
+    }
+    assert session.error_detection_tasks == []
+
+
+def test_planned_final_iteration_is_forced_to_three_when_error_detection_exists(session_manager, mock_services):
+    complex_service, _, difficulty_manager = mock_services
+    tasks = ["task_regular", "task_error"]
+    complex_obj = _setup_complex(complex_service, tasks)
+
+    session_manager._check_task_file_exists = lambda _: True
+    session_manager._get_task_type = lambda ref: "click"
+    difficulty_manager.get_available_levels.side_effect = lambda _type, _ref: [1, 2]
+
+    def fake_metadata(task_ref):
+        if task_ref == "task_error":
+            return {"subtype": "error_detection"}
+        return {}
+
+    session_manager._load_task_metadata = fake_metadata
+
+    session = session_manager.start_session("c1", "user1")
+
+    assert session_manager._get_planned_final_iteration(session, complex_obj) == 3
 
 
 def test_get_task_phase_returns_finisher_for_error_detection(session_manager, mock_services):
@@ -341,8 +551,8 @@ def test_generate_initial_queue_raises_on_empty_complex(session_manager, mock_se
     assert "не содержит заданий" in str(exc_info.value).lower()
 
 
-def test_error_detection_activates_on_iteration_2_if_max_is_2(session_manager, mock_services):
-    """Error_detection активируется на итерации 2, если max difficulty = 2."""
+def test_error_detection_stays_deferred_until_iteration_3_even_if_regular_max_is_2(session_manager, mock_services):
+    """Error_detection остаётся отложенным до итерации 3 даже если обычные задания достигают max=2."""
     from datetime import datetime
     from task_system.core.models.complex_models import ComplexSession
     
@@ -387,8 +597,59 @@ def test_error_detection_activates_on_iteration_2_if_max_is_2(session_manager, m
     session_manager._generate_initial_queue(session, complex_obj, target_iteration=2)
     
     queue_refs = [t.task_ref for t in session.queue]
-    # Error_detection должен быть в очереди, т.к. это последняя возможная итерация
-    assert "task_error" in queue_refs
+    assert "task_regular" in queue_refs
+    assert "task_error" not in queue_refs
+    assert session.error_detection_tasks == ["task_error"]
+
+
+def test_generate_next_iteration_replays_all_tasks_until_final_iteration(session_manager, mock_services):
+    complex_service, _, difficulty_manager = mock_services
+    tasks = ["task_l3", "task_l2", "task_l1", "task_error"]
+    complex_obj = _setup_complex(complex_service, tasks)
+
+    session_manager._check_task_file_exists = lambda _: True
+
+    def fake_type(task_ref):
+        if task_ref == "task_l1":
+            return "open_answer"
+        return "click"
+
+    def fake_levels(_task_type, task_ref):
+        if task_ref == "task_l1":
+            return [1]
+        if task_ref == "task_l2":
+            return [1, 2]
+        return [1, 2, 3]
+
+    def fake_metadata(task_ref):
+        if task_ref == "task_error":
+            return {"subtype": "error_detection"}
+        return {}
+
+    session_manager._get_task_type = fake_type
+    difficulty_manager.get_available_levels.side_effect = fake_levels
+    session_manager._load_task_metadata = fake_metadata
+
+    session = session_manager.start_session("c1", "user1")
+    session.iteration = 2
+    session.queue = []
+    session.current_task_index = 0
+    session.error_detection_tasks = ["task_error"]
+    session.completed_tasks = [
+        SessionTaskResult(task_ref="task_l3", success=True, time_spent=1, difficulty=2, iteration_index=2),
+        SessionTaskResult(task_ref="task_l2", success=True, time_spent=1, difficulty=2, iteration_index=2),
+        SessionTaskResult(task_ref="task_l1", success=True, time_spent=1, difficulty=1, iteration_index=2),
+    ]
+
+    session_manager._generate_next_iteration(session, complex_obj)
+
+    queue_by_ref = {task.task_ref: task.difficulty for task in session.queue}
+    assert queue_by_ref == {
+        "task_l3": 3,
+        "task_l2": 2,
+        "task_l1": 1,
+        "task_error": 3,
+    }
 
 
 def test_balance_chunks_by_type_distributes_types(session_manager, mock_services):

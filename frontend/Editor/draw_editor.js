@@ -17,18 +17,21 @@ class DrawEditor extends BaseEditor {
         this.init();
     }
 
+    getDifficultyAuthoringMountPoint() {
+        return document.querySelector('aside .p-5.flex.flex-col.gap-4')
+            || document.querySelector('aside .p-6.flex.flex-col.gap-8');
+    }
+
+    getDifficultyAuthoringLayoutVariant() {
+        return 'sidebar-compact';
+    }
+
+    getDifficultyAuthoringInsertMode() {
+        return 'append';
+    }
+
     async init() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const moduleId = urlParams.get('module');
-        const topicId = urlParams.get('topic');
-        const taskId = urlParams.get('task');
-
-        if (moduleId && topicId && taskId) {
-            await this.loadTask(moduleId, topicId, taskId);
-        } else {
-            console.error("Missing task parameters in URL");
-        }
-
+        await this.initTaskFromUrlContext();
         this.setupEventListeners();
     }
 
@@ -138,6 +141,7 @@ class DrawEditor extends BaseEditor {
         this.regions.forEach((region, index) => {
             const isSelected = this.selectedRegionIndex === index;
             const div = document.createElement('div');
+            div.dataset.regionIndex = String(index);
             div.className = `group flex items-center gap-3 p-2.5 rounded-lg transition-all cursor-pointer relative overflow-hidden ${isSelected ? 'bg-primary-lighter border border-primary-light shadow-sm' : 'bg-surface-1 border border-border-subtle hover:border-border-strong'}`;
 
             if (isSelected) {
@@ -155,10 +159,24 @@ class DrawEditor extends BaseEditor {
                 </button>
             `;
 
-            div.onclick = () => this.selectRegion(index);
+            div.onclick = (e) => {
+                if (e.target.closest('input,button')) return;
+                this.selectRegion(index);
+            };
 
             const input = div.querySelector('input');
             input.value = region.label || '';
+            input.onpointerdown = (e) => {
+                e.stopPropagation();
+                if (this.selectedRegionIndex !== index) {
+                    e.preventDefault();
+                    this.selectRegion(index);
+                    this.focusRegionLabelInput(index);
+                }
+            };
+            input.onclick = (e) => e.stopPropagation();
+            input.onfocus = (e) => e.stopPropagation();
+            input.onkeydown = (e) => e.stopPropagation();
             input.oninput = (e) => {
                 this.regions[index].label = e.target.value;
                 this.markUnsaved();
@@ -173,6 +191,19 @@ class DrawEditor extends BaseEditor {
         });
 
         this.renderVertexEditor();
+    }
+
+    focusRegionLabelInput(index) {
+        requestAnimationFrame(() => {
+            const selector = `#region-list [data-region-index="${index}"] input`;
+            const input = document.querySelector(selector);
+            if (!input) return;
+            input.focus({ preventScroll: true });
+            const length = input.value.length;
+            if (typeof input.setSelectionRange === 'function') {
+                input.setSelectionRange(length, length);
+            }
+        });
     }
 
     renderVertexEditor() {
@@ -481,7 +512,8 @@ class DrawEditor extends BaseEditor {
         // Use buildTaskData to get the current state of the content
         const taskData = this.buildTaskData();
         return {
-            content: JSON.parse(JSON.stringify(taskData.content))
+            content: JSON.parse(JSON.stringify(taskData.content)),
+            taskSettings: this.captureTaskSettingsState(),
         };
     }
 
@@ -494,10 +526,16 @@ class DrawEditor extends BaseEditor {
 
         // Restore content
         this.task.task_data.content = JSON.parse(JSON.stringify(state.content));
+        if (Object.prototype.hasOwnProperty.call(state, 'taskSettings')) {
+            this.restoreTaskSettingsState(state.taskSettings);
+        }
         this.regions = this.task.task_data.content.regions || [];
 
         // Restore UI
         this.renderUI();
+        this.refreshDifficultyAuthoringControls().catch((error) => {
+            console.warn('[DrawEditor] difficulty authoring refresh failed', error);
+        });
         this.markUnsaved();
     }
 }

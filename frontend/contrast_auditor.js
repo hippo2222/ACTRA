@@ -79,6 +79,31 @@
                 a: modern[4] !== undefined ? parseFloat(modern[4]) : 1
             };
         }
+
+        // Handle CSS Color 4 syntax: color(srgb 0.2 0.3 0.4 / 0.5)
+        const srgb = color.match(/color\(\s*srgb\s+([\d.]+%?)\s+([\d.]+%?)\s+([\d.]+%?)(?:\s*\/\s*([\d.]+%?))?\s*\)/i);
+        if (srgb) {
+            const toChannel = (value) => {
+                if (String(value).includes('%')) {
+                    return Math.round((parseFloat(value) / 100) * 255);
+                }
+                const numeric = parseFloat(value);
+                return numeric <= 1 ? Math.round(numeric * 255) : Math.round(numeric);
+            };
+            const toAlpha = (value) => {
+                if (value === undefined) return 1;
+                if (String(value).includes('%')) {
+                    return parseFloat(value) / 100;
+                }
+                return parseFloat(value);
+            };
+            return {
+                r: toChannel(srgb[1]),
+                g: toChannel(srgb[2]),
+                b: toChannel(srgb[3]),
+                a: toAlpha(srgb[4])
+            };
+        }
         return null;
     }
 
@@ -103,10 +128,19 @@
         return style.backgroundImage && style.backgroundImage.includes('gradient');
     }
 
-    function hasGradientInAncestry(el) {
+    function hasVisibleGradientInBackgroundChain(el) {
         let node = el;
         while (node) {
-            if (hasGradientBackground(node)) return true;
+            const style = window.getComputedStyle(node);
+            if (style.backgroundImage && style.backgroundImage.includes('gradient')) {
+                return true;
+            }
+            const bg = parseColor(style.backgroundColor);
+            const nodeOpacity = parseFloat(style.opacity);
+            const alpha = bg ? bg.a * (Number.isNaN(nodeOpacity) ? 1 : nodeOpacity) : 0;
+            if (alpha >= 0.98) {
+                return false;
+            }
             node = node.parentElement;
         }
         return false;
@@ -236,9 +270,17 @@
         if (style.display === 'none' || style.visibility === 'hidden' || style.visibility === 'collapse') {
             return false;
         }
+        const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+        if (rect && (style.position === 'fixed' || style.position === 'sticky')) {
+            const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+            const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+            const isOutsideViewport = rect.bottom <= 0 || rect.right <= 0 || rect.top >= viewportHeight || rect.left >= viewportWidth;
+            if (isOutsideViewport) {
+                return false;
+            }
+        }
         const rects = typeof el.getClientRects === 'function' ? el.getClientRects() : null;
         if (rects && rects.length > 0) return true;
-        const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
         return !!(rect && (rect.width > 0 || rect.height > 0));
     }
 
@@ -255,7 +297,13 @@
                 ...side,
                 widthValue: parseFloat(side.width) || 0,
             }))
-            .filter((side) => side.widthValue > 0 && side.color !== 'transparent' && side.borderStyle !== 'none' && side.borderStyle !== 'hidden');
+            .filter((side) => {
+                if (!(side.widthValue > 0) || side.borderStyle === 'none' || side.borderStyle === 'hidden') {
+                    return false;
+                }
+                const parsedColor = parseColor(side.color);
+                return !!(parsedColor && parsedColor.a > 0.05);
+            });
     }
 
     function getVisibleBorderSummary(style) {
@@ -268,33 +316,132 @@
         };
     }
 
-    function getBestBorderContrast(style, bgColor) {
+    function getVisibleOutlineSummary(style) {
+        if (!style) {
+            return {
+                segments: [],
+                maxWidth: 0,
+                hasVisibleOutline: false,
+            };
+        }
+        const outlineWidth = parseFloat(style.outlineWidth) || 0;
+        const outlineStyle = style.outlineStyle;
+        const outlineColor = style.outlineColor;
+        if (!(outlineWidth > 0) || outlineStyle === 'none' || outlineStyle === 'hidden') {
+            return {
+                segments: [],
+                maxWidth: 0,
+                hasVisibleOutline: false,
+            };
+        }
+        const parsedColor = parseColor(outlineColor);
+        if (!(parsedColor && parsedColor.a > 0.05)) {
+            return {
+                segments: [],
+                maxWidth: 0,
+                hasVisibleOutline: false,
+            };
+        }
+        return {
+            segments: [{
+                name: 'outline',
+                widthValue: outlineWidth,
+                color: outlineColor,
+                outlineStyle,
+            }],
+            maxWidth: outlineWidth,
+            hasVisibleOutline: true,
+        };
+    }
+
+    function getBestBorderContrastAgainstBackgrounds(style, bgColors) {
         const summary = getVisibleBorderSummary(style);
-        if (!summary.hasVisibleBorder || !bgColor) {
+        const backgrounds = Array.isArray(bgColors) ? bgColors.filter(Boolean) : [];
+        if (!summary.hasVisibleBorder || !backgrounds.length) {
             return {
                 ...summary,
                 bestRatio: 0,
                 bestSegment: null,
+                bestBackground: null,
             };
         }
 
         let bestRatio = 0;
         let bestSegment = null;
+        let bestBackground = null;
         summary.segments.forEach((segment) => {
             const parsedColor = parseColor(segment.color);
             if (!parsedColor) return;
-            const effectiveBorder = getEffectiveForegroundColor(parsedColor, bgColor);
-            const ratio = getContrastRatio(effectiveBorder, bgColor);
-            if (ratio > bestRatio) {
-                bestRatio = ratio;
-                bestSegment = segment;
-            }
+            backgrounds.forEach((bgColor) => {
+                if (!bgColor) return;
+                const effectiveBorder = getEffectiveForegroundColor(parsedColor, bgColor);
+                const ratio = getContrastRatio(effectiveBorder, bgColor);
+                if (ratio > bestRatio) {
+                    bestRatio = ratio;
+                    bestSegment = segment;
+                    bestBackground = bgColor;
+                }
+            });
         });
 
         return {
             ...summary,
             bestRatio,
             bestSegment,
+            bestBackground,
+        };
+    }
+
+    function getBestOutlineContrastAgainstBackgrounds(style, bgColors) {
+        const summary = getVisibleOutlineSummary(style);
+        const backgrounds = Array.isArray(bgColors) ? bgColors.filter(Boolean) : [];
+        if (!summary.hasVisibleOutline || !backgrounds.length) {
+            return {
+                ...summary,
+                bestRatio: 0,
+                bestSegment: null,
+                bestBackground: null,
+            };
+        }
+
+        let bestRatio = 0;
+        let bestSegment = null;
+        let bestBackground = null;
+        summary.segments.forEach((segment) => {
+            const parsedColor = parseColor(segment.color);
+            if (!parsedColor) return;
+            backgrounds.forEach((bgColor) => {
+                if (!bgColor) return;
+                const effectiveOutline = getEffectiveForegroundColor(parsedColor, bgColor);
+                const ratio = getContrastRatio(effectiveOutline, bgColor);
+                if (ratio > bestRatio) {
+                    bestRatio = ratio;
+                    bestSegment = segment;
+                    bestBackground = bgColor;
+                }
+            });
+        });
+
+        return {
+            ...summary,
+            bestRatio,
+            bestSegment,
+            bestBackground,
+        };
+    }
+
+    function getBestBoundaryContrastAgainstBackgrounds(style, bgColors) {
+        const borderContrast = getBestBorderContrastAgainstBackgrounds(style, bgColors);
+        const outlineContrast = getBestOutlineContrastAgainstBackgrounds(style, bgColors);
+        if (outlineContrast.bestRatio > borderContrast.bestRatio) {
+            return {
+                ...outlineContrast,
+                boundaryType: 'outline',
+            };
+        }
+        return {
+            ...borderContrast,
+            boundaryType: 'border',
         };
     }
 
@@ -321,6 +468,17 @@
             return hasFormControl || cursorInteractive;
         }
         return false;
+    }
+
+    function isPassiveContainerElement(el) {
+        if (!el || isInteractiveElement(el)) return false;
+        const tagName = String(el.tagName || '').toUpperCase();
+        if (!['SECTION', 'ARTICLE', 'HEADER', 'ASIDE', 'DIV', 'MAIN'].includes(tagName)) {
+            return false;
+        }
+        const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+        if (!rect) return false;
+        return rect.width >= 120 && rect.height >= 40;
     }
 
     function extractUtilityForStateToken(token, state) {
@@ -418,7 +576,7 @@
         const fgColor = parseColor(style.color);
         const parentBg = getEffectiveBackgroundColor(el.parentElement || document.body);
         const elementBg = getBaseElementBackground(el);
-        const usesGradient = hasGradientInAncestry(el);
+        const usesGradient = hasVisibleGradientInBackgroundChain(el);
         const opacity = getEffectiveOpacity(el);
         const isDisabled = isElementDisabled(el);
         const stateSuffix = stateLabel && stateLabel !== 'default' ? ` [${stateLabel}]` : '';
@@ -504,7 +662,8 @@
                 });
             }
 
-            if (usesGradient && ratio >= (limit - tolerance)) {
+            const gradientRiskThreshold = limit + (isLarge ? 1.0 : 1.25);
+            if (usesGradient && ratio >= (limit - tolerance) && ratio < gradientRiskThreshold) {
                 warnings.push({
                     type: `Gradient Background (Estimated)${stateSuffix}`,
                     el: el,
@@ -560,10 +719,14 @@
                 // If parent has background, check panel contrast
                 if (parentBgColor) {
                     const panelRatio = getContrastRatio(elBgColor, parentBgColor);
+                    const panelBoundary = getBestBoundaryContrastAgainstBackgrounds(style, [parentBgColor, elBgColor]);
+                    const hasVisiblePanelBoundary = !!(panelBoundary.bestSegment && panelBoundary.bestRatio >= 1.5);
+                    const rect = typeof el.getBoundingClientRect === 'function' ? el.getBoundingClientRect() : null;
+                    const isMicroAccent = !!(rect && rect.width <= 24 && rect.height <= 8);
 
                     // Panel should have at least 1.5:1 contrast from parent
-                    // Lower ratios indicate they blend too much
-                    if (panelRatio < 1.2 && panelRatio > 1.0) {
+                    // Lower ratios indicate they blend too much unless a visible contour separates them.
+                    if (panelRatio < 1.2 && panelRatio > 1.0 && !hasVisiblePanelBoundary) {
                         warnings.push({
                             type: 'Panel Contrast (TOO LOW)',
                             el: el,
@@ -571,12 +734,12 @@
                             ratio: panelRatio.toFixed(2),
                             required: '1.2+ (visual separation)',
                             fg: `bg: rgb(${elBgColor.r},${elBgColor.g},${elBgColor.b})`,
-                            bg: `parent: rgb(${parentBgColor.r},${parentBgColor.g},${parentBgColor.b})`
+                            bg: `parent: rgb(${parentBgColor.r},${parentBgColor.g},${parentBgColor.b}) [Boundary: ${panelBoundary.bestSegment ? `${panelBoundary.boundaryType} ${panelBoundary.bestSegment.name} ${panelBoundary.bestRatio.toFixed(2)}` : 'none'}]`
                         });
                     }
 
-                    // Panel contrast too high (> 6:1 may look harsh)
-                    if (panelRatio > 8.0) {
+                    // Panel contrast too high (> 8:1 may look harsh), but tiny indicators are exempt.
+                    if (panelRatio > 8.0 && !isMicroAccent) {
                         warnings.push({
                             type: 'Panel Contrast (TOO HIGH)',
                             el: el,
@@ -597,24 +760,28 @@
             ? String(el.getAttribute('type') || '').toLowerCase()
             : '';
         const isNativeToggle = inputType === 'radio' || inputType === 'checkbox';
-        const borderSummary = getVisibleBorderSummary(style);
+        const boundarySummary = getBestBoundaryContrastAgainstBackgrounds(style, [
+            getEffectiveBackgroundColor(el.parentElement || document.body),
+            getEffectiveElementBackground(el)
+        ]);
         if (
-            borderSummary.hasVisibleBorder &&
+            boundarySummary.bestSegment &&
+            !isPassiveContainerElement(el) &&
             !(ignoreNativeToggleBorderWarnings && isNativeToggle)
         ) {
-            const bgColor = getEffectiveBackgroundColor(el.parentElement || document.body); // Border contrasts against PARENT bg usually
-            const borderContrast = getBestBorderContrast(style, bgColor);
-
-            if (bgColor && borderContrast.bestSegment) {
-                if (borderContrast.bestRatio < 3.0) {
+            const bgColor = getEffectiveBackgroundColor(el.parentElement || document.body); // Border contrasts against adjacent surfaces
+            if (bgColor) {
+                if (boundarySummary.bestRatio < 3.0) {
                     warnings.push({
                         type: 'UI Border Contrast',
                         el: el,
-                        text: `Border (${borderContrast.bestSegment.name})`,
-                        ratio: borderContrast.bestRatio.toFixed(2),
+                        text: `${boundarySummary.boundaryType === 'outline' ? 'Outline' : 'Border'} (${boundarySummary.bestSegment.name})`,
+                        ratio: boundarySummary.bestRatio.toFixed(2),
                         required: 3.0,
-                        fg: borderContrast.bestSegment.color,
-                        bg: `rgb(${bgColor.r},${bgColor.g},${bgColor.b})`
+                        fg: boundarySummary.bestSegment.color,
+                        bg: boundarySummary.bestBackground
+                            ? `rgb(${boundarySummary.bestBackground.r},${boundarySummary.bestBackground.g},${boundarySummary.bestBackground.b})`
+                            : `rgb(${bgColor.r},${bgColor.g},${bgColor.b})`
                     });
                 }
             }
@@ -676,19 +843,16 @@
                     // WCAG 1.4.11 requires 3:1 for user interface components
                     // If the background itself is the boundary (no border), it must be 3:1
                     if (ratio < 3.0) {
-                        // Check if it has a sufficient border
-                        let hasSufficientBorder = false;
-                        let borderDebug = "None"; // For debugging report matching issues
+                        let hasSufficientBoundary = false;
+                        let boundaryDebug = "None";
 
-                        const borderContrast = getBestBorderContrast(style, parentBg);
-                        if (borderContrast.hasVisibleBorder && borderContrast.bestSegment) {
-                            if (borderContrast.bestRatio >= 3.0) {
-                                hasSufficientBorder = true;
+                        const boundaryContrast = getBestBoundaryContrastAgainstBackgrounds(style, [parentBg, elBg]);
+                        if (boundaryContrast.bestSegment) {
+                            if (boundaryContrast.bestRatio >= 3.0) {
+                                hasSufficientBoundary = true;
                             } else {
-                                borderDebug = `${borderContrast.bestSegment.name} ${borderContrast.bestSegment.widthValue}px fail ${borderContrast.bestRatio.toFixed(2)}`;
+                                boundaryDebug = `${boundaryContrast.boundaryType} ${boundaryContrast.bestSegment.name} ${boundaryContrast.bestSegment.widthValue}px fail ${boundaryContrast.bestRatio.toFixed(2)}`;
                             }
-                        } else {
-                            borderDebug = "None";
                         }
 
                         // Shadows *can* provide contrast, but often they are too subtle. 
@@ -698,7 +862,7 @@
                         // NOTE: We rely on the "Background" being the indicator. 
                         // If contrast is < 3.0 and no border, it fails WCAG 1.4.11.
 
-                        if (!hasSufficientBorder) {
+                        if (!hasSufficientBoundary) {
                             warnings.push({
                                 type: 'UI Component Boundary',
                                 el: el,
@@ -706,7 +870,7 @@
                                 ratio: ratio.toFixed(2),
                                 required: 3.0,
                                 fg: `BG: ${style.backgroundColor}`,
-                                bg: `Parent: rgb(${parentBg.r},${parentBg.g},${parentBg.b}) [Border: ${borderDebug}]`
+                                bg: `Parent: rgb(${parentBg.r},${parentBg.g},${parentBg.b}) [Boundary: ${boundaryDebug}]`
                             });
                         }
                     }

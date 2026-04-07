@@ -146,6 +146,34 @@ class TestSequenceContractE2E:
         assert result["success"] is True
         assert result["score"] == 100.0
     
+    def test_same_text_blocks_are_equivalent_even_with_different_ids(self):
+        evaluator = SequenceAssemblyTaskEvaluator()
+
+        ui_payload = {
+            "levels": [
+                {"level_id": "level_1", "blocks": ["elem_2", "elem_4"]},
+            ]
+        }
+
+        reference_data = {
+            "elements": [
+                {"id": "elem_1", "text": "Same step"},
+                {"id": "elem_2", "text": "Same step"},
+                {"id": "elem_3", "text": "Another"},
+                {"id": "elem_4", "text": "Another"},
+            ],
+            "levels": [
+                {"level_id": "level_1", "blocks": ["elem_1", "elem_3"]},
+            ],
+            "sequence_within_level_matters": True,
+            "level_order_matters": False
+        }
+
+        result = evaluator.evaluate(ui_payload, reference_data)
+
+        assert result["success"] is True
+        assert result["score"] == 100.0
+
     def test_level_order_matters_true(self):
         """
         Тест: level_order_matters=true требует правильный порядок уровней.
@@ -369,6 +397,90 @@ class TestSequenceEdgeCasesIntegration:
         # Должен обработать legacy формат
         assert "score" in result
         assert "success" in result
+
+    def test_difficulty_3_runtime_slots_match_by_typed_names(self):
+        evaluator = SequenceAssemblyTaskEvaluator()
+
+        ui_payload = {
+            "levels": [
+                {
+                    "level_id": "user_level_1",
+                    "level_name": "Правая рука",
+                    "blocks": ["user_slot_1", "user_slot_2"],
+                    "block_names": {
+                        "user_slot_1": "Красный",
+                        "user_slot_2": "Желтый",
+                    },
+                }
+            ]
+        }
+
+        reference_data = {
+            "levels": [
+                {
+                    "level_id": "level_1",
+                    "level_name": "Правая рука",
+                    "blocks": ["elem_red", "elem_yellow"],
+                    "block_names": {
+                        "elem_red": "Красный",
+                        "elem_yellow": "Желтый",
+                    },
+                }
+            ],
+            "elements": [
+                {"id": "elem_red", "text": "Красный"},
+                {"id": "elem_yellow", "text": "Желтый"},
+            ],
+            "sequence_within_level_matters": True,
+            "level_order_matters": False,
+        }
+
+        result = evaluator.evaluate(ui_payload, reference_data)
+
+        assert result["success"] is True
+        assert result["score"] == 100.0
+
+    def test_difficulty_3_runtime_slots_match_explicit_text_semantic_keys_after_normalization(self):
+        evaluator = SequenceAssemblyTaskEvaluator()
+
+        ui_payload = {
+            "levels": [
+                {
+                    "level_id": "user_level_1",
+                    "level_name": "\u041b\u0435\u0432\u0430\u044f \u043d\u043e\u0433\u0430",
+                    "blocks": ["user_slot_1", "user_slot_2"],
+                    "block_names": {
+                        "user_slot_1": "\u0416\u0435\u043b\u0442\u044b\u0439",
+                        "user_slot_2": "\u0417\u0435\u043b\u0435\u043d\u044b\u0439",
+                    },
+                }
+            ]
+        }
+
+        reference_data = {
+            "levels": [
+                {
+                    "level_id": "level_1",
+                    "level_name": "\u041b\u0435\u0432\u0430\u044f \u043d\u043e\u0433\u0430",
+                    "blocks": ["elem_yellow", "elem_green"],
+                    "block_names": {
+                        "elem_yellow": "\u0416\u0435\u043b\u0442\u044b\u0439",
+                        "elem_green": "\u0417\u0435\u043b\u0451\u043d\u044b\u0439",
+                    },
+                }
+            ],
+            "elements": [
+                {"id": "elem_yellow", "text": "\u0416\u0435\u043b\u0442\u044b\u0439", "semantic_key": "text:\u0416\u0435\u043b\u0442\u044b\u0439"},
+                {"id": "elem_green", "text": "\u0417\u0435\u043b\u0435\u043d\u044b\u0439", "semantic_key": "text:\u0417\u0435\u043b\u0451\u043d\u044b\u0439"},
+            ],
+            "sequence_within_level_matters": True,
+            "level_order_matters": False,
+        }
+
+        result = evaluator.evaluate(ui_payload, reference_data)
+
+        assert result["success"] is True
+        assert result["score"] == 100.0
 
 
 if __name__ == '__main__':

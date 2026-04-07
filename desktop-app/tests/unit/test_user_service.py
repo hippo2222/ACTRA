@@ -1,11 +1,11 @@
-﻿"""
-РўРµСЃС‚С‹ РґР»СЏ UserService.
+"""
+Тесты для UserService.
 
-РџСЂРѕРІРµСЂСЏРµС‚:
-- РЎРѕР·РґР°РЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
-- РџРѕР»СѓС‡РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
-- РџРѕР»СѓС‡РµРЅРёРµ СЃРїРёСЃРєР° РІСЃРµС… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
-- Р’Р°Р»РёРґР°С†РёСЋ РґР°РЅРЅС‹С…
+Проверяет:
+- Создание пользователей
+- Получение пользователей
+- Получение списка всех пользователей
+- Валидацию данных
 """
 
 import unittest
@@ -22,72 +22,72 @@ from services.schemas.user_schemas import ProfileSchema, ProgressSchema, Statist
 
 
 class TestUserService(unittest.TestCase):
-    """РўРµСЃС‚С‹ РґР»СЏ UserService"""
+    """Тесты для UserService"""
     
     def setUp(self):
-        """РќР°СЃС‚СЂРѕР№РєР° С‚РµСЃС‚РѕРІРѕРіРѕ РѕРєСЂСѓР¶РµРЅРёСЏ"""
+        """Настройка тестового окружения"""
         self.temp_dir = tempfile.mkdtemp()
         self.service = UserService(data_dir=self.temp_dir)
     
     def tearDown(self):
-        """РћС‡РёСЃС‚РєР° РїРѕСЃР»Рµ С‚РµСЃС‚РѕРІ"""
+        """Очистка после тестов"""
         shutil.rmtree(self.temp_dir, ignore_errors=True)
     
     def test_create_user(self):
-        """РўРµСЃС‚ СЃРѕР·РґР°РЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ"""
-        user = self.service.create_user("РРІР°РЅ РРІР°РЅРѕРІ")
+        """Тест создания пользователя"""
+        user = self.service.create_user("Иван Иванов")
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃРѕР·РґР°РЅ
+        # Проверяем, что пользователь создан
         self.assertIsNotNone(user)
         self.assertIsInstance(user, User)
-        self.assertEqual(user.name, "РРІР°РЅ РРІР°РЅРѕРІ")
+        self.assertEqual(user.name, "Иван Иванов")
         self.assertTrue(user.user_id.startswith("user_"))
         self.assertIsNotNone(user.created_at)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЃРѕР·РґР°РЅР° РґРёСЂРµРєС‚РѕСЂРёСЏ
+        # Проверяем, что создана директория
         user_dir = Path(self.temp_dir) / "users" / user.user_id
         self.assertTrue(user_dir.exists())
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЃРѕР·РґР°РЅ profile.json
+        # Проверяем, что создан profile.json
         profile_file = user_dir / "profile.json"
         self.assertTrue(profile_file.exists())
         
-        # РџСЂРѕРІРµСЂСЏРµРј СЃРѕРґРµСЂР¶РёРјРѕРµ profile.json
+        # Проверяем содержимое profile.json
         with open(profile_file, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
         errors = ProfileSchema.validate(data)
-        self.assertEqual(len(errors), 0, f"РћС€РёР±РєРё РІР°Р»РёРґР°С†РёРё: {errors}")
+        self.assertEqual(len(errors), 0, f"Ошибки валидации: {errors}")
         self.assertEqual(data["user_id"], user.user_id)
-        self.assertEqual(data["profile"]["name"], "РРІР°РЅ РРІР°РЅРѕРІ")
+        self.assertEqual(data["profile"]["name"], "Иван Иванов")
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ СЃРѕР·РґР°РЅС‹ progress.json Рё statistics.json
+        # Проверяем, что созданы progress.json и statistics.json
         progress_file = user_dir / "progress.json"
         statistics_file = user_dir / "statistics.json"
         
         self.assertTrue(progress_file.exists())
         self.assertTrue(statistics_file.exists())
         
-        # РџСЂРѕРІРµСЂСЏРµРј РІР°Р»РёРґРЅРѕСЃС‚СЊ progress.json
+        # Проверяем валидность progress.json
         with open(progress_file, 'r', encoding='utf-8') as f:
             progress_data = json.load(f)
         errors = ProgressSchema.validate(progress_data)
-        self.assertEqual(len(errors), 0, f"РћС€РёР±РєРё РІР°Р»РёРґР°С†РёРё progress.json: {errors}")
+        self.assertEqual(len(errors), 0, f"Ошибки валидации progress.json: {errors}")
         
-        # РџСЂРѕРІРµСЂСЏРµРј РІР°Р»РёРґРЅРѕСЃС‚СЊ statistics.json
+        # Проверяем валидность statistics.json
         with open(statistics_file, 'r', encoding='utf-8') as f:
             statistics_data = json.load(f)
         errors = StatisticsSchema.validate(statistics_data)
-        self.assertEqual(len(errors), 0, f"РћС€РёР±РєРё РІР°Р»РёРґР°С†РёРё statistics.json: {errors}")
+        self.assertEqual(len(errors), 0, f"Ошибки валидации statistics.json: {errors}")
     
     def test_create_user_with_settings(self):
-        """РўРµСЃС‚ СЃРѕР·РґР°РЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (settings РїСѓСЃС‚РѕР№ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ)"""
-        user = self.service.create_user("РџРµС‚СЂ РџРµС‚СЂРѕРІ")
+        """Тест создания пользователя (settings пустой по умолчанию)"""
+        user = self.service.create_user("Петр Петров")
         
-        # Settings РґРѕР»Р¶РµРЅ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј СЃР»РѕРІР°СЂРµРј
+        # Settings должен быть пустым словарем
         self.assertEqual(user.settings, {})
         
-        # РџСЂРѕРІРµСЂСЏРµРј РІ С„Р°Р№Р»Рµ
+        # Проверяем в файле
         user_dir = Path(self.temp_dir) / "users" / user.user_id
         profile_file = user_dir / "profile.json"
         
@@ -97,7 +97,7 @@ class TestUserService(unittest.TestCase):
         self.assertEqual(data["profile"]["settings"], {})
     
     def test_create_user_empty_name(self):
-        """РўРµСЃС‚ СЃРѕР·РґР°РЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃ РїСѓСЃС‚С‹Рј РёРјРµРЅРµРј"""
+        """Тест создания пользователя с пустым именем"""
         with self.assertRaises(ValueError) as context:
             self.service.create_user("")
         
@@ -106,40 +106,40 @@ class TestUserService(unittest.TestCase):
     
     
     def test_get_user(self):
-        """РўРµСЃС‚ РїРѕР»СѓС‡РµРЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ"""
-        # РЎРѕР·РґР°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
-        created_user = self.service.create_user("РРІР°РЅ РРІР°РЅРѕРІ")
+        """Тест получения пользователя"""
+        # Создаем пользователя
+        created_user = self.service.create_user("Иван Иванов")
         
-        # РџРѕР»СѓС‡Р°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+        # Получаем пользователя
         retrieved_user = self.service.get_user(created_user.user_id)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅР°Р№РґРµРЅ
+        # Проверяем, что пользователь найден
         self.assertIsNotNone(retrieved_user)
         self.assertEqual(retrieved_user.user_id, created_user.user_id)
         self.assertEqual(retrieved_user.name, created_user.name)
         self.assertEqual(retrieved_user.created_at, created_user.created_at)
     
     def test_get_user_not_found(self):
-        """РўРµСЃС‚ РїРѕР»СѓС‡РµРЅРёСЏ РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ"""
+        """Тест получения несуществующего пользователя"""
         user = self.service.get_user("nonexistent_user")
         self.assertIsNone(user)
     
     def test_get_user_empty_id(self):
-        """РўРµСЃС‚ РїРѕР»СѓС‡РµРЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃ РїСѓСЃС‚С‹Рј ID"""
+        """Тест получения пользователя с пустым ID"""
         user = self.service.get_user("")
         self.assertIsNone(user)
     
     def test_get_all_users(self):
-        """РўРµСЃС‚ РїРѕР»СѓС‡РµРЅРёСЏ СЃРїРёСЃРєР° РІСЃРµС… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№"""
-        # РЎРѕР·РґР°РµРј РЅРµСЃРєРѕР»СЊРєРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
-        user1 = self.service.create_user("РРІР°РЅ РРІР°РЅРѕРІ")
-        user2 = self.service.create_user("РџРµС‚СЂ РџРµС‚СЂРѕРІ")
-        user3 = self.service.create_user("РњР°СЂРёСЏ РЎРёРґРѕСЂРѕРІР°")
+        """Тест получения списка всех пользователей"""
+        # Создаем несколько пользователей
+        user1 = self.service.create_user("Иван Иванов")
+        user2 = self.service.create_user("Петр Петров")
+        user3 = self.service.create_user("Мария Сидорова")
         
-        # РџРѕР»СѓС‡Р°РµРј РІСЃРµС… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+        # Получаем всех пользователей
         users = self.service.get_all_users()
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РІСЃРµ РїРѕР»СЊР·РѕРІР°С‚РµР»Рё РЅР°Р№РґРµРЅС‹
+        # Проверяем, что все пользователи найдены
         self.assertEqual(len(users), 3)
         
         user_ids = {user.user_id for user in users}
@@ -148,20 +148,20 @@ class TestUserService(unittest.TestCase):
         self.assertIn(user3.user_id, user_ids)
         
         names = {user.name for user in users}
-        self.assertIn("РРІР°РЅ РРІР°РЅРѕРІ", names)
-        self.assertIn("РџРµС‚СЂ РџРµС‚СЂРѕРІ", names)
-        self.assertIn("РњР°СЂРёСЏ РЎРёРґРѕСЂРѕРІР°", names)
+        self.assertIn("Иван Иванов", names)
+        self.assertIn("Петр Петров", names)
+        self.assertIn("Мария Сидорова", names)
     
     def test_get_all_users_empty(self):
-        """РўРµСЃС‚ РїРѕР»СѓС‡РµРЅРёСЏ СЃРїРёСЃРєР° РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№, РєРѕРіРґР° РёС… РЅРµС‚"""
+        """Тест получения списка пользователей, когда их нет"""
         users = self.service.get_all_users()
         self.assertEqual(len(users), 0)
     
     def test_user_to_dict(self):
-        """РўРµСЃС‚ РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёСЏ User РІ СЃР»РѕРІР°СЂСЊ"""
+        """Тест преобразования User в словарь"""
         user = User(
             user_id="user_123",
-            name="РРІР°РЅ РРІР°РЅРѕРІ",
+            name="Иван Иванов",
             created_at="2024-01-01T00:00:00",
             settings={}
         )
@@ -169,20 +169,20 @@ class TestUserService(unittest.TestCase):
         data = user.to_dict()
         
         self.assertEqual(data["user_id"], "user_123")
-        self.assertEqual(data["profile"]["name"], "РРІР°РЅ РРІР°РЅРѕРІ")
+        self.assertEqual(data["profile"]["name"], "Иван Иванов")
         self.assertEqual(data["profile"]["created_at"], "2024-01-01T00:00:00")
         self.assertEqual(data["profile"]["settings"], {})
         
-        # РџСЂРѕРІРµСЂСЏРµРј РІР°Р»РёРґРЅРѕСЃС‚СЊ
+        # Проверяем валидность
         errors = ProfileSchema.validate(data)
-        self.assertEqual(len(errors), 0, f"РћС€РёР±РєРё РІР°Р»РёРґР°С†РёРё: {errors}")
+        self.assertEqual(len(errors), 0, f"Ошибки валидации: {errors}")
     
     def test_user_from_dict(self):
-        """РўРµСЃС‚ СЃРѕР·РґР°РЅРёСЏ User РёР· СЃР»РѕРІР°СЂСЏ"""
+        """Тест создания User из словаря"""
         data = {
             "user_id": "user_123",
             "profile": {
-                "name": "РРІР°РЅ РРІР°РЅРѕРІ",
+                "name": "Иван Иванов",
                 "created_at": "2024-01-01T00:00:00",
                 "settings": {}
             }
@@ -191,46 +191,46 @@ class TestUserService(unittest.TestCase):
         user = User.from_dict(data)
         
         self.assertEqual(user.user_id, "user_123")
-        self.assertEqual(user.name, "РРІР°РЅ РРІР°РЅРѕРІ")
+        self.assertEqual(user.name, "Иван Иванов")
         self.assertEqual(user.created_at, "2024-01-01T00:00:00")
         self.assertEqual(user.settings, {})
     
     def test_unique_user_ids(self):
-        """РўРµСЃС‚ СѓРЅРёРєР°Р»СЊРЅРѕСЃС‚Рё user_id"""
-        user1 = self.service.create_user("РРІР°РЅ")
-        user2 = self.service.create_user("РџРµС‚СЂ")
-        user3 = self.service.create_user("РњР°СЂРёСЏ")
+        """Тест уникальности user_id"""
+        user1 = self.service.create_user("Иван")
+        user2 = self.service.create_user("Петр")
+        user3 = self.service.create_user("Мария")
         
         user_ids = {user1.user_id, user2.user_id, user3.user_id}
-        self.assertEqual(len(user_ids), 3)  # Р’СЃРµ ID РґРѕР»Р¶РЅС‹ Р±С‹С‚СЊ СѓРЅРёРєР°Р»СЊРЅС‹РјРё
+        self.assertEqual(len(user_ids), 3)  # Все ID должны быть уникальными
     
     def test_user_directory_structure(self):
-        """РўРµСЃС‚ СЃС‚СЂСѓРєС‚СѓСЂС‹ РґРёСЂРµРєС‚РѕСЂРёР№ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ"""
-        user = self.service.create_user("РРІР°РЅ РРІР°РЅРѕРІ")
+        """Тест структуры директорий пользователя"""
+        user = self.service.create_user("Иван Иванов")
         user_dir = Path(self.temp_dir) / "users" / user.user_id
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РІСЃРµ РЅРµРѕР±С…РѕРґРёРјС‹Рµ С„Р°Р№Р»С‹ СЃРѕР·РґР°РЅС‹
+        # Проверяем, что все необходимые файлы созданы
         self.assertTrue((user_dir / "profile.json").exists())
         self.assertTrue((user_dir / "progress.json").exists())
         self.assertTrue((user_dir / "statistics.json").exists())
     
     def test_create_user_duplicate_name(self):
-        """РўРµСЃС‚ СЃРѕР·РґР°РЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№ СЃ РѕРґРёРЅР°РєРѕРІС‹РјРё РёРјРµРЅР°РјРё (РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ Р·Р°РїСЂРµС‰РµРЅРѕ)"""
-        # РЎРѕР·РґР°РµРј РїРµСЂРІРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
-        user1 = self.service.create_user("РРІР°РЅ РРІР°РЅРѕРІ")
+        """Тест создания пользователей с одинаковыми именами (должно быть запрещено)"""
+        # Создаем первого пользователя
+        user1 = self.service.create_user("Иван Иванов")
         self.assertIsNotNone(user1)
         
-        # РџРѕРїС‹С‚РєР° СЃРѕР·РґР°С‚СЊ РІС‚РѕСЂРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃ С‚РµРј Р¶Рµ РёРјРµРЅРµРј РґРѕР»Р¶РЅР° РІС‹Р±СЂРѕСЃРёС‚СЊ РѕС€РёР±РєСѓ
+        # Попытка создать второго пользователя с тем же именем должна выбросить ошибку
         with self.assertRaises(ValueError):
-            self.service.create_user("РРІР°РЅ РРІР°РЅРѕРІ")
+            self.service.create_user("Иван Иванов")
     
     def test_user_isolation(self):
-        """РўРµСЃС‚ РёР·РѕР»СЏС†РёРё РґР°РЅРЅС‹С… РјРµР¶РґСѓ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРјРё"""
-        # РЎРѕР·РґР°РµРј РґРІСѓС… РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
-        user1 = self.service.create_user("РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ 1")
-        user2 = self.service.create_user("РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ 2")
+        """Тест изоляции данных между пользователями"""
+        # Создаем двух пользователей
+        user1 = self.service.create_user("Пользователь 1")
+        user2 = self.service.create_user("Пользователь 2")
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ Сѓ РєР°Р¶РґРѕРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃРІРѕСЏ РґРёСЂРµРєС‚РѕСЂРёСЏ
+        # Проверяем, что у каждого пользователя своя директория
         user1_dir = Path(self.temp_dir) / "users" / user1.user_id
         user2_dir = Path(self.temp_dir) / "users" / user2.user_id
         
@@ -238,29 +238,29 @@ class TestUserService(unittest.TestCase):
         self.assertTrue(user2_dir.exists())
         self.assertNotEqual(user1_dir, user2_dir)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ Сѓ РєР°Р¶РґРѕРіРѕ СЃРІРѕР№ profile.json
+        # Проверяем, что у каждого свой profile.json
         profile1 = user1_dir / "profile.json"
         profile2 = user2_dir / "profile.json"
         
         self.assertTrue(profile1.exists())
         self.assertTrue(profile2.exists())
         
-        # РџСЂРѕРІРµСЂСЏРµРј СЃРѕРґРµСЂР¶РёРјРѕРµ profile.json
+        # Проверяем содержимое profile.json
         with open(profile1, 'r', encoding='utf-8') as f:
             data1 = json.load(f)
         with open(profile2, 'r', encoding='utf-8') as f:
             data2 = json.load(f)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ user_id СЂР°Р·РЅС‹Рµ
+        # Проверяем, что user_id разные
         self.assertNotEqual(data1["user_id"], data2["user_id"])
         self.assertEqual(data1["user_id"], user1.user_id)
         self.assertEqual(data2["user_id"], user2.user_id)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РёРјРµРЅР° СЂР°Р·РЅС‹Рµ
-        self.assertEqual(data1["profile"]["name"], "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ 1")
-        self.assertEqual(data2["profile"]["name"], "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ 2")
+        # Проверяем, что имена разные
+        self.assertEqual(data1["profile"]["name"], "Пользователь 1")
+        self.assertEqual(data2["profile"]["name"], "Пользователь 2")
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ Сѓ РєР°Р¶РґРѕРіРѕ СЃРІРѕР№ progress.json Рё statistics.json
+        # Проверяем, что у каждого свой progress.json и statistics.json
         progress1 = user1_dir / "progress.json"
         progress2 = user2_dir / "progress.json"
         stats1 = user1_dir / "statistics.json"
@@ -271,45 +271,45 @@ class TestUserService(unittest.TestCase):
         self.assertTrue(stats1.exists())
         self.assertTrue(stats2.exists())
         
-        # РџСЂРѕРІРµСЂСЏРµРј СЃРѕРґРµСЂР¶РёРјРѕРµ progress.json
+        # Проверяем содержимое progress.json
         with open(progress1, 'r', encoding='utf-8') as f:
             progress_data1 = json.load(f)
         with open(progress2, 'r', encoding='utf-8') as f:
             progress_data2 = json.load(f)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ user_id РІ progress.json СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‚
+        # Проверяем, что user_id в progress.json соответствуют
         self.assertEqual(progress_data1["user_id"], user1.user_id)
         self.assertEqual(progress_data2["user_id"], user2.user_id)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РґР°РЅРЅС‹Рµ РёР·РѕР»РёСЂРѕРІР°РЅС‹ (task_history РїСѓСЃС‚С‹Рµ)
+        # Проверяем, что данные изолированы (task_history пустые)
         self.assertEqual(progress_data1["task_history"], {})
         self.assertEqual(progress_data2["task_history"], {})
     
     def test_delete_user_with_progress(self):
-        """РўРµСЃС‚ СѓРґР°Р»РµРЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃ СЃРѕС…СЂР°РЅРµРЅРёРµРј РґР°РЅРЅС‹С…"""
-        # РЎРѕР·РґР°РµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
-        user = self.service.create_user("РўРµСЃС‚РѕРІС‹Р№ РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ")
+        """Тест удаления пользователя с сохранением данных"""
+        # Создаем пользователя
+        user = self.service.create_user("Тестовый Пользователь")
         user_dir = Path(self.temp_dir) / "users" / user.user_id
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃРѕР·РґР°РЅ
+        # Проверяем, что пользователь создан
         self.assertTrue(user_dir.exists())
         self.assertTrue((user_dir / "profile.json").exists())
         self.assertTrue((user_dir / "progress.json").exists())
         self.assertTrue((user_dir / "progress.json").exists())
         
-        # Р”РѕР±Р°РІР»СЏРµРј РЅРµРєРѕС‚РѕСЂС‹Рµ РґР°РЅРЅС‹Рµ РІ progress.json (СЃРёРјСѓР»СЏС†РёСЏ РїСЂРѕРіСЂРµСЃСЃР°)
+        # Добавляем некоторые данные в progress.json (симуляция прогресса)
         from services.progress_service import ProgressService
         progress_service = ProgressService(
             data_dir=str(self.temp_dir),
             user_id=user.user_id
         )
         
-        # РЎРѕС…СЂР°РЅСЏРµРј С‚РµСЃС‚РѕРІСѓСЋ РїРѕРїС‹С‚РєСѓ
+        # Сохраняем тестовую попытку
         from services.task_evaluator_service import EvaluationResult
         result = EvaluationResult(
             success=True,
             score=85.0,
-            message="РўРµСЃС‚",
+            message="Тест",
             metric="percent",
             details={}
         )
@@ -317,35 +317,35 @@ class TestUserService(unittest.TestCase):
             "module_01", "topic_01", "task_001", result
         )
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РґР°РЅРЅС‹Рµ СЃРѕС…СЂР°РЅРµРЅС‹
+        # Проверяем, что данные сохранены
         progress_file = user_dir / "progress.json"
         with open(progress_file, 'r', encoding='utf-8') as f:
             progress_data = json.load(f)
         self.assertGreater(len(progress_data.get("task_history", {})), 0)
         
-        # РЈРґР°Р»СЏРµРј РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ
+        # Удаляем пользователя
         deleted = self.service.delete_user(user.user_id)
         self.assertTrue(deleted)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РґРёСЂРµРєС‚РѕСЂРёСЏ СѓРґР°Р»РµРЅР°
+        # Проверяем, что директория удалена
         self.assertFalse(user_dir.exists())
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РЅР°Р№РґРµРЅ
+        # Проверяем, что пользователь не найден
         retrieved_user = self.service.get_user(user.user_id)
         self.assertIsNone(retrieved_user)
         
-        # РџСЂРѕРІРµСЂСЏРµРј, С‡С‚Рѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РІ СЃРїРёСЃРєРµ
+        # Проверяем, что пользователь не в списке
         all_users = self.service.get_all_users()
         user_ids = {u.user_id for u in all_users}
         self.assertNotIn(user.user_id, user_ids)
     
     def test_delete_user_not_found(self):
-        """РўРµСЃС‚ СѓРґР°Р»РµРЅРёСЏ РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ"""
+        """Тест удаления несуществующего пользователя"""
         deleted = self.service.delete_user("nonexistent_user")
         self.assertFalse(deleted)
     
     def test_delete_user_empty_id(self):
-        """РўРµСЃС‚ СѓРґР°Р»РµРЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ СЃ РїСѓСЃС‚С‹Рј ID"""
+        """Тест удаления пользователя с пустым ID"""
         with self.assertRaises(ValueError):
             self.service.delete_user("")
     

@@ -15,6 +15,7 @@ Task Evaluator Service - Единая точка входа для оценки 
 import sys
 import os
 import logging
+from collections import Counter
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional, Literal
 from dataclasses import dataclass, field
@@ -1175,7 +1176,8 @@ class TaskEvaluatorService:
     def _find_best_matching_line(self, target_points: List[Tuple[float, float]], 
                                  user_lines: List[Dict],
                                  used_lines: set,
-                                 line_tolerance: float) -> Tuple[Optional[Dict], int]:
+                                 line_tolerance: float,
+                                 drawing_context: Optional[Dict[str, Any]] = None) -> Tuple[Optional[Dict], int]:
         """
         Находит лучшую линию пользователя для заданного референсного target.
         
@@ -1215,9 +1217,14 @@ class TaskEvaluatorService:
                 'points': [[p[0], p[1]] if isinstance(p, (list, tuple)) else [p.get('x', 0), p.get('y', 0)] 
                           for p in line_points]
             }]
+            drawing_payload: Dict[str, Any] = {'drawing': drawing_strokes}
+            if isinstance(drawing_context, dict):
+                for key in ('image_width', 'image_height', 'display_width', 'display_height'):
+                    if drawing_context.get(key) is not None:
+                        drawing_payload[key] = drawing_context.get(key)
             
             # Вычисляем покрытие для этой линии
-            coverage = self.calculate_line_coverage(target_points, drawing_strokes, line_tolerance)
+            coverage = self.calculate_line_coverage(target_points, drawing_payload, line_tolerance)
             
             # Если это лучшая линия, сохраняем её
             if coverage > best_coverage:
@@ -1448,7 +1455,7 @@ class TaskEvaluatorService:
             # Если явного соответствия нет, используем улучшенный алгоритм поиска
             if not user_line:
                 user_line, matched_line_idx = self._find_best_matching_line(
-                    target_points, user_lines, used_line_indices, line_tolerance
+                    target_points, user_lines, used_line_indices, line_tolerance, drawing_context=user_input
                 )
                 if matched_line_idx >= 0:
                     used_line_indices.add(matched_line_idx)
@@ -1492,13 +1499,28 @@ class TaskEvaluatorService:
             score_config = target.get('score', {})
             threshold = score_config.get('threshold', 0.75) if isinstance(score_config, dict) else 0.75
             
+            line_drawing_context = {
+                'drawing': drawing_strokes,
+                'image_width': user_input.get('image_width'),
+                'image_height': user_input.get('image_height'),
+                'display_width': user_input.get('display_width'),
+                'display_height': user_input.get('display_height'),
+            }
+
             # Вычисляем покрытие с улучшенной оценкой
-            coverage = self.calculate_line_coverage(target_points, drawing_strokes, line_tolerance, use_improved_evaluation=True)
+            coverage = self.calculate_line_coverage(
+                target_points, line_drawing_context, line_tolerance, use_improved_evaluation=True
+            )
             line_success = coverage >= (threshold * 100)
             
             # Дополнительная информация для логирования (если нужно)
-            bidirectional = self._calculate_bidirectional_coverage(target_points, drawing_strokes, line_tolerance)
-            shape_score = self._calculate_shape_similarity(target_points, drawing_strokes, line_tolerance)
+            effective_line_tolerance = self._resolve_line_tolerance_px(line_tolerance, line_drawing_context)
+            bidirectional = self._calculate_bidirectional_coverage(
+                target_points, drawing_strokes, effective_line_tolerance
+            )
+            shape_score = self._calculate_shape_similarity(
+                target_points, drawing_strokes, effective_line_tolerance
+            )
             
             # Логирование для отладки с детальной информацией
             logger.debug(f"🎨 Проверка линии {freehand_idx}: coverage={coverage:.1f}% (ref={bidirectional['reference_coverage']:.1f}%, "
@@ -1703,30 +1725,211 @@ class TaskEvaluatorService:
     # HELPER METHODS для проверки labels (ФАЗА 2: Уровни сложности)
     # =========================================================================
     
-    def _evaluate_labels(self, user_labels: List[str], 
+    @staticmethod
+    def _format_normalization_kinds(normalization_kinds: List[str]) -> str:
+        kind_labels = {
+            'layout': 'раскладки',
+            'yo': 'е/ё',
+            'y_i': 'ы/і',
+        }
+        normalized = []
+        for kind in normalization_kinds or []:
+            key = str(kind or '').strip().lower()
+            if key and key in kind_labels and kind_labels[key] not in normalized:
+                normalized.append(kind_labels[key])
+
+        if not normalized:
+            return 'текста'
+        if len(normalized) == 1:
+            return normalized[0]
+        if len(normalized) == 2:
+            return f"{normalized[0]} и {normalized[1]}"
+        return f"{', '.join(normalized[:-1])} и {normalized[-1]}"
+
+    def _summarize_tolerance_matches(self, matches: List[Dict[str, Any]]) -> Dict[str, Any]:
+        normalized_matches = []
+        normalization_kinds: List[str] = []
+        raw_types = set()
+
+        for raw_match in matches or []:
+            if not isinstance(raw_match, dict):
+                continue
+
+            match_type = str(raw_match.get('type') or '').strip().lower()
+            normalized_kinds = raw_match.get('normalized_kinds')
+            if not isinstance(normalized_kinds, list):
+                normalized_kinds = []
+            cleaned_kinds = []
+            for kind in normalized_kinds:
+                kind_key = str(kind or '').strip().lower()
+                if not kind_key:
+                    continue
+                cleaned_kinds.append(kind_key)
+                if kind_key not in normalization_kinds:
+                    normalization_kinds.append(kind_key)
+
+            item = dict(raw_match)
+            if cleaned_kinds:
+                item['normalized_kinds'] = cleaned_kinds
+            normalized_matches.append(item)
+
+            if match_type in {'typo', 'ending', 'both'}:
+                raw_types.add(match_type)
+
+        if 'both' in raw_types or ('typo' in raw_types and 'ending' in raw_types):
+            tolerance_type = 'both'
+        elif 'ending' in raw_types:
+            tolerance_type = 'ending'
+        elif 'typo' in raw_types:
+            tolerance_type = 'typo'
+        elif normalization_kinds:
+            tolerance_type = 'normalized'
+        else:
+            tolerance_type = None
+
+        return {
+            'matches': normalized_matches,
+            'tolerance_type': tolerance_type,
+            'normalization_kinds': normalization_kinds,
+            'has_tolerance': bool(tolerance_type),
+        }
+
+    def _build_tolerance_explanation(self, subject: str, summary: Optional[Dict[str, Any]]) -> str:
+        if not isinstance(summary, dict):
+            return ''
+
+        tolerance_type = str(summary.get('tolerance_type') or '').strip().lower()
+        normalization_kinds = summary.get('normalization_kinds') or []
+        normalization_part = self._format_normalization_kinds(normalization_kinds)
+
+        if tolerance_type == 'typo':
+            return f"{subject} засчитан с учетом опечатки."
+        if tolerance_type == 'ending':
+            return f"{subject} засчитан с учетом формы слова."
+        if tolerance_type == 'both':
+            return f"{subject} засчитан с учетом формы слова и опечатки."
+        if tolerance_type == 'normalized':
+            return f"{subject} засчитан после нормализации {normalization_part}."
+        return ''
+
+    def _compare_named_text(self, user_text: str, correct_text: str) -> Optional[Dict[str, Any]]:
+        safe_user = str(user_text or '').strip()
+        safe_correct = str(correct_text or '').strip()
+        if not safe_user or not safe_correct:
+            return None
+        return compare_words_with_tolerance_info(
+            safe_user,
+            safe_correct,
+            self._get_tolerance_config_for_labels()
+        )
+
+    def _tokenize_label_text(self, text: str) -> List[str]:
+        safe_text = str(text or '').strip().lower()
+        if not safe_text:
+            return []
+
+        normalized = normalize_text(
+            safe_text,
+            normalize_yo=True,
+            normalize_layout=True,
+            normalize_y_i=True,
+        )
+        return [
+            str(token).strip()
+            for token in extract_words_from_text(normalized)
+            if str(token).strip()
+        ]
+
+    def _match_label_with_omitted_words(self, user_label: str, correct_label: str) -> Optional[Dict[str, Any]]:
+        safe_user = str(user_label or '').strip()
+        safe_correct = str(correct_label or '').strip()
+        if not safe_user or not safe_correct:
+            return None
+
+        user_words = self._tokenize_label_text(safe_user)
+        correct_words = self._tokenize_label_text(safe_correct)
+        if not user_words or not correct_words:
+            return None
+
+        omitted_count = len(correct_words) - len(user_words)
+        if omitted_count not in (1, 2):
+            return None
+
+        tolerance_config = self._get_tolerance_config_for_labels()
+        omitted_words: List[str] = []
+        user_idx = 0
+        correct_idx = 0
+
+        while user_idx < len(user_words) and correct_idx < len(correct_words):
+            if compare_words_with_tolerance_info(
+                user_words[user_idx],
+                correct_words[correct_idx],
+                tolerance_config,
+            ) is not None:
+                user_idx += 1
+                correct_idx += 1
+                continue
+
+            omitted_words.append(correct_words[correct_idx])
+            correct_idx += 1
+            if len(omitted_words) > 2:
+                return None
+
+        if user_idx < len(user_words):
+            return None
+
+        while correct_idx < len(correct_words):
+            omitted_words.append(correct_words[correct_idx])
+            correct_idx += 1
+            if len(omitted_words) > 2:
+                return None
+
+        if len(omitted_words) not in (1, 2):
+            return None
+
+        return {
+            'user_answer': safe_user,
+            'correct_answer': safe_correct,
+            'omitted_words': omitted_words,
+            'omitted_phrase': ' '.join(omitted_words).strip(),
+        }
+
+    def _build_draw_label_user_judgement(self, labels_eval: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        if not isinstance(labels_eval, dict):
+            return None
+
+        unmatched_labels = labels_eval.get('unmatched_labels')
+        if not isinstance(unmatched_labels, list) or not unmatched_labels:
+            return None
+
+        soft_mismatches: List[Dict[str, Any]] = []
+        for item in unmatched_labels:
+            if not isinstance(item, (list, tuple)) or len(item) < 3:
+                return None
+
+            try:
+                mismatch_index = int(item[0])
+            except Exception:
+                return None
+
+            omission_match = self._match_label_with_omitted_words(item[1], item[2])
+            if omission_match is None:
+                return None
+
+            omission_match['index'] = mismatch_index
+            soft_mismatches.append(omission_match)
+
+        if not soft_mismatches:
+            return None
+
+        return {
+            'reason': 'omitted_words',
+            'message': 'В одном или нескольких названиях пропущено 1–2 слова. Решите, считать ли ответ верным.',
+            'soft_mismatches': soft_mismatches,
+        }
+
+    def _evaluate_labels(self, user_labels: List[str],
                         correct_labels: List[str]) -> Dict[str, Any]:
-        """
-        Проверяет список названий пользователя против правильных названий.
-        
-        Используется для click заданий уровней 2-3, где пользователь должен
-        ввести названия для каждого найденного target.
-        
-        Использует нормализацию опечаток и раскладок клавиатуры, как в заданиях
-        Открытый ответ и Тест уровня 2.
-        
-        Args:
-            user_labels: Список названий от пользователя [str, ...]
-            correct_labels: Правильные названия в порядке targets [str, ...]
-        
-        Returns:
-            dict: {
-                'success': bool,
-                'score': float,  # 0.0 - 100.0
-                'message': str,
-                'matched_labels': List[Tuple[int, str, str]],  # (index, user_label, correct_label)
-                'unmatched_labels': List[Tuple[int, str, str]]  # (index, user_label, correct_label)
-            }
-        """
         if not correct_labels:
             return {
                 'success': False,
@@ -1735,7 +1938,7 @@ class TaskEvaluatorService:
                 'matched_labels': [],
                 'unmatched_labels': []
             }
-        
+
         if not user_labels:
             return {
                 'success': False,
@@ -1744,73 +1947,74 @@ class TaskEvaluatorService:
                 'matched_labels': [],
                 'unmatched_labels': []
             }
-        
-        # Загружаем конфигурацию толерантности
+
         tolerance_config = self._get_tolerance_config_for_labels()
-        
         matched = []
         unmatched = []
-        has_tolerance_matches = False  # Флаг для отслеживания совпадений с толерантностью
-        
-        # Сравниваем по индексу (порядок важен)
+        tolerance_matches = []
+        tolerance_matches = []
+
         max_len = max(len(user_labels), len(correct_labels))
-        
         for i in range(max_len):
             user_label_raw = user_labels[i].strip() if i < len(user_labels) and user_labels[i] else ''
             correct_label_raw = correct_labels[i] if i < len(correct_labels) else ''
-            
+
             if user_label_raw and correct_label_raw:
-                # Используем compare_words_with_tolerance_info для проверки с учетом опечаток и раскладок
                 tolerance_info = compare_words_with_tolerance_info(
                     user_label_raw,
                     correct_label_raw,
                     tolerance_config
                 )
-                
                 if tolerance_info is not None:
-                    # Совпадение найдено (с толерантностью или без)
-                    match_type = tolerance_info.get('type', 'exact')
-                    if match_type != 'exact':
-                        has_tolerance_matches = True
                     matched.append((i, user_label_raw, correct_label_raw))
+                    if tolerance_info.get('type') != 'exact' or tolerance_info.get('normalized_kinds'):
+                        tolerance_matches.append({
+                            'index': i,
+                            'type': tolerance_info.get('type', 'exact'),
+                            'user_answer': user_label_raw,
+                            'correct_answer': correct_label_raw,
+                            'normalized_kinds': list(tolerance_info.get('normalized_kinds', []))
+                            if isinstance(tolerance_info.get('normalized_kinds'), list)
+                            else [],
+                        })
                 else:
-                    # Совпадение не найдено
                     unmatched.append((i, user_label_raw, correct_label_raw))
             elif user_label_raw and not correct_label_raw:
-                # Пользователь ввел лишнее название
                 unmatched.append((i, user_label_raw, ''))
             elif not user_label_raw and correct_label_raw:
-                # Пользователь не ввел название
                 unmatched.append((i, '', correct_label_raw))
-        
-        # Определяем успешность
+
         total_labels = len(correct_labels)
         matched_count = len(matched)
         success = matched_count == total_labels and len(unmatched) == 0
-        
-        # НОВОЕ: Считаем процент правильных ответов
         score = (matched_count / total_labels * 100) if total_labels > 0 else 0.0
-        
-        # Формируем сообщение
+
+        tolerance_summary = self._summarize_tolerance_matches(tolerance_matches)
+        tolerance_explanation = self._build_tolerance_explanation('Название', tolerance_summary)
+
         if success:
-            if has_tolerance_matches:
-                message = get_message("labels_success_tolerance", matched_count=matched_count, total_labels=total_labels)
+            if tolerance_summary.get('has_tolerance'):
+                message = get_message('labels_success_tolerance', matched_count=matched_count, total_labels=total_labels)
             else:
-                message = get_message("labels_success_all", matched_count=matched_count, total_labels=total_labels)
+                message = get_message('labels_success_all', matched_count=matched_count, total_labels=total_labels)
         else:
             if total_labels > 0:
-                message = get_message("labels_fail_score", matched_count=matched_count, total_labels=total_labels, score=score)
+                message = get_message('labels_fail_score', matched_count=matched_count, total_labels=total_labels, score=score)
             else:
-                message = get_message("labels_fail", matched_count=matched_count, total_labels=total_labels)
-        
+                message = get_message('labels_fail', matched_count=matched_count, total_labels=total_labels)
+
         return {
             'success': success,
-            'score': score, # НОВОЕ
+            'score': score,
             'message': message,
             'matched_labels': matched,
-            'unmatched_labels': unmatched
+            'unmatched_labels': unmatched,
+            'tolerance_matches': tolerance_summary.get('matches', []),
+            'tolerance_type': tolerance_summary.get('tolerance_type'),
+            'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
+            'tolerance_explanation': tolerance_explanation
         }
-    
+
     def _evaluate_label(self, user_label: str, correct_label: str) -> Dict[str, Any]:
         """
         Проверяет одно название пользователя против правильного названия.
@@ -1857,6 +2061,16 @@ class TaskEvaluatorService:
         )
         
         success = tolerance_info is not None
+        normalized_kinds = tolerance_info.get('normalized_kinds', []) if isinstance(tolerance_info, dict) else []
+        tolerance_summary = self._summarize_tolerance_matches(
+            [{
+                'type': tolerance_info.get('type', 'exact'),
+                'user_answer': user_label.strip(),
+                'correct_answer': correct_label,
+                'normalized_kinds': list(normalized_kinds) if isinstance(normalized_kinds, list) else [],
+            }] if success and (tolerance_info.get('type', 'exact') != 'exact' or normalized_kinds) else []
+        )
+        tolerance_explanation = self._build_tolerance_explanation("Название", tolerance_summary)
         
         if success:
             # Определяем тип совпадения для сообщения
@@ -1872,7 +2086,11 @@ class TaskEvaluatorService:
         
         return {
             'success': success,
-            'message': message
+            'message': message,
+            'tolerance_matches': tolerance_summary.get('matches', []),
+            'tolerance_type': tolerance_summary.get('tolerance_type'),
+            'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
+            'tolerance_explanation': tolerance_explanation
         }
     
     def _evaluate_click_level_3_multiple_strokes(self, user_input: Dict[str, Any],
@@ -2044,7 +2262,7 @@ class TaskEvaluatorService:
             line_threshold = score_config.get('threshold', 0.75) if isinstance(score_config, dict) else 0.75
 
             user_line, matched_line_idx = self._find_best_matching_line(
-                target_points, user_lines, used_line_indices, line_tolerance
+                target_points, user_lines, used_line_indices, line_tolerance, drawing_context=user_input
             )
             if matched_line_idx is not None and matched_line_idx >= 0:
                 used_line_indices.add(matched_line_idx)
@@ -2065,8 +2283,16 @@ class TaskEvaluatorService:
                 'points': [[p[0], p[1]] if isinstance(p, (list, tuple)) else [p.get('x', 0), p.get('y', 0)] for p in line_points]
             }]
 
+            line_drawing_context = {
+                'drawing': drawing_strokes,
+                'image_width': user_input.get('image_width'),
+                'image_height': user_input.get('image_height'),
+                'display_width': user_input.get('display_width'),
+                'display_height': user_input.get('display_height'),
+            }
+
             coverage = self.calculate_line_coverage(
-                target_points, drawing_strokes, line_tolerance, use_improved_evaluation=True
+                target_points, line_drawing_context, line_tolerance, use_improved_evaluation=True
             )
             ok = coverage >= (line_threshold * 100)
             line_results.append({
@@ -2311,32 +2537,10 @@ class TaskEvaluatorService:
             'target_index': details.get('target_index', -1)
         }
     
-    def _evaluate_text_answer(self, user_text: str, 
+    def _evaluate_text_answer(self, user_text: str,
                               keywords: List[str],
                               reference_answer: Optional[str] = None,
                               task_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        """
-        Проверяет текстовый ответ пользователя по ключевым словам.
-        
-        Используется для test заданий уровня 2 (открытые вопросы).
-        Поддерживает толерантность к опечаткам, окончаниям и нормализацию е/ё.
-        
-        Args:
-            user_text: Текстовый ответ пользователя (str)
-            keywords: Список ключевых слов для проверки [str, ...]
-            reference_answer: Эталонный ответ (опционально, для справки)
-            task_data: Данные задания (опционально, для получения настроек толерантности)
-        
-        Returns:
-            dict: {
-                'success': bool,
-                'score': float,  # 0.0 - 100.0
-                'message': str,
-                'found_keywords': List[str],
-                'missing_keywords': List[str]
-            }
-        """
-        # Если нет ключевых слов — считаем ответ неверным (нет эталона для проверки)
         if not keywords:
             return {
                 'success': False,
@@ -2345,7 +2549,7 @@ class TaskEvaluatorService:
                 'found_keywords': [],
                 'missing_keywords': []
             }
-        
+
         if not user_text or not user_text.strip():
             return {
                 'success': False,
@@ -2354,54 +2558,74 @@ class TaskEvaluatorService:
                 'found_keywords': [],
                 'missing_keywords': keywords
             }
-        
-        # Загружаем настройки толерантности
+
         tolerance_config = self._get_tolerance_config(task_data)
-        
-        # Используем улучшенный поиск с толерантностью, если настройки включены
         use_tolerance = tolerance_config is not None
-        
+        tolerance_matches = []
+
+        def _find_keyword_match(keyword: str) -> Optional[Dict[str, Any]]:
+            config = tolerance_config or self._get_tolerance_config_for_labels()
+            for user_word in extract_words_from_text(user_text):
+                match_info = compare_words_with_tolerance_info(user_word, keyword, config)
+                if match_info is None:
+                    continue
+                return {
+                    'keyword': keyword,
+                    'type': match_info.get('type', 'exact'),
+                    'user_answer': user_word,
+                    'correct_answer': keyword,
+                    'normalized_kinds': list(match_info.get('normalized_kinds', []))
+                    if isinstance(match_info.get('normalized_kinds'), list)
+                    else [],
+                }
+            return None
+
         if use_tolerance:
-            # Используем find_keyword_with_tolerance для каждого ключевого слова
             found_keywords = []
             keywords_set = set(kw.lower() for kw in keywords)
-            
+
             for keyword in keywords_set:
                 if find_keyword_with_tolerance(user_text, keyword, tolerance_config):
                     found_keywords.append(keyword)
-            
+                    match_info = _find_keyword_match(keyword)
+                    if match_info and (match_info.get('type') != 'exact' or match_info.get('normalized_kinds')):
+                        tolerance_matches.append(match_info)
+
             found_keywords_set = set(found_keywords)
         else:
-            # Старая логика для обратной совместимости
             user_text_lower = user_text.strip().lower()
             keywords_set = set(kw.lower() for kw in keywords)
-            
             found_keywords_set = set()
             for keyword in keywords_set:
                 pattern = r"\b" + re.escape(keyword) + r"\b"
                 if re.search(pattern, user_text_lower, re.UNICODE):
                     found_keywords_set.add(keyword)
-        
+
         missing_keywords = keywords_set - found_keywords_set
-        
-        # Вычисляем score
         total_keywords = len(keywords)
         found_count = len(found_keywords_set)
         success = found_count == total_keywords
-        
-        # Формируем сообщение
+
+        tolerance_summary = self._summarize_tolerance_matches(tolerance_matches)
+        tolerance_type = tolerance_summary.get('tolerance_type')
+        tolerance_explanation = self._build_tolerance_explanation('Ответ', tolerance_summary)
+
         if success:
             message = f"✅ Правильно! Найдены все ключевые слова ({found_count}/{total_keywords})"
         else:
             message = f"❌ Не все ключевые слова найдены ({found_count}/{total_keywords})"
-        
+
         return {
             'success': success,
             'message': message,
             'found_keywords': list(found_keywords_set),
-            'missing_keywords': list(missing_keywords)
+            'missing_keywords': list(missing_keywords),
+            'tolerance_matches': tolerance_summary.get('matches', []),
+            'tolerance_type': tolerance_type,
+            'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
+            'tolerance_explanation': tolerance_explanation
         }
-    
+
     def _get_tolerance_config(self, task_data: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """
         Получает конфигурацию толерантности из task_data или difficulty_config.json.
@@ -2505,6 +2729,89 @@ class TaskEvaluatorService:
         # Убираем множественные пробелы внутри
         normalized = ' '.join(normalized.split())
         return normalized
+
+    def _extract_test_question_correct_answer_texts(self, question: Dict[str, Any]) -> List[str]:
+        answers_list = question.get("answers") or []
+        if not answers_list and isinstance(question.get("content"), dict):
+            answers_list = question.get("content", {}).get("answers") or []
+
+        correct_texts: List[str] = []
+        for answer in answers_list:
+            if not isinstance(answer, dict) or not answer.get("correct"):
+                continue
+            text = str(answer.get("text") or answer.get("label") or "").strip()
+            if text and text not in correct_texts:
+                correct_texts.append(text)
+        return correct_texts
+
+    def _normalize_text_for_answer_listing(self, text: str) -> str:
+        normalized = normalize_text(
+            str(text or "").strip().lower(),
+            normalize_yo=True,
+            normalize_layout=True,
+            normalize_y_i=True,
+        )
+        normalized = re.sub(r"[^\w]+", " ", normalized, flags=re.UNICODE)
+        return " ".join(normalized.split())
+
+    def _normalize_text_for_case_punctuation_match(self, text: str) -> str:
+        normalized = str(text or "").strip().lower()
+        normalized = re.sub(r"[^\w]+", " ", normalized, flags=re.UNICODE)
+        return " ".join(normalized.split())
+
+    def _should_hide_test_l2_tolerance_feedback(
+        self,
+        user_text: str,
+        reference_answer: str,
+        correct_answer_texts: List[str],
+    ) -> bool:
+        normalized_user = self._normalize_text_for_case_punctuation_match(user_text)
+        if not normalized_user:
+            return False
+
+        candidates: List[str] = []
+        seen: set[str] = set()
+        for raw_candidate in [reference_answer, *list(correct_answer_texts or [])]:
+            candidate = str(raw_candidate or "").strip()
+            if not candidate or candidate in seen:
+                continue
+            seen.add(candidate)
+            candidates.append(candidate)
+
+        for candidate in candidates:
+            normalized_candidate = self._normalize_text_for_case_punctuation_match(candidate)
+            if not normalized_candidate or normalized_candidate != normalized_user:
+                continue
+            if str(user_text or "").strip() == candidate:
+                return False
+            return True
+
+        return False
+
+    def _matches_test_question_answer_listing(
+        self,
+        user_text: str,
+        correct_answer_texts: List[str],
+    ) -> bool:
+        if not user_text or len(correct_answer_texts or []) < 2:
+            return False
+
+        normalized_user = self._normalize_text_for_answer_listing(user_text)
+        if not normalized_user:
+            return False
+
+        for answer_text in correct_answer_texts:
+            normalized_answer = self._normalize_text_for_answer_listing(answer_text)
+            if not normalized_answer:
+                continue
+            answer_parts = [re.escape(part) for part in normalized_answer.split() if part]
+            if not answer_parts:
+                continue
+            pattern = r"(?<!\w)" + r"\s+".join(answer_parts) + r"(?!\w)"
+            if re.search(pattern, normalized_user, re.UNICODE) is None:
+                return False
+
+        return True
     
     def _evaluate_level_names(self, user_levels: List[Dict[str, Any]],
                              correct_levels: List[Dict[str, Any]],
@@ -2558,14 +2865,16 @@ class TaskEvaluatorService:
         
         matched = []
         unmatched = []
+        tolerance_matches = []
         used_user_indices = set()  # Индексы уровней пользователя, которые уже сопоставлены
         
         # Для каждого правильного уровня находим соответствующий уровень пользователя по содержимому
         logger.debug(f"[LevelNamesEval] === НАЧАЛО ПРОВЕРКИ НАЗВАНИЙ ===")
         logger.debug(f"[LevelNamesEval] user_levels count: {len(user_levels)}, correct_levels count: {len(correct_levels)}")
         
-        # Если передан level_mapping (для уровня 3), используем его
-        if level_mapping:
+        # Если передан level_mapping, названия проверяем только для уровней,
+        # которые уже были сопоставлены по структуре.
+        if level_mapping is not None:
             logger.debug(f"[LevelNamesEval] Используем level_mapping для уровня 3: {level_mapping}")
             for correct_level in correct_levels:
                 correct_level_id = correct_level.get('level_id', '')
@@ -2588,8 +2897,19 @@ class TaskEvaluatorService:
                                f"correct='{correct_name}' -> '{correct_normalized}', "
                                f"совпадают={user_normalized == correct_normalized}")
                     
-                    if user_normalized == correct_normalized and correct_name:
+                    tolerance_info = self._compare_named_text(user_name, correct_name) if correct_name else None
+                    if tolerance_info is not None and correct_name:
                         matched.append((user_level_id, user_name, correct_name))
+                        if tolerance_info.get('type') != 'exact' or tolerance_info.get('normalized_kinds'):
+                            tolerance_matches.append({
+                                'level_id': user_level_id,
+                                'type': tolerance_info.get('type', 'exact'),
+                                'user_answer': user_name,
+                                'correct_answer': correct_name,
+                                'normalized_kinds': list(tolerance_info.get('normalized_kinds', []))
+                                if isinstance(tolerance_info.get('normalized_kinds'), list)
+                                else [],
+                            })
                         used_user_indices.add(user_idx)
                         logger.debug(f"[LevelNamesEval] ✓ Название совпадает для level_id={correct_level_id}")
                     else:
@@ -2671,15 +2991,37 @@ class TaskEvaluatorService:
                         # - Если блоки не совпадают/пустые: только название = 1 (макс 1)
                         if blocks_match:
                             score = 1
-                            if user_normalized == correct_normalized and correct_name:
+                            tolerance_info = self._compare_named_text(user_name, correct_name) if correct_name else None
+                            if tolerance_info is not None and correct_name:
                                 score = 2
+                                if tolerance_info.get('type') != 'exact' or tolerance_info.get('normalized_kinds'):
+                                    tolerance_matches.append({
+                                        'level_id': user_level_id,
+                                        'type': tolerance_info.get('type', 'exact'),
+                                        'user_answer': user_name,
+                                        'correct_answer': correct_name,
+                                        'normalized_kinds': list(tolerance_info.get('normalized_kinds', []))
+                                        if isinstance(tolerance_info.get('normalized_kinds'), list)
+                                        else [],
+                                    })
                                 logger.debug(f"[LevelNamesEval] ✓✓ Блоки И название совпадают (score=2)")
                             else:
                                 logger.debug(f"[LevelNamesEval] ✗ Блоки совпадают, но название неверное (score=1)")
                         else:
                             # Только название, без блоков
-                            score = 1 if (user_normalized == correct_normalized and correct_name) else 0
+                            tolerance_info = self._compare_named_text(user_name, correct_name) if correct_name else None
+                            score = 1 if (tolerance_info is not None and correct_name) else 0
                             if score == 1:
+                                if tolerance_info.get('type') != 'exact' or tolerance_info.get('normalized_kinds'):
+                                    tolerance_matches.append({
+                                        'level_id': user_level_id,
+                                        'type': tolerance_info.get('type', 'exact'),
+                                        'user_answer': user_name,
+                                        'correct_answer': correct_name,
+                                        'normalized_kinds': list(tolerance_info.get('normalized_kinds', []))
+                                        if isinstance(tolerance_info.get('normalized_kinds'), list)
+                                        else [],
+                                    })
                                 logger.debug(f"[LevelNamesEval] ✓ Название совпадает (блоки пустые/не совпадают, score=1)")
                             else:
                                 logger.debug(f"[LevelNamesEval] ✗ Название не совпадает (блоки пустые/не совпадают, score=0)")
@@ -2730,17 +3072,25 @@ class TaskEvaluatorService:
         
         score = (matched_count / total_levels * 100.0) if total_levels > 0 else 0.0
         
+        tolerance_summary = self._summarize_tolerance_matches(tolerance_matches)
+
         return {
             'success': success,
             'score': score,
             'message': message,
             'matched_levels': matched,
             'unmatched_levels': unmatched,
-            'total_levels': total_levels  # Добавляем total_levels для правильного отображения
+            'total_levels': total_levels,  # Добавляем total_levels для правильного отображения
+            'tolerance_matches': tolerance_summary.get('matches', []),
+            'tolerance_type': tolerance_summary.get('tolerance_type'),
+            'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
+            'tolerance_explanation': self._build_tolerance_explanation('Название', tolerance_summary),
         }
     
     def _evaluate_block_names(self, user_levels: List[Dict[str, Any]],
-                             correct_levels: List[Dict[str, Any]]) -> Dict[str, Any]:
+                             correct_levels: List[Dict[str, Any]],
+                             level_mapping: Optional[Dict[str, int]] = None,
+                             sequence_within_level_matters: bool = False) -> Dict[str, Any]:
         """
         Проверяет названия блоков для sequence заданий уровня 3.
         
@@ -2783,7 +3133,7 @@ class TaskEvaluatorService:
             }
         
         # Создаем карту правильных названий блоков
-        # Для уровня 3 сопоставляем по названиям уровней, так как level_id разные
+        # Для fallback-режима сопоставляем по названиям уровней, так как level_id могут быть разными.
         correct_map_by_level_name = {}
         correct_map_by_level_id = {}
         for level in correct_levels:
@@ -2797,7 +3147,138 @@ class TaskEvaluatorService:
         
         matched = []
         unmatched = []
+        tolerance_matches = []
         total_blocks = 0
+
+        # Безопасный режим для level 3: названия блоков проверяются только внутри уровней,
+        # которые уже были structurally matched в первой фазе.
+        if level_mapping is not None:
+            for correct_level in correct_levels:
+                correct_level_id = correct_level.get('level_id', '')
+                correct_blocks = correct_level.get('blocks', [])
+                correct_block_names = correct_level.get('block_names', {})
+                total_blocks += len([name for name in correct_block_names.values() if str(name or '').strip()])
+
+                if correct_level_id not in level_mapping:
+                    if isinstance(correct_block_names, dict):
+                        for block_id in correct_blocks:
+                            correct_name = correct_block_names.get(block_id, '')
+                            if str(correct_name or '').strip():
+                                unmatched.append((correct_level_id, block_id, '', correct_name))
+                    continue
+
+                user_idx = level_mapping[correct_level_id]
+                if user_idx < 0 or user_idx >= len(user_levels):
+                    if isinstance(correct_block_names, dict):
+                        for block_id in correct_blocks:
+                            correct_name = correct_block_names.get(block_id, '')
+                            if str(correct_name or '').strip():
+                                unmatched.append((correct_level_id, block_id, '', correct_name))
+                    continue
+
+                user_level = user_levels[user_idx]
+                user_level_id = user_level.get('level_id', '')
+                user_blocks = user_level.get('blocks', [])
+                user_block_names = user_level.get('block_names', {})
+                if not isinstance(user_block_names, dict):
+                    user_block_names = {}
+
+                if sequence_within_level_matters:
+                    limit = min(len(user_blocks), len(correct_blocks))
+                    used_correct_indices = set()
+
+                    for block_index in range(limit):
+                        user_block_id = user_blocks[block_index]
+                        correct_block_id = correct_blocks[block_index]
+                        user_name = str(user_block_names.get(user_block_id, '') or '').strip()
+                        correct_name = str(correct_block_names.get(correct_block_id, '') or '').strip()
+                        if not correct_name:
+                            continue
+                        tolerance_info = self._compare_named_text(user_name, correct_name) if correct_name else None
+                        if tolerance_info is not None:
+                            matched.append((user_level_id, str(user_block_id), user_name, correct_name))
+                            if tolerance_info.get('type') != 'exact' or tolerance_info.get('normalized_kinds'):
+                                tolerance_matches.append({
+                                    'level_id': user_level_id,
+                                    'block_id': str(user_block_id),
+                                    'type': tolerance_info.get('type', 'exact'),
+                                    'user_answer': user_name,
+                                    'correct_answer': correct_name,
+                                    'normalized_kinds': list(tolerance_info.get('normalized_kinds', []))
+                                    if isinstance(tolerance_info.get('normalized_kinds'), list)
+                                    else [],
+                                })
+                        else:
+                            unmatched.append((user_level_id, str(user_block_id), user_name, correct_name))
+                        used_correct_indices.add(block_index)
+
+                    for block_index, correct_block_id in enumerate(correct_blocks):
+                        if block_index in used_correct_indices:
+                            continue
+                        correct_name = str(correct_block_names.get(correct_block_id, '') or '').strip()
+                        if correct_name:
+                            unmatched.append((correct_level_id, str(correct_block_id), '', correct_name))
+                else:
+                    user_names_list = [
+                        str(user_block_names.get(block_id, '') or '').strip()
+                        for block_id in user_blocks
+                        if str(user_block_names.get(block_id, '') or '').strip()
+                    ]
+                    correct_names_list = [
+                        str(correct_block_names.get(block_id, '') or '').strip()
+                        for block_id in correct_blocks
+                        if str(correct_block_names.get(block_id, '') or '').strip()
+                    ]
+
+                    used_correct_indices = set()
+                    for user_name in user_names_list:
+                        user_normalized = self._normalize_text_for_comparison(user_name)
+                        matched_found = False
+                        for idx, correct_name in enumerate(correct_names_list):
+                            if idx in used_correct_indices:
+                                continue
+                            tolerance_info = self._compare_named_text(user_name, correct_name) if correct_name else None
+                            if tolerance_info is not None:
+                                matched.append((user_level_id, '', user_name, correct_name))
+                                if tolerance_info.get('type') != 'exact' or tolerance_info.get('normalized_kinds'):
+                                    tolerance_matches.append({
+                                        'level_id': user_level_id,
+                                        'type': tolerance_info.get('type', 'exact'),
+                                        'user_answer': user_name,
+                                        'correct_answer': correct_name,
+                                        'normalized_kinds': list(tolerance_info.get('normalized_kinds', []))
+                                        if isinstance(tolerance_info.get('normalized_kinds'), list)
+                                        else [],
+                                    })
+                                used_correct_indices.add(idx)
+                                matched_found = True
+                                break
+                        if not matched_found:
+                            unmatched.append((user_level_id, '', user_name, ''))
+
+                    for idx, correct_name in enumerate(correct_names_list):
+                        if idx not in used_correct_indices:
+                            unmatched.append((correct_level_id, '', '', correct_name))
+
+            matched_count = len(matched)
+            success = matched_count == total_blocks and len(unmatched) == 0
+            if success:
+                message = f"✅ Все названия блоков правильные ({matched_count}/{total_blocks})"
+            else:
+                message = f"❌ Не все названия блоков правильные ({matched_count}/{total_blocks})"
+            score = (matched_count / total_blocks * 100.0) if total_blocks > 0 else 0.0
+            tolerance_summary = self._summarize_tolerance_matches(tolerance_matches)
+            return {
+                'success': success,
+                'score': score,
+                'message': message,
+                'matched_blocks': matched,
+                'unmatched_blocks': unmatched,
+                'tolerance_matches': tolerance_summary.get('matches', []),
+                'tolerance_type': tolerance_summary.get('tolerance_type'),
+                'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
+                'tolerance_explanation': self._build_tolerance_explanation('Название', tolerance_summary),
+            }
         
         # Проверяем названия блоков пользователя
         for user_level in user_levels:
@@ -2831,23 +3312,29 @@ class TaskEvaluatorService:
             total_blocks += len(correct_names_list)
             
             # Нормализуем названия для сравнения
-            user_names_normalized = [self._normalize_text_for_comparison(name) for name in user_names_list]
-            correct_names_normalized = [self._normalize_text_for_comparison(name) for name in correct_names_list]
-            
             # Сопоставляем названия пользователя с правильными
             used_correct_indices = set()
             for user_name in user_names_list:
-                user_normalized = self._normalize_text_for_comparison(user_name)
                 matched_found = False
                 
                 # Ищем соответствующее правильное название
                 for idx, correct_name in enumerate(correct_names_list):
                     if idx in used_correct_indices:
                         continue
-                    correct_normalized = self._normalize_text_for_comparison(correct_name)
-                    if user_normalized == correct_normalized:
+                    tolerance_info = self._compare_named_text(user_name, correct_name) if correct_name else None
+                    if tolerance_info is not None:
                         # Найдено соответствие по названию
                         matched.append((user_level_id, '', user_name, correct_name))
+                        if tolerance_info.get('type') != 'exact' or tolerance_info.get('normalized_kinds'):
+                            tolerance_matches.append({
+                                'level_id': user_level_id,
+                                'type': tolerance_info.get('type', 'exact'),
+                                'user_answer': user_name,
+                                'correct_answer': correct_name,
+                                'normalized_kinds': list(tolerance_info.get('normalized_kinds', []))
+                                if isinstance(tolerance_info.get('normalized_kinds'), list)
+                                else [],
+                            })
                         used_correct_indices.add(idx)
                         matched_found = True
                         break
@@ -2874,12 +3361,18 @@ class TaskEvaluatorService:
         
         score = (matched_count / total_blocks * 100.0) if total_blocks > 0 else 0.0
         
+        tolerance_summary = self._summarize_tolerance_matches(tolerance_matches)
+
         return {
             'success': success,
             'score': score,
             'message': message,
             'matched_blocks': matched,
-            'unmatched_blocks': unmatched
+            'unmatched_blocks': unmatched,
+            'tolerance_matches': tolerance_summary.get('matches', []),
+            'tolerance_type': tolerance_summary.get('tolerance_type'),
+            'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
+            'tolerance_explanation': self._build_tolerance_explanation('Название', tolerance_summary),
         }
     
     # =========================================================================
@@ -2954,12 +3447,20 @@ class TaskEvaluatorService:
         
         # Если user_input содержит image_width/image_height или brush_radius, передаем их через user_drawing
         # для использования в _get_image_dimensions и calculate_polygon_coverage
-        if 'image_width' in user_input or 'image_height' in user_input or 'brush_radius' in user_input:
+        if (
+            'image_width' in user_input or
+            'image_height' in user_input or
+            'display_width' in user_input or
+            'display_height' in user_input or
+            'brush_radius' in user_input
+        ):
             # Создаем словарь с данными о размерах изображения и brush_radius
             user_drawing_with_size = {
                 'drawing': user_drawing,
                 'image_width': user_input.get('image_width'),
                 'image_height': user_input.get('image_height'),
+                'display_width': user_input.get('display_width'),
+                'display_height': user_input.get('display_height'),
                 'brush_radius': user_input.get('brush_radius')
             }
         else:
@@ -3275,6 +3776,8 @@ class TaskEvaluatorService:
                     'drawing': [{'type': 'brush_stroke', 'points': pts}],
                     'image_width': image_w,
                     'image_height': image_h,
+                    'display_width': user_input.get('display_width'),
+                    'display_height': user_input.get('display_height'),
                     'brush_radius': brush_radius,
                 }
 
@@ -3450,6 +3953,37 @@ class TaskEvaluatorService:
             draw_score = (successes / total_targets * 100) if total_targets > 0 else 0.0
             label_score = labels_eval.get('score', 0.0)
             combined_score = (draw_score * 0.7) + (label_score * 0.3)
+
+            manual_label_judgement = None
+            if coverage_success and labels_eval.get('success') is not True:
+                manual_label_judgement = self._build_draw_label_user_judgement(labels_eval)
+
+            if manual_label_judgement is not None:
+                return EvaluationResult(
+                    success=False,
+                    score=combined_score,
+                    message=str(
+                        manual_label_judgement.get('message')
+                        or 'В названии цели пропущено 1–2 слова. Решите, считать ли ответ верным.'
+                    ).strip(),
+                    metric="IoU",
+                    details={
+                        'stage': 'labels_review',
+                        'level': 2,
+                        'successful_targets': successes,
+                        'required_correct': required_correct,
+                        'total_targets': total_targets,
+                        'draw_score': draw_score,
+                        'label_score': label_score,
+                        'threshold': threshold,
+                        'polygon_results': polygon_results,
+                        'line_results': line_results,
+                        'labels': labels_eval,
+                        'requires_user_judgement': True,
+                        'pending_user_judgement': True,
+                        'manual_label_judgement': manual_label_judgement,
+                    }
+                )
             
             combined_success = coverage_success and labels_eval.get('success') is True
             msg = (
@@ -3818,6 +4352,53 @@ class TaskEvaluatorService:
             score = 50.0 * (2.0 ** (-excess / tolerance_px))
         
         return max(0.0, min(100.0, score))
+
+    def _extract_line_coordinate_scale(self, user_drawing: Any) -> float:
+        """Возвращает коэффициент перевода экранных пикселей в координаты изображения."""
+        if not isinstance(user_drawing, dict):
+            return 1.0
+
+        image_w = user_drawing.get('image_width') or user_drawing.get('imageWidth')
+        image_h = user_drawing.get('image_height') or user_drawing.get('imageHeight')
+        display_w = user_drawing.get('display_width') or user_drawing.get('displayWidth')
+        display_h = user_drawing.get('display_height') or user_drawing.get('displayHeight')
+
+        ratios: List[float] = []
+        try:
+            if image_w is not None and display_w is not None:
+                image_w_num = float(image_w)
+                display_w_num = float(display_w)
+                if image_w_num > 0 and display_w_num > 0:
+                    ratios.append(image_w_num / display_w_num)
+            if image_h is not None and display_h is not None:
+                image_h_num = float(image_h)
+                display_h_num = float(display_h)
+                if image_h_num > 0 and display_h_num > 0:
+                    ratios.append(image_h_num / display_h_num)
+        except Exception:
+            return 1.0
+
+        if not ratios:
+            return 1.0
+
+        scale = max(ratios)
+        if not isinstance(scale, (int, float)) or scale <= 0:
+            return 1.0
+        return float(scale)
+
+    def _resolve_line_tolerance_px(self, tolerance_px: float, user_drawing: Any) -> float:
+        """Масштабирует tolerance под реальные координаты изображения, если известен scale."""
+        try:
+            base_tolerance = float(tolerance_px)
+        except Exception:
+            base_tolerance = 12.0
+        if base_tolerance <= 0:
+            base_tolerance = 12.0
+
+        coordinate_scale = self._extract_line_coordinate_scale(user_drawing)
+        if coordinate_scale <= 0:
+            return base_tolerance
+        return base_tolerance * coordinate_scale
     
     def calculate_line_coverage(self, line_points: List[Tuple[float, float]], 
                                   user_drawing: List[Dict],
@@ -3842,6 +4423,8 @@ class TaskEvaluatorService:
         """
         if len(line_points) < 2:
             return 0.0
+
+        effective_tolerance_px = self._resolve_line_tolerance_px(tolerance_px, user_drawing)
         
         # Извлекаем список штрихов если user_drawing это словарь
         drawing_list = user_drawing
@@ -3854,14 +4437,14 @@ class TaskEvaluatorService:
             # Используем улучшенную комбинированную оценку
             # 1. Двустороннее покрытие
             bidirectional = self._calculate_bidirectional_coverage(
-                line_points, drawing_list, tolerance_px
+                line_points, drawing_list, effective_tolerance_px
             )
             ref_coverage = bidirectional['reference_coverage']
             user_coverage = bidirectional['user_coverage']
             
             # 2. Оценка формы
             shape_score = self._calculate_shape_similarity(
-                line_points, drawing_list, tolerance_px
+                line_points, drawing_list, effective_tolerance_px
             )
             
             # 3. Комбинированная оценка с весами
@@ -3895,7 +4478,7 @@ class TaskEvaluatorService:
             # Проверяем покрытие каждой точки
             covered_points = 0
             for line_pt in all_line_points:
-                if self._is_point_near_strokes(line_pt[0], line_pt[1], drawing_list, tolerance_px):
+                if self._is_point_near_strokes(line_pt[0], line_pt[1], drawing_list, effective_tolerance_px):
                     covered_points += 1
             
             coverage_percent = (covered_points / len(all_line_points)) * 100.0
@@ -4162,6 +4745,48 @@ class TaskEvaluatorService:
                 details={'error': 'empty_answer'}
             )
         
+        max_length = None
+        max_length_candidates = []
+        if isinstance(task_data, dict):
+            content = task_data.get('content', {}) if isinstance(task_data.get('content'), dict) else {}
+            settings = task_data.get('settings', {}) if isinstance(task_data.get('settings'), dict) else {}
+            max_length_candidates.extend([
+                content.get('max_length'),
+                content.get('maxLength'),
+                settings.get('max_length'),
+                settings.get('maxLength'),
+            ])
+        if isinstance(answer_key, dict):
+            nested_content = answer_key.get('content', {}) if isinstance(answer_key.get('content'), dict) else {}
+            max_length_candidates.extend([
+                answer_key.get('max_length'),
+                answer_key.get('maxLength'),
+                nested_content.get('max_length'),
+                nested_content.get('maxLength'),
+            ])
+
+        for candidate in max_length_candidates:
+            try:
+                parsed = int(candidate)
+            except (TypeError, ValueError):
+                continue
+            if parsed > 0:
+                max_length = parsed
+                break
+
+        if max_length is not None and len(user_answer) > max_length:
+            return EvaluationResult(
+                success=False,
+                message=f"Ответ слишком длинный (максимум {max_length} символов)",
+                score=0.0,
+                metric="percent",
+                details={
+                    'error': 'answer_too_long',
+                    'max_length': max_length,
+                    'answer_length': len(user_answer),
+                }
+            )
+
         keywords = answer_key.get('keywords', [])
         # Fallback: поддержка формата task.json, где ключевые слова лежат в content
         if not keywords:
@@ -4417,6 +5042,10 @@ class TaskEvaluatorService:
                 message = typo_warning
         
         # Формируем детали ответа (с полезными подсказками для UI)
+        tolerance_summary = self._summarize_tolerance_matches(tolerance_matches)
+        tolerance_type = tolerance_summary.get('tolerance_type')
+        tolerance_explanation = self._build_tolerance_explanation("Ответ", tolerance_summary)
+
         ref_answer = (
             answer_key.get('reference_answer') or
             answer_key.get('content', {}).get('reference_answer', '')
@@ -4428,6 +5057,9 @@ class TaskEvaluatorService:
             'sequence_matters': sequence_matters,
             'keywords': keywords,
             'tolerance_matches': tolerance_matches,
+            'tolerance_type': tolerance_type,
+            'normalization_kinds': tolerance_summary.get('normalization_kinds', []),
+            'tolerance_explanation': tolerance_explanation,
             'user_answer': user_answer
         }
         if sequence_matters and len(keywords) > 1:
@@ -4590,6 +5222,113 @@ class TaskEvaluatorService:
                         element_text = element.get('text', '')
                         if element_id:
                             element_text_map[element_id] = element_text
+
+            def canonicalize_sequence_semantic_value(explicit_key, raw_text='', raw_image=''):
+                explicit_value = str(explicit_key or '').strip()
+                if explicit_value:
+                    lowered = explicit_value.lower()
+                    if lowered.startswith('text:'):
+                        normalized_explicit_text = self._normalize_text_for_comparison(
+                            explicit_value.split(':', 1)[1]
+                        )
+                        if normalized_explicit_text:
+                            return f"text:{normalized_explicit_text}"
+                    elif lowered.startswith('image:'):
+                        normalized_explicit_image = explicit_value.split(':', 1)[1].strip().replace('\\', '/')
+                        if normalized_explicit_image:
+                            return f"image:{normalized_explicit_image}"
+                    return explicit_value
+
+                normalized_text = self._normalize_text_for_comparison(raw_text)
+                if normalized_text:
+                    return f"text:{normalized_text}"
+
+                normalized_image = str(raw_image or '').strip().replace('\\', '/')
+                if normalized_image:
+                    return f"image:{normalized_image}"
+
+                return ''
+
+            element_semantic_map = {}
+            if isinstance(elements, list):
+                for element in elements:
+                    if not isinstance(element, dict):
+                        continue
+                    element_id = str(element.get('id') or '').strip()
+                    if not element_id:
+                        continue
+                    explicit_key = str(
+                        element.get('semantic_key')
+                        or element.get('semanticKey')
+                        or ''
+                    ).strip()
+                    semantic_value = canonicalize_sequence_semantic_value(
+                        explicit_key,
+                        raw_text=element.get('text', ''),
+                        raw_image=element.get('image'),
+                    )
+                    element_semantic_map[element_id] = semantic_value or f"id:{element_id}"
+
+            def normalize_sequence_blocks(blocks, block_names=None):
+                normalized_blocks = []
+                normalized_block_names = block_names if isinstance(block_names, dict) else {}
+                for raw_block in blocks or []:
+                    if raw_block is None:
+                        normalized_blocks.append('__missing__')
+                        continue
+                    block_id = str(raw_block)
+                    semantic_value = element_semantic_map.get(block_id)
+                    if not semantic_value:
+                        typed_name = str(normalized_block_names.get(block_id, '') or '').strip()
+                        normalized_typed_name = self._normalize_text_for_comparison(typed_name)
+                        if normalized_typed_name:
+                            semantic_value = f"text:{normalized_typed_name}"
+                    normalized_blocks.append(semantic_value or f"id:{block_id}")
+                return normalized_blocks
+
+            def sequence_blocks_match(user_blocks, correct_blocks, order_matters, user_block_names=None):
+                normalized_user = normalize_sequence_blocks(user_blocks, user_block_names)
+                normalized_correct = normalize_sequence_blocks(correct_blocks)
+                if order_matters:
+                    return tuple(normalized_user) == tuple(normalized_correct)
+                return Counter(normalized_user) == Counter(normalized_correct)
+
+            def count_sequence_block_matches(user_blocks, correct_blocks, order_matters, user_block_names=None):
+                normalized_user = normalize_sequence_blocks(user_blocks, user_block_names)
+                normalized_correct = normalize_sequence_blocks(correct_blocks)
+                if order_matters:
+                    return sum(
+                        1
+                        for idx, block in enumerate(normalized_user)
+                        if idx < len(normalized_correct) and block == normalized_correct[idx]
+                    )
+                return sum((Counter(normalized_user) & Counter(normalized_correct)).values())
+
+            def collect_matching_user_block_ids(user_blocks, correct_blocks, order_matters, user_block_names=None):
+                matched_ids = []
+                normalized_user = normalize_sequence_blocks(user_blocks, user_block_names)
+                normalized_correct = normalize_sequence_blocks(correct_blocks)
+                if order_matters:
+                    matched_ids = [None] * len(normalized_correct)
+                    for idx, correct_block in enumerate(normalized_correct):
+                        if idx >= len(normalized_user):
+                            continue
+                        if normalized_user[idx] != correct_block:
+                            continue
+                        raw_id = user_blocks[idx] if idx < len(user_blocks) else None
+                        if raw_id is not None:
+                            matched_ids[idx] = raw_id
+                    return matched_ids
+
+                remaining = Counter(normalized_correct)
+                for idx, block in enumerate(normalized_user):
+                    if remaining.get(block, 0) <= 0:
+                        continue
+                    raw_id = user_blocks[idx] if idx < len(user_blocks) else None
+                    if raw_id is not None:
+                        matched_ids.append(raw_id)
+                    remaining[block] -= 1
+                return matched_ids
             
             # ОТЛАДКА: логируем входные данные для уровня 2
             if requires_level_names:
@@ -4633,6 +5372,7 @@ class TaskEvaluatorService:
                         
                         for correct_level in correct_levels_ref:
                             cid = correct_level.get('level_id', '')
+                            cblocks = correct_level.get('blocks', [])
                             correct_block_names = correct_level.get('block_names', {})
                             level_name = correct_level.get('level_name', '')
                             if level_name:
@@ -4642,57 +5382,38 @@ class TaskEvaluatorService:
                                        f"level_id={cid}, level_name='{level_name}', "
                                        f"block_names={correct_block_names}")
                             
-                            # Ищем соответствующий уровень пользователя по block_names
+                            # Ищем соответствующий уровень пользователя по реальной структуре блоков.
+                            # Введенные пользователем названия не должны определять сам structural match.
                             found_match = False
                             for idx, user_level in enumerate(user_levels):
                                 if idx in used_user_indices:
                                     continue
                                 
+                                ublocks = user_level.get('blocks', [])
                                 user_block_names = user_level.get('block_names', {})
                                 user_level_name = user_level.get('level_name', '')
                                 
                                 logger.debug(f"[SequenceEval Level3] Проверяем user_level[{idx}]: "
                                            f"level_id={user_level.get('level_id')}, "
+                                           f"blocks={ublocks}, "
                                            f"block_names={user_block_names}, "
                                            f"level_name='{user_level_name}'")
                                 
-                                # Сопоставляем по block_names: сравниваем множества значений
-                                if isinstance(user_block_names, dict) and isinstance(correct_block_names, dict):
-                                    user_names_set = set(self._normalize_text_for_comparison(v) 
-                                                        for v in user_block_names.values() if v.strip())
-                                    correct_names_set = set(self._normalize_text_for_comparison(v) 
-                                                          for v in correct_block_names.values() if v.strip())
-                                    
-                                    # Если block_names не пустые и совпадают
-                                    if user_names_set == correct_names_set and len(user_names_set) > 0:
-                                        logger.debug(f"[SequenceEval Level3] ✓ НАЙДЕНО СООТВЕТСТВИЕ по block_names: "
-                                                   f"correct_level_id={cid} <-> user_level[{idx}]")
-                                        used_user_indices.add(idx)
-                                        correct_level_ids.append(cid)
-                                        level_mapping[cid] = idx  # Сохраняем соответствие
-                                        found_match = True
-                                        break
-                                    # Fallback: если block_names пустые (у обоих) ИЛИ у правильного уровня пустые, а у пользователя есть блоки
-                                    # - проверяем по названиям уровней
-                                    should_fallback_to_name = (
-                                        (len(user_names_set) == 0 and len(correct_names_set) == 0) or  # Оба пустые
-                                        (len(correct_names_set) == 0 and len(user_block_names) > 0)  # Правильный пустой, у пользователя есть блоки
-                                    )
-                                    if should_fallback_to_name:
-                                        user_norm_name = self._normalize_text_for_comparison(user_level_name)
-                                        correct_norm_name = self._normalize_text_for_comparison(level_name)
-                                        if user_norm_name == correct_norm_name and user_norm_name:
-                                            logger.debug(f"[SequenceEval Level3] ✓ НАЙДЕНО СООТВЕТСТВИЕ по названию уровня: "
-                                                       f"correct_level_id={cid} <-> user_level[{idx}] (название: '{user_level_name}')")
-                                            used_user_indices.add(idx)
-                                            correct_level_ids.append(cid)
-                                            level_mapping[cid] = idx  # Сохраняем соответствие
-                                            found_match = True
-                                            break
+                                if sequence_blocks_match(ublocks, cblocks, sequence_matters, user_block_names):
+                                    logger.debug(f"[SequenceEval Level3] ✓ НАЙДЕНО STRUCTURAL СООТВЕТСТВИЕ: "
+                                               f"correct_level_id={cid} <-> user_level[{idx}]")
+                                    used_user_indices.add(idx)
+                                    correct_level_ids.append(cid)
+                                    level_mapping[cid] = idx
+                                    total_correct_blocks += len(cblocks)
+                                    correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters, user_block_names)
+                                    found_match = True
+                                    break
                             
                             if not found_match:
                                 logger.debug(f"[SequenceEval Level3] ✗ НЕ НАЙДЕНО соответствие для correct_level_id={cid}")
                                 incorrect_level_ids.append(cid)
+                                correct_blocks_by_level[cid] = []
                         
                         # Проверяем лишние уровни пользователя
                         for idx, user_level in enumerate(user_levels):
@@ -4734,10 +5455,7 @@ class TaskEvaluatorService:
                             total_blocks_in_levels += len(cblocks)
                             
                             # Нормализуем блоки для сравнения
-                            if sequence_matters:
-                                cblocks_normalized = tuple(cblocks)
-                            else:
-                                cblocks_normalized = tuple(sorted(cblocks))
+                            cblocks_normalized = tuple(normalize_sequence_blocks(cblocks))
                             
                             logger.debug(f"[SequenceEval Level2] Ищем соответствие для correct_level: "
                                        f"level_id={cid}, level_name='{level_name}', "
@@ -4751,10 +5469,7 @@ class TaskEvaluatorService:
                                 
                                 ublocks = user_level.get('blocks', [])
                                 # Нормализуем блоки пользователя
-                                if sequence_matters:
-                                    ublocks_normalized = tuple(ublocks)
-                                else:
-                                    ublocks_normalized = tuple(sorted(ublocks))
+                                ublocks_normalized = tuple(normalize_sequence_blocks(ublocks))
                                 
                                 logger.debug(f"[SequenceEval Level2] Проверяем user_level[{idx}]: "
                                            f"level_id={user_level.get('level_id')}, "
@@ -4771,7 +5486,7 @@ class TaskEvaluatorService:
                                     user_to_correct_mapping[idx] = cid
                                     # ИСПРАВЛЕНИЕ: Подсчитываем правильные блоки
                                     total_correct_blocks += len(cblocks)
-                                    correct_blocks_by_level[cid] = set(cblocks)
+                                    correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters)
                                     found_match = True
                                     break
                             
@@ -4804,10 +5519,7 @@ class TaskEvaluatorService:
                                 ublocks = user_level.get('blocks', [])
                                 
                                 # Нормализуем блоки пользователя
-                                if sequence_matters:
-                                    ublocks_normalized = tuple(ublocks)
-                                else:
-                                    ublocks_normalized = tuple(sorted(ublocks))
+                                ublocks_normalized = tuple(normalize_sequence_blocks(ublocks))
                                 
                                 # Проверяем совпадение блоков
                                 if ublocks_normalized == cblocks_normalized:
@@ -4820,26 +5532,20 @@ class TaskEvaluatorService:
                                             del user_to_correct_by_name[matched_user_idx]
                                         user_to_correct_mapping[matched_user_idx] = cid
                                     total_correct_blocks += len(cblocks)
-                                    correct_blocks_by_level[cid] = set(cblocks)
+                                    correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters)
                                     logger.debug(f"[SequenceEval Level2] ✓ Блоки совпадают для уровня {cid}, добавлено в correct_level_ids")
                                 else:
                                     # Блоки не совпадают полностью - считаем правильные блоки
                                     if sequence_matters:
-                                        # Если порядок важен, проверяем по позиции
-                                        correct_in_level = 0
-                                        correct_block_ids = set()
-                                        for i, block in enumerate(ublocks):
-                                            if i < len(cblocks) and block == cblocks[i]:
-                                                correct_in_level += 1
-                                                correct_block_ids.add(block)
+                                        # Частичное совпадение тоже считаем по semantic_key, а не по сырым id.
+                                        correct_in_level = count_sequence_block_matches(ublocks, cblocks, True)
+                                        correct_block_ids = collect_matching_user_block_ids(ublocks, cblocks, True)
                                         total_correct_blocks += correct_in_level
                                         correct_blocks_by_level[cid] = correct_block_ids
                                     else:
-                                        # Если порядок не важен, используем пересечение множеств
-                                        ublocks_set = set(ublocks)
-                                        cblocks_set = set(cblocks)
-                                        correct_block_ids = ublocks_set & cblocks_set
-                                        correct_in_level = len(correct_block_ids)
+                                        # Для неупорядоченного уровня учитываем кратность одинаковых шагов.
+                                        correct_in_level = count_sequence_block_matches(ublocks, cblocks, False)
+                                        correct_block_ids = collect_matching_user_block_ids(ublocks, cblocks, False)
                                         total_correct_blocks += correct_in_level
                                         correct_blocks_by_level[cid] = correct_block_ids
                                     
@@ -4848,13 +5554,17 @@ class TaskEvaluatorService:
                             if not found_match:
                                 logger.debug(f"[SequenceEval Level2] ✗ НЕ НАЙДЕНО соответствие для correct_level_id={cid}")
                                 incorrect_level_ids.append(cid)
-                                correct_blocks_by_level[cid] = set()  # Нет правильных блоков
+                                correct_blocks_by_level[cid] = []  # Нет правильных блоков
                         
                         # ИСПРАВЛЕНИЕ: Убеждаемся, что все правильные уровни инициализированы в correct_blocks_by_level
                         for correct_level in correct_levels_ref:
                             cid = correct_level.get('level_id', '')
                             if cid not in correct_blocks_by_level:
-                                correct_blocks_by_level[cid] = set()
+                                correct_blocks_by_level[cid] = []
+
+                        # Названия уровней должны проверяться только для уровней,
+                        # которые уже совпали по реальной структуре блоков.
+                        level_mapping = {correct_id: user_idx for user_idx, correct_id in user_to_correct_mapping.items()}
                         
                         # Проверяем лишние уровни пользователя
                         # ИСПРАВЛЕНИЕ: Не добавляем в incorrect_level_ids уровни, которые сопоставлены по названию
@@ -4943,58 +5653,51 @@ class TaskEvaluatorService:
                         
                         if uid == cid:
                             # ИСПРАВЛЕНИЕ: Считаем правильно размещенные блоки, даже если не все размещены
-                            if sequence_matters:
-                                # Если порядок важен, проверяем точное совпадение последовательности
-                                if ublocks == cblocks:
-                                    correct_level_ids.append(cid)
-                                    total_correct_blocks += len(cblocks)
-                                    correct_blocks_by_level[cid] = set(cblocks)
-                                else:
-                                    # Считаем правильно размещенные блоки (в правильном порядке)
-                                    correct_in_level = 0
-                                    correct_block_ids = set()
-                                    for i, block in enumerate(ublocks):
-                                        if i < len(cblocks) and block == cblocks[i]:
-                                            correct_in_level += 1
-                                            correct_block_ids.add(block)
-                                    total_correct_blocks += correct_in_level
-                                    correct_blocks_by_level[cid] = correct_block_ids
-                                    if correct_in_level > 0:
-                                        # Есть правильно размещенные блоки, но не все
-                                        incorrect_level_ids.append(cid)
+                                if sequence_matters:
+                                    # Если порядок важен, проверяем точное совпадение последовательности
+                                    if sequence_blocks_match(ublocks, cblocks, True):
+                                        correct_level_ids.append(cid)
+                                        total_correct_blocks += len(cblocks)
+                                        correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters)
                                     else:
-                                        # Нет правильно размещенных блоков
-                                        incorrect_level_ids.append(cid)
-                            else:
-                                # Если порядок не важен, проверяем, какие блоки правильные
-                                ublocks_set = set(ublocks)
-                                cblocks_set = set(cblocks)
-                                if ublocks_set == cblocks_set:
-                                    # Точное совпадение - все блоки размещены правильно
-                                    correct_level_ids.append(cid)
-                                    total_correct_blocks += len(cblocks)
-                                    correct_blocks_by_level[cid] = cblocks_set
+                                        # Частичное совпадение считаем семантически, чтобы одинаковый текст не зависел от auto-id.
+                                        correct_in_level = count_sequence_block_matches(ublocks, cblocks, True)
+                                        correct_block_ids = collect_matching_user_block_ids(ublocks, cblocks, True)
+                                        total_correct_blocks += correct_in_level
+                                        correct_blocks_by_level[cid] = correct_block_ids
+                                        if correct_in_level > 0:
+                                            # Есть правильно размещенные блоки, но не все
+                                            incorrect_level_ids.append(cid)
+                                        else:
+                                            # Нет правильно размещенных блоков
+                                            incorrect_level_ids.append(cid)
                                 else:
-                                    # Считаем правильно размещенные блоки (пересечение множеств)
-                                    correct_in_level = len(ublocks_set & cblocks_set)
-                                    correct_block_ids = ublocks_set & cblocks_set
-                                    total_correct_blocks += correct_in_level
-                                    correct_blocks_by_level[cid] = correct_block_ids
-                                    if correct_in_level > 0:
-                                        # Есть правильно размещенные блоки, но не все
-                                        incorrect_level_ids.append(cid)
+                                    # Если порядок не важен, сравниваем состав по semantic_key с учетом кратности.
+                                    if sequence_blocks_match(ublocks, cblocks, False):
+                                        # Точное совпадение - все блоки размещены правильно
+                                        correct_level_ids.append(cid)
+                                        total_correct_blocks += len(cblocks)
+                                        correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters)
                                     else:
-                                        # Нет правильно размещенных блоков или есть неправильные
-                                        incorrect_level_ids.append(cid)
+                                        correct_in_level = count_sequence_block_matches(ublocks, cblocks, False)
+                                        correct_block_ids = collect_matching_user_block_ids(ublocks, cblocks, False)
+                                        total_correct_blocks += correct_in_level
+                                        correct_blocks_by_level[cid] = correct_block_ids
+                                        if correct_in_level > 0:
+                                            # Есть правильно размещенные блоки, но не все
+                                            incorrect_level_ids.append(cid)
+                                        else:
+                                            # Нет правильно размещенных блоков или есть неправильные
+                                            incorrect_level_ids.append(cid)
                         else:
                             incorrect_level_ids.append(cid)
-                            correct_blocks_by_level[cid] = set()  # Нет правильных блоков
+                            correct_blocks_by_level[cid] = []  # Нет правильных блоков
                     
                     # Убеждаемся, что все правильные уровни инициализированы в correct_blocks_by_level
                     for correct_level in correct_levels_ref:
                         cid = correct_level.get('level_id', '')
                         if cid not in correct_blocks_by_level:
-                            correct_blocks_by_level[cid] = set()
+                            correct_blocks_by_level[cid] = []
                     
                     # ОБНОВЛЕНИЕ: Для уровня 1 обновляем sequence_success на основе проверки блоков
                     total_correct = len(correct_levels_ref)
@@ -5055,25 +5758,21 @@ class TaskEvaluatorService:
                         ulvl = next((l for l in user_levels if l.get('level_id', '') == cid), None)
                         if not ulvl:
                             incorrect_level_ids.append(cid)
-                            correct_blocks_by_level[cid] = set()  # Нет правильных блоков
+                            correct_blocks_by_level[cid] = []  # Нет правильных блоков
                             continue
                         ublocks = ulvl.get('blocks', [])
                         
                         # ИСПРАВЛЕНИЕ: Считаем правильно размещенные блоки, даже если не все размещены
                         if sequence_matters:
                             # Если порядок важен, проверяем точное совпадение последовательности
-                            if ublocks == cblocks:
+                            if sequence_blocks_match(ublocks, cblocks, True):
                                 correct_level_ids.append(cid)
                                 total_correct_blocks += len(cblocks)
-                                correct_blocks_by_level[cid] = set(cblocks)
+                                correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters)
                             else:
-                                # Считаем правильно размещенные блоки (в правильном порядке)
-                                correct_in_level = 0
-                                correct_block_ids = set()
-                                for i, block in enumerate(ublocks):
-                                    if i < len(cblocks) and block == cblocks[i]:
-                                        correct_in_level += 1
-                                        correct_block_ids.add(block)
+                                # Частичное совпадение тоже считаем по semantic_key.
+                                correct_in_level = count_sequence_block_matches(ublocks, cblocks, True)
+                                correct_block_ids = collect_matching_user_block_ids(ublocks, cblocks, True)
                                 total_correct_blocks += correct_in_level
                                 correct_blocks_by_level[cid] = correct_block_ids
                                 if correct_in_level > 0:
@@ -5083,18 +5782,15 @@ class TaskEvaluatorService:
                                     # Нет правильно размещенных блоков
                                     incorrect_level_ids.append(cid)
                         else:
-                            # Если порядок не важен, проверяем, какие блоки правильные
-                            ublocks_set = set(ublocks)
-                            cblocks_set = set(cblocks)
-                            if ublocks_set == cblocks_set:
+                            # Если порядок не важен, сравниваем состав по semantic_key с учетом кратности.
+                            if sequence_blocks_match(ublocks, cblocks, False):
                                 # Точное совпадение - все блоки размещены правильно
                                 correct_level_ids.append(cid)
                                 total_correct_blocks += len(cblocks)
-                                correct_blocks_by_level[cid] = cblocks_set
+                                correct_blocks_by_level[cid] = collect_matching_user_block_ids(ublocks, cblocks, sequence_matters)
                             else:
-                                # Считаем правильно размещенные блоки (пересечение множеств)
-                                correct_in_level = len(ublocks_set & cblocks_set)
-                                correct_block_ids = ublocks_set & cblocks_set
+                                correct_in_level = count_sequence_block_matches(ublocks, cblocks, False)
+                                correct_block_ids = collect_matching_user_block_ids(ublocks, cblocks, False)
                                 total_correct_blocks += correct_in_level
                                 correct_blocks_by_level[cid] = correct_block_ids
                                 if correct_in_level > 0:
@@ -5107,7 +5803,7 @@ class TaskEvaluatorService:
                     # Убеждаемся, что все правильные уровни инициализированы в correct_blocks_by_level
                     for cid in correct_map.keys():
                         if cid not in correct_blocks_by_level:
-                            correct_blocks_by_level[cid] = set()
+                            correct_blocks_by_level[cid] = []
                     
                     # ОБНОВЛЕНИЕ: Для уровня 1 обновляем sequence_success на основе проверки блоков
                     total_correct = len(correct_levels_ref)
@@ -5149,8 +5845,8 @@ class TaskEvaluatorService:
             level_names_result = None
             if requires_level_names:
                 sequence_within_level_matters = normalized.get('sequence_within_level_matters', False)
-                # Для уровня 3: передаем mapping соответствий, найденных в первой проверке
-                if requires_block_names and level_mapping is not None:
+                # Для уровней 2-3: названия проверяем только после structural matching.
+                if level_mapping is not None:
                     level_names_result = self._evaluate_level_names(
                         user_levels, correct_levels_ref, sequence_within_level_matters,
                         level_mapping=level_mapping
@@ -5179,11 +5875,21 @@ class TaskEvaluatorService:
                         enriched_correct_levels.append(level_copy)
                         logger.debug(f"[BlockNamesEval] level_id={level_copy.get('level_id', '')}, block_names={block_names}")
                     
-                    block_names_result = self._evaluate_block_names(user_levels, enriched_correct_levels)
+                    block_names_result = self._evaluate_block_names(
+                        user_levels,
+                        enriched_correct_levels,
+                        level_mapping=level_mapping,
+                        sequence_within_level_matters=sequence_within_level_matters
+                    )
                 else:
                     # Если elements не найдены, используем оригинальные correct_levels_ref
                     logger.debug(f"[BlockNamesEval] elements не найдены, используем оригинальные correct_levels_ref")
-                    block_names_result = self._evaluate_block_names(user_levels, correct_levels_ref)
+                    block_names_result = self._evaluate_block_names(
+                        user_levels,
+                        correct_levels_ref,
+                        level_mapping=level_mapping,
+                        sequence_within_level_matters=sequence_within_level_matters
+                    )
             
             # Определяем успешность: последовательность И названия (если требуются)
             # Для уровня 2: sequence_success уже определен на основе сопоставления по содержимому
@@ -5208,6 +5914,12 @@ class TaskEvaluatorService:
                 total_cnt = len(correct_levels_ref)
                 # ДОБАВЛЕНО: Логируем levels_order_info перед формированием сообщения
                 logger.debug(f"[SequenceEval] Перед формированием сообщения: levels_order_info={levels_order_info}, level_order_matters={level_order_matters}, requires_level_names={requires_level_names}, total_blocks_in_levels={total_blocks_in_levels}")
+                # В ветках "проверьте блоки" correct_level_ids считает только полностью собранные
+                # уровни (включая все блоки внутри). Если порядок/наличие уровней уже подтвержден
+                # отдельно через levels_order_info, показываем это в тексте как все уровни
+                # правильные, чтобы не получать противоречие вида
+                # "Последовательность уровней правильная" + "1/5 уровней правильно".
+                block_feedback_level_count = total_cnt if levels_order_info else len(correct_level_ids)
                 
                 # Для уровня 1 показываем количество правильных блоков
                 if not requires_level_names and total_blocks_in_levels > 0:
@@ -5215,12 +5927,12 @@ class TaskEvaluatorService:
                     if levels_order_info:
                         # Последовательность правильная, но блоки неправильные
                         if level_order_matters:
-                            message = f"✅ Последовательность уровней правильная, но проверьте блоки ({len(correct_level_ids)}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
+                            message = f"✅ Последовательность уровней правильная, но проверьте блоки ({block_feedback_level_count}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
                         else:
-                            message = f"✅ Все уровни присутствуют, но проверьте блоки ({len(correct_level_ids)}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
+                            message = f"✅ Все уровни присутствуют, но проверьте блоки ({block_feedback_level_count}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
                     else:
                         # Последовательность неправильная
-                        message = f"❌ Проверьте последовательность ({len(correct_level_ids)}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
+                        message = f"❌ Проверьте последовательность ({block_feedback_level_count}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
                 else:
                     # Для уровня 2-3 (requires_level_names=True)
                     # ИСПРАВЛЕНИЕ: Показываем информацию о блоках, если они были подсчитаны
@@ -5228,11 +5940,11 @@ class TaskEvaluatorService:
                         # Есть информация о блоках - показываем её
                         if levels_order_info:
                             if level_order_matters:
-                                message = f"✅ Последовательность уровней правильная, но проверьте блоки ({len(correct_level_ids)}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
+                                message = f"✅ Последовательность уровней правильная, но проверьте блоки ({block_feedback_level_count}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
                             else:
-                                message = f"✅ Все уровни присутствуют, но проверьте блоки ({len(correct_level_ids)}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
+                                message = f"✅ Все уровни присутствуют, но проверьте блоки ({block_feedback_level_count}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
                         else:
-                            message = f"❌ Проверьте последовательность ({len(correct_level_ids)}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
+                            message = f"❌ Проверьте последовательность ({block_feedback_level_count}/{total_cnt} уровней правильно, {total_correct_blocks}/{total_blocks_in_levels} блоков правильно)"
                     else:
                         # Нет информации о блоках - показываем только уровни
                         if levels_order_info:
@@ -5288,8 +6000,12 @@ class TaskEvaluatorService:
                 # Добавляем информацию о правильных блоках по уровням (для визуализации)
                 # Преобразуем sets в lists для JSON-совместимости
                 correct_blocks_by_level_serializable = {
-                    level_id: list(blocks_set) 
-                    for level_id, blocks_set in correct_blocks_by_level.items()
+                    level_id: (
+                        list(blocks_list)
+                        if isinstance(blocks_list, (list, tuple, set))
+                        else []
+                    )
+                    for level_id, blocks_list in correct_blocks_by_level.items()
                 }
                 details['correct_blocks_by_level'] = correct_blocks_by_level_serializable
             
@@ -5307,6 +6023,44 @@ class TaskEvaluatorService:
                 details['level_names'] = level_names_result
             if block_names_result:
                 details['block_names'] = block_names_result
+
+            sequence_tolerance_matches = []
+            if level_names_result:
+                for level_id, user_name, correct_name in level_names_result.get('matched_levels', []):
+                    match_info = self._compare_named_text(user_name, correct_name)
+                    if match_info is None or (match_info.get('type') == 'exact' and not match_info.get('normalized_kinds')):
+                        continue
+                    sequence_tolerance_matches.append({
+                        'level_id': level_id,
+                        'type': match_info.get('type', 'exact'),
+                        'user_answer': user_name,
+                        'correct_answer': correct_name,
+                        'normalized_kinds': list(match_info.get('normalized_kinds', []))
+                        if isinstance(match_info.get('normalized_kinds'), list)
+                        else [],
+                    })
+            if block_names_result:
+                for level_id, block_id, user_name, correct_name in block_names_result.get('matched_blocks', []):
+                    match_info = self._compare_named_text(user_name, correct_name)
+                    if match_info is None or (match_info.get('type') == 'exact' and not match_info.get('normalized_kinds')):
+                        continue
+                    sequence_tolerance_matches.append({
+                        'level_id': level_id,
+                        'block_id': block_id,
+                        'type': match_info.get('type', 'exact'),
+                        'user_answer': user_name,
+                        'correct_answer': correct_name,
+                        'normalized_kinds': list(match_info.get('normalized_kinds', []))
+                        if isinstance(match_info.get('normalized_kinds'), list)
+                        else [],
+                    })
+
+            sequence_tolerance_summary = self._summarize_tolerance_matches(sequence_tolerance_matches)
+            if sequence_tolerance_summary.get('has_tolerance'):
+                details['tolerance_matches'] = sequence_tolerance_summary.get('matches', [])
+                details['tolerance_type'] = sequence_tolerance_summary.get('tolerance_type')
+                details['normalization_kinds'] = sequence_tolerance_summary.get('normalization_kinds', [])
+                details['tolerance_explanation'] = self._build_tolerance_explanation('Название', sequence_tolerance_summary)
             
             # Добавляем данные для визуализации схемы
             # Обогащенные правильные уровни с block_names (для визуализации)
@@ -5399,6 +6153,62 @@ class TaskEvaluatorService:
     # TEST TASK EVALUATION
     # =========================================================================
     
+    def _format_test_result_message(self, correct_count: int, total_count: int) -> str:
+        """Build a clear summary for TEST results."""
+        if total_count <= 0:
+            return "❌ Проверьте ответы"
+
+        if correct_count >= total_count:
+            return f"✅ Правильно! {correct_count}/{total_count} ответов"
+
+        incorrect_count = max(0, total_count - correct_count)
+        return (
+            f"❌ Есть ошибки: {incorrect_count} из {total_count} с ошибкой, "
+            f"верно {correct_count}"
+        )
+
+    @staticmethod
+    def _is_image_only_test_question(question: Dict[str, Any]) -> bool:
+        if not isinstance(question, dict):
+            return False
+
+        answers = question.get("answers")
+        if not isinstance(answers, list) and isinstance(question.get("content"), dict):
+            answers = question.get("content", {}).get("answers")
+        if not isinstance(answers, list) or not answers:
+            return False
+
+        def _has_image(answer: Any) -> bool:
+            if not isinstance(answer, dict):
+                return False
+            image_meta = answer.get("image")
+            return bool(
+                answer.get("image_path")
+                or answer.get("image_url")
+                or (isinstance(image_meta, dict) and image_meta.get("url"))
+                or (isinstance(image_meta, dict) and image_meta.get("path"))
+            )
+
+        return all(_has_image(answer) for answer in answers)
+
+    def _should_use_level2_test_mode(
+        self,
+        *,
+        requires_text_input: bool,
+        show_options: bool,
+        difficulty: Any,
+        questions: List[Dict[str, Any]],
+    ) -> bool:
+        if requires_text_input or not show_options:
+            return True
+
+        if isinstance(difficulty, (int, float)) and difficulty >= 2:
+            if questions and all(self._is_image_only_test_question(question) for question in questions):
+                return False
+            return True
+
+        return False
+
     def evaluate_test_task(
         self,
         user_input: Dict[str, Any],
@@ -5418,17 +6228,13 @@ class TaskEvaluatorService:
             requires_text_input = content.get("requires_text_input", False)
             show_options = content.get("show_options", True)
 
-            # Синхронизация с frontend: difficulty >= 2 также активирует Level 2 (open text)
+            # Синхронизация с frontend: difficulty >= 2 обычно активирует Level 2 (open text),
+            # кроме чисто картинных тестов, которые остаются в вариантах ответа.
             difficulty = None
             if task_data:
                 difficulty = task_data.get("settings", {}).get("difficulty")
                 if difficulty is None:
                     difficulty = content.get("difficulty")
-            is_level2 = (
-                requires_text_input
-                or not show_options
-                or (isinstance(difficulty, (int, float)) and difficulty >= 2)
-            )
 
             # Получаем список вопросов из разных возможных мест
             questions = answer_key.get("questions", [])
@@ -5451,30 +6257,219 @@ class TaskEvaluatorService:
                     details={"error": "no_questions"},
                 )
 
+            is_level2 = self._should_use_level2_test_mode(
+                requires_text_input=requires_text_input,
+                show_options=show_options,
+                difficulty=difficulty,
+                questions=questions,
+            )
+
             answers_in = user_input.get("answers", {})
             text_answers_in = user_input.get("text_answers", {})
             answers = {str(k): v for k, v in answers_in.items()}
             text_answers = {str(k): v for k, v in text_answers_in.items()}
 
+            def _extract_answer_options(question: Dict[str, Any]) -> List[Dict[str, Any]]:
+                answer_options = question.get("answers")
+                if not isinstance(answer_options, list) and isinstance(
+                    question.get("content"), dict
+                ):
+                    answer_options = question.get("content", {}).get("answers")
+                if not isinstance(answer_options, list):
+                    return []
+                return [answer for answer in answer_options if isinstance(answer, dict)]
+
+            def _evaluate_choice_question(
+                question: Dict[str, Any], fallback_index: int
+            ) -> Dict[str, Any]:
+                qid_raw = question.get("id")
+                qid = str(qid_raw) if qid_raw is not None else str(fallback_index)
+                answer_options = _extract_answer_options(question)
+
+                raw_answer = answers.get(qid) if qid in answers else answers.get(qid_raw)
+                if raw_answer is None:
+                    try:
+                        qid_int = int(qid)
+                        raw_answer = answers.get(qid_int)
+                    except Exception:
+                        raw_answer = None
+
+                correct_option_indices = [
+                    i for i, ans in enumerate(answer_options) if ans.get("correct", False)
+                ]
+
+                if raw_answer is None:
+                    return {
+                        "correct": False,
+                        "question_result": {
+                            "question_id": qid,
+                            "correct": False,
+                            "reason": "not_answered",
+                        },
+                        "per_question": {
+                            "status": "unanswered",
+                            "correct_option_ids": correct_option_indices,
+                            "user_option_ids": [],
+                        },
+                    }
+
+                candidate_indices: List[int] = []
+                if isinstance(raw_answer, (list, tuple)):
+                    for answer_value in raw_answer:
+                        if isinstance(answer_value, (int, float)):
+                            candidate_indices.append(int(answer_value))
+                        elif isinstance(answer_value, str) and answer_value.isdigit():
+                            candidate_indices.append(int(answer_value))
+                else:
+                    if isinstance(raw_answer, str):
+                        if raw_answer.startswith("answer_"):
+                            try:
+                                candidate_indices.append(int(raw_answer.split("_")[1]))
+                            except Exception:
+                                pass
+                        else:
+                            raw_norm = raw_answer.strip().lower()
+                            for option_index, answer_option in enumerate(answer_options):
+                                option_text = str(
+                                    answer_option.get("text")
+                                    or answer_option.get("label")
+                                    or ""
+                                ).strip()
+                                if option_text.lower() == raw_norm:
+                                    candidate_indices.append(option_index)
+                                    break
+                    elif isinstance(raw_answer, (int, float)):
+                        candidate_indices.append(int(raw_answer))
+
+                if not candidate_indices:
+                    return {
+                        "correct": False,
+                        "question_result": {
+                            "question_id": qid,
+                            "correct": False,
+                            "reason": "not_answered",
+                        },
+                        "per_question": {
+                            "status": "unanswered",
+                            "correct_option_ids": correct_option_indices,
+                            "user_option_ids": [],
+                        },
+                    }
+
+                valid_user_indices = [
+                    option_index
+                    for option_index in candidate_indices
+                    if 0 <= option_index < len(answer_options)
+                ]
+
+                if not valid_user_indices:
+                    return {
+                        "correct": False,
+                        "question_result": {
+                            "question_id": qid,
+                            "correct": False,
+                            "reason": "invalid_answer_index",
+                        },
+                        "per_question": {
+                            "status": "incorrect",
+                            "correct_option_ids": correct_option_indices,
+                            "user_option_ids": candidate_indices,
+                        },
+                    }
+
+                is_correct = (
+                    set(valid_user_indices) == set(correct_option_indices)
+                    and len(valid_user_indices) == len(correct_option_indices)
+                    and len(valid_user_indices) > 0
+                )
+
+                if is_correct:
+                    return {
+                        "correct": True,
+                        "question_result": {
+                            "question_id": qid,
+                            "correct": True,
+                            "user_answer": valid_user_indices[0]
+                            if len(valid_user_indices) == 1
+                            else valid_user_indices,
+                        },
+                        "per_question": {
+                            "status": "correct",
+                            "correct_option_ids": correct_option_indices,
+                            "user_option_ids": valid_user_indices,
+                        },
+                    }
+
+                return {
+                    "correct": False,
+                    "question_result": {
+                        "question_id": qid,
+                        "correct": False,
+                        "user_answer": valid_user_indices[0]
+                        if len(valid_user_indices) == 1
+                        else valid_user_indices,
+                        "correct_answer": next(iter(correct_option_indices), None),
+                    },
+                    "per_question": {
+                        "status": "incorrect",
+                        "correct_option_ids": correct_option_indices,
+                        "user_option_ids": valid_user_indices,
+                    },
+                }
+
+            def _question_source_index(question: Dict[str, Any], fallback_index: int) -> int:
+                try:
+                    original_index = question.get("_partial_retry_original_index")
+                except Exception:
+                    original_index = None
+
+                try:
+                    return int(original_index)
+                except Exception:
+                    return fallback_index
+
             # ------------------------
             # Уровень 2: text_answers
             # ------------------------
             if is_level2:
+                def _extract_reference_answer_from_question(question: Dict[str, Any]) -> str:
+                    direct = str(question.get("reference_answer") or "").strip()
+                    if direct:
+                        return direct
+
+                    content_ref = str(
+                        (question.get("content") or {}).get("reference_answer") or ""
+                    ).strip()
+                    if content_ref:
+                        return content_ref
+
+                    answers_list = _extract_answer_options(question)
+                    correct_texts = []
+                    for answer in answers_list:
+                        if not isinstance(answer, dict) or not answer.get("correct"):
+                            continue
+                        text = str(answer.get("text") or answer.get("label") or "").strip()
+                        if text and text not in correct_texts:
+                            correct_texts.append(text)
+                    return "; ".join(correct_texts)
 
                 def _extract_keywords_from_question(question: Dict[str, Any]) -> List[str]:
                     kw: List[str] = list(question.get("keywords") or [])
-                    answers_list = question.get("answers") or []
+                    answers_list = _extract_answer_options(question)
                     correct_texts = [
                         a.get("text") or a.get("label") or ""
                         for a in answers_list
                         if a.get("correct")
                     ]
-                    ref = question.get("reference_answer") or ""
+                    ref = (
+                        question.get("reference_answer")
+                        or question.get("content", {}).get("reference_answer", "")
+                    )
                     texts = correct_texts + ([ref] if ref else [])
                     for t in texts:
                         norm = self._normalize_text_for_comparison(t)
                         if norm:
-                            for w in norm.split():
+                            for w in extract_words_from_text(norm):
                                 if len(w) > 1:
                                     kw.append(w)
                     seen = set()
@@ -5490,7 +6485,14 @@ class TaskEvaluatorService:
                     if not q.get("keywords"):
                         q["keywords"] = _extract_keywords_from_question(q)
 
-                if not text_answers:
+                has_choice_mode_questions = any(
+                    self._is_image_only_test_question(question) for question in questions
+                )
+                has_text_mode_questions = any(
+                    not self._is_image_only_test_question(question) for question in questions
+                )
+
+                if has_text_mode_questions and not has_choice_mode_questions and not text_answers:
                     return EvaluationResult(
                         success=False,
                         message="❌ Введите текстовые ответы",
@@ -5502,12 +6504,21 @@ class TaskEvaluatorService:
                 correct_count = 0
                 total_count = len(questions)
                 question_results: List[Dict[str, Any]] = []
+                per_question: Dict[str, Any] = {}
 
                 for idx, question in enumerate(questions):
                     qid_raw = question.get("id")
                     qid = str(qid_raw) if qid_raw is not None else str(idx)
+                    if self._is_image_only_test_question(question):
+                        choice_result = _evaluate_choice_question(question, idx)
+                        if choice_result["correct"]:
+                            correct_count += 1
+                        question_results.append(choice_result["question_result"])
+                        per_question[qid] = choice_result["per_question"]
+                        continue
                     keywords = question.get("keywords", [])
-                    reference_answer = question.get("reference_answer", "")
+                    reference_answer = _extract_reference_answer_from_question(question)
+                    correct_answer_texts = self._extract_test_question_correct_answer_texts(question)
 
                     user_text = str(text_answers.get(qid, "")).strip()
                     if not user_text:
@@ -5518,11 +6529,35 @@ class TaskEvaluatorService:
                                 "reason": "not_answered",
                             }
                         )
+                        per_question[qid] = {
+                            "status": "unanswered",
+                            "details": {
+                                "reference_answer": reference_answer,
+                                "found_keywords": [],
+                                "missing_keywords": list(keywords),
+                            },
+                        }
                         continue
 
                     text_result = self._evaluate_text_answer(
                         user_text, keywords, reference_answer, task_data
                     )
+                    if (
+                        not text_result.get("success")
+                        and self._matches_test_question_answer_listing(
+                            user_text,
+                            correct_answer_texts,
+                        )
+                    ):
+                        text_result = dict(text_result)
+                        text_result["success"] = True
+                        text_result["message"] = (
+                            "✅ Правильно! Все правильные варианты перечислены в ответе."
+                        )
+                        text_result["found_keywords"] = list(
+                            dict.fromkeys(str(keyword).strip().lower() for keyword in keywords if str(keyword).strip())
+                        )
+                        text_result["missing_keywords"] = []
 
                     if text_result["success"]:
                         correct_count += 1
@@ -5535,20 +6570,40 @@ class TaskEvaluatorService:
                             "text_evaluation": text_result,
                         }
                     )
+                    per_question[qid] = {
+                        "status": "correct" if text_result["success"] else "incorrect",
+                        "details": {
+                            "reference_answer": reference_answer,
+                            "user_answer": user_text,
+                            "found_keywords": list(text_result.get("found_keywords") or []),
+                            "missing_keywords": list(text_result.get("missing_keywords") or []),
+                        },
+                    }
+                    hide_tolerance_feedback = text_result["success"] and self._should_hide_test_l2_tolerance_feedback(
+                        user_text,
+                        reference_answer,
+                        correct_answer_texts,
+                    )
+                    if not hide_tolerance_feedback:
+                        tolerance_type = text_result.get("tolerance_type")
+                        if isinstance(tolerance_type, str) and tolerance_type.strip():
+                            per_question[qid]["tolerance_type"] = tolerance_type.strip()
+                        normalization_kinds = text_result.get("normalization_kinds")
+                        if isinstance(normalization_kinds, list) and normalization_kinds:
+                            per_question[qid]["normalization_kinds"] = list(normalization_kinds)
+                        tolerance_explanation = text_result.get("tolerance_explanation")
+                        if isinstance(tolerance_explanation, str) and tolerance_explanation.strip():
+                            per_question[qid]["tolerance_explanation"] = tolerance_explanation.strip()
 
                 success = correct_count == total_count
                 score = (correct_count / total_count * 100.0) if total_count > 0 else 0.0
-                message = (
-                    f"✅ Правильно! {correct_count}/{total_count} ответов"
-                    if success
-                    else f"❌ Проверьте ответы: {correct_count}/{total_count} правильных"
-                )
+                message = self._format_test_result_message(correct_count, total_count)
 
                 # Список заваленных вопросов (для частичного ретрая)
                 failed_subtests = [
                     {
                         "question_id": qr.get("question_id"),
-                        "index": idx,
+                        "index": _question_source_index(questions[idx], idx),
                     }
                     for idx, qr in enumerate(question_results)
                     if not qr.get("correct", False)
@@ -5563,6 +6618,7 @@ class TaskEvaluatorService:
                         "correct_count": correct_count,
                         "total_count": total_count,
                         "question_results": question_results,
+                        "per_question": per_question,
                         "level": 2,
                         "failed_subtests": failed_subtests,
                     },
@@ -5588,7 +6644,12 @@ class TaskEvaluatorService:
             for idx, question in enumerate(questions):
                 qid_raw = question.get("id")
                 qid = str(qid_raw) if qid_raw is not None else str(idx)
-                answer_options = question.get("answers", [])
+                choice_result = _evaluate_choice_question(question, idx)
+                if choice_result["correct"]:
+                    correct_count += 1
+                question_results.append(choice_result["question_result"])
+                per_question[qid] = choice_result["per_question"]
+                continue
 
                 raw_answer = (
                     answers.get(qid) if qid in answers else answers.get(qid_raw)
@@ -5747,17 +6808,13 @@ class TaskEvaluatorService:
 
             success = correct_count == total_count
             score = (correct_count / total_count * 100.0) if total_count > 0 else 0.0
-            message = (
-                f"✅ Правильно! {correct_count}/{total_count} ответов"
-                if success
-                else f"❌ Проверьте ответы: {correct_count}/{total_count} правильных"
-            )
+            message = self._format_test_result_message(correct_count, total_count)
 
             # Список заваленных вопросов (для частичного ретрая)
             failed_subtests = [
                 {
                     "question_id": qr.get("question_id"),
-                    "index": idx,
+                    "index": _question_source_index(questions[idx], idx),
                 }
                 for idx, qr in enumerate(question_results)
                 if not qr.get("correct", False)

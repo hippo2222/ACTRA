@@ -7,9 +7,18 @@ and lightweight annotation/validation for legacy analysis recommendations.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 CAPABILITY_MATRIX_VERSION = "1.0"
+
+_TASK_TYPE_TO_ENTRY_ID: Dict[str, str] = {
+    "TEST": "test_core",
+    "OPEN_ANSWER": "open_answer_core",
+    "DRAW": "draw_core",
+    "CLICK": "click_core",
+    "SEQUENCE": "sequence_structuring",
+    "SEQUENCE_ASSEMBLY": "sequence_structuring",
+}
 
 
 def _matrix_entries() -> Dict[str, Dict[str, Any]]:
@@ -113,6 +122,78 @@ def _matrix_entries() -> Dict[str, Dict[str, Any]]:
     }
 
 
+def normalize_task_type(task_type: Optional[str]) -> str:
+    value = str(task_type or "").strip().upper()
+    if value in {"SEQUENCE_ASSEMBLY", "SEQUENCE"}:
+        return "SEQUENCE_ASSEMBLY"
+    return value
+
+
+def get_task_capability_entry(task_type: Optional[str], subtype: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    normalized_task_type = normalize_task_type(task_type)
+    normalized_subtype = str(subtype or "").strip().lower() or None
+
+    if normalized_task_type == "CLICK" and normalized_subtype == "error_detection":
+        entry = _matrix_entries().get("click_error_detection")
+        return dict(entry) if entry else None
+
+    entry_id = _TASK_TYPE_TO_ENTRY_ID.get(normalized_task_type)
+    if not entry_id:
+        return None
+
+    entry = _matrix_entries().get(entry_id)
+    return dict(entry) if entry else None
+
+
+def get_task_difficulty_metadata(task_type: Optional[str], subtype: Optional[str] = None) -> Dict[str, Any]:
+    entry = get_task_capability_entry(task_type, subtype)
+    normalized_task_type = normalize_task_type(task_type)
+    normalized_subtype = str(subtype or "").strip().lower() or None
+
+    if not entry:
+        return {
+            "task_type": normalized_task_type or str(task_type or "").strip().upper(),
+            "subtype": normalized_subtype,
+            "capability_matrix_entry_id": None,
+            "supported_levels": [1],
+            "level_role_map": [],
+            "progression_is_fixed": False,
+            "progression_kind": "unknown",
+            "authoring_enabled": False,
+            "complex_role": "none",
+            "fixed_progression_note": "",
+        }
+
+    supported_levels = [int(level) for level in (entry.get("supported_levels") or []) if isinstance(level, int)]
+    progression_is_fixed = bool(entry.get("progression_is_fixed"))
+    if not supported_levels:
+        progression_kind = "special"
+    elif len(supported_levels) == 1:
+        progression_kind = "single_level"
+    else:
+        progression_kind = "fixed_levels" if progression_is_fixed else "subsettable"
+
+    authoring_enabled = bool(progression_is_fixed and len(supported_levels) > 1)
+    level_role_map = [dict(item) for item in (entry.get("level_role_map") or []) if isinstance(item, dict)]
+
+    return {
+        "task_type": normalize_task_type(entry.get("task_type")) or normalized_task_type,
+        "subtype": str(entry.get("subtype") or normalized_subtype or "").strip().lower() or None,
+        "capability_matrix_entry_id": entry.get("id"),
+        "supported_levels": supported_levels,
+        "level_role_map": _simplify_level_role_map(
+            normalize_task_type(entry.get("task_type")) or normalized_task_type,
+            str(entry.get("subtype") or normalized_subtype or "").strip().lower() or None,
+            level_role_map,
+        ),
+        "progression_is_fixed": progression_is_fixed,
+        "progression_kind": progression_kind,
+        "authoring_enabled": authoring_enabled,
+        "complex_role": entry.get("complex_role") or "none",
+        "fixed_progression_note": _fixed_progression_note(entry),
+    }
+
+
 _LEGACY_RECOMMENDATION_MAP: Dict[str, Dict[str, Any]] = {
     "TEST": {"entry_id": "test_core"},
     "OPEN_ANSWER": {"entry_id": "open_answer_core"},
@@ -142,6 +223,57 @@ def _fixed_progression_note(entry: Dict[str, Any]) -> str:
     return "Уровни этого типа трактуются как фиксированная progression, а не ручной выбор."
 
 
+def _simplify_level_role_map(
+    task_type: Optional[str],
+    subtype: Optional[str],
+    level_role_map: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    normalized_task_type = normalize_task_type(task_type)
+    normalized_subtype = str(subtype or "").strip().lower() or None
+    simple_roles: Dict[str, Dict[int, str]] = {
+        "TEST": {
+            1: "Пользователь выбирает правильный вариант из готовых ответов.",
+            2: "Пользователь сам вводит короткий текстовый ответ.",
+        },
+        "DRAW": {
+            1: "Пользователь обводит нужную область.",
+            2: "Пользователь обводит область и подписывает её.",
+        },
+        "CLICK": {
+            1: "Пользователь просто нажимает на нужную область.",
+            2: "Пользователь находит область и выбирает её с названием.",
+            3: "Пользователь выделяет область и называет её.",
+        },
+        "SEQUENCE_ASSEMBLY": {
+            1: "Пользователь раскладывает элементы по уровням или группам.",
+            2: "Пользователь раскладывает элементы и подписывает уровни.",
+            3: "Пользователь раскладывает элементы и подписывает и уровни, и элементы.",
+        },
+    }
+
+    if normalized_task_type == "CLICK" and normalized_subtype == "error_detection":
+        return [dict(item) for item in level_role_map if isinstance(item, dict)]
+
+    task_roles = simple_roles.get(normalized_task_type)
+    if not task_roles:
+        return [dict(item) for item in level_role_map if isinstance(item, dict)]
+
+    simplified: List[Dict[str, Any]] = []
+    for item in level_role_map:
+        if not isinstance(item, dict):
+            continue
+        try:
+            level = int(item.get("level"))
+        except Exception:
+            simplified.append(dict(item))
+            continue
+        simplified.append({
+            **dict(item),
+            "role": task_roles.get(level, str(item.get("role") or "").strip()),
+        })
+    return simplified
+
+
 def _annotate_recommendation(rec: Dict[str, Any], warnings: List[str]) -> Dict[str, Any]:
     task_type = str(rec.get("task_type") or "").strip().upper()
     mapping = _LEGACY_RECOMMENDATION_MAP.get(task_type)
@@ -167,7 +299,11 @@ def _annotate_recommendation(rec: Dict[str, Any], warnings: List[str]) -> Dict[s
     annotated["progression_is_fixed"] = bool(entry.get("progression_is_fixed"))
     annotated["supported_levels"] = list(entry.get("supported_levels") or [])
     annotated["complex_role"] = entry.get("complex_role")
-    annotated["level_role_map"] = [dict(item) for item in (entry.get("level_role_map") or [])]
+    annotated["level_role_map"] = _simplify_level_role_map(
+        entry.get("task_type"),
+        entry.get("subtype"),
+        [dict(item) for item in (entry.get("level_role_map") or []) if isinstance(item, dict)],
+    )
     annotated["capability_ids"] = list(entry.get("capability_ids") or [])
     annotated["canonical_task_type"] = entry.get("task_type")
     if entry.get("subtype") is not None:
@@ -297,4 +433,10 @@ def apply_capability_matrix_v1_annotations(data: Dict[str, Any]) -> Dict[str, An
     return result
 
 
-__all__ = ["CAPABILITY_MATRIX_VERSION", "apply_capability_matrix_v1_annotations"]
+__all__ = [
+    "CAPABILITY_MATRIX_VERSION",
+    "apply_capability_matrix_v1_annotations",
+    "get_task_capability_entry",
+    "get_task_difficulty_metadata",
+    "normalize_task_type",
+]

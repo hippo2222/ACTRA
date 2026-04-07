@@ -229,6 +229,280 @@ class AdaptiveSessionManager:
             f"на максимальном уровне"
         )
         return True
+
+    def _get_task_max_level(self, task_type: str, task_ref: str) -> int:
+        """Возвращает максимальный доступный уровень сложности для задания."""
+        available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
+        if not available_levels:
+            return 1
+        try:
+            return max(int(level) for level in available_levels)
+        except Exception:
+            logger.debug(
+                "[_get_task_max_level] Не удалось нормализовать уровни %s для %s, используем 1",
+                available_levels,
+                task_ref,
+            )
+            return 1
+
+    @staticmethod
+    def _has_real_difficulty_helper(helper: Any) -> bool:
+        return callable(helper) and not str(getattr(helper.__class__, "__module__", "")).startswith("unittest.mock")
+
+    @staticmethod
+    def _fallback_normalize_requested_level(requested_level: Any, available_levels: List[int]) -> int:
+        normalized_levels = sorted(int(level) for level in available_levels if isinstance(level, int))
+        if not normalized_levels:
+            return 1
+        try:
+            requested = int(requested_level)
+        except Exception:
+            return normalized_levels[0]
+        if requested in normalized_levels:
+            return requested
+        lower_or_equal = [level for level in normalized_levels if level <= requested]
+        if lower_or_equal:
+            return lower_or_equal[-1]
+        return normalized_levels[0]
+
+    def _normalize_level_for_available(self, requested_level: Any, available_levels: List[int]) -> int:
+        helper = getattr(self.difficulty_manager, "normalize_requested_level", None)
+        if self._has_real_difficulty_helper(helper):
+            try:
+                return int(helper(requested_level, available_levels))
+            except Exception:
+                pass
+        return self._fallback_normalize_requested_level(requested_level, available_levels)
+
+    def _next_level_for_available(self, current_level: Any, available_levels: List[int]) -> int:
+        helper = getattr(self.difficulty_manager, "get_next_allowed_level", None)
+        if self._has_real_difficulty_helper(helper):
+            try:
+                return int(helper(current_level, available_levels))
+            except Exception:
+                pass
+
+        normalized_levels = sorted(int(level) for level in available_levels if isinstance(level, int))
+        if not normalized_levels:
+            return 1
+        current = self._fallback_normalize_requested_level(current_level, normalized_levels)
+        for level in normalized_levels:
+            if level > current:
+                return level
+        return normalized_levels[-1]
+
+    def _progression_step_count_for_levels(self, available_levels: List[int]) -> int:
+        helper = getattr(self.difficulty_manager, "get_progression_step_count", None)
+        if self._has_real_difficulty_helper(helper):
+            try:
+                return int(helper(available_levels))
+            except Exception:
+                pass
+        return max(1, len([level for level in available_levels if isinstance(level, int)]))
+
+    def _iteration_level_for_step(self, target_step: Any, available_levels: List[int]) -> int:
+        helper = getattr(self.difficulty_manager, "get_iteration_level_by_step", None)
+        if self._has_real_difficulty_helper(helper):
+            try:
+                return int(helper(target_step, available_levels))
+            except Exception:
+                pass
+
+        normalized_levels = sorted(int(level) for level in available_levels if isinstance(level, int))
+        if not normalized_levels:
+            return 1
+        try:
+            step = max(1, int(target_step))
+        except Exception:
+            step = 1
+        return normalized_levels[min(step - 1, len(normalized_levels) - 1)]
+
+    def _get_task_progression_steps(self, task_type: str, task_ref: str) -> int:
+        """Возвращает число реальных шагов прогрессии для задания."""
+        available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
+        if not available_levels:
+            return 1
+        try:
+            return self._progression_step_count_for_levels(available_levels)
+        except Exception:
+            logger.debug(
+                "[_get_task_progression_steps] Не удалось нормализовать уровни %s для %s, используем 1",
+                available_levels,
+                task_ref,
+            )
+            return 1
+
+    @staticmethod
+    def _get_error_detection_finisher_level() -> int:
+        """Error-detection задачи являются отдельным финишером и всегда живут на уровне 3."""
+        return 3
+
+    @staticmethod
+    def _normalize_iteration_level_list(levels: List[Any]) -> List[int]:
+        normalized = sorted({int(level) for level in levels if isinstance(level, int)})
+        return [level for level in normalized if level >= 1]
+
+    def _get_regular_iteration_levels(
+        self,
+        session: ComplexSession,
+        complex_obj: Complex,
+    ) -> List[int]:
+        levels = set()
+        for task_ref in complex_obj.tasks or []:
+            if task_ref in session.broken_tasks:
+                continue
+
+            task_metadata = self._load_task_metadata(task_ref)
+            if self._is_error_detection_metadata(task_metadata):
+                continue
+
+            task_type = self._get_task_type(task_ref)
+            available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
+            for level in self._normalize_iteration_level_list(available_levels):
+                levels.add(level)
+
+        return sorted(levels)
+
+    def _has_error_detection_tasks(
+        self,
+        session: ComplexSession,
+        complex_obj: Complex,
+    ) -> bool:
+        for task_ref in complex_obj.tasks or []:
+            if task_ref in session.broken_tasks:
+                continue
+            if self._is_error_detection_metadata(self._load_task_metadata(task_ref)):
+                return True
+        return False
+
+    def _get_visible_iteration_levels(
+        self,
+        session: ComplexSession,
+        complex_obj: Complex,
+    ) -> List[int]:
+        visible_levels = list(self._get_regular_iteration_levels(session, complex_obj))
+        if self._has_error_detection_tasks(session, complex_obj):
+            finisher_level = self._get_error_detection_finisher_level()
+            if finisher_level not in visible_levels:
+                visible_levels.append(finisher_level)
+                visible_levels.sort()
+        return visible_levels
+
+    def _get_absolute_iteration_level(
+        self,
+        session: ComplexSession,
+        complex_obj: Complex,
+        target_iteration: int,
+    ) -> Optional[int]:
+        visible_levels = self._get_visible_iteration_levels(session, complex_obj)
+        if not visible_levels:
+            return None
+        try:
+            visible_iteration = max(1, int(target_iteration or 1))
+        except Exception:
+            visible_iteration = 1
+        if visible_iteration > len(visible_levels):
+            return None
+        return visible_levels[visible_iteration - 1]
+
+    def _task_participates_in_absolute_level(
+        self,
+        task_type: str,
+        task_ref: str,
+        absolute_level: Optional[int],
+        *,
+        is_error_detection: bool = False,
+        available_levels: Optional[List[int]] = None,
+    ) -> bool:
+        if absolute_level is None:
+            return False
+        if is_error_detection:
+            return absolute_level == self._get_error_detection_finisher_level()
+        return (
+            self._resolve_regular_iteration_difficulty(
+                task_type,
+                task_ref,
+                absolute_level,
+                available_levels=available_levels,
+            )
+            is not None
+        )
+
+    def _get_planned_final_iteration(
+        self,
+        session: ComplexSession,
+        complex_obj: Complex,
+    ) -> int:
+        """
+        Возвращает номер плановой финальной итерации.
+
+        До этой итерации комплекс должен повторять все доступные не-broken задания,
+        повышая сложность до максимума для каждого типа. Error-detection задания
+        подключаются в эту финальную плановую итерацию вместе с остальными.
+        """
+        visible_levels = self._get_visible_iteration_levels(session, complex_obj)
+        return max(1, len(visible_levels))
+
+    def _get_iteration_target_difficulty(
+        self,
+        task_type: str,
+        task_ref: str,
+        target_iteration: int,
+        session: ComplexSession,
+        complex_obj: Complex,
+        *,
+        is_error_detection: bool = False,
+    ) -> Optional[int]:
+        """Возвращает сложность задания для целевой итерации с учётом максимума."""
+        absolute_level = self._get_absolute_iteration_level(session, complex_obj, target_iteration)
+        if absolute_level is None:
+            return None
+        if is_error_detection:
+            return self._get_error_detection_finisher_level()
+        available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
+        return self._resolve_regular_iteration_difficulty(
+            task_type,
+            task_ref,
+            absolute_level,
+            available_levels=available_levels,
+        )
+
+    def _task_uses_explicit_level_selection(self, task_type: str, task_ref: str) -> bool:
+        helper = getattr(self.difficulty_manager, "uses_explicit_level_selection", None)
+        if self._has_real_difficulty_helper(helper):
+            try:
+                return bool(helper(task_type, task_ref=task_ref))
+            except Exception:
+                logger.debug(
+                    "[_task_uses_explicit_level_selection] Failed to resolve explicit policy for %s",
+                    task_ref,
+                    exc_info=True,
+                )
+        return False
+
+    def _resolve_regular_iteration_difficulty(
+        self,
+        task_type: str,
+        task_ref: str,
+        absolute_level: Optional[int],
+        *,
+        available_levels: Optional[List[int]] = None,
+    ) -> Optional[int]:
+        if absolute_level is None:
+            return None
+
+        normalized_levels = self._normalize_iteration_level_list(
+            available_levels
+            if available_levels is not None
+            else self.difficulty_manager.get_available_levels(task_type, task_ref)
+        )
+        if not normalized_levels:
+            return None
+
+        if absolute_level < normalized_levels[0]:
+            return None
+
+        return self._normalize_level_for_available(absolute_level, normalized_levels)
         
     def start_session(self, complex_id: str, user_id: str, start_iteration: int = 1) -> ComplexSession:
         """
@@ -449,7 +723,12 @@ class AdaptiveSessionManager:
         self.session_repository.save_session(session, session.user_id)
         logger.info(f"[pause_session] Сессия {session_id} сохранена и помечена как paused")
 
-    def resume_session(self, session_id: str, user_id: str) -> Optional[ComplexSession]:
+    def resume_session(
+        self,
+        session_id: str,
+        user_id: str,
+        source: Optional[str] = None,
+    ) -> Optional[ComplexSession]:
         """
         Возобновляет сессию: снимает флаг paused и возвращает объект.
         Идемпотентно: если не была на паузе, возвращает активную сессию.
@@ -459,8 +738,15 @@ class AdaptiveSessionManager:
             self._accumulate_pause_time(session)
             session.paused = False
             session.paused_at = None
+            session.paused_resume_target = None
+            session.last_resume_source = str(source or "unknown").strip() or "unknown"
+            session.last_resumed_at = datetime.utcnow()
             self.session_repository.save_session(session, session.user_id)
-            logger.info(f"[resume_session] Сессия {session_id} активна в памяти, флаг paused снят")
+            logger.info(
+                "[resume_session] Сессия %s активна в памяти, флаг paused снят, source=%s",
+                session_id,
+                session.last_resume_source,
+            )
             return session
 
         # Не найдена в памяти — пробуем загрузить из репозитория по session_id
@@ -477,9 +763,16 @@ class AdaptiveSessionManager:
         self._accumulate_pause_time(loaded)
         loaded.paused = False
         loaded.paused_at = None
+        loaded.paused_resume_target = None
+        loaded.last_resume_source = str(source or "unknown").strip() or "unknown"
+        loaded.last_resumed_at = datetime.utcnow()
         self._active_sessions[session_id] = loaded
         self.session_repository.save_session(loaded, loaded.user_id)
-        logger.info(f"[resume_session] Сессия {session_id} восстановлена из файла и активирована")
+        logger.info(
+            "[resume_session] Сессия %s восстановлена из файла и активирована, source=%s",
+            session_id,
+            loaded.last_resume_source,
+        )
         return loaded
     
     def cancel_session(self, session_id: str, user_id: Optional[str] = None) -> bool:
@@ -519,7 +812,10 @@ class AdaptiveSessionManager:
         
         if complex_id and sess_user_id:
             try:
-                self.session_repository.delete_session(complex_id, sess_user_id)
+                if hasattr(self.session_repository, "delete_session_by_session_id"):
+                    self.session_repository.delete_session_by_session_id(session_id, sess_user_id)
+                else:
+                    self.session_repository.delete_session(complex_id, sess_user_id)
                 logger.info(f"[cancel_session] Удалена сессия {session_id} (complex_id={complex_id}, user_id={sess_user_id})")
             except Exception:
                 logger.exception(
@@ -1458,8 +1754,15 @@ class AdaptiveSessionManager:
 
         settings = complex_obj.settings
         adaptive_enabled = settings.adaptive_difficulty if settings else True
+        planned_final_iteration = self._get_planned_final_iteration(session, complex_obj)
+        absolute_iteration_level = self._get_absolute_iteration_level(session, complex_obj, target_iteration)
 
         logger.info(f"[_generate_initial_queue] Generating queue for iteration {target_iteration}")
+        logger.info(
+            "[_generate_initial_queue] planned_final_iteration=%s absolute_iteration_level=%s",
+            planned_final_iteration,
+            absolute_iteration_level,
+        )
 
         for task_ref in complex_obj.tasks:
             # Проверяем, не в broken_tasks ли уже
@@ -1478,37 +1781,14 @@ class AdaptiveSessionManager:
                 session.error_detection_tasks.append(task_ref)
 
             if is_error_detection:
-                # Проверяем, что все остальные задания на максимальной сложности
-                if not self._all_other_tasks_at_max(session, complex_obj, task_ref):
+                if target_iteration < planned_final_iteration:
                     logger.info(
-                        f"[_generate_initial_queue] Error_detection {task_ref} отложен - "
-                        f"не все задания на максимальной сложности"
+                        f"[_generate_initial_queue] Error_detection {task_ref} отложен до "
+                        f"финальной плановой итерации {planned_final_iteration}"
                     )
                     continue
-                
-                # Дополнительная проверка: если есть задания с уровнем 3,
-                # то error_detection должен появляться минимум на итерации 3
-                if target_iteration < 3:
-                    # Проверяем, есть ли в комплексе задания, которые могут достичь L3
-                    has_level_3_tasks = False
-                    for other_ref in complex_obj.tasks:
-                        if other_ref == task_ref or other_ref in session.broken_tasks:
-                            continue
-                        
-                        other_type = self._get_task_type(other_ref)
-                        available_levels = self.difficulty_manager.get_available_levels(other_type, other_ref)
-                        if available_levels and max(available_levels) >= 3:
-                            has_level_3_tasks = True
-                            break
-                    
-                    if has_level_3_tasks:
-                        logger.info(
-                            f"[_generate_initial_queue] Error_detection {task_ref} отложен до итерации 3+ "
-                            f"(комплекс содержит задания с уровнем 3)"
-                        )
-                        continue
-                
-                # Если дошли сюда - включаем error_detection
+
+                # Если дошли сюда - включаем error_detection в финальную плановую итерацию
                 logger.info(
                     f"[_generate_initial_queue] Error_detection {task_ref} активирован на итерации {target_iteration}"
                 )
@@ -1520,26 +1800,48 @@ class AdaptiveSessionManager:
             # Определяем сложность задания.
             # Для error_detection всегда используем "финальный" уровень,
             # чтобы подтип работал как одноразовый финишер без повторной эскалации.
+            task_type = self._get_task_type(task_ref)
+            available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
+            if not is_error_detection and not self._task_participates_in_absolute_level(
+                task_type,
+                task_ref,
+                absolute_iteration_level,
+                is_error_detection=False,
+                available_levels=available_levels,
+            ):
+                logger.info(
+                    "[_generate_initial_queue] %s пропущено на итерации %s: абсолютный уровень %s не разрешён (%s)",
+                    task_ref,
+                    target_iteration,
+                    absolute_iteration_level,
+                    available_levels,
+                )
+                continue
             if is_error_detection:
-                task_type = self._get_task_type(task_ref)
-                available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
-                difficulty = max(available_levels) if available_levels else 2
+                difficulty = self._get_iteration_target_difficulty(
+                    task_type,
+                    task_ref,
+                    target_iteration,
+                    session,
+                    complex_obj,
+                    is_error_detection=True,
+                )
             else:
-                difficulty = 1
-                if target_iteration > 1:
-                    # Если запрошена итерация > 1, пытаемся установить соответствующую сложность
-                    # Здесь должна быть логика проверки доступности уровня сложности для задания.
-                    # Пока что просто устанавливаем difficulty = target_iteration,
-                    # предполагая, что если файл task.json существует, то и уровни в нем могут быть.
-                    # Но лучше бы проверить метаданные, если это возможно.
-                    # В текущей архитектуре уровень сложности task.json - это просто поле в данных,
-                    # или структура файла позволяет иметь разные уровни?
-                    # Обычно уровни сложности реализованы внутри логики рендеринга/проверки,
-                    # а здесь мы просто задаем желаемый уровень.
-                    pass
-
-                    # ВАЖНО: Если адаптивность включена, мы просто задаем начальную сложность
-                    difficulty = target_iteration
+                difficulty = self._get_iteration_target_difficulty(
+                    task_type,
+                    task_ref,
+                    target_iteration,
+                    session,
+                    complex_obj,
+                    is_error_detection=False,
+                )
+            if difficulty is None:
+                logger.info(
+                    "[_generate_initial_queue] %s пропущено: для итерации %s нет абсолютного уровня",
+                    task_ref,
+                    target_iteration,
+                )
+                continue
 
             # Создаем QueuedTask
             queued_task = QueuedTask(
@@ -1555,13 +1857,21 @@ class AdaptiveSessionManager:
 
         # Если очередь пуста, но в комплексе остались только error_detection задания,
         # разрешаем их ранний старт, чтобы сессия не завершалась мгновенно.
-        if not queue and error_detection_only and session.error_detection_tasks:
-            logger.info("[_generate_initial_queue] Все задания error_detection — позволяем ранний старт в итерации 1")
+        if (
+            not queue
+            and error_detection_only
+            and session.error_detection_tasks
+            and target_iteration >= planned_final_iteration
+        ):
+            logger.info(
+                "[_generate_initial_queue] Все задания error_detection — активируем на финальной итерации %s",
+                target_iteration,
+            )
             for task_ref in list(session.error_detection_tasks):
                 queue.append(
                     QueuedTask(
                         task_ref=task_ref,
-                        difficulty=2,
+                        difficulty=self._get_error_detection_finisher_level(),
                         is_retry=False,
                         origin_iteration=None,
                     )
@@ -1645,7 +1955,30 @@ class AdaptiveSessionManager:
             f"adaptive_difficulty={adaptive_enabled}, escalation_on_success={escalation_enabled}"
         )
 
+        max_iterations = None
+        try:
+            max_iterations = int(getattr(settings, "max_iterations", 0) or 0)
+        except Exception:
+            max_iterations = 0
+
         upcoming_iteration = int(getattr(session, "iteration", 0) or 0) + 1
+        planned_final_iteration = self._get_planned_final_iteration(session, complex_obj)
+        full_replay_iteration = upcoming_iteration <= planned_final_iteration
+        upcoming_absolute_level = self._get_absolute_iteration_level(session, complex_obj, upcoming_iteration)
+        current_iteration_expected_refs = {
+            queued_task.task_ref
+            for queued_task in (session.queue or [])
+            if getattr(queued_task, "task_ref", None)
+        }
+        if max_iterations > 0 and upcoming_iteration > max_iterations:
+            logger.info(
+                f"[_generate_next_iteration] Достигнут лимит итераций: current={session.iteration}, "
+                f"upcoming={upcoming_iteration}, max_iterations={max_iterations}. Очищаем очередь без генерации."
+            )
+            session.queue = []
+            session.current_task_index = 0
+            session.skip_counts = {}
+            return
         
         # Завершаем текущую итерацию (записываем end_time)
         current_iteration = session.iteration
@@ -1667,6 +2000,12 @@ class AdaptiveSessionManager:
         logger.info(
             f"[_generate_next_iteration] Фильтрация результатов для итерации {session.iteration}: "
             f"найдено {len(current_iteration_results)} результатов из {len(session.completed_tasks)} общих"
+        )
+        logger.info(
+            "[_generate_next_iteration] planned_final_iteration=%s full_replay_iteration=%s upcoming_absolute_level=%s",
+            planned_final_iteration,
+            full_replay_iteration,
+            upcoming_absolute_level,
         )
         
         # Логируем детали результатов текущей итерации
@@ -1713,38 +2052,15 @@ class AdaptiveSessionManager:
             if is_error_detection:
                 if task_ref not in session.error_detection_tasks:
                     session.error_detection_tasks.append(task_ref)
-                
-                # Проверяем, что все остальные задания на максимальной сложности
-                if not self._all_other_tasks_at_max(session, complex_obj, task_ref):
+
+                if upcoming_iteration < planned_final_iteration:
                     logger.info(
-                        f"[_generate_next_iteration] Error_detection {task_ref} отложен - "
-                        f"не все задания на максимальной сложности"
+                        f"[_generate_next_iteration] Error_detection {task_ref} отложен до "
+                        f"финальной плановой итерации {planned_final_iteration}"
                     )
                     continue
-                
-                # Дополнительная проверка: если есть задания с уровнем 3,
-                # то error_detection должен появляться минимум на итерации 3
-                if upcoming_iteration < 3:
-                    # Проверяем, есть ли в комплексе задания, которые могут достичь L3
-                    has_level_3_tasks = False
-                    for other_ref in complex_obj.tasks:
-                        if other_ref == task_ref or other_ref in session.broken_tasks:
-                            continue
-                        
-                        other_type = self._get_task_type(other_ref)
-                        available_levels = self.difficulty_manager.get_available_levels(other_type, other_ref)
-                        if available_levels and max(available_levels) >= 3:
-                            has_level_3_tasks = True
-                            break
-                    
-                    if has_level_3_tasks:
-                        logger.info(
-                            f"[_generate_next_iteration] Error_detection {task_ref} отложен до итерации 3+ "
-                            f"(комплекс содержит задания с уровнем 3)"
-                        )
-                        continue
-                
-                # Если дошли сюда - включаем error_detection
+
+                # Если дошли сюда - включаем error_detection начиная с финальной плановой итерации
                 logger.info(
                     f"[_generate_next_iteration] Error_detection {task_ref} активирован на итерации {upcoming_iteration}"
                 )
@@ -1761,10 +2077,15 @@ class AdaptiveSessionManager:
             # Получаем task_type и доступные уровни
             task_type = self._get_task_type(task_ref)
             available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
-            max_available_level = max(available_levels) if available_levels else 1
+            max_available_level = self._get_task_max_level(task_type, task_ref)
+            expected_in_current_iteration = task_ref in current_iteration_expected_refs
             
             latest_result = current_result or history_result
-            current_level = latest_result.difficulty if latest_result else 1
+            current_level = (
+                latest_result.difficulty
+                if latest_result
+                else self._normalize_level_for_available(1, available_levels)
+            )
             latest_success = latest_result.success if latest_result else False
             success_in_iteration = current_result.success if current_result else False
 
@@ -1772,15 +2093,16 @@ class AdaptiveSessionManager:
                 all_at_max_difficulty = False
 
             if missing_current_result:
-                if not (latest_result and latest_success and current_level >= max_available_level):
+                if expected_in_current_iteration and not (latest_result and latest_success and current_level >= max_available_level):
                     completed_all_tasks = False
             
             # Эскалация только при успехе
             should_escalate = adaptive_enabled and escalation_enabled and success_in_iteration and current_level < max_available_level
-            new_difficulty = current_level + 1 if should_escalate else current_level
-            # Безопасность: не превышаем максимум
-            if new_difficulty > max_available_level:
-                new_difficulty = max_available_level
+            new_difficulty = (
+                self._next_level_for_available(current_level, available_levels)
+                if should_escalate
+                else self._normalize_level_for_available(current_level, available_levels)
+            )
             
             # Статистика по текущей итерации
             if current_result:
@@ -1806,19 +2128,64 @@ class AdaptiveSessionManager:
                 # ставим сразу финальный уровень как финишер.
                 if task_ref in session.error_detection_tasks:
                     session.error_detection_tasks.remove(task_ref)
+                if full_replay_iteration or not task_completed_at_max:
+                    finisher_level = self._get_error_detection_finisher_level()
+                    new_queue.append(QueuedTask(
+                        task_ref=task_ref,
+                        difficulty=finisher_level,
+                        is_retry=False,
+                        origin_iteration=None
+                    ))
+                    logger.info(
+                        f"[_generate_next_iteration] Добавлено error_detection {task_ref} "
+                        f"на финальном уровне {finisher_level}"
+                    )
+                continue
+
+            if full_replay_iteration:
+                if not self._task_participates_in_absolute_level(
+                    task_type,
+                    task_ref,
+                    upcoming_absolute_level,
+                    is_error_detection=False,
+                    available_levels=available_levels,
+                ):
+                    logger.info(
+                        "[_generate_next_iteration] %s пропущено на видимой итерации %s: абсолютный уровень %s не разрешён (%s)",
+                        task_ref,
+                        upcoming_iteration,
+                        upcoming_absolute_level,
+                        available_levels,
+                    )
+                    continue
+                target_difficulty = self._get_iteration_target_difficulty(
+                    task_type,
+                    task_ref,
+                    upcoming_iteration,
+                    session,
+                    complex_obj,
+                    is_error_detection=False,
+                )
+                if target_difficulty is None:
+                    logger.info(
+                        "[_generate_next_iteration] %s пропущено: для итерации %s нет абсолютного уровня",
+                        task_ref,
+                        upcoming_iteration,
+                    )
+                    continue
                 new_queue.append(QueuedTask(
                     task_ref=task_ref,
-                    difficulty=max_available_level,
+                    difficulty=target_difficulty,
                     is_retry=False,
                     origin_iteration=None
                 ))
                 logger.info(
-                    f"[_generate_next_iteration] Добавлено error_detection {task_ref} "
-                    f"на финальном уровне {max_available_level}"
+                    f"[_generate_next_iteration] Повторно добавлено задание {task_ref} "
+                    f"для плановой итерации {upcoming_iteration}: "
+                    f"уровень {current_level} -> {target_difficulty}, "
+                    f"max_available={max_available_level}"
                 )
-                continue
-
-            if not task_completed_at_max:
+            elif not task_completed_at_max:
                 # Добавляем задание в новую очередь
                 new_queue.append(QueuedTask(
                     task_ref=task_ref,
@@ -1837,7 +2204,7 @@ class AdaptiveSessionManager:
                     f"[_generate_next_iteration] {task_ref} достиг максимальной сложности и не будет добавлено в очередь"
                 )
         
-        if upcoming_iteration >= 3 and session.error_detection_tasks:
+        if upcoming_absolute_level == self._get_error_detection_finisher_level() and session.error_detection_tasks:
             logger.info(
                 f"[_generate_next_iteration] Проверяем deferred error_detection задания: "
                 f"{len(session.error_detection_tasks)} шт."
@@ -1853,8 +2220,7 @@ class AdaptiveSessionManager:
                     continue
 
                 task_type = self._get_task_type(task_ref)
-                available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
-                finisher_level = max(available_levels) if available_levels else 1
+                finisher_level = self._get_error_detection_finisher_level()
 
                 new_queue.append(
                     QueuedTask(

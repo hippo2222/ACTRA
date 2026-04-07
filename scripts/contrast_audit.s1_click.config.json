@@ -1,0 +1,103 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_s1_click",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": true,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "S1 click - answering",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        { "type": "s1_modal", "modal": "close", "waitMs": 80 },
+        {
+          "type": "evaluate",
+          "script": "const content=document.getElementById('task-content'); if(!content || !window.ClickUI){ return { ok:false, error:'clickui_or_task_content_missing' }; } const task={ task_type:'click', difficulty:1, task_data:{ task_type:'click', _difficulty_level:1, content:{ prompt:'Найди области по названиям в списке справа.', image_url:'', additionalInfo:{ type:'text', text:'Дополнительный текст для проверки контрастности карточки материалов.' } } }, answer_key:{ targets:[ { label:'Центр', shape:'polygon', points:[[10,10],[20,10],[20,20],[10,20]] }, { label:'Последние три слова текста', shape:'polygon', points:[[40,40],[60,40],[60,60],[40,60]] } ] } }; content.innerHTML=''; window.ClickUI.render(content, task, { runtimeMode:true }); return { ok: !!content.querySelector('[data-clickui=\"targets-panel\"]') };",
+          "waitMs": 120
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-clickui='target-row']", "waitMs": 100 },
+        { "type": "focus", "selector": "#check-answer-btn", "waitMs": 100 }
+      ]
+    },
+    {
+      "name": "S1 click - review success",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        { "type": "s1_modal", "modal": "close", "waitMs": 80 },
+        {
+          "type": "evaluate",
+          "script": "const content=document.getElementById('task-content'); if(!content || !window.ClickUI){ return { ok:false, error:'clickui_or_task_content_missing' }; } const task={ task_type:'click', difficulty:1, task_data:{ task_type:'click', _difficulty_level:1, content:{ prompt:'Найди области по названиям в списке справа.', image_url:'', additionalInfo:{ type:'text', text:'Дополнительный текст для проверки контрастности карточки материалов.' } } }, answer_key:{ targets:[ { label:'Центр', shape:'polygon', points:[[10,10],[20,10],[20,20],[10,20]] }, { label:'Последние три слова текста', shape:'polygon', points:[[40,40],[60,40],[60,60],[40,60]] } ] } }; content.innerHTML=''; window.ClickUI.render(content, task, { runtimeMode:true }); window.ClickUI.applyCheckFeedback({ success:true, message:'Все цели найдены', details:{ stage:'done', found_targets:[0,1], click_results:[] } }); return { ok:true };",
+          "waitMs": 120
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-clickui='ref-toggles']", "waitMs": 100 },
+        { "type": "focus", "selector": "#next-task-btn", "waitMs": 100 }
+      ]
+    },
+    {
+      "name": "S1 click - review failure",
+      "url": "/ui/session/session_auto_placeholder",
+      "autoSession": {
+        "preferredIteration": 1,
+        "complexId": "contrast_audit_s1_seed",
+        "requireNotPaused": true,
+        "minTotalTasks": 1,
+        "autoCreateWhenEmpty": true,
+        "usePreviousSession": true,
+        "preferConfiguredUrlSession": false,
+        "strict": true
+      },
+      "waitFor": "#task-content",
+      "waitForTimeout": 30000,
+      "actionsOnce": [
+        { "type": "s1_modal", "modal": "close", "waitMs": 80 },
+        {
+          "type": "evaluate",
+          "script": "const content=document.getElementById('task-content'); if(!content || !window.ClickUI){ return { ok:false, error:'clickui_or_task_content_missing' }; } const task={ task_type:'click', difficulty:1, task_data:{ task_type:'click', _difficulty_level:1, content:{ prompt:'Найди области по названиям в списке справа.', image_url:'', additionalInfo:{ type:'text', text:'Дополнительный текст для проверки контрастности карточки материалов.' } } }, answer_key:{ targets:[ { label:'Центр', shape:'polygon', points:[[10,10],[20,10],[20,20],[10,20]] }, { label:'Последние три слова текста', shape:'polygon', points:[[40,40],[60,40],[60,60],[40,60]] } ] } }; content.innerHTML=''; window.ClickUI.render(content, task, { runtimeMode:true }); window.ClickUI.applyCheckFeedback({ success:false, message:'Найдена не вся цель', details:{ stage:'done', found_targets:[0], click_results:[{ target_index:1, click_success:false }] } }); return { ok:true };",
+          "waitMs": 120
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-clickui='target-row']", "waitMs": 100 },
+        { "type": "focus", "selector": "#check-answer-btn", "waitMs": 100 }
+      ]
+    }
+  ]
+}

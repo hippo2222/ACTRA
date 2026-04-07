@@ -9,6 +9,7 @@ if str(DESKTOP_APP_DIR) not in sys.path:
     sys.path.insert(0, str(DESKTOP_APP_DIR))
 
 from api.session_api import SessionAPI  # type: ignore
+from task_system.core.models.complex_models import SessionTaskResult
 from tests.unit.helpers import load_task_evaluator_service
 
 TaskEvaluatorService = load_task_evaluator_service()
@@ -62,6 +63,16 @@ class DummyAdaptiveSessionManager:
 
     def get_session(self, session_id: str) -> Optional[DummySession]:
         return self._session if self._session.id == session_id else None
+
+    def pause_session(self, session_id: str) -> None:
+        if self._session.id == session_id:
+            self._session.paused = True
+
+    def resume_session(self, session_id: str, user_id: str) -> Optional[DummySession]:
+        if self._session.id == session_id and self._session.user_id == user_id:
+            self._session.paused = False
+            return self._session
+        return None
 
 
 class DummyComplexService:
@@ -156,6 +167,63 @@ def test_controller_enhanced_task_overrides_storage_version() -> None:
     assert content["settings"]["success_threshold"] == 3
     assert content["additionalInfo"]["images"] == ["a.png"]
     assert content["requires_drawing"] is True
+
+
+def test_sequence_current_task_preserves_prompt_and_name_from_flattened_controller_data() -> None:
+    task_ref = "m/t/task_sequence"
+    storage_task = {
+        "task_data": {
+            "type": "sequence_assembly",
+            "content": {
+                "prompt": "Storage prompt",
+                "elements": [
+                    {"id": "elem_1", "text": "A"},
+                    {"id": "elem_2", "text": "B"},
+                ],
+                "levels": [
+                    {"level_id": "level_1", "level_name": "Step 1", "blocks": ["elem_1", "elem_2"]},
+                ],
+            },
+            "meta": {"name": "Тест Задание Последовательность"},
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+    enhanced_task = {
+        "type": "sequence_assembly",
+        "task_type": "sequence_assembly",
+        "prompt": "Опишите правильную последовательность наложения электродов при снятии ЭКГ",
+        "elements": [
+            {"id": "elem_1", "text": "Красный"},
+            {"id": "elem_2", "text": "Желтый"},
+        ],
+        "levels": [
+            {"level_id": "level_1", "label": "Левая рука", "slots": ["elem_1", "elem_2"]},
+        ],
+        "settings": {"level_order_matters": True},
+    }
+    session = DummySession(session_id="sess", iteration=1)
+    session.queue = [DummyQueuedTask(task_ref)]
+    session.current_task_index = 1
+
+    controller = DummyController("sess", task_ref, enhanced_task=enhanced_task)
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(storage_task),
+        statistics_service=MagicMock(),
+    )
+
+    payload = api.get_current_task("sess")
+
+    assert payload is not None
+    assert payload["task_data"]["prompt"] == (
+        "Опишите правильную последовательность наложения электродов при снятии ЭКГ"
+    )
+    assert payload["task_data"]["name"] == "Тест Задание Последовательность"
+    assert payload["task_data"]["meta"]["name"] == "Тест Задание Последовательность"
+    assert payload["task_name"] == "Тест Задание Последовательность"
 
 
 def test_session_api_roundtrip_with_requires_drawing_flag() -> None:
@@ -330,3 +398,465 @@ def test_draw_task_requires_labels_roundtrip() -> None:
     content = payload["task_data"]["content"]
     assert content["prompt"] == "Updated label prompt"
     assert content["additionalInfo"]["text"] == "Updated info"
+
+
+def test_pause_session_persists_current_slot_even_without_user_input() -> None:
+    task_ref = "m/t/task_pause"
+    task_data_full = {
+        "task_data": {
+            "type": "click",
+            "content": {
+                "prompt": "Prompt",
+                "settings": {},
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_pause", iteration=1)
+    session.queue = [DummyQueuedTask(task_ref, difficulty=1)]
+    session.current_task_index = 1
+
+    controller = MagicMock()
+    controller.current_session_id = None
+    controller.current_task_ref = None
+    controller.task_controller = None
+    controller.save_ui_state = MagicMock()
+
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    api.pause_session("sess_pause")
+
+    controller.save_ui_state.assert_called_once()
+    call_args = controller.save_ui_state.call_args
+    assert call_args.args[0] == "task"
+    assert call_args.kwargs["force"] is True
+    assert call_args.kwargs["task_ref"] == task_ref
+    assert call_args.kwargs["task_index"] == 0
+    assert session.paused is True
+
+
+def test_pause_session_forwards_view_state_to_controller() -> None:
+    task_ref = "m/t/task_pause_view"
+    task_data_full = {
+        "task_data": {
+            "type": "click",
+            "content": {
+                "prompt": "Prompt",
+                "settings": {},
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_pause_view", iteration=1)
+    session.queue = [DummyQueuedTask(task_ref, difficulty=1)]
+    session.current_task_index = 1
+
+    controller = MagicMock()
+    controller.current_session_id = None
+    controller.current_task_ref = None
+    controller.task_controller = None
+    controller.save_ui_state = MagicMock()
+
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    api.pause_session(
+        "sess_pause_view",
+        view_state={"zoom": 1.5, "panX": 12, "panY": 24},
+    )
+
+    controller.save_ui_state.assert_called_once()
+    call_args = controller.save_ui_state.call_args
+    assert call_args.kwargs["view_state"] == {
+        "zoom": 1.5,
+        "panX": 12,
+        "panY": 24,
+    }
+
+
+def test_get_current_task_returns_restored_view_state() -> None:
+    task_ref = "m/t/task_restore_view"
+    task_data_full = {
+        "task_data": {
+            "type": "sequence_assembly",
+            "content": {
+                "prompt": "Prompt",
+                "elements": [],
+                "levels": [],
+                "settings": {},
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_restore_view", iteration=1)
+    session.queue = [DummyQueuedTask(task_ref, difficulty=1)]
+    session.current_task_index = 1
+    session.ui_state = {
+        "screen_type": "task",
+        "task_ref": task_ref,
+        "task_index": 0,
+        "view_state": {
+            "selected_available_id": "elem_2",
+            "scroll_positions": {"availableTop": 30, "levelsTop": 40},
+        },
+    }
+
+    controller = DummyController("sess_restore_view", task_ref)
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    payload = api.get_current_task("sess_restore_view")
+
+    assert payload["restored_view_state"] == {
+        "selected_available_id": "elem_2",
+        "scroll_positions": {"availableTop": 30, "levelsTop": 40},
+    }
+
+
+def test_pause_resume_draft_clears_stale_restored_evaluation_result() -> None:
+    task_ref = "m/t/task_pause_restore"
+    task_data_full = {
+        "task_data": {
+            "type": "sequence_assembly",
+            "content": {
+                "prompt": "Prompt",
+                "elements": [],
+                "levels": [],
+                "settings": {},
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_pause_restore", iteration=1)
+    session.queue = [DummyQueuedTask(task_ref, difficulty=1)]
+    session.current_task_index = 1
+    session.ui_state = {
+        "screen_type": "task_results",
+        "task_ref": task_ref,
+        "task_index": 0,
+        "user_input": {"answer": "old checked answer"},
+        "view_state": {"comparison_view": "reference"},
+        "evaluation_result": {"success": False, "message": "Old result"},
+    }
+
+    controller = MagicMock()
+    controller.current_session_id = None
+    controller.current_task_ref = None
+    controller.task_controller = None
+
+    def _save_ui_state(screen_type: str, **kwargs: Any) -> bool:
+        next_ui_state = {
+            "screen_type": screen_type,
+            "task_ref": kwargs.get("task_ref"),
+            "task_index": kwargs.get("task_index"),
+        }
+        if "user_input" in kwargs:
+            next_ui_state["user_input"] = kwargs.get("user_input")
+        if "view_state" in kwargs:
+            next_ui_state["view_state"] = kwargs.get("view_state")
+        if "evaluation_result" in kwargs:
+            next_ui_state["evaluation_result"] = kwargs.get("evaluation_result")
+        session.ui_state = next_ui_state
+        return True
+
+    controller.save_ui_state = MagicMock(side_effect=_save_ui_state)
+
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    paused_user_input = {
+        "levels": [{"level_id": "level_1", "blocks": ["wolf_a"]}],
+    }
+    paused_view_state = {
+        "selected_available_id": "wolf_a",
+        "scroll_positions": {"availableTop": 10, "levelsTop": 20},
+    }
+
+    api.pause_session(
+        "sess_pause_restore",
+        user_input=paused_user_input,
+        view_state=paused_view_state,
+    )
+    resumed = api.resume_session("sess_pause_restore")
+    payload = api.get_current_task("sess_pause_restore")
+
+    assert resumed is session
+    assert session.ui_state["screen_type"] == "task"
+    assert session.ui_state["user_input"] == paused_user_input
+    assert session.ui_state["view_state"] == paused_view_state
+    assert "evaluation_result" not in session.ui_state
+    assert payload["restored_user_input"] == paused_user_input
+    assert payload["restored_view_state"] == paused_view_state
+    assert payload["restored_evaluation_result"] is None
+
+
+def test_get_current_task_ignores_stale_ui_state_for_later_retry_slot() -> None:
+    task_ref = "m/t/task_retry"
+    other_task_ref = "m/t/task_other"
+    task_data_full = {
+        "task_data": {
+            "type": "sequence_assembly",
+            "content": {
+                "prompt": "Prompt",
+                "elements": [],
+                "levels": [],
+                "settings": {},
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_retry_state", iteration=1)
+    session.queue = [
+        DummyQueuedTask(task_ref, difficulty=1),
+        DummyQueuedTask(other_task_ref, difficulty=1),
+        DummyQueuedTask(task_ref, difficulty=1),
+    ]
+    session.queue[2].is_retry = True
+    session.current_task_index = 3
+    session.ui_state = {
+        "screen_type": "task_results",
+        "task_ref": task_ref,
+        "task_index": 0,
+        "user_input": {"answer": "stale"},
+        "view_state": {"scrollTop": 120},
+        "evaluation_result": {"success": False, "message": "Old result"},
+    }
+
+    controller = DummyController("sess_retry_state", task_ref)
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    payload = api.get_current_task("sess_retry_state")
+
+    assert payload["queue"]["index"] == 2
+    assert payload["is_retry"] is True
+    assert payload["restored_user_input"] is None
+    assert payload["restored_view_state"] is None
+    assert payload["restored_evaluation_result"] is None
+
+
+def test_get_current_task_ignores_stale_ui_state_from_previous_iteration() -> None:
+    task_ref = "m/t/task_prev_iteration"
+    task_data_full = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [],
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_prev_iteration_state", iteration=2)
+    session.queue = [DummyQueuedTask(task_ref, difficulty=1)]
+    session.current_task_index = 1
+    session.ui_state = {
+        "screen_type": "task_results",
+        "task_ref": task_ref,
+        "task_index": 0,
+        "iteration": 1,
+        "user_input": {"answer": "old answer from iteration 1"},
+        "view_state": {"scrollTop": 120},
+        "evaluation_result": {"success": False, "message": "Old result from iteration 1"},
+    }
+
+    controller = DummyController("sess_prev_iteration_state", task_ref)
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    payload = api.get_current_task("sess_prev_iteration_state")
+
+    assert payload["iteration"] == 2
+    assert payload["restored_user_input"] is None
+    assert payload["restored_view_state"] is None
+    assert payload["restored_evaluation_result"] is None
+
+
+def test_get_current_task_does_not_restore_previous_result_for_retry_copy() -> None:
+    task_ref = "m/t/task_retry_result"
+    other_task_ref = "m/t/task_other"
+    task_data_full = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [],
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_retry_result", iteration=1)
+    session.queue = [
+        DummyQueuedTask(task_ref, difficulty=1),
+        DummyQueuedTask(other_task_ref, difficulty=1),
+        DummyQueuedTask(task_ref, difficulty=1),
+    ]
+    session.queue[2].is_retry = True
+    session.current_task_index = 3
+    session.completed_tasks = [
+        SessionTaskResult(
+            task_ref=task_ref,
+            success=False,
+            time_spent=12,
+            difficulty=1,
+            iteration_index=1,
+            score=0.0,
+            details={"source": "first_attempt"},
+        )
+    ]
+
+    controller = DummyController("sess_retry_result", task_ref)
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    payload = api.get_current_task("sess_retry_result")
+
+    assert payload["queue"]["index"] == 2
+    assert payload["is_retry"] is True
+    assert payload["restored_evaluation_result"] is None
+
+
+def test_save_task_ui_state_persists_active_task_snapshot() -> None:
+    task_ref = "m/t/task_autosave"
+    task_data_full = {
+        "task_data": {
+            "type": "open_answer",
+            "content": {
+                "prompt": "Prompt",
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_autosave", iteration=1)
+    session.queue = [DummyQueuedTask(task_ref, difficulty=1)]
+    session.current_task_index = 1
+
+    controller = MagicMock()
+    controller.current_session_id = None
+    controller.current_task_ref = None
+    controller.task_controller = None
+    controller.save_ui_state = MagicMock()
+
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    result = api.save_task_ui_state(
+        "sess_autosave",
+        task_ref=task_ref,
+        task_index=0,
+        user_input={"answer": "draft"},
+        view_state={"scrollTop": 16},
+    )
+
+    assert result["ok"] is True
+    controller.save_ui_state.assert_called_once()
+    call_args = controller.save_ui_state.call_args
+    assert call_args.args[0] == "task"
+    assert call_args.kwargs["task_ref"] == task_ref
+    assert call_args.kwargs["task_index"] == 0
+    assert call_args.kwargs["user_input"] == {"answer": "draft"}
+    assert call_args.kwargs["view_state"] == {"scrollTop": 16}
+
+
+def test_save_task_ui_state_rejects_stale_task_snapshot() -> None:
+    stale_task_ref = "m/t/task_old"
+    active_task_ref = "m/t/task_new"
+    task_data_full = {
+        "task_data": {
+            "type": "open_answer",
+            "content": {
+                "prompt": "Prompt",
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    session = DummySession(session_id="sess_stale_autosave", iteration=1)
+    session.queue = [
+        DummyQueuedTask(stale_task_ref, difficulty=1),
+        DummyQueuedTask(active_task_ref, difficulty=1),
+    ]
+    session.current_task_index = 2
+
+    controller = MagicMock()
+    controller.current_session_id = None
+    controller.current_task_ref = None
+    controller.task_controller = None
+    controller.save_ui_state = MagicMock()
+
+    api = SessionAPI(
+        controller,
+        DummyAdaptiveSessionManager(session),
+        DummyComplexService(),
+        DummyStorageService(task_data_full),
+        statistics_service=MagicMock(),
+    )
+
+    result = api.save_task_ui_state(
+        "sess_stale_autosave",
+        task_ref=stale_task_ref,
+        task_index=0,
+        user_input={"answer": "outdated"},
+    )
+
+    assert result["ok"] is False
+    assert result["error"] == "stale_task"
+    assert result["active_task_ref"] == active_task_ref
+    assert result["active_task_index"] == 1
+    controller.save_ui_state.assert_not_called()

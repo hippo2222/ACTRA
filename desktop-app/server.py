@@ -303,6 +303,34 @@ except ImportError:
 # Application wiring (headless, without Tk/UI)
 # ---------------------------------------------------------------------------
 
+TRAINER_STARTUP_USER_ID_ENV = "TRAINER_STARTUP_USER_ID"
+
+
+def _resolve_bootstrap_user_id(requested_user_id: Optional[str]) -> str:
+    """Resolve optional startup user override for isolated backend runs."""
+    requested = str(requested_user_id or "").strip()
+    if requested == "guest":
+        requested = ""
+
+    # Preserve explicit callers; the env override is meant for bootstrap paths
+    # that instantiate AppContextHeadless() with the default placeholder user.
+    if requested and requested != "default_user":
+        return requested
+
+    raw_env_override = os.environ.get(TRAINER_STARTUP_USER_ID_ENV)
+    env_override = str(raw_env_override or "").strip()
+    if env_override == "guest":
+        env_override = ""
+    if raw_env_override is not None:
+        logger.info(
+            "[HTTP] Using %s bootstrap override: %s",
+            TRAINER_STARTUP_USER_ID_ENV,
+            env_override,
+        )
+        return env_override
+
+    return requested
+
 
 class AppContextHeadless:
     """Headless subset of TrainerApp used for HTTP server.
@@ -322,7 +350,7 @@ class AppContextHeadless:
             self.data_dir = PROJECT_ROOT / data_dir
         else:
             self.data_dir = Path(data_dir)
-        self.user_id = user_id
+        self.user_id = _resolve_bootstrap_user_id(user_id)
         initial_user_id = self.user_id
 
         # Init services
@@ -443,8 +471,15 @@ class AppContextHeadless:
             logger.exception("[HTTP] Failed to load extension points config: %s", exc)
             evaluator_cfg = {"evaluators": {}, "ui_components": {}}
 
+        # StorageService
+        self.storage_service = StorageService(self.data_dir)
+        logger.info("[HTTP] StorageService initialized")
+
         # DifficultyManager
-        self.difficulty_manager = DifficultyManager(config_path=None)
+        self.difficulty_manager = DifficultyManager(
+            config_path=None,
+            storage_service=self.storage_service,
+        )
         logger.info("[HTTP] DifficultyManager initialized")
 
         # ProgressService (uses DifficultyManager and EventBus)
@@ -455,10 +490,6 @@ class AppContextHeadless:
             event_bus=self.event_bus,  # -> NEW: EventBus for progress events
         )
         logger.info("[HTTP] ProgressService initialized")
-
-        # StorageService
-        self.storage_service = StorageService(self.data_dir)
-        logger.info("[HTTP] StorageService initialized")
 
         # ModuleRepository (нужен для статистики по типам задач)
         self.module_repository = ModuleRepository(self.storage_service)
@@ -663,6 +694,7 @@ from routes.microcards_routes import microcards_bp
 from routes.ai_routes import ai_bp
 from routes.import_routes import import_bp
 from routes.misc_routes import misc_bp
+from routes.theory_center_routes import theory_center_bp
 
 init_context(
     _headless_app_ctx,
@@ -706,6 +738,7 @@ app.register_blueprint(microcards_bp)
 app.register_blueprint(ai_bp)
 app.register_blueprint(import_bp)
 app.register_blueprint(misc_bp)
+app.register_blueprint(theory_center_bp)
 
 # Register Calendar routes if available
 if calendar_service:
@@ -945,7 +978,11 @@ NETWORK_PROBE_TARGETS = (
     ("8.8.8.8", 53),
     ("api.brevo.com", 443),
 )
-_network_probe_cache: Dict[str, Any] = {"checked_at": 0.0, "internet_online": None}
+_network_probe_cache: Dict[str, Any] = {
+    "checked_at": 0.0,
+    "internet_online": None,
+    "refreshing": False,
+}
 _network_probe_lock = threading.Lock()
 UPDATE_CHECK_CACHE_MAX_AGE_SEC = 24 * 60 * 60
 UPDATE_CHECK_DEFAULT_TIMEOUT_SEC = 3.0
@@ -1199,7 +1236,42 @@ def _check_internet_connectivity(timeout_sec: float) -> bool:
     return False
 
 
-def _get_cached_internet_connectivity(*, force: bool = False) -> bool:
+def _start_async_internet_connectivity_refresh() -> bool:
+    with _network_probe_lock:
+        if _network_probe_cache.get("refreshing"):
+            return False
+        previous_status = _network_probe_cache.get("internet_online")
+        _network_probe_cache["refreshing"] = True
+
+    def _refresh() -> None:
+        checked_at = time.time()
+        resolved_status: Optional[bool] = None
+        try:
+            probe_timeout = _env_float("ACTRA_NETWORK_PROBE_TIMEOUT_SEC", NETWORK_PROBE_DEFAULT_TIMEOUT_SEC)
+            resolved_status = _check_internet_connectivity(probe_timeout)
+        except Exception:
+            logger.warning("[NETWORK] Async connectivity refresh failed", exc_info=True)
+
+        if not isinstance(resolved_status, bool):
+            if isinstance(previous_status, bool):
+                resolved_status = previous_status
+            else:
+                resolved_status = False
+
+        with _network_probe_lock:
+            _network_probe_cache["checked_at"] = checked_at
+            _network_probe_cache["internet_online"] = resolved_status
+            _network_probe_cache["refreshing"] = False
+
+    threading.Thread(
+        target=_refresh,
+        name="NetworkConnectivityRefresh",
+        daemon=True,
+    ).start()
+    return True
+
+
+def _get_cached_internet_connectivity(*, force: bool = False, allow_stale: bool = False) -> bool:
     now = time.time()
     with _network_probe_lock:
         checked_at = float(_network_probe_cache.get("checked_at") or 0.0)
@@ -1211,12 +1283,17 @@ def _get_cached_internet_connectivity(*, force: bool = False) -> bool:
         ):
             return cached_status
 
+    if not force and allow_stale:
+        _start_async_internet_connectivity_refresh()
+        return cached_status if isinstance(cached_status, bool) else False
+
     probe_timeout = _env_float("ACTRA_NETWORK_PROBE_TIMEOUT_SEC", NETWORK_PROBE_DEFAULT_TIMEOUT_SEC)
     status = _check_internet_connectivity(probe_timeout)
 
     with _network_probe_lock:
         _network_probe_cache["checked_at"] = now
         _network_probe_cache["internet_online"] = status
+        _network_probe_cache["refreshing"] = False
     return status
 
 

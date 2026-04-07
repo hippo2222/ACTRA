@@ -18,33 +18,52 @@
     l1: {
       textOption: {
         neutral:
-          "flex cursor-pointer items-start gap-3 rounded-lg border-2 border-border-strong bg-surface-2 px-4 py-3 text-sm text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark shadow-sm transition-colors transition-transform hover:bg-bg-hover dark:hover:bg-bg-hover active:scale-[.99]",
+          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-border-strong bg-surface-1 px-5 py-4 text-[15px] text-text-main dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark shadow-sm transition-all hover:-translate-y-[1px] hover:bg-bg-hover dark:hover:bg-bg-hover active:scale-[.99]",
         selected:
-          "flex cursor-pointer items-start gap-3 rounded-lg border-2 border-primary-dark bg-primary px-4 py-3 text-sm text-primary-fg ring-2 ring-primary-light shadow-sm transition-colors transition-transform active:scale-[.99]",
+          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-primary-dark bg-primary px-5 py-4 text-[15px] text-primary-fg ring-2 ring-primary-light shadow-sm transition-all active:scale-[.99]",
         reviewCorrectChosen:
-          "flex cursor-pointer items-start gap-3 rounded-lg border-2 border-success bg-success-light px-4 py-3 text-sm text-success-text shadow-sm transition-colors dark:border-success dark:bg-success-light dark:text-success-lighter",
+          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-success bg-success-light px-5 py-4 text-[15px] text-success-text shadow-sm transition-colors dark:border-success dark:bg-success-light dark:text-success-lighter",
         reviewCorrectMissed:
-          "flex cursor-pointer items-start gap-3 rounded-lg border-2 border-success bg-success-light px-4 py-3 text-sm text-success-text shadow-sm transition-colors dark:border-success dark:bg-success-light dark:text-success-lighter",
+          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-dashed border-success bg-surface-1 px-5 py-4 text-[15px] text-success-text shadow-sm transition-colors dark:border-success dark:bg-surface-1 dark:text-success-lighter",
         reviewWrongChosen:
-          "flex cursor-pointer items-start gap-3 rounded-lg border-2 border-error bg-error-light px-4 py-3 text-sm text-error-dark shadow-sm transition-colors dark:border-error dark:bg-error-light dark:text-error-lighter",
+          "flex cursor-pointer items-start gap-3 rounded-2xl border-2 border-error bg-error-light px-5 py-4 text-[15px] text-error-dark shadow-sm transition-colors dark:border-error dark:bg-error-light dark:text-error-lighter",
       },
     },
     l2: {
       open: {
         textareaAnswering:
-          "w-full rounded-lg border-2 border-border-strong dark:border-border-strong bg-surface-1 dark:bg-bg-hover p-4 text-text-main dark:text-text-on-dark placeholder:text-text-secondary dark:placeholder:text-text-secondary focus:ring-2 focus:ring-primary focus:border-primary transition-colors min-h-[120px]",
+          "w-full rounded-xl border-2 border-border-strong dark:border-border-strong bg-surface-1 dark:bg-bg-hover p-4 text-text-main dark:text-text-on-dark placeholder:text-text-secondary dark:placeholder:text-text-secondary focus:ring-2 focus:ring-primary focus:border-primary transition-colors min-h-[132px] leading-relaxed",
         textareaReviewCorrect:
-          "w-full rounded-lg border-2 border-success bg-success-light dark:bg-success-light p-4 text-text-main dark:text-text-on-dark min-h-[120px] cursor-not-allowed",
+          "w-full rounded-2xl border-2 border-success bg-surface-1 dark:bg-surface-1 p-4 text-text-main dark:text-text-on-dark min-h-[132px] cursor-not-allowed leading-relaxed shadow-sm",
         textareaReviewIncorrect:
-          "w-full rounded-lg border-2 border-error bg-error-light dark:bg-error-light p-4 text-text-main dark:text-text-on-dark min-h-[120px] cursor-not-allowed",
+          "w-full rounded-2xl border-2 border-error bg-surface-1 dark:bg-surface-1 p-4 text-text-main dark:text-text-on-dark min-h-[132px] cursor-not-allowed leading-relaxed shadow-sm",
       },
     },
   };
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function hasMeaningfulAnswerValue(value) {
+    if (Array.isArray(value)) return value.length > 0;
+    if (typeof value === "string") return value.trim().length > 0;
+    return value != null;
+  }
 
   function createQuestionRenderer(state, main) {
     const rerenderSidebar =
       typeof state._rerenderSidebar === "function"
         ? state._rerenderSidebar
+        : null;
+    const syncSidebarQuestion =
+      typeof state._syncSidebarQuestion === "function"
+        ? state._syncSidebarQuestion
         : null;
     const rerenderQuestion =
       typeof state._rerenderQuestion === "function"
@@ -69,6 +88,328 @@
       return out;
     }
 
+    function getNormalizedFeedbackStatus(feedback) {
+      if (!feedback || typeof feedback !== "object") return null;
+
+      const rawStatus = String(feedback.status || "").trim().toLowerCase();
+      if (
+        rawStatus === "correct" ||
+        rawStatus === "incorrect" ||
+        rawStatus === "unanswered"
+      ) {
+        return rawStatus;
+      }
+
+      const details =
+        feedback.details && typeof feedback.details === "object"
+          ? feedback.details
+          : {};
+      const correctIds = toOptionIndexSet(
+        Array.isArray(feedback.correct_option_ids)
+          ? feedback.correct_option_ids
+          : details.correct_option_ids
+      );
+      const userIds = toOptionIndexSet(
+        Array.isArray(feedback.user_option_ids)
+          ? feedback.user_option_ids
+          : details.user_option_ids
+      );
+      const hasUserAnswer =
+        userIds.size > 0 ||
+        hasMeaningfulAnswerValue(feedback.user_answer) ||
+        hasMeaningfulAnswerValue(details.user_answer);
+
+      if (feedback.correct === true || feedback.is_correct === true) {
+        return "correct";
+      }
+      if (feedback.correct === false || feedback.is_correct === false) {
+        return hasUserAnswer ? "incorrect" : "unanswered";
+      }
+
+      const reason = String(feedback.reason || details.reason || "")
+        .trim()
+        .toLowerCase();
+      if (reason === "not_answered" || reason === "no_answers") {
+        return "unanswered";
+      }
+
+      if (correctIds.size > 0 || userIds.size > 0) {
+        if (userIds.size === 0) return "unanswered";
+        const isCorrect =
+          correctIds.size === userIds.size &&
+          Array.from(userIds).every((id) => correctIds.has(id));
+        return isCorrect ? "correct" : "incorrect";
+      }
+
+      if (hasUserAnswer) {
+        return "incorrect";
+      }
+
+      return null;
+    }
+
+    function hasToleranceAcceptance(feedback) {
+      if (!feedback || typeof feedback !== "object") return false;
+      const details =
+        feedback.details && typeof feedback.details === "object"
+          ? feedback.details
+          : {};
+      const toleranceType = String(
+        feedback.tolerance_type || details.tolerance_type || ""
+      )
+        .trim()
+        .toLowerCase();
+      const toleranceExplanation = String(
+        feedback.tolerance_explanation || details.tolerance_explanation || ""
+      ).trim();
+      return Boolean(toleranceType || toleranceExplanation);
+    }
+
+    function buildReferenceAnswerDiff(referenceAnswer, userAnswer) {
+      const referenceChars = Array.from(String(referenceAnswer || ""));
+      const userChars = Array.from(String(userAnswer || ""));
+      if (referenceChars.length === 0) {
+        return { html: "", hasHighlights: false };
+      }
+      if (userChars.length === 0) {
+        return { html: escapeHtml(referenceChars.join("")), hasHighlights: false };
+      }
+
+      const normalizedReference = referenceChars.map((char) => char.toLowerCase());
+      const normalizedUser = userChars.map((char) => char.toLowerCase());
+      const dp = Array.from({ length: referenceChars.length + 1 }, () =>
+        Array(userChars.length + 1).fill(0)
+      );
+
+      for (let i = referenceChars.length - 1; i >= 0; i -= 1) {
+        for (let j = userChars.length - 1; j >= 0; j -= 1) {
+          if (normalizedReference[i] === normalizedUser[j]) {
+            dp[i][j] = dp[i + 1][j + 1] + 1;
+          } else {
+            dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+          }
+        }
+      }
+
+      const matchedReference = Array(referenceChars.length).fill(false);
+      let refIndex = 0;
+      let userIndex = 0;
+      while (refIndex < referenceChars.length && userIndex < userChars.length) {
+        if (normalizedReference[refIndex] === normalizedUser[userIndex]) {
+          matchedReference[refIndex] =
+            referenceChars[refIndex] === userChars[userIndex];
+          refIndex += 1;
+          userIndex += 1;
+        } else if (dp[refIndex + 1][userIndex] >= dp[refIndex][userIndex + 1]) {
+          refIndex += 1;
+        } else {
+          userIndex += 1;
+        }
+      }
+
+      let html = "";
+      let hasHighlights = false;
+      let chunk = "";
+      let currentChanged = null;
+
+      function flushChunk() {
+        if (!chunk) return;
+        const escapedChunk = escapeHtml(chunk);
+        if (currentChanged) {
+          hasHighlights = true;
+          html += `<mark data-testui="l2-reference-diff" class="rounded-md border border-warning-light bg-warning-lighter px-1 py-0.5 font-semibold text-warning-darker dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter">${escapedChunk}</mark>`;
+        } else {
+          html += escapedChunk;
+        }
+        chunk = "";
+      }
+
+      referenceChars.forEach((char, index) => {
+        const isChanged = !matchedReference[index];
+        if (currentChanged === null) {
+          currentChanged = isChanged;
+          chunk = char;
+          return;
+        }
+        if (currentChanged === isChanged) {
+          chunk += char;
+          return;
+        }
+        flushChunk();
+        currentChanged = isChanged;
+        chunk = char;
+      });
+      flushChunk();
+
+      return { html, hasHighlights };
+    }
+
+    function appendReferenceAnswerCard(body, options = {}) {
+      const title = String(options.title || "Эталонный ответ");
+      const html = String(options.html || "");
+      const hintText = String(options.hintText || "").trim();
+      const dataTestUi = String(options.dataTestUi || "l2-reference-answer");
+
+      const referenceWrapper = document.createElement("div");
+      referenceWrapper.dataset.testui = dataTestUi;
+      referenceWrapper.className =
+        "mt-4 overflow-hidden rounded-2xl border border-border-strong bg-surface-1 shadow-sm dark:border-border-strong dark:bg-surface-1";
+
+      const referenceHeader = document.createElement("div");
+      referenceHeader.className =
+        "flex items-center gap-2 border-b border-border-strong bg-success-light px-4 py-3 dark:border-border-strong dark:bg-success-light";
+
+      const referenceIcon = document.createElement("span");
+      referenceIcon.className =
+        "material-symbols-outlined text-[18px] text-success-text dark:text-success-lighter";
+      referenceIcon.textContent = "check_circle";
+
+      const referenceLabel = document.createElement("div");
+      referenceLabel.className =
+        "text-[12px] font-semibold uppercase tracking-[0.08em] text-success-text dark:text-success-lighter";
+      referenceLabel.textContent = title;
+
+      referenceHeader.appendChild(referenceIcon);
+      referenceHeader.appendChild(referenceLabel);
+      referenceWrapper.appendChild(referenceHeader);
+
+      if (hintText) {
+        const hint = document.createElement("div");
+        hint.dataset.testui = `${dataTestUi}-hint`;
+        hint.className =
+          "border-b border-warning-light bg-warning-lighter px-4 py-3 text-[13px] leading-5 text-warning-darker dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter";
+        hint.textContent = hintText;
+        referenceWrapper.appendChild(hint);
+      }
+
+      const referenceText = document.createElement("div");
+      referenceText.className =
+        "px-4 py-4 text-sm leading-relaxed text-text-main dark:text-text-on-dark whitespace-pre-wrap";
+      referenceText.innerHTML = html;
+      referenceWrapper.appendChild(referenceText);
+
+      body.appendChild(referenceWrapper);
+      return { wrapper: referenceWrapper, content: referenceText };
+    }
+
+    function createCompactStatusBadge(label, tone = "neutral") {
+      const badge = document.createElement("span");
+      let badgeClass =
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] ";
+
+      if (tone === "success") {
+        badgeClass +=
+          "border-success bg-success-light text-success-text dark:border-success dark:bg-success-light dark:text-success-lighter";
+      } else if (tone === "error") {
+        badgeClass +=
+          "border-error bg-error-light text-error-dark dark:border-error dark:bg-error-light dark:text-error-lighter";
+      } else if (tone === "warning") {
+        badgeClass +=
+          "border-warning-light bg-warning-lighter text-warning-darker dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter";
+      } else {
+        badgeClass +=
+          "border-border-strong bg-surface-2 text-text-secondary dark:border-border-strong dark:bg-surface-2 dark:text-text-secondary";
+      }
+
+      badge.className = badgeClass;
+      badge.textContent = label;
+      return badge;
+    }
+
+    function appendSectionShell(body, options = {}) {
+      const wrapper = document.createElement("section");
+      wrapper.className = (
+        "mt-5 overflow-hidden rounded-[24px] border border-border-strong bg-surface-1 shadow-sm dark:border-border-strong dark:bg-surface-1 " +
+        String(options.wrapperClass || "")
+      ).trim();
+
+      const title = String(options.title || "").trim();
+      const description = String(options.description || "").trim();
+      const headerClass = String(options.headerClass || "").trim();
+      const badge = options.badge || null;
+
+      if (title || description || badge) {
+        const header = document.createElement("div");
+        header.className = (
+          "flex items-start justify-between gap-3 border-b border-border-strong px-4 py-4 dark:border-border-strong " +
+          (headerClass || "bg-surface-2 dark:bg-surface-2")
+        ).trim();
+
+        const textBlock = document.createElement("div");
+        textBlock.className = "min-w-0 space-y-1";
+
+        if (title) {
+          const titleEl = document.createElement("div");
+          titleEl.className =
+            "text-[12px] font-semibold uppercase tracking-[0.08em] text-text-secondary dark:text-text-secondary";
+          titleEl.textContent = title;
+          textBlock.appendChild(titleEl);
+        }
+
+        if (description) {
+          const descriptionEl = document.createElement("p");
+          descriptionEl.className =
+            "text-sm leading-relaxed text-text-main dark:text-text-on-dark";
+          descriptionEl.textContent = description;
+          textBlock.appendChild(descriptionEl);
+        }
+
+        header.appendChild(textBlock);
+        if (badge) {
+          header.appendChild(badge);
+        }
+        wrapper.appendChild(header);
+      }
+
+      const content = document.createElement("div");
+      content.className = String(options.contentClass || "px-4 py-4");
+      wrapper.appendChild(content);
+      body.appendChild(wrapper);
+      return { wrapper, content };
+    }
+
+    function getChoiceReviewMeta(questionFeedback, isMultiple) {
+      const status = getNormalizedFeedbackStatus(questionFeedback) || "unknown";
+
+      if (status === "correct") {
+        return {
+          title: "Разбор ответа",
+          description: isMultiple
+            ? "Вы выбрали все правильные варианты."
+            : "Вы выбрали правильный вариант.",
+          badge: createCompactStatusBadge("Верно", "success"),
+          headerClass: "bg-success-light dark:bg-success-light",
+        };
+      }
+
+      if (status === "incorrect") {
+        return {
+          title: "Разбор ответа",
+          description: isMultiple
+            ? "Зеленым отмечены правильные варианты, красным отмечены лишние выбранные."
+            : "Зеленым отмечен правильный вариант, красным отмечен ваш неверный выбор.",
+          badge: createCompactStatusBadge("Есть ошибка", "error"),
+          headerClass: "bg-error-light dark:bg-error-light",
+        };
+      }
+
+      if (status === "unanswered") {
+        return {
+          title: "Разбор ответа",
+          description: "Ответ на этот вопрос не был выбран.",
+          badge: createCompactStatusBadge("Без ответа"),
+          headerClass: "bg-surface-2 dark:bg-surface-2",
+        };
+      }
+
+      return {
+        title: "Разбор ответа",
+        description: "",
+        badge: null,
+        headerClass: "bg-surface-2 dark:bg-surface-2",
+      };
+    }
+
     function renderQuestionView() {
       main.innerHTML = "";
       const currentMeta =
@@ -80,11 +421,11 @@
     function renderQuestionBody(currentMeta) {
       const body = document.createElement("div");
       body.className =
-        "space-y-4 rounded-xl border-2 border-border-strong bg-surface-2 px-4 py-4 text-sm text-text-muted shadow-md dark:border-border-strong dark:bg-surface-2 dark:text-text-muted tui-question-enter";
+        "space-y-6 rounded-[28px] border-2 border-border-strong bg-surface-2 px-5 py-5 text-sm text-text-main shadow-md dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark tui-question-enter lg:px-7 lg:py-6";
 
       if (!currentMeta || !state.questions.length) {
         const empty = document.createElement("p");
-        empty.textContent = "No questions data in task";
+        empty.textContent = "В задании нет вопросов";
         body.appendChild(empty);
         // Навигация между вопросами (стрелки под вариантами / полем ответа)
         renderQuestionNavigation(body);
@@ -99,8 +440,8 @@
       // Question text
       const qText = document.createElement("p");
       qText.className =
-        "text-base font-semibold leading-snug text-text-main dark:text-text-on-dark mb-1";
-      qText.textContent = currentMeta.text || "Test question";
+        "mb-1 max-w-3xl text-[1.05rem] font-semibold leading-7 text-text-main dark:text-text-on-dark";
+      qText.textContent = currentMeta.text || "Вопрос теста";
       body.appendChild(qText);
 
       // Optional question image (L1.C / L2)
@@ -138,13 +479,13 @@
 
           const img = document.createElement("img");
           img.src = questionImagePath;
-          img.alt = "Question image";
+          img.alt = "Изображение вопроса";
           img.className =
             "max-h-[260px] w-auto object-contain rounded-lg border border-border-strong dark:border-border-strong shadow-sm cursor-pointer";
 
           img.addEventListener("click", (ev) => {
             ev.preventDefault();
-            openImageLightbox(questionImagePath, currentMeta.text || "Question image");
+            openImageLightbox(questionImagePath, currentMeta.text || "Изображение вопроса");
           });
 
           imgWrapper.appendChild(img);
@@ -200,11 +541,12 @@
       }
 
       const textWrapper = document.createElement("div");
-      textWrapper.className = "mt-3 space-y-2";
+      textWrapper.className =
+        "mt-5 space-y-3 rounded-2xl border border-border-strong bg-surface-1 px-4 py-4 shadow-sm dark:border-border-strong dark:bg-surface-1";
 
       const label = document.createElement("label");
       label.className =
-        "text-[13px] font-medium text-text-main dark:text-text-on-dark flex items-center justify-between gap-2";
+        "flex items-center justify-between gap-2 text-[12px] font-semibold uppercase tracking-[0.08em] text-text-secondary dark:text-text-secondary";
       label.textContent = "Ваш ответ:";
 
       textWrapper.appendChild(label);
@@ -212,6 +554,7 @@
       const textarea = document.createElement("textarea");
       textarea.className = CLASSMAP.l2.open.textareaAnswering;
       textarea.value = existing;
+      textarea.placeholder = "Введите точный ответ";
 
       textarea.addEventListener("input", () => {
         const val = textarea.value || "";
@@ -223,7 +566,9 @@
           delete state.selections[qId];
         }
 
-        if (typeof rerenderSidebar === "function") {
+        if (typeof syncSidebarQuestion === "function") {
+          syncSidebarQuestion(state.currentIndex);
+        } else if (typeof rerenderSidebar === "function") {
           rerenderSidebar();
         }
         if (typeof state._notifyAnswerStateChanged === "function") {
@@ -237,27 +582,49 @@
 
     function renderOpenReviewL2(body, currentMeta, feedback, existingText) {
       const qId = currentMeta.id;
+      const referenceAnswer = getOpenQuestionReferenceAnswer(currentMeta, feedback);
 
       const textWrapper = document.createElement("div");
-      textWrapper.className = "mt-3 space-y-2";
+      textWrapper.className =
+        "mt-4 space-y-3 rounded-2xl border border-border-strong bg-surface-1 px-4 py-4 shadow-sm dark:border-border-strong dark:bg-surface-1";
 
       const labelRow = document.createElement("div");
       labelRow.className =
-        "flex items-center justify-between gap-2 text-[13px] font-medium";
+        "flex items-center justify-between gap-3";
 
       const label = document.createElement("span");
-      label.className = "text-text-main dark:text-text-on-dark";
+      label.className =
+        "text-[12px] font-semibold uppercase tracking-[0.08em] text-text-secondary dark:text-text-secondary";
       label.textContent = "Ваш ответ:";
 
       const badge = document.createElement("div");
       badge.id = "l2-status-badge";
 
       // Определяем базовый статус и толерантность
-      const status = feedback.status || "unknown"; // correct / incorrect / unanswered
-      const tolType = feedback.tolerance_type || feedback.tolerance || null; // typo / ending / both
+      const status = getNormalizedFeedbackStatus(feedback) || "unknown"; // correct / incorrect / unanswered
+      const tolType = feedback.tolerance_type || feedback.tolerance || null; // typo / ending / both / normalized
+      const tolKinds = Array.isArray(feedback.normalization_kinds)
+        ? feedback.normalization_kinds
+        : Array.isArray(feedback.details && feedback.details.normalization_kinds)
+          ? feedback.details.normalization_kinds
+          : [];
+
+      function describeNormalizationKinds(kinds) {
+        const labelMap = { layout: 'раскладки', yo: 'е/ё', y_i: 'ы/і' };
+        const labels = [];
+        (Array.isArray(kinds) ? kinds : []).forEach((kind) => {
+          const key = String(kind || '').trim().toLowerCase();
+          const label = labelMap[key];
+          if (label && !labels.includes(label)) labels.push(label);
+        });
+        if (!labels.length) return 'текста';
+        if (labels.length === 1) return labels[0];
+        if (labels.length === 2) return `${labels[0]} и ${labels[1]}`;
+        return `${labels.slice(0, -1).join(', ')} и ${labels[labels.length - 1]}`;
+      }
 
       let badgeClass =
-        "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium ";
+        "inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11px] font-medium ";
       let badgeDotClass = "w-1.5 h-1.5 rounded-full ";
       let badgeText = "";
 
@@ -266,24 +633,26 @@
           "bg-success-light text-success-text border-success dark:bg-success-light dark:text-success-light dark:border-success";
         badgeDotClass += "bg-success";
         if (tolType === "typo") {
-          badgeText = "Correct (typo)";
+          badgeText = "Верно (опечатка)";
         } else if (tolType === "ending") {
-          badgeText = "Correct (ending)";
+          badgeText = "Верно (окончание)";
         } else if (tolType === "both") {
-          badgeText = "Correct (typo + ending)";
+          badgeText = "Верно (опечатка + окончание)";
+        } else if (tolType === "normalized") {
+          badgeText = "Верно (нормализация)";
         } else {
-          badgeText = "Correct";
+          badgeText = "Верно";
         }
       } else if (status === "incorrect") {
         badgeClass +=
           "bg-error-light text-error-text border-error-light dark:bg-error-light dark:text-error-light dark:border-error";
         badgeDotClass += "bg-error";
-        badgeText = "Incorrect";
+        badgeText = "Неверно";
       } else {
         badgeClass +=
           "bg-surface-2 text-text-secondary border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:border-border-strong";
         badgeDotClass += "bg-bg-hover";
-        badgeText = "Unanswered";
+        badgeText = "Без ответа";
       }
 
       badge.className = badgeClass;
@@ -313,39 +682,426 @@
       textWrapper.appendChild(textarea);
       body.appendChild(textWrapper);
 
-      // Строка статуса под textarea
-      const statusLineWrapper = document.createElement("div");
-      statusLineWrapper.id = "l2-status-line";
-      statusLineWrapper.className = "mt-2 min-h-[20px]";
-
-      const p = document.createElement("p");
-      p.className = "text-sm font-medium ";
+      let statusLineText = "";
+      let statusLineClass = "";
+      const hasTolerance = status === "correct" && hasToleranceAcceptance(feedback);
 
       if (status === "correct") {
-        p.className += "text-success-text dark:text-success";
+        statusLineClass = "text-success-text dark:text-success";
         if (tolType === "typo") {
-          p.textContent = "Ответ засчитан как верный с учетом опечатки.";
+          statusLineText = "Ответ засчитан как верный с учетом опечатки.";
         } else if (tolType === "ending") {
-          p.textContent =
-            "Ответ засчитан как верный с учетом окончания слова.";
+          statusLineText = "Ответ засчитан как верный с учетом окончания слова.";
         } else if (tolType === "both") {
-          p.textContent =
-            "Ответ засчитан как верный с учетом опечатки и окончания слова.";
+          statusLineText = "Ответ засчитан как верный с учетом опечатки и окончания слова.";
+        } else if (tolType === "normalized") {
+          statusLineText = `Ответ засчитан после нормализации ${describeNormalizationKinds(tolKinds)}.`;
         } else {
-          p.textContent = "Ответ на этот вопрос засчитан как верный.";
+          statusLineText = "Ответ на этот вопрос засчитан как верный.";
         }
-      } else if (status === "incorrect") {
-        // Неправильный, но данный ответ
-        p.className += "text-error-text dark:text-error";
-        p.textContent = "Ответ на этот вопрос не засчитан как верный.";
       } else if (status === "unanswered") {
-        // Нет ответа
-        p.className += "text-text-muted dark:text-text-muted";
-        p.textContent = "Ответ на этот вопрос отсутствует.";
+        statusLineClass = "text-text-muted dark:text-text-muted";
+        statusLineText = "Ответ на этот вопрос отсутствует.";
       }
 
-      statusLineWrapper.appendChild(p);
-      body.appendChild(statusLineWrapper);
+      if (statusLineText) {
+        const statusLineWrapper = document.createElement("div");
+        statusLineWrapper.id = "l2-status-line";
+        statusLineWrapper.className =
+          hasTolerance
+            ? "mt-3 flex items-start gap-3 rounded-2xl border border-warning-light bg-warning-lighter px-4 py-3 shadow-sm dark:border-warning-light dark:bg-warning-light"
+            : "mt-3 flex items-start gap-3 rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 shadow-sm dark:border-border-strong dark:bg-surface-1";
+
+        const statusIcon = document.createElement("span");
+        statusIcon.className =
+          hasTolerance
+            ? "material-symbols-outlined mt-0.5 text-base text-warning-darker dark:text-warning-lighter"
+            : "material-symbols-outlined mt-0.5 text-base text-success-text dark:text-success";
+        statusIcon.textContent = hasTolerance ? "info" : "check_circle";
+
+        const p = document.createElement("p");
+        p.className = `flex-1 text-sm font-medium leading-relaxed ${statusLineClass}`.trim();
+        p.textContent = statusLineText;
+
+        statusLineWrapper.appendChild(statusIcon);
+        statusLineWrapper.appendChild(p);
+        body.appendChild(statusLineWrapper);
+      }
+
+      if (status === "incorrect" && referenceAnswer) {
+        const referenceWrapper = document.createElement("div");
+        referenceWrapper.dataset.testui = "l2-reference-answer";
+        referenceWrapper.className =
+          "mt-4 overflow-hidden rounded-2xl border border-border-strong bg-surface-1 shadow-sm dark:border-border-strong dark:bg-surface-1";
+
+        const referenceHeader = document.createElement("div");
+        referenceHeader.className =
+          "flex items-center gap-2 border-b border-border-strong bg-success-light px-4 py-3 dark:border-border-strong dark:bg-success-light";
+
+        const referenceIcon = document.createElement("span");
+        referenceIcon.className =
+          "material-symbols-outlined text-[18px] text-success-text dark:text-success-lighter";
+        referenceIcon.textContent = "check_circle";
+
+        const referenceLabel = document.createElement("div");
+        referenceLabel.className =
+          "text-[12px] font-semibold uppercase tracking-[0.08em] text-success-text dark:text-success-lighter";
+        referenceLabel.textContent = "Эталонный ответ";
+
+        const referenceText = document.createElement("div");
+        referenceText.className =
+          "px-4 py-4 text-sm leading-relaxed text-text-main dark:text-text-on-dark whitespace-pre-wrap";
+        referenceText.textContent = referenceAnswer;
+
+        referenceHeader.appendChild(referenceIcon);
+        referenceHeader.appendChild(referenceLabel);
+        referenceWrapper.appendChild(referenceHeader);
+        referenceWrapper.appendChild(referenceText);
+        body.appendChild(referenceWrapper);
+      }
+
+      if (
+        status === "correct" &&
+        referenceAnswer &&
+        hasToleranceAcceptance(feedback)
+      ) {
+        const diffResult = buildReferenceAnswerDiff(referenceAnswer, textValue);
+        appendReferenceAnswerCard(body, {
+          dataTestUi: "l2-reference-answer",
+          title: "Эталонный ответ",
+          html: diffResult.html || escapeHtml(referenceAnswer),
+          hintText: diffResult.hasHighlights
+            ? "Подсвечены отличия между вашим ответом и эталоном."
+            : "",
+        });
+      }
+    }
+
+    function getOpenQuestionReferenceAnswer(currentMeta, feedback) {
+      function collectCorrectAnswerTexts(questionLike, fallbackIds = []) {
+        if (!questionLike || typeof questionLike !== "object") return [];
+        const sources = [
+          questionLike.answers,
+          questionLike.content && questionLike.content.answers,
+        ];
+        const normalizedFallbackIds = Array.isArray(fallbackIds)
+          ? fallbackIds
+              .map((value) => Number(value))
+              .filter((value) => Number.isInteger(value))
+          : [];
+        const collected = [];
+
+        sources.forEach((answers) => {
+          if (!Array.isArray(answers)) return;
+          answers.forEach((answer, index) => {
+            if (!answer || typeof answer !== "object") return;
+            const isCorrect =
+              answer.correct === true ||
+              normalizedFallbackIds.includes(index);
+            if (!isCorrect) return;
+            const text = String(answer.text || answer.label || "").trim();
+            if (text && !collected.includes(text)) {
+              collected.push(text);
+            }
+          });
+        });
+
+        return collected;
+      }
+
+      const detailReference =
+        feedback &&
+        feedback.reference_answer != null
+          ? String(feedback.reference_answer).trim()
+          : "";
+      if (detailReference) {
+        return detailReference;
+      }
+
+      const nestedReference =
+        feedback &&
+        feedback.details &&
+        feedback.details.reference_answer != null
+          ? String(feedback.details.reference_answer).trim()
+          : "";
+      if (nestedReference) {
+        return nestedReference;
+      }
+
+      const raw =
+        (state.rawQuestions &&
+          state.rawQuestions[currentMeta.index ?? state.currentIndex]) ||
+        null;
+      const fallbackOptionIds =
+        feedback && Array.isArray(feedback.correct_option_ids)
+          ? feedback.correct_option_ids
+          : feedback &&
+              feedback.details &&
+              Array.isArray(feedback.details.correct_option_ids)
+            ? feedback.details.correct_option_ids
+            : [];
+      const fallbackSources = [
+        raw && raw.reference_answer,
+        raw && raw.content && raw.content.reference_answer,
+        currentMeta && currentMeta.reference_answer,
+        currentMeta && currentMeta.content && currentMeta.content.reference_answer,
+      ];
+
+      for (const candidate of fallbackSources) {
+        if (candidate == null) continue;
+        const normalized = String(candidate).trim();
+        if (normalized) {
+          return normalized;
+        }
+      }
+
+      const fallbackAnswers = [
+        ...collectCorrectAnswerTexts(raw, fallbackOptionIds),
+        ...collectCorrectAnswerTexts(currentMeta, fallbackOptionIds),
+      ].filter((value, index, self) => value && self.indexOf(value) === index);
+
+      if (fallbackAnswers.length === 1) {
+        return fallbackAnswers[0];
+      }
+      if (fallbackAnswers.length > 1) {
+        return fallbackAnswers.join("; ");
+      }
+
+      return "";
+    }
+
+    function getChoiceReferenceOptions(currentMeta, feedback) {
+      function collectOptionsByIds(questionLike, optionIds = [], mode = "correct") {
+        if (!questionLike || typeof questionLike !== "object") return [];
+        const sources = [
+          questionLike.answers,
+          questionLike.content && questionLike.content.answers,
+        ];
+        const normalizedOptionIds = Array.isArray(optionIds)
+          ? optionIds
+              .map((value) => Number(value))
+              .filter((value) => Number.isInteger(value))
+          : [];
+        const seen = new Set();
+        const collected = [];
+
+        sources.forEach((answers) => {
+          if (!Array.isArray(answers)) return;
+          answers.forEach((answer, index) => {
+            if (!answer || typeof answer !== "object") return;
+            const isCorrect =
+              mode === "selected"
+                ? normalizedOptionIds.includes(index)
+                : answer.correct === true || normalizedOptionIds.includes(index);
+            if (!isCorrect) return;
+
+            const imageSource =
+              answer.image_url ||
+              answer.image_path ||
+              (answer.image &&
+                typeof answer.image === "object" &&
+                (answer.image.url || answer.image.path)) ||
+              null;
+            const rawText = String(
+              answer.text || answer.label || answer.title || ""
+            ).trim();
+            const text =
+              imageSource && /^вариант\s+\d+$/i.test(rawText) ? "" : rawText;
+            const dedupeKey = `${rawText}::${imageSource || ""}`;
+            if (seen.has(dedupeKey)) return;
+            seen.add(dedupeKey);
+            collected.push({ text, rawText, imageSource });
+          });
+        });
+
+        return collected;
+      }
+
+      const fallbackOptionIds =
+        feedback && Array.isArray(feedback.correct_option_ids)
+          ? feedback.correct_option_ids
+          : feedback &&
+              feedback.details &&
+              Array.isArray(feedback.details.correct_option_ids)
+            ? feedback.details.correct_option_ids
+            : [];
+      const raw =
+        (state.rawQuestions &&
+          state.rawQuestions[currentMeta.index ?? state.currentIndex]) ||
+        null;
+      return [
+        ...collectOptionsByIds(raw, fallbackOptionIds, "correct"),
+        ...collectOptionsByIds(currentMeta, fallbackOptionIds, "correct"),
+      ].filter((option, index, self) => {
+        const dedupeKey = `${option.rawText || option.text}::${option.imageSource || ""}`;
+        return (
+          option.imageSource ||
+          option.text
+        ) && self.findIndex((candidate) => `${candidate.rawText || candidate.text}::${candidate.imageSource || ""}` === dedupeKey) === index;
+      });
+    }
+
+    function getChoiceUserOptions(currentMeta, feedback) {
+      function collectOptionsByIds(questionLike, optionIds = []) {
+        if (!questionLike || typeof questionLike !== "object") return [];
+        const sources = [
+          questionLike.answers,
+          questionLike.content && questionLike.content.answers,
+        ];
+        const normalizedOptionIds = Array.isArray(optionIds)
+          ? optionIds
+              .map((value) => Number(value))
+              .filter((value) => Number.isInteger(value))
+          : [];
+        const seen = new Set();
+        const collected = [];
+
+        sources.forEach((answers) => {
+          if (!Array.isArray(answers)) return;
+          answers.forEach((answer, index) => {
+            if (!answer || typeof answer !== "object") return;
+            if (!normalizedOptionIds.includes(index)) return;
+
+            const imageSource =
+              answer.image_url ||
+              answer.image_path ||
+              (answer.image &&
+                typeof answer.image === "object" &&
+                (answer.image.url || answer.image.path)) ||
+              null;
+            const rawText = String(
+              answer.text || answer.label || answer.title || ""
+            ).trim();
+            const text =
+              imageSource && /^вариант\s+\d+$/i.test(rawText) ? "" : rawText;
+            const dedupeKey = `${rawText}::${imageSource || ""}`;
+            if (seen.has(dedupeKey)) return;
+            seen.add(dedupeKey);
+            collected.push({ text, rawText, imageSource });
+          });
+        });
+
+        return collected;
+      }
+
+      const selectedOptionIds =
+        feedback && Array.isArray(feedback.user_option_ids)
+          ? feedback.user_option_ids
+          : feedback &&
+              feedback.details &&
+              Array.isArray(feedback.details.user_option_ids)
+            ? feedback.details.user_option_ids
+            : [];
+      const raw =
+        (state.rawQuestions &&
+          state.rawQuestions[currentMeta.index ?? state.currentIndex]) ||
+        null;
+      return [
+        ...collectOptionsByIds(raw, selectedOptionIds),
+        ...collectOptionsByIds(currentMeta, selectedOptionIds),
+      ].filter((option, index, self) => {
+        const dedupeKey = `${option.rawText || option.text}::${option.imageSource || ""}`;
+        return (
+          option.imageSource ||
+          option.text
+        ) && self.findIndex((candidate) => `${candidate.rawText || candidate.text}::${candidate.imageSource || ""}` === dedupeKey) === index;
+      });
+    }
+
+    function appendChoiceOptionCollectionCard(body, options = {}) {
+      const tone = String(options.tone || "neutral");
+      const items = Array.isArray(options.options) ? options.options : [];
+      const title = String(options.title || "Варианты").trim();
+      const dataTestUi = String(options.dataTestUi || "choice-option-collection");
+
+      const toneConfig =
+        tone === "error"
+          ? {
+              badge: createCompactStatusBadge("Ваш выбор", "error"),
+              headerClass: "bg-error-light dark:bg-error-light",
+              cardClass:
+                "overflow-hidden rounded-2xl border border-error-light bg-surface-2 shadow-sm dark:border-error dark:bg-surface-2",
+              mediaClass:
+                "relative aspect-[4/3] overflow-hidden border-b border-error-light bg-surface-1 dark:border-error dark:bg-surface-1",
+            }
+          : tone === "success"
+            ? {
+                badge: createCompactStatusBadge("Эталон", "success"),
+                headerClass: "bg-success-light dark:bg-success-light",
+                cardClass:
+                  "overflow-hidden rounded-2xl border border-success-light bg-surface-2 shadow-sm dark:border-success dark:bg-surface-2",
+                mediaClass:
+                  "relative aspect-[4/3] overflow-hidden border-b border-success-light bg-surface-1 dark:border-success dark:bg-surface-1",
+              }
+            : {
+                badge: null,
+                headerClass: "bg-surface-2 dark:bg-surface-2",
+                cardClass:
+                  "overflow-hidden rounded-2xl border border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2",
+                mediaClass:
+                  "relative aspect-[4/3] overflow-hidden border-b border-border-strong bg-surface-1 dark:border-border-strong dark:bg-surface-1",
+              };
+
+      const shell = appendSectionShell(body, {
+        title,
+        badge: toneConfig.badge,
+        headerClass: toneConfig.headerClass,
+        contentClass: "px-4 py-4",
+      });
+      shell.wrapper.dataset.testui = dataTestUi;
+
+      if (!items.length) {
+        const empty = document.createElement("p");
+        empty.className =
+          "text-sm leading-relaxed text-text-secondary dark:text-text-muted";
+        empty.textContent = String(options.emptyText || "Нет данных для отображения.");
+        shell.content.appendChild(empty);
+        return shell;
+      }
+
+      const grid = document.createElement("div");
+      grid.className = "grid gap-3 sm:grid-cols-2";
+
+      items.forEach((option) => {
+        const optionCard = document.createElement("div");
+        optionCard.className = toneConfig.cardClass;
+        optionCard.dataset.testui = `${dataTestUi}-option`;
+
+        if (option.imageSource) {
+          const media = document.createElement("div");
+          media.className = toneConfig.mediaClass;
+
+          const finalSrc = resolveImageUrlForWeb(option.imageSource);
+          const img = document.createElement("img");
+          img.src = finalSrc;
+          img.alt = option.text || option.rawText || title;
+          img.className = "h-full w-full object-contain";
+          media.appendChild(img);
+
+          const zoomBtn = createImageZoomButton(() => {
+            openSharedImageLightbox(
+              finalSrc,
+              option.text || option.rawText || title
+            );
+          });
+          media.appendChild(zoomBtn);
+
+          optionCard.appendChild(media);
+        }
+
+        if (option.text || option.rawText) {
+          const caption = document.createElement("div");
+          caption.className =
+            "px-4 py-3 text-sm font-medium leading-relaxed text-text-main dark:text-text-on-dark";
+          caption.textContent = option.text || option.rawText;
+          optionCard.appendChild(caption);
+        }
+
+        grid.appendChild(optionCard);
+      });
+
+      shell.content.appendChild(grid);
+      return shell;
     }
 
     function openImageLightbox(imgSrc, caption) {
@@ -354,90 +1110,196 @@
       const overlay = document.createElement("div");
       overlay.className =
         "fixed inset-0 z-[60] bg-scrim-strong flex items-center justify-center px-4";
+      overlay.tabIndex = -1;
 
       const container = document.createElement("div");
       container.className =
-        "relative max-w-5xl max-h-[90vh] w-full flex items-center justify-center";
+        "relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-surface-1 shadow-2xl";
+
+      const topBar = document.createElement("div");
+      topBar.className =
+        "flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle bg-surface-1 px-3 py-2 backdrop-blur";
+
+      const title = document.createElement("div");
+      title.className =
+        "min-w-0 flex-1 truncate text-xs font-semibold text-text-secondary";
+      title.textContent = String(caption || "").trim();
+
+      const btnRow = document.createElement("div");
+      btnRow.className = "flex flex-wrap items-center justify-end gap-2";
+
+      function makeToolbarButton(label, className, ariaLabel) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className =
+          className ||
+          "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm transition-colors hover:bg-bg-hover";
+        btn.textContent = label;
+        btn.setAttribute("aria-label", ariaLabel || label);
+        btn.title = ariaLabel || label;
+        return btn;
+      }
+
+      const zoomOutBtn = makeToolbarButton(
+        "\u2212",
+        "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-lg font-semibold leading-none text-text-secondary shadow-sm transition-colors hover:bg-bg-hover",
+        "Zoom out"
+      );
+
+      const scaleBadge = document.createElement("div");
+      scaleBadge.className =
+        "inline-flex min-w-[68px] items-center justify-center rounded-lg border border-border-subtle bg-surface-2 px-3 py-1.5 text-xs font-semibold text-text-main";
+      scaleBadge.textContent = "100%";
+
+      const zoomInBtn = makeToolbarButton(
+        "+",
+        "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-lg font-semibold leading-none text-text-secondary shadow-sm transition-colors hover:bg-bg-hover",
+        "Zoom in"
+      );
+
+      const fitBtn = makeToolbarButton(
+        "Подогнать",
+        "",
+        "Fit to screen"
+      );
+
+      const closeBtn = makeToolbarButton("Закрыть", "", "Close image viewer");
+      closeBtn.className =
+        "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm transition-colors hover:bg-bg-hover";
+
+      btnRow.appendChild(zoomOutBtn);
+      btnRow.appendChild(scaleBadge);
+      btnRow.appendChild(zoomInBtn);
+      btnRow.appendChild(fitBtn);
+      btnRow.appendChild(closeBtn);
+      topBar.appendChild(title);
+      topBar.appendChild(btnRow);
+
+      const viewport = document.createElement("div");
+      viewport.className =
+        "relative h-[min(82vh,720px)] min-h-[320px] w-full overflow-hidden bg-surface-2";
+      viewport.style.backgroundImage =
+        "radial-gradient(circle at top, color-mix(in srgb, var(--color-primary-light) 12%, transparent), transparent 42%), linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 92%, var(--color-bg-secondary, #e5e7eb) 8%), color-mix(in srgb, var(--color-surface-2) 88%, var(--color-bg-secondary, #d1d5db) 12%))";
 
       const img = document.createElement("img");
       img.src = imgSrc;
-      img.alt = caption || "Answer option";
-      img.className =
-        "max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl cursor-grab";
+      img.alt = caption || "Вариант ответа";
+      img.draggable = false;
+      img.className = "absolute left-0 top-0 select-none rounded-lg shadow-2xl";
+      img.style.maxWidth = "none";
+      img.style.maxHeight = "none";
+      img.style.transformOrigin = "0 0";
+      img.style.cursor = "grab";
 
-      const closeBtn = document.createElement("button");
-      closeBtn.type = "button";
-      closeBtn.className =
-        "absolute -top-3 -right-3 h-8 w-8 rounded-full bg-scrim-heavy text-text-on-dark flex items-center justify-center text-lg hover:bg-scrim-intense";
-      closeBtn.innerText = "?";
-
-      const handleClose = () => {
-        overlay.remove();
-      };
-
-      closeBtn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        handleClose();
-      });
-
-      overlay.addEventListener("click", handleClose);
-      container.addEventListener("click", (ev) => ev.stopPropagation());
-
-      // ------------------------------
-      // Zoom & pan logic
-      // ------------------------------
+      let naturalWidth = 0;
+      let naturalHeight = 0;
       let scale = 1;
+      let fittedScale = 1;
       let translateX = 0;
       let translateY = 0;
-
-      // Масштабируем и двигаем относительно левого верхнего угла
-      img.style.transformOrigin = "0 0";
-
-      function applyTransform() {
-        img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
-      }
-
-      // Масштабирование колесом мыши "в курсор"
-      img.addEventListener("wheel", (ev) => {
-        ev.preventDefault();
-
-        const rect = img.getBoundingClientRect();
-        const offsetX = ev.clientX - rect.left;
-        const offsetY = ev.clientY - rect.top;
-
-        const zoomFactor = ev.deltaY < 0 ? 1.1 : 0.9;
-        const newScale = Math.min(8, Math.max(0.25, scale * zoomFactor));
-        if (newScale === scale) return;
-
-        const oldScale = scale;
-
-        // Коррекция смещения так, чтобы точка под курсором оставалась на месте
-        translateX += offsetX * (1 / newScale - 1 / oldScale);
-        translateY += offsetY * (1 / newScale - 1 / oldScale);
-
-        scale = newScale;
-        applyTransform();
-      });
-
-      // Панорамирование зажатой ЛКМ
       let isDragging = false;
       let dragStartX = 0;
       let dragStartY = 0;
       let startTranslateX = 0;
       let startTranslateY = 0;
 
-      img.addEventListener("mousedown", (ev) => {
-        ev.preventDefault();
+      function clamp(value, min, max) {
+        return Math.min(max, Math.max(min, value));
+      }
+
+      function getViewportRect() {
+        return viewport.getBoundingClientRect();
+      }
+
+      function computeFittedScale() {
+        const rect = getViewportRect();
+        if (!rect.width || !rect.height || !naturalWidth || !naturalHeight) {
+          return 1;
+        }
+        return Math.min(rect.width / naturalWidth, rect.height / naturalHeight, 1);
+      }
+
+      function clampTranslation() {
+        const rect = getViewportRect();
+        const renderedWidth = naturalWidth * scale;
+        const renderedHeight = naturalHeight * scale;
+
+        if (!rect.width || !rect.height || !renderedWidth || !renderedHeight) {
+          return;
+        }
+
+        if (renderedWidth <= rect.width) {
+          translateX = (rect.width - renderedWidth) / 2;
+        } else {
+          translateX = clamp(translateX, rect.width - renderedWidth, 0);
+        }
+
+        if (renderedHeight <= rect.height) {
+          translateY = (rect.height - renderedHeight) / 2;
+        } else {
+          translateY = clamp(translateY, rect.height - renderedHeight, 0);
+        }
+      }
+
+      function updateToolbarState() {
+        scaleBadge.textContent = `${Math.round(scale * 100)}%`;
+        zoomOutBtn.disabled = scale <= 0.2;
+        zoomInBtn.disabled = scale >= 8;
+      }
+
+      function applyTransform() {
+        clampTranslation();
+        img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+        updateToolbarState();
+      }
+
+      function fitToViewport() {
+        if (!naturalWidth || !naturalHeight) return;
+        fittedScale = computeFittedScale();
+        scale = fittedScale;
+        translateX = 0;
+        translateY = 0;
+        applyTransform();
+      }
+
+      function setScaleAroundPoint(nextScale, pointX, pointY) {
+        if (!naturalWidth || !naturalHeight) return;
+
+        const rect = getViewportRect();
+        const localX = pointX - rect.left;
+        const localY = pointY - rect.top;
+        const clampedScale = clamp(nextScale, 0.2, 8);
+
+        if (clampedScale === scale) return;
+
+        const imageLocalX = (localX - translateX) / scale;
+        const imageLocalY = (localY - translateY) / scale;
+
+        scale = clampedScale;
+        fittedScale = computeFittedScale();
+        translateX = localX - imageLocalX * scale;
+        translateY = localY - imageLocalY * scale;
+        applyTransform();
+      }
+
+      function stepZoom(multiplier) {
+        const rect = getViewportRect();
+        setScaleAroundPoint(
+          scale * multiplier,
+          rect.left + rect.width / 2,
+          rect.top + rect.height / 2
+        );
+      }
+
+      function onDragStart(ev) {
+        if (ev.button !== 0) return;
         isDragging = true;
-        img.style.cursor = "grabbing";
         dragStartX = ev.clientX;
         dragStartY = ev.clientY;
         startTranslateX = translateX;
         startTranslateY = translateY;
-      });
-
-      window.addEventListener("mousemove", onDragMove);
-      window.addEventListener("mouseup", onDragEnd);
+        img.style.cursor = "grabbing";
+      }
 
       function onDragMove(ev) {
         if (!isDragging) return;
@@ -447,27 +1309,172 @@
       }
 
       function onDragEnd() {
-        if (!isDragging) return;
         isDragging = false;
         img.style.cursor = "grab";
       }
 
-      // Двойной клик по изображению — сброс зума и позиции
-      img.addEventListener("dblclick", (ev) => {
-        ev.preventDefault();
-        scale = 1;
-        translateX = 0;
-        translateY = 0;
+      function onResize() {
+        const wasNearFit = Math.abs(scale - fittedScale) < 0.05;
+        fittedScale = computeFittedScale();
+        if (wasNearFit) {
+          fitToViewport();
+          return;
+        }
+        scale = Math.max(scale, fittedScale);
         applyTransform();
+      }
+
+      function syncImageMetrics() {
+        naturalWidth = img.naturalWidth || 0;
+        naturalHeight = img.naturalHeight || 0;
+        if (!naturalWidth || !naturalHeight) return;
+        fitToViewport();
+      }
+
+      function onKeyDown(ev) {
+        if (ev.key === "Escape") {
+          ev.preventDefault();
+          handleClose();
+          return;
+        }
+        if (ev.key === "0") {
+          ev.preventDefault();
+          fitToViewport();
+          return;
+        }
+        if (ev.key === "+" || ev.key === "=") {
+          ev.preventDefault();
+          stepZoom(1.15);
+          return;
+        }
+        if (ev.key === "-" || ev.key === "_") {
+          ev.preventDefault();
+          stepZoom(0.85);
+        }
+      }
+
+      const handleClose = () => {
+        try {
+          window.removeEventListener("mousemove", onDragMove);
+          window.removeEventListener("mouseup", onDragEnd);
+          window.removeEventListener("resize", onResize);
+          window.removeEventListener("keydown", onKeyDown);
+        } catch (e) {
+          // ignore
+        }
+        overlay.remove();
+      };
+
+      viewport.addEventListener(
+        "wheel",
+        (ev) => {
+          ev.preventDefault();
+          const zoomFactor = ev.deltaY < 0 ? 1.1 : 0.9;
+          setScaleAroundPoint(scale * zoomFactor, ev.clientX, ev.clientY);
+        },
+        { passive: false }
+      );
+
+      viewport.addEventListener("mousedown", (ev) => {
+        ev.preventDefault();
+        onDragStart(ev);
       });
 
-      // Начальное состояние трансформации
-      applyTransform();
+      viewport.addEventListener("dblclick", (ev) => {
+        ev.preventDefault();
+        if (Math.abs(scale - fittedScale) < 0.05) {
+          setScaleAroundPoint(
+            Math.max(fittedScale * 2, 1.75),
+            ev.clientX,
+            ev.clientY
+          );
+          return;
+        }
+        fitToViewport();
+      });
 
-      container.appendChild(img);
-      container.appendChild(closeBtn);
+      zoomOutBtn.addEventListener("click", () => stepZoom(0.85));
+      zoomInBtn.addEventListener("click", () => stepZoom(1.15));
+      fitBtn.addEventListener("click", fitToViewport);
+      closeBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        handleClose();
+      });
+
+      overlay.addEventListener("click", handleClose);
+      container.addEventListener("click", (ev) => ev.stopPropagation());
+      img.addEventListener("load", syncImageMetrics);
+      window.addEventListener("mousemove", onDragMove);
+      window.addEventListener("mouseup", onDragEnd);
+      window.addEventListener("resize", onResize);
+      window.addEventListener("keydown", onKeyDown);
+
+      viewport.appendChild(img);
+      container.appendChild(topBar);
+      container.appendChild(viewport);
       overlay.appendChild(container);
       document.body.appendChild(overlay);
+
+      if (img.complete) {
+        syncImageMetrics();
+      } else {
+        applyTransform();
+      }
+
+      overlay.focus();
+    }
+
+    function openSharedImageLightbox(imgSrc, caption) {
+      if (!imgSrc) return;
+
+      const sharedLightbox =
+        typeof window !== "undefined" &&
+        window.OpenAnswerUIImageLightbox &&
+        typeof window.OpenAnswerUIImageLightbox.open === "function"
+          ? window.OpenAnswerUIImageLightbox
+          : null;
+
+      if (sharedLightbox) {
+        sharedLightbox.open(imgSrc, caption);
+        return;
+      }
+
+      openImageLightbox(imgSrc, caption);
+    }
+
+    function createImageZoomButton(onClick) {
+      const zoomBtn = document.createElement("button");
+      zoomBtn.type = "button";
+      zoomBtn.className =
+        "absolute bottom-3 right-3 z-10 inline-flex h-11 w-11 items-center justify-center rounded-xl p-2 text-text-on-dark shadow-sm transition-transform hover:scale-[1.03]";
+      zoomBtn.style.background = "rgba(15, 23, 42, 0.48)";
+      zoomBtn.style.border = "1px solid rgba(255, 255, 255, 0.28)";
+      zoomBtn.style.outline = "1px solid rgba(255, 255, 255, 0.1)";
+      zoomBtn.style.outlineOffset = "0";
+      zoomBtn.style.backdropFilter = "blur(6px)";
+      zoomBtn.style.WebkitBackdropFilter = "blur(6px)";
+      zoomBtn.style.boxShadow = "0 8px 18px rgba(15, 23, 42, 0.2)";
+      zoomBtn.setAttribute("aria-label", "Open image viewer");
+      zoomBtn.title = "Open image viewer";
+
+      const icon = document.createElement("span");
+      icon.setAttribute("aria-hidden", "true");
+      icon.style.display = "inline-flex";
+      icon.style.width = "22px";
+      icon.style.height = "22px";
+      icon.innerHTML =
+        '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M11 5a6 6 0 1 0 0 12a6 6 0 0 0 0-12Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 20l-4.35-4.35" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M11 8.5v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8.5 11h5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
+      zoomBtn.appendChild(icon);
+
+      zoomBtn.addEventListener("click", (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (typeof onClick === "function") {
+          onClick();
+        }
+      });
+
+      return zoomBtn;
     }
 
     function resolveImageUrlForWeb(imgSrc) {
@@ -489,9 +1496,30 @@
       const currentAnswer = state.answers[currentMeta.id];
       const questionFeedback =
         state.questionResults && state.questionResults[currentMeta.id];
+      const reviewShell =
+        state.mode === "review" && questionFeedback
+          ? appendSectionShell(body, {
+              ...getChoiceReviewMeta(questionFeedback, isMultiple),
+              contentClass: "px-4 py-4",
+            })
+          : null;
 
       const optionsWrapper = document.createElement("div");
-      optionsWrapper.className = "mt-3 space-y-2";
+      optionsWrapper.className = reviewShell ? "space-y-3" : "mt-5 space-y-3";
+      const optionRows = [];
+
+      function syncTextOptionSelectionState() {
+        const liveAnswer = state.answers[currentMeta.id];
+        optionRows.forEach(({ idx, input, optionRow }) => {
+          const isSelected = isMultiple
+            ? Array.isArray(liveAnswer) && liveAnswer.includes(idx)
+            : typeof liveAnswer === "number" && liveAnswer === idx;
+          input.checked = isSelected;
+          optionRow.className = isSelected
+            ? CLASSMAP.l1.textOption.selected
+            : CLASSMAP.l1.textOption.neutral;
+        });
+      }
 
       raw.answers.forEach((ans, idx) => {
         const optionRow = document.createElement("label");
@@ -501,6 +1529,8 @@
           : typeof currentAnswer === "number" && currentAnswer === idx;
 
         let optionClass = CLASSMAP.l1.textOption.neutral;
+        let reviewTagText = "";
+        let reviewTagTone = "neutral";
 
         if (state.mode === "answering" && isSelected) {
           optionClass = CLASSMAP.l1.textOption.selected;
@@ -514,10 +1544,16 @@
 
           if (isCorrect && isChosen) {
             optionClass = CLASSMAP.l1.textOption.reviewCorrectChosen;
+            reviewTagText = "Выбрано верно";
+            reviewTagTone = "success";
           } else if (isCorrect && !isChosen) {
             optionClass = CLASSMAP.l1.textOption.reviewCorrectMissed;
+            reviewTagText = "Правильный";
+            reviewTagTone = "success";
           } else if (!isCorrect && isChosen) {
             optionClass = CLASSMAP.l1.textOption.reviewWrongChosen;
+            reviewTagText = "Ваш выбор";
+            reviewTagTone = "error";
           }
         }
 
@@ -574,13 +1610,10 @@
             delete state.selections[currentMeta.id];
           }
 
-          if (typeof rerenderQuestion === "function") {
-            rerenderQuestion();
-          } else {
-            renderQuestionView();
-          }
-
-          if (typeof rerenderSidebar === "function") {
+          syncTextOptionSelectionState();
+          if (typeof syncSidebarQuestion === "function") {
+            syncSidebarQuestion(state.currentIndex);
+          } else if (typeof rerenderSidebar === "function") {
             rerenderSidebar();
           }
           if (typeof state._notifyAnswerStateChanged === "function") {
@@ -610,17 +1643,27 @@
 
 
         const textWrapper = document.createElement("div");
+        textWrapper.className = "flex min-w-0 flex-1 items-start justify-between gap-3";
         const txt = document.createElement("span");
-        txt.className = "text-[13px] leading-snug";
+        txt.className = "min-w-0 flex-1 text-[14px] leading-relaxed md:text-[15px]";
         txt.textContent = ans.text || "Option";
         textWrapper.appendChild(txt);
+
+        if (reviewTagText) {
+          textWrapper.appendChild(createCompactStatusBadge(reviewTagText, reviewTagTone));
+        }
 
         optionRow.appendChild(input);
         optionRow.appendChild(textWrapper);
         optionsWrapper.appendChild(optionRow);
+        optionRows.push({ idx, input, optionRow });
       });
 
-      body.appendChild(optionsWrapper);
+      if (reviewShell) {
+        reviewShell.content.appendChild(optionsWrapper);
+      } else {
+        body.appendChild(optionsWrapper);
+      }
     }
 
     function renderImageOptions(body, currentMeta, raw) {
@@ -630,10 +1673,35 @@
       const currentAnswer = state.answers[currentMeta.id];
       const questionFeedback =
         state.questionResults && state.questionResults[currentMeta.id];
+      const reviewShell =
+        state.mode === "review" && questionFeedback
+          ? appendSectionShell(body, {
+              ...getChoiceReviewMeta(questionFeedback, isMultiple),
+              contentClass: "px-4 py-4",
+            })
+          : null;
 
       const grid = document.createElement("div");
       grid.className =
-        "mt-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3";
+        (reviewShell ? "" : "mt-3 ") +
+        "grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4";
+      const optionCards = [];
+
+      function syncImageOptionSelectionState() {
+        const liveAnswer = state.answers[currentMeta.id];
+        optionCards.forEach(({ idx, input, card, captionEl }) => {
+          const isSelected = isMultiple
+            ? Array.isArray(liveAnswer) && liveAnswer.includes(idx)
+            : typeof liveAnswer === "number" && liveAnswer === idx;
+          input.checked = isSelected;
+          card.className = isSelected
+            ? "flex flex-col gap-3 rounded-2xl border-2 border-primary-dark bg-primary p-3 ring-2 ring-primary-light shadow-sm transition-colors transition-transform active:scale-[.99] cursor-pointer group"
+            : "flex flex-col gap-3 rounded-2xl border-2 border-border-strong bg-surface-1 p-3 shadow-sm transition-colors transition-transform active:scale-[.99] cursor-pointer group hover:-translate-y-[1px] hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:hover:bg-bg-hover";
+          captionEl.className = isSelected
+            ? "text-sm text-primary-fg text-center font-bold leading-relaxed"
+            : "text-sm text-text-secondary dark:text-text-muted text-center font-medium leading-relaxed";
+        });
+      }
 
       raw.answers.forEach((ans, idx) => {
         const imgSrc =
@@ -649,7 +1717,9 @@
 
         const card = document.createElement("label");
         let cardClass =
-          "flex flex-col gap-2 rounded-lg p-2 border-2 border-border-strong bg-surface-2 hover:bg-bg-hover transition-colors transition-transform active:scale-[.99] cursor-pointer group dark:border-border-strong dark:bg-surface-2 dark:hover:bg-bg-hover";
+          "flex flex-col gap-3 rounded-2xl border-2 border-border-strong bg-surface-1 p-3 shadow-sm transition-colors transition-transform active:scale-[.99] cursor-pointer group hover:-translate-y-[1px] hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:hover:bg-bg-hover";
+        let reviewTagText = "";
+        let reviewTagTone = "neutral";
 
         const isSelected = isMultiple
           ? Array.isArray(currentAnswer) && currentAnswer.includes(idx)
@@ -657,7 +1727,7 @@
 
         if (state.mode === "answering" && isSelected) {
           cardClass =
-            "flex flex-col gap-2 rounded-lg p-2 border-2 border-primary-dark bg-primary ring-2 ring-primary-light transition-colors transition-transform active:scale-[.99] cursor-pointer group";
+            "flex flex-col gap-3 rounded-2xl border-2 border-primary-dark bg-primary p-3 ring-2 ring-primary-light shadow-sm transition-colors transition-transform active:scale-[.99] cursor-pointer group";
         }
 
         if (state.mode === "review" && questionFeedback) {
@@ -668,13 +1738,19 @@
 
           if (isCorrect && isChosen) {
             cardClass =
-              "flex flex-col gap-2 rounded-lg p-2 border-2 border-success bg-success-light dark:bg-success-light text-success-text dark:text-success-lighter transition-colors cursor-pointer group";
+              "flex flex-col gap-3 rounded-2xl border-2 border-success bg-success-light p-3 shadow-sm text-success-text dark:border-success dark:bg-success-light dark:text-success-lighter transition-colors cursor-pointer group";
+            reviewTagText = "Выбрано верно";
+            reviewTagTone = "success";
           } else if (isCorrect && !isChosen) {
             cardClass =
-              "flex flex-col gap-2 rounded-lg p-2 border border-success bg-success-light dark:border-success dark:bg-success-light text-success-text dark:text-success-lighter transition-colors cursor-pointer group";
+              "flex flex-col gap-3 rounded-2xl border-2 border-dashed border-success bg-surface-1 p-3 shadow-sm text-success-text dark:border-success dark:bg-surface-1 dark:text-success-lighter transition-colors cursor-pointer group";
+            reviewTagText = "Правильный";
+            reviewTagTone = "success";
           } else if (!isCorrect && isChosen) {
             cardClass =
-              "flex flex-col gap-2 rounded-lg p-2 border-2 border-error bg-error-light dark:bg-error-light text-error-dark dark:text-error-lighter transition-colors cursor-pointer group";
+              "flex flex-col gap-3 rounded-2xl border-2 border-error bg-error-light p-3 shadow-sm text-error-dark dark:border-error dark:bg-error-light dark:text-error-lighter transition-colors cursor-pointer group";
+            reviewTagText = "Ваш выбор";
+            reviewTagTone = "error";
           }
         }
 
@@ -683,12 +1759,12 @@
 
         const imgBox = document.createElement("div");
         imgBox.className =
-          "relative w-full aspect-[4/3] overflow-hidden rounded-md border border-border-strong bg-surface-2 dark:bg-surface-2";
+          "relative w-full aspect-[4/3] overflow-hidden rounded-xl border border-border-strong bg-surface-2 dark:border-border-strong dark:bg-surface-2";
         if (imgSrc) {
           const finalSrc = resolveImageUrlForWeb(imgSrc);
           const img = document.createElement("img");
           img.src = finalSrc;
-          img.alt = caption || "Answer option";
+          img.alt = caption || "Вариант ответа";
           img.className = "w-full h-full object-contain";
           // ВАЖНО: не вешаем обработчик click на img, чтобы он не запускал зум,
           // выбор варианта обрабатывается через label/input.
@@ -696,15 +1772,21 @@
 
         }
 
+        if (reviewTagText) {
+          const reviewTag = createCompactStatusBadge(reviewTagText, reviewTagTone);
+          reviewTag.className += " absolute left-2 top-2 shadow-sm";
+          imgBox.appendChild(reviewTag);
+        }
+
         const captionEl = document.createElement("p");
         // Стиль подписи как в макете IMG-A1: выбранный вариант — синий и жирный,
         // остальные — серые и обычные.
         if (state.mode === "answering" && isSelected) {
           captionEl.className =
-            "text-sm text-primary-fg text-center font-bold";
+            "text-sm text-primary-fg text-center font-bold leading-relaxed";
         } else {
           captionEl.className =
-            "text-sm text-text-secondary dark:text-text-muted text-center font-medium";
+            "text-sm text-text-secondary dark:text-text-muted text-center font-medium leading-relaxed";
         }
         captionEl.textContent = caption || "";
 
@@ -748,13 +1830,10 @@
             delete state.selections[currentMeta.id];
           }
 
-          if (typeof rerenderQuestion === "function") {
-            rerenderQuestion();
-          } else {
-            renderQuestionView();
-          }
-
-          if (typeof rerenderSidebar === "function") {
+          syncImageOptionSelectionState();
+          if (typeof syncSidebarQuestion === "function") {
+            syncSidebarQuestion(state.currentIndex);
+          } else if (typeof rerenderSidebar === "function") {
             rerenderSidebar();
           }
           if (typeof state._notifyAnswerStateChanged === "function") {
@@ -788,34 +1867,29 @@
         card.appendChild(imgBox);
         card.appendChild(captionEl);
         card.appendChild(input);
+        optionCards.push({ idx, input, card, captionEl });
 
         wrapper.appendChild(card);
 
-        // Кнопка-лупа теперь живёт снаружи label, чтобы её клик не выбирал ответ
+        // Кнопка-лупа живёт внутри image-box, чтобы оставаться на самой картинке,
+        // но останавливает всплытие и не выбирает ответ.
         if (imgSrc) {
           const finalSrc = resolveImageUrlForWeb(imgSrc);
-          const zoomBtn = document.createElement("button");
-          zoomBtn.type = "button";
-          zoomBtn.className =
-            "absolute bottom-1 right-1 inline-flex h-8 w-8 items-center justify-center rounded-full bg-scrim-strong text-text-on-dark opacity-0 group-hover:opacity-100 transition-opacity";
-          const icon = document.createElement("span");
-          icon.className = "material-symbols-outlined text-xl";
-          icon.textContent = "zoom_in";
-          zoomBtn.appendChild(icon);
-
-          zoomBtn.addEventListener("click", (ev) => {
-            ev.preventDefault();
-            ev.stopPropagation();
-            openImageLightbox(finalSrc, caption);
+          const zoomBtn = createImageZoomButton(() => {
+            openSharedImageLightbox(finalSrc, caption);
           });
-
-          wrapper.appendChild(zoomBtn);
+          imgBox.appendChild(zoomBtn);
         }
 
         grid.appendChild(wrapper);
       });
 
-      body.appendChild(grid);
+      if (reviewShell) {
+        reviewShell.content.appendChild(grid);
+      } else {
+        body.appendChild(grid);
+      }
+
     }
 
     function renderQuestionNavigation(body) {
@@ -833,13 +1907,13 @@
       const prevBtn = document.createElement("button");
       prevBtn.type = "button";
       prevBtn.className =
-        "flex items-center justify-center rounded-full size-9 border-2 border-border-strong bg-surface-2 text-text-main transition-colors hover:bg-bg-hover dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:hover:bg-bg-hover disabled:cursor-default disabled:border-border-strong disabled:bg-bg-disabled disabled:text-text-main";
+        "flex items-center justify-center rounded-full size-10 border-2 border-border-strong bg-surface-1 text-text-main shadow-sm transition-all hover:-translate-y-[1px] hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover disabled:cursor-default disabled:border-border-strong disabled:bg-bg-disabled disabled:text-text-main";
       prevBtn.disabled = currentIndex <= 0;
 
       const nextBtn = document.createElement("button");
       nextBtn.type = "button";
       nextBtn.className =
-        "flex items-center justify-center rounded-full size-9 border-2 border-border-strong bg-surface-2 text-text-main transition-colors hover:bg-bg-hover dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:hover:bg-bg-hover disabled:cursor-default disabled:border-border-strong disabled:bg-bg-disabled disabled:text-text-main";
+        "flex items-center justify-center rounded-full size-10 border-2 border-border-strong bg-surface-1 text-text-main shadow-sm transition-all hover:-translate-y-[1px] hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover disabled:cursor-default disabled:border-border-strong disabled:bg-bg-disabled disabled:text-text-main";
       nextBtn.disabled = currentIndex >= total - 1;
 
       const prevIcon = document.createElement("span");

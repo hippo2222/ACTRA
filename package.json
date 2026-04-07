@@ -22,6 +22,8 @@
     "smoke:release:p1": "node scripts/run_browser_smoke_release.js --suite p1",
     "smoke:release:guardrail": "node scripts/run_browser_smoke_release.js --suite guardrail",
     "smoke:release:gate": "node scripts/run_browser_smoke_release.js --suite p0,p1,guardrail",
+    "audit:test-editor:browser": "node scripts/test_editor_browser_audit.js",
+    "audit:sequence-editor:browser": "node scripts/sequence_editor_browser_audit.js",
     "validate:themes": "node scripts/validate_theme_vars.js"
   },
   "keywords": [],
@@ -29,10 +31,12 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.11",
     "autoprefixer": "^10.4.17",
     "jsdom": "^27.4.0",
+    "jszip": "^3.10.1",
     "playwright": "^1.58.1",
     "postcss": "^8.4.33",
     "tailwindcss": "^3.4.17",

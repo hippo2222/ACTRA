@@ -849,6 +849,62 @@ class TestEvaluateLevelNames:
         assert result["success"] is False
 
 
+class TestSequenceTaskMessages:
+    def test_uses_all_levels_when_order_is_correct_but_blocks_are_not(self, svc):
+        answer_key = {
+            "levels": [
+                {"level_id": "l1", "blocks": ["a", "b"]},
+                {"level_id": "l2", "blocks": ["c", "d"]},
+                {"level_id": "l3", "blocks": ["e", "f"]},
+                {"level_id": "l4", "blocks": ["g", "h"]},
+                {"level_id": "l5", "blocks": ["i", "j"]},
+            ],
+            "sequence_within_level_matters": False,
+            "level_order_matters": True,
+        }
+        user_input = {
+            "levels": [
+                {"level_id": "l1", "blocks": ["a", "x"]},
+                {"level_id": "l2", "blocks": ["y", "z"]},
+                {"level_id": "l3", "blocks": ["q", "r"]},
+                {"level_id": "l4", "blocks": ["s", "t"]},
+                {"level_id": "l5", "blocks": ["u", "v"]},
+            ]
+        }
+
+        result = svc.evaluate_sequence_task(user_input, answer_key, task_data={"content": {}})
+
+        assert "Последовательность уровней правильная, но проверьте блоки" in result.message
+        assert "(5/5 уровней правильно, 1/10 блоков правильно)" in result.message
+        assert result.details["levels_order_correct"] is True
+        assert result.details["total_correct_blocks"] == 1
+        assert result.details["correct_levels"] == []
+
+    def test_uses_all_levels_when_all_levels_are_present_but_blocks_are_not(self, svc):
+        answer_key = {
+            "levels": [
+                {"level_id": "l1", "blocks": ["a", "b"]},
+                {"level_id": "l2", "blocks": ["c", "d"]},
+            ],
+            "sequence_within_level_matters": False,
+            "level_order_matters": False,
+        }
+        user_input = {
+            "levels": [
+                {"level_id": "l2", "blocks": ["c", "x"]},
+                {"level_id": "l1", "blocks": ["y", "z"]},
+            ]
+        }
+
+        result = svc.evaluate_sequence_task(user_input, answer_key, task_data={"content": {}})
+
+        assert "Все уровни присутствуют, но проверьте блоки" in result.message
+        assert "(2/2 уровней правильно, 1/4 блоков правильно)" in result.message
+        assert result.details["levels_order_correct"] is True
+        assert result.details["total_correct_blocks"] == 1
+        assert result.details["correct_levels"] == []
+
+
 class TestEvaluateBlockNames:
     def test_all_correct(self, svc):
         user_levels = [
