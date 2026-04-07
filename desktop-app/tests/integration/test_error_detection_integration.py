@@ -129,24 +129,25 @@ def test_error_detection_appears_only_after_all_tasks_max(monkeypatch):
             },
         )
 
-    # Ожидаем две полные итерации для обычных заданий + финальная с error_detection
+    # Для этого фикстурного комплекса максимальная сложность обычных заданий = 2,
+    # поэтому финальной плановой итерацией становится вторая:
+    # 1) обычные задания на стартовой сложности,
+    # 2) все задания комплекса на их максимальной сложности, включая error_detection.
     assert len(observed) == 5
 
     iter1 = [entry for entry in observed if entry[0] == 1]
     iter2 = [entry for entry in observed if entry[0] == 2]
-    iter3 = [entry for entry in observed if entry[0] >= 3]
 
     assert {ref for _, ref, _ in iter1} == {tasks[0], tasks[1]}
     assert all(difficulty == 1 for _, _, difficulty in iter1)
 
-    assert {ref for _, ref, _ in iter2} == {tasks[0], tasks[1]}
-    assert all(difficulty == 2 for _, _, difficulty in iter2)
+    assert {ref for _, ref, _ in iter2} == set(tasks)
+    iter2_by_ref = {ref: difficulty for _, ref, difficulty in iter2}
+    assert iter2_by_ref[tasks[0]] == 2
+    assert iter2_by_ref[tasks[1]] == 2
+    assert iter2_by_ref[tasks[2]] == 2
 
-    assert iter3 == [(entry[0], entry[1], entry[2]) for entry in observed[-1:]]
-    assert iter3[0][1] == tasks[2]
-    assert iter3[0][2] == 2
-
-    # После выполнения error_detection задача завершается, сессия должна завершиться
+    # После выполнения финальной полной итерации сессия должна завершиться
     assert manager.get_session(session_id) is None or not session.is_active
     assert not session.error_detection_tasks
     assert getattr(session, "_should_show_final_results", False)

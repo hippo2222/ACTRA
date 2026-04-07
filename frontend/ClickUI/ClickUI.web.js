@@ -61,6 +61,22 @@
     targetColors: [],
     targetRows: [],
     targetsProgress: null,
+    userActionsListEl: null,
+    userActionRows: [],
+    actionInterpretation: null,
+    actionInterpretationActive: false,
+    hoveredActionKey: null,
+    pendingViewState: null,
+    undoAttentionTimer: null,
+    targetsAttentionTimer: null,
+    labelsRemovalTimer: null,
+    targetsInstructionEl: null,
+    targetsPanelTitleEl: null,
+    targetsListSectionEl: null,
+    outlineVerbEls: [],
+    reviewHost: null,
+    reviewComparisonEl: null,
+    runtimeMode: false,
   };
 
   function _getThemeColor(varName, fallback) {
@@ -142,6 +158,30 @@
     const total = state.targetsProgress.total || 0;
     const found =
       state.foundClickTargets instanceof Set ? state.foundClickTargets.size : 0;
+    const isConfirmedProgress = state.locked === true;
+    const isDrawingTask = _taskRequiresDrawing(state.taskDto);
+    const clicksLimit =
+      Number.isFinite(state.maxClicks) && state.maxClicks > 0 ? state.maxClicks : total;
+    const usedClicks = Math.min(Array.isArray(state.clicks) ? state.clicks.length : 0, clicksLimit || 0);
+    let titleText = "Прогресс поиска";
+    let labelText = total ? `Найдено ${found} из ${total}` : "Цели отсутствуют";
+    let percent = total ? Math.min(100, Math.round((found / total) * 100)) : 0;
+
+    if (!isConfirmedProgress && !isDrawingTask) {
+      titleText = "Доступные клики";
+      labelText = clicksLimit ? `Использовано ${usedClicks} из ${clicksLimit}` : "Клики отсутствуют";
+      percent = clicksLimit ? Math.min(100, Math.round((usedClicks / clicksLimit) * 100)) : 0;
+    }
+    if (state.targetsProgress.titleEl) {
+      state.targetsProgress.titleEl.textContent = titleText;
+    }
+    if (state.targetsProgress.labelEl) {
+      state.targetsProgress.labelEl.textContent = labelText;
+    }
+    if (state.targetsProgress.barEl) {
+      state.targetsProgress.barEl.style.width = `${percent}%`;
+    }
+    return;
     if (state.targetsProgress.labelEl) {
       state.targetsProgress.labelEl.textContent = total
         ? `Найдено ${found} из ${total}`
@@ -153,14 +193,68 @@
     }
   }
 
+  function _syncFoundTargetsUI() {
+    _updateTargetsProgressUI();
+    _refreshTargetRowsState();
+    if (typeof state._updateLiveProgress === "function") {
+      state._updateLiveProgress();
+    }
+  }
+
+  function _normalizeFoundTargetsSet(foundTargets) {
+    const next = new Set();
+    if (foundTargets instanceof Set) {
+      foundTargets.forEach((idx) => {
+        if (typeof idx === "number" && Number.isInteger(idx) && idx >= 0) {
+          next.add(idx);
+        }
+      });
+      return next;
+    }
+    if (!Array.isArray(foundTargets)) return next;
+    foundTargets.forEach((entry) => {
+      if (typeof entry === "number" && Number.isInteger(entry) && entry >= 0) {
+        next.add(entry);
+        return;
+      }
+      if (!entry || typeof entry !== "object") return;
+      const idx =
+        typeof entry.target_index === "number"
+          ? entry.target_index
+          : typeof entry.targetIndex === "number"
+            ? entry.targetIndex
+            : null;
+      if (idx !== null && Number.isInteger(idx) && idx >= 0) {
+        next.add(idx);
+      }
+    });
+    return next;
+  }
+
+  function _rebuildFoundTargetsFromClicks() {
+    state.foundClickTargets = new Set();
+    try {
+      const clicks = Array.isArray(state.clicks) ? state.clicks : [];
+      for (const click of clicks) {
+        const hit = _checkClickHit(click && click.x, click && click.y);
+        if (hit && hit.hit && state.foundClickTargets) {
+          state.foundClickTargets.add(hit.targetIndex);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
   function _refreshTargetRowsState() {
     if (!Array.isArray(state.targetRows)) return;
+    const isConfirmedProgress = state.locked === true;
     const foundSet =
       state.foundClickTargets instanceof Set ? state.foundClickTargets : new Set();
     const badSet = state.badRefTargets instanceof Set ? state.badRefTargets : new Set();
     state.targetRows.forEach((entry) => {
       if (!entry || !entry.el) return;
-      const { idx, el, badge } = entry;
+      const { idx, el, badge, statusPill } = entry;
       el.classList.remove(
         "ring-2",
         "ring-success-light",
@@ -168,13 +262,45 @@
         "ring-error-light",
         "bg-error-lighter"
       );
-      if (foundSet.has(idx)) {
+      if (badge) {
+        badge.classList.remove(
+          "border-success-light",
+          "bg-success-lighter",
+          "text-success-text",
+          "border-error-light",
+          "bg-error-lighter",
+          "text-error-text"
+        );
+        badge.textContent = String(idx + 1);
+      }
+      if (statusPill) {
+        statusPill.className = "hidden";
+        statusPill.textContent = "";
+      }
+      if (isConfirmedProgress && foundSet.has(idx)) {
         el.classList.add("ring-2", "ring-success-light", "bg-success-lighter");
         if (badge) badge.textContent = "✓";
+        if (badge) {
+          badge.textContent = String(idx + 1);
+          badge.classList.add("border-success-light", "bg-success-lighter", "text-success-text");
+        }
+        if (statusPill) {
+          statusPill.className =
+            "inline-flex items-center rounded-full border border-success-light bg-success-lighter px-2 py-0.5 text-[11px] font-semibold text-success-text";
+          statusPill.textContent = "Найдена";
+        }
       } else {
         if (badge) badge.textContent = String(idx + 1);
-        if (badSet.has(idx)) {
+        if (isConfirmedProgress && badSet.has(idx)) {
           el.classList.add("ring-2", "ring-error-light", "bg-error-lighter");
+          if (badge) {
+            badge.classList.add("border-error-light", "bg-error-lighter", "text-error-text");
+          }
+          if (statusPill) {
+            statusPill.className =
+              "inline-flex items-center rounded-full border border-error-light bg-error-lighter px-2 py-0.5 text-[11px] font-semibold text-error-text";
+            statusPill.textContent = "Проверь";
+          }
         }
       }
     });
@@ -186,17 +312,428 @@
       if (!entry) return;
       const color = _getTargetColor(entry.idx || 0);
       if (entry.badge) {
-        entry.badge.style.backgroundColor = "";
-        entry.badge.style.color = "";
-        entry.badge.style.borderColor = "";
+        entry.badge.style.backgroundColor = color;
+        entry.badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
+        entry.badge.style.borderColor = _withAlpha(color, 0.4);
+        entry.badge.style.boxShadow = `0 0 0 2px ${_withAlpha(color, 0.12)}`;
       }
-      if (entry.icon) {
-        entry.icon.style.color = color;
-      }
+      if (entry.icon) entry.icon.style.color = "";
       if (entry.dot) {
         entry.dot.style.backgroundColor = color;
+        entry.dot.style.boxShadow = `0 0 0 2px ${_withAlpha(color, 0.18)}`;
       }
     });
+  }
+
+  function _getActionKey(kind, index) {
+    return `${kind}:${index}`;
+  }
+
+  function _getActionKindLabel(kind) {
+    if (kind === "click") return "Клик";
+    if (kind === "polygon") return "Контур";
+    return "Штрих";
+  }
+
+  function _getTargetLabelByIndex(targetIndex) {
+    const targets = _getTargets(state.taskDto);
+    if (!Array.isArray(targets) || targetIndex == null || targetIndex < 0 || targetIndex >= targets.length) {
+      return "";
+    }
+    const target = targets[targetIndex];
+    return String((target && target.label) || "").trim();
+  }
+
+  function _normalizePercentValue(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    return numeric > 0 && numeric <= 1 ? numeric * 100 : numeric;
+  }
+
+  function _formatPercentValue(value) {
+    const numeric = _normalizePercentValue(value);
+    if (!Number.isFinite(numeric)) return "";
+    const rounded = Math.round(numeric * 10) / 10;
+    return Number.isInteger(rounded) ? `${rounded}%` : `${rounded.toFixed(1)}%`;
+  }
+
+  function _collectUserActions() {
+    const actions = [];
+    const itemsByKind = {
+      click: Array.isArray(state.clicks) ? state.clicks : [],
+      polygon: Array.isArray(state.polygons) ? state.polygons : [],
+      line: Array.isArray(state.lines) ? state.lines : [],
+    };
+    const counters = { click: 0, polygon: 0, line: 0 };
+    const used = {
+      click: new Set(),
+      polygon: new Set(),
+      line: new Set(),
+    };
+
+    function pushAction(kind, index) {
+      const source = itemsByKind[kind];
+      if (!Array.isArray(source) || index < 0 || index >= source.length) return;
+      used[kind].add(index);
+      actions.push({
+        key: _getActionKey(kind, index),
+        kind,
+        index,
+        title: `${_getActionKindLabel(kind)} ${index + 1}`,
+      });
+    }
+
+    const history = Array.isArray(state.actionHistory) ? state.actionHistory : [];
+    history.forEach((entry) => {
+      const kind = entry && typeof entry.kind === "string" ? entry.kind : "";
+      if (kind !== "click" && kind !== "polygon" && kind !== "line") return;
+      const index = counters[kind];
+      counters[kind] += 1;
+      pushAction(kind, index);
+    });
+
+    ["click", "polygon", "line"].forEach((kind) => {
+      const source = itemsByKind[kind];
+      for (let index = 0; index < source.length; index += 1) {
+        if (used[kind].has(index)) continue;
+        pushAction(kind, index);
+      }
+    });
+
+    return actions;
+  }
+
+  function _setActionInterpretation(nextInterpretation, isActive) {
+    state.actionInterpretation = nextInterpretation && typeof nextInterpretation === "object" ? nextInterpretation : null;
+    state.actionInterpretationActive = isActive === true;
+    if (!state.actionInterpretationActive) {
+      state.actionInterpretation = null;
+    }
+  }
+
+  function _resetActionInterpretation() {
+    _setActionInterpretation(null, false);
+    if (state.hoveredActionKey) {
+      state.hoveredActionKey = null;
+    }
+    _syncUserActionRowsState();
+  }
+
+  function _getActionInterpretation(actionKey) {
+    if (!state.actionInterpretation || typeof state.actionInterpretation !== "object") return null;
+    const info = state.actionInterpretation[actionKey];
+    return info && typeof info === "object" ? info : null;
+  }
+
+  function _describeActionInterpretation(action) {
+    const interpretation = _getActionInterpretation(action.key);
+    const isChecked = state.actionInterpretationActive === true;
+    if (!interpretation) {
+      if (isChecked) {
+        return {
+          tone: "neutral",
+          statusText: "Не сопоставлено",
+          detailText: "Система не нашла явного совпадения с целью.",
+          color: null,
+        };
+      }
+      return {
+        tone: "pending",
+        statusText: "Ожидает проверки",
+        detailText: "Интерпретация появится после проверки.",
+        color: null,
+      };
+    }
+
+    const targetIndex =
+      typeof interpretation.targetIndex === "number" && interpretation.targetIndex >= 0
+        ? interpretation.targetIndex
+        : null;
+    const targetLabel = targetIndex != null ? _getTargetLabelByIndex(targetIndex) : "";
+    const parts = [];
+    if (targetIndex != null) {
+      const targetRef = _getTargetDisplayReference(state.taskDto, targetIndex);
+      const targetText = targetLabel ? `${targetRef} "${targetLabel}"` : targetRef;
+      parts.push(targetText);
+    } else {
+      parts.push("Цель не определена");
+    }
+
+    const coverageText = _formatPercentValue(interpretation.coverage);
+    const thresholdText = _formatPercentValue(interpretation.threshold);
+    if (coverageText && thresholdText) {
+      parts.push(`Совпадение ${coverageText} из ${thresholdText}`);
+    } else if (coverageText) {
+      parts.push(`Совпадение ${coverageText}`);
+    }
+
+    const success =
+      interpretation.success === true ||
+      interpretation.click_success === true ||
+      interpretation.polygon_success === true ||
+      interpretation.line_success === true;
+    const tone = success ? "success" : targetIndex != null ? "error" : "neutral";
+
+    return {
+      tone,
+      statusText:
+        targetIndex == null
+          ? "Не сопоставлено"
+          : success
+            ? "Засчитано"
+            : "Не засчитано",
+      detailText: parts.join(". "),
+      color: targetIndex != null ? _getTargetColor(targetIndex) : null,
+    };
+  }
+
+  function _syncUserActionRowsState() {
+    if (!Array.isArray(state.userActionRows)) return;
+    state.userActionRows.forEach((entry) => {
+      if (!entry || !entry.el) return;
+      entry.el.classList.remove("ring-1", "ring-primary", "shadow-md");
+    });
+  }
+
+  function _setHoveredActionKey(actionKey) {
+    const nextKey = actionKey || null;
+    if (state.hoveredActionKey === nextKey) return;
+    state.hoveredActionKey = nextKey;
+    _syncUserActionRowsState();
+    _renderMarkers();
+    _renderDrawing();
+  }
+
+  function _buildActionInterpretationMap(details) {
+    const map = Object.create(null);
+
+    function assign(kind, matchedIndex, payload) {
+      if (!Number.isInteger(matchedIndex) || matchedIndex < 0) return;
+      map[_getActionKey(kind, matchedIndex)] = payload;
+    }
+
+    function hasAssignment(kind, matchedIndex) {
+      if (!Number.isInteger(matchedIndex) || matchedIndex < 0) return false;
+      return !!map[_getActionKey(kind, matchedIndex)];
+    }
+
+    const clickResults = Array.isArray(details && details.click_results) ? details.click_results : [];
+    clickResults.forEach((result) => {
+      if (!result || typeof result !== "object") return;
+      const matchedIndex =
+        typeof result.matched_click_idx === "number" ? result.matched_click_idx : null;
+      if (matchedIndex == null) return;
+      assign("click", matchedIndex, {
+        targetIndex: typeof result.target_index === "number" ? result.target_index : null,
+        success: result.click_success === true,
+        coverage: result.coverage,
+        threshold: result.threshold,
+      });
+    });
+
+    const foundTargets = _normalizeFoundTargetsSet(
+      (Array.isArray(details && details.found_targets) && details.found_targets) ||
+      (Array.isArray(details && details.foundTargets) && details.foundTargets) ||
+      null
+    );
+    if (foundTargets.size && Array.isArray(state.clicks) && state.clicks.length) {
+      const usedTargetIndexes = new Set();
+      clickResults.forEach((result) => {
+        if (!result || typeof result !== "object") return;
+        const targetIndex = typeof result.target_index === "number" ? result.target_index : null;
+        if (targetIndex != null) usedTargetIndexes.add(targetIndex);
+      });
+
+      state.clicks.forEach((click, idx) => {
+        if (!click || hasAssignment("click", idx)) return;
+        const x = Number(click.x);
+        const y = Number(click.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        const hit = _checkClickHit(x, y);
+        if (!hit || hit.hit !== true || typeof hit.targetIndex !== "number") return;
+        if (!foundTargets.has(hit.targetIndex) || usedTargetIndexes.has(hit.targetIndex)) return;
+        assign("click", idx, {
+          targetIndex: hit.targetIndex,
+          success: true,
+        });
+        usedTargetIndexes.add(hit.targetIndex);
+      });
+    }
+
+    const polygonResults = Array.isArray(details && details.polygon_results) ? details.polygon_results : [];
+    polygonResults.forEach((result) => {
+      if (!result || typeof result !== "object") return;
+      const matchedIndex =
+        typeof result.matched_polygon_idx === "number" ? result.matched_polygon_idx : null;
+      if (matchedIndex == null) return;
+      assign("polygon", matchedIndex, {
+        targetIndex: typeof result.target_index === "number" ? result.target_index : null,
+        success: result.polygon_success === true,
+        coverage: result.coverage,
+        threshold: result.threshold,
+      });
+    });
+
+    const lineResults = Array.isArray(details && details.line_results) ? details.line_results : [];
+    lineResults.forEach((result) => {
+      if (!result || typeof result !== "object") return;
+      const matchedIndex =
+        typeof result.matched_line_idx === "number" ? result.matched_line_idx : null;
+      if (matchedIndex == null) return;
+      assign("line", matchedIndex, {
+        targetIndex: typeof result.target_index === "number" ? result.target_index : null,
+        success: result.line_success === true,
+        coverage: result.coverage,
+        threshold: result.threshold,
+      });
+    });
+
+    return map;
+  }
+
+  function _refreshUserActionsPanel() {
+    if (!state.userActionsListEl) return;
+    state.userActionsListEl.innerHTML = "";
+    state.userActionRows = [];
+
+    const actions = _collectUserActions();
+    if (!actions.length) {
+      const empty = _createEl(
+        "div",
+        "flex items-start gap-2.5 rounded-xl border border-dashed border-border-strong bg-surface-1/70 px-3 py-2.5 dark:border-border-strong dark:bg-surface-1/40",
+        ""
+      );
+      const emptyIcon = _createEl(
+        "span",
+        "material-symbols-outlined mt-0.5 shrink-0 text-[16px] text-text-secondary dark:text-text-secondary",
+        "history_toggle_off"
+      );
+      const emptyText = _createEl(
+        "div",
+        "text-[12px] leading-5 text-text-secondary dark:text-text-secondary",
+        "Пока нет действий. Первые клики, контуры и штрихи появятся здесь автоматически."
+      );
+      empty.appendChild(emptyIcon);
+      empty.appendChild(emptyText);
+      state.userActionsListEl.appendChild(empty);
+      return;
+    }
+
+    actions.forEach((action) => {
+      const description = _describeActionInterpretation(action);
+      const accentColor = _getActionDisplayColor(state.taskDto, action.kind, action.index);
+      const row = document.createElement("div");
+      row.className =
+        "task-chip flex w-full items-start gap-2.5 rounded-xl border border-border-strong bg-surface-1 px-3 py-2.5 text-left shadow-sm dark:border-border-strong dark:bg-surface-1";
+      row.setAttribute("data-clickui", "user-action-row");
+      row.setAttribute("data-clickui-action-key", action.key);
+
+      const badge = _createEl(
+        "div",
+        "task-chip flex size-8 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold shadow-sm",
+        String(action.index + 1)
+      );
+      badge.style.backgroundColor = accentColor;
+      badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
+      badge.style.borderColor = _withAlpha(accentColor, 0.3);
+      badge.style.boxShadow = `0 0 0 2px ${_withAlpha(accentColor, 0.14)}`;
+
+      const body = _createEl("div", "min-w-0 flex-1", "");
+      const titleRow = _createEl("div", "flex items-start justify-between gap-2", "");
+      const title = _createEl(
+        "div",
+        "text-[13px] font-semibold leading-5 text-text-main dark:text-text-on-dark",
+        action.title
+      );
+      const status = _createEl(
+        "div",
+        "inline-flex shrink-0 items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.04em]",
+        description.statusText
+      );
+      if (description.tone === "success") {
+        status.className += " border-success-light bg-success-lighter text-success-text";
+      } else if (description.tone === "error") {
+        status.className += " border-error-light bg-error-lighter text-error-text";
+      } else if (description.tone === "pending") {
+        status.className +=
+          " border-info-light bg-info-light/20 text-primary dark:border-info-light dark:bg-info-light/15 dark:text-primary";
+      } else {
+        status.className +=
+          " border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark";
+      }
+      titleRow.appendChild(title);
+      titleRow.appendChild(status);
+
+      const detail = _createEl(
+        "div",
+        "mt-1 text-[12px] leading-5 text-text-secondary dark:text-text-secondary",
+        description.detailText
+      );
+      body.appendChild(titleRow);
+      body.appendChild(detail);
+
+      row.appendChild(badge);
+      row.appendChild(body);
+
+      state.userActionsListEl.appendChild(row);
+      state.userActionRows.push({ key: action.key, el: row });
+    });
+
+    _syncUserActionRowsState();
+  }
+
+  function _renderUserActionsSection() {
+    // Panel card: same border-2 style as targets panel for visual consistency
+    const section = _createEl(
+      "div",
+      "shrink-0 flex flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2",
+      ""
+    );
+    section.setAttribute("data-clickui", "user-actions-section");
+
+    // Header: px-5 py-4 — same rhythm as targets panel header
+    const header = _createEl(
+      "div",
+      "flex items-center gap-3 border-b border-border-strong bg-surface-1 px-4 py-3 dark:border-border-strong",
+      ""
+    );
+    const headerIcon = _createEl(
+      "span",
+      "material-symbols-outlined shrink-0 text-[18px] text-text-secondary dark:text-text-secondary",
+      "history"
+    );
+    const titleWrap = _createEl("div", "min-w-0 flex-1", "");
+    titleWrap.appendChild(
+      _createEl(
+        "div",
+        "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
+        "Ваши действия"
+      )
+    );
+    titleWrap.appendChild(
+      _createEl(
+        "div",
+        "mt-1 text-[12px] leading-5 text-text-secondary dark:text-text-secondary",
+        "Что вы сделали и результат системной проверки."
+      )
+    );
+    header.appendChild(headerIcon);
+    header.appendChild(titleWrap);
+    section.appendChild(header);
+
+    // List wrapper: px-4 py-4 — one step inset from bar header px-5
+    const listWrap = _createEl("div", "px-3 py-3", "");
+    const list = _createEl(
+      "div",
+      "flex max-h-52 flex-col gap-2 overflow-y-auto pr-1",
+      ""
+    );
+    list.setAttribute("data-clickui", "user-actions-list");
+    listWrap.appendChild(list);
+    section.appendChild(listWrap);
+    state.userActionsListEl = list;
+    _refreshUserActionsPanel();
+    return section;
   }
 
   function _debugEnabled() {
@@ -249,9 +786,127 @@
   }
 
   function _isFreehandTarget(t) {
-    if (!t || typeof t !== "object") return false;
-    const shape = t.shape || t.type;
-    return shape === "freehand";
+    return _getTargetShape(t) === "freehand";
+  }
+
+  function _getTargetShape(target) {
+    if (!target || typeof target !== "object") return "";
+    const rawShape = String(target.shape || target.type || "").toLowerCase().trim();
+    if (rawShape) return rawShape;
+    if (Array.isArray(target.points)) {
+      if (target.points.length >= 3) return "polygon";
+      if (target.points.length >= 2) return "freehand";
+    }
+    return "";
+  }
+
+  function _taskRequiresDrawing(taskDto = state.taskDto) {
+    if (!taskDto) return false;
+    const taskType = _getTaskType(taskDto);
+    if (taskType === "draw") return true;
+    const td = taskDto.task_data || {};
+    const content = td.content || taskDto.content || {};
+    return Boolean(
+      content.requires_drawing ||
+      td.requires_drawing ||
+      taskDto.requires_drawing
+    );
+  }
+
+  function _getTargetInteractionMeta(taskDto, target) {
+    const shape = _getTargetShape(target);
+    const isDrawTask = _taskRequiresDrawing(taskDto);
+
+    if (shape === "freehand" || shape === "line") {
+      return { shape, icon: "gesture", label: "Линия", actionFamily: "line" };
+    }
+
+    if (shape === "point") {
+      return { shape, icon: "gps_fixed", label: "Точка", actionFamily: "point" };
+    }
+
+    if (isDrawTask) {
+      return { shape: shape || "polygon", icon: "interests", label: "Контур", actionFamily: "outline" };
+    }
+
+    return { shape: shape || "polygon", icon: "interests", label: "Область", actionFamily: "click" };
+  }
+
+  function _summarizeTargetInteractions(taskDto, targets) {
+    const summary = {
+      hasClick: false,
+      hasOutline: false,
+      hasLine: false,
+      hasPoint: false,
+    };
+
+    if (!Array.isArray(targets)) return summary;
+
+    targets.forEach((target) => {
+      const meta = _getTargetInteractionMeta(taskDto, target);
+      if (meta.actionFamily === "click") summary.hasClick = true;
+      if (meta.actionFamily === "outline") summary.hasOutline = true;
+      if (meta.actionFamily === "line") summary.hasLine = true;
+      if (meta.actionFamily === "point") summary.hasPoint = true;
+    });
+
+    return summary;
+  }
+
+  function _buildTargetDisplayIndexes(taskDto, targets) {
+    if (!Array.isArray(targets) || !targets.length) return [];
+
+    const counters = {
+      click: 0,
+      outline: 0,
+      line: 0,
+      point: 0,
+    };
+
+    return targets.map((target) => {
+      const meta = _getTargetInteractionMeta(taskDto, target);
+      const family =
+        meta &&
+        typeof meta.actionFamily === "string" &&
+        Object.prototype.hasOwnProperty.call(counters, meta.actionFamily)
+          ? meta.actionFamily
+          : "click";
+      counters[family] += 1;
+      return counters[family];
+    });
+  }
+
+  function _getTargetDisplayReference(taskDto, targetIndex) {
+    const targets = _getTargets(taskDto);
+    if (!Array.isArray(targets) || targetIndex == null || targetIndex < 0 || targetIndex >= targets.length) {
+      return "";
+    }
+
+    const target = targets[targetIndex];
+    const displayIndexes = _buildTargetDisplayIndexes(taskDto, targets);
+    const displayIndex = Number.isInteger(displayIndexes[targetIndex]) ? displayIndexes[targetIndex] : targetIndex + 1;
+    const meta = _getTargetInteractionMeta(taskDto, target);
+    const baseLabel = meta && meta.label ? meta.label : "Цель";
+    return `${baseLabel} #${displayIndex}`;
+  }
+
+  function _getActionDisplayColor(taskDto, kind, actionIndex) {
+    if (kind === "polygon") return _getThemeColor("--color-success", "#22c55e");
+    if (kind === "line") return _getThemeColor("--color-primary", "#1349ec");
+    return _getThemeColor("--color-accent-strong", "#d97706");
+  }
+
+  function _getRawTaskType(taskDto) {
+    const td = (taskDto && taskDto.task_data) || {};
+    return String(
+      (taskDto && taskDto.task_type) ||
+        td.task_type ||
+        td._original_type ||
+        (taskDto && taskDto.type) ||
+        ""
+    )
+      .trim()
+      .toLowerCase();
   }
 
   function _recalcLimitsFromTask(taskDto) {
@@ -272,14 +927,55 @@
   }
 
   function _requiresDrawing() {
-    const taskDto = state.taskDto;
-    const taskType = _getTaskType(taskDto);
-    if (taskType === "draw") return true;
-    const v =
-      (taskDto && taskDto.task_data && taskDto.task_data.content && taskDto.task_data.content.requires_drawing) ||
-      (taskDto && taskDto.task_data && taskDto.task_data.requires_drawing) ||
-      (taskDto && taskDto.content && taskDto.content.requires_drawing);
-    return Boolean(v);
+    return _taskRequiresDrawing(state.taskDto);
+  }
+
+  function _buildTargetsInstruction(taskDto, targets) {
+    const { hasClick, hasOutline, hasLine, hasPoint } = _summarizeTargetInteractions(taskDto, targets);
+
+    if (hasOutline && hasLine) {
+      return "Список ниже показывает, что искать: цели с типом «Контур» нужно обвести по границе, а цели с типом «Линия» провести по нужному фрагменту. Номер и цвет помогают сопоставить цель и результат.";
+    }
+    if (hasOutline) {
+      return "Список ниже показывает, что искать. Для каждой цели обведи нужную область на изображении и замкни контур. Номер и цвет помогают сопоставить цель и результат.";
+    }
+    if (hasLine && !hasClick && !hasPoint) {
+      return "Список ниже показывает, что искать. Для каждой цели проведи линию по нужному фрагменту изображения. Номер и цвет помогают сопоставить цель и результат.";
+    }
+    if (hasClick && hasLine) {
+      return "Список ниже показывает, что искать: цели с типом «Область» нужно кликать, а цели с типом «Линия» проводить по изображению. Номер и цвет помогают сопоставить цель и результат.";
+    }
+    if (hasPoint && !hasClick && !hasLine) {
+      return "Список ниже показывает, что искать. Затем для каждой цели кликни по соответствующей точке на изображении. Номер и цвет помогают сопоставить цель и результат.";
+    }
+    if (hasClick || hasPoint) {
+      return "Список ниже показывает, что искать. Затем для каждой цели кликни по соответствующей области на изображении. Номер и цвет помогают сопоставить цель и результат.";
+    }
+    return "Прочитай названия целей ниже и отмечай на изображении только те фрагменты, которые соответствуют строкам списка.";
+  }
+
+  function _buildTargetsStatusInstruction(taskDto, targets) {
+    const { hasClick, hasOutline, hasLine, hasPoint } = _summarizeTargetInteractions(taskDto, targets);
+
+    if (hasOutline && hasLine) {
+      return "Сверяйся со списком целей: контуры нужно обводить, а линии проводить по изображению.";
+    }
+    if (hasOutline) {
+      return "Сверяйся со списком целей и обводи только нужные области.";
+    }
+    if (hasLine && !hasClick && !hasPoint) {
+      return "Сверяйся со списком целей и проводи только нужные линии.";
+    }
+    if (hasClick && hasLine) {
+      return "Сверяйся со списком целей: области кликай, а линии проводи по изображению.";
+    }
+    if (hasPoint && !hasClick && !hasLine) {
+      return "Сверяйся со списком целей и кликай только по нужным точкам.";
+    }
+    if (hasClick || hasPoint) {
+      return "Сверяйся со списком целей и кликай только по подходящим областям.";
+    }
+    return "Сверяйся со списком целей и отмечай только подходящие фрагменты.";
   }
 
   function _pointInPolygon(x, y, points) {
@@ -322,7 +1018,15 @@
   function _getPrompt(taskDto) {
     const td = (taskDto && taskDto.task_data) || {};
     const content = td.content || {};
-    return content.prompt || td.prompt || "";
+    return (
+      content.question ||
+      td.question ||
+      content.prompt ||
+      td.prompt ||
+      taskDto.question ||
+      taskDto.prompt ||
+      ""
+    );
   }
 
   function _renderTargetsPanel(taskDto) {
@@ -335,30 +1039,30 @@
 
     const panel = _createEl(
       "div",
-      "task-chip flex flex-col rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2",
+      "task-chip flex flex-col rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2 overflow-hidden",
       ""
     );
 
     const header = _createEl(
       "div",
-      "px-4 pt-4 pb-3 border-b border-border-strong dark:border-border-strong",
+      "px-4 pt-4 pb-3 border-b border-border-strong dark:border-border-strong bg-surface-1/60",
       ""
     );
     const title = _createEl(
       "h3",
       "text-sm font-semibold text-text-main dark:text-text-on-dark",
-      "Цели для поиска"
+      _taskRequiresDrawing(taskDto) ? "Что нужно отметить" : "Цели для поиска"
     );
     const subtitle = _createEl(
       "p",
-      "mt-1 text-xs text-text-secondary dark:text-text-secondary",
-      "Цвет цели совпадает с отметками на изображении"
+      "mt-1 text-xs leading-relaxed text-text-main dark:text-text-on-dark",
+      _buildTargetsInstruction(taskDto, targets)
     );
     header.appendChild(title);
     header.appendChild(subtitle);
     panel.appendChild(header);
 
-    const progressSection = _createEl("div", "task-chip px-4 py-3 border-b border-border-strong dark:border-border-strong", "");
+    const progressSection = _createEl("div", "task-chip px-4 py-3 border-b border-border-strong dark:border-border-strong bg-surface-1/40", "");
     const progressLabel = _createEl(
       "div",
       "text-xs font-medium text-text-secondary dark:text-text-on-dark",
@@ -381,6 +1085,7 @@
 
     state.targetsProgress = {
       total: targets.length,
+      titleEl: progressTitle,
       labelEl: progressLabel,
       barEl: progressFill,
     };
@@ -388,21 +1093,12 @@
     const list = _createEl("div", "flex flex-col divide-y divide-border-subtle dark:divide-border-strong", "");
     state.targetRows = [];
 
-    const typeMeta = {
-      point: { icon: "gps_fixed", label: "Точка" },
-      line: { icon: "show_chart", label: "Линия" },
-      freehand: { icon: "gesture", label: "Свободная линия" },
-      polygon: { icon: "interests", label: "Область" },
-      default: { icon: "location_searching", label: "Цель" },
-    };
-
     targets.forEach((t, idx) => {
-      const shape = String((t && (t.shape || t.type)) || "").toLowerCase();
-      const meta = typeMeta[shape] || typeMeta.default;
+      const meta = _getTargetInteractionMeta(taskDto, t);
       const color = _getTargetColor(idx);
       const item = _createEl(
         "div",
-        "task-chip flex items-center gap-3 px-4 py-3 transition-colors",
+        "task-chip flex items-center gap-3 px-4 py-3 transition-colors hover:bg-bg-hover/40",
         ""
       );
 
@@ -450,12 +1146,12 @@
     const labelsControls = _createEl("div", "flex flex-col gap-2", "");
     const labelsTitle = _createEl(
       "div",
-      "text-xs font-semibold uppercase tracking-wide text-text-secondary dark:text-text-secondary",
+      "text-xs font-semibold uppercase tracking-wide text-text-main dark:text-text-on-dark",
       "Подписи"
     );
     labelsControls.appendChild(labelsTitle);
 
-    const labelsButtons = _createEl("div", "flex gap-2", "");
+    const labelsButtons = _createEl("div", "flex gap-2 rounded-xl border border-border-subtle bg-surface-1 p-1", "");
     const labelModes = [
       { key: "off", label: "Скрыть" },
       { key: "compact", label: "Компактно" },
@@ -465,7 +1161,7 @@
       btn.type = "button";
       btn.textContent = mode.label;
       btn.className =
-        "task-chip flex-1 rounded-lg border border-border-strong bg-surface-2 px-3 py-1 text-xs font-semibold text-text-main transition-colors focus:outline-none focus:ring-2 focus:ring-primary-light dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark";
+        "task-chip flex-1 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-xs font-semibold text-text-main shadow-sm transition-colors hover:bg-bg-hover focus:outline-none focus:ring-2 focus:ring-primary-light dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark";
       btn.addEventListener("click", () => {
         state.labelMode = mode.key;
         _updateLabelModeButtons(labelsButtons);
@@ -481,6 +1177,298 @@
     panel.appendChild(list);
     _updateTargetsProgressUI();
     _refreshTargetRowsState();
+
+    return panel;
+  }
+
+  function _shouldAccentOutlineGuidance(taskDto, targets) {
+    if (!state.runtimeMode) return false;
+    if (_getRawTaskType(taskDto) !== "click") return false;
+    if (_getDifficultyLevel(taskDto) < 3) return false;
+    if (!Array.isArray(targets) || !targets.length) return false;
+    return targets.some((target) => {
+      const shape = _getTargetShape(target);
+      return shape !== "point" && shape !== "freehand" && shape !== "line";
+    });
+  }
+
+  function _clearOutlineGuidanceAttention(targets = null) {
+    const panelTitleEl =
+      targets && targets.panelTitleEl ? targets.panelTitleEl : state.targetsPanelTitleEl;
+    const listSectionEl =
+      targets && targets.listSectionEl ? targets.listSectionEl : state.targetsListSectionEl;
+    const outlineVerbEls =
+      targets && Array.isArray(targets.outlineVerbEls)
+        ? targets.outlineVerbEls
+        : Array.isArray(state.outlineVerbEls)
+          ? state.outlineVerbEls
+          : [];
+    if (state.targetsAttentionTimer) {
+      clearTimeout(state.targetsAttentionTimer);
+      state.targetsAttentionTimer = null;
+    }
+    if (panelTitleEl) {
+      panelTitleEl.classList.remove("clickui-targets-attention");
+    }
+    if (listSectionEl) {
+      listSectionEl.classList.remove("clickui-targets-attention");
+    }
+    outlineVerbEls.forEach((el) => {
+      try {
+        el.classList.remove("clickui-outline-verb-attention");
+      } catch (e) {
+        // ignore
+      }
+    });
+  }
+
+  function _flashOutlineGuidanceAttention(targets = null) {
+    const panelTitleEl =
+      targets && targets.panelTitleEl ? targets.panelTitleEl : state.targetsPanelTitleEl;
+    const listSectionEl =
+      targets && targets.listSectionEl ? targets.listSectionEl : state.targetsListSectionEl;
+    const outlineVerbEls =
+      targets && Array.isArray(targets.outlineVerbEls)
+        ? targets.outlineVerbEls
+        : Array.isArray(state.outlineVerbEls)
+          ? state.outlineVerbEls
+          : [];
+    _clearOutlineGuidanceAttention(targets);
+    if (panelTitleEl) {
+      panelTitleEl.classList.add("clickui-targets-attention");
+    }
+    if (listSectionEl) {
+      listSectionEl.classList.add("clickui-targets-attention");
+    }
+    outlineVerbEls.forEach((el) => {
+      try {
+        el.classList.add("clickui-outline-verb-attention");
+      } catch (e) {
+        // ignore
+      }
+    });
+    state.targetsAttentionTimer = setTimeout(() => {
+      state.targetsAttentionTimer = null;
+      _clearOutlineGuidanceAttention(targets);
+    }, 1800);
+  }
+
+  function _renderTargetsPanelV2(taskDto) {
+    const targets = _getTargets(taskDto);
+    _clearOutlineGuidanceAttention();
+    state.targetsPanelTitleEl = null;
+    state.targetsListSectionEl = null;
+    state.outlineVerbEls = [];
+    if (!Array.isArray(targets) || !targets.length) {
+      state.targetsProgress = null;
+      state.targetRows = [];
+      state.userActionsListEl = null;
+      state.userActionRows = [];
+      return null;
+    }
+    const shouldAccentOutlineGuidance = _shouldAccentOutlineGuidance(taskDto, targets);
+    const targetsInstruction = _buildTargetsInstruction(taskDto, targets);
+    const promptText = String(_getPrompt(taskDto) || "").trim();
+    const hideTargetsList = _shouldHideTargetsList(taskDto);
+    const shouldShowPromptText = Boolean(promptText);
+    const shouldShowInstructionText = Boolean(targetsInstruction && targetsInstruction !== promptText);
+    const targetsPanelTitle =
+      _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance
+        ? "\u0427\u0442\u043e \u043d\u0443\u0436\u043d\u043e \u043e\u0442\u043c\u0435\u0442\u0438\u0442\u044c"
+        : "\u0426\u0435\u043b\u0438 \u0434\u043b\u044f \u043f\u043e\u0438\u0441\u043a\u0430";
+    const targetsPanelIcon =
+      _taskRequiresDrawing(taskDto) || shouldAccentOutlineGuidance ? "draw" : "my_location";
+
+    const panel = _createEl(
+      "div",
+      "task-chip flex min-h-0 flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2",
+      ""
+    );
+    panel.setAttribute("data-clickui", "targets-panel");
+
+    // Header: px-5 py-4 — symmetric, generous
+    const header = _createEl(
+      "div",
+      "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong",
+      ""
+    );
+    header.setAttribute("data-clickui", "targets-header");
+    const titleRow = _createEl("div", "flex items-center gap-2", "");
+    const titleIcon = _createEl(
+      "span",
+      "material-symbols-outlined text-[18px] text-primary dark:text-primary",
+      targetsPanelIcon
+    );
+    const title = _createEl(
+      "h3",
+      "text-[15px] font-bold text-text-main dark:text-text-on-dark",
+      targetsPanelTitle
+    );
+    title.setAttribute("data-clickui", "targets-title");
+    titleRow.appendChild(titleIcon);
+    titleRow.appendChild(title);
+    state.targetsPanelTitleEl = header;
+    // Instruction chip: same horizontal inset as content rows (px-4) but nested inside px-5 header
+    // so we give it mt-3 and let it fill the full column naturally
+    const subtitleWrap = _createEl(
+      "div",
+      "mt-2.5 rounded-xl border border-info-light/35 bg-info-light/15 px-3 py-2.5 dark:border-info-light/30 dark:bg-info-light/10",
+      ""
+    );
+    subtitleWrap.setAttribute("data-clickui", "targets-subtitle-wrap");
+    if (shouldShowPromptText) {
+      const promptEl = _createEl(
+        "p",
+        "break-words text-[14px] font-semibold leading-5 text-text-main dark:text-text-on-dark",
+        promptText
+      );
+      promptEl.setAttribute("data-clickui", "targets-prompt");
+      subtitleWrap.appendChild(promptEl);
+    }
+    if (shouldShowInstructionText) {
+      const subtitle = _createEl(
+        "div",
+        shouldShowPromptText
+          ? "mt-2 break-words text-[12px] leading-5 text-text-secondary dark:text-text-secondary"
+          : "break-words text-[13px] leading-6 text-text-secondary dark:text-text-secondary",
+        targetsInstruction
+      );
+      subtitle.setAttribute("data-clickui", "targets-instruction");
+      subtitleWrap.appendChild(subtitle);
+      state.targetsInstructionEl = subtitle;
+    } else {
+      state.targetsInstructionEl = null;
+    }
+    if (shouldAccentOutlineGuidance && hideTargetsList) {
+      const actionChip = _createEl(
+        "span",
+        "mt-2 inline-flex w-fit items-center rounded-full border border-warning-light bg-warning-lighter px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.08em] text-warning-darker transition-transform dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter",
+        "\u041e\u0431\u0432\u0435\u0441\u0442\u0438"
+      );
+      actionChip.setAttribute("data-clickui", "target-verb-outline");
+      subtitleWrap.appendChild(actionChip);
+      state.outlineVerbEls.push(actionChip);
+    }
+    header.appendChild(titleRow);
+    header.appendChild(subtitleWrap);
+    panel.appendChild(header);
+    if (hideTargetsList) {
+      state.targetsProgress = null;
+      state.targetRows = [];
+      state.userActionsListEl = null;
+      state.userActionRows = [];
+      if (shouldAccentOutlineGuidance) {
+        _flashOutlineGuidanceAttention({
+          panelTitleEl: header,
+          listSectionEl: subtitleWrap,
+          outlineVerbEls: state.outlineVerbEls.slice(),
+        });
+      }
+      return panel;
+    }
+
+    // List section: px-4 py-4 — consistent inset, one unit less than header
+    const listSection = _createEl("div", "px-3 py-3 lg:py-2.5", "");
+    listSection.setAttribute("data-clickui", "targets-list-section");
+    state.targetsListSectionEl = listSection;
+    const list = _createEl("div", "flex flex-col gap-2.5", "");
+    list.setAttribute("data-clickui", "targets-list");
+    const displayIndexes = _buildTargetDisplayIndexes(taskDto, targets);
+    state.targetRows = [];
+
+    targets.forEach((target, idx) => {
+      const meta = _getTargetInteractionMeta(taskDto, target);
+      const displayIndex = Number.isInteger(displayIndexes[idx]) ? displayIndexes[idx] : idx + 1;
+      // Row: px-4 py-3 — horizontal matches list container, vertical gives the row breathing room
+      const item = _createEl(
+        "div",
+        "task-chip flex items-start gap-2.5 rounded-xl border border-border-strong bg-surface-1 px-3 py-2.5 shadow-sm ring-2 ring-transparent transition-colors duration-200 hover:bg-bg-hover/30 dark:border-border-strong dark:bg-surface-1",
+        ""
+      );
+      item.setAttribute("data-clickui", "target-row");
+
+      // Badge: size-8 = 32px, perfectly circular
+      const badge = _createEl(
+        "div",
+        "task-chip mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full border-2 text-[12px] font-bold shadow-sm",
+        String(displayIndex)
+      );
+      const color = _getTargetColor(idx);
+      badge.style.backgroundColor = color;
+      badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
+      badge.style.borderColor = _withAlpha(color, 0.4);
+      badge.style.boxShadow = `0 0 0 2px ${_withAlpha(color, 0.12)}`;
+
+      const info = _createEl("div", "min-w-0 flex-1", "");
+      // Label: text-sm, semibold — clearly the primary text
+      const label = _createEl(
+        "div",
+        "text-[13px] font-semibold leading-5 text-text-main dark:text-text-on-dark",
+        target.label || `Цель ${idx + 1}`
+      );
+      // Meta row: mt-1.5 below label — not too close, not too far
+      const metaRow = _createEl(
+        "div",
+        "mt-1 flex flex-wrap items-center gap-1.5 text-xs",
+        ""
+      );
+      // Kind chip: clean pill, icon + label
+      const kindChip = _createEl(
+        "span",
+        "inline-flex items-center gap-1.5 rounded-full border border-border-strong bg-surface-2 px-2.5 py-0.5 text-[11px] font-medium text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark",
+        ""
+      );
+      const iconEl = _createEl(
+        "span",
+        "material-symbols-outlined text-[13px]",
+        meta.icon
+      );
+      iconEl.style.color = color;
+      kindChip.appendChild(iconEl);
+      kindChip.appendChild(_createEl("span", "", `${meta.label} #${displayIndex}`));
+      metaRow.appendChild(kindChip);
+      if (shouldAccentOutlineGuidance && meta.actionFamily === "outline") {
+        const actionChip = _createEl(
+          "span",
+          "inline-flex items-center rounded-full border border-warning-light bg-warning-lighter px-2.5 py-0.5 text-[11px] font-semibold text-warning-darker transition-transform dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter",
+          "Обвести"
+        );
+        actionChip.setAttribute("data-clickui", "target-verb-outline");
+        metaRow.appendChild(actionChip);
+        state.outlineVerbEls.push(actionChip);
+      }
+      info.appendChild(label);
+      info.appendChild(metaRow);
+
+      const sideInfo = _createEl(
+        "div",
+        "flex shrink-0 flex-col items-end gap-1.5 self-start",
+        ""
+      );
+      sideInfo.appendChild(_createEl("span", "sr-only", "Цвет цели"));
+
+      const statusPill = _createEl("div", "hidden", "");
+      sideInfo.appendChild(statusPill);
+
+      item.appendChild(badge);
+      item.appendChild(info);
+      item.appendChild(sideInfo);
+      list.appendChild(item);
+
+      state.targetRows.push({ idx, el: item, badge, icon: iconEl, dot: null, statusPill });
+    });
+
+    listSection.appendChild(list);
+    panel.appendChild(listSection);
+    state.targetsProgress = null;
+    _refreshTargetRowsState();
+    if (shouldAccentOutlineGuidance) {
+      _flashOutlineGuidanceAttention({
+        panelTitleEl: header,
+        listSectionEl: listSection,
+        outlineVerbEls: state.outlineVerbEls.slice(),
+      });
+    }
 
     return panel;
   }
@@ -832,36 +1820,47 @@
     if (!info) return null;
     const card = _createEl(
       "div",
-      "task-chip flex-1 rounded-lg border-2 border-border-strong bg-surface-2 px-4 py-3 text-sm text-text-main shadow-sm dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark",
+      "task-chip overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 text-sm text-text-main shadow-sm dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark",
       ""
     );
     card.setAttribute("data-clickui", "additional-info");
 
     const header = _createEl(
       "div",
-      "text-xs font-semibold uppercase tracking-wide text-text-secondary dark:text-text-secondary",
-      "Доп. материалы"
+      "flex items-center gap-2 border-b border-border-strong bg-surface-1 px-4 py-3 text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:border-border-strong dark:text-text-on-dark",
+      ""
     );
+    header.appendChild(
+      _createEl(
+        "span",
+        "material-symbols-outlined text-[17px] text-text-secondary dark:text-text-secondary",
+        "library_books"
+      )
+    );
+    header.appendChild(_createEl("span", "", "Доп. материалы"));
     card.appendChild(header);
+
+    const body = _createEl("div", "flex flex-col gap-2.5 px-4 py-3", "");
+    card.appendChild(body);
 
     if (info.text) {
       const textEl = _createEl(
         "div",
-        "text-sm leading-relaxed text-text-secondary dark:text-text-on-dark whitespace-pre-wrap",
+        "whitespace-pre-wrap text-[13px] leading-6 text-text-main dark:text-text-on-dark",
         info.text
       );
-      card.appendChild(textEl);
+      body.appendChild(textEl);
     }
 
     if (info.images && info.images.length) {
-      const gallery = _createEl("div", "mt-3 flex flex-wrap gap-2", "");
+      const gallery = _createEl("div", "flex flex-wrap gap-2", "");
       info.images.slice(0, 3).forEach((imgPath, idx) => {
         const url = _resolveAssetUrl(imgPath);
         if (!url) return;
         const button = document.createElement("button");
         button.type = "button";
         button.className =
-          "group relative h-24 w-32 overflow-hidden rounded-lg border border-border-subtle bg-surface-2 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-border-strong dark:bg-surface-2";
+          "group relative h-20 w-[7.25rem] overflow-hidden rounded-xl border border-border-subtle bg-surface-2 text-left shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary dark:border-border-strong dark:bg-surface-2";
 
         const img = document.createElement("img");
         img.src = url;
@@ -881,14 +1880,14 @@
         button.addEventListener("click", () => _openAdditionalModal(url, img.alt));
         gallery.appendChild(button);
       });
-      card.appendChild(gallery);
+      body.appendChild(gallery);
     }
 
     if (!info.text && (!info.images || !info.images.length)) {
-      card.appendChild(
+      body.appendChild(
         _createEl(
           "div",
-          "text-sm text-text-muted dark:text-text-muted",
+          "text-[13px] text-text-muted dark:text-text-muted",
           "Дополнительные материалы отсутствуют"
         )
       );
@@ -921,6 +1920,74 @@
     state.contentLayer.style.transformOrigin = "0 0";
   }
 
+  function _shouldHideTargetsList(taskDto) {
+    const explicitRequiresLabels =
+      (taskDto && taskDto.task_data && taskDto.task_data.content && taskDto.task_data.content.requires_labels) ||
+      (taskDto && taskDto.task_data && taskDto.task_data.requires_labels) ||
+      (taskDto && taskDto.content && taskDto.content.requires_labels) ||
+      (taskDto && taskDto.requires_labels);
+    return explicitRequiresLabels == null ? _getDifficultyLevel(taskDto) >= 2 : Boolean(explicitRequiresLabels);
+  }
+
+  function _sanitizeViewState(viewState) {
+    if (!viewState || typeof viewState !== "object") return null;
+    const nextZoom = Number(viewState.zoom);
+    const nextPanX = Number(viewState.panX);
+    const nextPanY = Number(viewState.panY);
+    const requestedMode = String(viewState.mode || "").trim();
+    const mode =
+      requestedMode === "pan" || requestedMode === "brush" || requestedMode === "click"
+        ? requestedMode
+        : "click";
+
+    return {
+      zoom: Number.isFinite(nextZoom) ? Math.max(0.25, Math.min(6, nextZoom)) : null,
+      panX: Number.isFinite(nextPanX) ? nextPanX : null,
+      panY: Number.isFinite(nextPanY) ? nextPanY : null,
+      mode,
+      showRef: viewState.showRef === true,
+      showRefContours: viewState.showRefContours !== false,
+      showRefPolygons: viewState.showRefPolygons !== false,
+      showRefLines: viewState.showRefLines !== false,
+      showRefLabels: viewState.showRefLabels !== false,
+      showUserMarks: viewState.showUserMarks !== false,
+    };
+  }
+
+  function _applyRestoredViewState(viewState, options = {}) {
+    const safeViewState = _sanitizeViewState(viewState);
+    if (!safeViewState) return;
+
+    const applyViewport = options.applyViewport !== false;
+
+    state.showRef = safeViewState.showRef;
+    state.showRefContours = safeViewState.showRefContours;
+    state.showRefPolygons = safeViewState.showRefPolygons;
+    state.showRefLines = safeViewState.showRefLines;
+    state.showRefLabels = safeViewState.showRefLabels;
+    state.showUserMarks = safeViewState.showUserMarks;
+    _setMode(safeViewState.mode);
+
+    if (
+      applyViewport &&
+      safeViewState.zoom != null &&
+      safeViewState.panX != null &&
+      safeViewState.panY != null
+    ) {
+      state.zoom = safeViewState.zoom;
+      state.panX = safeViewState.panX;
+      state.panY = safeViewState.panY;
+      _applyTransform();
+    }
+
+    _renderMarkers();
+    _renderDrawing();
+    _renderReference();
+    _applyUserMarksVisibility();
+    if (typeof state._updateToolbar === "function") state._updateToolbar();
+    if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
+  }
+
   function _clearDrawing() {
     if (!state.drawLayer) return;
     state.drawLayer.innerHTML = "";
@@ -928,11 +1995,19 @@
 
   function _requiresLabels() {
     const taskDto = state.taskDto;
-    const v =
-      (taskDto && taskDto.task_data && taskDto.task_data.content && taskDto.task_data.content.requires_labels) ||
-      (taskDto && taskDto.task_data && taskDto.task_data.requires_labels) ||
-      (taskDto && taskDto.content && taskDto.content.requires_labels);
-    return Boolean(v);
+    const explicit =
+      (taskDto && taskDto.task_data && taskDto.task_data.content
+        ? taskDto.task_data.content.requires_labels
+        : null) ??
+      (taskDto && taskDto.task_data ? taskDto.task_data.requires_labels : null) ??
+      (taskDto && taskDto.content ? taskDto.content.requires_labels : null);
+    if (explicit === true) return true;
+    const difficulty = _getDifficultyLevel(taskDto);
+    const iteration =
+      taskDto && Number.isFinite(Number(taskDto.iteration)) ? Number(taskDto.iteration) : null;
+    const inferredLevel = Math.max(Number(difficulty) || 0, Number(iteration) || 0, 1);
+    if (inferredLevel >= 2) return true;
+    return explicit === false ? false : false;
   }
 
   function _hasAnyUserMarks() {
@@ -992,6 +2067,469 @@
       if (Number.isFinite(x) && Number.isFinite(y)) return [x, y];
     }
     return null;
+  }
+
+  function _pointsLookNormalized(pointsXY) {
+    if (!Array.isArray(pointsXY) || !pointsXY.length) return false;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const xy of pointsXY) {
+      if (!xy) continue;
+      if (xy[0] > maxX) maxX = xy[0];
+      if (xy[1] > maxY) maxY = xy[1];
+    }
+    return maxX <= 1.5 && maxY <= 1.5;
+  }
+
+  function _getReviewCanvasSize() {
+    const width =
+      Number(state.img && (state.img.naturalWidth || state.img.width)) ||
+      Number((state.taskDto && state.taskDto.image_width) || 0) ||
+      640;
+    const height =
+      Number(state.img && (state.img.naturalHeight || state.img.height)) ||
+      Number((state.taskDto && state.taskDto.image_height) || 0) ||
+      360;
+    return {
+      width: Math.max(1, width),
+      height: Math.max(1, height),
+    };
+  }
+
+  function _scaleReviewPoint(xy, naturalW, naturalH) {
+    if (!xy) return null;
+    const isNorm = xy[0] <= 1.5 && xy[1] <= 1.5;
+    return {
+      x: isNorm ? xy[0] * naturalW : xy[0],
+      y: isNorm ? xy[1] * naturalH : xy[1],
+    };
+  }
+
+  function _appendReviewPath(svg, points, options) {
+    const opts = options || {};
+    const naturalW = Number(opts.naturalW) || 1;
+    const naturalH = Number(opts.naturalH) || 1;
+    const normalized = Array.isArray(points) ? points.map((p) => _normalizeXY(p)).filter(Boolean) : [];
+    if (!normalized.length) return null;
+    const isNorm = _pointsLookNormalized(normalized);
+    const scaled = normalized.map((xy) => ({
+      x: isNorm ? xy[0] * naturalW : xy[0],
+      y: isNorm ? xy[1] * naturalH : xy[1],
+    }));
+    if (!scaled.length) return null;
+    if (opts.closed && scaled.length < 3) return null;
+    if (!opts.closed && scaled.length < 2) return null;
+
+    const d = scaled
+      .map((pt, idx) => `${idx === 0 ? "M" : "L"} ${pt.x} ${pt.y}`)
+      .join(" ");
+    if (!d) return null;
+
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", opts.closed ? `${d} Z` : d);
+    path.setAttribute("fill", opts.closed ? opts.fill || "none" : "none");
+    path.setAttribute("stroke", opts.stroke || "#2563eb");
+    path.setAttribute("stroke-width", String(opts.strokeWidth || 4));
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    if (opts.strokeDasharray) path.setAttribute("stroke-dasharray", opts.strokeDasharray);
+    if (opts.strokeOpacity != null) path.setAttribute("stroke-opacity", String(opts.strokeOpacity));
+    if (opts.fillOpacity != null) path.setAttribute("fill-opacity", String(opts.fillOpacity));
+    svg.appendChild(path);
+    return scaled;
+  }
+
+  function _appendReviewMarker(svg, point, options) {
+    const opts = options || {};
+    const naturalW = Number(opts.naturalW) || 1;
+    const naturalH = Number(opts.naturalH) || 1;
+    const scaled = _scaleReviewPoint(_normalizeXY(point), naturalW, naturalH);
+    if (!scaled) return null;
+
+    const outer = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    outer.setAttribute("cx", String(scaled.x));
+    outer.setAttribute("cy", String(scaled.y));
+    outer.setAttribute("r", String(opts.radius || 14));
+    outer.setAttribute("fill", opts.fill || "#f59e0b");
+    outer.setAttribute("fill-opacity", String(opts.fillOpacity != null ? opts.fillOpacity : 0.94));
+    outer.setAttribute("stroke", opts.stroke || "#ffffff");
+    outer.setAttribute("stroke-width", String(opts.strokeWidth || 3));
+    svg.appendChild(outer);
+
+    if (opts.label) {
+      const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      text.setAttribute("x", String(scaled.x));
+      text.setAttribute("y", String(scaled.y + 1));
+      text.setAttribute("fill", opts.labelColor || "#ffffff");
+      text.setAttribute("font-size", String(opts.labelSize || 12));
+      text.setAttribute("font-family", "Inter, system-ui, sans-serif");
+      text.setAttribute("font-weight", "700");
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("dominant-baseline", "middle");
+      text.textContent = String(opts.label);
+      svg.appendChild(text);
+    }
+
+    return scaled;
+  }
+
+  function _buildReviewSummary(parts) {
+    const safeParts = Array.isArray(parts)
+      ? parts.filter((part) => typeof part === "string" && part.trim())
+      : [];
+    return safeParts.length ? safeParts.join(" • ") : "Без отметок";
+  }
+
+  function _normalizeReviewLabelText(value) {
+    const text = String(value == null ? "" : value).trim();
+    return text || "Без названия";
+  }
+
+  function _buildReviewLabelsBlock(titleText, items, dataTestUi) {
+    const safeItems = Array.isArray(items) ? items : [];
+    if (!safeItems.length) return null;
+
+    const block = _createEl(
+      "div",
+      "mt-3 rounded-2xl border border-border-strong bg-surface-1 px-3 py-3 shadow-sm dark:border-border-strong dark:bg-surface-1",
+      ""
+    );
+    if (dataTestUi) {
+      block.setAttribute("data-clickui", dataTestUi);
+    }
+
+    block.appendChild(
+      _createEl(
+        "div",
+        "text-xs font-semibold uppercase tracking-wide text-text-secondary dark:text-text-muted",
+        titleText || "Названия"
+      )
+    );
+
+    const list = _createEl("div", "mt-2 flex flex-col gap-2", "");
+    safeItems.forEach((item, idx) => {
+      const row = _createEl(
+        "div",
+        "rounded-xl border border-border-subtle bg-surface-2 px-3 py-2 text-sm text-text-main dark:border-border-subtle dark:bg-surface-2 dark:text-text-on-dark",
+        ""
+      );
+      const fallbackTitle =
+        item && item.kind === "freehand"
+          ? `Линия ${idx + 1}`
+          : item && item.kind === "point"
+            ? `Точка ${idx + 1}`
+            : item && item.kind === "click"
+              ? `Область ${idx + 1}`
+              : `Контур ${idx + 1}`;
+      row.textContent = `${item && item.title ? item.title : fallbackTitle}: ${_normalizeReviewLabelText(item && item.label)}`;
+      list.appendChild(row);
+    });
+    block.appendChild(list);
+    return block;
+  }
+
+  function _createReviewPreviewCard(config) {
+    const opts = config || {};
+    const card = _createEl(
+      "section",
+      "rounded-2xl border border-border-strong bg-surface-2 p-3 shadow-sm dark:border-border-strong dark:bg-surface-2",
+      ""
+    );
+    if (opts.dataTestUi) {
+      card.setAttribute("data-clickui", opts.dataTestUi);
+    }
+
+    const header = _createEl("div", "mb-2 flex items-start justify-between gap-3", "");
+    const headerText = _createEl("div", "min-w-0", "");
+    const title = _createEl(
+      "div",
+      "text-sm font-semibold text-text-main dark:text-text-on-dark",
+      opts.title || ""
+    );
+    const description = _createEl(
+      "div",
+      "mt-0.5 text-xs leading-5 text-text-secondary dark:text-text-muted",
+      opts.description || ""
+    );
+    headerText.appendChild(title);
+    headerText.appendChild(description);
+    header.appendChild(headerText);
+
+    const imageUrl = opts.imageUrl ? String(opts.imageUrl) : "";
+    if (imageUrl && typeof opts.openImage === "function") {
+      const zoomBtn = document.createElement("button");
+      zoomBtn.type = "button";
+      zoomBtn.className =
+        "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border-strong bg-surface-1 text-text-main shadow-sm transition-colors hover:bg-bg-hover dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark dark:hover:bg-bg-hover";
+      zoomBtn.title = "Открыть изображение";
+      zoomBtn.setAttribute("aria-label", "Открыть изображение");
+      zoomBtn.setAttribute("data-clickui", `${opts.dataTestUi || "review"}-zoom`);
+      const icon = _createEl("span", "material-symbols-outlined text-[18px]", "zoom_in");
+      zoomBtn.appendChild(icon);
+      zoomBtn.addEventListener("click", () => {
+        opts.openImage(imageUrl, opts.title || "Разбор ответа");
+      });
+      header.appendChild(zoomBtn);
+    }
+
+    card.appendChild(header);
+
+    const frame = _createEl(
+      "div",
+      "relative overflow-hidden rounded-2xl border border-border-strong bg-surface-1 shadow-inner dark:border-border-strong dark:bg-surface-1",
+      ""
+    );
+    frame.style.aspectRatio = `${opts.naturalW || 1} / ${opts.naturalH || 1}`;
+    frame.style.minHeight = "220px";
+    frame.setAttribute("data-clickui", `${opts.dataTestUi || "review"}-frame`);
+
+    if (imageUrl) {
+      const img = document.createElement("img");
+      img.src = imageUrl;
+      img.alt = opts.title || "";
+      img.draggable = false;
+      img.className = "absolute inset-0 h-full w-full object-contain";
+      frame.appendChild(img);
+    } else {
+      const placeholder = _createEl(
+        "div",
+        "absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-text-muted dark:text-text-muted",
+        "Исходное изображение недоступно"
+      );
+      frame.appendChild(placeholder);
+    }
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "absolute inset-0 h-full w-full pointer-events-none");
+    svg.setAttribute("viewBox", `0 0 ${opts.naturalW || 1} ${opts.naturalH || 1}`);
+    svg.setAttribute("preserveAspectRatio", "none");
+    frame.appendChild(svg);
+
+    if (typeof opts.renderSvg === "function") {
+      opts.renderSvg(svg);
+    }
+
+    card.appendChild(frame);
+    if (opts.labelsBlock) {
+      card.appendChild(opts.labelsBlock);
+    }
+    return card;
+  }
+
+  function _clearReviewComparison() {
+    if (state.reviewComparisonEl && state.reviewComparisonEl.parentNode) {
+      state.reviewComparisonEl.parentNode.removeChild(state.reviewComparisonEl);
+    }
+    state.reviewComparisonEl = null;
+    if (state.reviewHost) {
+      state.reviewHost.classList.add("hidden");
+    }
+  }
+
+  function _buildUserReviewPreviewCard(imageUrl, naturalW, naturalH) {
+    const parts = [];
+    if (Array.isArray(state.clicks) && state.clicks.length) {
+      parts.push(state.clicks.length === 1 ? "1 клик" : `${state.clicks.length} клика`);
+    }
+    if (Array.isArray(state.polygons) && state.polygons.length) {
+      parts.push(state.polygons.length === 1 ? "1 контур" : `${state.polygons.length} контура`);
+    }
+    if (Array.isArray(state.lines) && state.lines.length) {
+      parts.push(state.lines.length === 1 ? "1 линия" : `${state.lines.length} линии`);
+    }
+
+    const shouldShowLabels = _requiresLabels() || _requiresDrawing();
+    let labelsBlock = null;
+    if (shouldShowLabels) {
+      const labelItems = [];
+      (state.clicks || []).forEach((_, idx) => {
+        labelItems.push({
+          kind: "click",
+          title: `Область ${idx + 1}`,
+          label: state.labelsClicks && state.labelsClicks[idx],
+        });
+      });
+      (state.polygons || []).forEach((_, idx) => {
+        labelItems.push({
+          kind: "polygon",
+          title: `Контур ${idx + 1}`,
+          label: state.labelsPolygons && state.labelsPolygons[idx],
+        });
+      });
+      (state.lines || []).forEach((_, idx) => {
+        labelItems.push({
+          kind: "freehand",
+          title: `Линия ${idx + 1}`,
+          label: state.labelsLines && state.labelsLines[idx],
+        });
+      });
+      labelsBlock = _buildReviewLabelsBlock("Названия пользователя", labelItems, "review-user-labels");
+    }
+
+    return _createReviewPreviewCard({
+      dataTestUi: "review-user-preview",
+      title: "Ваш ответ",
+      description: _buildReviewSummary(parts),
+      imageUrl,
+      naturalW,
+      naturalH,
+      openImage: _openAdditionalModal,
+      labelsBlock,
+      renderSvg(svg) {
+        (state.polygons || []).forEach((poly, idx) => {
+          const color = _getActionDisplayColor(state.taskDto, "polygon", idx);
+          _appendReviewPath(svg, poly && poly.points, {
+            closed: true,
+            naturalW,
+            naturalH,
+            stroke: color,
+            fill: _withAlpha(color, 0.16),
+            strokeWidth: 4,
+          });
+        });
+
+        (state.lines || []).forEach((line, idx) => {
+          const color = _getActionDisplayColor(state.taskDto, "line", idx);
+          _appendReviewPath(svg, line && line.points, {
+            closed: false,
+            naturalW,
+            naturalH,
+            stroke: color,
+            strokeWidth: 4,
+            strokeDasharray: "10 6",
+            strokeOpacity: 0.92,
+          });
+        });
+
+        (state.clicks || []).forEach((click, idx) => {
+          _appendReviewMarker(svg, [click && click.x, click && click.y], {
+            naturalW,
+            naturalH,
+            radius: 14,
+            fill: _getActionDisplayColor(state.taskDto, "click", idx),
+            stroke: "#ffffff",
+            label: idx + 1,
+          });
+        });
+      },
+    });
+  }
+
+  function _buildReferenceReviewPreviewCard(imageUrl, naturalW, naturalH) {
+    const targets = _getTargets(state.taskDto);
+    const points = targets.filter((target) => _getTargetShape(target) === "point").length;
+    const outlines = targets.filter((target) => _getTargetShape(target) === "polygon").length;
+    const lines = targets.filter((target) => _getTargetShape(target) === "freehand").length;
+    const parts = [];
+    if (points) {
+      parts.push(points === 1 ? "1 точка" : `${points} точки`);
+    }
+    if (outlines) {
+      parts.push(outlines === 1 ? "1 контур" : `${outlines} контура`);
+    }
+    if (lines) {
+      parts.push(lines === 1 ? "1 линия" : `${lines} линии`);
+    }
+
+    const shouldShowLabels = _requiresLabels() || _requiresDrawing();
+    let labelsBlock = null;
+    if (shouldShowLabels) {
+      const labelItems = targets.map((target, idx) => {
+        const meta = _getTargetInteractionMeta(state.taskDto, target);
+        return {
+          kind: _getTargetShape(target),
+          title: `${meta && meta.label ? meta.label : "Цель"} ${idx + 1}`,
+          label: target && target.label,
+        };
+      });
+      labelsBlock = _buildReviewLabelsBlock("Эталонные названия", labelItems, "review-reference-labels");
+    }
+
+    return _createReviewPreviewCard({
+      dataTestUi: "review-reference-preview",
+      title: "Эталон",
+      description: _buildReviewSummary(parts),
+      imageUrl,
+      naturalW,
+      naturalH,
+      openImage: _openAdditionalModal,
+      labelsBlock,
+      renderSvg(svg) {
+        targets.forEach((target, idx) => {
+          const shape = _getTargetShape(target);
+          const isBad = state.badRefTargets instanceof Set && state.badRefTargets.has(idx);
+          const baseColor = isBad ? _getThemeColor("--color-error", "#ef4444") : _getTargetColor(idx);
+
+          if (shape === "polygon") {
+            _appendReviewPath(svg, target && target.points, {
+              closed: true,
+              naturalW,
+              naturalH,
+              stroke: baseColor,
+              fill: _withAlpha(baseColor, isBad ? 0.12 : 0.18),
+              strokeWidth: isBad ? 5 : 4,
+            });
+          } else if (shape === "freehand") {
+            _appendReviewPath(svg, target && target.points, {
+              closed: false,
+              naturalW,
+              naturalH,
+              stroke: baseColor,
+              strokeWidth: isBad ? 5 : 4,
+              strokeDasharray: "10 6",
+              strokeOpacity: 0.92,
+            });
+          } else if (shape === "point") {
+            _appendReviewMarker(svg, target && target.point, {
+              naturalW,
+              naturalH,
+              radius: 15,
+              fill: baseColor,
+              stroke: "#ffffff",
+              label: idx + 1,
+            });
+          }
+        });
+      },
+    });
+  }
+
+  function _renderReviewComparison(result) {
+    _clearReviewComparison();
+    if (!state.reviewHost) return;
+    if (state.runtimeMode && (_requiresLabels() || _requiresDrawing())) return;
+
+    const imageUrl = _resolveImageUrl(state.taskDto);
+    const canvasSize = _getReviewCanvasSize();
+    const section = _createEl(
+      "section",
+      "rounded-[28px] border border-border-strong bg-surface-1/80 p-4 shadow-sm dark:border-border-strong dark:bg-surface-1/80",
+      ""
+    );
+    section.setAttribute("data-clickui", "review-comparison");
+
+    const title = _createEl(
+      "div",
+      "text-base font-semibold text-text-main dark:text-text-on-dark",
+      result && result.success === true ? "Разбор ответа" : "Разбор ошибок"
+    );
+    const note = _createEl(
+      "div",
+      "mt-1 text-sm leading-6 text-text-secondary dark:text-text-muted",
+      result && result.success === true
+        ? "Показываем, что вы отметили на изображении, и рядом оставляем эталон для быстрой сверки."
+        : "Слева сохранён ваш ответ, справа показан эталон на том же изображении, чтобы различия считывались визуально."
+    );
+    const grid = _createEl("div", "mt-4 grid gap-3 xl:grid-cols-2", "");
+    grid.appendChild(_buildUserReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
+    grid.appendChild(_buildReferenceReviewPreviewCard(imageUrl, canvasSize.width, canvasSize.height));
+
+    section.appendChild(title);
+    section.appendChild(note);
+    section.appendChild(grid);
+    state.reviewHost.classList.remove("hidden");
+    state.reviewHost.appendChild(section);
+    state.reviewComparisonEl = section;
   }
 
   function _renderReference() {
@@ -1255,10 +2793,10 @@
           // High-contrast label: dark fill with light stroke, readable on any background.
           text.setAttribute("fill", labelFill);
           text.setAttribute("stroke", labelStroke);
-          text.setAttribute("stroke-width", "4");
+          text.setAttribute("stroke-width", "3");
           text.setAttribute("paint-order", "stroke fill");
           text.setAttribute("stroke-linejoin", "round");
-          text.setAttribute("font-size", "14");
+          text.setAttribute("font-size", "13");
           text.setAttribute("font-family", "Inter, system-ui, sans-serif");
           text.setAttribute("text-anchor", "middle");
           text.setAttribute("dominant-baseline", "middle");
@@ -1381,6 +2919,15 @@
     const strokeColor = state.userLinesCheckedStyle ? errorStroke : primaryStroke;
     const strokeOpacity = state.userLinesCheckedStyle ? "0.5" : "0.9";
 
+    function attachActionHover(node, actionKey) {
+      if (!node || !actionKey) return;
+      node.setAttribute("data-clickui-action-key", actionKey);
+      node.addEventListener("mouseenter", () => _setHoveredActionKey(actionKey));
+      node.addEventListener("mouseleave", () => _setHoveredActionKey(null));
+      node.addEventListener("focus", () => _setHoveredActionKey(actionKey));
+      node.addEventListener("blur", () => _setHoveredActionKey(null));
+    }
+
     // Live preview of the active stroke while drawing (so the user sees it in real time)
     if (Array.isArray(state.activeStroke) && state.activeStroke.length >= 2) {
       const pts = state.activeStroke.filter(Boolean);
@@ -1399,7 +2946,7 @@
         preview.setAttribute("d", d);
         preview.setAttribute("fill", "none");
         preview.setAttribute("stroke", _requiresDrawing() ? successStroke : strokeColor);
-        preview.setAttribute("stroke-width", "4");
+        preview.setAttribute("stroke-width", "3.5");
         preview.setAttribute("stroke-linecap", "round");
         preview.setAttribute("stroke-linejoin", "round");
         preview.setAttribute("stroke-opacity", "0.55");
@@ -1411,6 +2958,10 @@
     allPolygons.forEach((poly, idx) => {
       const pts = (poly && Array.isArray(poly.points) ? poly.points : []).filter(Boolean);
       if (pts.length < 3) return;
+      const actionKey = _getActionKey("polygon", idx);
+      const mappedColor = _getActionDisplayColor(state.taskDto, "polygon", idx);
+      const isHovered = state.hoveredActionKey === actionKey;
+      const pathOpacity = state.userLinesCheckedStyle ? "0.55" : isHovered ? "1" : "0.9";
 
       const d = pts
         .map((p, i) => {
@@ -1426,11 +2977,13 @@
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", `${d} Z`);
       path.setAttribute("fill", "none");
-      path.setAttribute("stroke", successStroke);
-      path.setAttribute("stroke-width", "4");
+      path.setAttribute("stroke", mappedColor);
+      path.setAttribute("stroke-width", isHovered ? "5" : "3.5");
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
-      path.setAttribute("stroke-opacity", state.userLinesCheckedStyle ? "0.55" : "0.9");
+      path.setAttribute("stroke-opacity", pathOpacity);
+      path.setAttribute("pointer-events", "visibleStroke");
+      attachActionHover(path, actionKey);
       svg.appendChild(path);
 
       const first = pts[0];
@@ -1439,18 +2992,20 @@
       if (typeof x0 === "number" && typeof y0 === "number") {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("transform", `translate(${x0} ${y0})`);
+        g.setAttribute("tabindex", "0");
+        attachActionHover(g, actionKey);
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("r", "10");
-        circle.setAttribute("fill", successStroke);
+        circle.setAttribute("r", "11");
+        circle.setAttribute("fill", mappedColor);
         circle.setAttribute("stroke", textOnDark);
         circle.setAttribute("stroke-width", "2");
-        circle.setAttribute("opacity", state.userLinesCheckedStyle ? "0.6" : "0.95");
+        circle.setAttribute("opacity", state.userLinesCheckedStyle ? "0.6" : isHovered ? "1" : "0.95");
 
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", "0");
         text.setAttribute("y", "1");
         text.setAttribute("fill", textOnDark);
-        text.setAttribute("font-size", "12");
+        text.setAttribute("font-size", "11");
         text.setAttribute("font-family", "Inter, system-ui, sans-serif");
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("dominant-baseline", "middle");
@@ -1466,6 +3021,9 @@
     allLines.forEach((line, idx) => {
       const pts = (line && Array.isArray(line.points) ? line.points : []).filter(Boolean);
       if (pts.length < 2) return;
+      const actionKey = _getActionKey("line", idx);
+      const mappedColor = _getActionDisplayColor(state.taskDto, "line", idx);
+      const isHovered = state.hoveredActionKey === actionKey;
 
       const d = pts
         .map((p, i) => {
@@ -1482,11 +3040,13 @@
       const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
       path.setAttribute("d", d);
       path.setAttribute("fill", "none");
-      path.setAttribute("stroke", strokeColor);
-      path.setAttribute("stroke-width", "4");
+      path.setAttribute("stroke", mappedColor);
+      path.setAttribute("stroke-width", isHovered ? "5" : "3.5");
       path.setAttribute("stroke-linecap", "round");
       path.setAttribute("stroke-linejoin", "round");
-      path.setAttribute("stroke-opacity", strokeOpacity);
+      path.setAttribute("stroke-opacity", isHovered ? "1" : strokeOpacity);
+      path.setAttribute("pointer-events", "visibleStroke");
+      attachActionHover(path, actionKey);
       svg.appendChild(path);
 
       // Stroke numbering (separate from click markers): show near the first point
@@ -1496,19 +3056,21 @@
       if (typeof x0 === "number" && typeof y0 === "number") {
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.setAttribute("transform", `translate(${x0} ${y0})`);
+        g.setAttribute("tabindex", "0");
+        attachActionHover(g, actionKey);
 
         const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-        circle.setAttribute("r", "10");
-        circle.setAttribute("fill", primaryStroke);
+        circle.setAttribute("r", "11");
+        circle.setAttribute("fill", mappedColor);
         circle.setAttribute("stroke", textOnDark);
         circle.setAttribute("stroke-width", "2");
-        circle.setAttribute("opacity", state.userLinesCheckedStyle ? "0.6" : "0.95");
+        circle.setAttribute("opacity", state.userLinesCheckedStyle ? "0.6" : isHovered ? "1" : "0.95");
 
         const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
         text.setAttribute("x", "0");
         text.setAttribute("y", "1");
         text.setAttribute("fill", textOnDark);
-        text.setAttribute("font-size", "12");
+        text.setAttribute("font-size", "11");
         text.setAttribute("font-family", "Inter, system-ui, sans-serif");
         text.setAttribute("text-anchor", "middle");
         text.setAttribute("dominant-baseline", "middle");
@@ -1536,10 +3098,12 @@
     const naturalH = state.img.naturalHeight || rect.height || 1;
 
     state.clicks.forEach((c, idx) => {
-      const color = _getTargetColor(idx);
+      const actionKey = _getActionKey("click", idx);
+      const color = _getActionDisplayColor(state.taskDto, "click", idx);
+      const isHovered = state.hoveredActionKey === actionKey;
       const dot = _createEl(
         "div",
-        "absolute flex items-center justify-center size-8 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 text-sm font-bold shadow-lg cursor-pointer hover:scale-110 transition-transform clickui-marker-entry",
+        "absolute flex size-8 items-center justify-center -translate-x-1/2 -translate-y-1/2 rounded-full border-2 text-[11px] font-bold shadow-md clickui-marker-entry",
         ""
       );
 
@@ -1555,6 +3119,16 @@
       } else {
         dot.style.opacity = "1";
       }
+      dot.style.boxShadow = isHovered
+        ? `0 0 0 3px ${_withAlpha(color, 0.24)}`
+        : `0 6px 18px ${_withAlpha(color, 0.16)}`;
+      dot.style.zIndex = isHovered ? "3" : "1";
+      dot.tabIndex = 0;
+      dot.setAttribute("data-clickui-action-key", actionKey);
+      dot.addEventListener("mouseenter", () => _setHoveredActionKey(actionKey));
+      dot.addEventListener("mouseleave", () => _setHoveredActionKey(null));
+      dot.addEventListener("focus", () => _setHoveredActionKey(actionKey));
+      dot.addEventListener("blur", () => _setHoveredActionKey(null));
       state.markerLayer.appendChild(dot);
     });
   }
@@ -1691,18 +3265,22 @@
       if (linesNow > histLines) {
         state.lines.pop();
         if (Array.isArray(state.labelsLines) && state.labelsLines.length) state.labelsLines.pop();
+        _resetActionInterpretation();
         _renderDrawing();
         _renderLabelsInputs(null);
+        _refreshUserActionsPanel();
         if (typeof state._updateToolbar === "function") state._updateToolbar();
-        if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
+        _syncFoundTargetsUI();
         _clientLog("undo", _dbgSnap("after_force_line"));
         return;
       }
       if (polysNow > histPolys) {
         state.polygons.pop();
         if (Array.isArray(state.labelsPolygons) && state.labelsPolygons.length) state.labelsPolygons.pop();
+        _resetActionInterpretation();
         _renderDrawing();
         _renderLabelsInputs(null);
+        _refreshUserActionsPanel();
         if (typeof state._updateToolbar === "function") state._updateToolbar();
         if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
         _clientLog("undo", _dbgSnap("after_force_polygon"));
@@ -1711,17 +3289,11 @@
       if (clicksNow > histClicks) {
         state.clicks.pop();
         if (Array.isArray(state.labelsClicks) && state.labelsClicks.length) state.labelsClicks.pop();
-        state.foundClickTargets = new Set();
-        try {
-          for (const c of state.clicks) {
-            const hit = _checkClickHit(c.x, c.y);
-            if (hit && hit.hit && state.foundClickTargets) state.foundClickTargets.add(hit.targetIndex);
-          }
-        } catch (e) {
-          // ignore
-        }
+        _rebuildFoundTargetsFromClicks();
+        _resetActionInterpretation();
         _renderMarkers();
         _renderLabelsInputs(null);
+        _refreshUserActionsPanel();
         if (typeof state._updateToolbar === "function") state._updateToolbar();
         if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
         _clientLog("undo", _dbgSnap("after_force_click"));
@@ -1739,15 +3311,8 @@
     if (last.kind === "click") {
       if (Array.isArray(state.clicks) && state.clicks.length) state.clicks.pop();
       if (Array.isArray(state.labelsClicks) && state.labelsClicks.length) state.labelsClicks.pop();
-      state.foundClickTargets = new Set();
-      try {
-        for (const c of state.clicks) {
-          const hit = _checkClickHit(c.x, c.y);
-          if (hit && hit.hit && state.foundClickTargets) state.foundClickTargets.add(hit.targetIndex);
-        }
-      } catch (e) {
-        // ignore
-      }
+      _rebuildFoundTargetsFromClicks();
+      _resetActionInterpretation();
       _renderMarkers();
 
       if (
@@ -1764,16 +3329,19 @@
     } else if (last.kind === "polygon") {
       if (Array.isArray(state.polygons) && state.polygons.length) state.polygons.pop();
       if (Array.isArray(state.labelsPolygons) && state.labelsPolygons.length) state.labelsPolygons.pop();
+      _resetActionInterpretation();
       _renderDrawing();
     } else if (last.kind === "line") {
       if (Array.isArray(state.lines) && state.lines.length) state.lines.pop();
       if (Array.isArray(state.labelsLines) && state.labelsLines.length) state.labelsLines.pop();
+      _resetActionInterpretation();
       _renderDrawing();
     }
 
     _renderLabelsInputs(null);
+    _refreshUserActionsPanel();
     if (typeof state._updateToolbar === "function") state._updateToolbar();
-    if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
+    _syncFoundTargetsUI();
     _clientLog("undo", _dbgSnap("after"));
   }
 
@@ -1794,11 +3362,13 @@
     state.labelsClicks = [];
     state.actionHistory = [];
     state.autoBrushFromClicks = false;
+    _resetActionInterpretation();
     _renderMarkers();
     _renderDrawing();
     _renderReference();
     _renderLabelsInputs(null);
-    if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
+    _refreshUserActionsPanel();
+    _syncFoundTargetsUI();
   }
 
   function _clearLines() {
@@ -1810,8 +3380,10 @@
     state.labelsLines = [];
     state.actionHistory = [];
     state.autoBrushFromClicks = false;
+    _resetActionInterpretation();
     _renderDrawing();
     _renderLabelsInputs(null);
+    _refreshUserActionsPanel();
     if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
   }
 
@@ -1819,31 +3391,134 @@
     if (!state.labelsContainer) return;
 
     state.labelsInputs = [];
-    state.labelsCardEl = null;
-    state.labelsContainer.innerHTML = "";
+    function _clearLabelsCard(animate) {
+      if (!state.labelsContainer) return;
+      if (state.labelsRemovalTimer) {
+        clearTimeout(state.labelsRemovalTimer);
+        state.labelsRemovalTimer = null;
+      }
+      const existingCard =
+        state.labelsCardEl || state.labelsContainer.querySelector('[data-clickui="labels-card"]');
+      state.labelsCardEl = null;
+      if (!existingCard) {
+        state.labelsContainer.innerHTML = "";
+        if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
+        return;
+      }
+      if (!animate) {
+        state.labelsContainer.innerHTML = "";
+        if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
+        return;
+      }
+      if (existingCard.dataset.exiting === "1") return;
+      existingCard.dataset.exiting = "1";
+      existingCard.classList.remove("clickui-card-entry");
+      existingCard.classList.add("clickui-card-exit");
+      existingCard.style.height = `${existingCard.offsetHeight}px`;
+      existingCard.style.opacity = "1";
+      existingCard.style.transform = "translateY(0)";
+      existingCard.style.overflow = "hidden";
+      requestAnimationFrame(() => {
+        try {
+          existingCard.style.height = "0px";
+          existingCard.style.opacity = "0";
+          existingCard.style.transform = "translateY(-6px)";
+        } catch (e) {
+          // ignore
+        }
+      });
+      state.labelsRemovalTimer = setTimeout(() => {
+        try {
+          if (existingCard.parentNode === state.labelsContainer) {
+            existingCard.remove();
+          }
+        } catch (e) {
+          // ignore
+        }
+        state.labelsRemovalTimer = null;
+        if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
+      }, 220);
+    }
 
     const requiresLabels = _requiresLabels();
-    if (!requiresLabels) return;
+    if (!requiresLabels) {
+      _clearLabelsCard(true);
+      return;
+    }
 
     _ensureLabelsLengths();
 
     // For L2: show labels UI only after user has at least one click/stroke.
-    if (!_hasAnyUserMarks()) return;
+    if (!_hasAnyUserMarks()) {
+      _clearLabelsCard(true);
+      return;
+    }
 
+    _clearLabelsCard(false);
+
+    const labelsInSideColumn = Boolean(
+      state.labelsContainer &&
+      typeof state.labelsContainer.closest === "function" &&
+      state.labelsContainer.closest('[data-clickui="side-column"]')
+    );
     const card = _createEl(
-      "div",
-      "mt-4 bg-surface-1 dark:bg-surface-2 rounded-lg border border-border-subtle dark:border-border-strong p-4 shadow-sm",
+      "section",
+      labelsInSideColumn
+        ? "task-chip flex flex-col overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-sm dark:border-border-strong dark:bg-surface-2"
+        : "mt-4 flex flex-col gap-4 rounded-2xl border border-border-strong bg-surface-2 p-4 shadow-sm dark:border-border-strong dark:bg-surface-2",
       ""
     );
+    card.setAttribute("data-clickui", "labels-card");
 
-    const grid = _createEl("div", "grid grid-cols-1 sm:grid-cols-3 gap-4", "");
+    const header = _createEl(
+      "div",
+      labelsInSideColumn
+        ? "border-b border-border-strong bg-surface-1 px-4 py-3.5 dark:border-border-strong"
+        : "flex flex-col gap-1",
+      ""
+    );
+    header.appendChild(
+      _createEl(
+        "div",
+        "text-[12px] font-bold uppercase tracking-[0.08em] text-text-main dark:text-text-on-dark",
+        "Ваши действия"
+      )
+    );
+    header.appendChild(
+      _createEl(
+        "div",
+        labelsInSideColumn
+          ? "hidden"
+          : "text-[13px] leading-5 text-text-secondary dark:text-text-on-dark",
+        "Подпиши отмеченные цели перед проверкой ответа."
+      )
+    );
+    card.appendChild(header);
+
+    const grid = _createEl(
+      "div",
+      labelsInSideColumn
+        ? "grid grid-cols-1 gap-3 px-4 py-3"
+        : "grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3",
+      ""
+    );
     card.appendChild(grid);
 
     function _makeRow(kind, idx1based, value, onChange) {
       const id = `clickui-${kind}-${idx1based}`;
 
-      const wrap = _createEl("div", "flex flex-col gap-1.5", "");
-      const top = _createEl("div", "flex items-center justify-between", "");
+      const wrap = _createEl(
+        "div",
+        labelsInSideColumn
+          ? "flex items-center gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 shadow-sm dark:border-border-strong dark:bg-surface-1"
+          : "flex flex-col gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3.5 py-3 shadow-sm dark:border-border-strong dark:bg-surface-1",
+        ""
+      );
+      const top = _createEl(
+        "div",
+        labelsInSideColumn ? "contents" : "flex items-center justify-between gap-3",
+        ""
+      );
       const labelText =
         kind === "click"
           ? `Клик ${idx1based}`
@@ -1854,14 +3529,25 @@
       const lbl = document.createElement("label");
       lbl.setAttribute("for", id);
       lbl.className =
-        "text-xs font-semibold text-text-muted dark:text-text-muted uppercase tracking-wide";
+        labelsInSideColumn
+          ? "sr-only"
+          : "text-[12px] font-semibold uppercase tracking-[0.06em] text-text-main dark:text-text-on-dark";
       lbl.textContent = labelText;
 
       const badge = _createEl(
         "span",
-        "flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-fg text-[10px] font-bold",
+        labelsInSideColumn
+          ? "task-chip flex size-8 shrink-0 items-center justify-center rounded-full border text-[11px] font-bold shadow-sm"
+          : "flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-fg text-[10px] font-bold",
         String(idx1based)
       );
+      if (labelsInSideColumn) {
+        const accentColor = _getActionDisplayColor(state.taskDto, kind, idx1based - 1);
+        badge.style.backgroundColor = accentColor;
+        badge.style.color = _getThemeColor("--color-text-on-dark", "#ffffff");
+        badge.style.borderColor = _withAlpha(accentColor, 0.3);
+        badge.style.boxShadow = `0 0 0 2px ${_withAlpha(accentColor, 0.14)}`;
+      }
 
       const statusIcon = document.createElement("span");
       statusIcon.className = "material-symbols-outlined text-[16px]";
@@ -1896,19 +3582,32 @@
         // ignore
       }
 
-      top.appendChild(lbl);
-      const right = _createEl("div", "flex items-center gap-2", "");
+      const left = _createEl(
+        "div",
+        labelsInSideColumn ? "flex shrink-0 items-center gap-2.5" : "flex min-w-0 items-center gap-2.5",
+        ""
+      );
+      left.appendChild(badge);
+      if (!labelsInSideColumn) left.appendChild(lbl);
+      top.appendChild(left);
+      const right = _createEl(
+        "div",
+        labelsInSideColumn ? "flex shrink-0 items-center gap-2 self-center" : "flex shrink-0 items-center gap-2",
+        ""
+      );
       right.appendChild(statusIcon);
-      right.appendChild(badge);
-      top.appendChild(right);
+      if (!labelsInSideColumn) {
+        top.appendChild(right);
+      }
 
       const input = document.createElement("input");
       input.id = id;
       input.type = "text";
+      input.setAttribute("aria-label", `Название для ${labelText}`);
       input.placeholder = "Введите название...";
       input.disabled = state.locked;
       const baseInputClass =
-        "form-input block w-full rounded-md border-border-subtle dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark shadow-sm focus:border-primary focus:ring-primary sm:text-sm";
+        "block min-h-[44px] w-full rounded-xl border border-border-strong bg-surface-2 px-3.5 py-2.5 text-[14px] leading-5 text-text-main transition-colors placeholder:text-text-muted focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary-light disabled:cursor-not-allowed disabled:bg-bg-disabled disabled:text-text-secondary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark dark:placeholder:text-text-secondary";
       input.className = baseInputClass;
       input.value = value || "";
 
@@ -1972,8 +3671,15 @@
         }
       });
 
-      wrap.appendChild(top);
-      wrap.appendChild(input);
+      if (labelsInSideColumn) {
+        input.className += " flex-1 min-w-0";
+        wrap.appendChild(top);
+        wrap.appendChild(input);
+        wrap.appendChild(right);
+      } else {
+        wrap.appendChild(top);
+        wrap.appendChild(input);
+      }
       return { wrap, input };
     }
 
@@ -2020,6 +3726,8 @@
     state.clicks = [];
     state.polygons = [];
     state.lines = [];
+    state.actionHistory = [];
+    state.autoBrushFromClicks = false;
     state.foundClickTargets = new Set();
     _recalcLimitsFromTask(taskDto);
     state.activeStroke = null;
@@ -2032,6 +3740,8 @@
     state.panStart = null;
     state.showRef = false;
     state.showRefContours = true;
+    state.showRefPolygons = true;
+    state.showRefLines = true;
     state.showRefLabels = true;
     state.showUserMarks = true;
     state.badRefTargets = null;
@@ -2043,6 +3753,21 @@
     _assignTargetColors(taskDto);
     state.targetRows = [];
     state.targetsProgress = null;
+    state.userActionsListEl = null;
+    state.userActionRows = [];
+    state.hoveredActionKey = null;
+    state.pendingViewState = null;
+    state.reviewHost = null;
+    state.reviewComparisonEl = null;
+    if (state.targetsAttentionTimer) {
+      clearTimeout(state.targetsAttentionTimer);
+      state.targetsAttentionTimer = null;
+    }
+    state.targetsPanelTitleEl = null;
+    state.targetsListSectionEl = null;
+    state.outlineVerbEls = [];
+    state.runtimeMode = runtimeMode;
+    _setActionInterpretation(null, false);
 
     if (state._themeListener) {
       window.removeEventListener("themechanged", state._themeListener);
@@ -2050,6 +3775,7 @@
     state._themeListener = () => {
       _assignTargetColors(state.taskDto);
       _refreshTargetRowColors();
+      _refreshUserActionsPanel();
       _renderMarkers();
       _renderDrawing();
       _renderReference();
@@ -2066,7 +3792,7 @@
       document.head.appendChild(_s);
     }
 
-    const root = _createEl("div", "flex flex-col gap-3 cui-layout-enter", "");
+    const root = _createEl("div", "flex flex-col gap-2.5 cui-layout-enter", "");
 
     // Prevent horizontal layout shift when vertical scrollbar appears (e.g., after label inputs are rendered).
     try {
@@ -2087,19 +3813,20 @@
 
     const layout = _createEl(
       "div",
-      "flex flex-col gap-4 lg:flex-row lg:items-stretch lg:gap-6 min-h-[70vh]",
+      "flex min-h-[68vh] flex-col gap-3 lg:flex-row lg:items-stretch lg:gap-4",
       ""
     );
     const mainColumn = _createEl(
       "div",
-      "flex-1 flex flex-col gap-4 min-h-[70vh]",
+      "flex min-h-[68vh] flex-1 flex-col gap-3",
       ""
     );
     const sideColumn = _createEl(
       "div",
-      "w-full lg:w-80 xl:w-96 2xl:w-[420px] flex flex-col gap-4 lg:sticky lg:top-0 lg:self-start max-h-[calc(100vh-120px)] overflow-y-auto",
+      "flex w-full flex-col gap-3 lg:w-80 lg:sticky lg:top-3 lg:self-start lg:max-h-[calc(100vh-128px)] lg:overflow-y-auto lg:pr-1 xl:w-96 2xl:w-[420px]",
       ""
     );
+    sideColumn.setAttribute("data-clickui", "side-column");
     let sideHasContent = false;
 
     state.metadataApi = null;
@@ -2131,21 +3858,24 @@
 
     const wrapperRow = _createEl(
       "div",
-      "flex flex-col flex-1 gap-4 lg:flex-row lg:items-stretch",
+      "flex flex-1 flex-col gap-3 lg:flex-row lg:items-stretch",
       ""
     );
+    const reviewHost = _createEl("div", "hidden", "");
+    reviewHost.setAttribute("data-clickui", "review-host");
 
     const wrapper = _createEl(
       "div",
-      "relative flex-1 min-h-[520px] lg:min-h-[600px] overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-inner dark:border-border-strong dark:bg-surface-2 group select-none",
+      "group relative flex-1 min-h-[480px] overflow-hidden rounded-2xl border-2 border-border-strong bg-surface-2 shadow-inner select-none dark:border-border-strong dark:bg-surface-2 lg:min-h-[560px]",
       ""
     );
 
     const viewport = _createEl(
       "div",
-      "relative w-full h-full min-h-[520px] overflow-hidden flex items-center justify-center bg-surface-2 dark:bg-surface-2",
+      "relative flex h-full min-h-[480px] w-full items-center justify-center overflow-hidden bg-surface-2 dark:bg-surface-2 lg:min-h-[560px]",
       ""
     );
+    viewport.setAttribute("data-clickui", "viewport");
     const contentLayer = _createEl("div", "absolute left-0 top-0", "");
 
     const img = document.createElement("img");
@@ -2202,58 +3932,61 @@
 
     const toolbar = _createEl(
       "div",
-      "pointer-events-auto absolute left-4 top-4 flex flex-col gap-3 z-30 w-12 sm:w-14",
+      "pointer-events-auto absolute left-3 top-3 z-30 flex w-11 flex-col gap-2.5 sm:w-12",
       ""
     );
 
     const toolGroup = _createEl(
       "div",
-      "flex flex-col bg-surface-1 dark:bg-surface-2 rounded-lg shadow-sm border border-border-strong dark:border-border-strong overflow-hidden divide-y divide-border-strong dark:divide-border-strong",
+      "flex flex-col overflow-hidden rounded-2xl border border-border-strong bg-surface-1/95 shadow-md backdrop-blur-sm divide-y divide-border-strong dark:border-border-strong dark:bg-surface-2/95 dark:divide-border-strong",
       ""
     );
 
     const zoomGroup = _createEl(
       "div",
-      "flex flex-col bg-surface-1 dark:bg-surface-2 rounded-lg shadow-sm border border-border-strong dark:border-border-strong overflow-hidden divide-y divide-border-strong dark:divide-border-strong",
+      "flex flex-col overflow-hidden rounded-2xl border border-border-strong bg-surface-1/95 shadow-md backdrop-blur-sm divide-y divide-border-strong dark:border-border-strong dark:bg-surface-2/95 dark:divide-border-strong",
       ""
     );
+
+    const toolbarButtonBaseClass =
+      "flex h-10 w-full items-center justify-center bg-surface-2 text-text-main transition-colors duration-150 focus:outline-none dark:bg-surface-2 dark:text-text-on-dark sm:h-11";
+    const toolbarButtonIdleClass =
+      `${toolbarButtonBaseClass} hover:bg-bg-hover dark:hover:bg-bg-hover`;
+    const toolbarButtonActiveClass =
+      `${toolbarButtonBaseClass} bg-primary-lighter text-primary shadow-inner dark:bg-primary-dark dark:text-primary-light`;
+    const hintBaseClass =
+      "flex items-start gap-2.5 rounded-xl border border-border-strong bg-surface-1 px-3 py-3 text-[13px] leading-5 text-text-secondary shadow-sm transition-colors duration-150 ease-out dark:border-border-strong dark:bg-surface-1 dark:text-text-on-dark";
+    const hintWarningClass =
+      "flex items-start gap-2.5 rounded-xl border border-warning-light bg-warning-lighter px-3 py-3 text-[13px] leading-5 text-warning-darker transition-colors duration-150 ease-out dark:border-warning-light dark:bg-warning-light dark:text-warning-lighter";
 
     function _iconBtn({ title, icon, sizeClass, kind, onClick }) {
       const b = document.createElement("button");
       b.type = "button";
       b.title = title;
-      if (kind === "zoom") {
-        b.className =
-          "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover hover:text-primary transition-colors focus:outline-none focus:bg-surface-2";
-      } else {
-        b.className =
-          "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover transition-colors focus:outline-none";
-      }
+      b.className = kind === "zoom" ? `${toolbarButtonIdleClass} hover:text-primary` : toolbarButtonIdleClass;
       b.addEventListener("click", onClick);
 
       const s = document.createElement("span");
-      s.className = `material-symbols-outlined ${sizeClass || "text-[22px]"}`;
+      s.className = `material-symbols-outlined ${sizeClass || "text-[20px]"}`;
       s.textContent = icon;
       b.appendChild(s);
       return b;
     }
 
     function _activeBtn(btn, iconSize) {
-      btn.className =
-        "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-primary-lighter dark:border-border-strong dark:bg-primary-dark text-primary dark:text-primary-light font-medium transition-colors focus:outline-none";
+      btn.className = toolbarButtonActiveClass;
       btn.innerHTML = "";
       const s = document.createElement("span");
-      s.className = `material-symbols-outlined ${iconSize || "text-[22px]"}`;
+      s.className = `material-symbols-outlined ${iconSize || "text-[20px]"}`;
       s.textContent = btn.dataset.icon || "";
       btn.appendChild(s);
     }
 
     function _inactiveBtn(btn, iconSize) {
-      btn.className =
-        "flex items-center justify-center w-full h-12 sm:h-14 border border-border-strong bg-surface-2 text-text-main dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark hover:bg-bg-hover dark:hover:bg-bg-hover transition-colors focus:outline-none";
+      btn.className = toolbarButtonIdleClass;
       btn.innerHTML = "";
       const s = document.createElement("span");
-      s.className = `material-symbols-outlined ${iconSize || "text-[22px]"}`;
+      s.className = `material-symbols-outlined ${iconSize || "text-[20px]"}`;
       s.textContent = btn.dataset.icon || "";
       btn.appendChild(s);
     }
@@ -2261,7 +3994,7 @@
     const selectBtn = _iconBtn({
       title: "Режим клика",
       icon: "arrow_selector_tool",
-      sizeClass: "text-[20px]",
+      sizeClass: "text-[18px]",
       kind: "tool",
       onClick: () => _setMode("click"),
     });
@@ -2270,7 +4003,7 @@
     const brushBtn = _iconBtn({
       title: "Режим рисования",
       icon: "edit",
-      sizeClass: "text-[22px]",
+      sizeClass: "text-[20px]",
       kind: "tool",
       onClick: () => {
         state.autoBrushFromClicks = false;
@@ -2282,7 +4015,7 @@
     const panBtn = _iconBtn({
       title: "Перемещение",
       icon: "pan_tool",
-      sizeClass: "text-[22px]",
+      sizeClass: "text-[20px]",
       kind: "tool",
       onClick: () => {
         state.autoBrushFromClicks = false;
@@ -2294,11 +4027,55 @@
     const undoBtn = _iconBtn({
       title: "Отменить",
       icon: "undo",
-      sizeClass: "text-[22px]",
+      sizeClass: "text-[20px]",
       kind: "tool",
       onClick: _undoLastAction,
     });
     undoBtn.dataset.icon = "undo";
+    undoBtn.setAttribute("data-clickui", "toolbar-undo");
+    undoBtn.style.transition =
+      "background-color 180ms ease-out, color 180ms ease-out, box-shadow 180ms ease-out, transform 180ms ease-out, opacity 160ms ease-out";
+
+    function _syncUndoButtonState() {
+      if (!undoBtn) return;
+      const canUndo =
+        (Array.isArray(state.actionHistory) && state.actionHistory.length > 0) ||
+        (Array.isArray(state.activeStroke) && state.activeStroke.length > 0);
+      undoBtn.style.opacity = canUndo ? "1" : "0.4";
+      undoBtn.style.pointerEvents = canUndo ? "auto" : "none";
+      const shouldHighlight = canUndo && Date.now() < (state.undoAttentionUntil || 0);
+      if (shouldHighlight) {
+        const accentColor = _getThemeColor("--color-error", "#ef4444");
+        undoBtn.style.backgroundColor = _withAlpha(accentColor, 0.1);
+        undoBtn.style.color = accentColor;
+        undoBtn.style.setProperty("--clickui-undo-border", _withAlpha(accentColor, 0.85));
+        undoBtn.style.setProperty("--clickui-undo-ring", _withAlpha(accentColor, 0.22));
+        undoBtn.classList.add("clickui-undo-attention");
+        undoBtn.style.transform = "scale(1.03)";
+      } else {
+        undoBtn.style.backgroundColor = "";
+        undoBtn.style.color = "";
+        undoBtn.style.removeProperty("--clickui-undo-border");
+        undoBtn.style.removeProperty("--clickui-undo-ring");
+        undoBtn.classList.remove("clickui-undo-attention");
+        undoBtn.style.transform = "";
+      }
+    }
+
+    function _flashUndoButtonAttention() {
+      if (!undoBtn) return;
+      state.undoAttentionUntil = Date.now() + 1400;
+      if (state.undoAttentionTimer) {
+        clearTimeout(state.undoAttentionTimer);
+        state.undoAttentionTimer = null;
+      }
+      _syncUndoButtonState();
+      state.undoAttentionTimer = setTimeout(() => {
+        state.undoAttentionTimer = null;
+        state.undoAttentionUntil = 0;
+        _syncUndoButtonState();
+      }, 1450);
+    }
 
     toolGroup.appendChild(selectBtn);
     toolGroup.appendChild(brushBtn);
@@ -2308,28 +4085,28 @@
     const zoomInBtn = _iconBtn({
       title: "Увеличить",
       icon: "add",
-      sizeClass: "text-[24px]",
+      sizeClass: "text-[20px]",
       kind: "zoom",
       onClick: () => _zoomAtClientPoint(state.zoom * 1.15, null, null),
     });
     const zoomOutBtn = _iconBtn({
       title: "Уменьшить",
       icon: "remove",
-      sizeClass: "text-[24px]",
+      sizeClass: "text-[20px]",
       kind: "zoom",
       onClick: () => _zoomAtClientPoint(state.zoom / 1.15, null, null),
     });
     zoomGroup.appendChild(zoomInBtn);
     zoomGroup.appendChild(zoomOutBtn);
 
-    const clearWrap = _createEl("div", "mt-auto", "");
+    const clearWrap = _createEl("div", "pt-0.5", "");
     const clearBtn = document.createElement("button");
     clearBtn.type = "button";
     clearBtn.title = "Очистить";
     clearBtn.className =
-      "flex flex-col items-center justify-center w-full h-14 bg-error-light dark:bg-error-light rounded-lg border-2 border-border-strong dark:border-border-strong text-error-text dark:text-error-lighter hover:bg-error-light dark:hover:bg-error-light transition-colors";
+      "flex h-10 w-full items-center justify-center rounded-xl border border-border-strong bg-error-light/95 text-error-text shadow-md transition-colors duration-150 hover:bg-error-light/85 focus:outline-none dark:border-border-strong dark:bg-error-light dark:text-error-lighter sm:h-11";
     const clearIcon = document.createElement("span");
-    clearIcon.className = "material-symbols-outlined text-[22px]";
+    clearIcon.className = "material-symbols-outlined text-[20px]";
     clearBtn.appendChild(clearIcon);
     clearBtn.addEventListener("click", () => {
       if (state.mode === "brush") _clearLines();
@@ -2344,33 +4121,54 @@
 
     const difficultyLevel = _getDifficultyLevel(taskDto);
     let hasTargetsPanel = false;
+    let suppressStatusCard = false;
+    const labelsWorkflowInPanel = runtimeMode && _shouldHideTargetsList(taskDto);
     let runtimeAdditionalCard = null;
-    if (difficultyLevel === 1) {
-      const targetsPanel = _renderTargetsPanel(taskDto);
-      if (targetsPanel) {
-        targetsPanel.className += " w-full";
-        sideColumn.appendChild(targetsPanel);
-        sideHasContent = true;
-        hasTargetsPanel = true;
-      }
+      if (runtimeMode) {
+        const targetsPanel = _renderTargetsPanelV2(taskDto);
+        if (targetsPanel) {
+          targetsPanel.className += " w-full shrink-0";
+          sideColumn.appendChild(targetsPanel);
+          if (difficultyLevel === 1) {
+            const userActionsPanel = _renderUserActionsSection();
+            if (userActionsPanel) {
+              userActionsPanel.className += " w-full shrink-0";
+              sideColumn.appendChild(userActionsPanel);
+            }
+            suppressStatusCard = true;
+          }
+          sideHasContent = true;
+          hasTargetsPanel = true;
+        }
     }
 
     if (runtimeMode) {
       const additionalInfo = _getAdditionalInfo(taskDto);
       runtimeAdditionalCard = _createAdditionalInfoCard(additionalInfo);
       if (runtimeAdditionalCard) {
-        runtimeAdditionalCard.classList.add("w-full");
+        runtimeAdditionalCard.classList.add("w-full", "shrink-0");
+        sideColumn.classList.remove(
+          "lg:sticky",
+          "lg:top-3",
+          "lg:self-start",
+          "lg:max-h-[calc(100vh-128px)]",
+          "lg:overflow-y-auto",
+          "lg:pr-1"
+        );
       }
     }
+
+    const labelsContainer = _createEl("div", "w-full shrink-0", "");
+    labelsContainer.setAttribute("data-clickui", "labels-section");
 
     wrapperRow.appendChild(wrapper);
     wrapper.appendChild(toolbar);
 
-    const controls = _createEl("div", "mt-3 flex flex-col gap-2", "");
+    const controls = _createEl("div", "mt-2.5 flex flex-col gap-2", "");
 
     const refToggles = _createEl(
       "div",
-      "hidden flex flex-wrap items-center gap-3 rounded-lg border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-secondary dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark",
+      "hidden flex flex-wrap items-center gap-2.5 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2 text-[13px] text-text-secondary shadow-sm dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark",
       ""
     );
     refToggles.setAttribute("data-clickui", "ref-toggles");
@@ -2445,7 +4243,7 @@
     refToggles.appendChild(lblLabels);
     const hint = _createEl(
       "div",
-      "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-surface-1 dark:bg-surface-1 border border-border-strong dark:border-border-strong rounded-lg text-sm text-text-secondary dark:text-text-on-dark",
+      hintBaseClass,
       ""
     );
     hint.style.transition = "opacity 160ms ease-out, background-color 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out";
@@ -2453,7 +4251,7 @@
     hint.setAttribute("data-clickui", "hint");
     const hintIcon = _createEl(
       "span",
-      "material-symbols-outlined text-text-secondary dark:text-text-on-dark",
+      "material-symbols-outlined text-[18px] text-text-secondary dark:text-text-on-dark",
       "info"
     );
     hintIcon.style.transition = "color 150ms ease-out";
@@ -2519,14 +4317,14 @@
 
     const liveStatus = _createEl(
       "div",
-      "text-xs font-medium text-text-secondary dark:text-text-on-dark",
+      "text-[11px] font-medium leading-5 text-text-secondary dark:text-text-on-dark",
       ""
     );
     liveStatus.setAttribute("data-clickui", "live-status");
 
     const checkStatus = _createEl(
       "div",
-      "text-xs font-semibold text-text-secondary dark:text-text-on-dark text-right",
+      "text-[11px] font-semibold leading-5 text-text-secondary dark:text-text-on-dark text-right",
       ""
     );
     checkStatus.setAttribute("data-clickui", "check-status");
@@ -2534,21 +4332,27 @@
 
     hint.className += " w-full";
     checkStatus.className =
-      "text-xs font-semibold text-text-secondary dark:text-text-on-dark text-right xl:text-left";
+      "text-[11px] font-semibold leading-5 text-text-secondary dark:text-text-on-dark text-right xl:text-left";
     const statusCard = _createEl(
       "div",
-      "rounded-lg border border-border-strong bg-surface-2 p-4 shadow-sm dark:border-border-strong dark:bg-surface-2 flex flex-col gap-3",
+      "flex flex-col gap-2.5 rounded-2xl border border-border-strong bg-surface-2 p-3.5 shadow-sm dark:border-border-strong dark:bg-surface-2",
       ""
     );
-    const statusMeta = _createEl("div", "flex flex-col gap-1", "");
+    statusCard.setAttribute("data-clickui", "status-card");
+    statusCard.classList.add("w-full", "shrink-0");
+    const statusMeta = _createEl("div", "flex flex-col gap-0.5", "");
     statusMeta.appendChild(liveStatus);
     statusMeta.appendChild(checkStatus);
     statusCard.appendChild(hint);
     statusCard.appendChild(statusMeta);
     // In L1 runtime flow, targets panel already shows progress/state better.
     // Avoid duplicating the same information in a separate status card.
-    if (!(runtimeMode && hasTargetsPanel)) {
+    if (!(suppressStatusCard || labelsWorkflowInPanel)) {
       sideColumn.appendChild(statusCard);
+      sideHasContent = true;
+    }
+    if (runtimeMode) {
+      sideColumn.appendChild(labelsContainer);
       sideHasContent = true;
     }
     if (runtimeAdditionalCard) {
@@ -2559,10 +4363,10 @@
     const labelsIndicator = document.createElement("button");
     labelsIndicator.type = "button";
     labelsIndicator.className =
-      "fixed right-3 bottom-24 z-50 rounded-full bg-primary text-primary-fg text-xs font-semibold px-3 py-2 shadow-lg hover:bg-primary-hover transition-colors opacity-0 pointer-events-none";
+      "fixed right-3 bottom-24 z-50 rounded-full bg-primary text-primary-fg text-xs font-semibold px-3 py-2.5 shadow-lg hover:bg-primary-hover transition-colors opacity-0 pointer-events-none";
     labelsIndicator.style.opacity = "0";
     labelsIndicator.style.transition = "opacity 160ms ease-out";
-    labelsIndicator.textContent = "Названия ↓";
+    labelsIndicator.textContent = "Ваши действия ↓";
     labelsIndicator.addEventListener("click", () => {
       try {
         if (state.labelsCardEl && typeof state.labelsCardEl.scrollIntoView === "function") {
@@ -2580,7 +4384,7 @@
         // ignore
       }
     });
-    state.labelsIndicatorEl = labelsIndicator;
+    state.labelsIndicatorEl = null;
 
     function _getViewportMetrics() {
       try {
@@ -2655,9 +4459,25 @@
         @keyframes clickuiFadeIn { from { opacity: 0; } to { opacity: 1; } }
         @keyframes clickuiScaleIn { from { opacity: 0; transform: translate(-50%, -50%) scale(0.6); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         @keyframes clickuiSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes clickuiUndoAttention {
+          0%, 100% { box-shadow: inset 0 0 0 1px var(--clickui-undo-border), 0 0 0 0 var(--clickui-undo-ring); }
+          50% { box-shadow: inset 0 0 0 1px var(--clickui-undo-border), 0 0 0 4px var(--clickui-undo-ring); }
+        }
+        @keyframes clickuiTargetsAttention {
+          0%, 100% { box-shadow: inset 0 0 0 1px var(--clickui-targets-border, transparent), 0 0 0 0 var(--clickui-targets-ring, transparent); transform: translateY(0); }
+          50% { box-shadow: inset 0 0 0 1px var(--clickui-targets-border, transparent), 0 0 0 6px var(--clickui-targets-ring, transparent); transform: translateY(-1px); }
+        }
+        @keyframes clickuiOutlineVerbAttention {
+          0%, 100% { transform: scale(1); }
+          50% { transform: scale(1.06); }
+        }
         .clickui-bad-target { animation: clickuiPulse 1.8s ease-in-out infinite }
         .clickui-marker-entry { animation: clickuiScaleIn 250ms ease-out forwards; }
         .clickui-card-entry { animation: clickuiSlideUp 250ms ease-out forwards; }
+        .clickui-card-exit { transition: height 200ms ease, opacity 180ms ease, transform 180ms ease; }
+        .clickui-undo-attention { animation: clickuiUndoAttention 780ms ease-in-out infinite; }
+        .clickui-targets-attention { animation: clickuiTargetsAttention 900ms ease-in-out 2; }
+        .clickui-outline-verb-attention { animation: clickuiOutlineVerbAttention 680ms ease-in-out 2; }
       `;
       document.head.appendChild(style);
     }
@@ -2665,13 +4485,55 @@
     function _setLiveStatus(kind, text) {
       if (!liveStatus) return;
       if (kind === "ok") {
-        liveStatus.className = "text-xs font-semibold text-success-text dark:text-success";
+        liveStatus.className = "text-[11px] font-semibold leading-5 text-success-text dark:text-success";
       } else if (kind === "bad") {
-        liveStatus.className = "text-xs font-semibold text-error-text dark:text-error";
+        liveStatus.className = "text-[11px] font-semibold leading-5 text-error-text dark:text-error";
       } else {
-        liveStatus.className = "text-xs font-medium text-text-secondary dark:text-text-on-dark";
+        liveStatus.className = "text-[11px] font-medium leading-5 text-text-secondary dark:text-text-on-dark";
       }
       liveStatus.textContent = text || "";
+    }
+
+    function _updateTargetsPanelInstruction() {
+      try {
+        if (!state.targetsInstructionEl) return;
+        if (!_shouldHideTargetsList(state.taskDto)) return;
+        const targets = _getTargets(state.taskDto);
+        const instructionText = _buildTargetsStatusInstruction(state.taskDto, targets);
+        const total = state.maxClicks;
+        const done = Math.min(Array.isArray(state.clicks) ? state.clicks.length : 0, total || 0);
+        const progressHtml =
+          total > 0
+            ? `<span class="font-semibold text-text-main dark:text-text-on-dark">Сделано ${done} кликов из ${total} доступных.</span>`
+            : `<span class="font-semibold text-text-main dark:text-text-on-dark">Сделано ${done} кликов.</span>`;
+        const extraHtml = _hasAnyUserMarks()
+          ? "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>"
+          : "";
+        const progressMarkup = _requiresDrawing()
+          ? (() => {
+              const donePoly = Array.isArray(state.polygons) ? state.polygons.length : 0;
+              const doneLines = Array.isArray(state.lines) ? state.lines.length : 0;
+              const totalPoly = state.maxPolygons;
+              const totalLines = state.maxStrokes;
+              if (totalPoly > 0 && totalLines > 0) {
+                return `<span class="font-semibold text-text-main dark:text-text-on-dark">Контуры ${donePoly} из ${totalPoly}. Линии ${doneLines} из ${totalLines}.</span>`;
+              }
+              if (totalPoly > 0) {
+                return `<span class="font-semibold text-text-main dark:text-text-on-dark">Контуры ${donePoly} из ${totalPoly}.</span>`;
+              }
+              if (totalLines > 0) {
+                return `<span class="font-semibold text-text-main dark:text-text-on-dark">Линии ${doneLines} из ${totalLines}.</span>`;
+              }
+              return `<span class="font-semibold text-text-main dark:text-text-on-dark">Отметь нужные фрагменты.</span>`;
+            })()
+          : progressHtml;
+        state.targetsInstructionEl.innerHTML =
+          `<div class="leading-snug">${_escapeHtml(instructionText)}</div>` +
+          `<div class="mt-1">${progressMarkup}</div>` +
+          extraHtml;
+      } catch (e) {
+        // ignore
+      }
     }
 
     function _updateLiveProgress() {
@@ -2718,24 +4580,42 @@
 
       const found = state.foundClickTargets ? state.foundClickTargets.size : 0;
       const total = state.maxClicks;
+      const usedClicks = Math.min(Array.isArray(state.clicks) ? state.clicks.length : 0, total || 0);
+      const isConfirmedProgress = state.locked === true;
       _setLiveStatus(
         "neutral",
-        total > 0 ? `Найдено целей: ${found}/${total}` : `Найдено целей: ${found}`
+        isConfirmedProgress
+          ? total > 0
+            ? `Найдено целей: ${found}/${total}`
+            : `Найдено целей: ${found}`
+          : total > 0
+            ? `Использовано кликов: ${usedClicks}/${total}`
+            : `Использовано кликов: ${usedClicks}`
       );
     }
 
     state._updateLiveProgress = _updateLiveProgress;
 
     function _flashHint(message) {
-      if (!hintText) return;
       if (state.tempHintTimer) {
         clearTimeout(state.tempHintTimer);
         state.tempHintTimer = null;
       }
 
-      hint.className =
-        "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-warning-lighter dark:bg-warning-light border border-warning-light dark:border-warning-light rounded-lg text-sm text-warning-darker dark:text-warning-lighter";
-      _setHintIcon("warning", "material-symbols-outlined text-warning dark:text-warning-light");
+      if (_shouldHideTargetsList(state.taskDto) && state.targetsInstructionEl) {
+        state.targetsInstructionEl.innerHTML =
+          `<span class="font-semibold text-warning-darker dark:text-warning-lighter">${_escapeHtml(message)}</span>`;
+        state.tempHintTimer = setTimeout(() => {
+          state.tempHintTimer = null;
+          if (typeof state._updateToolbar === "function") state._updateToolbar();
+        }, 3000);
+        return;
+      }
+
+      if (!hintText) return;
+
+      hint.className = hintWarningClass;
+      _setHintIcon("warning", "material-symbols-outlined text-[18px] text-warning dark:text-warning-light");
       _setHintHtml(
         `<span class="font-semibold text-text-main dark:text-text-on-dark">${_escapeHtml(message)}</span>`
       );
@@ -2748,18 +4628,18 @@
 
     controls.appendChild(refToggles);
 
-    const labelsContainer = _createEl("div", "", "");
-
     mainColumn.appendChild(wrapperRow);
     mainColumn.appendChild(controls);
-    mainColumn.appendChild(labelsContainer);
+    mainColumn.appendChild(reviewHost);
+    if (!runtimeMode) {
+      mainColumn.appendChild(labelsContainer);
+    }
 
     layout.appendChild(mainColumn);
     if (sideHasContent) {
       layout.appendChild(sideColumn);
     }
     root.appendChild(layout);
-    root.appendChild(labelsIndicator);
 
     img.addEventListener("load", () => {
       const naturalW = img.naturalWidth || 1;
@@ -2777,10 +4657,16 @@
       state.panX = (viewportRect.width - naturalW * state.zoom) / 2;
       state.panY = (viewportRect.height - naturalH * state.zoom) / 2;
 
-      _applyTransform();
-      _renderMarkers();
-      _renderDrawing();
-      _renderReference();
+      if (state.pendingViewState) {
+        const pendingViewState = state.pendingViewState;
+        state.pendingViewState = null;
+        _applyRestoredViewState(pendingViewState, { applyViewport: true });
+      } else {
+        _applyTransform();
+        _renderMarkers();
+        _renderDrawing();
+        _renderReference();
+      }
       if (typeof state._updateLabelsIndicator === "function") state._updateLabelsIndicator();
     });
 
@@ -2818,9 +4704,13 @@
 
       if (state.mode === "brush") {
         state.ignoreClicksUntil = Date.now() + 350;
-        if (state.maxStrokes > 0 && state.lines.length >= state.maxStrokes) {
+        const drawingTask = _requiresDrawing();
+        const linesFull = state.maxStrokes > 0 && state.lines.length >= state.maxStrokes;
+        const polygonsFull = state.maxPolygons > 0 && state.polygons.length >= state.maxPolygons;
+        if ((!drawingTask && linesFull) || (drawingTask && linesFull && polygonsFull)) {
           _flashHint("Достигнут лимит штрихов. Нажми «Проверить» для завершения.");
           _setLiveStatus("bad", "Лимит штрихов");
+          _flashUndoButtonAttention();
           return;
         }
         const pt = _getClickFromEvent(ev);
@@ -2871,6 +4761,58 @@
       return dx * dx + dy * dy;
     }
 
+    function _getNaturalCoordinateScale(options) {
+      const opts = options || {};
+      if (Number.isFinite(Number(opts.coordinateScale)) && Number(opts.coordinateScale) > 0) {
+        return Number(opts.coordinateScale);
+      }
+
+      const img = opts.img || state.img;
+      if (!img) return 1;
+
+      const naturalW = Number(opts.naturalWidth != null ? opts.naturalWidth : img.naturalWidth || img.width || 0);
+      const naturalH = Number(opts.naturalHeight != null ? opts.naturalHeight : img.naturalHeight || img.height || 0);
+      const rect =
+        opts.rect ||
+        (typeof img.getBoundingClientRect === "function" ? img.getBoundingClientRect() : null);
+
+      if (!rect || !rect.width || !rect.height || !naturalW || !naturalH) {
+        return 1;
+      }
+
+      const scaleX = naturalW / rect.width;
+      const scaleY = naturalH / rect.height;
+      const scale = Math.max(scaleX, scaleY);
+      return Number.isFinite(scale) && scale > 0 ? scale : 1;
+    }
+
+    const _CLOSE_STROKE_DISTANCE_PX = 14;
+    const _MIN_CLOSED_STROKE_POINTS = 5;
+    const _MIN_CLOSED_STROKE_EXCURSION_PX = 18;
+
+    function _getClosedStrokePoints(points, options) {
+      if (!Array.isArray(points) || points.length < _MIN_CLOSED_STROKE_POINTS) return null;
+      const coordinateScale = _getNaturalCoordinateScale(options);
+      const closeStrokeDistancePx = _CLOSE_STROKE_DISTANCE_PX * coordinateScale;
+      const minClosedStrokeExcursionPx = _MIN_CLOSED_STROKE_EXCURSION_PX * coordinateScale;
+      const start = points[0];
+      let hadMeaningfulExcursion = false;
+      for (let idx = 1; idx < points.length; idx += 1) {
+        const distSq = _distanceSq(start, points[idx]);
+        if (distSq >= minClosedStrokeExcursionPx * minClosedStrokeExcursionPx) {
+          hadMeaningfulExcursion = true;
+        }
+        if (
+          idx >= (_MIN_CLOSED_STROKE_POINTS - 1) &&
+          hadMeaningfulExcursion &&
+          distSq <= closeStrokeDistancePx * closeStrokeDistancePx
+        ) {
+          return points.slice(0, idx + 1);
+        }
+      }
+      return null;
+    }
+
     function _onPointerUp() {
       if (!state.isPointerDown) return;
       state.isPointerDown = false;
@@ -2892,12 +4834,11 @@
             pts = [p0, [p0[0], p0[1]]];
           }
           if (pts.length >= 2) {
-            const isClosed =
-              _requiresDrawing() &&
-              pts.length >= 3 &&
-              _distanceSq(pts[0], pts[pts.length - 1]) <= 14 * 14;
-
+            const closedStrokePoints = _requiresDrawing() ? _getClosedStrokePoints(pts) : null;
+            const isClosed = !!closedStrokePoints;
+            const drawingTask = _requiresDrawing();
             if (isClosed) {
+              pts = closedStrokePoints;
               if (_requiresDrawing() && state.maxPolygons > 0 && state.polygons.length >= state.maxPolygons) {
                 _flashHint("Достигнут лимит контуров. Нарисуй штрихи (фрихенд) или нажми «Проверить». ");
                 _setLiveStatus("bad", "Лимит контуров");
@@ -2908,6 +4849,7 @@
                 state.labelsPolygons.push("");
                 state.actionHistory = Array.isArray(state.actionHistory) ? state.actionHistory : [];
                 state.actionHistory.push({ kind: "polygon" });
+                _resetActionInterpretation();
                 _clientLog("finalize_stroke", {
                   kind: "polygon",
                   now: Date.now(),
@@ -2921,6 +4863,10 @@
                     .map((a) => (a ? a.kind : null)),
                 });
               }
+            } else if (drawingTask && state.maxStrokes > 0 && state.lines.length >= state.maxStrokes) {
+              _flashHint("Достигнут лимит штрихов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний штрих. ");
+              _setLiveStatus("bad", "Лимит штрихов");
+              _flashUndoButtonAttention();
             } else {
               state.lines = Array.isArray(state.lines) ? state.lines : [];
               state.lines.push({ points: pts });
@@ -2928,6 +4874,7 @@
               state.labelsLines.push("");
               state.actionHistory = Array.isArray(state.actionHistory) ? state.actionHistory : [];
               state.actionHistory.push({ kind: "line" });
+              _resetActionInterpretation();
               _clientLog("finalize_stroke", {
                 kind: "line",
                 now: Date.now(),
@@ -2965,6 +4912,7 @@
         _renderDrawing();
         _renderMarkers();
         _renderLabelsInputs(null);
+        _refreshUserActionsPanel();
         if (typeof state._updateLiveProgress === "function") state._updateLiveProgress();
         if (typeof state._updateToolbar === "function") state._updateToolbar();
       }
@@ -2997,7 +4945,8 @@
           state.autoBrushFromClicks = true;
           _setMode("brush");
         }
-        _flashHint("Достигнут лимит кликов. Нажми «Проверить» для завершения.");
+        _flashHint("Достигнут лимит кликов. Нажми «Проверить» для завершения или «Отменить», чтобы убрать последний клик.");
+        _flashUndoButtonAttention();
         _setLiveStatus("bad", "Лимит кликов");
         return;
       }
@@ -3008,11 +4957,14 @@
       if (hit.hit) {
         if (state.foundClickTargets && state.foundClickTargets.has(hit.targetIndex)) {
           _flashHint("Эта цель уже была найдена.");
-          _setLiveStatus("bad", `Уже найдено (цель #${hit.targetIndex + 1})`);
+          _setLiveStatus("bad", `Уже найдено (${_getTargetDisplayReference(state.taskDto, hit.targetIndex)})`);
           return;
         }
-        if (state.foundClickTargets) state.foundClickTargets.add(hit.targetIndex);
-        _setLiveStatus("ok", `Попадание (цель #${hit.targetIndex + 1})`);
+        if (state.foundClickTargets) {
+          state.foundClickTargets.add(hit.targetIndex);
+          _syncFoundTargetsUI();
+        }
+        _setLiveStatus("ok", `Попадание (${_getTargetDisplayReference(state.taskDto, hit.targetIndex)})`);
       } else {
         _setLiveStatus("bad", "Мимо");
       }
@@ -3022,6 +4974,7 @@
       state.labelsClicks.push("");
       state.actionHistory = Array.isArray(state.actionHistory) ? state.actionHistory : [];
       state.actionHistory.push({ kind: "click" });
+      _resetActionInterpretation();
       _clientLog("add_click", {
         now: Date.now(),
         mode: state.mode,
@@ -3034,7 +4987,8 @@
       });
       _renderMarkers();
       _renderLabelsInputs(null);
-      _updateLiveProgress();
+      _refreshUserActionsPanel();
+      _syncFoundTargetsUI();
       if (state.maxClicks > 0 && state.clicks.length >= state.maxClicks && state.maxStrokes > 0) {
         state.autoBrushFromClicks = true;
         _setMode("brush");
@@ -3052,6 +5006,8 @@
     state.refLayer = refLayer;
     state.labelsContainer = labelsContainer;
     state.labelsInputs = [];
+    state.reviewHost = reviewHost;
+    state.reviewComparisonEl = null;
     if (state.checkStatusEl) state.checkStatusEl.textContent = "";
 
     state._updateToolbar = function updateToolbar() {
@@ -3068,26 +5024,22 @@
       }
 
       if (state.mode === "click") {
-        _activeBtn(selectBtn, "text-[20px]");
-        _inactiveBtn(brushBtn, "text-[22px]");
-        _inactiveBtn(panBtn, "text-[22px]");
-        if (undoBtn) {
-          const canUndo =
-            (Array.isArray(state.actionHistory) && state.actionHistory.length > 0) ||
-            (Array.isArray(state.activeStroke) && state.activeStroke.length > 0);
-          undoBtn.style.opacity = canUndo ? "1" : "0.4";
-          undoBtn.style.pointerEvents = canUndo ? "auto" : "none";
-        }
+        _activeBtn(selectBtn, "text-[18px]");
+        _inactiveBtn(brushBtn, "text-[20px]");
+        _inactiveBtn(panBtn, "text-[20px]");
+        _syncUndoButtonState();
         clearBtn.title = "Очистить все клики";
         clearIcon.textContent = "delete";
 
-        hint.className =
-          "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-surface-1 dark:bg-surface-1 border border-border-strong dark:border-border-strong rounded-lg text-sm text-text-secondary dark:text-text-on-dark";
-        _setHintIcon("info", "material-symbols-outlined text-text-secondary dark:text-text-on-dark");
+        hint.className = hintBaseClass;
+        _setHintIcon("info", "material-symbols-outlined text-[18px] text-text-secondary dark:text-text-on-dark");
 
         if (hintText) {
           const done = state.clicks.length;
           const total = state.maxClicks;
+          const targets = _getTargets(state.taskDto);
+          const instructionHtml =
+            `<div class="leading-snug">${_escapeHtml(_buildTargetsStatusInstruction(state.taskDto, targets))}</div>`;
           const baseHtml =
             total > 0
               ? `<span class="font-semibold text-text-main dark:text-text-on-dark">Сделано ${done} кликов из ${total} доступных.</span>`
@@ -3096,25 +5048,20 @@
             _requiresLabels() && _hasAnyUserMarks()
               ? "<div class=\"mt-0.5 leading-snug\">Введи названия для отмеченных целей и нажми «Проверить ответ».</div>"
               : "";
-          _setHintHtml(baseHtml + extraHtml);
+          _setHintHtml(instructionHtml + `<div class="mt-1">${baseHtml}</div>` + extraHtml);
         }
       } else if (state.mode === "brush") {
-        _inactiveBtn(selectBtn, "text-[20px]");
-        _activeBtn(brushBtn, "text-[22px]");
-        _inactiveBtn(panBtn, "text-[22px]");
-        if (undoBtn) {
-          const canUndo =
-            (Array.isArray(state.actionHistory) && state.actionHistory.length > 0) ||
-            (Array.isArray(state.activeStroke) && state.activeStroke.length > 0);
-          undoBtn.style.opacity = canUndo ? "1" : "0.4";
-          undoBtn.style.pointerEvents = canUndo ? "auto" : "none";
-        }
-        clearBtn.title = "Очистить штрихи";
+        _inactiveBtn(selectBtn, "text-[18px]");
+        _activeBtn(brushBtn, "text-[20px]");
+        _inactiveBtn(panBtn, "text-[20px]");
+        _syncUndoButtonState();
+        clearBtn.title = _requiresDrawing()
+          ? "Очистить контуры и линии"
+          : "Очистить штрихи";
         clearIcon.textContent = "ink_eraser";
 
-        hint.className =
-          "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-surface-1 dark:bg-surface-1 border border-border-strong dark:border-border-strong rounded-lg text-sm text-text-secondary dark:text-text-on-dark";
-        _setHintIcon("gesture", "material-symbols-outlined text-text-secondary dark:text-text-on-dark");
+        hint.className = hintBaseClass;
+        _setHintIcon("gesture", "material-symbols-outlined text-[18px] text-text-secondary dark:text-text-on-dark");
 
         if (hintText) {
           const hasActive = Array.isArray(state.activeStroke) && state.activeStroke.length >= 1;
@@ -3122,21 +5069,25 @@
           const totalLines = state.maxStrokes;
           let baseHtml = "";
           if (_requiresDrawing()) {
-            const willBePoly =
-              hasActive &&
-              Array.isArray(state.activeStroke) &&
-              state.activeStroke.length >= 3 &&
-              _distanceSq(state.activeStroke[0], state.activeStroke[state.activeStroke.length - 1]) <= 14 * 14;
+            const willBePoly = hasActive && !!_getClosedStrokePoints(state.activeStroke);
             const donePoly = state.polygons.length + (hasActive && willBePoly ? 1 : 0);
             const totalPoly = state.maxPolygons;
-            const polyText = totalPoly > 0 ? `Контуры ${donePoly} из ${totalPoly}.` : `Контуры ${donePoly}.`;
-            const lineText = totalLines > 0 ? `Штрихи ${doneLines} из ${totalLines}.` : `Штрихи ${doneLines}.`;
-            baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${polyText} ${lineText}</span> Зажми и веди мышью по границе.`;
+            if (totalPoly > 0 && totalLines > 0) {
+              const polyText = `Контуры ${donePoly} из ${totalPoly}.`;
+              const lineText = `Линии ${doneLines} из ${totalLines}.`;
+              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">${polyText} ${lineText}</span> Замкнутый штрих засчитывается как контур, незамкнутый — как линия.`;
+            } else if (totalPoly > 0) {
+              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Контуры ${donePoly} из ${totalPoly}.</span> Обведи нужную область и замкни линию.`;
+            } else if (totalLines > 0) {
+              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии ${doneLines} из ${totalLines}.</span> Проведи линию по нужному фрагменту изображения.`;
+            } else {
+              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Отметь нужные фрагменты.</span> Рисуй только по тем строкам, которые показаны в списке целей.`;
+            }
           } else {
             if (totalLines > 0) {
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Нарисовано ${doneLines} штрихов из ${totalLines}.</span> Зажми и веди мышью по границе.`;
+              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии ${doneLines} из ${totalLines}.</span> Проведи линию по нужному фрагменту изображения.`;
             } else {
-              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Нарисовано ${doneLines} штрихов.</span> Зажми и веди мышью по границе.`;
+              baseHtml = `<span class=\"font-semibold text-text-main dark:text-text-on-dark\">Линии ${doneLines}.</span> Проведи линию по нужному фрагменту изображения.`;
             }
           }
 
@@ -3147,23 +5098,18 @@
           _setHintHtml(baseHtml + extraHtml);
         }
       } else {
-        _inactiveBtn(selectBtn, "text-[20px]");
-        _inactiveBtn(brushBtn, "text-[22px]");
-        _activeBtn(panBtn, "text-[22px]");
-        if (undoBtn) {
-          const canUndo =
-            (Array.isArray(state.actionHistory) && state.actionHistory.length > 0) ||
-            (Array.isArray(state.activeStroke) && state.activeStroke.length > 0);
-          undoBtn.style.opacity = canUndo ? "1" : "0.4";
-          undoBtn.style.pointerEvents = canUndo ? "auto" : "none";
-        }
+        _inactiveBtn(selectBtn, "text-[18px]");
+        _inactiveBtn(brushBtn, "text-[20px]");
+        _activeBtn(panBtn, "text-[20px]");
+        _syncUndoButtonState();
         clearBtn.title = "Очистить всё";
         clearIcon.textContent = "delete";
 
-        hint.className =
-          "flex items-start gap-3 p-3 min-h-[64px] transition-colors duration-150 ease-out bg-surface-1 dark:bg-surface-1 border border-border-strong dark:border-border-strong rounded-lg text-sm text-text-secondary dark:text-text-on-dark";
-        _setHintIcon("info", "material-symbols-outlined text-text-secondary dark:text-text-on-dark");
+        hint.className = hintBaseClass;
+        _setHintIcon("info", "material-symbols-outlined text-[18px] text-text-secondary dark:text-text-on-dark");
       }
+
+      _updateTargetsPanelInstruction();
 
     };
 
@@ -3190,6 +5136,100 @@
     container.appendChild(root);
   };
 
+  ClickUI.restoreInput = function restoreInput(draft) {
+    if (!draft || typeof draft !== "object") return;
+
+    function _normalizePoint(point) {
+      if (!point) return null;
+      const x = Number(Array.isArray(point) ? point[0] : point.x);
+      const y = Number(Array.isArray(point) ? point[1] : point.y);
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+      return [x, y];
+    }
+
+    function _normalizePointsCollection(items, minPoints) {
+      if (!Array.isArray(items)) return [];
+      return items
+        .map((item) => {
+          const rawPoints = Array.isArray(item && item.points) ? item.points : [];
+          const points = rawPoints.map(_normalizePoint).filter(Boolean);
+          return points.length >= minPoints ? { points } : null;
+        })
+        .filter(Boolean);
+    }
+
+    const nextClicks = Array.isArray(draft.clicks)
+      ? draft.clicks
+          .map((click) => {
+            const x = Number(click && click.x);
+            const y = Number(click && click.y);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+            return { x, y, scale_factor: 1.0, offset_x: 0.0, offset_y: 0.0 };
+          })
+          .filter(Boolean)
+      : [];
+
+    state.clicks = nextClicks;
+    state.polygons = _normalizePointsCollection(draft.polygons, 3);
+    state.lines = _normalizePointsCollection(draft.lines, 2);
+    state.labelsClicks = Array.isArray(draft.labels_clicks) ? draft.labels_clicks.map((s) => String(s || "")) : [];
+    state.labelsPolygons = Array.isArray(draft.labels_polygons)
+      ? draft.labels_polygons.map((s) => String(s || ""))
+      : [];
+    state.labelsLines = Array.isArray(draft.labels_lines) ? draft.labels_lines.map((s) => String(s || "")) : [];
+    state.highlightLabelErrors = false;
+    state.labelEval = null;
+    state.badRefTargets = null;
+    state.showRef = false;
+    state.showRefContours = true;
+    state.showRefPolygons = true;
+    state.showRefLines = true;
+    state.userLinesCheckedStyle = false;
+    state.userMarksCheckedStyle = false;
+    state.locked = false;
+    state.hoveredActionKey = null;
+    _setActionInterpretation(null, false);
+
+    const restoredActionHistory = Array.isArray(draft.action_history)
+      ? draft.action_history
+          .map((item) => String(item && item.kind ? item.kind : "").trim())
+          .filter((kind) => kind === "click" || kind === "polygon" || kind === "line")
+          .map((kind) => ({ kind }))
+      : [];
+    state.actionHistory = restoredActionHistory.length
+      ? restoredActionHistory
+      : [
+          ...state.clicks.map(() => ({ kind: "click" })),
+          ...state.polygons.map(() => ({ kind: "polygon" })),
+          ...state.lines.map(() => ({ kind: "line" })),
+        ];
+
+    if (Array.isArray(draft.found_targets)) {
+      state.foundClickTargets = _normalizeFoundTargetsSet(draft.found_targets);
+    } else {
+      _rebuildFoundTargetsFromClicks();
+    }
+
+    _ensureLabelsLengths();
+    if (_requiresDrawing()) {
+      _setMode("brush");
+    } else if (state.maxClicks > 0 && state.clicks.length >= state.maxClicks && state.maxStrokes > 0) {
+      state.autoBrushFromClicks = true;
+      _setMode("brush");
+    } else {
+      state.autoBrushFromClicks = false;
+      _setMode("click");
+    }
+    _renderMarkers();
+    _renderDrawing();
+    _renderReference();
+    _renderLabelsInputs(null);
+    _refreshUserActionsPanel();
+    _applyUserMarksVisibility();
+    _syncFoundTargetsUI();
+    if (typeof state._updateToolbar === "function") state._updateToolbar();
+  };
+
   ClickUI.getUserAnswerPayload = function getUserAnswerPayload() {
     const taskDto = state.taskDto;
     const answerKey = (taskDto && taskDto.answer_key) || {};
@@ -3205,7 +5245,7 @@
 
     const payload = {
       clicks,
-      found_targets: [],
+      found_targets: state.foundClickTargets instanceof Set ? Array.from(state.foundClickTargets).sort((a, b) => a - b) : [],
       total_targets: targets.length,
     };
 
@@ -3213,6 +5253,11 @@
       if (state.img) {
         payload.image_width = state.img.naturalWidth || null;
         payload.image_height = state.img.naturalHeight || null;
+        if (typeof state.img.getBoundingClientRect === "function") {
+          const rect = state.img.getBoundingClientRect();
+          payload.display_width = rect && Number.isFinite(rect.width) ? rect.width : null;
+          payload.display_height = rect && Number.isFinite(rect.height) ? rect.height : null;
+        }
       }
       payload.brush_radius = state.brushRadius != null ? state.brushRadius : 8;
 
@@ -3243,6 +5288,13 @@
       }
     }
 
+    if (Array.isArray(state.actionHistory) && state.actionHistory.length) {
+      payload.action_history = state.actionHistory
+        .map((entry) => String(entry && entry.kind ? entry.kind : "").trim())
+        .filter((kind) => kind === "click" || kind === "polygon" || kind === "line")
+        .map((kind) => ({ kind }));
+    }
+
     if (
       !payload.clicks.length &&
       !(payload.polygons && payload.polygons.length) &&
@@ -3254,6 +5306,31 @@
     return payload;
   };
 
+  ClickUI.getViewState = function getViewState() {
+    return {
+      zoom: state.zoom,
+      panX: state.panX,
+      panY: state.panY,
+      mode: state.mode,
+      showRef: !!state.showRef,
+      showRefContours: state.showRefContours !== false,
+      showRefPolygons: state.showRefPolygons !== false,
+      showRefLines: state.showRefLines !== false,
+      showRefLabels: state.showRefLabels !== false,
+      showUserMarks: state.showUserMarks !== false,
+    };
+  };
+
+  ClickUI.restoreViewState = function restoreViewState(viewState) {
+    const safeViewState = _sanitizeViewState(viewState);
+    if (!safeViewState) return;
+
+    const canApplyViewport =
+      !!(state.img && state.img.complete && (state.img.naturalWidth || 0) > 0);
+    state.pendingViewState = canApplyViewport ? null : safeViewState;
+    _applyRestoredViewState(safeViewState, { applyViewport: canApplyViewport });
+  };
+
   ClickUI.applyCheckFeedback = function applyCheckFeedback(result) {
     state.locked = true;
 
@@ -3262,11 +5339,15 @@
     }
 
     const details = result.details;
+    _setActionInterpretation(_buildActionInterpretationMap(details), true);
+    _refreshUserActionsPanel();
 
     const foundTargets =
       (Array.isArray(details.found_targets) && details.found_targets) ||
       (Array.isArray(details.foundTargets) && details.foundTargets) ||
       null;
+    state.foundClickTargets = _normalizeFoundTargetsSet(foundTargets);
+    _syncFoundTargetsUI();
 
     const error = details.error || null;
 
@@ -3350,8 +5431,9 @@
     state.showRefLines = true;
     state.userLinesCheckedStyle = true;
     state.userMarksCheckedStyle = true;
-    // For L3 we keep user contours/strokes visible after check.
-    state.showUserMarks = _requiresDrawing();
+    // Keep the user's own marks visible after check so the result screen
+    // reflects exactly what was submitted and can later be reused in history.
+    state.showUserMarks = true;
     if (state.root) {
       const toggles = state.root.querySelector('[data-clickui="ref-toggles"]');
       if (toggles) {
@@ -3365,7 +5447,7 @@
 
       const chkUser = state.root.querySelector('[data-clickui="user-marks"]');
       if (chkUser && chkUser instanceof HTMLInputElement) {
-        chkUser.checked = false;
+        chkUser.checked = true;
       }
 
       const chkPolys = state.root.querySelector('[data-clickui="ref-polygons"]');
@@ -3415,6 +5497,7 @@
     } else {
       state.highlightLabelErrors = false;
     }
+    _syncFoundTargetsUI();
 
     // Capture label correctness from evaluator (if provided) for green/red highlighting.
     state.labelEval = null;
@@ -3448,6 +5531,7 @@
     _renderMarkers();
     _renderDrawing();
     _renderReference();
+    _renderReviewComparison(result);
 
     if (_debugEnabled()) {
       try {
@@ -3467,6 +5551,9 @@
 
     if (state._themeListener) {
       window.removeEventListener("themechanged", state._themeListener);
+    }
+    if (state.targetsAttentionTimer) {
+      clearTimeout(state.targetsAttentionTimer);
     }
 
     // Reset state object to initial values
@@ -3490,6 +5577,8 @@
       panStart: null,
       showRef: false,
       showRefContours: true,
+      showRefPolygons: true,
+      showRefLines: true,
       showRefLabels: true,
       showUserMarks: true,
       badRefTargets: null,
@@ -3510,6 +5599,20 @@
       targetColors: [],
       targetRows: [],
       targetsProgress: null,
+      targetsInstructionEl: null,
+      targetsPanelTitleEl: null,
+      targetsListSectionEl: null,
+      outlineVerbEls: [],
+      targetsAttentionTimer: null,
+      userActionsListEl: null,
+      userActionRows: [],
+      actionInterpretation: null,
+      actionInterpretationActive: false,
+      hoveredActionKey: null,
+      pendingViewState: null,
+      reviewHost: null,
+      reviewComparisonEl: null,
+      runtimeMode: false,
       additionalModal: null,
       additionalModalKeyHandler: null,
       _themeListener: null,

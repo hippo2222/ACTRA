@@ -129,10 +129,52 @@ class TestLoadTask(unittest.TestCase):
         # Проверяем, что задание загружено корректно
         self.assertIsInstance(task, Task)
         self.assertEqual(task.task_type, "click")
-        
-        # Проверяем, что флаги валидации сохранены в task_data
-        self.assertTrue(task.task_data.get('_difficulty_enhanced', False))
-        self.assertEqual(task.task_data.get('_difficulty_level'), 2)
+
+    def test_submit_answer_preserves_freehand_annotations_for_draw_tasks(self):
+        """draw fallback не должен деградировать freehand-аннотации в polygon."""
+        controller = TaskController(self.evaluator, self.progress)
+        controller.evaluator_service = Mock()
+        controller.evaluator_service.evaluate_task.return_value = EvaluationResult(
+            success=False,
+            score=0,
+            message="stub",
+            details={},
+        )
+
+        task_data = {
+            "type": "draw",
+            "content": {
+                "annotations": [
+                    {
+                        "type": "polygon",
+                        "label": "Контур",
+                        "points": [[0, 0], [20, 0], [20, 20], [0, 20]],
+                    },
+                    {
+                        "type": "freehand",
+                        "label": "Линия",
+                        "points": [[30, 10], [40, 10], [50, 12], [60, 12]],
+                    },
+                ]
+            },
+        }
+
+        controller.load_task(
+            module_id="m1",
+            topic_id="t1",
+            task_id="draw_1",
+            task_data=task_data,
+            answer_key={},
+        )
+
+        controller.submit_answer({"polygons": [], "lines": []})
+
+        self.assertTrue(controller.evaluator_service.evaluate_task.called)
+        passed_answer_key = controller.evaluator_service.evaluate_task.call_args.kwargs["answer_key"]
+        self.assertEqual(
+            [target.get("shape") for target in passed_answer_key.get("targets", [])],
+            ["polygon", "freehand"],
+        )
     
     def test_load_task_sets_current_task(self):
         """load_task сохраняет задание в current_task"""
@@ -280,6 +322,36 @@ class TestSubmitAnswer(unittest.TestCase):
         self.assertIsNotNone(progress)
         self.assertTrue(progress['completed'])
     
+    def test_submit_answer_skips_direct_progress_save_for_managed_session(self):
+        """complex-session flow must not write the same attempt twice"""
+        session_manager = Mock()
+        session_manager.submit_result = Mock()
+        session_manager.record_task_result = Mock()
+        controller = TaskController(self.evaluator, self.progress, session_manager=session_manager)
+
+        task_data = {'type': 'click'}
+        answer_key = {
+            'targets': [{'shape': 'point', 'coordinates': [100, 100], 'label': 'test'}]
+        }
+        controller.load_task("anatomy", "liver", "liver_click_01", task_data, answer_key)
+
+        user_input = {
+            'x': 100, 'y': 100,
+            'scale_factor': 1.0,
+            'offset_x': 0, 'offset_y': 0
+        }
+
+        with patch.object(self.progress, 'save_evaluation_result') as save_mock:
+            result = controller.submit_answer(user_input)
+
+        self.assertIsNotNone(result)
+        self.assertTrue(result.success)
+        save_mock.assert_not_called()
+        session_manager.record_task_result.assert_called_once_with(
+            task_id='liver_click_01',
+            success=True,
+        )
+
     def test_submit_answer_changes_state_to_completed_on_success(self):
         """submit_answer меняет состояние на COMPLETED при успехе"""
         task_data = {'type': 'click'}

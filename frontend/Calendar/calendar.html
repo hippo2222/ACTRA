@@ -12,203 +12,6 @@
 
     <title>Календарь — ACTRA</title>
 
-    <style>
-        .hide-scrollbar::-webkit-scrollbar {
-
-            display: none;
-
-        }
-
-        .hide-scrollbar {
-
-            -ms-overflow-style: none;
-
-            scrollbar-width: none;
-
-        }
-
-        /* Animations */
-
-        @keyframes slideIn {
-
-            from {
-
-                opacity: 0;
-
-                transform: translateY(-10px);
-
-            }
-
-            to {
-
-                opacity: 1;
-
-                transform: translateY(0);
-
-            }
-
-        }
-
-        @keyframes fadeOut {
-
-            from {
-
-                opacity: 1;
-
-            }
-
-            to {
-
-                opacity: 0;
-
-                transform: translateX(20px);
-
-            }
-
-        }
-
-        @keyframes pulse-once {
-
-            0%,
-
-            100% {
-
-                transform: scale(1);
-
-            }
-
-            50% {
-
-                transform: scale(1.02);
-
-            }
-
-        }
-
-        .animate-slide-in {
-
-            animation: slideIn 0.3s ease-out;
-
-        }
-
-        .animate-fade-out {
-
-            animation: fadeOut 0.3s ease-out forwards;
-
-        }
-
-        .animate-pulse-once {
-
-            animation: pulse-once 0.3s ease-out;
-
-        }
-
-        /* Drag scroll */
-
-        .drag-scroll {
-
-            cursor: grab;
-
-            user-select: none;
-
-            touch-action: pan-y;
-
-        }
-
-        .drag-scroll:active {
-
-            cursor: grabbing;
-
-        }
-
-        .drag-scroll.dragging {
-
-            cursor: grabbing;
-
-            scroll-behavior: auto;
-
-        }
-
-        /* Tooltip */
-
-        .tooltip {
-
-            position: relative;
-
-        }
-
-        .tooltip::after {
-
-            content: attr(data-tooltip);
-
-            position: absolute;
-
-            bottom: 100%;
-
-            left: 50%;
-
-            transform: translateX(-50%);
-
-            background: rgba(30, 30, 47, 0.95);
-
-            color: white;
-
-            padding: 8px 12px;
-
-            border-radius: 6px;
-
-            font-size: 11px;
-
-            line-height: 1.4;
-
-            white-space: pre-line;
-
-            opacity: 0;
-
-            pointer-events: none;
-
-            transition: opacity 0.2s;
-
-            margin-bottom: 4px;
-
-            min-width: 100px;
-
-            text-align: left;
-
-            z-index: 50;
-
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-
-        }
-
-        .tooltip:hover::after {
-
-            opacity: 1;
-
-        }
-
-        #calendarInitialLoading .loading-logo {
-            width: 72px;
-            height: 72px;
-            object-fit: contain;
-            display: block;
-        }
-
-        #calendarLoadingLogoStatic {
-            display: none;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            #calendarLoadingLogoAnimated {
-                display: none;
-            }
-
-            #calendarLoadingLogoStatic {
-                display: block;
-            }
-        }
-    </style>
-
     <link href="/assets/tailwind.css" rel="stylesheet" />
 
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
@@ -223,18 +26,20 @@
 
 </head>
 
-<body class="bg-bg-main text-text-main font-display antialiased selection:bg-primary-light"
+<body class="calendar-layout bg-bg-main text-text-main font-display antialiased selection:bg-primary-light"
     data-calendar-build="variantA-debug-20260117">
 
     <div id="app" class="relative flex min-h-screen flex-col overflow-x-hidden">
         <div id="calendarInitialLoading"
             class="absolute inset-0 z-[60] hidden flex flex-col items-center justify-center gap-5 bg-bg-main/95 backdrop-blur-sm">
-            <div class="rounded-2xl border border-border-subtle bg-surface-1/90 p-5 shadow-sm">
-                <img id="calendarLoadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="loading-logo">
-                <img id="calendarLoadingLogoStatic" src="/assets/logo.svg" alt="" aria-hidden="true" class="loading-logo">
+            <div class="calendar-loading-panel rounded-2xl border border-border-subtle bg-surface-1/90 p-5 shadow-sm">
+                <div class="calendar-loading-logo-frame" aria-hidden="true">
+                    <img id="calendarLoadingLogoAnimated" src="/assets/logo_animated.svg" alt="ACTRA" class="calendar-loading-logo">
+                    <img id="calendarLoadingLogoStatic" src="/assets/logo.svg" alt="ACTRA" class="calendar-loading-logo hidden">
+                </div>
             </div>
             <p class="text-xs font-semibold uppercase tracking-widest text-text-muted">Загрузка календаря...</p>
-            <div class="w-full max-w-[560px] space-y-3 px-4 animate-pulse" aria-hidden="true">
+            <div class="calendar-loading-skeleton w-full max-w-[560px] space-y-3 px-4 animate-pulse" aria-hidden="true">
                 <div class="h-24 rounded-xl bg-surface-1 border border-border-subtle"></div>
                 <div class="h-16 rounded-xl bg-surface-1 border border-border-subtle"></div>
                 <div class="h-40 rounded-xl bg-surface-1 border border-border-subtle"></div>
@@ -249,17 +54,13 @@
 
                 <div class="flex items-center gap-3">
 
-                    <a href="/ui/main"
-                        class="flex items-center justify-center size-8 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
-                        title="На главную">
-
+                    <a href="/ui/main" class="icon-button-muted" title="На главную">
                         <span class="material-symbols-outlined">arrow_back</span>
-
                     </a>
 
                     <div class="flex items-center gap-3">
 
-                        <span class="brand-logo size-8" style="color:var(--color-primary)" aria-hidden="true"></span>
+                        <span class="brand-logo size-8 text-primary" aria-hidden="true"></span>
 
                         <div class="flex flex-col">
 
@@ -290,20 +91,17 @@
                     <!-- Streak Badge -->
 
                     <div id="streak-badge"
-                        class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-full border border-border-subtle transition-all">
+                        class="pill-neutral pill-sm">
 
                     </div>
 
                     <!-- User Avatar (same as Main page) -->
 
-                    <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
-                        onclick="openProfileModal()">
-
+                    <div class="calendar-header-user" data-profile-menu-anchor aria-haspopup="menu"
+                        aria-expanded="false" onclick="openProfileMenu(event)">
                         <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
-
-                        <span class="text-text-main text-sm font-medium hidden sm:inline"
-                            id="headerUserName">Гость</span>
-
+                        <span class="text-text-main text-sm font-medium hidden sm:inline" id="headerUserName"></span>
+                        <span class="material-symbols-outlined text-[18px] text-text-muted">expand_more</span>
                     </div>
 
                 </div>
@@ -313,25 +111,19 @@
         </header>
 
         <main id="calendar-main"
-            class="calendar-main flex-1 w-full max-w-[1380px] mx-auto p-3 md:p-4 lg:px-4 lg:py-3 flex flex-col gap-3 page-enter">
+            class="calendar-main page-enter">
 
             <!-- Recipe Cards with Time Controller -->
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div class="calendar-top-grid">
 
-                <!-- Cards Container -->
+                <!-- Daily Mix Card -->
 
-                <div class="lg:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-3">
-
-                    <!-- Daily Mix Card -->
-
-                    <div id="daily-mix-card"
-                        class="calendar-summary-card group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-primary transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
+                    <article id="daily-mix-card"
+                        class="card-elevated calendar-summary-card calendar-summary-card--primary flex flex-col cursor-pointer"
                         onclick="startSession('daily_mix')">
 
-                        <div class="absolute top-0 left-0 w-1 h-full bg-primary"></div>
-
-                        <div class="calendar-card-body flex-1 p-4 flex flex-col justify-between gap-3 z-10">
+                        <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
 
                             <div>
 
@@ -340,7 +132,7 @@
                                     <span class="material-symbols-outlined text-primary text-[20px]">cached</span>
 
                                     <span id="daily-mix-badge"
-                                        class="text-xs font-bold text-primary uppercase tracking-wider">Повторение</span>
+                                        class="pill-kicker pill-sm pill-neutral">Повторение</span>
 
                                 </div>
 
@@ -370,30 +162,24 @@
 
                                 </div>
 
-                                <button
-                                    class="flex items-center gap-2 border border-primary-light bg-surface-2 hover:bg-primary-lighter hover:border-primary text-primary px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
-
+                                <button class="btn-secondary flex items-center gap-2 text-sm">
                                     <span class="material-symbols-outlined text-[18px]">play_circle</span>
-
                                     <span id="daily-mix-btn-text">Начать</span>
-
                                 </button>
 
                             </div>
 
                         </div>
 
-                    </div>
+                    </article>
 
                     <!-- Main Focus Card -->
 
-                    <div id="main-focus-card"
-                        class="calendar-summary-card group relative flex flex-col bg-surface-1 border border-border-subtle rounded-xl overflow-hidden hover:border-accent transition-all duration-300 shadow-sm hover:shadow-md cursor-pointer"
+                    <article id="main-focus-card"
+                        class="card-elevated calendar-summary-card calendar-summary-card--accent flex flex-col cursor-pointer"
                         onclick="startSession('new_material')">
 
-                        <div class="absolute top-0 left-0 w-1 h-full bg-accent"></div>
-
-                        <div class="calendar-card-body flex-1 p-4 flex flex-col justify-between gap-3 z-10">
+                        <div class="calendar-card-body flex-1 flex flex-col justify-between gap-3">
 
                             <div>
 
@@ -402,7 +188,7 @@
                                     <span class="material-symbols-outlined text-accent text-[20px]">school</span>
 
                                     <span id="main-focus-badge"
-                                        class="text-xs font-bold text-accent uppercase tracking-wider">Изучение</span>
+                                        class="pill-kicker pill-sm pill-neutral">Изучение</span>
 
                                 </div>
 
@@ -432,60 +218,38 @@
 
                                 </div>
 
-                                <button
-                                    class="flex items-center gap-2 bg-bg-hover hover:bg-accent-light text-accent px-3 py-1.5 rounded-lg text-sm font-bold transition-colors">
-
+                                <button class="btn-secondary flex items-center gap-2 text-sm">
                                     <span class="material-symbols-outlined text-[18px]">play_circle</span>
-
                                     Начать
-
                                 </button>
 
                             </div>
 
                         </div>
 
-                    </div>
-
-                </div>
+                    </article>
 
                 <!-- Time Controller (vertical, right side) -->
 
-                <div class="lg:col-span-3 flex flex-col">
+                <div class="card-elevated calendar-summary-card calendar-control-card">
 
-                    <div class="calendar-summary-card calendar-control-card bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm h-full flex flex-col justify-between gap-4">
+                        <div class="calendar-control-card__section">
 
-                        <div class="flex flex-col items-center">
+                            <span class="calendar-control-card__eyebrow">Времени сегодня</span>
 
-                            <span
-                                class="text-[10px] font-medium text-text-secondary uppercase tracking-wider mb-3 text-center">Времени
+                            <div id="time-controller" class="calendar-time-controller" role="group" aria-label="Лимит времени на сегодня">
 
-                                сегодня</span>
+                                <button type="button" onclick="setTimeLimit(20)" data-time="20" class="time-btn">20 мин</button>
 
-                            <div id="time-controller" class="flex flex-col gap-2 w-full">
+                                <button type="button" onclick="setTimeLimit(30)" data-time="30" class="time-btn">30 мин</button>
 
-                                <button onclick="setTimeLimit(20)" data-time="20"
-                                    class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">20
-
-                                    мин</button>
-
-                                <button onclick="setTimeLimit(30)" data-time="30"
-                                    class="time-btn py-2 rounded-lg text-sm font-medium text-text-secondary hover:bg-bg-hover hover:text-primary transition-all flex items-center justify-center">30
-
-                                    мин</button>
-
-                                <button onclick="setTimeLimit(45)" data-time="45"
-                                    class="time-btn py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center">45
-
-                                    мин</button>
+                                <button type="button" onclick="setTimeLimit(45)" data-time="45" class="time-btn">45 мин</button>
 
                             </div>
 
                         </div>
 
-                        <div id="microcards-today-summary" class="border-t border-border-subtle pt-3"></div>
-
-                    </div>
+                        <div id="microcards-today-summary" class="calendar-control-card__summary hidden"></div>
 
                 </div>
 
@@ -493,45 +257,39 @@
 
             <!-- Schedule Strip -->
 
-            <div class="flex flex-col gap-2">
+            <div class="calendar-schedule pt-1">
 
-                <div class="flex justify-between items-center px-1">
+                <div class="calendar-schedule-header flex justify-between items-center px-1">
 
                     <h3 class="text-text-main text-base font-bold">Расписание</h3>
 
                     <div class="flex gap-2">
 
-                        <button onclick="scrollSchedule(-1)"
-                            class="text-text-secondary hover:text-primary transition-colors">
-
+                        <button id="schedule-scroll-prev" onclick="scrollSchedule(-1)" class="icon-button-muted schedule-scroll-button" style="width:2rem;height:2rem">
                             <span class="material-symbols-outlined">chevron_left</span>
-
                         </button>
 
-                        <button onclick="scrollSchedule(1)"
-                            class="text-text-secondary hover:text-primary transition-colors">
-
+                        <button id="schedule-scroll-next" onclick="scrollSchedule(1)" class="icon-button-muted schedule-scroll-button" style="width:2rem;height:2rem">
                             <span class="material-symbols-outlined">chevron_right</span>
-
                         </button>
 
                     </div>
 
                 </div>
 
-                <div id="schedule-strip" class="schedule-strip flex overflow-x-auto gap-3 pb-2 hide-scrollbar drag-scroll"></div>
+                <div id="schedule-strip" class="schedule-strip flex overflow-x-auto hide-scrollbar drag-scroll"></div>
 
             </div>
 
             <!-- Bottom Grid: Activity & Health -->
 
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+            <div class="calendar-bottom-grid">
 
                 <!-- Activity Section -->
 
-                <div class="lg:col-span-7 flex flex-col gap-4">
+                <div class="calendar-activity-col">
 
-                    <div class="calendar-panel-card bg-surface-1 border border-border-subtle rounded-xl p-3 shadow-sm">
+                    <section class="card-elevated calendar-panel-card">
 
                         <div class="flex justify-between items-center mb-3">
 
@@ -543,13 +301,10 @@
 
                                 <div class="flex gap-1">
 
-                                    <div class="size-3 rounded-sm bg-bg-secondary"></div>
-
-                                    <div class="size-3 rounded-sm bg-primary-light"></div>
-
-                                    <div class="size-3 rounded-sm bg-primary"></div>
-
-                                    <div class="size-3 rounded-sm bg-primary"></div>
+                                    <div class="size-3 rounded-sm heatmap-cell--empty"></div>
+                                    <div class="size-3 rounded-sm heatmap-cell--low"></div>
+                                    <div class="size-3 rounded-sm heatmap-cell--mid"></div>
+                                    <div class="size-3 rounded-sm heatmap-cell--high"></div>
 
                                 </div>
 
@@ -565,13 +320,13 @@
 
                         <div id="activity-banner" class="hidden"></div>
 
-                    </div>
+                    </section>
 
                 </div>
 
                 <!-- Health & Notifications -->
 
-                <div class="lg:col-span-5 flex flex-col gap-3">
+                <div class="calendar-health-col">
 
                     <!-- Notification Card -->
 
@@ -579,7 +334,7 @@
 
                     <!-- Health Indicator -->
 
-                    <div class="calendar-panel-card bg-surface-1 border border-border-subtle rounded-xl p-3 flex flex-col flex-1 shadow-sm">
+                    <section class="card-elevated calendar-panel-card flex flex-col flex-1">
 
                         <div class="flex justify-between items-center mb-3">
 
@@ -587,29 +342,47 @@
 
                         </div>
 
-                        <div id="health-content" class="flex items-center justify-center gap-4 flex-1">
+                        <div id="memory-health-shell" class="memory-health-shell flex-1">
 
-                            <div id="health-chart" class="relative size-20 flex-shrink-0">
+                            <div id="memory-health-overview" class="memory-health-overview">
 
-                                <div id="health-ring" class="absolute inset-0 rounded-full"></div>
+                                <div class="memory-health-progress-wrap">
 
-                                <div
-                                    class="absolute inset-2 bg-surface-1 rounded-full flex flex-col items-center justify-center">
+                                    <div id="memory-health-progress" class="memory-health-progress"></div>
 
-                                    <span id="health-percent" class="text-lg font-black text-text-main">—</span>
+                                    <div class="memory-health-progress-core">
 
-                                    <span
-                                        class="text-[8px] text-text-secondary uppercase font-bold tracking-wide">Общее</span>
+                                        <span id="memory-health-percent" class="memory-health-progress-value">—</span>
+
+                                    </div>
+
+                                </div>
+
+                                <div class="memory-health-overview-copy">
+
+                                    <span id="memory-health-status" class="memory-health-status">—</span>
+
+                                    <p id="memory-health-headline" class="memory-health-overview-title">Пока без данных</p>
+
+                                    <p id="memory-health-subline" class="memory-health-overview-text">Статистика появится после прохождения комплексов.</p>
+
+                                    <div id="memory-health-metrics" class="memory-health-stats"></div>
 
                                 </div>
 
                             </div>
 
-                            <div id="health-list" class="flex flex-col gap-2 w-full"></div>
+                            <div class="memory-health-actions">
+
+                                <div id="memory-health-list" class="memory-health-list"></div>
+
+                                <button id="memory-health-all-action" type="button" class="memory-health-all-action" onclick="openHealthDetails()">Все</button>
+
+                            </div>
 
                         </div>
 
-                    </div>
+                    </section>
 
                 </div>
 
@@ -721,25 +494,39 @@
 
             if (!animatedLogo || !staticLogo) return;
 
+            const showAnimatedLogo = () => {
+
+                animatedLogo.classList.remove('hidden');
+
+                staticLogo.classList.add('hidden');
+
+            };
+
+            const showStaticLogo = () => {
+
+                animatedLogo.classList.add('hidden');
+
+                staticLogo.classList.remove('hidden');
+
+            };
+
             const prefersReducedMotion = window.matchMedia
 
                 && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
             if (prefersReducedMotion) {
 
-                animatedLogo.classList.add('hidden');
-
-                staticLogo.classList.remove('hidden');
+                showStaticLogo();
 
                 return;
 
             }
 
+            showAnimatedLogo();
+
             animatedLogo.addEventListener('error', () => {
 
-                animatedLogo.classList.add('hidden');
-
-                staticLogo.classList.remove('hidden');
+                showStaticLogo();
 
             }, { once: true });
 
@@ -1120,8 +907,6 @@
 
                 generateScheduleIfEmpty();
 
-                loadUserAvatar();
-
                 renderAll();
 
                 if (isInitialLoad) {
@@ -1196,7 +981,7 @@
 
                     const nameEl = document.getElementById('headerUserName');
 
-                    if (nameEl) nameEl.textContent = data.user.name || 'Гость';
+                    if (nameEl) nameEl.textContent = data.user.name || '';
 
                     if (avatarEl) avatarEl.src = getAvatarUrl(data.user.avatar_seed, data.user.user_id);
 
@@ -1205,6 +990,14 @@
             } catch (e) {
 
                 console.log('Could not load user avatar');
+
+                const nameEl = document.getElementById('headerUserName');
+
+                if (nameEl && !nameEl.textContent.trim()) {
+
+                    nameEl.textContent = 'Гость';
+
+                }
 
             }
 
@@ -1600,13 +1393,8 @@
 
                 const isActive = time === state.settings.daily_time_limit_minutes;
 
-                btn.className = `time-btn px-4 py-1.5 rounded text-sm font-medium transition-all ${isActive
-
-                    ? 'bg-primary text-primary-fg shadow-lg shadow-primary-light font-bold transform scale-105'
-
-                    : 'border border-border-subtle bg-bg-secondary text-text-main hover:border-primary-light hover:bg-surface-1 hover:text-primary'
-
-                    }`;
+                btn.className = `time-btn${isActive ? ' is-active' : ''}`;
+                btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
 
             });
 
@@ -1615,6 +1403,19 @@
         function renderRecipeCards() {
 
             const plan = state.daily_plan;
+            const mainFocusName =
+                plan.main_focus_name
+                || plan.main_focus_complex_name
+                || plan.main_focus?.complex_name
+                || '';
+            const mainFocusCount = Math.max(
+                Number(plan.main_focus_count || 0),
+                Number(plan.main_focus_tasks_count || 0)
+            );
+            const mainFocusMinutes = Math.max(
+                Number(plan.main_focus_minutes || 0),
+                Number(plan.main_focus_estimated_minutes || 0)
+            );
 
             const activeComplexes = (state.health_summary?.complexes || []).filter(c => {
 
@@ -1636,7 +1437,8 @@
 
             const hasDailyMix = hasActiveComplexes && plan.daily_mix_count > 0;
 
-            const hasMainFocus = hasActiveComplexes && !!plan.main_focus_name;
+            const hasMainFocus = hasActiveComplexes
+                && (Boolean(mainFocusName) || mainFocusCount > 0 || Boolean(plan.main_focus));
 
             console.debug('[calendar] renderRecipeCards', {
 
@@ -1667,40 +1469,24 @@
                 // Strict empty state for Daily Mix: нет активных комплексов
 
                 dailyMixCard.innerHTML = `
-
-            <div class="absolute top-0 left-0 w-1 h-full bg-border-subtle"></div>
-
-            <div class="flex-1 p-6 flex flex-col items-start justify-center gap-3 z-10 min-h-[180px]">
-
-                <div class="flex items-center gap-2 text-text-secondary">
-
-                    <span class="material-symbols-outlined text-[20px]">cached</span>
-
-                    <span class="text-sm font-medium">Нет активных комплексов</span>
-
+            <div class="empty-state-card empty-state-card--compact">
+                <div class="empty-state-card__icon">
+                    <span class="material-symbols-outlined">cached</span>
                 </div>
-
-                <p class="text-text-secondary text-sm">Запустите любой комплекс, чтобы появилась подборка повторения.</p>
-
-                <p class="text-text-muted text-xs font-medium">Без активного комплекса система не может собрать осмысленный Daily Mix.</p>
-
-                <button onclick="window.navigateWithTransition('/ui/complexes')" class="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary transition-colors">
-
-                    Перейти к комплексам
-
-                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-
-                </button>
-
+                <p class="empty-state-card__title">Нет активных комплексов</p>
+                <p class="empty-state-card__copy text-sm">Запустите любой комплекс, чтобы появилась подборка повторения.</p>
+                <div class="empty-state-card__actions">
+                    <button onclick="window.navigateWithTransition('/ui/complexes')" class="btn-secondary text-xs">
+                        Перейти к комплексам
+                        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </button>
+                </div>
             </div>
-
         `;
 
                 dailyMixCard.onclick = null;
-
-                dailyMixCard.classList.add('cursor-default');
-
-                dailyMixCard.classList.remove('cursor-pointer');
+                dailyMixCard.classList.add('cursor-default', 'calendar-summary-card--empty');
+                dailyMixCard.classList.remove('cursor-pointer', 'calendar-summary-card--primary');
 
             } else {
 
@@ -1724,7 +1510,7 @@
 
                 if (dailyMixReasonEl) {
 
-                    dailyMixReasonEl.textContent = activeComplexes > 1
+                    dailyMixReasonEl.textContent = activeComplexes.length > 1
 
                         ? 'Подборка собрана из активных комплексов, чтобы не копить отложенные повторы.'
 
@@ -1775,48 +1561,34 @@
                 // Strict empty state for Main Focus
 
                 mainFocusCard.innerHTML = `
-
-            <div class="absolute top-0 left-0 w-1 h-full bg-border-subtle"></div>
-
-            <div class="flex-1 p-6 flex flex-col items-start justify-center gap-3 z-10 min-h-[180px]">
-
-                <div class="flex items-center gap-2 text-text-secondary">
-
-                    <span class="material-symbols-outlined text-[20px]">school</span>
-
-                    <span class="text-sm font-medium">Нет активных комплексов</span>
-
+            <div class="empty-state-card empty-state-card--compact">
+                <div class="empty-state-card__icon">
+                    <span class="material-symbols-outlined">school</span>
                 </div>
-
-                <p class="text-text-secondary text-sm">Запустите комплекс, чтобы появилась подборка "Изучение".</p>
-
-                <button onclick="window.navigateWithTransition('/ui/complexes')" class="inline-flex items-center gap-2 text-xs font-semibold text-primary hover:text-primary transition-colors">
-
-                    Перейти к комплексам
-
-                    <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
-
-                </button>
-
+                <p class="empty-state-card__title">Нет активных комплексов</p>
+                <p class="empty-state-card__copy text-sm">Запустите комплекс, чтобы появилась подборка "Изучение".</p>
+                <div class="empty-state-card__actions">
+                    <button onclick="window.navigateWithTransition('/ui/complexes')" class="btn-secondary text-xs">
+                        Перейти к комплексам
+                        <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    </button>
+                </div>
             </div>
-
         `;
 
                 mainFocusCard.onclick = null;
-
-                mainFocusCard.classList.add('cursor-default');
-
-                mainFocusCard.classList.remove('cursor-pointer');
+                mainFocusCard.classList.add('cursor-default', 'calendar-summary-card--empty');
+                mainFocusCard.classList.remove('cursor-pointer', 'calendar-summary-card--accent');
 
             } else {
 
                 // Normal Main Focus
 
-                const focusName = plan.main_focus_name || (state.complexes[0]?.name || 'Новый комплекс');
+                const focusName = mainFocusName || (state.complexes[0]?.name || 'Новый комплекс');
 
-                const focusCount = plan.main_focus_count || (state.complexes[0]?.tasks?.length || 0);
+                const focusCount = mainFocusCount || (state.complexes[0]?.tasks?.length || 0);
 
-                const focusMinutes = plan.main_focus_minutes || Math.round(focusCount * 3);
+                const focusMinutes = mainFocusMinutes || Math.round(focusCount * 3);
 
                 document.getElementById('main-focus-title').textContent = focusName;
 
@@ -1871,14 +1643,14 @@
             }
 
             container.innerHTML = `
-                <div class="flex flex-col gap-1.5">
-                    <div class="flex items-center gap-2">
+                <div class="calendar-microcards-summary">
+                    <div class="calendar-microcards-summary__header">
                         <span class="material-symbols-outlined text-secondary text-[16px]">style</span>
-                        <span class="text-[11px] font-bold text-text-main uppercase tracking-wider">Микрокарточки</span>
+                        <span class="calendar-microcards-summary__title">Микрокарточки</span>
                     </div>
-                    <p class="text-xs text-text-secondary">${statusLine}</p>
-                    ${todayLine ? `<p class="text-[10px] text-text-secondary">${todayLine}</p>` : ''}
-                    ${hasDue ? `<a href="/ui/microcards" class="inline-flex items-center gap-1 text-[11px] font-semibold text-primary hover:text-primary-dark transition-colors mt-0.5">
+                    <p class="calendar-microcards-summary__status">${statusLine}</p>
+                    ${todayLine ? `<p class="calendar-microcards-summary__today">${todayLine}</p>` : ''}
+                    ${hasDue ? `<a href="/ui/microcards" class="calendar-microcards-summary__link">
                         Повторить
                         <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
                     </a>` : ''}
@@ -1914,18 +1686,22 @@
 
                     if (typeof t === 'string') {
 
-                        return { name: t, is_completed: false, is_synthetic: false };
+                        return {
+                            name: t,
+                            complex_name: '',
+                            is_completed: false,
+                            is_synthetic: false,
+                            complex_id: '',
+                        };
 
                     }
 
                     return {
 
                         name: t?.name || t?.complex_name || t?.task_id || '',
-
+                        complex_name: t?.complex_name || t?.complex?.name || '',
                         is_completed: Boolean(t?.is_completed),
-
                         is_synthetic: Boolean(t?.is_synthetic),
-
                         complex_id: t?.complex_id || '',
 
                     };
@@ -1936,18 +1712,12 @@
 
             const filterSyntheticTasks = (tasks) => {
 
-                if (!tasks) return [];  // Безопасность: проверка на null/undefined
+                if (!tasks) return [];
 
                 return tasks.filter(t => {
 
                     if (!t || !t.name) return false;
-
-                    // Фильтруем синтетические задачи по флагу, а не по имени
-
                     if (t.is_synthetic) return false;
-
-                    // убираем чисто временные строки типа (~12 мин)
-
                     if (/^\(~\d+\s*мин\)/i.test((t.name || '').toLowerCase())) return false;
 
                     return true;
@@ -1956,10 +1726,21 @@
 
             };
 
+            const getComplexWord = (count) => {
+
+                const abs = Math.abs(count) % 100;
+                const mod = abs % 10;
+
+                if (abs > 10 && abs < 20) return 'комплексов';
+                if (mod > 1 && mod < 5) return 'комплекса';
+                if (mod === 1) return 'комплекс';
+                return 'комплексов';
+
+            };
+
             const isScheduleEmpty = state.schedule.every(d => {
 
                 const tasks = Array.isArray(d.tasks) ? d.tasks : [];
-
                 const allTasks = Array.isArray(d.all_tasks) ? d.all_tasks : [];
 
                 return tasks.length === 0 && allTasks.length === 0;
@@ -1968,108 +1749,100 @@
 
             if (isScheduleEmpty) {
 
-                container.innerHTML = `
+                const today = new Date();
+                const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+                const ghostDays = Array.from({ length: 7 }, (_, i) => {
+                    const d = new Date(today);
+                    d.setDate(today.getDate() + i);
+                    return {
+                        label: i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : dayNames[d.getDay()],
+                        num: d.getDate(),
+                        month: d.toLocaleDateString('ru', { month: 'short' }),
+                        isToday: i === 0,
+                    };
+                });
 
-            <div class="w-full bg-surface-1 border border-border-subtle rounded-xl px-4 py-3 flex items-center justify-between gap-3 opacity-90 shadow-sm">
+                container.innerHTML = ghostDays.map((d) => `
+                    <div class="schedule-card border rounded-xl p-4 flex flex-col gap-3 relative
+                        ${d.isToday
+                            ? 'bg-surface-1 border-primary schedule-card-today'
+                            : 'bg-surface-1 border-border-subtle opacity-50'}">
+                        ${d.isToday ? '<div class="absolute top-2 right-2 size-2 rounded-full bg-primary animate-pulse"></div>' : ''}
+                        <div class="flex justify-between items-start">
+                            <span class="text-sm font-bold ${d.isToday ? 'text-primary' : 'text-text-secondary'}">${d.label}</span>
+                            <span class="text-xs text-text-secondary">${d.num} ${d.month}</span>
+                        </div>
+                        <div class="h-px w-full bg-border-subtle"></div>
+                        <div class="flex flex-col gap-2 flex-1 items-center justify-center">
+                            <span class="material-symbols-outlined text-[20px] ${d.isToday ? 'text-primary' : 'text-text-secondary opacity-40'}">
+                                ${d.isToday ? 'play_circle' : 'lock'}
+                            </span>
+                            ${d.isToday
+                                ? `<button onclick="window.navigateWithTransition('/ui/complexes')"
+                                      class="text-[11px] font-semibold text-primary hover:underline transition-colors text-center leading-tight">
+                                      Запустить комплекс
+                                   </button>`
+                                : `<span class="text-[10px] text-text-secondary opacity-50 text-center">Будет доступно</span>`
+                            }
+                        </div>
+                    </div>
+                `).join('');
 
-                <div class="flex items-center gap-2 min-w-0">
-
-                    <span class="material-symbols-outlined text-text-secondary text-[18px]">info</span>
-
-                    <span class="text-xs text-text-secondary font-medium truncate">План появится после старта комплекса</span>
-
-                </div>
-
-                <button onclick="window.navigateWithTransition('/ui/complexes')" class="text-xs font-semibold text-primary hover:text-primary transition-colors whitespace-nowrap">
-
-                    Перейти к комплексам
-
-                </button>
-
-            </div>
-
-        `;
-
+                requestAnimationFrame(syncScheduleStripState);
                 setupDragScroll();
 
                 return;
 
             }
 
-            container.innerHTML = state.schedule.map((day, dayIndex) => {
+            container.innerHTML = state.schedule.map((day) => {
 
                 const isToday = day.is_today;
-
                 const isMissed = day.status === 'missed';
-
-                const isCompleted = day.status === 'completed';
-
                 const isRestDay = day.status === 'rest_day' || state.restDays[day.date];
-
                 const isExpanded = state.ui.expandedDays && state.ui.expandedDays[day.date];
-
                 const canToggleRest = isToday || day.is_future;
-
                 const safeDayDate = escapeInlineJsString(day.date);
 
                 let borderClass = 'border-border-subtle';
-
                 let stateClass = '';
-
                 let bgClass = 'bg-surface-1';
-
                 let extraContent = '';
 
                 if (isRestDay) {
-
                     bgClass = 'bg-bg-secondary';
-
                     borderClass = 'border-border-subtle';
-
                 } else if (isToday) {
-
                     borderClass = 'border-primary';
-
                     stateClass = 'schedule-card-today';
-
-                    extraContent = '<div class="absolute top-2 right-2 size-2 rounded-full bg-primary animate-pulse"></div>';
-
+                    extraContent = '<div class="absolute top-2 right-2 size-2 rounded-full bg-primary today-indicator"></div>';
                 } else if (isMissed) {
-
                     bgClass = 'bg-error-lighter';
-
                     borderClass = 'border-error-light';
-
                 }
 
-                // Определяем, какие задачи показывать
+                const sourceTasks = Array.isArray(day.all_tasks) && day.all_tasks.length > 0
+                    ? day.all_tasks
+                    : (day.tasks || []);
 
-                const allTasksNorm = normalizeTasks(day.all_tasks || []);
-
-                const allTasks = filterSyntheticTasks(allTasksNorm);
-
-                const visibleTasksRaw = normalizeTasks(isExpanded ? day.tasks : (day.tasks || []).slice(0, 3));
-
-                const visibleTaskNames = filterSyntheticTasks(visibleTasksRaw);
-
-                const displayTasks = isExpanded ? allTasks : allTasks.slice(0, 3);
-
-                // Формируем HTML задач с галочками выполнения
+                const allTasks = filterSyntheticTasks(normalizeTasks(sourceTasks));
+                const complexNames = [...new Set(
+                    allTasks
+                        .map((task) => (task.complex_name || '').trim())
+                        .filter(Boolean)
+                )];
+                const collapsedTaskLimit = complexNames.length >= 3 ? 2 : 3;
+                const displayTasks = isExpanded ? allTasks : allTasks.slice(0, collapsedTaskLimit);
+                const hiddenTaskCount = Math.max(0, allTasks.length - displayTasks.length);
+                const overflowCount = Math.max(hiddenTaskCount, Number(day.overflow_count || 0));
 
                 const tasksHtml = displayTasks.length > 0
+                    ? displayTasks.map((taskInfo) => {
 
-                    ? displayTasks.map((taskInfo, idx) => {
-
-                        const isCompleted = taskInfo.is_completed || false;
-
-                        const taskName = (visibleTaskNames[idx] && visibleTaskNames[idx].name) || taskInfo.name;
-
-                        const safeTaskName = escapeHtml(taskName);
-
-                        const checkIcon = isCompleted
-
+                        const isCompletedTask = taskInfo.is_completed || false;
+                        const safeTaskName = escapeHtml(taskInfo.name);
+                        const checkIcon = isCompletedTask
                             ? '<span class="material-symbols-outlined text-success text-[16px]">check_circle</span>'
-
                             : '<span class="material-symbols-outlined text-text-secondary text-[16px]">radio_button_unchecked</span>';
 
                         return `
@@ -2078,15 +1851,14 @@
 
                         <span class="schedule-task-icon">${checkIcon}</span>
 
-                        <span class="schedule-task-name text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'} ${isCompleted ? 'line-through opacity-70' : ''}" title="${safeTaskName}">${safeTaskName}</span>
+                        <span class="schedule-task-name text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'} ${isCompletedTask ? 'line-through opacity-70' : ''}" title="${safeTaskName}">${safeTaskName}</span>
 
                     </div>
 
                 `;
 
                     }).join('')
-
-                    : normalizeTasks(day.tasks || []).filter(t => t && t.name).map(task => `
+                    : filterSyntheticTasks(normalizeTasks(day.tasks || [])).map((task) => `
 
                 <div class="schedule-task-row flex items-start gap-2 min-w-0">
 
@@ -2098,24 +1870,41 @@
 
             `).join('');
 
-                // Индикатор переполнения
+                const complexSummaryHtml = complexNames.length > 1 ? `
 
-                const overflowHtml = day.has_overflow && !isExpanded
+            <div class="schedule-complex-summary">
 
+                <div class="schedule-complex-summary__meta">
+
+                    <span class="schedule-complex-summary__count">${complexNames.length} ${getComplexWord(complexNames.length)}</span>
+
+                    ${complexNames.length > 2 ? '<span class="schedule-complex-summary__hint">в одном дне</span>' : ''}
+
+                </div>
+
+                <div class="schedule-complex-summary__chips">
+
+                    ${complexNames.slice(0, 2).map((name) => `<span class="schedule-complex-chip" title="${escapeHtml(name)}">${escapeHtml(name)}</span>`).join('')}
+
+                    ${complexNames.length > 2 ? `<span class="schedule-complex-chip schedule-complex-chip--muted">+${complexNames.length - 2}</span>` : ''}
+
+                </div>
+
+            </div>
+
+        ` : '';
+
+                const overflowHtml = overflowCount > 0 && !isExpanded
                     ? `<button onclick="toggleDayExpand('${safeDayDate}')" class="flex items-center gap-1 text-xs text-primary hover:text-primary font-medium transition-colors">
 
                 <span class="material-symbols-outlined text-[14px]">expand_more</span>
 
-                <span>+${day.overflow_count} ещё</span>
+                <span>+${overflowCount} ещё</span>
 
             </button>`
-
                     : '';
 
-                // Кнопка сворачивания
-
                 const collapseHtml = isExpanded
-
                     ? `<button onclick="toggleDayExpand('${safeDayDate}')" class="flex items-center gap-1 text-xs text-text-secondary hover:text-primary font-medium transition-colors">
 
                 <span class="material-symbols-outlined text-[14px]">expand_less</span>
@@ -2123,38 +1912,31 @@
                 <span>Свернуть</span>
 
             </button>`
-
                     : '';
 
                 const badgesHtml = (() => {
 
                     const list = [...(day.badges || [])];
 
-                    return list.map(badge => {
+                    return list.map((badge) => {
 
-                        let badgeClass = 'bg-bg-secondary border border-border-subtle text-text-secondary';
+                        let badgeClass = 'pill-neutral pill-sm';
                         const badgeLabel = escapeHtml(badge);
 
-                        if (badge === 'Пропущено') badgeClass = 'bg-error-lighter border border-error-light text-error-text';
+                        if (badge === 'Пропущено') badgeClass = 'pill-error pill-sm';
+                        if (badge === 'Пересчитано') badgeClass = 'pill-info pill-sm';
+                        if (badge === 'Нет данных') badgeClass = 'pill-warning pill-sm';
 
-                        if (badge === 'Пересчитано') badgeClass = 'bg-primary-lighter border border-primary-light text-primary-dark';
-
-                        if (badge === 'Нет данных') badgeClass = 'bg-warning-light text-warning-dark border border-warning-lighter';
-
-                        return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${badgeLabel}</span></div>`;
+                        return `<span class="${badgeClass}">${badgeLabel}</span>`;
 
                     }).join('');
 
                 })();
 
-                // Кнопка переключения выходного
-
                 const restToggleHtml = canToggleRest ? `
 
-            <button onclick="event.stopPropagation(); toggleRestDay('${safeDayDate}')" 
-
+            <button onclick="event.stopPropagation(); toggleRestDay('${safeDayDate}')"
                     class="rest-day-toggle ${isRestDay ? 'active' : ''} p-1 rounded hover:bg-bg-hover transition-colors"
-
                     title="${isRestDay ? 'Снять отметку выходного' : 'Отметить как выходной'}">
 
                 <span class="material-symbols-outlined text-[16px] ${isRestDay ? 'text-text-main' : 'text-text-secondary'}">
@@ -2169,7 +1951,7 @@
 
                 return `
 
-            <div class="schedule-card ${isExpanded ? 'schedule-card-expanded' : ''} ${stateClass} ${bgClass} border ${borderClass} rounded-xl p-4 flex flex-col gap-3 transition-all shadow-sm relative">
+            <div class="card-elevated schedule-card ${isExpanded ? 'schedule-card-expanded' : ''} ${stateClass} ${bgClass} ${borderClass} flex flex-col gap-3 relative">
 
                 ${extraContent}
 
@@ -2181,8 +1963,6 @@
 
                         ${restToggleHtml}
 
-                        ${day.is_future ? `<span class="material-symbols-outlined text-[16px] text-info" title="Прогноз: план может обновиться после новых прохождений">visibility</span>` : ''}
-
                         <span class="schedule-date-label text-xs text-text-secondary whitespace-nowrap">${day.day_num || ''} ${day.month || ''}</span>
 
                     </div>
@@ -2192,6 +1972,8 @@
                 <div class="h-px w-full bg-border-subtle"></div>
 
                 <div class="schedule-task-list flex flex-col gap-2 min-w-0">
+
+                    ${complexSummaryHtml}
 
                     ${tasksHtml}
 
@@ -2209,6 +1991,7 @@
 
             }).join('');
 
+            requestAnimationFrame(syncScheduleStripState);
             setupDragScroll();
 
         }
@@ -2297,9 +2080,7 @@
 
             container.innerHTML = gridDays.map(day => {
 
-                let bgClass = 'bg-bg-secondary';
-
-                let extraClass = '';
+                let cellClass = 'heatmap-cell--empty';
 
                 const tasksSolved = day.tasks_solved || 0;
 
@@ -2320,41 +2101,21 @@
                 const minutesSpent = Math.round(totalSeconds / 60);
 
                 if (day.is_future) {
-
-                    bgClass = 'bg-surface-1 border border-dashed border-text-secondary';
-
+                    cellClass = 'heatmap-cell--future';
                 } else if (day.is_today) {
-
-                    bgClass = 'bg-primary animate-pulse shadow-lg shadow-primary-light border-2 border-border-strong';
-
+                    cellClass = 'heatmap-cell--today';
                 } else if (day.is_rest_day) {
-
-                    bgClass = 'bg-bg-secondary';
-
-                    extraClass = 'border border-border-subtle';
-
+                    cellClass = 'heatmap-cell--rest';
                 } else if (day.is_missed && actTotal === 0) {
-
-                    bgClass = 'bg-error-lighter';
-
-                    extraClass = 'border border-dashed border-error-light';
-
+                    cellClass = 'heatmap-cell--missed';
                 } else if (actTotal >= 10) {
-
-                    bgClass = 'bg-primary-dark ring-1 ring-primary';
-
+                    cellClass = 'heatmap-cell--peak';
                 } else if (actTotal >= 6) {
-
-                    bgClass = 'bg-primary';
-
+                    cellClass = 'heatmap-cell--high';
                 } else if (actTotal >= 3) {
-
-                    bgClass = 'bg-primary-light';
-
+                    cellClass = 'heatmap-cell--mid';
                 } else if (actTotal > 0) {
-
-                    bgClass = 'bg-primary-lighter';
-
+                    cellClass = 'heatmap-cell--low';
                 }
 
                 const dateLabel = (() => {
@@ -2404,7 +2165,7 @@
                 }
 
                 const safeTooltip = escapeHtml(tooltip);
-                return `<div class="aspect-square rounded ${bgClass} ${extraClass} heatmap-cell tooltip" data-tooltip="${safeTooltip}"></div>`;
+                return `<div class="heatmap-cell ${cellClass} tooltip" data-tooltip="${safeTooltip}"></div>`;
 
             }).join('');
 
@@ -2513,27 +2274,23 @@
 
             container.innerHTML = `
 
-        <div class="flex items-center justify-between p-4 bg-warning-light border border-warning-light rounded-xl shadow-sm animate-slide-in">
+        <div class="calendar-alert-rail animate-slide-in">
 
-            <div class="flex items-center gap-3">
+            <div class="calendar-alert-rail__icon">
 
-                <div class="bg-warning-lighter text-warning-dark rounded-full p-1.5">
-
-                    <span class="material-symbols-outlined text-[18px]">warning</span>
-
-                </div>
-
-                <div>
-
-                    <p class="text-warning-dark text-sm font-medium">${safeTitle}</p>
-
-                    <p class="text-warning-dark text-xs">${safeMessage}</p>
-
-                </div>
+                <span class="material-symbols-outlined text-[18px]">warning</span>
 
             </div>
 
-            <button onclick="handleNotificationAction('${safeActionType}')" class="text-xs bg-warning-lighter hover:bg-warning-light text-warning-dark px-3 py-1.5 rounded-md font-bold transition-colors">
+            <div class="calendar-alert-rail__copy">
+
+                <p class="calendar-alert-rail__title">${safeTitle}</p>
+
+                <p class="calendar-alert-rail__message">${safeMessage}</p>
+
+            </div>
+
+            <button onclick="handleNotificationAction('${safeActionType}')" class="calendar-alert-rail__action">
 
                 ${notif.action_type === 'fix' ? 'Исправить' : 'Обновить'}
 
@@ -2549,74 +2306,174 @@
 
         function renderHealthIndicator() {
 
-            const health = state.health_summary;
+            const health = state.health_summary || {};
+            const complexes = Array.isArray(health.complexes) ? health.complexes : [];
+            const healthShell = document.getElementById('memory-health-shell');
+            const ring = document.getElementById('memory-health-progress');
+            const list = document.getElementById('memory-health-list');
+            const allActionEl = document.getElementById('memory-health-all-action');
+            const percentEl = document.getElementById('memory-health-percent');
+            const statusEl = document.getElementById('memory-health-status');
+            const headlineEl = document.getElementById('memory-health-headline');
+            const sublineEl = document.getElementById('memory-health-subline');
+            const metricsEl = document.getElementById('memory-health-metrics');
 
-            const hasComplexes = health.complexes && health.complexes.length > 0;
+            if (!healthShell || !ring || !list || !percentEl || !statusEl || !headlineEl || !sublineEl || !metricsEl || !allActionEl) {
+                return;
+            }
 
-            const ring = document.getElementById('health-ring');
+            const getComplexWord = (count) => {
 
-            const list = document.getElementById('health-list');
+                const abs = Math.abs(count) % 100;
+                const mod = abs % 10;
 
-            const percentEl = document.getElementById('health-percent');
+                if (abs > 10 && abs < 20) return 'комплексов';
+                if (mod > 1 && mod < 5) return 'комплекса';
+                if (mod === 1) return 'комплекс';
+                return 'комплексов';
 
-            const chartEl = document.getElementById('health-chart');
+            };
 
-            if (!hasComplexes) {
+            const getTone = (healthPercent, isCritical = false) => {
 
-                // Empty state - hide chart, show centered message
+                if (isCritical || healthPercent < 65) return 'alert';
+                if (healthPercent < 85) return 'steady';
+                return 'good';
 
-                if (chartEl) chartEl.classList.add('hidden');
+            };
 
-                percentEl.textContent = '—';
+            const getStatusMeta = (overallPercent, criticalCount, activeCount) => {
 
-                ring.style.background = 'var(--color-bg-tertiary)';
+                if (criticalCount > 0) {
+                    return {
+                        tone: overallPercent >= 70 ? 'steady' : 'alert',
+                        label: overallPercent >= 70 ? 'Нужно внимание' : 'Нужен повтор',
+                        headline: `${criticalCount} ${getComplexWord(criticalCount)} проседают`,
+                        compactHeadline: criticalCount === 1 ? 'Один комплекс проседает' : `${criticalCount} в зоне риска`,
+                        subline: criticalCount === activeCount
+                            ? 'Лучше вернуть их в работу сегодня, чтобы не терять ритм.'
+                            : 'Остальная база держится лучше, но эти комплексы уже просят короткий повтор.',
+                    };
+                }
 
-                list.innerHTML = `
+                if (overallPercent >= 90) {
+                    return {
+                        tone: 'good',
+                        label: 'Отличная форма',
+                        headline: 'Память держится уверенно',
+                        compactHeadline: 'Все держится уверенно',
+                        subline: 'Можно идти в обычном темпе и не форсировать лишние повторы.',
+                    };
+                }
 
-            <div class="flex flex-col items-center justify-center text-center py-2 w-full">
+                if (overallPercent >= 75) {
+                    return {
+                        tone: 'steady',
+                        label: 'Стабильный ритм',
+                        headline: 'Темп повторения в норме',
+                        compactHeadline: 'Темп в норме',
+                        subline: 'Есть небольшой спад, но без критичных зон. Хватит короткой поддержки.',
+                    };
+                }
 
-                <span class="material-symbols-outlined text-text-secondary text-[28px] mb-2">psychology</span>
+                return {
+                    tone: 'alert',
+                    label: 'Нужен апдейт',
+                    headline: 'Материал пора освежить',
+                    compactHeadline: 'Пора освежить материал',
+                    subline: 'Лучше запланировать короткий повтор по самым слабым комплексам.',
+                };
 
-                <p class="text-sm font-medium text-text-secondary">Нет данных о прогрессе</p>
+            };
 
-                <p class="text-xs text-text-secondary mt-1">Пройдите комплекс, чтобы увидеть здоровье памяти</p>
+            const getFrequencyLabel = (healthPercent) => {
+
+                if (healthPercent < 50) return 'Лучше повторять каждый день';
+                if (healthPercent < 70) return 'Лучше вернуться через 1-2 дня';
+                if (healthPercent < 85) return 'Достаточно двух коротких повторов в неделю';
+                if (healthPercent < 95) return 'Достаточно одного повтора в неделю';
+                return 'Повтор можно держать редким';
+
+            };
+
+            const renderMetrics = (metrics) => {
+
+                metricsEl.innerHTML = metrics.map((metric) => `
+
+            <span class="memory-health-stat">
+
+                <span class="memory-health-stat__value">${escapeHtml(metric.value)}</span>
+
+                <span class="memory-health-stat__label">${escapeHtml(metric.label)}</span>
+
+            </span>
+
+        `).join('');
+
+            };
+
+            const setRing = (percent, tone) => {
+                const safePercent = Number.isFinite(percent) ? Math.max(0, Math.min(100, percent)) : 0;
+                ring.style.background = `conic-gradient(from -90deg, ${tone} 0% ${safePercent}%, var(--color-bg-tertiary) ${safePercent}% 100%)`;
+            };
+
+            const setOverview = ({ percentText, status, statusTone, headline, subline, stats }) => {
+                percentEl.textContent = percentText;
+                statusEl.textContent = status;
+                statusEl.className = `memory-health-status memory-health-status--${statusTone}`;
+                headlineEl.textContent = headline;
+                sublineEl.textContent = subline;
+                renderMetrics(stats);
+            };
+
+            const setHealthEmptyState = ({ headline, subline, listHtml }) => {
+                healthShell.classList.add('memory-health-shell--empty');
+                healthShell.classList.remove('memory-health-shell--compact');
+                allActionEl.classList.add('is-hidden');
+                setRing(0, 'var(--color-bg-tertiary)');
+                setOverview({
+                    percentText: '—',
+                    status: 'Без данных',
+                    statusTone: 'muted',
+                    headline,
+                    subline,
+                    stats: [
+                        { value: '0', label: 'активно' },
+                        { value: '0', label: 'в фокусе' },
+                    ],
+                });
+                list.innerHTML = listHtml;
+            };
+
+            if (complexes.length === 0) {
+
+                setHealthEmptyState({
+                    headline: 'Пока без истории',
+                    subline: 'Как только появятся повторения, здесь соберётся понятная картина по памяти.',
+                    listHtml: `
+
+            <div class="memory-health-empty">
+
+                <span class="material-symbols-outlined memory-health-empty__icon">psychology</span>
+
+                <p class="memory-health-empty__title">Нет данных о прогрессе</p>
+
+                <p class="memory-health-empty__text">Пройдите комплекс, чтобы увидеть, где память проседает сильнее всего.</p>
 
             </div>
 
-        `;
+        `,
+                });
 
                 return;
 
             }
 
-            // Helper to get frequency label
-
-            const getFrequencyLabel = (healthPercent) => {
-
-                if (healthPercent < 50) return 'Каждый день';
-
-                if (healthPercent < 70) return 'Через 1-2 дня';
-
-                if (healthPercent < 85) return '2 раза/неделю';
-
-                if (healthPercent < 95) return 'Раз в неделю';
-
-                return 'Раз в 2 недели';
-
-            };
-
-            // Complex list
-
-            // Filter out complexes that are frozen in the future
-
             const now = new Date();
+            const visibleComplexes = complexes.filter((complex) => {
 
-            const visibleComplexes = health.complexes.filter(c => {
-
-                if (c.status === 'frozen' && c.frozen_until) {
-
-                    return new Date(c.frozen_until) <= now;
-
+                if (complex.status === 'frozen' && complex.frozen_until) {
+                    return new Date(complex.frozen_until) <= now;
                 }
 
                 return true;
@@ -2625,141 +2482,193 @@
 
             if (visibleComplexes.length === 0) {
 
-                if (chartEl) chartEl.classList.add('hidden');
+                setHealthEmptyState({
+                    headline: 'Нет активных комплексов',
+                    subline: 'Сейчас анализировать нечего: блок оживёт, когда вернутся активные комплексы.',
+                    listHtml: `
 
-                percentEl.textContent = '—';
+            <div class="memory-health-empty memory-health-empty--dashed">
 
-                ring.style.background = 'var(--color-bg-tertiary)';
+                <span class="material-symbols-outlined memory-health-empty__icon">psychology_alt</span>
 
-                list.innerHTML = `
+                <p class="memory-health-empty__title">Нет активных данных</p>
 
-                <div class="flex flex-col items-center justify-center text-center py-4 w-full h-[200px] border-2 border-dashed border-border-subtle rounded-xl">
+                <p class="memory-health-empty__text">Начните обучение, чтобы увидеть рекомендации по повторению.</p>
 
-                    <span class="material-symbols-outlined text-text-secondary text-[32px] mb-2 opacity-50">psychology_alt</span>
+            </div>
 
-                    <p class="text-sm font-bold text-text-secondary">Нет активных данных</p>
-
-                    <p class="text-[11px] text-text-secondary mt-1 max-w-[180px]">Начните обучение, чтобы увидеть статистику здоровья памяти</p>
-
-                </div>
-
-            `;
+        `,
+                });
 
                 return;
 
             }
 
-            // Show chart when we have data — always restore visibility here
+            healthShell.classList.remove('memory-health-shell--empty');
 
-            if (chartEl) chartEl.classList.remove('hidden');
+            const shellWidth = Math.round(healthShell.getBoundingClientRect().width || window.innerWidth);
+            const healthCardHeight = Math.round((healthShell.closest('.calendar-panel-card')?.getBoundingClientRect().height) || 0);
+            const compactHealthLayout = shellWidth < 560 || healthCardHeight < 160;
+            healthShell.classList.toggle('memory-health-shell--compact', compactHealthLayout);
+            allActionEl.classList.toggle('is-hidden', compactHealthLayout);
+            if (!compactHealthLayout) {
+                allActionEl.classList.remove('is-hidden');
+            }
+            const percent = Math.max(0, Math.min(100, Math.round((health.overall_health || 0) * 100)));
+            const criticalCount = visibleComplexes.filter((complex) => complex.is_critical).length;
+            const weakCount = visibleComplexes.filter((complex) => (complex.health_percent || 0) < 80 || complex.is_critical).length;
+            const statusMeta = getStatusMeta(percent, criticalCount, visibleComplexes.length);
+            const ringTone = statusMeta.tone === 'good'
+                ? 'var(--color-success)'
+                : (statusMeta.tone === 'steady' ? 'var(--color-primary)' : 'var(--color-error)');
 
-            const percent = Math.round((health.overall_health || 0) * 100);
-
-            percentEl.textContent = `${percent}%`;
-
-            // Conic gradient for ring (only for visible complexes)
-
-            // Recalculate based on visible only
-
-            let gradient = 'conic-gradient(';
-
-            let pos = 0;
-
-            const size = 100 / visibleComplexes.length;
-
-            visibleComplexes.forEach((c, i) => {
-
-                const color = c.is_critical ? 'var(--color-error)' : (c.health_percent >= 80 ? 'var(--color-success)' : 'var(--color-bg-tertiary)');
-
-                gradient += `${color} ${pos}% ${pos + size}%`;
-
-                if (i < visibleComplexes.length - 1) gradient += ', ';
-
-                pos += size;
-
+            const sortedComplexes = [...visibleComplexes].sort((a, b) => {
+                if (Number(b.is_critical) !== Number(a.is_critical)) {
+                    return Number(b.is_critical) - Number(a.is_critical);
+                }
+                return (a.health_percent || 0) - (b.health_percent || 0);
             });
 
-            gradient += ')';
+            const primaryComplex = sortedComplexes[0];
+            const hiddenComplexCount = Math.max(0, sortedComplexes.length - 1);
+            const focusComplexes = sortedComplexes.filter((complex) => (complex.health_percent || 0) < 80 || complex.is_critical);
 
-            ring.style.background = gradient;
+            setRing(percent, ringTone);
+            setOverview({
+                percentText: `${percent}%`,
+                status: statusMeta.label,
+                statusTone: statusMeta.tone,
+                headline: compactHealthLayout
+                    ? statusMeta.compactHeadline
+                    : (criticalCount === 1 ? 'Один комплекс проседает' : statusMeta.headline),
+                subline: compactHealthLayout
+                    ? (criticalCount > 0
+                        ? 'Лучше быстро освежить самый слабый комплекс.'
+                        : 'Достаточно поддерживать текущий ритм.')
+                    : statusMeta.subline,
+                stats: [
+                    { value: String(visibleComplexes.length), label: 'активно' },
+                    { value: String(weakCount), label: 'в фокусе' },
+                ],
+            });
 
-            list.innerHTML = visibleComplexes.map(c => {
-
-                // Determine badge for status
-
-                let badge = '';
-
-                if (c.status === 'mastered') {
-
-                    badge = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-success-light text-success-dark font-bold ml-2">Освоен</span>';
-
-                } else if (c.status === 'frozen') {
-
-                    badge = '<span class="text-[10px] px-1.5 py-0.5 rounded bg-info-light text-info-dark font-bold ml-2">Заморожен</span>';
-
-                }
-
-                // Формируем текст рекомендации по повторению (используется в тултипе и в подстроке)
-
-                const frequencyText = c.message || getFrequencyLabel(c.health_percent);
-
-                const subTooltip = c.recovery_time ? ` (${c.recovery_time})` : '';
-
-                const fullTooltip = c.hint_title ? `${c.hint_title}\n${frequencyText}${subTooltip}` : frequencyText;
-
-                const safeComplexId = escapeHtml(c.complex_id || '');
-
-                const safeComplexName = escapeHtml(c.name || 'Комплекс');
-
-                const safeFrequencyText = escapeHtml(frequencyText);
-
-                const safeTooltip = escapeHtml(fullTooltip);
-
-                const safeHealthPercent = escapeHtml(c.health_percent);
+            const renderPrimaryAction = (complex) => {
+                const tone = getTone(complex.health_percent || 0, complex.is_critical);
+                const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
+                const safeComplexId = escapeHtml(complex.complex_id || '');
+                const safeComplexName = escapeHtml(complex.name || 'Комплекс');
+                const safePercent = escapeHtml(healthPercent);
+                const actionLabel = complex.is_critical
+                    ? 'Срочный повтор'
+                    : hiddenComplexCount > 0
+                    ? `Повторить первым, ещё ${hiddenComplexCount}`
+                    : 'Рекомендуемый повтор';
+                const toneText = complex.recovery_time
+                    ? escapeHtml(complex.recovery_time)
+                    : escapeHtml((complex.health_percent || 0) < 80 ? 'поддержать ритм' : 'держится стабильно');
 
                 return `
 
-        <button type="button" class="health-review-trigger flex w-full flex-col gap-0.5 group cursor-pointer py-1 text-left bg-transparent border-0 tooltip" data-tooltip="${safeTooltip}" data-complex-id="${safeComplexId}">
+            <button type="button" class="memory-health-action memory-health-action--${tone} memory-health-trigger" data-complex-id="${safeComplexId}" title="${safeComplexName}">
 
-            <div class="flex items-center justify-between">
+                <div class="memory-health-action__copy">
 
-                <div class="health-complex-meta flex items-center gap-2">
+                    <span class="memory-health-action__label">${escapeHtml(actionLabel)}</span>
 
-                    <div class="size-2 rounded-full ${c.is_critical ? 'bg-warning-text' : (c.health_percent >= 80 ? 'bg-primary' : 'bg-primary')}"></div>
-
-                    <span class="health-complex-name text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors" title="${safeComplexName}">${safeComplexName}</span>
-
-                    ${badge}
+                    <span class="memory-health-action__name">${safeComplexName}</span>
 
                 </div>
 
-                <span class="text-xs ${c.is_critical ? 'text-warning-dark' : (c.health_percent >= 80 ? 'text-primary' : 'text-text-secondary')} font-bold">${safeHealthPercent}%</span>
+                <div class="memory-health-action__side">
 
-            </div>
+                    <span class="memory-health-action__percent">${safePercent}%</span>
 
-            <div class="flex items-center gap-2 ml-4">
+                    <span class="memory-health-action__meta">${toneText}</span>
 
-                <span class="text-[10px] text-text-secondary truncate">${safeFrequencyText}</span>
+                </div>
 
-            </div>
+            </button>
 
-        </button>
+        `;
+            };
 
-    `}).join('');
+            const renderCompactAction = (complex) => {
+                const tone = getTone(complex.health_percent || 0, complex.is_critical);
+                const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
+                const safeComplexId = escapeHtml(complex.complex_id || '');
+                const safeComplexName = escapeHtml(complex.name || 'РљРѕРјРїР»РµРєСЃ');
 
-            const reviewTriggers = list.querySelectorAll('.health-review-trigger[data-complex-id]');
+                return `
+
+            <button type="button" class="memory-health-action memory-health-action--${tone} memory-health-trigger" data-complex-id="${safeComplexId}" title="${safeComplexName}">
+
+                <div class="memory-health-action__copy">
+
+                    <span class="memory-health-action__label">РџРѕРІС‚РѕСЂ</span>
+
+                    <span class="memory-health-action__name">${safeComplexName}</span>
+
+                </div>
+
+                <div class="memory-health-action__side">
+
+                    <span class="memory-health-action__percent">${escapeHtml(healthPercent)}%</span>
+
+                    <span class="memory-health-action__meta">РћСЃРІРµР¶РёС‚СЊ</span>
+
+                </div>
+
+            </button>
+
+        `;
+            };
+
+            const renderCompactOverflowAction = (count) => `
+
+            <button type="button" class="memory-health-overflow-action" data-open-health-details="true" title="РћС‚РєСЂС‹С‚СЊ РІСЃРµ РєРѕРјРїР»РµРєСЃС‹ РІ С„РѕРєСѓСЃРµ">
+
+                +${escapeHtml(count)} РµС‰С‘
+
+            </button>
+
+        `;
+
+            if (compactHealthLayout) {
+                const compactSource = focusComplexes.length > 0 ? focusComplexes : sortedComplexes.slice(0, 1);
+                const compactVisible = compactSource.slice(0, Math.min(2, compactSource.length));
+                const compactHtml = compactVisible.map(renderCompactAction).join('')
+                    + (compactSource.length > compactVisible.length
+                        ? renderCompactOverflowAction(compactSource.length - compactVisible.length)
+                        : '');
+
+                list.innerHTML = compactHtml;
+            } else {
+                list.innerHTML = `
+
+        ${renderPrimaryAction(primaryComplex)}
+
+    `;
+            }
+
+            const reviewTriggers = list.querySelectorAll('.memory-health-trigger[data-complex-id]');
+            const overflowAction = list.querySelector('[data-open-health-details="true"]');
 
             reviewTriggers.forEach((item) => {
 
                 item.addEventListener('click', () => {
 
                     const complexId = item.getAttribute('data-complex-id');
-
                     startUnplannedReview(complexId);
 
                 });
 
             });
+
+            if (overflowAction) {
+                overflowAction.addEventListener('click', () => {
+                    openHealthDetails();
+                });
+            }
 
         }
 
@@ -2856,11 +2765,47 @@
 
             if (!container) return;
 
-            // Scroll by ~80% of container width (more robust than hardcoded px)
+            if (container.scrollWidth <= container.clientWidth + 2) {
+                return;
+            }
 
             const scrollAmount = direction * Math.max(200, Math.floor(container.clientWidth * 0.8));
 
             container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+
+        }
+
+        function syncScheduleStripState() {
+
+            const container = document.getElementById('schedule-strip');
+            const prevBtn = document.getElementById('schedule-scroll-prev');
+            const nextBtn = document.getElementById('schedule-scroll-next');
+
+            if (!container) return;
+
+            const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth);
+            const hasOverflow = maxScroll > 2;
+            const atStart = !hasOverflow || container.scrollLeft <= 2;
+            const atEnd = !hasOverflow || container.scrollLeft >= maxScroll - 2;
+
+            container.classList.toggle('schedule-strip--centered', !hasOverflow);
+            container.classList.toggle('schedule-strip--scrollable', hasOverflow);
+
+            if (prevBtn) {
+                prevBtn.disabled = atStart;
+                prevBtn.setAttribute('aria-disabled', atStart ? 'true' : 'false');
+            }
+
+            if (nextBtn) {
+                nextBtn.disabled = atEnd;
+                nextBtn.setAttribute('aria-disabled', atEnd ? 'true' : 'false');
+            }
+
+            if (!hasOverflow) {
+                container.scrollLeft = 0;
+            } else if (container.scrollLeft > maxScroll) {
+                container.scrollLeft = maxScroll;
+            }
 
         }
 
@@ -3009,51 +2954,36 @@
             const container = document.getElementById('schedule-strip');
 
             if (!container) return;
-
             if (state.ui.dragScrollInitialized) return;
 
             state.ui.dragScrollInitialized = true;
 
-            // Use pointer events for better cross-device support (mouse/touch/pen)
-
             container.addEventListener('pointerdown', (e) => {
 
-                // If user interacts with a control inside the strip, don't hijack the event
+                if (container.scrollWidth <= container.clientWidth + 2) {
+                    return;
+                }
 
                 const interactive = e.target && e.target.closest
-
                     ? e.target.closest('button, a, input, select, textarea, label')
-
                     : null;
 
                 if (interactive) {
-
                     return;
-
                 }
-
-                // Only left click for mouse
 
                 if (e.pointerType === 'mouse' && e.button !== 0) return;
 
                 state.ui.isDragging = true;
-
                 container.classList.add('dragging');
-
                 state.ui.startX = e.clientX;
-
                 state.ui.startY = e.clientY;
-
                 state.ui.scrollLeft = container.scrollLeft;
 
                 try {
-
                     container.setPointerCapture(e.pointerId);
-
                 } catch (err) {
-
                     // Ignore if not supported
-
                 }
 
                 e.preventDefault();
@@ -3065,13 +2995,12 @@
                 if (!state.ui.isDragging) return;
 
                 const dx = e.clientX - state.ui.startX;
-
                 const dy = e.clientY - state.ui.startY;
 
                 if (Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
 
                 container.scrollLeft = state.ui.scrollLeft - dx;
-
+                syncScheduleStripState();
                 e.preventDefault();
 
             });
@@ -3081,16 +3010,14 @@
                 if (!state.ui.isDragging) return;
 
                 state.ui.isDragging = false;
-
                 container.classList.remove('dragging');
+                syncScheduleStripState();
 
             };
 
             container.addEventListener('pointerup', endDrag);
-
             container.addEventListener('pointercancel', endDrag);
-
-            // If capture fails or pointer leaves, still stop dragging
+            container.addEventListener('scroll', syncScheduleStripState, { passive: true });
 
             window.addEventListener('pointerup', endDrag);
 
@@ -3128,7 +3055,14 @@
 
             setupCalendarLoadingLogo();
 
+            loadUserAvatar();
+
             fetchTodayPlan();
+
+            window.addEventListener('resize', () => {
+                syncScheduleStripState();
+                renderHealthIndicator();
+            });
 
         });
 
@@ -3141,3 +3075,6 @@
 </body>
 
 </html>
+
+
+

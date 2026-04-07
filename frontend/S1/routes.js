@@ -27,6 +27,7 @@
         // API Endpoints
         API: {
             GET_TASK: (sessionId) => `/api/session/${encode(sessionId)}/task`,
+            SAVE_UI_STATE: (sessionId) => `/api/session/${encode(sessionId)}/ui-state`,
             PAUSE: (sessionId) => `/api/session/${encode(sessionId)}/pause`,
             RESUME: (sessionId) => `/api/session/${encode(sessionId)}/resume`,
             SUBMIT_ANSWER: (sessionId) => `/api/session/${encode(sessionId)}/task/submit`,

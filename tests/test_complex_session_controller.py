@@ -288,6 +288,58 @@ class TestUIState:
         result = ctrl.save_ui_state("task", task_ref="mod/topic/t1")
         assert result is True
 
+    def test_save_task_with_explicit_index_does_not_advance_progress_by_default(self):
+        ctrl = _make_ctrl()
+        ctrl.current_session_id = "sess1"
+        ctrl.current_task_ref = "mod/topic/task0"
+        session = _mock_session(queue_len=3, current_idx=0)
+        ctrl.session_manager.get_session.return_value = session
+
+        result = ctrl.save_ui_state("task", task_ref="mod/topic/task0", task_index=0)
+
+        assert result is True
+        assert session.ui_state["task_index"] == 0
+        assert session.current_task_index == 0
+
+    def test_save_task_with_explicit_index_can_advance_progress_when_requested(self):
+        ctrl = _make_ctrl()
+        ctrl.current_session_id = "sess1"
+        ctrl.current_task_ref = "mod/topic/task0"
+        session = _mock_session(queue_len=3, current_idx=0)
+        ctrl.session_manager.get_session.return_value = session
+
+        result = ctrl.save_ui_state(
+            "task",
+            task_ref="mod/topic/task0",
+            task_index=0,
+            sync_progress=True,
+        )
+
+        assert result is True
+        assert session.ui_state["task_index"] == 0
+        assert session.current_task_index == 1
+
+    def test_save_task_persists_view_state(self):
+        ctrl = _make_ctrl()
+        ctrl.current_session_id = "sess1"
+        ctrl.current_task_ref = "mod/topic/task0"
+        session = _mock_session(queue_len=2, current_idx=0)
+        ctrl.session_manager.get_session.return_value = session
+
+        result = ctrl.save_ui_state(
+            "task",
+            task_ref="mod/topic/task0",
+            task_index=0,
+            view_state={"zoom": 1.5, "panX": 10, "panY": 20},
+        )
+
+        assert result is True
+        assert session.ui_state["view_state"] == {
+            "zoom": 1.5,
+            "panX": 10,
+            "panY": 20,
+        }
+
 
 # ═══════════════════════════════════════════════════════════════════
 # _serialize_evaluation_result
@@ -365,6 +417,67 @@ class TestNextTask:
         with patch.object(ctrl, "_load_next_task"):
             ctrl.next_task()
             ctrl.session_manager.skip_task.assert_called_once_with("sess1", "mod/topic/task0")
+
+    def test_retry_copy_requires_its_own_submission(self):
+        ctrl = _make_ctrl()
+        ctrl.current_session_id = "sess1"
+        ctrl.current_task_ref = "mod/topic/task0"
+        ctrl._current_queue_index = 2
+        ctrl._current_task_iteration = 1
+
+        session = _mock_session(queue_len=3, current_idx=3)
+        session.queue[2].task_ref = "mod/topic/task0"
+        session.queue[2].is_retry = True
+        session.completed_tasks = [
+            MagicMock(task_ref="mod/topic/task0", iteration_index=1),
+        ]
+        ctrl.session_manager.get_session.return_value = session
+        ctrl.session_manager.skip_task.return_value = {
+            "ok": False,
+            "reason": "retry_cannot_be_skipped",
+        }
+
+        errors = []
+        ctrl.on_error = lambda msg: errors.append(msg)
+
+        with patch.object(ctrl, "_load_next_task") as mock_load:
+            ctrl.next_task()
+
+        ctrl.session_manager.skip_task.assert_called_once_with("sess1", "mod/topic/task0")
+        mock_load.assert_not_called()
+        assert errors
+        assert "retry_cannot_be_skipped" in errors[0]
+
+    def test_persists_iteration_results_state_before_callback(self):
+        ctrl = _make_ctrl()
+        ctrl.current_session_id = "sess1"
+        session = _mock_session(iteration=1, queue_len=2, current_idx=2)
+        ctrl.session_manager.get_session.return_value = session
+        ctrl.complex_service.get_complex.return_value = MagicMock()
+
+        def _generate_next_iteration(current_session, _complex_obj):
+            current_session.iteration = 2
+
+        ctrl.session_manager._generate_next_iteration.side_effect = _generate_next_iteration
+
+        summary = MagicMock()
+        summary.iteration = 1
+        summary.total_tasks = 2
+        summary.successful_tasks = 2
+        summary.failed_tasks = 0
+        summary.success_rate = 1.0
+        ctrl.session_manager.get_iteration_summary.return_value = summary
+
+        completed = []
+        ctrl.on_iteration_completed = lambda payload: completed.append(payload)
+
+        with patch.object(ctrl, "clear_ui_state") as mock_clear:
+            ctrl._load_next_task()
+
+        assert session.ui_state["screen_type"] == "iteration_results"
+        assert session.ui_state["iteration_number"] == 1
+        mock_clear.assert_not_called()
+        assert completed == [summary]
 
 
 # ═══════════════════════════════════════════════════════════════════

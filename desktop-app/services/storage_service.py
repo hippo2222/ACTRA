@@ -10,13 +10,17 @@ Storage Service - Работа с хранилищем данных (модул�
 ОБНОВЛЕНО: Удалена зависимость от NavigationManager
 """
 
+import copy
+import hashlib
 import json
 import logging
 import os
 import time
-from datetime import datetime
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional
+from werkzeug.utils import secure_filename
 
 # Import TaskLoader and exceptions
 try:
@@ -154,16 +158,26 @@ class StorageService:
                 point = item.get('point') or item.get('coordinates')
                 label = item.get('label', '')
 
+                # Freehand must win over generic "3+ points" fallback, otherwise
+                # long freehand traces degrade into polygons in runtime/UI.
+                if item_type == 'freehand' and isinstance(points, list) and len(points) >= 2:
+                    t = {
+                        'shape': 'freehand',
+                        'points': points,
+                        'label': label,
+                    }
+                    if 'tolerance_px' in item: t['tolerance_px'] = item['tolerance_px']
+                    elif 'tolerancePx' in item: t['tolerancePx'] = item['tolerancePx']
+                    targets.append(t)
                 # Polygon / Region
-                is_polygon = item_type == 'polygon' or (isinstance(points, list) and len(points) >= 3)
-                if is_polygon:
+                elif item_type == 'polygon' or (not item_type and isinstance(points, list) and len(points) >= 3):
                      targets.append({
                         'shape': 'polygon',
                         'points': points,
                         'label': label,
                     })
-                # Freehand
-                elif item_type == 'freehand' or (isinstance(points, list) and len(points) >= 2):
+                # Freehand fallback for legacy shapes without explicit type
+                elif isinstance(points, list) and len(points) >= 2:
                     t = {
                         'shape': 'freehand',
                         'points': points,
@@ -190,30 +204,40 @@ class StorageService:
         # 3. OPEN ANSWER
         elif task_type == 'open_answer':
             # Keywords
-            if 'keywords' not in base and 'keywords' in content:
+            if 'keywords' not in base and 'keywords' in content and content.get('keywords') is not None:
                 base['keywords'] = content['keywords']
             
             # Sequence matters
             if 'sequence_matters' not in base:
-                if 'sequence_matters' in content:
+                if 'sequence_matters' in content and content.get('sequence_matters') is not None:
                     base['sequence_matters'] = content['sequence_matters']
-                elif 'settings' in task_data and 'sequence_matters' in task_data['settings']:
+                elif 'settings' in task_data and 'sequence_matters' in task_data['settings'] and task_data['settings'].get('sequence_matters') is not None:
                     base['sequence_matters'] = task_data['settings']['sequence_matters']
             
             # Reference answer (D-2 fix)
-            if 'reference_answer' not in base and 'reference_answer' in content:
+            if 'reference_answer' not in base and 'reference_answer' in content and content.get('reference_answer') is not None:
                 base['reference_answer'] = content['reference_answer']
+
+            # max_length (D-11 fix)
+            if 'max_length' not in base:
+                if 'max_length' in content and content.get('max_length') is not None:
+                    base['max_length'] = content['max_length']
+                elif 'settings' in task_data and 'max_length' in task_data['settings'] and task_data['settings'].get('max_length') is not None:
+                    base['max_length'] = task_data['settings']['max_length']
             
             # min_keywords / require_all_keywords (D-1 fix)
-            if 'min_keywords' not in base and 'min_keywords' in content:
+            if 'min_keywords' not in base and 'min_keywords' in content and content.get('min_keywords') is not None:
                 base['min_keywords'] = content['min_keywords']
-            if 'require_all_keywords' not in base and 'require_all_keywords' in content:
+            if 'require_all_keywords' not in base and 'require_all_keywords' in content and content.get('require_all_keywords') is not None:
                 base['require_all_keywords'] = content['require_all_keywords']
             
             return base
 
         # 4. SEQUENCE ASSEMBLY
         elif task_type == 'sequence_assembly' or task_type == 'sequence':
+            if 'elements' not in base and isinstance(content.get('elements'), list):
+                base['elements'] = content['elements']
+
             # Editor saves 'sequence' list in content
             # Evaluator expects 'levels' list in answer_key
             if 'levels' not in base and 'sequence' in content:
@@ -468,15 +492,22 @@ class StorageService:
                     # Fallback if not relative (shouldn't happen usually)
                     path_str = str(task_json)
 
+                canonical_task_id = str(meta.get('id') or task_path.name)
+                canonical_task_name = meta.get('name') or task_data.get('name') or task_path.name
+
+                legacy_task_id = str(task_data.get('id') or '').strip()
+
                 metadata = {
-                    'id': task_data.get('id', task_path.name),
-                    'name': task_data.get('name', task_path.name),
-                    'type': task_data.get('type', 'unknown'),
+                    'id': canonical_task_id,
+                    'name': canonical_task_name,
+                    'type': task_data.get('type', meta.get('type', 'unknown')),
                     'subtype': task_data.get('subtype'),
                     'description': task_data.get('description', ''),
                     'created_at': created_at,
                     'path': path_str,
                 }
+                if legacy_task_id and legacy_task_id != canonical_task_id:
+                    metadata['legacy_id'] = legacy_task_id
                 
                 tasks.append(metadata)
                 
@@ -522,13 +553,17 @@ class StorageService:
                         or datetime.fromtimestamp(task_json_path.stat().st_ctime).isoformat()
                     )
                     metadata.update({
-                        'name': task_data.get('name', metadata.get('name')),
+                        'id': meta.get('id') or task_json_path.parent.name or metadata.get('id'),
+                        'name': meta.get('name') or task_data.get('name') or metadata.get('name'),
                         'type': task_data.get('type', metadata.get('type', 'unknown')),
                         'subtype': task_data.get('subtype', metadata.get('subtype')),
                         'description': task_data.get('description', metadata.get('description', '')),
                         'created_at': created_at,
                         'author': task_data.get('author', metadata.get('author')),
                     })
+                    legacy_task_id = str(task_data.get('id') or '').strip()
+                    if legacy_task_id and legacy_task_id != metadata.get('id'):
+                        metadata['legacy_id'] = legacy_task_id
                 except Exception as exc:
                     self.logger.warning(f"Failed to enrich task metadata from {task_json_path}: {exc}")
             enriched.append(metadata)
@@ -1058,6 +1093,25 @@ class StorageService:
         self._validate_id(task_id, "task_id")
 
         try:
+            if isinstance(task_data, dict):
+                task_data = copy.deepcopy(task_data)
+                meta = task_data.get("meta")
+                if not isinstance(meta, dict):
+                    meta = {}
+                    task_data["meta"] = meta
+
+                task_data["id"] = task_id
+                meta["id"] = task_id
+                meta["module"] = module_id
+                meta["topic"] = topic_id
+
+                task_name = meta.get("name") or task_data.get("name") or task_id
+                meta["name"] = task_name
+                task_data["name"] = task_name
+                self._normalize_task_metadata_for_save(task_data)
+                self._synchronize_click_threshold_fields(task_data)
+                self._sanitize_open_answer_payload_for_save(task_data)
+
             # 1. Resolve path
             task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
             
@@ -1090,6 +1144,7 @@ class StorageService:
 
             from task_system.core.io.task_io import TaskIO
             TaskIO.save(task_data_obj, str(task_json_path), validate=validate)
+            self._postprocess_saved_open_answer_task(task_json_path)
 
             # 4. Update module.json (ensure registered)
             self._ensure_task_registered_in_module(module_id, topic_id, task_id, task_data)
@@ -1102,6 +1157,197 @@ class StorageService:
         except Exception as e:
             self.logger.exception(f"Failed to save task {module_id}/{topic_id}/{task_id}: {e}")
             return False
+
+    def _normalize_task_metadata_for_save(self, task_data: Dict[str, Any]) -> None:
+        """Fill and normalize task metadata without dropping legacy keys."""
+        if not isinstance(task_data, dict):
+            return
+
+        meta = task_data.get("meta")
+        if not isinstance(meta, dict):
+            meta = {}
+            task_data["meta"] = meta
+
+        now_iso = datetime.now(timezone.utc).isoformat()
+        created_at = meta.get("created_at") or meta.get("created") or now_iso
+        created = meta.get("created") or created_at
+
+        meta["created_at"] = created_at
+        meta["created"] = created
+        meta["modified"] = now_iso
+        meta.setdefault("version", "1.0")
+        meta.setdefault("task_schema_version", "1.2")
+
+    def _synchronize_click_threshold_fields(self, task_data: Dict[str, Any]) -> None:
+        """Keep click threshold in both legacy content.required_correct and canonical settings.success_threshold."""
+        if not isinstance(task_data, dict):
+            return
+        if task_data.get("type") != "click":
+            return
+
+        content = task_data.get("content")
+        if not isinstance(content, dict):
+            content = {}
+            task_data["content"] = content
+
+        settings = task_data.get("settings")
+        if not isinstance(settings, dict):
+            settings = {}
+            task_data["settings"] = settings
+
+        if task_data.get("subtype") == "error_detection" or content.get("subtype") == "error_detection":
+            settings.pop("success_threshold", None)
+            return
+
+        raw_candidates = [settings.get("success_threshold"), content.get("required_correct")]
+        canonical_value = None
+        for raw in raw_candidates:
+            try:
+                parsed = int(raw)
+            except Exception:
+                continue
+            if parsed >= 1:
+                canonical_value = parsed
+                break
+
+        if canonical_value is None:
+            settings.pop("success_threshold", None)
+            return
+
+        settings["success_threshold"] = canonical_value
+        content["required_correct"] = canonical_value
+
+    def _sanitize_open_answer_payload_for_save(self, task_data: Dict[str, Any]) -> None:
+        """Strip removed legacy fields and obvious null-only noise from new open_answer saves."""
+        if not isinstance(task_data, dict):
+            return
+        if task_data.get("type") != "open_answer":
+            return
+
+        content = task_data.get("content")
+        if not isinstance(content, dict):
+            content = {}
+            task_data["content"] = content
+
+        settings = task_data.get("settings")
+        if not isinstance(settings, dict):
+            settings = {}
+            task_data["settings"] = settings
+
+        # Legacy partial-keyword threshold is no longer authored in the editor.
+        content.pop("min_keywords", None)
+        content.pop("require_all_keywords", None)
+
+        # Remove null-only open_answer noise while preserving any meaningful values.
+        for key in ("image", "hint", "sample_answers", "min_length", "max_length"):
+            if key in content and content.get(key) is None:
+                content.pop(key, None)
+
+        # These settings belong to other task types; keep only if they carry a real value.
+        for key in ("tolerancePx", "overlapThreshold", "success_threshold"):
+            if key in settings and settings.get(key) is None:
+                settings.pop(key, None)
+
+    def _postprocess_saved_open_answer_task(self, task_json_path: Path) -> None:
+        """Reapply open_answer cleanup to the serialized file because TaskIO writes optional null fields."""
+        try:
+            if not task_json_path.exists():
+                return
+
+            raw = json.loads(task_json_path.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict) or raw.get("type") != "open_answer":
+                return
+
+            before = json.dumps(raw, ensure_ascii=False, sort_keys=True)
+            self._sanitize_open_answer_payload_for_save(raw)
+            after = json.dumps(raw, ensure_ascii=False, sort_keys=True)
+            if after == before:
+                return
+
+            task_json_path.write_text(
+                json.dumps(raw, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+        except Exception as exc:
+            self.logger.warning("Failed to postprocess saved open_answer task %s: %s", task_json_path, exc)
+
+    def reserve_task_id(
+        self,
+        module_id: str,
+        topic_id: str,
+        task_name: str,
+        preferred_task_id: Optional[str] = None,
+    ) -> str:
+        """Reserve a stable task id without creating task.json or registering it in catalog."""
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+
+        if preferred_task_id:
+            self._validate_id(preferred_task_id, "task_id")
+            return preferred_task_id
+
+        base_id = secure_filename((task_name or "").lower().replace(" ", "_"))
+        if not base_id:
+            base_id = f"task_{uuid.uuid4().hex[:8]}"
+
+        candidate = base_id
+        suffix = 1
+        while (self.modules_dir / module_id / "topics" / topic_id / "tasks" / candidate / "task.json").exists():
+            candidate = f"{base_id}_{suffix:02d}"
+            suffix += 1
+
+        return candidate
+
+    def build_task_draft_bootstrap(
+        self,
+        module_id: str,
+        topic_id: str,
+        task_name: str,
+        task_type: str,
+        preferred_task_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Build an unsaved task payload for draft-first editor flow."""
+        self._validate_id(module_id, "module_id")
+        self._validate_id(topic_id, "topic_id")
+
+        from task_system.core.io.task_io import TaskIO
+
+        task_id = self.reserve_task_id(
+            module_id,
+            topic_id,
+            task_name,
+            preferred_task_id=preferred_task_id,
+        )
+        now_iso = datetime.now().isoformat()
+
+        task_data_obj = TaskIO.new_task(task_type, name=task_name, module=module_id, topic=topic_id)
+        task_data_obj.id = task_id
+        task_data_obj.set_meta(
+            id=task_id,
+            name=task_name,
+            module=module_id,
+            topic=topic_id,
+            created=now_iso,
+            created_at=now_iso,
+            modified=now_iso,
+        )
+
+        task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+        return {
+            "task_id": task_id,
+            "task": {
+                "task_data": task_data_obj.to_dict(),
+                "answer_key": {},
+                "metadata": {
+                    "id": task_id,
+                    "name": task_name,
+                    "module": module_id,
+                    "topic": topic_id,
+                },
+                "task_dir": str(task_dir),
+                "is_new": True,
+            },
+        }
 
     def create_task(
         self,
@@ -1121,25 +1367,26 @@ class StorageService:
         # task_name can be anything, it will be sanitized to generate ID
 
         try:
-            import uuid
-            import time
-            from werkzeug.utils import secure_filename
             from task_system.core.io.task_io import TaskIO
             
-            # Generate ID
-            safe_name = secure_filename(task_name.lower().replace(' ', '_'))
-            task_id = safe_name if safe_name else str(uuid.uuid4())[:8]
-            
-            # Ensure uniqueness
+            task_id = self.reserve_task_id(module_id, topic_id, task_name)
             task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
-            if task_dir.exists():
-                task_id = f"{task_id}_{int(time.time()) % 1000}"
-                task_dir = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
             
             task_dir.mkdir(parents=True, exist_ok=True)
             
             # Create initial data
             task_data_obj = TaskIO.new_task(task_type, name=task_name, module=module_id, topic=topic_id)
+            now_iso = datetime.now().isoformat()
+            task_data_obj.id = task_id
+            task_data_obj.set_meta(
+                id=task_id,
+                name=task_name,
+                module=module_id,
+                topic=topic_id,
+                created=now_iso,
+                created_at=now_iso,
+                modified=now_iso,
+            )
             task_json_path = task_dir / "task.json"
             
             TaskIO.save(task_data_obj, str(task_json_path), validate=True)
@@ -1446,7 +1693,20 @@ class StorageService:
             content = task_data.get("content", {})
             if not isinstance(content, dict):
                 return # Should handle raw structure too if needed, but task_data usually has content
-                
+
+            def hash_file(path: Path) -> Optional[str]:
+                try:
+                    hasher = hashlib.sha256()
+                    with open(path, "rb") as fh:
+                        while True:
+                            chunk = fh.read(8192)
+                            if not chunk:
+                                break
+                            hasher.update(chunk)
+                    return hasher.hexdigest()
+                except Exception:
+                    return None
+
             # Helper logic similar to server.py
             def copy_image(src_path: str) -> Optional[str]:
                 if not src_path: return None
@@ -1459,20 +1719,31 @@ class StorageService:
                 
                 if not abs_path.exists():
                     return src_path # Can't find it, leave as is
-                    
+
                 filename = secure_filename(abs_path.name)
                 dst = images_dir / filename
-                
-                # Avoid collisions
+
+                source_hash = hash_file(abs_path)
+                stem = abs_path.stem
+                suffix = abs_path.suffix
+                candidate_paths = [dst]
+                candidate_paths.extend(sorted(images_dir.glob(f"{stem}_*{suffix}")))
+                if source_hash:
+                    for candidate in candidate_paths:
+                        if not candidate.exists():
+                            continue
+                        if hash_file(candidate) == source_hash:
+                            try:
+                                return candidate.relative_to(self.data_dir).as_posix()
+                            except ValueError:
+                                return src_path
+
+                # Avoid collisions for different content
                 counter = 1
                 while dst.exists():
-                    # Check if it's the same file? optional optimization.
-                    # For now just rename
-                    stem = abs_path.stem
-                    suffix = abs_path.suffix
                     dst = images_dir / f"{stem}_{counter:02d}{suffix}"
                     counter += 1
-                
+
                 shutil.copy2(str(abs_path), str(dst))
                 
                 # Return relative path from data_dir

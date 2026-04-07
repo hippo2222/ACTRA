@@ -42,6 +42,91 @@ quick_access_bp = Blueprint("quick_access", __name__)
 # ---------------------------------------------------------------------------
 
 
+def _resolve_display_task_index(session_api: Any, session: Any) -> Optional[int]:
+    if session is None:
+        return None
+
+    try:
+        resolver = getattr(session_api, "_resolve_current_queue_slot", None)
+        if callable(resolver):
+            _, queue_index = resolver(session)
+            if isinstance(queue_index, int) and queue_index >= 0:
+                return queue_index
+    except Exception:
+        logger.debug("[HTTP] Failed to resolve quick-access display task index", exc_info=True)
+
+    queue = getattr(session, "queue", None)
+    if not isinstance(queue, list) or not queue:
+        return None
+
+    current_index = getattr(session, "current_task_index", 0)
+    if not isinstance(current_index, int):
+        current_index = 0
+
+    if getattr(session, "complex_id", None) == "daily_mix":
+        return max(0, min(current_index, len(queue) - 1))
+
+    return max(0, min(current_index - 1, len(queue) - 1))
+
+
+def _normalize_recoverable_session(session_api: Any, session: Any) -> Any:
+    if session is None:
+        return None
+
+    normalizer = getattr(session_api, "mark_interrupted_session_as_paused", None)
+    if callable(normalizer):
+        try:
+            return normalizer(session)
+        except Exception:
+            logger.debug(
+                "[HTTP] Failed to normalize quick-access session restored from repository",
+                exc_info=True,
+            )
+    return session
+
+
+def _find_paused_session(session_api: Any, complex_id: str, user_id: str) -> Optional[Any]:
+    sm = getattr(session_api, "_session_manager", None)
+    repo = getattr(sm, "session_repository", None) if sm is not None else None
+
+    existing = None
+    try:
+        if repo is not None:
+            existing = repo.load_session(complex_id, user_id)
+            existing = _normalize_recoverable_session(session_api, existing)
+    except Exception:
+        logger.warning(
+            "[HTTP] Failed to load paused session snapshot for complex %s",
+            complex_id,
+            exc_info=True,
+        )
+
+    candidates = []
+    if existing is not None:
+        candidates.append(existing)
+
+    in_memory_sessions = getattr(sm, "_active_sessions", {}) if sm is not None else {}
+    if isinstance(in_memory_sessions, dict):
+        for loaded in in_memory_sessions.values():
+            if not loaded:
+                continue
+            if str(getattr(loaded, "user_id", "") or "").strip() != user_id:
+                continue
+            if str(getattr(loaded, "complex_id", "") or "").strip() != complex_id:
+                continue
+            candidates.append(loaded)
+
+    for candidate in candidates:
+        if (
+            candidate
+            and getattr(candidate, "is_active", False)
+            and getattr(candidate, "paused", False)
+        ):
+            return candidate
+
+    return None
+
+
 def _get_user_dir(user_id: str) -> Path:
     return get_ctx().data_dir / "users" / user_id
 
@@ -144,34 +229,35 @@ def start_complex_session(complex_id: str) -> Any:
     force = payload.get("force", False)
 
     # MISSING-3 fix: проверяем наличие паузированной сессии для этого комплекса
-    if not force:
-        try:
-            sm = getattr(session_api, "_session_manager", None)
-            repo = sm.session_repository if sm is not None else None
-            if repo is not None:
-                existing = repo.load_session(complex_id, user_id)
-                if (
-                    existing
-                    and getattr(existing, "is_active", False)
-                    and getattr(existing, "paused", False)
-                ):
-                    return (
-                        jsonify(
-                            {
-                                "ok": False,
-                                "error": "paused_session_exists",
-                                "session_id": existing.id,
-                                "paused_at": _json_safe(getattr(existing, "paused_at", None)),
-                            }
-                        ),
-                        409,
-                    )
-        except Exception:
-            logger.warning(
-                "[HTTP] Failed to check for existing paused session for complex %s",
-                complex_id,
-                exc_info=True,
-            )
+    existing = _find_paused_session(session_api, complex_id, user_id)
+    if existing and not force:
+        return (
+            jsonify(
+                {
+                    "ok": False,
+                    "error": "paused_session_exists",
+                    "session_id": existing.id,
+                    "paused_at": _json_safe(getattr(existing, "paused_at", None)),
+                }
+            ),
+            409,
+        )
+
+    if existing and force:
+        sm = getattr(session_api, "_session_manager", None)
+        cancelled = False
+        if sm is not None and hasattr(sm, "cancel_session"):
+            try:
+                cancelled = bool(sm.cancel_session(existing.id, user_id=user_id))
+            except Exception:
+                logger.warning(
+                    "[HTTP] Failed to cancel paused session %s before restart of complex %s",
+                    getattr(existing, "id", None),
+                    complex_id,
+                    exc_info=True,
+                )
+        if not cancelled:
+            return jsonify({"ok": False, "error": "failed_to_clear_paused_session"}), 409
 
     data = session_api.start_session(
         complex_id=complex_id, user_id=user_id, start_iteration=start_iteration
@@ -202,6 +288,7 @@ def get_quick_access() -> Any:
                     continue
 
                 loaded = repo.load_session_by_session_id(user_id=user_id, session_id=session_id)
+                loaded = _normalize_recoverable_session(session_api, loaded)
                 if not loaded:
                     continue
                 if not getattr(loaded, "is_active", True):
@@ -228,12 +315,20 @@ def get_quick_access() -> Any:
                     "complex_id": cid,
                     "paused": True,
                     "paused_at": _json_safe(paused_at),
+                    "last_resume_source": getattr(loaded, "last_resume_source", None),
+                    "last_resumed_at": _json_safe(getattr(loaded, "last_resumed_at", None)),
                     "start_time": _json_safe(start_time),
                     "iteration": getattr(loaded, "iteration", None),
                     "current_task_index": getattr(loaded, "current_task_index", None),
+                    "display_task_index": _resolve_display_task_index(session_api, loaded),
                     "total_tasks": len(getattr(loaded, "queue", []) or []),
                     "_sort_ts": sort_ts,
                 }
+                try:
+                    if hasattr(session_api, "get_resume_target"):
+                        payload["resume_target"] = _json_safe(session_api.get_resume_target(loaded))
+                except Exception:
+                    logger.debug("[HTTP] Failed to attach resume_target to paused quick-access session", exc_info=True)
 
                 prev = paused_sessions_by_complex.get(cid)
                 if prev is None or payload["_sort_ts"] >= prev.get("_sort_ts", 0):

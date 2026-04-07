@@ -1,0 +1,1037 @@
+/* =============================================================================
+   S3 – Итоговые результаты комплекса
+   Правила:
+   • Никаких color-mix() в этом файле — только токены из lightB-variables.css
+     и компонентные классы из lightB-components.css.
+   • Tailwind utility только в JS-коде (классы типа .hidden, .text-sm).
+     В HTML-разметке — только s3-* и component-классы.
+   • Все анимации описаны здесь; keyframes живут в animations.css.
+   ============================================================================= */
+
+/* ─── MATERIAL ICONS ────────────────────────────────────────────────────────── */
+.material-symbols-outlined {
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* ─── PAGE SHELL ─────────────────────────────────────────────────────────────
+   Один корневой элемент, один frame-контейнер.
+   Никаких вложенных div-обёрток без роли.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-body {
+  min-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background: var(--color-bg-main);
+  color: var(--color-text-main);
+  font-family: var(--font-display, inherit);
+  -webkit-font-smoothing: antialiased;
+}
+
+.s3-page-root {
+  display: flex;
+  min-height: 100svh;
+  flex-direction: column;
+}
+
+.s3-page-frame {
+  width: min(1320px, calc(100vw - 32px));
+  min-height: 100svh;
+  margin: 0 auto;
+  padding: 16px 0 20px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* ─── TOOLBAR ────────────────────────────────────────────────────────────────
+   Semantic <header>. Использует var(--color-surface-1) и border-токены.
+   Без color-mix() напрямую.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 18px;
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface-1);
+  box-shadow: var(--shadow-sm);
+}
+
+.s3-toolbar-identity {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.s3-kicker {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.s3-toolbar-title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: clamp(1.05rem, 1.8vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.s3-toolbar-nav {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.s3-toolbar-nav[hidden] {
+  display: none !important;
+}
+
+.s3-toolbar-nav .s3-btn {
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.s3-toolbar-nav .s3-btn--wide {
+  min-width: 0;
+}
+
+.s3-toolbar-nav .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+/* ─── ICON BUTTON ────────────────────────────────────────────────────────────
+   Повторно использует токены компонентного слоя.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  border: 1px solid var(--color-component-icon-button-muted-border);
+  background: var(--color-component-icon-button-muted-bg);
+  color: var(--color-component-icon-button-muted-fg);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.s3-icon-btn:hover {
+  background: var(--color-component-icon-button-muted-hover-bg);
+  border-color: var(--color-component-icon-button-muted-hover-border);
+  color: var(--color-component-icon-button-muted-hover-fg);
+}
+
+.s3-icon-btn:active {
+  transform: scale(0.95);
+}
+
+/* ─── MAIN ───────────────────────────────────────────────────────────────────
+   Семантический <main>. Flexbox-стек с нужными промежутками.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-main {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+}
+
+/* ─── HERO ───────────────────────────────────────────────────────────────────
+   Использует card-elevated из lightB-components.css.
+   Дополняет только layout.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-hero {
+  padding: 22px;
+  display: grid;
+  gap: 18px;
+  position: relative;
+  overflow: hidden;
+}
+
+.s3-hero-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.s3-hero-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.s3-hero-title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: clamp(1.15rem, 1.9vw, 1.45rem);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.025em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ─── STAT GRID ──────────────────────────────────────────────────────────────
+   Карточки метрик. Фон — panel-row токен, акцент — pill-success.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 12px;
+}
+
+.s3-stat-card {
+  min-height: 104px;
+  padding: 14px 15px;
+  border: 1px solid var(--color-component-panel-row-border);
+  border-radius: 18px;
+  background: var(--color-component-panel-row-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: inset 0 1px 0 var(--color-glass-light);
+}
+
+.s3-stat-card--success {
+  border-color: var(--color-component-pill-success-border);
+  background: var(--color-component-pill-success-bg);
+}
+
+.s3-stat-label-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-secondary);
+}
+
+.s3-stat-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.s3-stat-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.s3-stat-card--success .s3-stat-label-row {
+  color: var(--color-component-pill-success-fg);
+}
+
+.s3-stat-value {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: clamp(1.85rem, 2.4vw, 2.4rem);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+
+.s3-stat-sub {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* ─── GUIDANCE ───────────────────────────────────────────────────────────────
+   Использует primary-light токены через pill-info или component-empty-state.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-guidance {
+  border-radius: 16px;
+  border: 1px solid var(--color-component-pill-info-border);
+  background: var(--color-component-pill-info-bg);
+  padding: 14px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.s3-guidance-text {
+  margin: 0;
+  color: var(--color-component-pill-info-fg);
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+/* ─── CONTENT GRID ───────────────────────────────────────────────────────────
+   Два-колоночный layout. Использует card-elevated для панелей.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.42fr) minmax(300px, 0.9fr);
+  gap: 14px;
+  align-items: start;
+}
+
+/* ─── PANEL ──────────────────────────────────────────────────────────────────
+   Семантический <section>. card-elevated дополняет только layout-частью.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-panel {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.s3-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.s3-panel-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.s3-panel-title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+.s3-panel-subtitle {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+
+.s3-panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ─── EMPTY STATE ────────────────────────────────────────────────────────────
+   Использует component-empty-state токены.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 120px;
+  border: 1px dashed var(--color-component-empty-state-border);
+  border-radius: 16px;
+  background: var(--color-component-empty-state-bg);
+  padding: 20px 16px;
+  text-align: center;
+}
+
+.s3-empty-icon {
+  font-size: 2rem;
+  color: var(--color-component-empty-state-icon-fg);
+  background: var(--color-component-empty-state-icon-bg);
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.s3-empty-icon--success {
+  color: var(--color-success);
+  background: var(--color-component-pill-success-bg);
+}
+
+.s3-empty-title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.93rem;
+  font-weight: 700;
+}
+
+.s3-empty-sub {
+  margin: 0;
+  color: var(--color-component-empty-state-copy);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.s3-empty-state--success {
+  border-style: solid;
+  border-color: var(--color-component-pill-success-border);
+  background: var(--color-component-pill-success-bg);
+}
+
+.s3-hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+/* ─── ITERATION GRID ─────────────────────────────────────────────────────────
+   Карточки итераций инжектируются JS.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-iteration-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.s3-iteration-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 16px;
+  border: 1px solid var(--color-component-panel-row-border);
+  background: var(--color-component-panel-row-bg);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.s3-iteration-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.s3-iteration-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.s3-iteration-name {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* ─── BADGE ──────────────────────────────────────────────────────────────────
+   Переиспользует pill-токены. Семантика через модификаторы.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 54px;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: 9999px;
+  border: 1px solid var(--color-component-pill-neutral-border);
+  background: var(--color-component-pill-neutral-bg);
+  color: var(--color-component-pill-neutral-fg);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.s3-badge--success {
+  border-color: var(--color-component-pill-success-border);
+  background: var(--color-component-pill-success-bg);
+  color: var(--color-component-pill-success-fg);
+}
+
+.s3-badge--warning {
+  border-color: var(--color-component-pill-warning-border);
+  background: var(--color-component-pill-warning-bg);
+  color: var(--color-component-pill-warning-fg);
+}
+
+.s3-badge--error {
+  border-color: var(--color-component-pill-error-border);
+  background: var(--color-component-pill-error-bg);
+  color: var(--color-component-pill-error-fg);
+}
+
+/* ─── PROGRESS ───────────────────────────────────────────────────────────────
+   Трек + fill. Fill-цвет через semantic-переменные успех/предупреждение/ошибка.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-progress-track {
+  width: 100%;
+  height: 7px;
+  border-radius: 9999px;
+  overflow: hidden;
+  background: var(--color-component-panel-row-border);
+}
+
+.s3-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.s3-progress-bar--success { background: var(--color-success); }
+.s3-progress-bar--warning { background: var(--color-warning); }
+.s3-progress-bar--error   { background: var(--color-error); }
+.s3-progress-bar--neutral { background: var(--color-border-strong); }
+
+/* ─── KPI PAIR ───────────────────────────────────────────────────────────────*/
+
+.s3-iteration-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.s3-kpi {
+  min-width: 0;
+}
+
+.s3-kpi-label {
+  margin: 0 0 2px;
+  color: var(--color-text-secondary);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.s3-kpi-value {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.94rem;
+  font-weight: 700;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* ─── ITERATION ERRORS ───────────────────────────────────────────────────────*/
+
+.s3-iteration-errors {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: var(--color-component-pill-error-bg);
+  border: 1px solid var(--color-component-pill-error-border);
+  color: var(--color-component-pill-error-fg);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.s3-iteration-errors .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+/* ─── PROBLEM LIST ───────────────────────────────────────────────────────────
+   <ul> без маркеров. Элементы инжектируются JS.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-problem-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+}
+
+.s3-problem-task {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--color-component-panel-row-border);
+  background: var(--color-component-panel-row-bg);
+  transition: box-shadow var(--transition-fast), transform var(--transition-fast);
+}
+
+.s3-problem-task:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.s3-problem-task-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.s3-problem-task-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.85rem;
+  height: 1.85rem;
+  flex-shrink: 0;
+  border-radius: 9999px;
+  background: var(--color-component-pill-error-bg);
+  color: var(--color-error);
+}
+
+.s3-problem-task-icon .material-symbols-outlined {
+  font-size: 1rem;
+}
+
+.s3-problem-task-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.s3-problem-task-name {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  color: var(--color-text-main);
+  font-size: 0.88rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.s3-problem-task-hint {
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.35;
+}
+
+.s3-problem-task-count {
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+/* ─── BTN VARIANTS ───────────────────────────────────────────────────────────
+   Базовые стили btn-primary / btn-secondary из lightB-components.css.
+   Здесь только layout-расширения для S3.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+  border-radius: 14px;
+  min-height: 44px;
+  padding: 0.6rem 1.1rem;
+  white-space: nowrap;
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast);
+}
+
+.s3-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.s3-btn:active {
+  transform: scale(0.97);
+}
+
+.s3-btn-label {
+  display: block;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.s3-btn--wide {
+  min-width: 160px;
+}
+
+.s3-btn--theory {
+  /* Визуально отличается — используем info-pill для "теории" */
+  border-color: var(--color-component-pill-info-border) !important;
+  background: var(--color-component-pill-info-bg) !important;
+  color: var(--color-component-pill-info-fg) !important;
+}
+
+.s3-btn--theory:hover {
+  background: var(--color-component-button-muted-hover-bg) !important;
+}
+
+/* ─── FOOTER ─────────────────────────────────────────────────────────────────
+   <footer> с nav внутри. Без color-mix.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+
+/* ─── DIALOG ─────────────────────────────────────────────────────────────────
+   Модальный разбор ошибок. Использует shadow-lg и surface-1.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: var(--color-scrim-light);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.s3-backdrop.is-open {
+  display: flex;
+}
+
+.s3-dialog {
+  width: min(760px, 100%);
+  max-height: min(84vh, 920px);
+  overflow: auto;
+  border-radius: 24px;
+  border: 1px solid var(--color-component-card-elevated-border);
+  background: var(--color-surface-1);
+  box-shadow: var(--shadow-lg);
+}
+
+.s3-dialog-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.s3-dialog-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.s3-dialog-title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 1.1rem;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.s3-dialog-sub {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.s3-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px 22px 22px;
+}
+
+.s3-empty-state--dialog {
+  min-height: 220px;
+}
+
+/* ─── REVIEW CARD ────────────────────────────────────────────────────────────*/
+
+.s3-review-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--color-component-panel-row-border);
+  background: var(--color-component-panel-row-bg);
+}
+
+.s3-review-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.s3-review-card-title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.s3-review-question {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.94rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.s3-review-note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.s3-review-attempt {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--color-component-panel-row-border);
+}
+
+.s3-review-attempt:first-of-type {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.s3-review-attempt-meta {
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.s3-review-answers {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.s3-review-answer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--color-component-panel-row-border);
+}
+
+.s3-review-answer--user {
+  background: var(--color-component-pill-error-bg);
+  border-color: var(--color-component-pill-error-border);
+}
+
+.s3-review-answer--reference {
+  background: var(--color-component-pill-success-bg);
+  border-color: var(--color-component-pill-success-border);
+}
+
+.s3-review-answer-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.s3-review-answer--user .s3-review-answer-label   { color: var(--color-component-pill-error-fg); }
+.s3-review-answer--reference .s3-review-answer-label { color: var(--color-component-pill-success-fg); }
+
+.s3-review-answer-copy {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.92rem;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.s3-review-media-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.s3-review-media-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 12px;
+  border: 1px solid var(--color-component-panel-row-border);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.s3-review-media-image {
+  display: block;
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.04);
+}
+
+.s3-review-media-caption {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+/* ─── ANIMATIONS ─────────────────────────────────────────────────────────────
+   Keyframes живут в animations.css; здесь только применение.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+.s3-page-enter {
+  animation: a-slide-up 0.45s ease-out both;
+}
+
+.s3-stat {
+  animation: a-slide-up 0.4s ease-out both;
+}
+
+.s3-stat:nth-child(1) { animation-delay: 0.05s; }
+.s3-stat:nth-child(2) { animation-delay: 0.10s; }
+.s3-stat:nth-child(3) { animation-delay: 0.15s; }
+.s3-stat:nth-child(4) { animation-delay: 0.20s; }
+
+.s3-section-enter {
+  animation: a-slide-up 0.4s ease-out 0.15s both;
+}
+
+.s3-motivational {
+  animation: a-scale-in 0.5s ease-out 0.25s both;
+}
+
+/* ─── LIGHT-B THEME OVERRIDES ────────────────────────────────────────────────
+   Только исправления контраста, без color-mix().
+   ─────────────────────────────────────────────────────────────────────────── */
+
+html[data-theme="light-b"] .s3-panel-subtitle,
+html[data-theme="light-b"] .s3-kpi-label,
+html[data-theme="light-b"] .s3-stat-label,
+html[data-theme="light-b"] .s3-stat-sub,
+html[data-theme="light-b"] .s3-problem-task-hint,
+html[data-theme="light-b"] .s3-empty-sub {
+  color: var(--color-text-main);
+}
+
+html[data-theme="light-b"] .s3-toolbar,
+html[data-theme="light-b"] .s3-stat-card,
+html[data-theme="light-b"] .s3-iteration-card,
+html[data-theme="light-b"] .s3-problem-task,
+html[data-theme="light-b"] .s3-review-card {
+  border-color: var(--color-border-strong);
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────────────────────────*/
+
+@media (max-width: 767px) {
+  .s3-page-frame {
+    width: calc(100vw - 20px);
+    padding-top: 10px;
+    gap: 12px;
+  }
+
+  .s3-toolbar {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .s3-stat-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .s3-content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .s3-toolbar-nav {
+    gap: 6px;
+  }
+
+  .s3-toolbar-nav .s3-btn--wide {
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .s3-toolbar-nav .s3-btn {
+    padding: 7px 10px;
+    font-size: 0.82rem;
+  }
+
+  .s3-review-answers {
+    grid-template-columns: 1fr;
+  }
+
+  .s3-dialog {
+    max-height: 88vh;
+    border-radius: 20px;
+  }
+
+  .s3-dialog-head,
+  .s3-dialog-body {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .s3-hero-title {
+    font-size: 1.15rem;
+  }
+}
+
+@media (min-width: 1024px) and (max-height: 920px) {
+  .s3-main {
+    gap: 12px;
+  }
+
+  .s3-hero,
+  .s3-panel {
+    padding-top: 18px;
+    padding-bottom: 18px;
+  }
+}

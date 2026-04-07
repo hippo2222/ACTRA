@@ -4,10 +4,32 @@
 const TestUI = (function () {
   let currentInstance = null;
 
+  function isImageOnlyAnswer(answer) {
+    if (!answer || typeof answer !== "object") return false;
+    const image = answer.image;
+    return !!(
+      answer.image_path ||
+      answer.image_url ||
+      (image && typeof image === "object" && (image.url || image.path))
+    );
+  }
+
+  function areAllQuestionsImageOnly(rawQuestions) {
+    if (!Array.isArray(rawQuestions) || !rawQuestions.length) return false;
+    return rawQuestions.every((question) => {
+      if (!question || typeof question !== "object") return false;
+      const answers = Array.isArray(question.answers)
+        ? question.answers
+        : question.content && Array.isArray(question.content.answers)
+          ? question.content.answers
+          : [];
+      return answers.length > 0 && answers.every(isImageOnlyAnswer);
+    });
+  }
+
   function buildAnswerProgressFromState(state) {
-    const totalQuestions = Array.isArray(state && state.questions)
-      ? state.questions.length
-      : 0;
+    const questions = Array.isArray(state && state.questions) ? state.questions : [];
+    const totalQuestions = questions.length;
     const answers = state && state.answers && typeof state.answers === "object"
       ? state.answers
       : {};
@@ -27,13 +49,20 @@ const TestUI = (function () {
       answeredIds.add(String(qid));
     });
 
-    const answeredCount = answeredIds.size;
-    const unansweredCount = Math.max(0, totalQuestions - answeredCount);
+    const questionIds = questions.map((question, index) =>
+      question && question.id != null ? String(question.id) : String(index)
+    );
+    const answeredQuestionIds = questionIds.filter((qid) => answeredIds.has(qid));
+    const unansweredQuestionIds = questionIds.filter((qid) => !answeredIds.has(qid));
+    const answeredCount = answeredQuestionIds.length;
+    const unansweredCount = unansweredQuestionIds.length;
 
     return {
       totalQuestions,
       answeredCount,
       unansweredCount,
+      answeredQuestionIds,
+      unansweredQuestionIds,
       allAnswered: totalQuestions > 0 && unansweredCount === 0,
     };
   }
@@ -59,7 +88,7 @@ const TestUI = (function () {
         const mapped = raw.map((q, idx) => ({
           id: q.id != null ? String(q.id) : `q_${idx + 1}`,
           index: idx,
-          text: q.text || q.title || "Question",
+          text: q.text || q.title || "Вопрос",
         }));
 
         const testType =
@@ -77,9 +106,13 @@ const TestUI = (function () {
           content && Object.prototype.hasOwnProperty.call(content, "show_options")
             ? !!content.show_options
             : true;
+        const imageOnlyQuestions = areAllQuestionsImageOnly(raw);
         // L2 open-mode: либо явно требует текстового ввода, либо скрывает варианты,
         // либо уровень сложности 2+ (для второй итерации показываем поле ввода).
-        const isOpenMode = requiresTextInput || !showOptions || isLevel2OrHigher;
+        const isOpenMode =
+          requiresTextInput ||
+          !showOptions ||
+          (!imageOnlyQuestions && isLevel2OrHigher);
 
         const difficulty = difficultyFromTask;
 
@@ -99,6 +132,7 @@ const TestUI = (function () {
           mode: "answering",
           difficulty: difficultyFromTask,
           questionResults: {},
+          pendingUnansweredQuestionIds: [],
         };
       })();
 
@@ -112,7 +146,7 @@ const TestUI = (function () {
         if (state.difficulty == null) {
           state.difficulty = difficultyFromTask;
         }
-        if (difficultyFromTask >= 2) {
+        if (difficultyFromTask >= 2 && !areAllQuestionsImageOnly(state.rawQuestions)) {
           state.isOpenMode = true;
         }
       }
@@ -129,6 +163,9 @@ const TestUI = (function () {
     // Гарантируем наличие visitedIndices в состоянии
     if (!state.visitedIndices) {
       state.visitedIndices = { [state.currentIndex]: true };
+    }
+    if (!Array.isArray(state.pendingUnansweredQuestionIds)) {
+      state.pendingUnansweredQuestionIds = [];
     }
 
     function emitAnswerStateChanged() {
@@ -153,7 +190,7 @@ const TestUI = (function () {
       // Fallback layout без кастомного модуля: повторяем структуру L1-M1/L1-SPEC
       root = document.createElement("div");
       root.className =
-        "grid gap-8 lg:grid-cols-3 xl:grid-cols-4 items-start";
+        "grid items-start gap-6 lg:grid-cols-3 xl:grid-cols-4";
 
       main = document.createElement("div");
       main.className =
@@ -161,20 +198,29 @@ const TestUI = (function () {
 
       sidebar = document.createElement("aside");
       sidebar.className =
-        "lg:col-span-1 xl:col-span-1 flex flex-col";
+        "ml-auto flex w-full max-w-sm flex-col lg:col-span-1 xl:col-span-1";
 
       const sidebarCard = document.createElement("div");
       sidebarCard.className =
-        "sticky top-0 rounded-xl border border-border-strong bg-surface-2 p-6 shadow-lg dark:border-border-strong dark:bg-surface-2 h-fit";
+        "sticky top-0 h-fit overflow-hidden rounded-2xl border border-border-strong bg-surface-2 p-5 shadow-sm dark:border-border-strong dark:bg-surface-2";
 
+      const sidebarHeader = document.createElement("div");
+      sidebarHeader.className = "mb-4 flex items-center justify-between gap-3";
       const sidebarTitle = document.createElement("h3");
       sidebarTitle.className =
-        "text-lg font-bold text-text-main dark:text-text-on-dark mb-4";
-      sidebarTitle.textContent = "Question Panel";
-      sidebarCard.appendChild(sidebarTitle);
+        "text-lg font-bold tracking-tight text-text-main dark:text-text-on-dark";
+      sidebarTitle.textContent = "Вопросы";
+      sidebarHeader.appendChild(sidebarTitle);
+
+      const sidebarMeta = document.createElement("span");
+      sidebarMeta.className =
+        "inline-flex items-center rounded-full border border-border-strong bg-surface-1 px-2.5 py-1 text-[11px] font-semibold tracking-[0.04em] text-text-secondary dark:border-border-strong dark:bg-surface-1 dark:text-text-secondary";
+      sidebarMeta.textContent = `${state.questions.length || 0}`;
+      sidebarHeader.appendChild(sidebarMeta);
+      sidebarCard.appendChild(sidebarHeader);
 
       list = document.createElement("ol");
-      list.className = "grid grid-cols-5 gap-2";
+      list.className = "grid grid-cols-5 gap-2.5";
       sidebarCard.appendChild(list);
       sidebar.appendChild(sidebarCard);
 
@@ -207,7 +253,7 @@ const TestUI = (function () {
         const empty = document.createElement("li");
         empty.className =
           "col-span-4 rounded-md border-2 border-dashed border-border-strong bg-surface-2 px-2 py-2 text-center text-xs text-text-muted dark:border-border-strong dark:bg-surface-2 dark:text-text-muted";
-        empty.textContent = "No questions";
+        empty.textContent = "Нет вопросов";
         list.appendChild(empty);
         return;
       }
@@ -216,6 +262,13 @@ const TestUI = (function () {
         const item = document.createElement("li");
         const isCurrent = idx === state.currentIndex;
         const isAnswered = !!state.selections[q.id];
+        const pendingUnansweredIds = new Set(
+          Array.isArray(state.pendingUnansweredQuestionIds)
+            ? state.pendingUnansweredQuestionIds.map((questionId) => String(questionId))
+            : []
+        );
+        const isPendingUnanswered =
+          !isAnswered && pendingUnansweredIds.has(String(q.id));
         const isFlagged = !!state.flags[q.id];
         const qr = state.questionResults && state.questionResults[q.id];
         const status = qr && qr.status;
@@ -223,7 +276,10 @@ const TestUI = (function () {
         let baseClass =
           "relative flex items-center justify-center size-9 md:size-10 rounded-lg border-2 border-border-strong bg-surface-2 text-xs font-semibold text-text-main cursor-pointer select-none transition-colors dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark ";
 
-        if (isCurrent && !status) {
+        if (isPendingUnanswered && !status) {
+          baseClass =
+            "relative flex items-center justify-center size-9 md:size-10 rounded-lg border-2 border-warning-light bg-warning-lighter text-warning-darker text-xs font-semibold cursor-pointer select-none shadow-sm transition-colors";
+        } else if (isCurrent && !status) {
           baseClass =
             "relative flex items-center justify-center size-9 md:size-10 rounded-lg bg-primary text-primary-fg text-xs font-semibold cursor-pointer select-none shadow-sm transition-colors";
         } else if (!status && isAnswered) {
@@ -282,25 +338,25 @@ const TestUI = (function () {
     function renderQuestionHeaderC2() {
       const header = document.createElement("div");
       header.className =
-        "flex items-center justify-between gap-2 border-b border-border-strong pb-1 dark:border-border-strong";
+        "flex items-center justify-between gap-3 border-b border-border-strong pb-2 dark:border-border-strong";
 
       const headerInfo = document.createElement("div");
       headerInfo.className = "flex flex-col";
 
       const title = document.createElement("div");
       title.className =
-        "text-sm font-semibold text-text-main dark:text-text-on-dark";
+        "text-sm font-semibold tracking-tight text-text-main dark:text-text-on-dark";
       const meta = document.createElement("div");
-      meta.className = "text-[11px] font-medium text-text-muted dark:text-text-muted";
+      meta.className = "text-[11px] font-medium tracking-[0.02em] text-text-muted dark:text-text-muted";
 
       let currentQuestionId = null;
       let currentMeta = null;
       if (state.questions.length > 0) {
         const total = state.questions.length;
-        const baseMeta = `Question ${state.currentIndex + 1} of ${total}`;
+        const baseMeta = `Вопрос ${state.currentIndex + 1} из ${total}`;
         title.textContent = baseMeta;
         if (state.difficulty != null) {
-          meta.textContent = `Difficulty: ${state.difficulty}`;
+          meta.textContent = `Сложность: ${state.difficulty}`;
         } else {
           meta.textContent = "";
         }
@@ -308,8 +364,8 @@ const TestUI = (function () {
           state.questions[state.currentIndex] || state.questions[0];
         currentQuestionId = currentMeta.id;
       } else {
-        title.textContent = "Question";
-        meta.textContent = "No questions data in task";
+        title.textContent = "Вопрос";
+        meta.textContent = "В задании нет вопросов";
       }
 
       headerInfo.appendChild(title);
@@ -320,11 +376,11 @@ const TestUI = (function () {
       const flagButton = document.createElement("button");
       flagButton.type = "button";
       flagButton.className =
-        "inline-flex items-center gap-1 rounded-full border border-warning-light px-2 py-0.5 text-[11px] font-medium text-warning-text hover:bg-warning-lighter dark:border-warning dark:text-warning dark:hover:bg-warning-light disabled:opacity-60";
+        "inline-flex items-center gap-1 rounded-full border border-warning-light px-2.5 py-1 text-[11px] font-medium text-warning-text shadow-sm hover:bg-warning-lighter dark:border-warning dark:text-warning dark:hover:bg-warning-light disabled:opacity-60";
       const flagSpan = document.createElement("span");
       flagSpan.textContent = "⚑";
       const flagLabel = document.createElement("span");
-      flagLabel.textContent = "Flag";
+      flagLabel.textContent = "Пометить";
       flagButton.appendChild(flagSpan);
       flagButton.appendChild(flagLabel);
 
@@ -372,6 +428,22 @@ const TestUI = (function () {
     // чтобы модуль TestUIQuestion мог обновлять сайдбар и текущий вопрос
     // после изменения ответов или навигации стрелками.
     state._rerenderSidebar = renderQuestionSidebarC1;
+    state._syncSidebarQuestion = function syncSidebarQuestion(questionIndex) {
+      const sidebarModule =
+        (typeof TestUISidebar !== "undefined" && TestUISidebar) || null;
+      if (
+        sidebarModule &&
+        typeof sidebarModule.syncSidebarQuestion === "function"
+      ) {
+        sidebarModule.syncSidebarQuestion({
+          state,
+          listElement: list,
+          questionIndex,
+        });
+        return;
+      }
+      renderQuestionSidebarC1();
+    };
     state._rerenderQuestion = renderQuestionViewC2C3C4;
     state._notifyAnswerStateChanged = emitAnswerStateChanged;
 
@@ -380,14 +452,24 @@ const TestUI = (function () {
     emitAnswerStateChanged();
 
     // Legend и дополнительная панель создаём только во fallback-режиме без кастомного layout.
-    if (!usingCustomLayout) {
+    if (!usingCustomLayout && state.questions.length > 1) {
       const legend = document.createElement("div");
       legend.className =
-        "mt-4 border-t border-border-strong dark:border-border-strong pt-3 space-y-2 text-[11px] text-text-main dark:text-text-on-dark";
+        "mt-4 rounded-2xl border border-border-strong bg-surface-2 px-3 py-3 text-[11px] text-text-main shadow-sm dark:border-border-strong dark:bg-surface-2 dark:text-text-on-dark";
+
+      const legendTitle = document.createElement("div");
+      legendTitle.className =
+        "mb-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-text-secondary dark:text-text-secondary";
+      legendTitle.textContent = "Обозначения";
+      legend.appendChild(legendTitle);
+
+      const legendGrid = document.createElement("div");
+      legendGrid.className = "grid grid-cols-2 gap-2";
 
       function legendItem(boxClass, text) {
         const row = document.createElement("div");
-        row.className = "flex items-center gap-2";
+        row.className =
+          "flex items-center gap-2 rounded-xl border border-border-strong bg-surface-1 px-2.5 py-2 text-[11px] font-medium text-text-secondary dark:border-border-strong dark:bg-surface-1 dark:text-text-secondary";
         const box = document.createElement("div");
         box.className = `${boxClass} task-chip`;
         const label = document.createElement("span");
@@ -397,38 +479,39 @@ const TestUI = (function () {
         return row;
       }
 
-      legend.appendChild(
+      legendGrid.appendChild(
         legendItem(
           "size-3 rounded-md bg-success",
           "Верный ответ"
         )
       );
-      legend.appendChild(
+      legendGrid.appendChild(
         legendItem(
           "size-3 rounded-md bg-error",
           "Неверный ответ"
         )
       );
-      legend.appendChild(
+      legendGrid.appendChild(
         legendItem(
           "size-3 rounded-md bg-primary", "Отвечен"
         )
       );
-      legend.appendChild(
+      legendGrid.appendChild(
         legendItem(
-          "size-3 rounded-md bg-surface-2 dark:bg-surface-2",
+          "size-3 rounded-md border border-border-strong bg-surface-2 dark:border-border-strong dark:bg-surface-2",
           "Посещен"
         )
       );
-      legend.appendChild(
+      legendGrid.appendChild(
         legendItem(
-          "size-3 rounded-md bg-bg-disabled dark:bg-bg-disabled",
+          "size-3 rounded-md border border-dashed border-border-strong bg-transparent dark:border-border-strong dark:bg-transparent",
           "Не посещен"
         )
       );
 
       const flagRow = document.createElement("div");
-      flagRow.className = "flex items-center gap-2";
+      flagRow.className =
+        "flex items-center gap-2 rounded-xl border border-border-strong bg-surface-1 px-2.5 py-2 text-[11px] font-medium text-text-secondary dark:border-border-strong dark:bg-surface-1 dark:text-text-secondary";
       const flagIcon = document.createElement("span");
       flagIcon.className =
         "material-symbols-outlined text-warning dark:text-warning text-base";
@@ -437,7 +520,9 @@ const TestUI = (function () {
       flagLabel.textContent = "Отмечен";
       flagRow.appendChild(flagIcon);
       flagRow.appendChild(flagLabel);
-      legend.appendChild(flagRow);
+      legendGrid.appendChild(flagRow);
+
+      legend.appendChild(legendGrid);
 
       root.appendChild(main);
       sidebar.appendChild(legend);
@@ -445,6 +530,34 @@ const TestUI = (function () {
     }
 
     containerElement.appendChild(root);
+
+    function buildSelectionsFromAnswers(answersMap) {
+      const nextSelections = {};
+      if (!answersMap || typeof answersMap !== "object") {
+        return nextSelections;
+      }
+
+      Object.keys(answersMap).forEach((questionId) => {
+        const value = answersMap[questionId];
+        if (Array.isArray(value)) {
+          if (value.length > 0) {
+            nextSelections[questionId] = true;
+          }
+          return;
+        }
+        if (typeof value === "string") {
+          if (value.trim().length > 0) {
+            nextSelections[questionId] = true;
+          }
+          return;
+        }
+        if (value != null) {
+          nextSelections[questionId] = true;
+        }
+      });
+
+      return nextSelections;
+    }
 
     return {
       get questions() {
@@ -481,11 +594,128 @@ const TestUI = (function () {
           text_answers: textAnswers,
         };
       },
+      restoreInput(draft) {
+        if (!draft || typeof draft !== "object") {
+          return;
+        }
+
+        const nextAnswers = {};
+        const answerGroups = [];
+        if (draft.answers && typeof draft.answers === "object") {
+          answerGroups.push(draft.answers);
+        }
+        if (draft.text_answers && typeof draft.text_answers === "object") {
+          answerGroups.push(draft.text_answers);
+        }
+
+        answerGroups.forEach((group) => {
+          Object.keys(group).forEach((questionId) => {
+            const value = group[questionId];
+            if (Array.isArray(value)) {
+              nextAnswers[questionId] = value.slice();
+            } else if (
+              typeof value === "string" ||
+              typeof value === "number" ||
+              typeof value === "boolean"
+            ) {
+              nextAnswers[questionId] = value;
+            }
+          });
+        });
+
+        state.answers = nextAnswers;
+        state.selections = buildSelectionsFromAnswers(nextAnswers);
+        state.visitedIndices = state.visitedIndices || {};
+        state.visitedIndices[state.currentIndex] = true;
+
+        renderQuestionSidebarC1();
+        renderQuestionViewC2C3C4();
+        emitAnswerStateChanged();
+      },
+      getViewState() {
+        const visitedIndices = Object.keys(state.visitedIndices || {})
+          .map((idx) => Number(idx))
+          .filter((idx) => Number.isInteger(idx) && idx >= 0)
+          .sort((a, b) => a - b);
+
+        return {
+          current_index: Number.isInteger(state.currentIndex) ? state.currentIndex : 0,
+          visited_indices: visitedIndices,
+          sidebar_scroll_top:
+            list && typeof list.scrollTop === "number" ? list.scrollTop : 0,
+        };
+      },
+      restoreViewState(viewState) {
+        if (!viewState || typeof viewState !== "object") {
+          return;
+        }
+
+        const totalQuestions = Array.isArray(state.questions) ? state.questions.length : 0;
+        const requestedIndex = Number(viewState.current_index);
+        const safeIndex =
+          totalQuestions > 0 && Number.isInteger(requestedIndex)
+            ? Math.max(0, Math.min(totalQuestions - 1, requestedIndex))
+            : 0;
+        state.currentIndex = safeIndex;
+
+        const nextVisitedIndices = {};
+        const rawVisited = viewState.visited_indices;
+        if (Array.isArray(rawVisited)) {
+          rawVisited.forEach((idx) => {
+            const numericIndex = Number(idx);
+            if (
+              Number.isInteger(numericIndex) &&
+              numericIndex >= 0 &&
+              (totalQuestions === 0 || numericIndex < totalQuestions)
+            ) {
+              nextVisitedIndices[numericIndex] = true;
+            }
+          });
+        } else if (rawVisited && typeof rawVisited === "object") {
+          Object.keys(rawVisited).forEach((idx) => {
+            const numericIndex = Number(idx);
+            if (
+              rawVisited[idx] &&
+              Number.isInteger(numericIndex) &&
+              numericIndex >= 0 &&
+              (totalQuestions === 0 || numericIndex < totalQuestions)
+            ) {
+              nextVisitedIndices[numericIndex] = true;
+            }
+          });
+        }
+        nextVisitedIndices[state.currentIndex] = true;
+        state.visitedIndices = nextVisitedIndices;
+
+        renderQuestionSidebarC1();
+        renderQuestionViewC2C3C4();
+
+        const sidebarScrollTop = Number(viewState.sidebar_scroll_top);
+        if (list && Number.isFinite(sidebarScrollTop)) {
+          list.scrollTop = Math.max(0, sidebarScrollTop);
+        }
+
+        emitAnswerStateChanged();
+      },
       getAnswerProgress() {
         return buildAnswerProgressFromState(state);
       },
+      setPendingUnansweredQuestionIds(questionIds) {
+        state.pendingUnansweredQuestionIds = Array.isArray(questionIds)
+          ? questionIds.map((questionId) => String(questionId))
+          : [];
+        renderQuestionSidebarC1();
+      },
+      clearPendingUnansweredQuestionIds() {
+        if (!Array.isArray(state.pendingUnansweredQuestionIds) || state.pendingUnansweredQuestionIds.length === 0) {
+          return;
+        }
+        state.pendingUnansweredQuestionIds = [];
+        renderQuestionSidebarC1();
+      },
       applyCheckFeedback(result) {
         state.mode = "review";
+        state.pendingUnansweredQuestionIds = [];
 
         let perQuestion = null;
         if (result && result.details && result.details.per_question_ui) {
@@ -556,6 +786,47 @@ const TestUI = (function () {
         return currentInstance.getAnswerProgress();
       }
       return null;
+    },
+    restoreInput(draft) {
+      if (
+        currentInstance &&
+        typeof currentInstance.restoreInput === "function"
+      ) {
+        currentInstance.restoreInput(draft);
+      }
+    },
+    getViewState() {
+      if (
+        currentInstance &&
+        typeof currentInstance.getViewState === "function"
+      ) {
+        return currentInstance.getViewState();
+      }
+      return null;
+    },
+    restoreViewState(viewState) {
+      if (
+        currentInstance &&
+        typeof currentInstance.restoreViewState === "function"
+      ) {
+        currentInstance.restoreViewState(viewState);
+      }
+    },
+    setPendingUnansweredQuestionIds(questionIds) {
+      if (
+        currentInstance &&
+        typeof currentInstance.setPendingUnansweredQuestionIds === "function"
+      ) {
+        currentInstance.setPendingUnansweredQuestionIds(questionIds);
+      }
+    },
+    clearPendingUnansweredQuestionIds() {
+      if (
+        currentInstance &&
+        typeof currentInstance.clearPendingUnansweredQuestionIds === "function"
+      ) {
+        currentInstance.clearPendingUnansweredQuestionIds();
+      }
     },
     applyCheckFeedback(result) {
       if (

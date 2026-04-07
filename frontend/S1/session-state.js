@@ -20,16 +20,24 @@
         theoryContext: null,
         isLoading: false,
         canGoNext: false,
+        currentTaskChecked: false,
+        currentEvaluationResult: null,
+        pendingManualJudgement: false,
         autoSubmitting: false,
         pauseModalOpen: false,
         pauseInFlight: false,
         paused: false,
+        skipBeforeUnloadPrompt: false,
 
         // Helpers to reset state between tasks if needed
         resetForNewTask() {
             this.canGoNext = false;
+            this.currentTaskChecked = false;
+            this.currentEvaluationResult = null;
+            this.pendingManualJudgement = false;
             this.isLoading = false;
             this.autoSubmitting = false;
+            this.skipBeforeUnloadPrompt = false;
             // Keep sessionId and paused state
         }
     };

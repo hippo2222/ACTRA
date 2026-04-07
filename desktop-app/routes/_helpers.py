@@ -2,13 +2,76 @@
 
 import logging
 import uuid as _uuid
+from collections import defaultdict
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from routes._context import get_ctx
 
 logger = logging.getLogger(__name__)
+
+
+def compute_theory_usage_stats(
+    *,
+    modules: List[Dict[str, Any]],
+    complex_payloads: List[Dict[str, Any]],
+) -> Tuple[Dict[str, Dict[str, int]], Dict[Tuple[str, str], Optional[str]]]:
+    """Return usage stats per theory along with topic->theory map.
+
+    usage_stats[theory_id] = {"topics": <count>, "complexes": <count>}.
+    topic_theory_map[(module_id, topic_id)] = theory_id or None.
+    """
+
+    def _collect_topic_refs(task_refs: Any) -> Set[Tuple[str, str]]:
+        refs: Set[Tuple[str, str]] = set()
+        if not isinstance(task_refs, list):
+            return refs
+        for task_ref in task_refs:
+            if not isinstance(task_ref, str):
+                continue
+            parts = [part.strip() for part in task_ref.split("/")]
+            if len(parts) < 3:
+                continue
+            module_id, topic_id = parts[0], parts[1]
+            if module_id and topic_id:
+                refs.add((module_id, topic_id))
+        return refs
+
+    storage = get_ctx().storage_service
+    usage: Dict[str, Dict[str, int]] = defaultdict(lambda: {"topics": 0, "complexes": 0})
+    topic_theory_map: Dict[Tuple[str, str], Optional[str]] = {}
+
+    for module in modules or []:
+        module_id = _normalize_optional_text(module.get("id"))
+        if not module_id:
+            continue
+        topics = module.get("topics") if isinstance(module.get("topics"), list) else []
+        for topic in topics:
+            topic_id = _normalize_optional_text(topic.get("id"))
+            if not topic_id:
+                continue
+            theory_link = storage.get_topic_theory_link(module_id, topic_id)
+            theory_id = None
+            if isinstance(theory_link, dict):
+                theory_id = _normalize_optional_text(theory_link.get("theory_id"))
+            if not theory_id and isinstance(topic.get("theory_link"), dict):
+                theory_id = _normalize_optional_text(topic["theory_link"].get("theory_id"))
+            topic_theory_map[(module_id, topic_id)] = theory_id
+            if theory_id:
+                usage[theory_id]["topics"] += 1
+
+    for payload in complex_payloads or []:
+        task_refs = payload.get("tasks") if isinstance(payload.get("tasks"), list) else []
+        theory_ids_in_complex: Set[str] = set()
+        for module_id, topic_id in _collect_topic_refs(task_refs):
+            theory_id = topic_theory_map.get((module_id, topic_id))
+            if theory_id:
+                theory_ids_in_complex.add(theory_id)
+        for theory_id in theory_ids_in_complex:
+            usage[theory_id]["complexes"] += 1
+
+    return dict(usage), topic_theory_map
 
 
 def _make_safe_id(name: str) -> str:
@@ -124,6 +187,100 @@ def _resolve_effective_user_id(value: Any = None, *, fallback: str = "default_us
     return fallback
 
 
+def _build_theory_link_snapshot(theory_link: Any) -> Optional[dict]:
+    """Return a UI-friendly theory link enriched with cached title/version when possible."""
+    if not isinstance(theory_link, dict):
+        return None
+
+    theory_id = _normalize_optional_text(theory_link.get("theory_id"))
+    if theory_id is None:
+        return None
+
+    snapshot = dict(theory_link)
+    snapshot["theory_id"] = theory_id
+
+    try:
+        from services.theory_service import TheoryNotFoundError  # type: ignore
+
+        theory_item = get_ctx().theory_service.get_theory(theory_id, include_delta=False)
+        title = _normalize_optional_text(theory_item.get("title"))
+        if title is not None:
+            snapshot["title_cache"] = title
+
+        updated_at = _json_safe(theory_item.get("updated_at"))
+        if updated_at is not None:
+            snapshot["updated_at"] = updated_at
+    except TheoryNotFoundError:
+        snapshot["missing"] = True
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.warning("[HTTP] Failed to enrich theory snapshot %s: %s", theory_id, exc)
+
+    return snapshot
+
+
+def _compute_inherited_theory_for_topics(
+    topic_refs: Set[Tuple[str, str]],
+) -> Dict[str, Any]:
+    """Resolve effective inherited theory for a set of topic refs."""
+    storage = get_ctx().storage_service
+    topic_rows: List[Dict[str, Any]] = []
+    unique_theory_links: Dict[str, Dict[str, Any]] = {}
+
+    for module_id, topic_id in sorted(topic_refs):
+        theory_link = _build_theory_link_snapshot(
+            storage.get_topic_theory_link(module_id, topic_id)
+        )
+        theory_id = (
+            _normalize_optional_text(theory_link.get("theory_id"))
+            if isinstance(theory_link, dict)
+            else None
+        )
+
+        topic_row: Dict[str, Any] = {
+            "module_id": module_id,
+            "topic_id": topic_id,
+            "theory_id": theory_id,
+        }
+        theory_title = _normalize_optional_text(
+            theory_link.get("title_cache") if isinstance(theory_link, dict) else None
+        )
+        if theory_title is not None:
+            topic_row["theory_title"] = theory_title
+        topic_rows.append(topic_row)
+
+        if theory_id is not None and isinstance(theory_link, dict):
+            unique_theory_links[theory_id] = theory_link
+
+    theory_ids = sorted(unique_theory_links.keys())
+    inherited_theory_links = [unique_theory_links[theory_id] for theory_id in theory_ids]
+
+    if not inherited_theory_links:
+        return {
+            "status": "none",
+            "inherited_theory_link": None,
+            "inherited_theory_links": [],
+            "theory_ids": [],
+            "topic_rows": topic_rows,
+        }
+
+    if len(inherited_theory_links) == 1:
+        return {
+            "status": "ok",
+            "inherited_theory_link": inherited_theory_links[0],
+            "inherited_theory_links": inherited_theory_links,
+            "theory_ids": theory_ids,
+            "topic_rows": topic_rows,
+        }
+
+    return {
+        "status": "composite",
+        "inherited_theory_link": None,
+        "inherited_theory_links": inherited_theory_links,
+        "theory_ids": theory_ids,
+        "topic_rows": topic_rows,
+    }
+
+
 def _build_complex_ownership_payload(
     obj: dict,
     *,
@@ -144,10 +301,21 @@ def _build_complex_ownership_payload(
         created_by_user_id and effective_user_id and created_by_user_id == effective_user_id
     )
 
+    user_service = getattr(get_ctx(), "user_service", None)
+    created_by_user_name = None
+    if user_service and created_by_user_id:
+        try:
+            user = user_service.get_user(created_by_user_id)
+            if user:
+                created_by_user_name = user.name
+        except Exception:
+            pass
+
     return {
         "scope": "workspace",
         "content_scope": content_scope,
         "created_by_user_id": created_by_user_id,
+        "created_by_user_name": created_by_user_name,
         "updated_by_user_id": updated_by_user_id,
         "created_via": created_via,
         "has_owner": bool(created_by_user_id),
@@ -197,7 +365,6 @@ def _enrich_complex_with_theory_link(obj: dict) -> dict:
             theory_id.strip(), include_delta=False
         )
         theory_link["title_cache"] = theory_item.get("title", "")
-        theory_link["updated_at"] = theory_item.get("updated_at")
         obj["has_theory"] = True
     except TheoryNotFoundError:
         theory_link["missing"] = True

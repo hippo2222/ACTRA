@@ -2,6 +2,8 @@
 
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { createRequire } from 'module';
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 
 const require = createRequire(import.meta.url);
 
@@ -24,6 +26,11 @@ const DAY_TEMPLATE = (dayIndex, overrides = {}) => {
 
 function mountBaseDom() {
     document.body.innerHTML = `
+        <header class="stats-header">
+            <div class="stats-header-end">
+                <button class="stats-user-chip">Profile</button>
+            </div>
+        </header>
         <div id="chart-card">
             <div id="chart-header"></div>
             <div class="chart-viewport" style="width: 800px; height: 400px;">
@@ -53,15 +60,38 @@ function mountBaseDom() {
         <div id="chart-legend"></div>
         <div id="right-column"></div>
         <div id="theory-analytics-list"></div>
+        <div id="complexes-nav"></div>
+        <button id="complexes-prev"></button>
+        <button id="complexes-next"></button>
+        <span id="complexes-counter"></span>
+        <div id="complexes-grid"></div>
         <div id="chart-content"></div>
+        <div id="metric-tasks" class="st-metric-card"></div>
+        <div id="metric-time" class="st-metric-card"></div>
+        <div id="metric-microcards" class="st-metric-card"></div>
+        <div id="metric-streak" class="st-metric-card"></div>
+        <div id="metric-tasks-value" class="st-metric-body"></div>
+        <p id="metric-tasks-empty" class="st-metric-empty hidden"></p>
+        <div id="metric-time-value" class="st-metric-body"></div>
+        <p id="metric-time-empty" class="st-metric-empty hidden"></p>
+        <div id="metric-microcards-value" class="st-metric-body"></div>
+        <p id="metric-microcards-empty" class="st-metric-empty hidden"></p>
+        <div id="metric-streak-value" class="st-metric-body"></div>
+        <p id="metric-streak-empty" class="st-metric-empty hidden"></p>
         <div id="metric-tasks-icon"></div>
         <div id="metric-time-icon"></div>
+        <div id="metric-microcards-icon"></div>
         <div id="metric-streak-icon"></div>
         <span id="tasks-mastered"></span>
         <span id="tasks-total"></span>
         <span id="time-hours"></span>
         <span id="time-minutes"></span>
+        <span id="time-source-hint"></span>
         <span id="streak-days"></span>
+        <span id="streak-best"></span>
+        <span id="microcards-reviews-count"></span>
+        <span id="microcards-correct-rate"></span>
+        <span id="microcards-correct-badge"></span>
     `;
 }
 
@@ -175,8 +205,63 @@ describe('Statistics progress block logic', () => {
 
         const theoryList = document.getElementById('theory-analytics-list');
         expect(theoryList.textContent).toContain('Theory A');
-        expect(theoryList.textContent).toContain('2 complexes');
-        expect(theoryList.textContent).toContain('4 attempts');
+        expect(theoryList.textContent).toContain('2 компл.');
+        expect(theoryList.textContent).toContain('4 попыток');
+    });
+    it('keeps the time card empty when there is activity without tracked study time', () => {
+        StatisticsApp.resetState({
+            stats: {
+                total_tasks_attempted: 0,
+                total_time_spent: 0,
+                activity_streak_days: 0,
+                activity_streak_best: 0,
+                microcards: {
+                    reviews_total: 3,
+                    correct_rate: 0.66
+                },
+                learning_sources: {
+                    combined: { time_spent_seconds: 0 },
+                    tasks: { time_spent_seconds: 0 },
+                    microcards: { time_spent_seconds: 0 }
+                }
+            }
+        });
+
+        StatisticsApp.renderMetrics();
+
+        const timeValue = document.getElementById('metric-time-value');
+        const timeEmpty = document.getElementById('metric-time-empty');
+        const timeHint = document.getElementById('time-source-hint');
+
+        expect(timeValue.classList.contains('hidden')).toBe(true);
+        expect(timeEmpty.classList.contains('hidden')).toBe(false);
+        expect(timeHint.textContent).toBe('');
+    });
+    it('renders recent complexes with the full attempts label', () => {
+        StatisticsApp.resetState({
+            complexStats: {
+                cx_1: {
+                    aggregated: { attempts: 5, success_rate: 0.8 },
+                    recent_sessions: [{ end_time: '2026-04-01T12:00:00Z' }]
+                }
+            },
+            complexNames: {
+                cx_1: 'Комплекс на повторение'
+            }
+        });
+
+        StatisticsApp.renderComplexes();
+
+        expect(document.getElementById('complexes-grid').textContent).toContain('5 попыток');
+    });
+    it('keeps the hidden empty-chart overlay suppressed in CSS', () => {
+        const css = readFileSync(resolve(process.cwd(), 'frontend/statistics/statistics.css'), 'utf8');
+        expect(css).toContain('.st-empty-overlay.hidden');
+        expect(css).toMatch(/\.st-metric-body\.hidden,[\s\S]*\.st-empty-overlay\.hidden,[\s\S]*display:\s*none\s*!important;/);
+    });
+    it('does not tint today hitbox on the chart', () => {
+        const css = readFileSync(resolve(process.cwd(), 'frontend/statistics/statistics.css'), 'utf8');
+        expect(css).toContain('.chart-hit--today { fill: transparent; }');
     });
     it('treats API-level period failures as warnings and does not cache failed dynamics', async () => {
         StatisticsApp.resetState({
@@ -207,7 +292,7 @@ describe('Statistics progress block logic', () => {
         expect(toastSpy).toHaveBeenCalled();
         expect(toastSpy.mock.calls.at(-1)).toEqual([expect.any(String), 'warning']);
         return;
-        expect(toastSpy).toHaveBeenCalledWith('РќРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»РЅРѕСЃС‚СЊСЋ РѕР±РЅРѕРІРёС‚СЊ РіСЂР°С„РёРє. РџРѕРєР°Р·Р°РЅС‹ РґРѕСЃС‚СѓРїРЅС‹Рµ РґР°РЅРЅС‹Рµ.', 'warning');
+        expect(toastSpy).toHaveBeenCalledWith('Не удалось полностью обновить график. Показаны доступные данные.', 'warning');
     });
     it('renders an actionable chart insight for downward trend', () => {
         StatisticsApp.resetState({

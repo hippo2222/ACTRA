@@ -14,6 +14,9 @@
     'use strict';
 
     const FETCH_TIMEOUT_MS = 30000;
+    const CURRENT_USER_ENDPOINT = "/api/users/current";
+    let cachedCurrentUserId = null;
+    let currentUserIdPromise = null;
 
     function ensureRoutes() {
         if (!SessionRoutes || !SessionRoutes.API) {
@@ -66,6 +69,82 @@
         return { status: res.status, data };
     }
 
+    function inferUserIdFromSessionId(sessionId) {
+        const normalized = String(sessionId || "").trim();
+        if (!normalized.startsWith("session_")) {
+            return null;
+        }
+
+        const remainder = normalized.slice("session_".length);
+        const splitIndex = remainder.lastIndexOf("_");
+        if (splitIndex <= 0) {
+            return null;
+        }
+
+        const userId = remainder.slice(0, splitIndex).trim();
+        const timestampPart = remainder.slice(splitIndex + 1).trim();
+        if (!userId || !timestampPart || Number.isNaN(Number(timestampPart))) {
+            return null;
+        }
+
+        return userId;
+    }
+
+    async function resolveCurrentUserId(sessionId = null) {
+        if (cachedCurrentUserId) {
+            return cachedCurrentUserId;
+        }
+
+        if (!currentUserIdPromise) {
+            currentUserIdPromise = (async () => {
+                try {
+                    const { status, data } = await requestJson(CURRENT_USER_ENDPOINT, {
+                        method: "GET",
+                    });
+                    if (
+                        status === 200 &&
+                        data &&
+                        data.ok === true &&
+                        data.user &&
+                        typeof data.user.user_id === "string" &&
+                        data.user.user_id.trim()
+                    ) {
+                        cachedCurrentUserId = data.user.user_id.trim();
+                        return cachedCurrentUserId;
+                    }
+                } catch (e) {
+                    // Fallback below handles failed lookups.
+                } finally {
+                    currentUserIdPromise = null;
+                }
+                return null;
+            })();
+        }
+
+        const resolvedUserId = await currentUserIdPromise;
+        if (resolvedUserId) {
+            return resolvedUserId;
+        }
+
+        return inferUserIdFromSessionId(sessionId);
+    }
+
+    async function withResolvedUserId(sessionId, payload = null) {
+        const basePayload =
+            payload && typeof payload === "object"
+                ? { ...payload }
+                : {};
+        if (basePayload.user_id) {
+            return basePayload;
+        }
+
+        const userId = await resolveCurrentUserId(sessionId);
+        if (userId) {
+            basePayload.user_id = userId;
+        }
+        return basePayload;
+    }
+
     return {
         async getCurrentTask(sessionId) {
             return requestJson(SessionRoutes.API.GET_TASK(sessionId), {
@@ -73,25 +152,47 @@
             });
         },
 
-        async pauseSession(sessionId) {
+        async saveTaskUiState(sessionId, uiStatePayload = null) {
+            const payload =
+                uiStatePayload && typeof uiStatePayload === "object"
+                    ? uiStatePayload
+                    : {};
+            return requestJson(SessionRoutes.API.SAVE_UI_STATE(sessionId), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+        },
+
+        async pauseSession(sessionId, pausePayload = null) {
+            const payload = await withResolvedUserId(sessionId, pausePayload);
             return requestJson(SessionRoutes.API.PAUSE(sessionId), {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
             });
         },
 
-        async resumeSession(sessionId) {
+        async resumeSession(sessionId, resumePayload = null) {
+            const payload = await withResolvedUserId(sessionId, resumePayload);
             return requestJson(SessionRoutes.API.RESUME(sessionId), {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
             });
         },
 
-        async submitAnswer(sessionId, taskId, userInput) {
+        async submitAnswer(sessionId, taskId, userInput, options = null) {
+            const payload = { task_id: taskId, user_input: userInput };
+            if (options && options.auditControl && typeof options.auditControl === "object") {
+                payload.audit_control = options.auditControl;
+            }
             return requestJson(
                 SessionRoutes.API.SUBMIT_ANSWER(sessionId),
                 {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ task_id: taskId, user_input: userInput }),
+                    body: JSON.stringify(payload),
                 }
             );
         },
@@ -118,8 +219,11 @@
         },
 
         async cancelSession(sessionId) {
+            const payload = await withResolvedUserId(sessionId);
             return requestJson(SessionRoutes.API.CANCEL(sessionId), {
                 method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
             });
         }
     };

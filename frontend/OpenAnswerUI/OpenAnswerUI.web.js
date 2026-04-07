@@ -8,6 +8,7 @@
     textarea: null,
     counter: null,
     maxLength: null,
+    isLocked: false,
   };
 
   function _safeText(v) {
@@ -106,7 +107,7 @@
     try {
       const btn = document.getElementById("check-answer-btn");
       if (btn) {
-        btn.disabled = !_isNonEmptyAnswer();
+        btn.disabled = state.isLocked || !_isNonEmptyAnswer();
       }
       if (state.counter) {
         if (!state.maxLength) {
@@ -120,7 +121,17 @@
     }
   }
 
-  function _openImageLightbox(imgSrc, caption) {
+  function _setInputLocked(isLocked) {
+    state.isLocked = !!isLocked;
+    if (!state.textarea) return;
+    state.textarea.readOnly = state.isLocked;
+    state.textarea.disabled = state.isLocked;
+    state.textarea.classList.toggle("opacity-80", state.isLocked);
+    state.textarea.classList.toggle("cursor-not-allowed", state.isLocked);
+    state.textarea.classList.toggle("bg-bg-secondary", state.isLocked);
+  }
+
+  function _openImageLightboxLegacy(imgSrc, caption) {
     if (!imgSrc) return;
 
     const overlay = document.createElement("div");
@@ -268,6 +279,330 @@
     applyTransform();
   }
 
+  function _openImageLightboxSmart(imgSrc, caption) {
+    if (!imgSrc) return;
+
+    const overlay = document.createElement("div");
+    overlay.className =
+      "fixed inset-0 z-[60] bg-scrim-strong flex items-center justify-center px-4";
+    overlay.tabIndex = -1;
+
+    const container = document.createElement("div");
+    container.className =
+      "relative flex max-h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-surface-1 shadow-2xl";
+
+    const topBar = document.createElement("div");
+    topBar.className =
+      "flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle bg-surface-1 px-3 py-2 backdrop-blur";
+
+    const title = document.createElement("div");
+    title.className =
+      "min-w-0 flex-1 truncate text-xs font-semibold text-text-secondary";
+    title.textContent = _safeText(caption) || "";
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "flex flex-wrap items-center justify-end gap-2";
+
+    function makeToolbarButton(label, className, ariaLabel) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className =
+        className ||
+        "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm transition-colors hover:bg-bg-hover";
+      btn.textContent = label;
+      btn.setAttribute("aria-label", ariaLabel || label);
+      btn.title = ariaLabel || label;
+      return btn;
+    }
+
+    const zoomOutBtn = makeToolbarButton(
+      "\u2212",
+      "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-lg font-semibold leading-none text-text-secondary shadow-sm transition-colors hover:bg-bg-hover",
+      "Zoom out"
+    );
+
+    const scaleBadge = document.createElement("div");
+    scaleBadge.className =
+      "inline-flex min-w-[68px] items-center justify-center rounded-lg border border-border-subtle bg-surface-2 px-3 py-1.5 text-xs font-semibold text-text-main";
+    scaleBadge.textContent = "100%";
+
+    const zoomInBtn = makeToolbarButton(
+      "+",
+      "inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-lg font-semibold leading-none text-text-secondary shadow-sm transition-colors hover:bg-bg-hover",
+      "Zoom in"
+    );
+
+    const fitBtn = makeToolbarButton(
+      "\u041f\u043e\u0434\u043e\u0433\u043d\u0430\u0442\u044c",
+      "",
+      "Fit to screen"
+    );
+
+    const closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className =
+      "inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 px-3 py-1.5 text-xs font-semibold text-text-secondary shadow-sm transition-colors hover:bg-bg-hover";
+    closeBtn.textContent = "\u0417\u0430\u043a\u0440\u044b\u0442\u044c";
+    closeBtn.setAttribute("aria-label", "Close image viewer");
+    closeBtn.title = "Close image viewer";
+
+    btnRow.appendChild(zoomOutBtn);
+    btnRow.appendChild(scaleBadge);
+    btnRow.appendChild(zoomInBtn);
+    btnRow.appendChild(fitBtn);
+    btnRow.appendChild(closeBtn);
+    topBar.appendChild(title);
+    topBar.appendChild(btnRow);
+
+    const viewport = document.createElement("div");
+    viewport.className =
+      "relative h-[min(82vh,720px)] min-h-[320px] w-full overflow-hidden bg-surface-2";
+    viewport.style.backgroundImage =
+      "radial-gradient(circle at top, color-mix(in srgb, var(--color-primary-light) 12%, transparent), transparent 42%), linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 92%, var(--color-bg-secondary, #e5e7eb) 8%), color-mix(in srgb, var(--color-surface-2) 88%, var(--color-bg-secondary, #d1d5db) 12%))";
+
+    const img = document.createElement("img");
+    img.src = imgSrc;
+    img.alt = _safeText(caption) || "image";
+    img.draggable = false;
+    img.className = "absolute left-0 top-0 select-none rounded-lg shadow-2xl";
+    img.style.maxWidth = "none";
+    img.style.maxHeight = "none";
+    img.style.transformOrigin = "0 0";
+    img.style.cursor = "grab";
+
+    let naturalWidth = 0;
+    let naturalHeight = 0;
+    let scale = 1;
+    let fittedScale = 1;
+    let translateX = 0;
+    let translateY = 0;
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let startTranslateX = 0;
+    let startTranslateY = 0;
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function getViewportRect() {
+      return viewport.getBoundingClientRect();
+    }
+
+    function computeFittedScale() {
+      const rect = getViewportRect();
+      if (!rect.width || !rect.height || !naturalWidth || !naturalHeight) {
+        return 1;
+      }
+      return Math.min(rect.width / naturalWidth, rect.height / naturalHeight, 1);
+    }
+
+    function clampTranslation() {
+      const rect = getViewportRect();
+      const renderedWidth = naturalWidth * scale;
+      const renderedHeight = naturalHeight * scale;
+
+      if (!rect.width || !rect.height || !renderedWidth || !renderedHeight) {
+        return;
+      }
+
+      if (renderedWidth <= rect.width) {
+        translateX = (rect.width - renderedWidth) / 2;
+      } else {
+        translateX = clamp(translateX, rect.width - renderedWidth, 0);
+      }
+
+      if (renderedHeight <= rect.height) {
+        translateY = (rect.height - renderedHeight) / 2;
+      } else {
+        translateY = clamp(translateY, rect.height - renderedHeight, 0);
+      }
+    }
+
+    function updateToolbarState() {
+      scaleBadge.textContent = `${Math.round(scale * 100)}%`;
+      zoomOutBtn.disabled = scale <= 0.2;
+      zoomInBtn.disabled = scale >= 8;
+    }
+
+    function applyTransform() {
+      clampTranslation();
+      img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+      updateToolbarState();
+    }
+
+    function fitToViewport() {
+      if (!naturalWidth || !naturalHeight) return;
+      fittedScale = computeFittedScale();
+      scale = fittedScale;
+      translateX = 0;
+      translateY = 0;
+      applyTransform();
+    }
+
+    function setScaleAroundPoint(nextScale, pointX, pointY) {
+      if (!naturalWidth || !naturalHeight) return;
+
+      const rect = getViewportRect();
+      const localX = pointX - rect.left;
+      const localY = pointY - rect.top;
+      const clampedScale = clamp(nextScale, 0.2, 8);
+
+      if (clampedScale === scale) return;
+
+      const imageLocalX = (localX - translateX) / scale;
+      const imageLocalY = (localY - translateY) / scale;
+
+      scale = clampedScale;
+      fittedScale = computeFittedScale();
+      translateX = localX - imageLocalX * scale;
+      translateY = localY - imageLocalY * scale;
+      applyTransform();
+    }
+
+    function stepZoom(multiplier) {
+      const rect = getViewportRect();
+      setScaleAroundPoint(
+        scale * multiplier,
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2
+      );
+    }
+
+    function onDragStart(ev) {
+      if (ev.button !== 0) return;
+      isDragging = true;
+      dragStartX = ev.clientX;
+      dragStartY = ev.clientY;
+      startTranslateX = translateX;
+      startTranslateY = translateY;
+      img.style.cursor = "grabbing";
+    }
+
+    function onDragMove(ev) {
+      if (!isDragging) return;
+      translateX = startTranslateX + (ev.clientX - dragStartX);
+      translateY = startTranslateY + (ev.clientY - dragStartY);
+      applyTransform();
+    }
+
+    function onDragEnd() {
+      isDragging = false;
+      img.style.cursor = "grab";
+    }
+
+    function onResize() {
+      const wasNearFit = Math.abs(scale - fittedScale) < 0.05;
+      fittedScale = computeFittedScale();
+      if (wasNearFit) {
+        fitToViewport();
+        return;
+      }
+      scale = Math.max(scale, fittedScale);
+      applyTransform();
+    }
+
+    function onKeyDown(ev) {
+      if (ev.key === "Escape") {
+        ev.preventDefault();
+        handleClose();
+        return;
+      }
+      if (ev.key === "0") {
+        ev.preventDefault();
+        fitToViewport();
+        return;
+      }
+      if (ev.key === "+" || ev.key === "=") {
+        ev.preventDefault();
+        stepZoom(1.15);
+        return;
+      }
+      if (ev.key === "-" || ev.key === "_") {
+        ev.preventDefault();
+        stepZoom(0.85);
+      }
+    }
+
+    function syncImageMetrics() {
+      naturalWidth = img.naturalWidth || 0;
+      naturalHeight = img.naturalHeight || 0;
+      if (!naturalWidth || !naturalHeight) return;
+      fitToViewport();
+    }
+
+    const handleClose = () => {
+      try {
+        window.removeEventListener("mousemove", onDragMove);
+        window.removeEventListener("mouseup", onDragEnd);
+        window.removeEventListener("resize", onResize);
+        window.removeEventListener("keydown", onKeyDown);
+      } catch (e) {
+        // ignore
+      }
+      overlay.remove();
+    };
+
+    viewport.addEventListener(
+      "wheel",
+      (ev) => {
+        ev.preventDefault();
+        const zoomFactor = ev.deltaY < 0 ? 1.1 : 0.9;
+        setScaleAroundPoint(scale * zoomFactor, ev.clientX, ev.clientY);
+      },
+      { passive: false }
+    );
+
+    viewport.addEventListener("mousedown", (ev) => {
+      ev.preventDefault();
+      onDragStart(ev);
+    });
+
+    viewport.addEventListener("dblclick", (ev) => {
+      ev.preventDefault();
+      if (Math.abs(scale - fittedScale) < 0.05) {
+        setScaleAroundPoint(
+          Math.max(fittedScale * 2, 1.75),
+          ev.clientX,
+          ev.clientY
+        );
+        return;
+      }
+      fitToViewport();
+    });
+
+    zoomOutBtn.addEventListener("click", () => stepZoom(0.85));
+    zoomInBtn.addEventListener("click", () => stepZoom(1.15));
+    fitBtn.addEventListener("click", fitToViewport);
+    closeBtn.addEventListener("click", (ev) => {
+      ev.preventDefault();
+      handleClose();
+    });
+
+    overlay.addEventListener("click", handleClose);
+    container.addEventListener("click", (ev) => ev.stopPropagation());
+    img.addEventListener("load", syncImageMetrics);
+    window.addEventListener("mousemove", onDragMove);
+    window.addEventListener("mouseup", onDragEnd);
+    window.addEventListener("resize", onResize);
+    window.addEventListener("keydown", onKeyDown);
+
+    viewport.appendChild(img);
+    container.appendChild(topBar);
+    container.appendChild(viewport);
+    overlay.appendChild(container);
+    document.body.appendChild(overlay);
+
+    if (img.complete) {
+      syncImageMetrics();
+    } else {
+      applyTransform();
+    }
+
+    overlay.focus();
+  }
+
   OpenAnswerUI.render = function render(container, taskDto) {
     state.taskDto = taskDto;
     state.container = container;
@@ -284,18 +619,41 @@
       style.textContent = `
         @keyframes oaSlideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .oa-card-entry { animation: oaSlideUp 250ms ease-out forwards; }
+        .oa-task-prompt {
+          border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border-strong) 66%);
+          background:
+            linear-gradient(
+              180deg,
+              color-mix(in srgb, var(--color-primary-light) 18%, var(--color-surface-1) 82%),
+              color-mix(in srgb, var(--color-info-light) 28%, var(--color-surface-1) 72%)
+            );
+          box-shadow:
+            inset 0 1px 0 color-mix(in srgb, var(--color-surface-1) 78%, transparent),
+            0 8px 18px color-mix(in srgb, var(--color-primary) 8%, transparent);
+        }
+        .oa-task-prompt-icon {
+          border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border-strong) 72%);
+          background: color-mix(in srgb, var(--color-surface-1) 88%, var(--color-primary-light) 12%);
+          color: var(--color-primary);
+        }
+        .oa-task-prompt-label {
+          color: color-mix(in srgb, var(--color-primary) 82%, var(--color-text-main) 18%);
+        }
         .oa-answer-input::placeholder { color: var(--color-text-secondary); opacity: 1; }
+        .oa-answer-input { line-height: 1.6; }
+        .oa-answer-input:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-light) 50%, transparent); }
       `;
       document.head.appendChild(style);
     }
 
     const title = _getTitle(taskDto);
     const question = _getQuestion(taskDto);
+    const isRuntimeSession = !!document.getElementById("check-answer-btn");
 
-    if (title) {
+    if (title && !isRuntimeSession) {
       const titleEl = _createEl(
         "div",
-        "text-sm font-semibold text-text-main dark:text-text-on-dark",
+        "text-sm font-semibold tracking-tight text-text-main dark:text-text-on-dark",
         title
       );
       root.appendChild(titleEl);
@@ -306,22 +664,58 @@
 
     const card = _createEl(
       "div",
-      "w-full rounded-xl border-2 border-border-strong bg-surface-2 p-4 shadow-sm dark:border-border-strong dark:bg-surface-2 oa-card-entry",
+      "w-full rounded-2xl border-2 border-border-strong bg-surface-2 p-5 shadow-sm dark:border-border-strong dark:bg-surface-2 oa-card-entry",
       ""
     );
+
+    if (question) {
+      const promptBlock = _createEl(
+        "div",
+        "oa-task-prompt mb-4 rounded-2xl border-2 px-4 py-3 shadow-sm",
+        ""
+      );
+      promptBlock.setAttribute("data-openanswerui", "task-prompt");
+
+      const promptInner = _createEl("div", "flex items-start gap-3", "");
+      const promptIconWrap = _createEl(
+        "div",
+        "oa-task-prompt-icon mt-0.5 inline-flex size-9 shrink-0 items-center justify-center rounded-xl border shadow-sm",
+        ""
+      );
+      promptIconWrap.appendChild(
+        _createEl("span", "material-symbols-outlined text-[19px]", "assignment")
+      );
+      const promptBody = _createEl("div", "min-w-0 flex-1", "");
+      const promptLabel = _createEl(
+        "div",
+        "oa-task-prompt-label mb-1 text-[11px] font-bold uppercase tracking-[0.09em]",
+        "Текст задания"
+      );
+      const q = _createEl(
+        "div",
+        "text-[15px] leading-7 text-text-main dark:text-text-on-dark",
+        question
+      );
+      promptBody.appendChild(promptLabel);
+      promptBody.appendChild(q);
+      promptInner.appendChild(promptIconWrap);
+      promptInner.appendChild(promptBody);
+      promptBlock.appendChild(promptInner);
+      card.appendChild(promptBlock);
+    }
 
     if (imgUrl) {
       const wrapper = _createEl(
         "div",
-      "group relative w-full overflow-hidden rounded-xl bg-surface-2 border border-border-strong shadow-inner cursor-zoom-in",
+        "group relative mx-auto w-full max-w-3xl overflow-hidden rounded-xl border border-border-strong bg-surface-2 shadow-inner cursor-zoom-in",
         ""
       );
-      wrapper.style.aspectRatio = "4 / 3";
+      wrapper.style.height = "clamp(220px, 34vh, 360px)";
 
       const img = document.createElement("img");
       img.src = imgUrl;
       img.alt = title || "Task image";
-      img.className = "h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]";
+      img.className = "h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.02]";
       img.draggable = false;
 
       const shade = _createEl("div", "absolute inset-0 bg-scrim group-hover:bg-transparent transition-colors", "");
@@ -329,7 +723,9 @@
       const zoomBtn = document.createElement("button");
       zoomBtn.type = "button";
       zoomBtn.className =
-        "absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-surface-1 backdrop-blur-sm p-2 text-text-main shadow-sm opacity-0 group-hover:opacity-100 transition-opacity";
+        "absolute bottom-3 right-3 inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border-subtle bg-surface-1/95 p-2 text-text-main shadow-sm transition-transform hover:scale-[1.03]";
+      zoomBtn.setAttribute("aria-label", "Open image viewer");
+      zoomBtn.title = "Open image viewer";
       const zoomIcon = _createEl("span", "material-symbols-outlined text-[22px]", "zoom_in");
       zoomBtn.appendChild(zoomIcon);
 
@@ -339,7 +735,7 @@
           ev.preventDefault();
           ev.stopPropagation();
         }
-        _openImageLightbox(imgUrl, caption);
+        _openImageLightboxSmart(imgUrl, caption);
       };
 
       img.addEventListener("click", open);
@@ -352,18 +748,9 @@
       card.appendChild(wrapper);
     }
 
-    if (question) {
-      const q = _createEl(
-        "div",
-        "text-sm leading-relaxed text-text-main",
-        question
-      );
-      card.appendChild(q);
-    }
-
     const textarea = document.createElement("textarea");
     textarea.className =
-      "oa-answer-input mt-3 w-full min-h-[160px] resize-y rounded-lg border-2 border-border-strong bg-surface-1 px-3 py-2 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-sm focus:border-primary focus:ring-primary";
+      "oa-answer-input mt-4 w-full min-h-[176px] resize-y rounded-xl border-2 border-border-strong bg-surface-1 px-4 py-3 text-sm text-text-main placeholder:text-text-secondary dark:placeholder:text-text-secondary shadow-sm focus:border-primary focus:ring-primary";
     textarea.placeholder = "\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u043e\u0442\u0432\u0435\u0442...";
 
     // D-6 fix: max_length lives in content, not settings
@@ -383,23 +770,16 @@
 
     card.appendChild(textarea);
 
-    const footerRow = _createEl("div", "mt-2 flex items-center justify-between gap-3", "");
-
-    const hint = _createEl(
-      "div",
-      "text-xs text-text-secondary dark:text-text-secondary",
-      "Пустой ответ отправить нельзя"
-    );
-    footerRow.appendChild(hint);
-
-    const counter = _createEl("div", "text-xs text-text-secondary dark:text-text-secondary", "");
-
     textarea.addEventListener("input", _syncCheckButtonState);
     _syncCheckButtonState();
 
-    footerRow.appendChild(counter);
-
-    card.appendChild(footerRow);
+    let counter = null;
+    if (state.maxLength) {
+      const footerRow = _createEl("div", "mt-3 flex items-center justify-end gap-3 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2", "");
+      counter = _createEl("div", "shrink-0 rounded-full border border-border-subtle bg-surface-2 px-2.5 py-1 text-xs font-semibold text-text-secondary dark:text-text-secondary", "");
+      footerRow.appendChild(counter);
+      card.appendChild(footerRow);
+    }
 
     root.appendChild(card);
 
@@ -408,6 +788,8 @@
     state.root = root;
     state.textarea = textarea;
     state.counter = counter;
+    state.isLocked = false;
+    _setInputLocked(false);
 
     try {
       textarea.focus();
@@ -423,6 +805,7 @@
   };
 
   OpenAnswerUI.applyCheckFeedback = function applyCheckFeedback(_result) {
+    _setInputLocked(true);
     _syncCheckButtonState();
   };
 
@@ -437,6 +820,7 @@
       if (!draft || typeof draft !== "object") return;
       const answer = draft.answer != null ? String(draft.answer) : "";
       if (state.textarea) {
+        _setInputLocked(false);
         state.textarea.value = answer;
         _syncCheckButtonState();
       }
@@ -453,10 +837,14 @@
     state.textarea = null;
     state.counter = null;
     state.maxLength = null;
+    state.isLocked = false;
     // Note: Event listeners are attached to DOM elements that will be removed,
     // so they will be garbage collected automatically.
     // The lightbox cleanup is handled by handleClose() when the lightbox is closed.
   };
 
   global.OpenAnswerUI = OpenAnswerUI;
+  global.OpenAnswerUIImageLightbox = {
+    open: _openImageLightboxSmart,
+  };
 })(typeof window !== "undefined" ? window : this);

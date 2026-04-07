@@ -92,8 +92,104 @@ pytest tests/integration/test_import_api.py -v
 - Complete workflow (parse → execute)
 - Import with warnings
 
+## Playwright Tests (Frontend E2E)
+
+### Theory Center Fixes Tests
+
+Комплексный набор E2E тестов для проверки всех исправлений Центра теории.
+
+**Файлы:**
+- `theory-center-fixes.test.mjs` - Основные тесты
+- `theory-center-helpers.mjs` - Helper функции
+
+### Запуск Playwright тестов
+
+```bash
+# Установка Playwright (если ещё не установлен)
+npm install -D @playwright/test
+
+# Установка браузеров
+npx playwright install
+
+# Запуск всех тестов
+npx playwright test
+
+# Запуск конкретного файла
+npx playwright test theory-center-fixes.test.mjs
+
+# Запуск с UI режимом
+npx playwright test --ui
+
+# Запуск с headed браузером (видимый)
+npx playwright test --headed
+
+# Запуск конкретного теста
+npx playwright test -g "должен отображать Автосинхронизация"
+```
+
+### Покрытие тестами
+
+**Локализация и тексты:**
+- ✅ "Автосинхронизация" вместо "Worker Sync"
+- ✅ Пояснения к способам привязки
+- ✅ Корректный текст о комплексах
+- ✅ Упрощённый текст в редакторе
+
+**Модальные окна:**
+- ✅ Кастомное модальное окно создания теории
+- ✅ Кнопки закрытия
+- ✅ Поддержка Enter/Escape
+
+**Навигация:**
+- ✅ Кнопка "Центр теории" в хедере
+- ✅ Кликабельность кнопок
+- ✅ Правильные тексты кнопок
+
+**Форматирование:**
+- ✅ Кнопка подчёркивания текста
+- ✅ Расположение кнопок форматирования
+
+**Изображения:**
+- ✅ Атрибуты data-width и data-align
+- ✅ Кликабельность (cursor: pointer)
+- ✅ Обёртка theory-image-wrapper
+
+**UI элементы:**
+- ✅ Высота списка теорий
+- ✅ Отсутствие растягивания тегов
+- ✅ Адаптивность кнопок
+
+**Статусы и tooltips:**
+- ✅ Tooltips у статусов синхронизации
+- ✅ Title атрибуты у кнопок
+
+**Анимации:**
+- ✅ Использование will-change
+- ✅ Оптимизированные transitions
+
+**Интеграция:**
+- ✅ Навигация между страницами
+- ✅ Отсутствие критичных ошибок
+
+### Требования
+
+- Сервер должен быть запущен на `http://localhost:5000`
+- Node.js версии 16 или выше
+- Playwright установлен и настроен
+
+### Отчёты
+
+```bash
+# Генерация HTML отчёта
+npx playwright test --reporter=html
+
+# Открыть отчёт
+npx playwright show-report
+```
+
 ## Notes
 
 - Integration tests require the server to be running at `http://localhost:8000`
 - Tests use `test_module` and `test_topic` - ensure these exist or configure fixtures
 - Coverage reports are generated in `htmlcov/` directory
+- Playwright tests require server at `http://localhost:5000`

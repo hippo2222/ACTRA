@@ -555,6 +555,8 @@ ANALYSIS_PROMPT_ADDENDUM = r"""
 
 <analysis_strictness_addendum>
 - Add `target_language` to top-level JSON (`ru`, `uk`, `en`, or `mixed`) and keep generated task content in that language.
+- ВАЖНО: АБСОЛЮТНО ВЕСЬ сгенерированный текст в значениях JSON-полей (включая title, description, rationale, reason, human_summary, evidence, warnings, notes_for_author, common_confusions) должен быть СТРОГО на языке, указанном в <target_language>, независимо от языка исходного материала.
+- Если <target_language>ru</target_language>, то любой выдаваемый тобой смысловой текст обязан быть на правильном русском языке. Никакого английского текста в значениях JSON!
 - For each educational unit, MUST add `explicitness`, `evidence`, `modality`, and `assessment_risk` (do not omit these keys).
 - Prefer broad coverage and avoid recommending many tasks that test the same paragraph/fact repeatedly.
 - Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology).
@@ -702,7 +704,7 @@ _GENERATION_GUARDRAILS = {
     "OPEN_ANSWER": [
         "Include keywords that cover abbreviations and synonyms used in the material.",
         "Prefer 4-8 meaningful keywords over overly narrow keyword lists.",
-        "When multiple phrasings are acceptable, you may add metadata lines before # such as '@ min_keywords: N' and '@ require_all_keywords: false'.",
+        "Mark as keywords only the words or short phrases that must be present in the learner answer.",
     ],
     "CLICK_TEXT": [
         "Use misconception-style contrasts and subtle distinctions from the source.",
@@ -1558,9 +1560,9 @@ def _heuristic_parse_analysis_from_prose(raw_text: str) -> Optional[dict]:
 
 def parse_analysis_response(raw_text: str) -> dict:
     """
-    ????????? JSON ?? ?????? ??-??????.
-    ???? ???? ????? ????????? <analysis_json> ? </analysis_json>.
-    ???? ??????? ?? ???????, ???????? ????? ?????? ???????? JSON-??????.
+    Извлекает JSON из ответа ИИ-модели.
+    Если блок обернут тегами <analysis_json> и </analysis_json>, берет его.
+    Если теги не найдены, пытается взять первый валидный JSON-объект.
     """
     tag_match = re.search(
         r"<analysis_json>\s*(.*?)\s*</analysis_json>",

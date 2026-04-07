@@ -214,23 +214,20 @@
    Theme-safe: only opacity/transform (no color overlay).
    ============================================================================= */
 .app-page-transition {
-  transition: opacity 170ms ease, transform 170ms ease;
-  will-change: opacity, transform;
+  transition: opacity 140ms ease;
+  will-change: opacity;
 }
 
 .app-page-enter {
   opacity: 0;
-  transform: translateY(4px);
 }
 
 .app-page-enter-active {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .app-page-leave {
   opacity: 0;
-  transform: translateY(4px);
   pointer-events: none;
 }
 
@@ -243,7 +240,6 @@
   .app-page-enter-active,
   .app-page-leave {
     opacity: 1 !important;
-    transform: none !important;
   }
 }
 

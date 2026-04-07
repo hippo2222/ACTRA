@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ImportManager - Manages task import workflow
  */
 class ImportManager {
@@ -1587,13 +1587,13 @@ class ImportManager {
     getMicrocardsDeckCreatedViaLabel(createdVia) {
         switch (String(createdVia || '').trim().toLowerCase()) {
             case 'analysis_auto':
-                return 'AI';
+                return 'ИИ';
             case 'manual_editor':
-                return 'Editor';
+                return 'Редактор';
             case 'text_import':
                 return 'Импорт';
             default:
-                return 'Workspace';
+                return 'Библиотека';
         }
     }
 
@@ -1677,7 +1677,7 @@ class ImportManager {
         return (normalized.unit_ids.length || normalized.chunk_ids.length || normalized.route_ids.length) ? normalized : null;
     }
 
-    syncEditorTheoryBridgeContext({ refs = null, sourceBlock = null, showToast = false } = {}) {
+    syncEditorTheoryBridgeContext({ refs = null, sourceBlock = null, showToast = false, intent = '' } = {}) {
         if (!this.isTheoryFeatureEnabled('editor_analysis_report_link')) {
             if (showToast) this.showToast('Связка отчёта с редактором отключена (feature flag).', 'warning');
             return false;
@@ -1692,6 +1692,7 @@ class ImportManager {
         const payload = {
             version: 1,
             source: 'theory_report',
+            intent: String(intent || '').trim() || null,
             ai_run_id: aiRunId,
             saved_at: new Date().toISOString(),
             analysis_summary: {
@@ -1718,7 +1719,7 @@ class ImportManager {
     }
 
     pushTheoryAnalysisContextForEditor() {
-        return this.syncEditorTheoryBridgeContext({ showToast: true });
+        return this.syncEditorTheoryBridgeContext({ showToast: true, intent: 'editor_link' });
     }
 
     pushTheoryReportBlockContextForEditor(blockId) {
@@ -1742,6 +1743,7 @@ class ImportManager {
                 type: block.type,
             },
             showToast: true,
+            intent: 'editor_link',
         });
     }
 
@@ -1770,6 +1772,7 @@ class ImportManager {
                 type: 'authoring_route',
             },
             showToast: true,
+            intent: 'editor_link',
         });
     }
 
@@ -3580,7 +3583,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                         <div class="text-[11px] text-text-secondary mt-1 font-mono truncate">${this.escapeHtml(String(deck?.id || ''))}</div>
                                         ${ownershipBadges ? `<div class="mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
                                         <div class="text-[11px] text-text-secondary mt-1">
-                                            due ${this.escapeHtml(String(stats.cards_due ?? 0))} · new ${this.escapeHtml(String(stats.cards_new ?? 0))} · total ${this.escapeHtml(String(stats.cards_total ?? 0))}
+                                            к повторению: ${this.escapeHtml(String(stats.cards_due ?? 0))} · новые: ${this.escapeHtml(String(stats.cards_new ?? 0))} · всего: ${this.escapeHtml(String(stats.cards_total ?? 0))}
                                         </div>
                                     </div>
                                     <button type="button"
@@ -3650,7 +3653,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                 onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}')"
                                 ${this.microcardsQueueLoading ? 'disabled' : ''}
                                 class="px-3 py-1.5 text-xs font-medium rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover disabled:opacity-60">
-                                ${this.microcardsQueueLoading ? 'Обновление...' : 'Resume / обновить'}
+                                ${this.microcardsQueueLoading ? 'Обновление...' : 'Продолжить / обновить'}
                             </button>
                             <button type="button"
                                 onclick="dashboard.importManager.openMicrocardsDeckQueue('${this.escapeInlineJsString(String(activeDeck.id))}', { restart: true })"
@@ -3688,13 +3691,13 @@ text: Сердце человека состоит из [трёх] камер. �
         return `
             <div class="space-y-4">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${this.escapeHtml(cardType)}</span>
-                    ${isPair ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-info-light bg-info-lighter text-info-text">MATCH</span>` : ''}
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-strong bg-surface-1 text-text-secondary uppercase">${this.escapeHtml(cardType === 'pair_match' ? 'сопоставление' : 'вопрос/ответ')}</span>
+                    ${isPair ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-info-light bg-info-lighter text-info-text uppercase">ПАРА</span>` : ''}
                     <span class="text-[11px] text-text-secondary font-mono">${this.escapeHtml(String(card?.id || ''))}</span>
                 </div>
 
                 <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                    <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Front</div>
+                    <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Лицевая</div>
                     <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(frontText)}</div>
                 </div>
 
@@ -3702,7 +3705,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
                 ${(!isPair && this.microcardsReviewReveal) ? `
                     <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                        <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Back</div>
+                        <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-1">Обратная</div>
                         <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(backText)}</div>
                     </div>
                 ` : ''}
@@ -3724,22 +3727,22 @@ text: Сердце человека состоит из [трёх] камер. �
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('again')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-error-light text-error-text bg-error-lighter hover:bg-error-light disabled:opacity-60">
-                            Again
+                            Снова
                         </button>
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('hard')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-warning-light text-warning-text bg-warning-lighter hover:bg-warning-light disabled:opacity-60">
-                            Hard
+                            Трудно
                         </button>
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('good')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-success-light text-success-text bg-success-lighter hover:bg-success-light disabled:opacity-60">
-                            Good
+                            Хорошо
                         </button>
                         <button type="button" onclick="dashboard.importManager.submitCurrentMicrocardRating('easy')"
                             ${this.microcardsReviewSubmitting ? 'disabled' : ''}
                             class="px-3 py-1.5 text-xs font-medium rounded-lg border border-info-light text-info-text bg-info-lighter hover:bg-info-light disabled:opacity-60">
-                            Easy
+                            Легко
                         </button>
                     `}
                 </div>
@@ -3758,7 +3761,7 @@ text: Сердце человека состоит из [трёх] камер. �
         const saved = (this.microcardsPairSelections && this.microcardsPairSelections[cardId]) ? this.microcardsPairSelections[cardId] : {};
         return `
             <div class="rounded-lg border border-border-strong bg-surface-2 p-3">
-                <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-2">Pair match</div>
+                <div class="text-[11px] uppercase tracking-wide text-text-secondary mb-2">Сопоставление пар</div>
                 <div class="space-y-2">
                     ${leftItems.map((left) => {
                         const leftId = String(left?.id || '');
@@ -3950,10 +3953,11 @@ text: Сердце человека состоит из [трёх] камер. �
         if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
             return;
         }
+        this.setModalPurpose('theory_analysis');
         this.theorySubMode = 'manual_editor';
         this.manualEditorCardForm = null;
         this.manualEditorPreviewCard = null;
-        if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+        this.renderTheoryAnalysisMode();
         await this.loadMicrocardsDecks();
     }
 
@@ -4585,7 +4589,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="flex items-start justify-between gap-3 mb-3">
                             <div>
                                 <h4 class="text-sm font-bold text-text-main">Шаблон промпта для ИИ-агента</h4>
-                                <p class="text-xs text-text-secondary mt-1">Скопируйте шаблон, передайте его ИИ-агенту и вставьте результат справа.</p>
+                                <p class="text-xs text-text-secondary mt-1">Скопируйте этот шаблон, передайте его внешнему ИИ (например, ChatGPT) и вставьте полученный результат справа.</p>
                             </div>
                             <button onclick="dashboard.importManager.mcImportCopyPrompt()"
                                 class="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded hover:bg-primary hover:text-primary-fg transition-colors shrink-0">
@@ -4628,8 +4632,8 @@ text: Сердце человека состоит из [трёх] камер. �
                         ` : ''}
                         <div class="flex justify-end mb-2">
                             <button onclick="dashboard.importManager.mcImportPasteClipboard()"
-                                class="px-3 py-1.5 text-xs font-semibold text-text-secondary border border-border-subtle rounded hover:bg-bg-hover transition-colors">
-                                Вставить из буфера
+                                class="px-3 py-1.5 text-xs font-bold text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-all">
+                                <span class="material-symbols-outlined text-[14px] align-middle mr-1">content_paste</span> Вставить из буфера
                             </button>
                         </div>
                         <textarea id="mcImportTextArea"
@@ -4696,9 +4700,9 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <div class="rounded-lg border ${borderCls} p-3">
                                     <div class="flex items-center gap-2 mb-1.5">
                                         <span class="text-[10px] font-bold text-text-muted">#${idx + 1}</span>
-                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase">${this.escapeHtml(cp.card_type || 'fact_recall')}</span>
+                                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase tracking-tight">${this.escapeHtml(cp.card_type === 'pair_match' ? 'сопост.' : 'вопр/отв')}</span>
                                         ${meta.tags?.length ? `<span class="text-[10px] text-text-secondary">${meta.tags.map(t => this.escapeHtml(t)).join(', ')}</span>` : ''}
-                                        ${st !== 'valid' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${st === 'error' ? 'bg-error-lighter text-error-text border border-error-light' : 'bg-warning-lighter text-warning-text border border-warning-light'}">${st}</span>` : ''}
+                                        ${st !== 'valid' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${st === 'error' ? 'bg-error-lighter text-error-text border border-error-light' : 'bg-warning-lighter text-warning-text border border-warning-light'} uppercase tracking-tight">${this.escapeHtml(st === 'warning' ? 'предупреждение' : (st === 'error' ? 'ошибка' : st))}</span>` : ''}
                                     </div>
                                     <div class="text-xs font-semibold text-text-main mb-0.5">${this.escapeHtml(String(cp.front || '').slice(0, 120))}</div>
                                     <div class="text-[11px] text-text-secondary">${this.escapeHtml(String(cp.back || '').slice(0, 150))}</div>
@@ -4945,12 +4949,12 @@ text: Сердце человека состоит из [трёх] камер. �
                 const stats = d?.stats || {};
                 const ownershipBadges = this.renderMicrocardsDeckOwnershipBadges(d);
                 return `
-                    <div data-m11-deck-row="${this.escapeHtmlAttr(String(d?.id || ''))}" class="flex items-center gap-2 px-3 py-2 rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} ${archived ? 'opacity-60' : ''} cursor-pointer hover:bg-bg-hover transition-colors"
+                    <div data-m11-deck-row="${this.escapeHtmlAttr(String(d?.id || ''))}" class="flex items-center gap-2 px-3 py-2 rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20 shadow-sm' : 'border-border-strong bg-surface-2 opacity-80 hover:opacity-100'} ${archived ? 'grayscale opacity-50' : ''} cursor-pointer hover:bg-bg-hover transition-all"
                          onclick="dashboard.importManager.manualEditorOpenDeck('${this.escapeInlineJsString(String(d?.id || ''))}')">
                         <div class="min-w-0 flex-1">
-                            <div class="text-xs font-semibold text-text-main truncate">${this.escapeHtml(String(d?.name || d?.id || 'Колода'))}${archived ? ' <span class="text-text-muted">(архив)</span>' : ''}</div>
+                            <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(String(d?.name || d?.id || 'Колода'))}${archived ? ' <span class="text-text-muted">(архив)</span>' : ''}</div>
                             ${ownershipBadges ? `<div class="mt-1 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
-                            <div class="text-[10px] text-text-secondary mt-0.5">${stats.cards_total ?? 0} карт.</div>
+                            <div class="text-[10px] text-text-secondary mt-1">${stats.cards_total ?? 0} карт.</div>
                         </div>
                         ${this.manualEditorRenamingDeckId === String(d?.id) ? '' : `
                             <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorRenamingDeckId='${this.escapeInlineJsString(String(d?.id))}'; dashboard.importManager.renderTheoryAnalysisMode();"
@@ -5058,7 +5062,8 @@ text: Сердце человека состоит из [трёх] камер. �
                     <button onclick="dashboard.importManager.manualEditorSaveCard()"
                         class="px-4 py-2 text-xs font-bold rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors disabled:opacity-50"
                         ${this.manualEditorSaving ? 'disabled' : ''}>
-                        ${this.manualEditorSaving ? 'Сохранение...' : (form.mode === 'edit' ? 'Сохранить' : 'Создать карточку')}
+                        ${this.manualEditorSaving ? 'disabled' : ''}>
+                        ${this.manualEditorSaving ? 'Сохранение...' : (form.mode === 'edit' ? 'Сохранить изменения' : 'Создать карточку')}
                     </button>
                     <button onclick="dashboard.importManager.manualEditorPreviewCurrentCard()"
                         class="px-4 py-2 text-xs font-bold rounded-lg border border-border-strong text-text-secondary hover:bg-bg-hover transition-colors">
@@ -5073,29 +5078,29 @@ text: Сердце человека состоит из [трёх] камер. �
             ${preview ? `
                 <div class="rounded-xl border border-info-light bg-info-lighter/30 p-4">
                     <div class="text-[10px] font-bold text-text-secondary uppercase tracking-wider mb-2">Предпросмотр карточки</div>
-                    <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2">
-                        <div class="text-[10px] uppercase tracking-wide text-text-secondary mb-1">Front</div>
-                        <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(String(preview.front?.text || ''))}</div>
+                    <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2 shadow-sm">
+                        <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-1">Лицевая сторона</div>
+                        <div class="text-sm text-text-main whitespace-pre-line leading-relaxed">${this.escapeHtml(String(preview.front?.text || ''))}</div>
                     </div>
                     ${preview.card_type === 'pair_match' && preview.front?.payload?.left_items ? `
-                        <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2">
-                            <div class="text-[10px] uppercase tracking-wide text-text-secondary mb-2">Пары</div>
+                        <div class="rounded-lg border border-border-strong bg-surface-1 p-3 mb-2 shadow-sm">
+                            <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-2">Пары сопоставления</div>
                             <div class="space-y-1.5">
                                 ${(Array.isArray(preview.back?.payload?.pairs) ? preview.back.payload.pairs : []).map(pl => {
                                     const li = (preview.front.payload.left_items || []).find(x => x.id === pl.left_id);
                                     const ri = (preview.front.payload.right_items || []).find(x => x.id === pl.right_id);
                                     return `<div class="flex items-center gap-2 text-xs">
-                                        <span class="flex-1 px-2 py-1 rounded border border-border-strong bg-surface-2 text-text-main">${this.escapeHtml(String(li?.text || ''))}</span>
-                                        <span class="text-text-muted">\u2192</span>
-                                        <span class="flex-1 px-2 py-1 rounded border border-border-strong bg-surface-2 text-text-main">${this.escapeHtml(String(ri?.text || ''))}</span>
+                                        <span class="flex-1 px-2.5 py-1.5 rounded-lg border border-border-strong bg-surface-2 text-text-main">${this.escapeHtml(String(li?.text || ''))}</span>
+                                        <span class="text-text-muted font-bold">\u2192</span>
+                                        <span class="flex-1 px-2.5 py-1.5 rounded-lg border border-border-strong bg-surface-2 text-text-main">${this.escapeHtml(String(ri?.text || ''))}</span>
                                     </div>`;
                                 }).join('')}
                             </div>
                         </div>
                     ` : `
-                        <div class="rounded-lg border border-border-strong bg-surface-1 p-3">
-                            <div class="text-[10px] uppercase tracking-wide text-text-secondary mb-1">Back</div>
-                            <div class="text-sm text-text-main whitespace-pre-line">${this.escapeHtml(String(preview.back?.text || ''))}</div>
+                        <div class="rounded-lg border border-border-strong bg-surface-1 p-3 shadow-sm">
+                            <div class="text-[10px] uppercase font-bold tracking-wider text-text-secondary mb-1">Обратная сторона</div>
+                            <div class="text-sm text-text-main whitespace-pre-line leading-relaxed">${this.escapeHtml(String(preview.back?.text || ''))}</div>
                         </div>
                     `}
                 </div>
@@ -5112,32 +5117,33 @@ text: Сердце человека состоит из [трёх] камер. �
                     const isManual = card?.created_by === 'manual_editor';
                     const cstatus = String(card?.status || 'active');
                     return `
-                        <div class="flex items-start gap-2 px-3 py-2.5 rounded-lg border border-border-strong bg-surface-2 group ${cstatus !== 'active' ? 'opacity-60' : ''}">
+                        <div class="flex items-start gap-2 px-3 py-2.5 rounded-lg border border-border-strong bg-surface-2 group hover:border-primary-light transition-all ${cstatus !== 'active' ? 'opacity-60 grayscale' : ''}">
                             <div class="min-w-0 flex-1">
-                                <div class="flex items-center gap-1.5 mb-1">
-                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase">${this.escapeHtml(ctype)}</span>
-                                    ${isManual ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text">manual</span>' : ''}
-                                    ${cstatus !== 'active' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text">${this.escapeHtml(cstatus)}</span>` : ''}
+                                <div class="flex items-center gap-1.5 mb-1.5">
+                                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-border-strong bg-surface-1 text-text-muted uppercase tracking-tight">${this.escapeHtml(ctype === 'pair_match' ? 'сопост.' : 'вопр/отв')}</span>
+                                    ${isManual ? '<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-info-light bg-info-lighter text-info-text uppercase tracking-tight">ручная</span>' : ''}
+                                    ${cstatus !== 'active' ? `<span class="px-1.5 py-0.5 rounded text-[9px] font-bold border border-warning-light bg-warning-lighter text-warning-text uppercase tracking-tight">${this.escapeHtml(cstatus === 'archived' ? 'в архиве' : cstatus)}</span>` : ''}
                                 </div>
-                                <div class="text-xs font-semibold text-text-main truncate">${this.escapeHtml(ft || 'Без текста')}</div>
-                                <div class="text-[11px] text-text-secondary truncate mt-0.5">${this.escapeHtml(bt || '')}</div>
+                                <div class="text-xs font-bold text-text-main truncate">${this.escapeHtml(ft || 'Без текста')}</div>
+                                <div class="text-[11px] text-text-secondary truncate mt-0.5 italic">${this.escapeHtml(bt || '')}</div>
                             </div>
-                            <div class="flex items-center gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div class="flex items-center gap-0.5 shrink-0 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                                 ${idx > 0 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeInlineJsString(cid)}', -1)"
-                                    class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Вверх">
-                                    <span class="material-symbols-outlined text-[14px]">arrow_upward</span>
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title="Сдвинуть выше">
+                                    <span class="material-symbols-outlined text-[16px]">expand_less</span>
                                 </button>` : ''}
                                 ${idx < cards.length - 1 ? `<button onclick="event.stopPropagation(); dashboard.importManager.manualEditorMoveCard('${this.escapeInlineJsString(cid)}', 1)"
-                                    class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Вниз">
-                                    <span class="material-symbols-outlined text-[14px]">arrow_downward</span>
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title="Сдвинуть ниже">
+                                    <span class="material-symbols-outlined text-[16px]">expand_more</span>
                                 </button>` : ''}
+                                <div class="w-1"></div>
                                 <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorEditCardFromEncoded('${this.serializeInlineJson(card)}')"
-                                    class="p-1 rounded text-text-muted hover:text-primary transition-colors" title="Редактировать">
-                                    <span class="material-symbols-outlined text-[14px]">edit</span>
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-primary hover:border-primary transition-all" title="Редактировать">
+                                    <span class="material-symbols-outlined text-[16px]">edit</span>
                                 </button>
                                 <button onclick="event.stopPropagation(); dashboard.importManager.manualEditorDeleteCard('${this.escapeInlineJsString(cid)}')"
-                                    class="p-1 rounded text-text-muted hover:text-error transition-colors" title="Удалить">
-                                    <span class="material-symbols-outlined text-[14px]">delete</span>
+                                    class="p-1 rounded-md bg-surface-1 border border-border-subtle text-text-muted hover:text-error hover:border-error transition-all" title="Удалить">
+                                    <span class="material-symbols-outlined text-[16px]">delete</span>
                                 </button>
                             </div>
                         </div>
@@ -5248,7 +5254,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="flex items-start gap-2">
                     <span class="material-symbols-outlined text-[18px] text-text-secondary mt-0.5">info</span>
                     <div class="min-w-0">
-                        <p class="text-xs font-semibold text-text-main">Fallback renderer</p>
+                        <p class="text-xs font-semibold text-text-main">Резервный рендерер</p>
                         <p class="text-xs text-text-secondary mt-1">${this.escapeHtml(reasonText)}</p>
                     </div>
                 </div>
@@ -5284,6 +5290,26 @@ text: Сердце человека состоит из [трёх] камер. �
             </aside>
         ` : '';
 
+        const technicalBlockTypes = ['coverage_plan', 'progression_matrix'];
+        const technicalBlocks = nonTocBlocks.filter(b => technicalBlockTypes.includes(String(b?.type || '').toLowerCase()));
+        const standardBlocks = nonTocBlocks.filter(b => !technicalBlockTypes.includes(String(b?.type || '').toLowerCase()));
+
+        const technicalAccordionHtml = (fixedProgressionsSectionHtml || technicalBlocks.length) ? `
+            <details class="group rounded-xl border border-border-strong bg-surface-2 mt-4">
+                <summary class="flex items-center justify-between p-3 cursor-pointer select-none outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-xl">
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-[20px] text-text-secondary group-open:rotate-180 transition-transform">expand_more</span>
+                        <span class="text-sm font-semibold text-text-main">Технические детали</span>
+                        <span class="text-[11px] text-text-secondary hidden sm:inline">(coverage, progressions, config)</span>
+                    </div>
+                </summary>
+                <div class="p-3 pt-0 space-y-3 border-t border-border-subtle mt-1 opacity-0 group-open:opacity-100 transition-opacity">
+                    ${fixedProgressionsSectionHtml}
+                    ${technicalBlocks.map(block => this.renderTheoryReportBlock(block, ctx)).join('')}
+                </div>
+            </details>
+        ` : '';
+
         const mainHtml = `
             <div class="min-w-0 space-y-3">
                 ${!tocBlocks.length ? metaCards : ''}
@@ -5292,7 +5318,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         <div class="flex items-start gap-2">
                             <span class="material-symbols-outlined text-[18px] text-warning-text mt-0.5">compress</span>
                             <div class="min-w-0">
-                                <p class="text-xs font-semibold text-text-main">Compact mode</p>
+                                <p class="text-xs font-semibold text-text-main">Компактный режим</p>
                                 <p class="text-xs text-text-secondary mt-1">
                                     report_lint: verbosity_risk=${this.escapeHtml(String(a?.report_lint?.verbosity_risk || 'unknown'))},
                                     duplicates=${this.escapeHtml(String(a?.report_lint?.duplicate_content_signals ?? 0))}.
@@ -5301,8 +5327,8 @@ text: Сердце человека состоит из [трёх] камер. �
                         </div>
                     </div>
                 ` : ''}
-                ${fixedProgressionsSectionHtml}
-                ${nonTocBlocks.map(block => this.renderTheoryReportBlock(block, ctx)).join('')}
+                ${standardBlocks.map(block => this.renderTheoryReportBlock(block, ctx)).join('')}
+                ${technicalAccordionHtml}
             </div>
         `;
 
@@ -5393,28 +5419,28 @@ text: Сердце человека состоит из [трёх] камер. �
         const lint = (a && typeof a === 'object' && a.report_lint && typeof a.report_lint === 'object') ? a.report_lint : {};
         return `
             <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
-                <div class="flex items-start justify-between gap-2">
+                <div class="flex items-start justify-between gap-2 mb-3">
                     <div>
-                        <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Report meta</div>
+                        <div class="text-xs font-semibold uppercase tracking-wide text-text-secondary">Метаданные отчёта</div>
                         <div class="text-[11px] text-text-secondary mt-1">
-                            ${a?.report_blocks_version ? `report_blocks v${this.escapeHtml(String(a.report_blocks_version))}` : 'legacy'}
-                            ${a?.analysis_schema_version ? ` · schema ${this.escapeHtml(String(a.analysis_schema_version))}` : ''}
+                            ${a?.report_blocks_version ? `report_blocks v${this.escapeHtml(String(a.report_blocks_version))}` : 'устаревш.'}
+                            ${a?.analysis_schema_version ? ` · схема ${this.escapeHtml(String(a.analysis_schema_version))}` : ''}
                         </div>
                     </div>
-                    ${compactMode ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-warning-light bg-warning-lighter text-warning-text">compact</span>` : ''}
+                    ${compactMode ? `<span class="px-2 py-0.5 rounded-full text-[10px] border border-warning-light bg-warning-lighter text-warning-text">компактный</span>` : ''}
                 </div>
-                <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
-                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Units <span class="font-semibold text-text-main">${units}</span></div>
-                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Chunks <span class="font-semibold text-text-main">${chunks}</span></div>
-                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Routes <span class="font-semibold text-text-main">${routes}</span></div>
-                    <div class="px-2 py-1.5 rounded-md bg-surface-1 border border-border-strong text-text-secondary">Lint dup <span class="font-semibold text-text-main">${this.escapeHtml(String(lint.duplicate_content_signals ?? 0))}</span></div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">school</span> Единиц <span class="font-semibold text-text-main">${units}</span></div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">segment</span> Фрагментов <span class="font-semibold text-text-main">${chunks}</span></div>
+                    <div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-surface-1 border border-border-strong text-text-secondary"><span class="material-symbols-outlined text-[14px]">route</span> Маршрутов <span class="font-semibold text-text-main">${routes}</span></div>
+                    ${lint.duplicate_content_signals ? `<div class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-warning-lighter border border-warning-light text-warning-text"><span class="material-symbols-outlined text-[14px]">content_copy</span> Дубли <span class="font-semibold">${this.escapeHtml(String(lint.duplicate_content_signals))}</span></div>` : ''}
                 </div>
-                <div class="mt-3 text-[11px] text-text-secondary space-y-1">
-                    <p>Материал: <span class="text-text-main">${this.escapeHtml(String(materialLang))}</span></p>
-                    <p>Анализ: <span class="text-text-main">${this.escapeHtml(String(outputLang))}</span></p>
-                    ${a?.provider_used ? `<p>Провайдер: <span class="text-text-main">${this.escapeHtml(String(a.provider_used))}${a?.provider_model ? ` (${this.escapeHtml(String(a.provider_model))})` : ''}</span></p>` : ''}
+                <div class="mt-3 text-[11px] text-text-secondary flex flex-wrap gap-y-1 gap-x-3">
+                    <p>Язык контента: <span class="text-text-main">${this.escapeHtml(String(materialLang))}</span></p>
+                    <p>Язык анализа: <span class="text-text-main">${this.escapeHtml(String(outputLang))}</span></p>
+                    ${a?.provider_used ? `<p>ИИ-модель: <span class="text-text-main">${this.escapeHtml(String(a.provider_used))}${a?.provider_model ? ` (${this.escapeHtml(String(a.provider_model))})` : ''}</span></p>` : ''}
                 </div>
-                ${a?.human_summary ? `<p class="text-xs text-text-main mt-3 leading-relaxed">${this.escapeHtml(String(a.human_summary))}</p>` : ''}
+                ${a?.human_summary ? `<p class="text-xs text-text-main mt-3 leading-relaxed border-t border-border-subtle pt-2">${this.escapeHtml(String(a.human_summary))}</p>` : ''}
             </section>
         `;
     }
@@ -5426,7 +5452,7 @@ text: Сердце человека состоит из [трёх] камер. �
             <section class="rounded-xl border border-border-strong bg-surface-2 p-3">
                 <div class="flex items-center gap-1.5 mb-2">
                     <span class="material-symbols-outlined text-[16px] text-text-secondary">warning</span>
-                    <div class="text-xs font-semibold uppercase tracking-wide text-text-main">Warnings</div>
+                    <div class="text-xs font-semibold uppercase tracking-wide text-text-main">Предупреждения</div>
                 </div>
                 <div class="space-y-1">
                     ${warnings.slice(0, 8).map(w => `<p class="text-xs text-text-main">${this.escapeHtml(String(w))}</p>`).join('')}
@@ -5630,6 +5656,8 @@ text: Сердце человека состоит из [трёх] камер. �
         if (this.theoryReportBlockCollapseState.has(id)) {
             return !!this.theoryReportBlockCollapseState.get(id);
         }
+        const btype = String(block?.type || '').toLowerCase();
+        if (['coverage_plan', 'progression_matrix'].includes(btype)) return true;
         return !!block?.collapsed_by_default;
     }
 
@@ -5990,7 +6018,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="flex flex-wrap items-center gap-2">
                         <div class="text-sm font-semibold text-text-main">${this.escapeHtml(chunk.title || chunkId)}</div>
                         ${chunk.chunk_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(chunk.chunk_type)}</span>` : ''}
-                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${unitIds.length} units</span>
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${unitIds.length} ед.</span>
                         <button type="button"
                             onclick="dashboard.importManager.createTheoryMicrocardsDeckForChunk('${this.escapeInlineJsString(chunkId)}')"
                             class="px-2 py-0.5 rounded-md text-[10px] font-medium border border-primary text-primary hover:bg-primary hover:text-primary-fg transition-colors">
@@ -6006,8 +6034,8 @@ text: Сердце человека состоит из [трёх] камер. �
                 </div>
 
                 ${body.show_units !== false ? `
-                    <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Units</div>
+                    <div class="pt-2 border-t border-border-subtle">
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Охватываемые единицы</div>
                         ${unitIds.length ? `
                             <div class="space-y-1">
                                 ${unitIds.slice(0, 10).map((unitId) => {
@@ -6035,15 +6063,15 @@ text: Сердце человека состоит из [трёх] камер. �
                 ` : ''}
 
                 ${body.show_confusions !== false && confusions.length ? `
-                    <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Common confusions</div>
+                    <div class="pt-2 border-t border-border-subtle">
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Частые ошибки</div>
                         ${this.theoryReportListToHtml(confusions, { max: 6, className: 'text-xs text-text-main' })}
                     </div>
                 ` : ''}
 
                 ${anchors.length ? `
-                    <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Factual anchors</div>
+                    <div class="pt-2 border-t border-border-subtle">
+                        <div class="text-[10px] font-bold uppercase tracking-wider text-text-secondary mb-2">Фактологические якоря</div>
                         <div class="flex flex-wrap gap-1">
                             ${anchors.slice(0, 8).map((anchorItem) => {
                                 const kind = typeof anchorItem === 'object' ? String(anchorItem?.kind || '') : '';
@@ -6073,7 +6101,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
                 ${notes.length ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Notes for author</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Заметки для автора</div>
                         ${this.theoryReportListToHtml(notes, { max: 8, className: 'text-xs text-text-main' })}
                     </div>
                 ` : ''}
@@ -6244,7 +6272,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         ${route.route_kind ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(route.route_kind))}</span>` : ''}
                         ${route.target_surface ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(route.target_surface))}</span>` : ''}
                         ${route.effort_estimate ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border ${this.theoryReportPriorityBadgeClass(route.effort_estimate)}">${this.escapeHtml(String(route.effort_estimate))} effort</span>` : ''}
-                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${steps.length} steps</span>
+                        <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${steps.length} шагов</span>
                     </div>
                     ${route.expected_effect ? `<p class="text-xs text-text-secondary mt-2 leading-relaxed">${this.escapeHtml(String(route.expected_effect))}</p>` : ''}
                     <div class="mt-2">${this.renderTheoryRouteQuickActions(route)}</div>
@@ -6252,7 +6280,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
                 ${chunkIds.length ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Chunks</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Фрагменты</div>
                         <div class="flex flex-wrap gap-2">
                             ${chunkIds.map((chunkId) => {
                                 const chunk = ctx?.chunkById?.get(String(chunkId));
@@ -6268,7 +6296,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
                 ${unitIds.length ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Units</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Единицы</div>
                         <div class="text-xs text-text-secondary">${unitIds.slice(0, 12).map((unitId) => {
                             const unit = ctx?.unitById?.get(String(unitId));
                             return `#${this.escapeHtml(String(unitId))} ${this.escapeHtml(unit?.title || 'Unit')}`;
@@ -6294,7 +6322,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                     ${step?.purpose ? `<p class="text-xs text-text-secondary mt-1">${this.escapeHtml(String(step.purpose))}</p>` : ''}
                                     ${(body.show_checklists !== false && checklist.length) ? `
                                         <div class="mt-2">
-                                            <div class="text-[11px] font-semibold text-text-secondary mb-1">Checklist</div>
+                                            <div class="text-[11px] font-semibold text-text-secondary mb-1">Чеклист</div>
                                             ${this.theoryReportListToHtml(checklist, { max: 8, className: 'text-xs text-text-main' })}
                                         </div>
                                     ` : ''}
@@ -6306,7 +6334,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
                 ${(body.show_anti_patterns !== false && Array.isArray(route.anti_patterns) && route.anti_patterns.length) ? `
                     <div>
-                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Anti-patterns</div>
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-text-secondary mb-1">Антипаттерны</div>
                         ${this.theoryReportListToHtml(route.anti_patterns, { max: 8, className: 'text-xs text-text-main', bulletClass: 'text-warning-text' })}
                     </div>
                 ` : ''}
@@ -6329,9 +6357,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 <table class="min-w-full text-xs">
                     <thead class="bg-surface-2">
                         <tr>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Unit</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Surface / Types</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Signals</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Unit (Единица)</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Поверхность / Типы</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Сигналы</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -6372,9 +6400,9 @@ text: Сердце человека состоит из [трёх] камер. �
                 <table class="min-w-full text-xs">
                     <thead class="bg-surface-2">
                         <tr>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Chunk</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Routes</th>
-                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Limits</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Chunk (Фрагмент)</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Маршруты</th>
+                            <th class="text-left px-2 py-2 font-semibold text-text-secondary uppercase tracking-wide">Лимиты</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -6637,10 +6665,47 @@ text: Сердце человека состоит из [трёх] камер. �
         `;
     }
 
+    switchAiComposerTab(tab) {
+        this.aiComposerTab = tab;
+        this.renderTheoryAnalysisMode();
+    }
+
+    onAiMaterialInput(event) {
+        this.materialText = event.target.value;
+        const wordCount = (this.materialText || '').split(/\s+/).filter(Boolean).length;
+        const countSpan = document.getElementById('ai-word-count');
+        const countText = document.getElementById('ai-word-count-text');
+        const submitBtn = document.getElementById('ai-submit-btn');
+
+        if (countSpan && countText) {
+            countSpan.textContent = wordCount ? `${wordCount} слов` : '';
+            if (wordCount > 0 && wordCount < 50) {
+                countText.classList.add('text-error-text');
+                countSpan.classList.add('text-error-text');
+                countSpan.classList.remove('text-text-secondary');
+            } else {
+                countText.classList.remove('text-error-text');
+                countSpan.classList.remove('text-error-text');
+                countSpan.classList.add('text-text-secondary');
+            }
+        }
+
+        if (submitBtn) {
+            const hasFile = !!this.aiUploadedFile;
+            const validText = wordCount >= 50;
+            submitBtn.disabled = this.aiAnalyzing || (!hasFile && !validText);
+        }
+    }
+
     renderTheoryAnalysisComposer() {
+        if (!this.aiComposerTab) this.aiComposerTab = 'text';
         const limitInfo = this.dailyLimit;
         const aiUnavailable = this.aiStatus && this.aiStatus.ai_available === false;
         const wordCount = (this.materialText || '').split(/\s+/).filter(Boolean).length;
+        const isTextValid = wordCount >= 50;
+        const hasFile = !!this.aiUploadedFile;
+        const isSubmitDisabled = this.aiAnalyzing || aiUnavailable || (!hasFile && !isTextValid);
+
         const limitHtml = limitInfo ? `
             <div class="flex items-center gap-2 text-xs text-text-muted mt-2">
                 <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
@@ -6655,7 +6720,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     </div>
                     <div class="min-w-0">
                         <div class="text-sm font-bold text-text-main">Новый анализ</div>
-                        <div class="text-xs text-text-secondary mt-1">Вставьте материал или загрузите файл. Анализ сохранится и будет доступен в истории справа.</div>
+                        <div class="text-xs text-text-secondary mt-1">Добавьте материал. Анализ сохранится и будет доступен в истории справа.</div>
                     </div>
                 </div>
 
@@ -6676,85 +6741,85 @@ text: Сердце человека состоит из [трёх] камер. �
                 ` : ''}
 
                 <div class="p-4 border border-border-strong rounded-lg bg-surface-2 mb-4">
-                    <div class="flex items-start gap-2 mb-3">
-                        <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">translate</span>
-                        <div>
-                            <div class="text-sm font-semibold text-text-main">Язык анализа/рекомендаций</div>
-                            <div class="text-xs text-text-secondary">Можно оставить язык материала или запросить другой язык (с риском качества перевода).</div>
+                    <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                        <div class="flex items-center gap-2 flex-1">
+                            <span class="material-symbols-outlined text-[18px] text-primary">translate</span>
+                            <span class="text-sm font-semibold text-text-main">Язык результатов:</span>
                         </div>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="flex items-start gap-2 p-2 rounded-lg border border-border-strong bg-surface-1 cursor-pointer">
-                            <input type="radio" name="ai-output-language-mode" value="same_as_material"
-                                class="mt-0.5 text-primary border-border-strong bg-surface-1 focus:ring-primary"
-                                ${this.aiOutputLanguageMode !== 'custom' ? 'checked' : ''}>
-                            <div class="min-w-0">
-                                <div class="text-sm font-medium text-text-main">Как в материале (рекомендуется)</div>
-                                <div class="text-xs text-text-muted">Лучше для точности терминов и меньше ручной правки.</div>
-                            </div>
-                        </label>
-                        <label class="flex items-start gap-2 p-2 rounded-lg border border-border-strong bg-surface-1 cursor-pointer">
-                            <input type="radio" name="ai-output-language-mode" value="custom"
-                                class="mt-0.5 text-primary border-border-strong bg-surface-1 focus:ring-primary"
-                                ${this.aiOutputLanguageMode === 'custom' ? 'checked' : ''}>
-                            <div class="min-w-0 flex-1">
-                                <div class="text-sm font-medium text-text-main">Другой язык</div>
-                                <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
-                                    <select id="ai-output-language-select"
-                                        class="rounded-lg border-border-subtle bg-surface-2 py-2 px-2 text-sm text-text-main focus:ring-2 focus:ring-primary ${this.aiOutputLanguageMode !== 'custom' ? 'opacity-60' : ''}"
-                                        ${this.aiOutputLanguageMode !== 'custom' ? 'disabled' : ''}>
-                                        <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>Русский</option>
-                                        <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>English</option>
-                                    </select>
-                                    <span class="text-[11px] text-text-secondary ${this.aiOutputLanguageMode === 'custom' ? '' : 'hidden'}">
-                                        Перевод может ухудшить качество анализа.
-                                    </span>
-                                </div>
-                            </div>
-                        </label>
+                        <div class="flex items-center gap-3">
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="ai-output-language-mode" value="same_as_material"
+                                    class="text-primary border-border-strong bg-surface-1 focus:ring-primary"
+                                    ${this.aiOutputLanguageMode !== 'custom' ? 'checked' : ''}
+                                    onchange="document.getElementById('ai-output-language-select').disabled = true">
+                                <span class="text-sm text-text-main">Как в материале</span>
+                            </label>
+                            <label class="flex items-center gap-1.5 cursor-pointer">
+                                <input type="radio" name="ai-output-language-mode" value="custom"
+                                    class="text-primary border-border-strong bg-surface-1 focus:ring-primary"
+                                    ${this.aiOutputLanguageMode === 'custom' ? 'checked' : ''}
+                                    onchange="document.getElementById('ai-output-language-select').disabled = false; document.getElementById('ai-output-language-select').focus()">
+                                <select id="ai-output-language-select"
+                                    class="rounded-md border-border-subtle bg-surface-1 py-1 px-2 text-sm text-text-main focus:ring-1 focus:ring-primary disabled:opacity-50"
+                                    ${this.aiOutputLanguageMode !== 'custom' ? 'disabled' : ''}>
+                                    <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>Русский</option>
+                                    <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>English</option>
+                                </select>
+                            </label>
+                        </div>
                     </div>
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">Загрузка материала</label>
-                    <div id="ai-drop-zone" class="border-2 border-dashed border-border-subtle rounded-lg p-6 text-center bg-surface-2 hover:bg-bg-hover hover:border-primary transition-all cursor-pointer relative">
-                        <input type="file" id="ai-file-input" accept=".pdf,.docx,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="pointer-events-none">
-                            ${this.aiUploadedFile ? `
-                                <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
-                                <p class="text-sm font-bold text-success-text" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
-                                <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : 'Загружено'}</p>
-                            ` : `
-                                <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
-                                <p class="text-sm font-medium text-text-secondary" id="ai-file-name">Перетащите PDF, DOCX или TXT</p>
-                                <p class="text-xs text-text-secondary mt-1">Максимум 18 МБ</p>
-                            `}
-                        </div>
-                    </div>
-                    ${limitHtml}
+                <div class="flex gap-4 mb-4 border-b border-border-subtle">
+                    <button onclick="dashboard.importManager.switchAiComposerTab('text')" 
+                        class="px-2 py-2 text-sm font-semibold border-b-2 transition-colors focus:outline-none ${this.aiComposerTab === 'text' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-main'}">
+                        Вставить текст
+                    </button>
+                    <button onclick="dashboard.importManager.switchAiComposerTab('file')" 
+                        class="px-2 py-2 text-sm font-semibold border-b-2 transition-colors focus:outline-none ${this.aiComposerTab === 'file' ? 'border-primary text-primary' : 'border-transparent text-text-secondary hover:text-text-main'}">
+                        Загрузить файл
+                    </button>
                 </div>
 
-                <div class="mb-4">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="flex-1 h-px bg-border-subtle"></div>
-                        <span class="text-xs text-text-secondary font-medium">или вставьте текст</span>
-                        <div class="flex-1 h-px bg-border-subtle"></div>
+                ${this.aiComposerTab === 'file' ? `
+                    <div class="mb-4">
+                        <div id="ai-drop-zone" class="border-2 border-dashed border-border-subtle rounded-lg p-6 text-center bg-surface-2 hover:bg-bg-hover hover:border-primary transition-all cursor-pointer relative">
+                            <input type="file" id="ai-file-input" accept=".pdf,.docx,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <div class="pointer-events-none">
+                                ${this.aiUploadedFile ? `
+                                    <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
+                                    <p class="text-sm font-bold text-success-text" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
+                                    <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : 'Загружено'}</p>
+                                ` : `
+                                    <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
+                                    <p class="text-sm font-medium text-text-secondary" id="ai-file-name">Перетащите PDF, DOCX или TXT</p>
+                                    <p class="text-xs text-text-secondary mt-1">Максимум 18 МБ</p>
+                                `}
+                            </div>
+                        </div>
+                        ${limitHtml}
                     </div>
-                    <textarea id="ai-material-textarea" rows="8"
-                        class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary resize-y"
-                        placeholder="Вставьте учебный материал сюда...">${this.escapeHtml(this.materialText)}</textarea>
-                    <div class="flex justify-between mt-1">
-                        <span class="text-xs text-text-secondary" id="ai-word-count">${wordCount ? `${wordCount} слов` : ''}</span>
-                        <span class="text-xs text-text-secondary">Минимум 50 слов</span>
+                ` : ''}
+
+                ${this.aiComposerTab === 'text' ? `
+                    <div class="mb-4">
+                        <textarea id="ai-material-textarea" rows="8"
+                            class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary resize-y"
+                            placeholder="Вставьте учебный материал сюда..." oninput="dashboard.importManager.onAiMaterialInput(event)">${this.escapeHtml(this.materialText)}</textarea>
+                        <div class="flex justify-between mt-1">
+                            <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count">${wordCount ? `${wordCount} слов` : ''}</span>
+                            <span class="text-xs ${wordCount > 0 && wordCount < 50 ? 'text-error-text' : 'text-text-secondary'}" id="ai-word-count-text">Минимум 50 слов</span>
+                        </div>
                     </div>
-                </div>
+                ` : ''}
 
                 <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="dashboard.importManager.theoryAnalyze()" ${this.aiAnalyzing || aiUnavailable ? 'disabled' : ''}
-                        class="px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
-                        ${this.aiAnalyzing ? 'Анализ...' : 'Запустить анализ'}
+                    <button id="ai-submit-btn" onclick="dashboard.importManager.theoryAnalyze()" ${isSubmitDisabled ? 'disabled' : ''}
+                        class="inline-flex items-center gap-1.5 px-4 py-2 bg-primary text-primary-contrast rounded-lg hover:bg-primary-dark font-semibold transition-all shadow-md disabled:opacity-50 disabled:cursor-not-allowed">
+                        ${this.aiAnalyzing ? '<span class="material-symbols-outlined text-[16px] animate-spin">progress_activity</span>' : ''}
+                        <span>${this.aiAnalyzing ? 'Анализ...' : 'Запустить анализ'}</span>
                     </button>
-                    <span class="editor-flow-wrap text-xs text-text-secondary">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : 'Результат будет сохранён в истории анализов.'}</span>
+                    ${!isSubmitDisabled ? `<span class="editor-flow-wrap text-xs text-text-secondary ml-2">${this.aiRunId ? `Последний ai_run_id: ${this.escapeHtml(this.aiRunId)}` : 'Результат будет сохранён в истории анализов'}</span>` : ''}
                 </div>
             </div>
         `;
@@ -6786,8 +6851,10 @@ text: Сердце человека состоит из [трёх] камер. �
                 ` : ''}
 
                 ${!this.theoryRunsLoading && !this.theoryRunsError && rows.length === 0 ? `
-                    <div class="p-3 bg-surface-2 rounded-lg text-xs text-text-secondary">
-                        Пока нет сохранённых анализов.
+                    <div class="flex flex-col items-center justify-center p-6 bg-surface-2 border border-border-strong border-dashed rounded-lg text-center mt-2">
+                        <span class="material-symbols-outlined text-[32px] text-border-strong mb-2">history</span>
+                        <p class="text-xs font-semibold text-text-main">Нет сохранённых анализов</p>
+                        <p class="text-[11px] text-text-secondary mt-1">Здесь появится история ваших анализов после первого запуска.</p>
                     </div>
                 ` : ''}
 
@@ -6810,10 +6877,8 @@ text: Сердце человека состоит из [трёх] камер. �
                                 <div class="rounded-lg border ${isActive ? 'border-primary bg-primary-lighter/20' : 'border-border-strong bg-surface-2'} p-3">
                                     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                         <div class="min-w-0 flex-1">
-                                            <div class="editor-flow-wrap text-[11px] font-mono text-text-secondary" title="${this.escapeHtmlAttr(row.ai_run_id)}">${this.escapeHtml(row.ai_run_id)}</div>
-                                            <div class="editor-flow-wrap text-xs font-semibold text-text-main mt-1">${this.escapeHtml(row.source_file_name || row.human_summary || 'Анализ без имени')}</div>
+                                            <div class="editor-flow-wrap text-xs font-semibold text-text-main">${this.escapeHtml(row.source_file_name || row.human_summary || 'Анализ без имени')}</div>
                                             ${updatedAt ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-1">${this.escapeHtml(updatedAt)}</div>` : ''}
-                                            ${stats ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-1">${this.escapeHtml(stats)}</div>` : ''}
                                             ${counts ? `<div class="editor-flow-wrap text-[10px] text-text-secondary mt-0.5">${this.escapeHtml(counts)}</div>` : ''}
                                         </div>
                                         <button onclick="dashboard.importManager.openTheoryAnalysisRun('${this.escapeInlineJsString(row.ai_run_id)}')" ${isOpening ? 'disabled' : ''}
@@ -6880,13 +6945,13 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="flex flex-wrap items-center justify-between gap-2">
                         <div class="text-xs font-semibold text-text-main">${this.escapeHtml(item.task_type || 'UNKNOWN')}${item.subtype ? ` / ${this.escapeHtml(item.subtype)}` : ''}</div>
                         <div class="flex flex-wrap gap-1">
-                            <span class="text-[10px] px-1 py-0.5 rounded font-medium text-text-main">${this.escapeHtml(item.suitability || 'n/a')}</span>
-                            ${item?.progression_is_fixed ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">fixed progression</span>` : ''}
+                            <span class="text-[10px] px-1 py-0.5 rounded font-medium text-text-main">${this.escapeHtml(item.suitability || 'н/д')}</span>
+                            ${item?.progression_is_fixed ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">фиксированная посл.</span>` : ''}
                             ${item?.complex_role && item.complex_role !== 'none' ? `<span class="text-[10px] px-1 py-0.5 rounded text-text-secondary">${this.escapeHtml(String(item.complex_role))}</span>` : ''}
                         </div>
                     </div>
-                    ${item?.progression_is_fixed ? `<p class="text-[11px] text-text-secondary mt-2">Уровни показываются как роли внутри progression, а не как произвольный выбор.</p>` : ''}
-                    ${levelLabels.length ? `<p class="text-[11px] text-text-secondary mt-1">Уровни в progression: ${this.escapeHtml(levelLabels.join(', '))}</p>` : ''}
+                    ${item?.progression_is_fixed ? `<p class="text-[11px] text-text-secondary mt-2">Уровни показываются как роли внутри последовательности (progression), а не как произвольный выбор.</p>` : ''}
+                    ${levelLabels.length ? `<p class="text-[11px] text-text-secondary mt-1">Уровни в последовательности: ${this.escapeHtml(levelLabels.join(', '))}</p>` : ''}
                     ${levelRoleMap.length ? `<div class="mt-2">${this.theoryReportLevelRoleMapToHtml(levelRoleMap, { max: 3, emptyText: 'Роли уровней не указаны.' })}</div>` : ''}
                     ${iterativeNotes.length ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(iterativeNotes[0]))}</p>` : ''}
                     ${item.why ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(item.why)}</p>` : ''}
@@ -6910,9 +6975,9 @@ text: Сердце человека состоит из [трёх] камер. �
                             </div>
                         </div>
                         <div class="flex flex-wrap gap-1">
-                            <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${steps.length} steps</span>
-                            ${chunkIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${chunkIds.length} chunks</span>` : ''}
-                            ${unitIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${unitIds.length} units</span>` : ''}
+                            <span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${steps.length} шагов</span>
+                            ${chunkIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${chunkIds.length} фрагментов</span>` : ''}
+                            ${unitIds.length ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-2 text-text-secondary">${unitIds.length} единиц</span>` : ''}
                         </div>
                     </div>
                     ${route?.expected_effect ? `<p class="text-[11px] text-text-secondary mt-2">${this.escapeHtml(String(route.expected_effect))}</p>` : ''}
@@ -6922,7 +6987,7 @@ text: Сердце человека состоит из [трёх] камер. �
                             return `
                                 <div class="rounded-md border border-border-strong bg-surface-2 p-2">
                                     <div class="flex flex-wrap items-center gap-1">
-                                        <span class="text-[11px] font-semibold text-text-main">${idx + 1}. ${this.escapeHtml(String(step?.action_type || 'step'))}</span>
+                                        <span class="text-[11px] font-semibold text-text-main">${idx + 1}. ${this.escapeHtml(String(step?.action_type || 'шаг'))}</span>
                                         ${step?.task_type ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.task_type))}</span>` : ''}
                                         ${step?.microcard_mode ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-info-light bg-info-lighter text-info-text">${this.escapeHtml(String(step.microcard_mode))}</span>` : ''}
                                         ${step?.progression_policy ? `<span class="px-1.5 py-0.5 rounded-md text-[10px] border border-border-strong bg-surface-1 text-text-secondary">${this.escapeHtml(String(step.progression_policy))}</span>` : ''}
@@ -6930,8 +6995,8 @@ text: Сердце человека состоит из [трёх] камер. �
                                     </div>
                                     ${step?.purpose ? `<p class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(String(step.purpose))}</p>` : ''}
                                     ${checklist.length ? `
-                                        <div class="mt-1.5">
-                                            <div class="text-[10px] font-semibold text-text-secondary mb-1">Checklist</div>
+                                        <div class="mt-1.5 pt-1.5 border-t border-border-subtle">
+                                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-tight">Чеклист</div>
                                             ${this.theoryReportListToHtml(checklist, { max: 4, className: 'text-[11px] text-text-main' })}
                                         </div>
                                     ` : ''}
@@ -6942,7 +7007,7 @@ text: Сердце человека состоит из [трёх] камер. �
                     </div>
                     ${antiPatterns.length ? `
                         <div class="mt-2">
-                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-wide">Anti-patterns</div>
+                            <div class="text-[10px] font-semibold text-text-secondary mb-1 uppercase tracking-wide">Антипаттерны</div>
                             ${this.theoryReportListToHtml(antiPatterns, { max: 4, className: 'text-[11px] text-text-main', bulletClass: 'text-warning-text' })}
                         </div>
                     ` : ''}
@@ -6987,10 +7052,10 @@ text: Сердце человека состоит из [трёх] камер. �
                     </div>
                     <div class="flex flex-col gap-2 xl:items-end">
                         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Units: <span class="font-bold text-text-main">${units.length}</span></div>
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Recs: <span class="font-bold text-text-main">${recs.length}</span></div>
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Chunks: <span class="font-bold text-text-main">${chunks.length}</span></div>
-                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Routes: <span class="font-bold text-text-main">${routes.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Единицы: <span class="font-bold text-text-main">${units.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Рекомендации: <span class="font-bold text-text-main">${recs.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Фрагменты: <span class="font-bold text-text-main">${chunks.length}</span></div>
+                            <div class="px-3 py-2 rounded-lg bg-surface-2 text-text-secondary">Маршруты: <span class="font-bold text-text-main">${routes.length}</span></div>
                         </div>
                         <button type="button"
                             onclick="dashboard.importManager.pushTheoryAnalysisContextForEditor()"
@@ -7111,7 +7176,7 @@ text: Сердце человека состоит из [трёх] камер. �
         if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
 
         try {
-            const resp = await fetch('/api/editor/ai/analyses?limit=50');
+            const resp = await fetch('/api/editor/ai/analyses?limit=15');
             const data = await resp.json();
             if (requestToken !== this.theoryRunsRequestToken) return data;
 
@@ -7154,7 +7219,6 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.aiRunId = data.ai_run_id || runId;
                 this.aiProvider = data.provider_used || null;
                 this.aiProviderModel = data.provider_model || null;
-                this.syncEditorTheoryBridgeContext();
                 this.theoryReportPanelOpen = true;
                 this.theoryReportScrollTop = 0;
                 this.theoryReportBlockCollapseState.clear();
@@ -7505,7 +7569,7 @@ text: Сердце человека состоит из [трёх] камер. �
             const sequenceIntentLabels = sequenceIntentOptions.map(i => _SEQUENCE_INTENT_LABELS[i] || i);
             const progressionMetaHtml = rec.progression_is_fixed ? `
                 <div class="mt-2 p-2 rounded-md bg-surface-2 border border-border-subtle">
-                    <p class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Fixed progression</p>
+                    <p class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Фиксированная прогрессия</p>
                     <p class="text-[11px] text-text-secondary leading-relaxed mt-1">${this.escapeHtml(rec.fixed_progression_note || 'Уровни этого типа рассматриваются как часть progression.')}</p>
                     ${supportedLevels.length ? `<p class="text-[10px] text-text-disabled mt-1">Поддерживаемые уровни: ${supportedLevels.map(l => `L${l}`).join(', ')}</p>` : ''}
                     ${levelRoleMap.length ? `
@@ -7682,15 +7746,15 @@ text: Сердце человека состоит из [трёх] камер. �
 
                 ${summary.quality ? `
                     <div class="mb-4 p-4 bg-surface-1 border border-border-subtle rounded-lg">
-                        <div class="text-sm font-bold text-text-main mb-2">Quality Checks</div>
+                        <div class="text-sm font-bold text-text-main mb-2">Проверки качества</div>
                         <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Duplicates: <span class="font-bold">${summary.quality.duplicate_groups || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Lang warnings: <span class="font-bold">${summary.quality.language_mismatch_warnings || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">SEQ grounding: <span class="font-bold">${summary.quality.sequence_grounding_warnings || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Material lang: <span class="font-bold">${this.escapeHtml(summary.quality.material_language || 'unknown')}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Дубликаты: <span class="font-bold">${summary.quality.duplicate_groups || 0}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Алерты языка: <span class="font-bold">${summary.quality.language_mismatch_warnings || 0}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">SEQ-привязка: <span class="font-bold">${summary.quality.sequence_grounding_warnings || 0}</span></div>
+                            <div class="p-2 rounded border border-border-subtle bg-surface-2">Язык материала: <span class="font-bold">${this.escapeHtml(summary.quality.material_language || 'unknown')}</span></div>
                         </div>
                         <div class="mt-2 text-xs text-text-secondary">
-                            Expected output lang: <span class="font-bold text-text-main">${this.escapeHtml(summary.quality.expected_output_language || gen.effective_output_language || 'unknown')}</span>
+                            Ожидаемый язык вывода: <span class="font-bold text-text-main">${this.escapeHtml(summary.quality.expected_output_language || gen.effective_output_language || 'unknown')}</span>
                         </div>
                     </div>
                 ` : ''}
@@ -7708,16 +7772,16 @@ text: Сердце человека состоит из [трёх] камер. �
                     <div class="mb-4 p-4 bg-surface-1 border border-border-subtle rounded-lg">
                         <div class="flex items-center justify-between gap-3 mb-3">
                             <div>
-                                <div class="text-sm font-bold text-text-main">Coverage</div>
-                                <div class="text-xs text-text-secondary">Educational unit coverage before import</div>
+                                <div class="text-sm font-bold text-text-main">Покрытие</div>
+                                <div class="text-xs text-text-secondary">Покрытие учебных единиц перед импортом</div>
                             </div>
                             <div class="text-xs text-text-secondary text-right">
-                                <div>Uncovered: <span class="font-bold text-error-text">${uncoveredUnits.length}</span></div>
-                                <div>Overcovered (3+): <span class="font-bold text-warning-text">${overcoveredUnits.length}</span></div>
+                                <div>Не покрыто: <span class="font-bold text-error-text">${uncoveredUnits.length}</span></div>
+                                <div>Избыточно покрыто (3+): <span class="font-bold text-warning-text">${overcoveredUnits.length}</span></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            ${coverageRows || '<div class="text-xs text-text-secondary">No coverage data</div>'}
+                            ${coverageRows || '<div class="text-xs text-text-secondary">Нет данных о покрытии</div>'}
                         </div>
                     </div>
                 ` : ''}
@@ -7883,7 +7947,6 @@ text: Сердце человека состоит из [трёх] камер. �
                 this.aiProvider = data.provider_used;
                 this.aiProviderModel = data.provider_model || null;
                 this.aiRunId = data.ai_run_id || this.aiRunId;
-                this.syncEditorTheoryBridgeContext();
                 this.theoryReportPanelOpen = true;
                 this.theoryReportScrollTop = 0;
                 this.theoryReportBlockCollapseState.clear();

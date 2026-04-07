@@ -1451,7 +1451,442 @@ class TestSequenceTaskDifficultyLevels(unittest.TestCase):
         self.assertIn('block_names', result.details)
 
 
+    def test_sequence_level_1_treats_same_text_blocks_as_equivalent(self):
+        user_input = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_2', 'elem_4']},
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_1', 'elem_3']}
+            ],
+            'elements': [
+                {'id': 'elem_1', 'text': 'Same step'},
+                {'id': 'elem_2', 'text': 'Same step'},
+                {'id': 'elem_3', 'text': 'Another'},
+                {'id': 'elem_4', 'text': 'Another'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': False,
+                'requires_block_names': False,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.score, 100.0)
+        self.assertEqual(result.details.get('total_correct_blocks'), 2)
+
+    def test_sequence_level_1_partial_match_uses_semantic_keys_when_order_matters(self):
+        user_input = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_2', 'elem_5']},
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_1', 'elem_3']}
+            ],
+            'elements': [
+                {'id': 'elem_1', 'text': 'Same step'},
+                {'id': 'elem_2', 'text': 'Same step'},
+                {'id': 'elem_3', 'text': 'Another'},
+                {'id': 'elem_5', 'text': 'Wrong step'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': False,
+                'requires_block_names': False,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.score, 50.0)
+        self.assertEqual(result.details.get('total_correct_blocks'), 1)
+        self.assertEqual(result.details.get('correct_blocks_by_level', {}).get('level1'), ['elem_2', None])
+
+    def test_sequence_level_1_partial_match_preserves_ordered_slot_positions_for_feedback(self):
+        user_input = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_9', 'elem_4']},
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_1', 'elem_3']}
+            ],
+            'elements': [
+                {'id': 'elem_1', 'text': 'Same step'},
+                {'id': 'elem_3', 'text': 'Another'},
+                {'id': 'elem_4', 'text': 'Another'},
+                {'id': 'elem_9', 'text': 'Wrong step'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': False,
+                'requires_block_names': False,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.details.get('total_correct_blocks'), 1)
+        self.assertEqual(
+            result.details.get('correct_blocks_by_level', {}).get('level1'),
+            [None, 'elem_4']
+        )
+
+    def test_sequence_level_1_partial_match_counts_duplicate_text_by_quantity(self):
+        user_input = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_2', 'elem_5', 'elem_6']},
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {'level_id': 'level1', 'blocks': ['elem_1', 'elem_3', 'elem_4']}
+            ],
+            'elements': [
+                {'id': 'elem_1', 'text': 'Same step'},
+                {'id': 'elem_2', 'text': 'Same step'},
+                {'id': 'elem_3', 'text': 'Repeatable'},
+                {'id': 'elem_4', 'text': 'Repeatable'},
+                {'id': 'elem_5', 'text': 'Repeatable'},
+                {'id': 'elem_6', 'text': 'Wrong step'}
+            ],
+            'sequence_within_level_matters': False,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': False,
+                'requires_block_names': False,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertFalse(result.success)
+        self.assertAlmostEqual(result.score, (2 / 3) * 100.0)
+        self.assertEqual(result.details.get('total_correct_blocks'), 2)
+        self.assertCountEqual(
+            result.details.get('correct_blocks_by_level', {}).get('level1', []),
+            ['elem_2', 'elem_5']
+        )
+
+    def test_sequence_level_2_matches_same_text_blocks_even_when_level_ids_are_runtime_generated(self):
+        user_input = {
+            'levels': [
+                {
+                    'level_id': 'user_level_1',
+                    'level_name': 'Подготовка',
+                    'blocks': ['elem_2', 'elem_4']
+                }
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {
+                    'level_id': 'level_1',
+                    'level_name': 'Подготовка',
+                    'blocks': ['elem_1', 'elem_3']
+                }
+            ],
+            'elements': [
+                {'id': 'elem_1', 'text': 'Same step'},
+                {'id': 'elem_2', 'text': 'Same step'},
+                {'id': 'elem_3', 'text': 'Another'},
+                {'id': 'elem_4', 'text': 'Another'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': True,
+                'requires_block_names': False,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.details.get('total_correct_blocks'), 2)
+        self.assertEqual(result.details.get('correct_blocks_by_level', {}).get('level_1'), ['elem_2', 'elem_4'])
+
+    def test_sequence_level_2_does_not_award_level_name_credit_without_structural_match(self):
+        user_input = {
+            'levels': [
+                {
+                    'level_id': 'user_level_1',
+                    'level_name': 'Подготовка',
+                    'blocks': ['elem_9']
+                }
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {
+                    'level_id': 'level_1',
+                    'level_name': 'Подготовка',
+                    'blocks': ['elem_1']
+                }
+            ],
+            'elements': [
+                {'id': 'elem_1', 'text': 'Right step'},
+                {'id': 'elem_9', 'text': 'Wrong step'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': True,
+                'requires_block_names': False,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.details.get('level_names', {}).get('score'), 0.0)
+        self.assertEqual(result.details.get('level_names', {}).get('matched_levels'), [])
+
+    def test_sequence_level_3_does_not_award_block_name_credit_without_structural_match(self):
+        user_input = {
+            'levels': [
+                {
+                    'level_id': 'user_level_1',
+                    'level_name': 'Подготовка',
+                    'blocks': ['elem_9'],
+                    'block_names': {'elem_9': 'Right step'}
+                }
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {
+                    'level_id': 'level_1',
+                    'level_name': 'Подготовка',
+                    'blocks': ['elem_1']
+                }
+            ],
+            'elements': [
+                {'id': 'elem_1', 'text': 'Right step'},
+                {'id': 'elem_9', 'text': 'Wrong step'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': True,
+                'requires_block_names': True,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertFalse(result.success)
+        self.assertEqual(result.details.get('block_names', {}).get('score'), 0.0)
+        self.assertEqual(result.details.get('block_names', {}).get('matched_blocks'), [])
+
+    def test_sequence_level_3_matches_synthetic_runtime_slots_by_typed_block_names(self):
+        user_input = {
+            'levels': [
+                {
+                    'level_id': 'user_level_1',
+                    'level_name': 'Правая рука',
+                    'blocks': ['user_slot_1', 'user_slot_2'],
+                    'block_names': {
+                        'user_slot_1': 'Красный',
+                        'user_slot_2': 'Желтый',
+                    }
+                }
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {
+                    'level_id': 'level_1',
+                    'level_name': 'Правая рука',
+                    'blocks': ['elem_red', 'elem_yellow'],
+                    'block_names': {
+                        'elem_red': 'Красный',
+                        'elem_yellow': 'Желтый',
+                    }
+                }
+            ],
+            'elements': [
+                {'id': 'elem_red', 'text': 'Красный'},
+                {'id': 'elem_yellow', 'text': 'Желтый'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': True,
+                'requires_block_names': True,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.score, 100.0)
+        self.assertEqual(result.details.get('level_names', {}).get('score'), 100.0)
+        self.assertEqual(result.details.get('block_names', {}).get('score'), 100.0)
+        self.assertEqual(
+            result.details.get('correct_blocks_by_level', {}).get('level_1'),
+            ['user_slot_1', 'user_slot_2']
+        )
+
+    def test_sequence_level_3_matches_explicit_text_semantic_keys_after_normalization(self):
+        user_input = {
+            'levels': [
+                {
+                    'level_id': 'user_level_1',
+                    'level_name': '\u041b\u0435\u0432\u0430\u044f \u043d\u043e\u0433\u0430',
+                    'blocks': ['user_slot_1', 'user_slot_2'],
+                    'block_names': {
+                        'user_slot_1': '\u0416\u0435\u043b\u0442\u044b\u0439',
+                        'user_slot_2': '\u0417\u0435\u043b\u0435\u043d\u044b\u0439',
+                    }
+                }
+            ]
+        }
+
+        answer_key = {
+            'levels': [
+                {
+                    'level_id': 'level_1',
+                    'level_name': '\u041b\u0435\u0432\u0430\u044f \u043d\u043e\u0433\u0430',
+                    'blocks': ['elem_yellow', 'elem_green'],
+                    'block_names': {
+                        'elem_yellow': '\u0416\u0435\u043b\u0442\u044b\u0439',
+                        'elem_green': '\u0417\u0435\u043b\u0451\u043d\u044b\u0439',
+                    }
+                }
+            ],
+            'elements': [
+                {'id': 'elem_yellow', 'text': '\u0416\u0435\u043b\u0442\u044b\u0439', 'semantic_key': 'text:\u0416\u0435\u043b\u0442\u044b\u0439'},
+                {'id': 'elem_green', 'text': '\u0417\u0435\u043b\u0435\u043d\u044b\u0439', 'semantic_key': 'text:\u0417\u0435\u043b\u0451\u043d\u044b\u0439'}
+            ],
+            'sequence_within_level_matters': True,
+            'level_order_matters': False
+        }
+
+        task_data = {
+            'content': {
+                'requires_level_names': True,
+                'requires_block_names': True,
+                'elements': answer_key['elements']
+            }
+        }
+
+        result = self.service.evaluate_sequence_task(user_input, answer_key, task_data)
+
+        self.assertTrue(result.success)
+        self.assertEqual(result.score, 100.0)
+        self.assertEqual(result.details.get('level_names', {}).get('score'), 100.0)
+        self.assertEqual(result.details.get('block_names', {}).get('score'), 100.0)
+        self.assertEqual(
+            result.details.get('correct_blocks_by_level', {}).get('level_1'),
+            ['user_slot_1', 'user_slot_2']
+        )
+
+
+class TestDrawResolutionScaling(unittest.TestCase):
+    """Проверка scale-aware поведения для штрихов на изображениях разного разрешения."""
+
+    def setUp(self):
+        self.service = TaskEvaluatorService()
+
+    @staticmethod
+    def _dense_line(x1, y1, x2, y2, step=2):
+        points = []
+        length = max(abs(x2 - x1), abs(y2 - y1))
+        segments = max(1, int(length / step))
+        for idx in range(segments + 1):
+            t = idx / segments
+            points.append([x1 + (x2 - x1) * t, y1 + (y2 - y1) * t])
+        return points
+
+    def test_line_coverage_scales_with_display_size(self):
+        small_reference = [(10, 50), (190, 50)]
+        large_reference = [(100, 500), (1900, 500)]
+
+        small_user = {
+            'drawing': [{
+                'type': 'brush_stroke',
+                'points': self._dense_line(10, 60, 190, 60, step=2),
+            }],
+            'image_width': 200,
+            'image_height': 200,
+            'display_width': 200,
+            'display_height': 200,
+        }
+        large_user = {
+            'drawing': [{
+                'type': 'brush_stroke',
+                'points': self._dense_line(100, 600, 1900, 600, step=20),
+            }],
+            'image_width': 2000,
+            'image_height': 2000,
+            'display_width': 200,
+            'display_height': 200,
+        }
+
+        small_score = self.service.calculate_line_coverage(
+            small_reference, small_user, tolerance_px=15.0, use_improved_evaluation=True
+        )
+        large_score = self.service.calculate_line_coverage(
+            large_reference, large_user, tolerance_px=15.0, use_improved_evaluation=True
+        )
+
+        self.assertAlmostEqual(small_score, large_score, delta=1.0)
+        self.assertGreater(large_score, 90.0)
+
 if __name__ == '__main__':
     # Запуск всех тестов
     unittest.main(verbosity=2)
-

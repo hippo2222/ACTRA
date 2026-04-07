@@ -1,0 +1,217 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_complex_create_tmp",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": false,
+  "afterThemeWaitMs": 350,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "warnExcessiveTextContrast": false,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "Complex Create (empty baseline)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 }
+      ],
+      "actions": [
+        { "type": "focus", "selector": "#name", "waitMs": 80 },
+        { "type": "focus", "selector": "#description", "waitMs": 80 },
+        { "type": "hover", "selector": "#builder-quality-beacon", "waitMs": 80 },
+        { "type": "hover", "selector": "#draft-recovery-btn", "waitMs": 80 },
+        { "type": "hover", "selector": "#save-btn", "waitMs": 80 },
+        { "type": "focus", "selector": "#catalog-search", "waitMs": 80 },
+        { "type": "hover", "selector": "#reload-catalog", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (populated builder)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "document.getElementById('name').value='Контрастный комплекс'; document.getElementById('description').value='Сценарий для проверки заполненного конструктора и дочерних элементов.'; updateLastSaveTimestamp('2026-03-19T09:15:00Z'); updateComplexSaveStatus({ time: '09:15' }); state.selectedTasks=[{ref:'/api/tasks/open_answer/oa_1',label:'Открытый ответ: термины',topic_name:'Пульмонология',module_name:'open_answer'},{ref:'/api/tasks/test/test_1',label:'Тест: признаки патологии',topic_name:'Пульмонология',module_name:'test'},{ref:'/api/tasks/click/click_1',label:'Клик: рентгенограмма',topic_name:'Визуализация',module_name:'click'},{ref:'/api/tasks/sequence_assembly/seq_1',label:'Последовательность: этапы лечения',topic_name:'Терапия',module_name:'sequence_assembly'},{ref:'/api/tasks/draw/draw_1',label:'Рисование: схема дренажа',topic_name:'Практика',module_name:'draw'}]; state.chains=[['/api/tasks/open_answer/oa_1','/api/tasks/test/test_1','/api/tasks/click/click_1'],['/api/tasks/sequence_assembly/seq_1','/api/tasks/draw/draw_1']]; state.theory.mode='link'; state.theory.theoryId='th_ready_1'; state.theory.relation='link'; state.theory.title='Теория для готового комплекса'; state.theory.version='2026-03-19T09:14:00Z'; state.theory.delta={ops:[{insert:'Развернутая теория для готового состояния.\\n'}]}; renderSelectedList(); renderChains(); document.querySelectorAll('[data-selected-task-ref]').forEach((el, idx) => { if (idx < 2) { el.setAttribute('data-selected', '1'); el.classList.add('selected', 'ring-2', 'ring-primary-light'); } }); syncHiddenSelectedListSelectionFromCards(); renderBuilderQualityPreview(); document.getElementById('builder-quality-dropdown')?.classList.add('show'); showAutosaveIndicator('Черновик обновлён', 'success'); showGlobalError('Проверка предупреждения на заполненной форме.'); return {ok:true};",
+          "waitMs": 200
+        },
+        { "type": "waitFor", "selector": "[data-selected-task-ref]" }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "[data-selected-task-ref]", "waitMs": 80 },
+        { "type": "hover", "selector": ".delete-task-btn", "waitMs": 80 },
+        { "type": "focus", "selector": "#remove-selected", "waitMs": 80 },
+        { "type": "hover", "selector": "#builder-quality-beacon", "waitMs": 80 },
+        { "type": "hover", "selector": "#builder-quality-dropdown", "waitMs": 80 },
+        { "type": "hover", "selector": "#chains-container button", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (theory linked editor)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "document.getElementById('name').value='Комплекс с теорией'; state.editingId='cx_theory_audit'; state.theory.mode='link'; state.theory.theoryId='th_42'; state.theory.relation='link'; state.theory.title='Контрольная теория'; state.theory.version='2026-03-19T10:00:00Z'; state.theory.delta={ops:[{insert:'Контрольный абзац для linked-режима.\\n'},{insert:'Пункт 1\\n',attributes:{list:'bullet'}},{insert:'Пункт 2\\n',attributes:{list:'bullet'}}]}; const picker=document.getElementById('theory-link-picker'); if (picker) { picker.innerHTML='<option value=\"\">Выберите теорию</option><option value=\"th_42\">Контрольная теория (th_42)</option><option value=\"th_99\">Альтернативная теория (th_99)</option>'; picker.value='th_42'; } setTheoryMode('link'); renderTheoryDeltaToEditor(state.theory.delta); document.getElementById('theory-title').value=state.theory.title; updateTheoryCopyButtonState(); renderTheoryContextActions(); renderBuilderQualityPreview(); return {ok:true};",
+          "waitMs": 180
+        }
+      ],
+      "actions": [
+        { "type": "focus", "selector": "#theory-mode", "waitMs": 80 },
+        { "type": "focus", "selector": "#theory-link-picker", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-reload-list", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-create-copy", "waitMs": 80 },
+        { "type": "focus", "selector": "#theory-title", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-bold", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-image-btn", "waitMs": 80 },
+        { "type": "focus", "selector": "#theory-editor", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-open-complexes-btn", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-open-hub-btn", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (theory inherited sync)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "state.editingId='cx_inherit_audit'; state.theory.mode='none'; state.complexTheoryContext={mode:'inherit',syncStatus:'composite',theoryLink:{theory_id:'th_inherited_1',relation:'link',title_cache:'Базовая теория'},syncMeta:{composite_theory_links:[{theory_id:'th_inherited_1',relation:'link',title_cache:'Базовая теория'},{theory_id:'th_inherited_2',relation:'link',title_cache:'Расширение по теме'},{theory_id:'th_inherited_3',relation:'link',title_cache:'Клинические нюансы'}]}}; const header=document.getElementById('theory-header'); const body=document.getElementById('theory-body'); const label=document.getElementById('theory-status-label'); const chevron=document.getElementById('theory-header-chevron'); if (header) header.classList.add('theory-header--active'); if (body) body.style.maxHeight='2000px'; if (label) { label.textContent=''; label.style.display='none'; } if (chevron) chevron.textContent='expand_less'; renderTheoryInheritSyncPanel(); renderTheoryContextActions(); renderBuilderQualityPreview(); return {ok:true};",
+          "waitMs": 150
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#theory-header", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-sync-topics-btn", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-open-complexes-btn", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-open-hub-btn", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (task context menu)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "state.selectedTasks=[{ref:'/api/tasks/open_answer/oa_1',label:'Открытый ответ',topic_name:'Пульмонология',module_name:'open_answer'},{ref:'/api/tasks/test/test_1',label:'Тест',topic_name:'Пульмонология',module_name:'test'},{ref:'/api/tasks/click/click_1',label:'Клик',topic_name:'Визуализация',module_name:'click'}]; state.chains=[['/api/tasks/open_answer/oa_1','/api/tasks/test/test_1']]; renderSelectedList(); renderChains(); const cards=Array.from(document.querySelectorAll('[data-selected-task-ref]')); cards.slice(0,2).forEach((card)=>{ card.setAttribute('data-selected','1'); card.classList.add('selected','ring-2','ring-primary-light'); }); syncHiddenSelectedListSelectionFromCards(); showContextMenu(320, 260, '/api/tasks/open_answer/oa_1'); return {ok:true};",
+          "waitMs": 120
+        },
+        { "type": "waitFor", "selector": "#task-context-menu:not(.hidden)" }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#ctx-chain", "waitMs": 80 },
+        { "type": "hover", "selector": "#ctx-add-to-chain button", "waitMs": 80 },
+        { "type": "hover", "selector": "#ctx-unlink", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (complexes tab context menu)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "complexesData=[{id:'cx_active',name:'Активный комплекс',updated_at:'2026-03-18T12:00:00Z',tasks:[1,2],theory_mode:'override',theory_link:{theory_id:'th_active',title_cache:'Своя теория'}},{id:'cx_batch_1',name:'Комплекс для импорта A',updated_at:'2026-03-17T11:00:00Z',tasks:[1,2,3],theory_mode:'inherit',theory_sync_status:'ok',theory_link:{theory_id:'th_a',title_cache:'Тема A'}},{id:'cx_batch_2',name:'Комплекс для импорта B',updated_at:'2026-03-16T10:00:00Z',tasks:[1,2,3,4],theory_mode:'inherit',theory_sync_status:'composite',theory_sync_meta:{theory_ids:['th_b1','th_b2']}}]; state.editingId='cx_active'; state.selectedComplexes=new Set(['cx_batch_1','cx_batch_2']); switchTab('complexes'); renderComplexes(complexesData); const trigger=document.querySelector('#complexes-list button'); if (!trigger) return {ok:false,error:'complex_menu_trigger_missing'}; openComplexContextMenu({preventDefault(){},stopPropagation(){},target:trigger,pageX:640,pageY:260}, 'cx_batch_1'); return {ok:true};",
+          "waitMs": 120
+        },
+        { "type": "waitFor", "selector": "#complex-context-menu:not(.hidden)" }
+      ],
+      "actions": [
+        { "type": "focus", "selector": "#complex-search", "waitMs": 80 },
+        { "type": "hover", "selector": "#tab-complexes", "waitMs": 80 },
+        { "type": "hover", "selector": "#ctx-complex-import", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (unsaved changes modal)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "document.getElementById('name').value='Черновой комплекс'; showUnsavedChangesModal('/ui/complexes'); return {ok:true};",
+          "waitMs": 120
+        },
+        { "type": "waitFor", "selector": "#unsaved-changes-modal.flex" }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#modal-cancel", "waitMs": 80 },
+        { "type": "hover", "selector": "#modal-leave", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (draft recovery modal)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "state.editingId='cx_draft_audit'; window.autoSaveManager=window.autoSaveManager||{}; window.autoSaveManager.listDrafts=()=>[{key:'complex_draft_new',id:'new',timestamp:Date.parse('2026-03-19T09:00:00Z'),data:{name:'Новый черновик',description:'Локальная версия'}},{key:'complex_draft_cx_draft_audit',id:'cx_draft_audit',timestamp:Date.parse('2026-03-19T09:05:00Z'),data:{name:'Текущий черновик',description:'Локальная версия для редактируемого комплекса'}}]; const originalFetch=window.fetch.bind(window); window.fetch=async (input, init) => { const url=typeof input==='string' ? input : (input && input.url) || ''; if (url.includes('/api/complexes/cx_draft_audit/autosave')) { return new Response(JSON.stringify({ok:true,saved_at:'2026-03-19T09:08:00Z',item:{id:'cx_draft_audit',name:'Серверный черновик',description:'Серверная версия'}}), {status:200,headers:{'Content-Type':'application/json'}}); } return originalFetch(input, init); }; await openDraftRecoveryModal(); return {ok:true};",
+          "waitMs": 180
+        },
+        { "type": "waitFor", "selector": "#draft-recovery-modal.flex" }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#draft-recovery-close", "waitMs": 80 },
+        { "type": "hover", "selector": "#draft-recovery-reload", "waitMs": 80 },
+        { "type": "hover", "selector": "[data-action='restore-draft']", "waitMs": 80 },
+        { "type": "hover", "selector": "[data-action='discard-draft']", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (history modal)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "state.editingId='cx_history_audit'; const originalFetch=window.fetch.bind(window); window.fetch=async (input, init) => { const url=typeof input==='string' ? input : (input && input.url) || ''; if (url.includes('/api/complexes/cx_history_audit/history')) { return new Response(JSON.stringify({ok:true,history:[{_snapshot_timestamp:'20260319_090000',name:'Версия утро',tasks:[1,2,3],chains:[[1,2]]},{_snapshot_timestamp:'20260318_221500',name:'Версия вечер',tasks:[1,2],chains:[]}]}), {status:200,headers:{'Content-Type':'application/json'}}); } return originalFetch(input, init); }; await showHistoryModal('cx_history_audit'); return {ok:true};",
+          "waitMs": 180
+        },
+        { "type": "waitFor", "selector": "#history-modal" }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#history-modal button[onclick*='remove']", "waitMs": 80 },
+        { "type": "hover", "selector": "#history-modal button[onclick*='restoreVersion']", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Complex Create (version conflict modal)",
+      "url": "/ui/complexes/create",
+      "waitFor": "#name",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1500 },
+        {
+          "type": "evaluate",
+          "script": "state.editingId='cx_conflict_audit'; await handleVersionConflict({details:{expected_version:'2026-03-19T08:55:00Z',current_version:'2026-03-19T09:12:00Z'}}); return {ok:true};",
+          "waitMs": 120
+        },
+        { "type": "waitFor", "selector": "#conflict-reload" }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#conflict-reload", "waitMs": 80 },
+        { "type": "hover", "selector": "#conflict-force", "waitMs": 80 },
+        { "type": "hover", "selector": "#conflict-cancel", "waitMs": 80 }
+      ]
+    }
+  ]
+}

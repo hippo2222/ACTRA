@@ -55,7 +55,7 @@
       font-size: 0.875rem;
       color: var(--color-text-main);
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-      box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 3%, transparent);
+      box-shadow: var(--color-page-builder-field-inset-shadow);
     }
 
     .form-field::placeholder {
@@ -66,8 +66,8 @@
       outline: none;
       border-color: var(--color-primary);
       box-shadow:
-        0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent),
-        inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 3%, transparent);
+        var(--color-page-builder-field-focus-ring),
+        var(--color-page-builder-field-inset-shadow);
     }
 
     .form-field:hover:not(:focus) {
@@ -147,15 +147,13 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 5%, transparent);
+      box-shadow: var(--color-page-builder-task-checkbox-inset-shadow);
     }
 
     .task-checkbox-input:checked+.task-checkbox-custom {
       background: var(--color-primary);
       border-color: var(--color-primary);
-      box-shadow:
-        0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
-        inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 10%, transparent);
+      box-shadow: var(--color-page-builder-task-checkbox-checked-shadow);
     }
 
     .task-checkbox-input:checked+.task-checkbox-custom::after {
@@ -190,12 +188,12 @@
       background: var(--color-bg-tertiary);
       border-radius: 1rem;
       border: 1.5px solid var(--color-border-subtle);
-      box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text-main) 5%, transparent);
+      box-shadow: var(--color-page-builder-section-header-shadow);
       transition: all 0.2s;
     }
 
     .section-header-premium:hover {
-      box-shadow: 0 4px 12px color-mix(in srgb, var(--color-text-main) 8%, transparent);
+      box-shadow: var(--color-page-builder-section-header-shadow-hover);
     }
 
     .section-title-gradient {
@@ -203,10 +201,6 @@
       font-weight: 700;
       color: var(--color-text-main);
       letter-spacing: -0.01em;
-      background: linear-gradient(135deg, var(--color-text-main) 0%, var(--color-text-secondary) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
     }
 
     /* Premium add button with shine effect */
@@ -215,10 +209,7 @@
       background-color: var(--color-primary-dark) !important;
       color: var(--color-primary-fg) !important;
       border: 2px solid var(--color-primary) !important;
-      box-shadow:
-        0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent),
-        0 2px 4px color-mix(in srgb, var(--color-primary) 20%, transparent),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      box-shadow: var(--color-page-builder-add-button-shadow);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
       overflow: hidden;
@@ -241,24 +232,19 @@
 
     .add-btn-premium:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow:
-        0 8px 20px color-mix(in srgb, var(--color-primary) 40%, transparent),
-        0 4px 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      box-shadow: var(--color-page-builder-add-button-shadow-hover);
     }
 
     .add-btn-premium:active:not(:disabled) {
       transform: translateY(0);
-      box-shadow:
-        0 2px 8px color-mix(in srgb, var(--color-primary) 25%, transparent),
-        inset 0 1px 3px rgba(0, 0, 0, 0.15);
+      box-shadow: var(--color-page-builder-add-button-shadow-active);
     }
 
     .add-btn-premium:disabled {
       background-color: var(--color-surface-1) !important;
       background-image: none !important;
-      color: var(--color-text-muted) !important;
-      border: 1px solid var(--color-border-subtle) !important;
+      color: var(--color-text-secondary) !important;
+      border: 1px solid var(--color-border-normal) !important;
       box-shadow: none;
       cursor: not-allowed;
       opacity: 1;
@@ -272,23 +258,19 @@
     .btn-primary {
       background-color: var(--color-surface-1) !important;
       background-image: none !important;
-      color: var(--color-text-main) !important;
+      color: var(--color-primary) !important;
       border: 1.5px solid var(--color-primary);
       padding: 0.875rem 1.75rem;
       border-radius: 0.75rem;
       font-size: 0.9375rem;
       font-weight: 600;
-      box-shadow:
-        0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent),
-        0 2px 4px color-mix(in srgb, var(--color-text-main) 10%, transparent);
+      box-shadow: var(--color-page-builder-primary-button-shadow);
       transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow:
-        0 6px 20px color-mix(in srgb, var(--color-primary) 40%, transparent),
-        0 4px 8px color-mix(in srgb, var(--color-text-main) 15%, transparent);
+      box-shadow: var(--color-page-builder-primary-button-shadow-hover);
     }
 
     .btn-primary:active {
@@ -298,7 +280,7 @@
     /* Secondary button */
     .btn-secondary {
       background: transparent;
-      color: var(--color-text-secondary);
+      color: var(--color-text-main);
       border: 1.5px solid var(--color-border-normal);
       padding: 0.875rem 1.5rem;
       border-radius: 0.75rem;
@@ -315,7 +297,7 @@
     /* Danger button */
     .btn-danger {
       color: var(--color-status-error);
-      border-color: color-mix(in srgb, var(--color-status-error) 80%, transparent);
+      border-color: var(--color-page-builder-danger-border-soft);
     }
 
     /* FIX: Force high contrast border for Dark A (Issue 1.43 vs 3.0) */
@@ -336,7 +318,7 @@
     }
 
     .btn-danger:hover {
-      background: color-mix(in srgb, var(--color-status-error) 5%, transparent);
+      background: var(--color-page-builder-danger-hover-bg);
       border-color: var(--color-status-error);
     }
 
@@ -429,7 +411,7 @@
     .sidebar-glass {
       background: var(--color-bg-secondary);
       border-left: 1px solid var(--color-border-strong);
-      box-shadow: -4px 0 16px color-mix(in srgb, var(--color-text-main) 12%, transparent);
+      box-shadow: var(--color-page-builder-sidebar-rail-shadow);
       position: relative;
     }
 
@@ -456,12 +438,14 @@
       color: var(--color-text-secondary);
     }
 
-    .sidebar-tabs button.active-tab {
+    .sidebar-tabs button.active-tab,
+    .sidebar-tabs button[data-active='true'] {
       color: var(--color-text-main);
       font-weight: 700;
     }
 
-    .sidebar-tabs button.active-tab::after {
+    .sidebar-tabs button.active-tab::after,
+    .sidebar-tabs button[data-active='true']::after {
       content: '';
       position: absolute;
       left: 0;
@@ -474,7 +458,7 @@
 
     .sidebar-panel {
       background: var(--color-surface-panel);
-      border: 1px solid color-mix(in srgb, var(--color-border-normal) 60%, transparent);
+      border: 1px solid var(--color-page-builder-sidebar-panel-border);
       border-radius: 0.9rem;
       box-shadow: 0 10px 20px rgba(20, 13, 31, 0.08);
     }
@@ -507,7 +491,7 @@
       background: var(--color-surface-1);
       border: 1.5px solid var(--color-border-normal);
       border-radius: 0.75rem;
-      box-shadow: 0 1px 4px color-mix(in srgb, var(--color-text-main) 8%, transparent);
+      box-shadow: var(--color-page-builder-module-card-shadow);
       margin-bottom: 0.75rem;
       transition: all 0.2s ease;
       overflow: hidden;
@@ -525,7 +509,7 @@
     }
 
     .module-card-header:hover {
-      background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+      background: var(--color-page-builder-module-card-hover-bg);
     }
 
     .module-info {
@@ -537,7 +521,7 @@
     .module-icon {
       font-size: 2rem;
       color: var(--color-text-secondary);
-      background: color-mix(in srgb, var(--color-primary) 20%, transparent);
+      background: var(--color-page-builder-module-icon-bg);
       border: 1.5px solid var(--color-border-subtle);
       padding: 0.5rem;
       border-radius: 0.75rem;
@@ -814,7 +798,7 @@
       background: var(--color-primary) !important;
       border-color: var(--color-primary) !important;
       color: var(--color-primary-fg) !important;
-      box-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 25%, transparent);
+      box-shadow: var(--color-page-builder-task-chip-selected-shadow);
     }
 
     .task-chip input:disabled+label {
@@ -882,13 +866,13 @@
       background: var(--color-surface-1);
       border: 1.5px solid var(--color-border-subtle);
       border-radius: 1rem;
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-text-main) 4%, transparent);
+      box-shadow: var(--color-page-builder-card-section-shadow);
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       position: relative;
     }
 
     .card-section-premium:hover {
-      box-shadow: 0 8px 24px color-mix(in srgb, var(--color-text-main) 8%, transparent);
+      box-shadow: var(--color-page-builder-card-section-shadow-hover);
       border-color: var(--color-primary-light);
       z-index: 20;
       position: relative;
@@ -922,7 +906,7 @@
       gap: 0.5rem;
       min-height: 2rem;
       overflow: visible;
-      box-shadow: 0 1px 1px color-mix(in srgb, var(--color-text-main) var(--sidebar-shadow-opacity, 4%), transparent);
+      box-shadow: var(--color-page-builder-task-card-shadow);
       animation: slideInTask 0.3s ease-out backwards;
     }
 
@@ -947,14 +931,12 @@
       border-color: var(--color-primary);
       background: var(--color-bg-secondary);
       transform: translateY(-1px);
-      box-shadow:
-        0 2px 8px color-mix(in srgb, var(--color-text-main) 5%, transparent),
-        0 1px 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+      box-shadow: var(--color-page-builder-task-card-hover-shadow);
       z-index: 5;
     }
 
     .task-card-premium.selected {
-      background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+      background: var(--color-page-builder-task-card-selected-bg);
       border-color: var(--color-primary);
       box-shadow: 0 2px 8px rgba(var(--color-primary-rgb), 0.1);
     }
@@ -964,30 +946,28 @@
       position: relative;
       width: 1.125rem;
       height: 1.125rem;
-      border: 1px solid var(--color-border-subtle);
+      border: 1px solid var(--color-page-builder-border-strong);
       border-radius: 0.25rem;
-      background: var(--color-surface-1);
+      background: var(--color-page-builder-surface);
       cursor: pointer;
       transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: inset 0 1px 1px color-mix(in srgb, var(--color-text-main) 2%, transparent);
+      box-shadow: var(--color-page-builder-custom-checkbox-inset-shadow);
     }
 
     .custom-checkbox:hover {
       border-color: var(--color-primary);
-      background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-1));
+      background: var(--color-page-builder-custom-checkbox-hover-bg);
       transform: scale(1.05);
     }
 
     .task-card-premium.selected .custom-checkbox {
-      background: var(--color-primary);
-      border-color: var(--color-primary);
-      box-shadow:
-        0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
-        inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 10%, transparent);
+      background: var(--color-page-builder-primary-bg);
+      border-color: var(--color-page-builder-primary-border);
+      box-shadow: var(--color-page-builder-custom-checkbox-selected-shadow);
     }
 
     .custom-checkbox::after {
@@ -995,7 +975,7 @@
       position: absolute;
       width: 5px;
       height: 10px;
-      border: solid var(--color-primary-fg);
+      border: solid var(--color-text-main);
       border-width: 0 2px 2px 0;
       transform: rotate(45deg) scale(0);
       transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1014,7 +994,7 @@
       border: 1.5px solid var(--color-border-subtle);
       border-radius: 1rem;
       padding: 1.5rem;
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-text-main) 4%, transparent);
+      box-shadow: var(--color-page-builder-card-section-shadow);
       max-height: calc(100vh - 3rem);
       overflow-y: auto;
     }
@@ -1024,7 +1004,7 @@
       border: 1.5px solid var(--color-border-subtle);
       border-radius: 1rem;
       padding: 1.5rem;
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-text-main) 4%, transparent);
+      box-shadow: var(--color-page-builder-card-section-shadow);
       position: sticky;
       top: 1.5rem;
       z-index: 20;
@@ -1139,44 +1119,44 @@
     }
 
     .task-tag-meta {
-      background: color-mix(in srgb, var(--color-primary) 12%, transparent);
-      border: 1px solid color-mix(in srgb, var(--color-primary) 28%, transparent);
+      background: var(--color-page-builder-task-tag-flat-primary-bg);
+      border: 1px solid var(--color-page-builder-task-tag-flat-primary-border);
       color: var(--color-text-main);
     }
 
     .task-tag-chain {
-      background: color-mix(in srgb, var(--color-success) 16%, transparent);
-      border: 1px solid color-mix(in srgb, var(--color-success) 32%, transparent);
+      background: var(--color-page-builder-task-tag-flat-success-bg);
+      border: 1px solid var(--color-page-builder-task-tag-flat-success-border);
       color: var(--color-text-main);
     }
 
     /* Chain Tag Dynamic Coloring */
     .task-tag-chain[data-chain-color="1"] {
-      background: color-mix(in srgb, var(--color-chain-1) 12%, transparent);
-      border-color: color-mix(in srgb, var(--color-chain-1) 28%, transparent);
+      background: var(--color-page-builder-task-tag-flat-chain-1-bg);
+      border-color: var(--color-page-builder-task-tag-flat-chain-1-border);
     }
 
     .task-tag-chain[data-chain-color="2"] {
-      background: color-mix(in srgb, var(--color-chain-2) 12%, transparent);
-      border-color: color-mix(in srgb, var(--color-chain-2) 28%, transparent);
+      background: var(--color-page-builder-task-tag-flat-chain-2-bg);
+      border-color: var(--color-page-builder-task-tag-flat-chain-2-border);
     }
 
     .task-tag-chain[data-chain-color="3"] {
-      background: color-mix(in srgb, var(--color-chain-3) 12%, transparent);
-      border-color: color-mix(in srgb, var(--color-chain-3) 28%, transparent);
+      background: var(--color-page-builder-task-tag-flat-chain-3-bg);
+      border-color: var(--color-page-builder-task-tag-flat-chain-3-border);
     }
 
     .task-tag-chain[data-chain-color="4"] {
-      background: color-mix(in srgb, var(--color-chain-4) 12%, transparent);
-      border-color: color-mix(in srgb, var(--color-chain-4) 28%, transparent);
+      background: var(--color-page-builder-task-tag-flat-chain-4-bg);
+      border-color: var(--color-page-builder-task-tag-flat-chain-4-border);
     }
 
     .task-tag:hover {
-      background: color-mix(in srgb, var(--color-primary) 15%, transparent);
+      background: var(--color-page-builder-task-tag-flat-hover-bg);
       border-color: var(--color-primary);
       transform: translateY(-1px);
       z-index: 10;
-      box-shadow: 0 2px 8px color-mix(in srgb, var(--color-text-main) 10%, transparent);
+      box-shadow: var(--color-page-builder-task-tag-flat-hover-shadow);
     }
 
     .task-tag-icon {
@@ -1250,12 +1230,12 @@
       background: var(--color-primary);
       color: var(--color-primary-fg);
       border: 1px solid var(--color-primary-dark);
-      box-shadow: 0 2px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+      box-shadow: var(--color-page-builder-add-button-compact-shadow);
     }
 
     .add-btn-premium:hover:not(:disabled) {
       background: var(--color-primary-dark);
-      box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
+      box-shadow: var(--color-page-builder-add-button-compact-shadow-hover);
     }
 
     .counter-glass {
@@ -1278,6 +1258,625 @@
       pointer-events: auto;
     }
 
+    /* Quality beacon and dropdown */
+    #builder-quality-beacon {
+      position: relative;
+    }
+
+    #builder-quality-status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      margin-left: 2px;
+    }
+
+    #builder-quality-status-dot.status-ready {
+      background-color: var(--color-status-success);
+    }
+
+    #builder-quality-status-dot.status-warning {
+      background-color: var(--color-status-warning);
+      box-shadow: 0 0 0 rgba(var(--color-status-warning), 0.4);
+      animation: pulse-warning 2s infinite;
+    }
+
+    #builder-quality-status-dot.status-draft {
+      background-color: var(--color-text-muted);
+    }
+
+    @keyframes pulse-warning {
+      0% {
+        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0.7);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(234, 179, 8, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(234, 179, 8, 0);
+      }
+    }
+
+    #builder-quality-dropdown {
+      position: absolute;
+      top: calc(100% + 12px);
+      right: 0;
+      width: 420px;
+      background: var(--color-surface-1);
+      border: 1px solid var(--color-border-strong);
+      border-radius: 1.25rem;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+      padding: 1.25rem;
+      z-index: 110;
+      transform: translateY(-10px) scale(0.95);
+      opacity: 0;
+      pointer-events: none;
+      visibility: hidden;
+      transition:
+        opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+        visibility 0.2s;
+    }
+
+    #builder-quality-dropdown.show {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+      visibility: visible;
+    }
+
+    @media (max-width: 640px) {
+      #builder-quality-dropdown {
+        position: fixed;
+        left: 1rem;
+        right: 1rem;
+        width: auto;
+        top: 70px;
+      }
+    }
+
+    .form-field,
+    #catalog-search,
+    #complex-search {
+      background: var(--color-page-builder-surface);
+      border-color: var(--color-page-builder-border);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .form-field:hover:not(:focus),
+    #catalog-search:hover:not(:focus),
+    #complex-search:hover:not(:focus) {
+      border-color: var(--color-page-builder-border-strong);
+    }
+
+    .form-field:focus,
+    #catalog-search:focus,
+    #complex-search:focus {
+      border-color: var(--color-page-builder-border-strong);
+    }
+
+    .form-field::placeholder,
+    #catalog-search::placeholder,
+    #complex-search::placeholder {
+      color: var(--color-text-muted);
+      opacity: 1;
+    }
+
+    #tab-tasks.text-text-muted,
+    #tab-complexes.text-text-muted {
+      color: var(--color-text-secondary) !important;
+    }
+
+    [data-theme="light-b"] #tab-tasks.text-text-muted,
+    [data-theme="light-b"] #tab-complexes.text-text-muted,
+    [data-theme="light-b"] #tab-tasks.text-text-muted:hover,
+    [data-theme="light-b"] #tab-complexes.text-text-muted:hover,
+    [data-theme="light-b"] #tab-tasks.text-text-muted:focus,
+    [data-theme="light-b"] #tab-complexes.text-text-muted:focus,
+    [data-theme="light-b"] #tab-tasks.text-text-muted:active,
+    [data-theme="light-b"] #tab-complexes.text-text-muted:active,
+    [data-theme="light-b"] #tab-tasks.text-text-muted:disabled,
+    [data-theme="light-b"] #tab-complexes.text-text-muted:disabled {
+      color: #4C4037 !important;
+    }
+
+    .card-section-premium,
+    .section-header-premium,
+    .module-card,
+    .topic-card,
+    #theory-context-actions-row,
+    #theory-inherit-sync-box,
+    #builder-quality-dropdown,
+    #complex-context-menu,
+    #task-context-menu,
+    #unsaved-changes-modal > div,
+    #draft-recovery-modal > div,
+    #history-modal > div {
+      border-color: var(--color-page-builder-border);
+    }
+
+    .module-card,
+    .topic-card,
+    .section-header-premium,
+    #theory-context-actions-row,
+    #theory-inherit-sync-box {
+      background: var(--color-page-builder-surface);
+    }
+
+    .module-card-header:hover,
+    .topic-card-header:hover {
+      background: var(--color-component-pill-info-bg);
+    }
+
+    .module-icon,
+    .cx-empty-state-icon {
+      background: var(--color-page-builder-primary-bg-strong);
+      border: 1px solid var(--color-page-builder-primary-border);
+      color: var(--color-text-main);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .module-name {
+      color: var(--color-text-main);
+    }
+
+    .module-meta {
+      color: var(--color-text-secondary);
+    }
+
+    .topic-count,
+    #catalog-selected,
+    .counter-glass,
+    .cx-mini-pill,
+    .cx-complex-badge {
+      background: var(--color-page-builder-surface-strong);
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-border);
+      box-shadow: var(--color-page-builder-inset-highlight);
+    }
+
+    .topic-count {
+      font-weight: 600;
+    }
+
+    #last-saved-meta {
+      border-left-color: var(--color-page-builder-border-strong) !important;
+    }
+
+    .cx-count-badge {
+      background: var(--color-page-builder-surface-strong);
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-border-strong);
+      box-shadow: var(--color-page-builder-inset-highlight);
+    }
+
+    #catalog-selected {
+      color: var(--color-text-main);
+      border-style: solid;
+    }
+
+    .counter-glass {
+      background: var(--color-primary) !important;
+      color: var(--color-primary-fg) !important;
+      border-color: var(--color-primary-dark) !important;
+      box-shadow: var(--color-page-builder-inset-highlight);
+    }
+
+    .task-chip label {
+      background: var(--color-component-panel-row-chip-bg) !important;
+      border-color: var(--color-page-builder-border);
+      color: var(--color-text-chip) !important;
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .task-chip label:hover {
+      border-color: var(--color-page-builder-primary-border);
+      background: var(--color-component-pill-info-bg) !important;
+    }
+
+    .task-chip input:checked + label {
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-primary-bg)) !important;
+      border-color: var(--color-page-builder-primary-border) !important;
+      color: var(--color-text-main) !important;
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .task-chip input:disabled + label {
+      background: var(--color-page-builder-surface-strong);
+      color: var(--color-text-secondary);
+      border-color: var(--color-page-builder-border);
+    }
+
+    [data-theme="neutral-b"] .task-chip label {
+      background: var(--color-surface-chip) !important;
+    }
+
+    [data-theme="neutral-b"] .task-chip label:hover {
+      background: var(--color-component-pill-info-bg) !important;
+    }
+
+    .chip-number,
+    .chip-type,
+    .task-chip .material-symbols-outlined {
+      color: inherit !important;
+    }
+
+    .task-tag {
+      color: var(--color-text-main);
+      border-color: var(--color-page-builder-border);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .task-tag-meta {
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-primary-bg));
+      border-color: var(--color-page-builder-primary-border);
+    }
+
+    .task-tag-chain {
+      background: linear-gradient(180deg, var(--color-page-builder-success-bg-strong), var(--color-page-builder-success-bg));
+      border-color: var(--color-page-builder-success-border);
+    }
+
+    .task-tag-chain[data-chain-color="1"] {
+      background: var(--color-page-builder-task-tag-chain-1-bg);
+      border-color: var(--color-page-builder-task-tag-chain-1-border);
+    }
+
+    .task-tag-chain[data-chain-color="2"] {
+      background: var(--color-page-builder-task-tag-chain-2-bg);
+      border-color: var(--color-page-builder-task-tag-chain-2-border);
+    }
+
+    .task-tag-chain[data-chain-color="3"] {
+      background: var(--color-page-builder-task-tag-chain-3-bg);
+      border-color: var(--color-page-builder-task-tag-chain-3-border);
+    }
+
+    .task-tag-chain[data-chain-color="4"] {
+      background: var(--color-page-builder-task-tag-chain-4-bg);
+      border-color: var(--color-page-builder-task-tag-chain-4-border);
+    }
+
+    .task-tag:hover {
+      border-color: var(--color-page-builder-primary-border);
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-primary-bg));
+    }
+
+    .task-tag-icon {
+      color: inherit;
+      opacity: 1;
+    }
+
+    .cx-inline-error {
+      background: var(--color-page-builder-error-bg);
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-error-border);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .cx-inline-error-close {
+      color: var(--color-text-main);
+    }
+
+    .cx-inline-error-close:hover,
+    .cx-inline-error-close:focus,
+    .cx-inline-error-close:active,
+    .cx-inline-error-close:disabled {
+      color: var(--color-text-main);
+    }
+
+    .cx-warning-orb {
+      background: linear-gradient(180deg, var(--color-page-builder-warning-bg-strong), var(--color-page-builder-warning-bg));
+      border: 1px solid var(--color-page-builder-warning-border);
+      color: var(--color-text-main);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .cx-chain-header {
+      background: linear-gradient(180deg, var(--color-page-builder-surface-strong), var(--color-page-builder-surface));
+      border-bottom: 1px solid var(--color-page-builder-border);
+    }
+
+    .cx-chain-badge {
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-primary-bg));
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-primary-border);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .cx-chain-count {
+      background: var(--color-page-builder-surface-strong);
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-border-strong);
+      box-shadow: var(--color-page-builder-inset-highlight);
+    }
+
+    .cx-chain-pill {
+      background: var(--color-page-builder-surface);
+      border: 1px solid var(--color-page-builder-border-strong);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .cx-chain-order {
+      background: var(--color-page-builder-surface-strong);
+      border: 1px solid var(--color-page-builder-border-strong);
+      color: var(--color-text-main);
+      box-shadow: var(--color-page-builder-inset-highlight);
+    }
+
+    [data-theme="light-b"] .card-section-premium {
+      background: var(--color-surface-1);
+      border-color: var(--color-page-builder-border-strong);
+      box-shadow: var(--color-page-builder-shadow-strong);
+    }
+
+    .delete-task-btn {
+      background: var(--color-page-builder-surface);
+      border-color: var(--color-page-builder-border);
+      color: var(--color-text-main) !important;
+    }
+
+    .btn-secondary,
+    #builder-quality-beacon,
+    #draft-recovery-btn,
+    #history-btn,
+    #reload-catalog,
+    #theory-sync-topics-btn,
+    #theory-open-complexes-btn,
+    #theory-open-hub-btn,
+    #theory-reload-list,
+    #theory-create-copy,
+    #ctx-complex-import,
+    #modal-cancel,
+    #draft-recovery-reload,
+    #draft-recovery-dismiss {
+      background: var(--color-page-builder-surface);
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-border);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .btn-secondary:hover,
+    #builder-quality-beacon:hover,
+    #draft-recovery-btn:hover,
+    #history-btn:hover,
+    #reload-catalog:hover,
+    #theory-sync-topics-btn:hover,
+    #theory-open-complexes-btn:hover,
+    #theory-open-hub-btn:hover,
+    #theory-reload-list:hover,
+    #theory-create-copy:hover,
+    #ctx-complex-import:hover,
+    #modal-cancel:hover,
+    #draft-recovery-reload:hover,
+    #draft-recovery-dismiss:hover {
+      background: var(--color-page-builder-surface-strong);
+      color: var(--color-text-main);
+      border-color: var(--color-page-builder-border-strong);
+    }
+
+    #builder-quality-status-icon,
+    #builder-quality-status-text,
+    #builder-quality-status-badge,
+    #builder-quality-dropdown .material-symbols-outlined {
+      color: var(--color-text-main);
+    }
+
+    .btn-danger,
+    #remove-selected,
+    #draft-recovery-content [data-action='discard-draft'],
+    #conflict-force,
+    .cx-chain-delete {
+      background: linear-gradient(180deg, var(--color-page-builder-error-bg-strong), var(--color-page-builder-error-bg)) !important;
+      color: var(--color-text-main) !important;
+      border: 1px solid var(--color-page-builder-error-border) !important;
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    .btn-danger:hover,
+    #remove-selected:hover,
+    #draft-recovery-content [data-action='discard-draft']:hover,
+    #conflict-force:hover,
+    .cx-chain-delete:hover {
+      background: linear-gradient(180deg, var(--color-page-builder-error-bg-strong), var(--color-page-builder-error-bg)) !important;
+      color: var(--color-text-main) !important;
+      border-color: var(--color-page-builder-error-border) !important;
+    }
+
+    #modal-leave,
+    #conflict-cancel {
+      background: linear-gradient(180deg, var(--color-page-builder-warning-bg-strong), var(--color-page-builder-warning-bg));
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-warning-border);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    #modal-leave:hover,
+    #conflict-cancel:hover {
+      background: linear-gradient(180deg, var(--color-page-builder-warning-bg-strong), var(--color-page-builder-warning-bg));
+      color: var(--color-text-main);
+      border-color: var(--color-page-builder-warning-border);
+    }
+
+    #conflict-reload,
+    #history-modal button[onclick*='restoreVersion'],
+    #draft-recovery-content [data-action='restore-draft'] {
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-primary-bg));
+      color: var(--color-text-main);
+      border: 1px solid var(--color-page-builder-primary-border);
+      box-shadow: var(--color-page-builder-shadow-soft);
+    }
+
+    #conflict-reload:hover,
+    #history-modal button[onclick*='restoreVersion']:hover,
+    #draft-recovery-content [data-action='restore-draft']:hover {
+      background: linear-gradient(180deg, var(--color-page-builder-primary-bg-strong), var(--color-page-builder-primary-bg));
+      color: var(--color-text-main);
+      border-color: var(--color-page-builder-primary-border);
+    }
+
+    .cx-status-pill,
+    .cx-state-box,
+    .cx-complex-badge {
+      color: var(--color-component-pill-neutral-fg);
+      border: 1px solid var(--color-component-pill-neutral-border);
+    }
+
+    .cx-status-pill--muted,
+    .cx-state-box--muted,
+    .cx-complex-badge--muted {
+      background: var(--color-component-pill-neutral-bg);
+      border-color: var(--color-component-pill-neutral-border);
+    }
+
+    .cx-status-pill--primary,
+    .cx-state-box--primary,
+    .cx-complex-badge--primary {
+      background: var(--color-component-pill-info-bg);
+      border-color: var(--color-component-pill-info-border);
+      color: var(--color-component-pill-info-fg);
+    }
+
+    .cx-status-pill--success,
+    .cx-state-box--success,
+    .cx-complex-badge--success {
+      background: var(--color-component-pill-success-bg);
+      border-color: var(--color-component-pill-success-border);
+      color: var(--color-component-pill-success-fg);
+    }
+
+    .cx-status-pill--warning,
+    .cx-state-box--warning,
+    .cx-complex-badge--warning {
+      background: var(--color-component-pill-warning-bg);
+      border-color: var(--color-component-pill-warning-border);
+      color: var(--color-component-pill-warning-fg);
+    }
+
+    .cx-status-pill--error,
+    .cx-state-box--error,
+    .cx-complex-badge--error {
+      background: var(--color-component-pill-error-bg);
+      border-color: var(--color-component-pill-error-border);
+      color: var(--color-component-pill-error-fg);
+    }
+
+    .cx-mini-pill {
+      color: var(--color-component-pill-neutral-fg);
+      border: 1px solid var(--color-component-pill-neutral-border);
+    }
+
+    .cx-metric-card {
+      background: var(--color-component-card-elevated-bg);
+      border: 1px solid var(--color-component-card-elevated-border);
+      color: var(--color-text-main);
+      box-shadow: var(--color-page-builder-inset-highlight);
+    }
+
+    .cx-mini-pill--success {
+      background: var(--color-component-pill-success-bg);
+      border-color: var(--color-component-pill-success-border);
+      color: var(--color-component-pill-success-fg);
+    }
+
+    .cx-mini-pill--warning {
+      background: var(--color-component-pill-warning-bg);
+      border-color: var(--color-component-pill-warning-border);
+      color: var(--color-component-pill-warning-fg);
+    }
+
+    .cx-mini-pill--muted {
+      background: var(--color-component-pill-neutral-bg);
+      border-color: var(--color-component-pill-neutral-border);
+    }
+
+    #selected-empty,
+    #chains-container .cx-empty-state,
+    #complexes-list .cx-empty-state {
+      background: var(--color-component-empty-state-bg);
+      border-color: var(--color-component-empty-state-border);
+    }
+
+    #add-from-catalog {
+      background: var(--color-primary) !important;
+      color: var(--color-primary-fg) !important;
+      border: 1px solid var(--color-primary) !important;
+      box-shadow: var(--color-page-builder-shadow-strong);
+    }
+
+    #add-from-catalog:hover:not(:disabled) {
+      background: var(--color-primary-dark) !important;
+      color: var(--color-primary-fg) !important;
+      border-color: var(--color-primary-dark) !important;
+    }
+
+    #add-from-catalog .material-symbols-outlined {
+      color: currentColor !important;
+    }
+
+    #add-from-catalog:disabled #add-counter,
+    .add-btn-premium:disabled .counter-glass {
+      background: var(--color-page-builder-surface-strong) !important;
+      color: var(--color-text-main) !important;
+      border-color: var(--color-page-builder-border-strong) !important;
+      box-shadow: var(--color-page-builder-inset-highlight);
+    }
+
+    .cx-elevated-meta {
+      color: var(--color-text-main);
+    }
+
+    .cx-modal-scrim,
+    #unsaved-changes-modal,
+    #draft-recovery-modal,
+    #history-modal {
+      background: var(--color-page-builder-modal-scrim);
+    }
+
+    [data-theme="dark-a"] .cx-modal-scrim,
+    [data-theme="dark-a"] #unsaved-changes-modal,
+    [data-theme="dark-a"] #draft-recovery-modal,
+    [data-theme="dark-a"] #history-modal,
+    [data-theme="dark-b"] .cx-modal-scrim,
+    [data-theme="dark-b"] #unsaved-changes-modal,
+    [data-theme="dark-b"] #draft-recovery-modal,
+    [data-theme="dark-b"] #history-modal {
+      background: var(--color-page-builder-modal-scrim-dark);
+    }
+
+    [data-theme="dark-a"] .cx-warning-orb,
+    [data-theme="dark-b"] .cx-warning-orb {
+      border-color: var(--color-warning) !important;
+    }
+
+    [data-theme="dark-a"] #modal-leave,
+    [data-theme="dark-a"] #conflict-cancel,
+    [data-theme="dark-b"] #modal-leave,
+    [data-theme="dark-b"] #conflict-cancel {
+      border-color: var(--color-warning) !important;
+    }
+
+    [data-theme="dark-a"] .cx-dark-modal-panel,
+    [data-theme="dark-b"] .cx-dark-modal-panel {
+      background: var(--color-surface-2) !important;
+      border: 1px solid var(--color-page-builder-border-strong);
+      box-shadow: var(--color-page-builder-shadow-modal);
+    }
+
+    #task-context-menu .border-t,
+    #complex-context-menu .border-t {
+      border-top-color: var(--color-page-builder-border-strong);
+    }
+
+    #ctx-unlink {
+      background: var(--color-page-builder-surface);
+      border-top: 1px solid var(--color-page-builder-border-strong);
+    }
+
+    #ctx-unlink:hover {
+      background: var(--color-page-builder-surface-strong);
+    }
+
     /* End of Premium Styles */
   </style>
 
@@ -1295,7 +1894,7 @@
 <body
   class="font-display bg-bg-main text-text-main h-screen flex flex-col overflow-hidden selection:bg-primary-light selection:text-primary antialiased">
 
-  <header class="bg-surface-1 border-b border-border-subtle px-4 h-16 shrink-0 flex items-center justify-between z-20">
+  <header class="bg-surface-1 border-b border-border-subtle px-4 h-16 shrink-0 flex items-center justify-between z-50">
     <div class="flex items-center gap-4">
       <a href="/ui/complexes"
         onclick="event.preventDefault(); if (!hasUnsavedChanges()) { window.navigateWithTransition('/ui/complexes'); } else { showUnsavedChangesModal('/ui/complexes'); }"
@@ -1308,16 +1907,48 @@
       </h1>
 
       <!-- Moved Last Saved Info -->
-      <div class="hidden md:flex items-center gap-2 ml-4 pl-4 border-l border-border-subtle">
+      <div id="last-saved-meta" class="hidden md:flex items-center gap-2 ml-4 pl-4 border-l border-border-subtle">
         <span class="text-sm text-text-secondary">Последнее сохранение:</span>
         <span id="last-saved-label" class="text-text-main font-medium">—</span>
       </div>
     </div>
 
     <div class="flex items-center gap-3">
+      <!-- Quality Beacon -->
+      <div class="relative">
+        <button id="builder-quality-beacon"
+          class="h-9 px-3 flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 transition-all hover:bg-bg-hover"
+          title="Анализ состава"
+          onclick="toggleQualityDropdown(event)">
+          <span id="builder-quality-status-icon" class="material-symbols-outlined text-[18px] text-text-muted">verified_user</span>
+          <span id="builder-quality-status-text" class="hidden sm:inline text-xs font-semibold">Готовность</span>
+          <span id="builder-quality-status-dot" class="status-draft"></span>
+        </button>
+
+        <!-- Quality Dropdown -->
+        <div id="builder-quality-dropdown" class="flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <span class="material-symbols-outlined text-text-muted text-[18px]">analytics</span>
+              <h3 class="text-sm font-bold text-text-main">Анализ комплекса</h3>
+            </div>
+            <span id="builder-quality-status-badge" class="cx-status-pill cx-status-pill--muted px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider">Черновик</span>
+          </div>
+
+          <div id="builder-quality-metrics" class="grid grid-cols-2 gap-2"></div>
+
+          <div>
+            <p class="text-[10px] font-bold text-text-muted uppercase mb-2 tracking-widest">Типы задач</p>
+            <div id="builder-quality-types" class="flex flex-wrap gap-1.5"></div>
+          </div>
+
+          <div id="builder-quality-warnings" class="flex flex-col gap-2"></div>
+        </div>
+      </div>
+
       <!-- Draft Status Badge -->
       <span
-        class="px-2.5 py-1 text-xs font-semibold rounded-full bg-bg-tertiary text-text-secondary border border-border-subtle">
+        class="cx-mini-pill cx-mini-pill--muted hidden lg:inline-flex px-2.5 py-1 text-xs font-semibold rounded-full">
         Черновик
       </span>
 
@@ -1349,7 +1980,7 @@
 
         <div id="global-alert" hidden>
 
-          <div class="rounded-xl border border-error-light bg-error-lighter text-status-error p-4">
+          <div class="cx-inline-error rounded-xl p-4">
 
             <div class="flex items-start gap-2">
 
@@ -1363,7 +1994,7 @@
 
               </div>
 
-              <button id="global-alert-close" class="text-status-error hover:text-status-error">✕</button>
+              <button id="global-alert-close" class="cx-inline-error-close">✕</button>
 
             </div>
 
@@ -1399,18 +2030,6 @@
               </div>
             </section>
 
-            <section id="complex-workspace-row"
-              class="rounded-2xl border border-border-subtle bg-surface-1 px-5 py-4 shadow-sm">
-              <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                <div class="min-w-0">
-                  <p class="text-[11px] uppercase tracking-wide font-semibold text-text-muted">Shared library</p>
-                  <p id="complex-workspace-meta" class="text-sm text-text-secondary mt-1">
-                    Новый комплекс будет сохранён в общую библиотеку устройства. Прогресс выполнения останется личным для каждого профиля.
-                  </p>
-                </div>
-                <div id="complex-workspace-badges" class="flex flex-wrap gap-1.5"></div>
-              </div>
-            </section>
 
             <section
               class="card-section-premium p-0 relative overflow-hidden before:absolute before:left-0 before:top-4 before:bottom-4 before:w-1 before:bg-info before:rounded-r">
@@ -1482,8 +2101,8 @@
                         </button>
                         <button id="theory-open-hub-btn" type="button"
                           class="btn-secondary h-10 px-3 inline-flex items-center gap-1.5">
-                          <span class="material-symbols-outlined text-[18px]">account_tree</span>
-                          Theory Hub
+                          <span class="material-symbols-outlined text-[18px]">edit_square</span>
+                          Редактор теории
                         </button>
                       </div>
                     </div>
@@ -1495,39 +2114,26 @@
                       <input id="theory-title" class="form-field form-field-input"
                         placeholder="Например: КТ грудной клетки" type="text" />
                     </div>
-
                     <div class="flex flex-wrap items-center gap-1" onmousedown="event.preventDefault()">
-                      <!-- Text formatting -->
                       <button id="theory-bold" type="button" class="theory-toolbar-btn" title="Жирный (Ctrl+B)">
                         <span class="material-symbols-outlined">format_bold</span>
                       </button>
                       <button id="theory-italic" type="button" class="theory-toolbar-btn" title="Курсив (Ctrl+I)">
                         <span class="material-symbols-outlined">format_italic</span>
                       </button>
-
                       <span class="theory-toolbar-sep"></span>
-
-                      <!-- Headings -->
                       <button id="theory-h1" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
                         title="Заголовок 1">H1</button>
                       <button id="theory-h2" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
                         title="Заголовок 2">H2</button>
-                      <button id="theory-h3" type="button" class="theory-toolbar-btn theory-toolbar-btn--text"
-                        title="Заголовок 3">H3</button>
-
                       <span class="theory-toolbar-sep"></span>
-
-                      <!-- Lists -->
                       <button id="theory-ul" type="button" class="theory-toolbar-btn" title="Маркированный список">
                         <span class="material-symbols-outlined">format_list_bulleted</span>
                       </button>
                       <button id="theory-ol" type="button" class="theory-toolbar-btn" title="Нумерованный список">
                         <span class="material-symbols-outlined">format_list_numbered</span>
                       </button>
-
                       <span class="theory-toolbar-sep"></span>
-
-                      <!-- Alignment -->
                       <button id="theory-align-left" type="button" class="theory-toolbar-btn" title="По левому краю">
                         <span class="material-symbols-outlined">format_align_left</span>
                       </button>
@@ -1540,10 +2146,7 @@
                       <button id="theory-align-justify" type="button" class="theory-toolbar-btn" title="По ширине">
                         <span class="material-symbols-outlined">format_align_justify</span>
                       </button>
-
                       <span class="theory-toolbar-sep"></span>
-
-                      <!-- Image -->
                       <button id="theory-image-btn" type="button" class="theory-toolbar-btn"
                         title="Вставить изображение">
                         <span class="material-symbols-outlined">add_photo_alternate</span>
@@ -1552,7 +2155,6 @@
                         class="hidden" />
                     </div>
                   </div>
-
                   <div id="theory-editor"
                     class="w-full min-h-[240px] rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-main focus:outline-none focus:ring-2 focus:ring-primary-light"
                     contenteditable="true"></div>
@@ -1560,11 +2162,9 @@
                     файлами
                     комплексов.</p>
                 </div>
-
               </div>
           </div>
           </section>
-
 
           <section class="card-section-premium flex flex-col">
             <!-- Premium Header with Buttons -->
@@ -1574,7 +2174,7 @@
                   Задания в комплексе
                 </h3>
                 <span
-                  class="px-2 py-0.5 bg-bg-tertiary text-text-secondary border border-border-subtle rounded-md text-sm font-semibold">
+                  class="cx-count-badge px-2 py-0.5 rounded-md text-sm font-semibold">
                   <span id="selected-count">0</span>
                 </span>
               </div>
@@ -1597,7 +2197,7 @@
               <!-- Enhanced Empty State -->
               <div id="selected-empty"
                 class="bg-bg-secondary rounded-xl border-2 border-dashed border-border-subtle p-8 flex flex-col items-center justify-center gap-3 text-center">
-                <div class="w-16 h-16 rounded-full bg-primary-lighter flex items-center justify-center">
+                <div class="cx-empty-state-icon w-16 h-16 rounded-full flex items-center justify-center">
                   <span class="material-symbols-outlined text-primary text-3xl">playlist_add</span>
                 </div>
                 <p class="text-text-main font-semibold">Комплекс пуст</p>
@@ -1607,30 +2207,12 @@
                 </p>
               </div>
 
-              <div id="selected-cards" class="hidden flex flex-col gap-2 p-1"></div>
+              <div id="selected-cards" class="hidden flex flex-col gap-2 py-1 pl-3 pr-1"></div>
               <select id="selected-list" size="10" class="hidden" multiple></select>
               <p id="tasks-error" class="text-xs text-error" hidden></p>
             </div>
           </section>
 
-          <section id="builder-quality-section" class="card-section-premium flex flex-col">
-            <div class="section-header-premium flex items-center justify-between p-4">
-              <div class="flex items-center gap-3">
-                <h3 class="text-base font-bold text-text-main">Готовность комплекса</h3>
-                <span id="builder-quality-status"
-                  class="inline-flex items-center rounded-md border border-border-subtle bg-bg-tertiary px-2 py-0.5 text-xs font-semibold text-text-secondary">
-                  Черновик
-                </span>
-              </div>
-              <span class="text-xs text-text-muted">Мягкая проверка перед сохранением</span>
-            </div>
-
-            <div class="px-4 pb-4 flex flex-col gap-3">
-              <div id="builder-quality-metrics" class="grid gap-2 sm:grid-cols-2 xl:grid-cols-4"></div>
-              <div id="builder-quality-types" class="flex flex-wrap gap-2"></div>
-              <div id="builder-quality-warnings" class="flex flex-col gap-2"></div>
-            </div>
-          </section>
 
           <!-- Chains Section (Bug 2 fix: was missing from DOM) -->
           <section id="chains-section"
@@ -1717,7 +2299,7 @@
               class="add-btn-premium w-full h-11 rounded-lg font-semibold text-sm transition-all duration-200 flex items-center justify-center gap-2 disabled:cursor-not-allowed"
               aria-label="Добавить выбранные задания (0)">
 
-              <span class="material-symbols-outlined text-xl text-text-main">add_circle</span>
+              <span class="material-symbols-outlined text-xl">add_circle</span>
 
               Добавить выбранные
 
@@ -1827,7 +2409,7 @@
       serverDraftRemoved: 'Серверный черновик удалён. Сохранённая версия комплекса не изменена.',
       serverDraftKept: 'Серверный черновик сохранён. Его можно восстановить через «Черновики».',
       inheritSyncSuccess: 'Наследуемая теория синхронизирована.',
-      inheritSyncConflict: 'Синхронизация завершена с конфликтом теорий.',
+      inheritSyncComposite: 'Собрана составная теория комплекса.',
       inheritSyncUnchanged: 'Синхронизация не требуется: контекст уже актуален.',
       inheritSyncFailed: 'Синхронизация не выполнена. Проверьте сеть и повторите действие.',
     });
@@ -1893,8 +2475,9 @@
       },
       complexTheoryContext: {
         mode: "inherit", // inherit | override
-        syncStatus: "none", // ok | none | conflict
+        syncStatus: "none", // ok | none | composite
         theoryLink: null,
+        syncMeta: {},
       },
       theorySyncInFlight: false,
     });
@@ -2032,7 +2615,12 @@
 
     function resolveComplexTheorySyncStatus(item) {
       const rawStatus = String(item?.theory_sync_status || '').trim().toLowerCase();
-      if (rawStatus === 'ok' || rawStatus === 'none' || rawStatus === 'conflict') return rawStatus;
+      if (rawStatus === 'conflict') return 'composite';
+      if (rawStatus === 'ok' || rawStatus === 'none' || rawStatus === 'composite') return rawStatus;
+      const theoryIds = Array.isArray(item?.theory_sync_meta?.theory_ids)
+        ? item.theory_sync_meta.theory_ids.map((value) => String(value || '').trim()).filter(Boolean)
+        : [];
+      if (theoryIds.length > 1) return 'composite';
       const theoryLink = (item && typeof item.theory_link === 'object') ? item.theory_link : null;
       const hasTheoryId = !!(theoryLink && typeof theoryLink.theory_id === 'string' && theoryLink.theory_id);
       return hasTheoryId ? 'ok' : 'none';
@@ -2042,105 +2630,14 @@
       const mode = resolveComplexTheoryMode(item);
       const syncStatus = resolveComplexTheorySyncStatus(item);
       const modeBadge = mode === 'inherit'
-        ? `<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-tertiary px-2 py-0.5 text-[10px] font-semibold text-text-secondary"><span class="material-symbols-outlined text-[12px]">account_tree</span>наследование</span>`
-        : `<span class="inline-flex items-center gap-1 rounded-full border border-primary-light bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-darker"><span class="material-symbols-outlined text-[12px]">tune</span>локально</span>`;
-      const conflictBadge = syncStatus === 'conflict'
-        ? `<span class="inline-flex items-center gap-1 rounded-full border border-warning-light bg-warning-lighter px-2 py-0.5 text-[10px] font-semibold text-warning-darker"><span class="material-symbols-outlined text-[12px]">warning</span>конфликт</span>`
+        ? `<span class="cx-complex-badge cx-complex-badge--muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">account_tree</span>наследование</span>`
+        : `<span class="cx-complex-badge cx-complex-badge--primary inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">tune</span>локально</span>`;
+      const compositeBadge = syncStatus === 'composite'
+        ? `<span class="cx-complex-badge cx-complex-badge--success inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold"><span class="material-symbols-outlined text-[12px]">layers</span>составная теория</span>`
         : '';
-      return `${modeBadge}${conflictBadge}`;
+      return `${modeBadge}${compositeBadge}`;
     }
 
-    function normalizeComplexOwnership(payload) {
-      const ownership = (payload && typeof payload.ownership === 'object') ? payload.ownership : {};
-      const createdByUserId = String(
-        ownership.created_by_user_id
-        || ownership.createdByUserId
-        || payload?.created_by_user_id
-        || payload?.createdByUserId
-        || ''
-      ).trim();
-      const updatedByUserId = String(
-        ownership.updated_by_user_id
-        || ownership.updatedByUserId
-        || payload?.updated_by_user_id
-        || payload?.updatedByUserId
-        || createdByUserId
-        || ''
-      ).trim();
-      const createdVia = String(
-        ownership.created_via
-        || ownership.createdVia
-        || payload?.created_via
-        || payload?.createdVia
-        || ''
-      ).trim() || 'complex_builder';
-      const contentScope = String(
-        ownership.content_scope
-        || ownership.contentScope
-        || payload?.content_scope
-        || payload?.contentScope
-        || ''
-      ).trim() || 'shared_local';
-      return {
-        createdByUserId,
-        updatedByUserId,
-        createdVia,
-        contentScope,
-        hasOwner: ownership.has_owner === true || ownership.hasOwner === true || !!createdByUserId,
-        isOwnedByCurrentUser: ownership.is_owned_by_current_user === true || ownership.isOwnedByCurrentUser === true,
-        isSharedLibrary: ownership.is_shared_library !== false && ownership.isSharedLibrary !== false,
-      };
-    }
-
-    function resolveComplexCreatedViaLabel(createdVia) {
-      switch (String(createdVia || '').trim().toLowerCase()) {
-        case 'complex_builder':
-          return 'Builder';
-        case 'manual_editor':
-          return 'Editor';
-        case 'archive_import':
-          return 'Импорт';
-        case 'topic_propagation':
-          return 'Sync тем';
-        case 'single_complex_sync':
-          return 'Sync комплекса';
-        default:
-          return 'Workspace';
-      }
-    }
-
-    function buildComplexOwnershipBadges(ownership) {
-      const normalized = normalizeComplexOwnership(ownership);
-      const chips = [];
-      if (normalized.isSharedLibrary) {
-        chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[10px] font-semibold text-text-secondary">Общая библиотека</span>');
-      }
-      if (normalized.isOwnedByCurrentUser) {
-        chips.push('<span class="inline-flex items-center gap-1 rounded-full border border-primary-light bg-primary-lighter px-2 py-0.5 text-[10px] font-semibold text-primary-darker">Создано вами</span>');
-      } else if (normalized.hasOwner) {
-        chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escapeHtml(normalized.createdByUserId)}</span>`);
-      }
-      chips.push(`<span class="inline-flex items-center gap-1 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${escapeHtml(resolveComplexCreatedViaLabel(normalized.createdVia))}</span>`);
-      return chips.join('');
-    }
-
-    function renderComplexWorkspaceOwnership() {
-      const metaEl = document.getElementById('complex-workspace-meta');
-      const badgesEl = document.getElementById('complex-workspace-badges');
-      if (!metaEl || !badgesEl) return;
-
-      const ownership = normalizeComplexOwnership(state.complexOwnership || {});
-      const ownerText = ownership.isOwnedByCurrentUser
-        ? 'создан вами'
-        : ownership.hasOwner
-          ? `создан пользователем ${ownership.createdByUserId}`
-          : 'пока без явного автора';
-
-      metaEl.textContent = state.editingId
-        ? `Этот комплекс живёт в общей библиотеке устройства, ${ownerText} через ${resolveComplexCreatedViaLabel(ownership.createdVia)}. Прогресс выполнения остаётся личным для каждого профиля.`
-        : 'Новый комплекс будет сохранён в общую библиотеку устройства. Прогресс выполнения останется личным для каждого профиля.';
-      badgesEl.innerHTML = buildComplexOwnershipBadges(ownership);
-    }
 
     function sanitizeTheoryLinkPayload(value) {
       if (!value || typeof value !== 'object') return null;
@@ -2167,10 +2664,12 @@
       const theoryLink = sanitizeTheoryLinkPayload(
         (item && typeof item.theory_link === 'object') ? item.theory_link : null
       );
+      const syncMeta = (item && typeof item.theory_sync_meta === 'object') ? item.theory_sync_meta : {};
       state.complexTheoryContext = {
         mode,
         syncStatus,
         theoryLink,
+        syncMeta,
       };
     }
 
@@ -2183,6 +2682,42 @@
       if (resolveEffectiveComplexTheoryMode() !== 'inherit') return null;
       if (state.theory.mode !== 'none') return null;
       return sanitizeTheoryLinkPayload(state.complexTheoryContext?.theoryLink || null);
+    }
+
+    function resolveCompositeTheoryLinksForBuilder() {
+      if (resolveEffectiveComplexTheoryMode() !== 'inherit') return [];
+      if (state.theory.mode !== 'none') return [];
+      if (String(state.complexTheoryContext?.syncStatus || 'none') !== 'composite') return [];
+
+      const rawLinks = Array.isArray(state.complexTheoryContext?.syncMeta?.composite_theory_links)
+        ? state.complexTheoryContext.syncMeta.composite_theory_links
+        : [];
+      const sanitizedLinks = rawLinks
+        .map((link) => sanitizeTheoryLinkPayload(link))
+        .filter(Boolean);
+      if (sanitizedLinks.length) return sanitizedLinks;
+
+      const theoryIds = Array.isArray(state.complexTheoryContext?.syncMeta?.theory_ids)
+        ? state.complexTheoryContext.syncMeta.theory_ids.map((value) => String(value || '').trim()).filter(Boolean)
+        : [];
+      return theoryIds
+        .map((theoryId) => sanitizeTheoryLinkPayload({ theory_id: theoryId, relation: 'link' }))
+        .filter(Boolean);
+    }
+
+    function buildCompositeTheorySummaryText() {
+      const theoryLinks = resolveCompositeTheoryLinksForBuilder();
+      if (!theoryLinks.length) {
+        return 'В темах найдено несколько теорий. Комплекс использует составной набор материалов.';
+      }
+
+      const previewLabels = theoryLinks
+        .slice(0, 3)
+        .map((link) => String(link?.title_cache || link?.theory_id || '').trim())
+        .filter(Boolean);
+      const extraCount = Math.max(0, theoryLinks.length - previewLabels.length);
+      const suffix = extraCount > 0 ? ` и ещё ${extraCount}` : '';
+      return `Комплекс собран из нескольких теорий: ${previewLabels.join(', ')}${suffix}. Это нормальный многотемный сценарий.`;
     }
 
     function resolveWorkspaceTheoryLink() {
@@ -2217,18 +2752,39 @@
       const label = String(theoryLink?.title_cache || '').trim() || theoryId;
       const isInherited = resolveEffectiveComplexTheoryMode() === 'inherit' && state.theory.mode === 'none';
       metaEl.textContent = isInherited
-        ? `Комплекс наследует теорию ${label}. Можно сразу открыть связанные комплексы или Theory Hub.`
-        : `Комплекс использует теорию ${label}. Можно быстро перейти к связанному theory-контексту.`;
+        ? `Комплекс наследует теорию ${label}. Можно сразу открыть связанные комплексы или полноценный редактор теории.`
+        : `Комплекс использует теорию ${label}. Можно быстро перейти к связанному редактору теории.`;
       openHubBtn.disabled = false;
       openComplexesBtn.disabled = false;
       row.classList.remove('hidden');
+    }
+
+    function buildTheoryWorkspaceUrl(theoryId) {
+      const normalizedTheoryId = String(theoryId || '').trim();
+      const url = new URL('/ui/editor/Theory_Editor.html', window.location.origin);
+      if (normalizedTheoryId) {
+        url.searchParams.set('theory_id', normalizedTheoryId);
+      }
+      url.searchParams.set('context', 'complex');
+      if (state.editingId) {
+        url.searchParams.set('complex_id', state.editingId);
+      }
+      const complexName = String(document.getElementById('name')?.value || '').trim();
+      if (complexName) {
+        url.searchParams.set('complex_name', complexName);
+      }
+      const returnUrl = state.editingId
+        ? `/ui/complexes/create?id=${encodeURIComponent(state.editingId)}`
+        : '/ui/complexes/create';
+      url.searchParams.set('return_url', returnUrl);
+      return `${url.pathname}${url.search}`;
     }
 
     function openTheoryWorkspaceContext(target) {
       const theoryId = String(resolveWorkspaceTheoryLink()?.theory_id || '').trim();
       if (!theoryId) return;
       const url = target === 'hub'
-        ? `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(theoryId)}`
+        ? buildTheoryWorkspaceUrl(theoryId)
         : `/ui/complexes?theory_id=${encodeURIComponent(theoryId)}`;
       if (typeof window.navigateWithTransition === 'function') {
         window.navigateWithTransition(url);
@@ -2265,10 +2821,10 @@
       box.className = 'rounded-xl border px-3 py-2.5 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between';
       summaryEl.className = 'text-sm';
 
-      if (syncStatus === 'conflict') {
-        box.classList.add('border-warning-light', 'bg-warning-light');
-        summaryEl.classList.add('text-warning-darker');
-        summaryEl.textContent = 'В связанных темах обнаружен конфликт теорий. Автовыбор отключён.';
+      if (syncStatus === 'composite') {
+        box.classList.add('border-info-light', 'bg-info-lighter');
+        summaryEl.classList.add('text-info-text');
+        summaryEl.textContent = buildCompositeTheorySummaryText();
       } else if (syncStatus === 'ok' && theoryId) {
         box.classList.add('border-success-light', 'bg-success-lighter');
         summaryEl.classList.add('text-success-darker');
@@ -2323,8 +2879,8 @@
         const status = String(summary.status || state.complexTheoryContext?.syncStatus || 'none');
 
         if (action === 'updated') {
-          if (status === 'conflict') {
-            notifyComplexToast(COMPLEX_VOICE.inheritSyncConflict, 'warning', 3600);
+          if (status === 'composite') {
+            notifyComplexToast(COMPLEX_VOICE.inheritSyncComposite, 'info', 3600);
           } else {
             notifyComplexToast(COMPLEX_VOICE.inheritSyncSuccess, 'success', 3000);
           }
@@ -2439,7 +2995,7 @@
 
       const inheritedSyncStatus = String(state.complexTheoryContext?.syncStatus || 'none');
 
-      const hasTheory = theoryMode === 'new' || hasTheoryLink || !!inheritedTheoryId;
+      const hasTheory = theoryMode === 'new' || hasTheoryLink || !!inheritedTheoryId || inheritedSyncStatus === 'composite';
 
       const warnings = [];
 
@@ -2458,12 +3014,6 @@
         if (!hasTheory) {
 
           warnings.push('Теория не добавлена. Новому пользователю может не хватить контекста перед стартом.');
-
-        }
-
-        if (theoryMode === 'none' && inheritedSyncStatus === 'conflict') {
-
-          warnings.push('В темах обнаружен конфликт теорий. Для наследования выберите единую теорию на уровне тем.');
 
         }
 
@@ -2488,7 +3038,9 @@
       }
 
       const theoryLabel = theoryMode === 'none'
-        ? (inheritedTheoryId ? 'Наследуется из тем' : 'Без теории')
+        ? (inheritedSyncStatus === 'composite'
+          ? 'Подборка из тем'
+          : (inheritedTheoryId ? 'Наследуется из тем' : 'Без теории'))
         : (theoryMode === 'link' && !hasTheoryLink)
           ? 'Связь не завершена'
           : theoryMode === 'new'
@@ -2517,7 +3069,7 @@
 
       const card = document.createElement('div');
 
-      card.className = 'rounded-xl border border-border-subtle bg-bg-secondary px-3 py-3';
+      card.className = 'cx-metric-card rounded-xl px-3 py-3';
 
       const valueEl = document.createElement('div');
 
@@ -2540,117 +3092,98 @@
     }
 
     function renderBuilderQualityPreview() {
-
       const metricsRoot = document.getElementById('builder-quality-metrics');
-
       const typesRoot = document.getElementById('builder-quality-types');
-
       const warningsRoot = document.getElementById('builder-quality-warnings');
+      const statusBadge = document.getElementById('builder-quality-status-badge');
+      const statusIcon = document.getElementById('builder-quality-status-icon');
+      const statusDot = document.getElementById('builder-quality-status-dot');
 
-      const statusBadge = document.getElementById('builder-quality-status');
-
-      if (!metricsRoot || !typesRoot || !warningsRoot || !statusBadge) return;
+      if (!metricsRoot || !typesRoot || !warningsRoot) return;
 
       const snapshot = getBuilderQualitySnapshot();
 
       metricsRoot.replaceChildren();
-
       metricsRoot.appendChild(createBuilderMetric('Заданий', String(snapshot.taskCount)));
-      metricsRoot.appendChild(createBuilderMetric('Типов заданий', String(snapshot.typeCounts.size || 0)));
+      metricsRoot.appendChild(createBuilderMetric('Типов', String(snapshot.typeCounts.size || 0)));
       metricsRoot.appendChild(createBuilderMetric('Теория', snapshot.theoryLabel));
       metricsRoot.appendChild(createBuilderMetric('Сцепок', String(snapshot.chainCount)));
 
-      statusBadge.className = 'inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-semibold';
+      if (statusBadge && statusDot && statusIcon) {
+        statusBadge.className = 'cx-status-pill px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider transition-colors';
+        statusDot.className = '';
 
-      if (snapshot.looksReady) {
-
-        statusBadge.classList.add('border-success-light', 'bg-success-lighter', 'text-success-darker');
-        statusBadge.textContent = 'Готово';
-
-      } else if (snapshot.warningCount > 0) {
-
-        statusBadge.classList.add('border-warning-light', 'bg-warning-light', 'text-warning-darker');
-        statusBadge.textContent = 'Есть риски';
-
-      } else {
-
-        statusBadge.classList.add('border-border-subtle', 'bg-bg-tertiary', 'text-text-secondary');
-        statusBadge.textContent = 'Черновик';
-
+        if (snapshot.looksReady) {
+          statusBadge.classList.add('cx-status-pill--success');
+          statusBadge.textContent = 'Готово';
+          statusDot.classList.add('status-ready');
+          statusIcon.textContent = 'verified_user';
+          statusIcon.className = 'material-symbols-outlined text-[18px] text-text-main';
+        } else if (snapshot.warningCount > 0) {
+          statusBadge.classList.add('cx-status-pill--warning');
+          statusBadge.textContent = 'Есть риски';
+          statusDot.classList.add('status-warning');
+          statusIcon.textContent = 'report_problem';
+          statusIcon.className = 'material-symbols-outlined text-[18px] text-text-main';
+        } else {
+          statusBadge.classList.add('cx-status-pill--muted');
+          statusBadge.textContent = 'Черновик';
+          statusDot.classList.add('status-draft');
+          statusIcon.textContent = 'edit_note';
+          statusIcon.className = 'material-symbols-outlined text-[18px] text-text-main';
+        }
       }
 
       typesRoot.replaceChildren();
-
       if (!snapshot.typeCounts.size) {
-
         const emptyType = document.createElement('span');
-
-        emptyType.className = 'inline-flex items-center rounded-full border border-border-subtle bg-bg-tertiary px-2.5 py-1 text-xs font-medium text-text-muted';
-
-        emptyType.textContent = 'Типы появятся после добавления задач';
-
+        emptyType.className = 'text-[10px] text-text-muted italic';
+        emptyType.textContent = 'Добавьте задачи для анализа';
         typesRoot.appendChild(emptyType);
-
       } else {
-
         Array.from(snapshot.typeCounts.entries())
           .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
           .forEach(([taskType, count]) => {
             const chip = document.createElement('span');
-            chip.className = 'inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-xs font-medium text-text-secondary';
-
-            const icon = document.createElement('span');
-            icon.className = 'material-symbols-outlined text-[14px] leading-none text-text-muted';
-            icon.textContent = getTaskTypeIcon(taskType);
-
-            const text = document.createElement('span');
-            text.textContent = `${translateTaskType(taskType)}: ${count}`;
-
-            chip.appendChild(icon);
-            chip.appendChild(text);
+            chip.className = 'cx-mini-pill cx-mini-pill--muted inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium';
+            chip.textContent = `${translateTaskType(taskType)}: ${count}`;
             typesRoot.appendChild(chip);
           });
-
       }
 
       warningsRoot.replaceChildren();
-
       if (!snapshot.warningCount) {
-
         const okBox = document.createElement('div');
-
-        okBox.className = 'rounded-xl border border-success-light bg-success-lighter px-3 py-2 text-sm text-success-darker';
-
-        okBox.textContent = 'Состав выглядит достаточно цельным для сохранения и первого прохождения.';
-
+        okBox.className = 'cx-state-box cx-state-box--success rounded-lg px-3 py-2 text-xs flex items-center gap-2';
+        okBox.innerHTML = '<span class="material-symbols-outlined text-[14px]">check_circle</span> Готов к сохранению';
         warningsRoot.appendChild(okBox);
-
-        return;
-
+      } else {
+        snapshot.warnings.forEach((warningText) => {
+          const item = document.createElement('div');
+          item.className = 'cx-state-box cx-state-box--warning rounded-lg px-3 py-2 text-xs flex items-start gap-2';
+          item.innerHTML = `<span class="material-symbols-outlined text-[14px] mt-0.5">warning</span> <span class="leading-tight">${warningText}</span>`;
+          warningsRoot.appendChild(item);
+        });
       }
-
-      snapshot.warnings.forEach((warningText) => {
-        const item = document.createElement('div');
-        item.className = 'rounded-xl border border-warning-light bg-warning-light px-3 py-2 text-sm text-warning-darker';
-
-        const row = document.createElement('div');
-        row.className = 'flex items-start gap-2';
-
-        const icon = document.createElement('span');
-        icon.className = 'material-symbols-outlined text-[18px] leading-none';
-        icon.textContent = 'warning';
-
-        const text = document.createElement('span');
-        text.className = 'leading-relaxed';
-        text.textContent = warningText;
-
-        row.appendChild(icon);
-        row.appendChild(text);
-        item.appendChild(row);
-        warningsRoot.appendChild(item);
-      });
-
     }
+
+    function toggleQualityDropdown(event) {
+      if (event) event.stopPropagation();
+      const dropdown = document.getElementById('builder-quality-dropdown');
+      if (dropdown) {
+        dropdown.classList.toggle('show');
+      }
+    }
+
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('builder-quality-dropdown');
+      const beacon = document.getElementById('builder-quality-beacon');
+      if (dropdown && dropdown.classList.contains('show')) {
+        if (!dropdown.contains(e.target) && !beacon.contains(e.target)) {
+          dropdown.classList.remove('show');
+        }
+      }
+    });
 
     function chainIndexForTaskRef(ref) {
 
@@ -4721,11 +5254,11 @@
 
       const modal = document.createElement('div');
 
-      modal.className = 'fixed inset-0 bg-scrim flex items-center justify-center z-[9999]';
+      modal.className = 'cx-modal-scrim fixed inset-0 bg-scrim flex items-center justify-center z-[9999]';
 
       modal.innerHTML = `
 
-        <div class="bg-surface-1 dark:bg-surface-1 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
+        <div class="cx-dark-modal-panel bg-surface-1 dark:bg-surface-1 rounded-lg shadow-xl max-w-md w-full mx-4 p-6">
 
           <h2 class="text-xl font-bold text-text-main mb-4">
 
@@ -5098,8 +5631,12 @@
 
       if (!indicator) return;
 
+      const isError = type === 'error';
       indicator.textContent = message;
-      indicator.style.color = type === 'error' ? 'var(--color-error)' : 'var(--color-text-secondary)';
+      indicator.style.background = isError ? 'var(--color-page-builder-error-bg)' : 'var(--color-page-builder-success-bg)';
+      indicator.style.border = `1px solid ${isError ? 'var(--color-page-builder-error-border)' : 'var(--color-page-builder-success-border)'}`;
+      indicator.style.color = 'var(--color-text-main)';
+      indicator.style.boxShadow = 'var(--color-page-builder-shadow-strong)';
       indicator.style.opacity = '1';
 
       setTimeout(() => {
@@ -5232,9 +5769,11 @@
 
       if (!entries.length) {
         const empty = document.createElement('div');
-        empty.className = 'rounded-xl border border-border-subtle bg-surface-2 p-6 text-center';
+        empty.className = 'cx-empty-state rounded-xl border p-6 text-center';
         empty.innerHTML = `
-          <span class="material-symbols-outlined text-3xl text-text-disabled">history_toggle_off</span>
+          <div class="cx-empty-state-icon inline-flex items-center justify-center w-12 h-12 rounded-full mx-auto mb-3">
+            <span class="material-symbols-outlined text-3xl text-text-main">history_toggle_off</span>
+          </div>
           <p class="text-sm font-semibold text-text-secondary mt-2">Черновики не найдены</p>
           <p class="text-xs text-text-muted mt-1">Когда автосохранение создаст черновик, он появится здесь.</p>
         `;
@@ -5250,8 +5789,8 @@
         const title = entry.complexId === 'new' ? 'Новый комплекс (черновик)' : `Комплекс: ${entry.complexId}`;
         const sourceLabel = isServer ? 'Серверный черновик' : 'Локальный черновик';
         const sourceBadgeClass = isServer
-          ? 'bg-primary-lighter text-primary-dark border border-primary-light'
-          : 'bg-bg-tertiary text-text-secondary border border-border-subtle';
+          ? 'cx-complex-badge cx-complex-badge--primary'
+          : 'cx-complex-badge cx-complex-badge--muted';
         const actionHint = entry.canRestoreInline
           ? 'Восстановится в текущей форме.'
           : 'Откроется соответствующая форма комплекса.';
@@ -5265,8 +5804,8 @@
                 ${escapeHtml(sourceLabel)}
               </span>
             </div>
-            <p class="text-xs text-text-secondary mt-1">Время: ${escapeHtml(formatRecoveryTimestamp(entry.savedAt || entry.timestamp))}</p>
-            <p class="text-[11px] text-text-muted mt-1">${escapeHtml(actionHint)}</p>
+            <p class="text-xs cx-elevated-meta mt-1">Время: ${escapeHtml(formatRecoveryTimestamp(entry.savedAt || entry.timestamp))}</p>
+            <p class="text-[11px] cx-elevated-meta mt-1">${escapeHtml(actionHint)}</p>
           </div>
           <div class="flex items-center gap-2 shrink-0">
             <button type="button" data-action="restore-draft"
@@ -5437,7 +5976,6 @@
       renderTheoryDeltaToEditor(state.theory.delta);
       await loadTheoryCatalog();
       updateTheoryCopyButtonState();
-      renderComplexWorkspaceOwnership();
       renderTheoryInheritSyncPanel();
       renderTheoryContextActions();
       renderBuilderQualityPreview();
@@ -5781,10 +6319,8 @@
     async function applyDataToEditor(complex) {
 
       state.editingId = complex.id;
-      state.complexOwnership = normalizeComplexOwnership(complex);
       updateComplexTheoryContextFromItem(complex);
       state.theorySyncInFlight = false;
-      renderComplexWorkspaceOwnership();
 
       document.getElementById('history-btn')?.classList.remove('hidden');
 
@@ -5961,7 +6497,7 @@
 
         const modal = document.createElement('div');
 
-        modal.className = 'fixed inset-0 bg-scrim flex items-center justify-center z-50';
+        modal.className = 'cx-modal-scrim fixed inset-0 bg-scrim flex items-center justify-center z-50';
 
         modal.id = 'history-modal';
 
@@ -5969,7 +6505,7 @@
 
         modal.innerHTML = `
 
-          <div class="bg-surface-1 rounded-xl shadow-xl max-w-2xl w-full mx-4 flex flex-col max-h-[80vh]">
+          <div class="cx-dark-modal-panel bg-surface-1 rounded-xl shadow-xl max-w-2xl w-full mx-4 flex flex-col max-h-[80vh]">
 
             <div class="p-6 border-b border-border-subtle flex items-center justify-between">
 
@@ -6029,7 +6565,7 @@
 
                       <div class="text-sm text-text-secondary font-medium">${safeName}</div>
 
-                      <div class="text-xs text-text-muted flex gap-3">
+                      <div class="text-xs text-text-secondary flex gap-3">
 
                         <span>Заданий: ${taskCount}</span>
 
@@ -6259,22 +6795,26 @@
     function switchTab(tab) {
       if (tab === 'tasks') {
         // Active tab: tasks
-        tabTasks.classList.add('text-primary', 'border-primary', 'font-semibold');
-        tabTasks.classList.remove('text-text-muted', 'border-transparent', 'font-medium');
+        tabTasks.classList.add('active-tab', 'text-text-main', 'border-primary', 'font-semibold');
+        tabTasks.setAttribute('data-active', 'true');
+        tabTasks.classList.remove('text-primary', 'text-text-muted', 'border-transparent', 'font-medium');
 
         // Inactive tab: complexes
-        tabComplexes.classList.remove('text-primary', 'border-primary', 'font-semibold');
+        tabComplexes.classList.remove('active-tab', 'text-primary', 'text-text-main', 'border-primary', 'font-semibold');
+        tabComplexes.removeAttribute('data-active');
         tabComplexes.classList.add('text-text-muted', 'border-transparent', 'font-medium');
 
         tabContentTasks.classList.remove('hidden');
         tabContentComplexes.classList.add('hidden');
       } else {
         // Active tab: complexes
-        tabComplexes.classList.add('text-primary', 'border-primary', 'font-semibold');
-        tabComplexes.classList.remove('text-text-muted', 'border-transparent', 'font-medium');
+        tabComplexes.classList.add('active-tab', 'text-text-main', 'border-primary', 'font-semibold');
+        tabComplexes.setAttribute('data-active', 'true');
+        tabComplexes.classList.remove('text-primary', 'text-text-muted', 'border-transparent', 'font-medium');
 
         // Inactive tab: tasks
-        tabTasks.classList.remove('text-primary', 'border-primary', 'font-semibold');
+        tabTasks.classList.remove('active-tab', 'text-primary', 'text-text-main', 'border-primary', 'font-semibold');
+        tabTasks.removeAttribute('data-active');
         tabTasks.classList.add('text-text-muted', 'border-transparent', 'font-medium');
 
         tabContentComplexes.classList.remove('hidden');
@@ -6302,8 +6842,8 @@
           complexesData = data.items.sort((a, b) => (b.updated_at || 0) - (a.updated_at || 0));
           if (complexesData.length === 0) {
             complexesList.innerHTML = `
-              <div class="p-8 text-center">
-                <div class="w-16 h-16 mx-auto rounded-full bg-primary-lighter flex items-center justify-center mb-3">
+              <div class="cx-empty-state p-8 text-center rounded-xl border border-dashed">
+                <div class="cx-empty-state-icon w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-3">
                   <span class="material-symbols-outlined text-primary text-3xl">folder_off</span>
                 </div>
                 <p class="text-text-main font-semibold mb-1">Нет сохранённых комплексов</p>
@@ -6361,10 +6901,10 @@
                      ${isActive ? '<div class="flex items-center gap-1 text-primary"><span class="text-[10px] uppercase font-bold tracking-wider">Редактируется</span><span class="material-symbols-outlined text-[16px]">edit</span></div>' : ''}
                    </div>
                    <div class="flex items-center flex-wrap gap-1 mb-1">${theoryContextBadges}</div>
-                   <div class="flex items-center justify-between text-xs text-text-muted mt-2">
-                     <span>${count} заданий</span>
-                     <span>${safeDate}</span>
-                   </div>
+                    <div class="flex items-center justify-between text-xs cx-elevated-meta mt-2">
+                      <span>${count} заданий</span>
+                      <span>${safeDate}</span>
+                    </div>
                  </div>
 
                  <button onclick="openComplexContextMenu(event, '${safeItemIdLiteral}')" class="p-1 rounded hover:bg-bg-tertiary text-text-muted hover:text-text-main transition-colors shrink-0">
@@ -6463,12 +7003,14 @@
 
     // Custom modal for link navigation
     let pendingNavigation = null;
-    const modal = document.getElementById('unsaved-changes-modal');
-    const modalCancel = document.getElementById('modal-cancel');
-    const modalLeave = document.getElementById('modal-leave');
+
+    function getUnsavedChangesModal() {
+      return document.getElementById('unsaved-changes-modal');
+    }
 
     function showUnsavedChangesModal(targetUrl) {
       pendingNavigation = targetUrl;
+      const modal = getUnsavedChangesModal();
       if (modal) {
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -6476,6 +7018,7 @@
     }
 
     function hideUnsavedChangesModal() {
+      const modal = getUnsavedChangesModal();
       if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
@@ -6483,29 +7026,28 @@
       pendingNavigation = null;
     }
 
-    // Modal button handlers
-    if (modalCancel) {
-      modalCancel.addEventListener('click', hideUnsavedChangesModal);
-    }
+    document.addEventListener('click', (e) => {
+      const cancelBtn = e.target.closest('#modal-cancel');
+      if (cancelBtn) {
+        hideUnsavedChangesModal();
+        return;
+      }
 
-    if (modalLeave) {
-      modalLeave.addEventListener('click', () => {
+      const leaveBtn = e.target.closest('#modal-leave');
+      if (leaveBtn) {
         if (pendingNavigation) {
           state.suppressUnloadWarning = true;
           window.removeEventListener('beforeunload', beforeUnloadHandler);
           window.navigateWithTransition(pendingNavigation);
         }
-      });
-    }
+        return;
+      }
 
-    // Close modal on backdrop click
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-          hideUnsavedChangesModal();
-        }
-      });
-    }
+      const modal = getUnsavedChangesModal();
+      if (modal && e.target === modal) {
+        hideUnsavedChangesModal();
+      }
+    });
 
     // Intercept all link clicks
     document.addEventListener('click', (e) => {
@@ -6526,12 +7068,12 @@
 
   <!-- Custom Unsaved Changes Modal -->
   <div id="unsaved-changes-modal"
-    class="fixed inset-0 z-[300] hidden items-center justify-center bg-scrim backdrop-blur-sm">
+    class="cx-modal-scrim fixed inset-0 z-[300] hidden items-center justify-center bg-scrim backdrop-blur-sm">
     <div class="bg-surface-1 rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-border-subtle">
       <!-- Header -->
       <div class="bg-gradient-to-r from-warning-light to-warning-lighter px-6 py-4 border-b border-border-subtle">
         <div class="flex items-center gap-3">
-          <div class="w-12 h-12 rounded-full bg-warning-light flex items-center justify-center">
+          <div class="cx-warning-orb w-12 h-12 rounded-full flex items-center justify-center">
             <span class="material-symbols-outlined text-warning text-2xl">warning</span>
           </div>
           <div>
@@ -6563,7 +7105,7 @@
   </div>
 
   <div id="draft-recovery-modal"
-    class="fixed inset-0 z-[320] hidden items-center justify-center bg-scrim backdrop-blur-sm p-4">
+    class="cx-modal-scrim fixed inset-0 z-[320] hidden items-center justify-center bg-scrim backdrop-blur-sm p-4">
     <div
       class="bg-surface-1 rounded-2xl shadow-2xl max-w-3xl w-full max-h-[86vh] overflow-hidden border border-border-subtle flex flex-col">
       <div class="px-6 py-4 border-b border-border-subtle flex items-center justify-between">
@@ -6603,11 +7145,15 @@
 
     padding: 10px 20px;
 
-    background: var(--color-success);
+    background: var(--color-page-builder-success-bg);
 
-    color: var(--color-text-on-dark);
+    color: var(--color-text-main);
+
+    border: 1px solid var(--color-page-builder-success-border);
 
     border-radius: 8px;
+
+    box-shadow: var(--color-page-builder-shadow-strong);
 
     opacity: 0;
 
@@ -6644,9 +7190,9 @@
       // If no chains: Show helper tip (Dynamic Empty State)
       if (!state.chains.length) {
         const emptyState = document.createElement('div');
-        emptyState.className = 'px-4 py-8 text-center bg-bg-hover rounded-xl border-2 border-dashed border-border-subtle';
+        emptyState.className = 'cx-empty-state px-4 py-8 text-center rounded-xl border-2 border-dashed';
         emptyState.innerHTML = `
-           <div class="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary-lighter text-primary mb-3">
+           <div class="cx-empty-state-icon inline-flex items-center justify-center w-12 h-12 rounded-full text-primary mb-3">
              <span class="material-symbols-outlined text-[24px]">lightbulb</span>
            </div>
            <p class="text-sm font-bold text-text-main mb-1">Создание сцепок</p>
@@ -6686,18 +7232,18 @@
         // Header - NO BORDER BOTTOM to avoid "white line" look
         // The gradient changes slightly to imply separation
         const header = document.createElement('div');
-        header.className = 'flex items-center justify-between px-5 py-3.5 bg-gradient-to-r from-bg-main to-bg-secondary';
+        header.className = 'cx-chain-header flex items-center justify-between px-5 py-3.5';
 
         const headerLeft = document.createElement('div');
         headerLeft.className = 'flex items-center gap-3';
 
         // Badge
         const badge = document.createElement('span');
-        badge.className = 'h-6 px-2.5 rounded-lg bg-primary text-primary-fg text-xs font-bold uppercase tracking-wider flex items-center shadow-sm';
+        badge.className = 'cx-chain-badge h-6 px-2.5 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center';
         badge.textContent = `Сцепка ${idx + 1}`;
 
         const count = document.createElement('span');
-        count.className = 'text-xs font-medium text-text-muted bg-bg-tertiary px-2 py-0.5 rounded-md border border-border-subtle';
+        count.className = 'cx-chain-count text-xs font-medium px-2 py-0.5 rounded-md';
         count.textContent = `Заданий: ${ch.length}`;
 
         headerLeft.appendChild(badge);
@@ -6717,11 +7263,11 @@
           // Task Pill - "Card within Card"
           const pill = document.createElement('div');
           // Keep the pills interactive as per original design, they are children
-          pill.className = 'group/task flex items-center gap-3 p-2 bg-bg-secondary border border-border-subtle rounded-xl shadow-sm max-w-[240px] hover:border-primary hover:shadow-md transition-all cursor-default relative';
+          pill.className = 'cx-chain-pill group/task flex items-center gap-3 p-2 rounded-xl max-w-[240px] hover:border-primary hover:shadow-md transition-all cursor-default relative';
 
           // Number bubble
           const num = document.createElement('span');
-          num.className = 'w-5 h-5 rounded-full bg-bg-tertiary border border-border-subtle text-[11px] font-bold text-text-secondary flex items-center justify-center shadow-inner';
+          num.className = 'cx-chain-order w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center';
           num.textContent = i + 1;
 
           // Label
@@ -6749,7 +7295,7 @@
         // Right Side Action: Vertical Delete Strip
         const deleteAction = document.createElement('button');
         // w-12 width, subtle red bg, hover full red, no border
-        deleteAction.className = 'w-12 bg-error-lighter hover:bg-status-error text-status-error hover:text-text-contrast flex items-center justify-center transition-all cursor-pointer';
+        deleteAction.className = 'cx-chain-delete w-12 flex items-center justify-center transition-all cursor-pointer';
         deleteAction.title = 'Удалить сцепку';
         deleteAction.innerHTML = `
           <span class="material-symbols-outlined text-[24px]">delete_outline</span>

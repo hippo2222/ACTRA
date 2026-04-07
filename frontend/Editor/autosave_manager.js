@@ -47,10 +47,16 @@ class AutoSaveManager {
             return;
         }
         try {
+            const taskMeta = this.editor.task?.metadata || {};
+            const taskDataMeta = this.editor.task?.task_data?.meta || {};
             const draft = {
                 taskId: this.editor.taskId,
                 moduleId: this.editor.moduleId,
                 topicId: this.editor.topicId,
+                taskName: taskMeta.name || this.editor.taskId || '',
+                moduleName: taskDataMeta.module_name || taskMeta.module_name || '',
+                topicName: taskDataMeta.topic_name || taskMeta.topic_name || '',
+                taskType: this.editor.task?.task_data?.type || this.editor.taskTypeParam || '',
                 timestamp: Date.now(),
                 data: this.editor.captureState()
             };
@@ -71,10 +77,16 @@ class AutoSaveManager {
                 this.clearOldDrafts();
                 // Try one more time after cleanup
                 try {
+                    const taskMeta = this.editor.task?.metadata || {};
+                    const taskDataMeta = this.editor.task?.task_data?.meta || {};
                     const draft = {
                         taskId: this.editor.taskId,
                         moduleId: this.editor.moduleId,
                         topicId: this.editor.topicId,
+                        taskName: taskMeta.name || this.editor.taskId || '',
+                        moduleName: taskDataMeta.module_name || taskMeta.module_name || '',
+                        topicName: taskDataMeta.topic_name || taskMeta.topic_name || '',
+                        taskType: this.editor.task?.task_data?.type || this.editor.taskTypeParam || '',
                         timestamp: Date.now(),
                         data: this.editor.captureState()
                     };
@@ -97,12 +109,8 @@ class AutoSaveManager {
      */
     loadDraft() {
         try {
-            const key = this.getDraftKey();
-            const draftJson = localStorage.getItem(key);
-
-            if (draftJson) {
-                return JSON.parse(draftJson);
-            }
+            const draft = this.findLatestDraft();
+            if (draft) return draft;
         } catch (error) {
             console.error('Failed to load draft:', error);
         }
@@ -114,8 +122,9 @@ class AutoSaveManager {
      */
     clearDraft() {
         try {
-            const key = this.getDraftKey();
-            localStorage.removeItem(key);
+            this.getDraftKeys().forEach((key) => {
+                localStorage.removeItem(key);
+            });
             this.lastSaveTime = null;
             this.updateAutosaveIndicator();
             console.log('Draft cleared');
@@ -131,7 +140,32 @@ class AutoSaveManager {
      */
     hasFresherDraft(lastSavedTimestamp) {
         const draft = this.loadDraft();
-        return draft && draft.timestamp > lastSavedTimestamp;
+        if (!draft || !draft.timestamp) return false;
+
+        const draftTs = this.normalizeTimestamp(draft.timestamp);
+        const savedTs = this.normalizeTimestamp(lastSavedTimestamp);
+
+        return draftTs > savedTs;
+    }
+
+    normalizeTimestamp(value) {
+        if (typeof value === 'number' && Number.isFinite(value)) {
+            return value;
+        }
+
+        if (typeof value === 'string' && value.trim()) {
+            const asNumber = Number(value);
+            if (Number.isFinite(asNumber)) {
+                return asNumber;
+            }
+
+            const parsed = Date.parse(value);
+            if (!Number.isNaN(parsed)) {
+                return parsed;
+            }
+        }
+
+        return 0;
     }
 
     /**
@@ -166,6 +200,20 @@ class AutoSaveManager {
      */
     updateAutosaveIndicator() {
         if (this.lastSaveTime) {
+            const blockingState = typeof this.editor?.getBlockingEditorState === 'function'
+                ? this.editor.getBlockingEditorState()
+                : null;
+            if (blockingState) {
+                this.editor.updateSaveStatus({
+                    type: 'blocking',
+                    message: blockingState.message || '! Требуется правка',
+                    detail: blockingState.draftDetail || blockingState.detail || '',
+                });
+                if (typeof this.editor?.notifyBlockingDraftSaved === 'function') {
+                    this.editor.notifyBlockingDraftSaved(blockingState);
+                }
+                return;
+            }
             const time = new Date(this.lastSaveTime).toLocaleTimeString();
             this.editor.updateSaveStatus({
                 type: 'draft',
@@ -186,5 +234,47 @@ class AutoSaveManager {
 
     getDraftKey() {
         return `${this.storageKey}_${this.editor.moduleId}_${this.editor.topicId}_${this.editor.taskId}`;
+    }
+
+    getDraftTaskIds() {
+        if (typeof this.editor?.getDraftTaskIds === 'function') {
+            const ids = this.editor.getDraftTaskIds();
+            if (Array.isArray(ids) && ids.length) {
+                return [...new Set(ids.map((id) => String(id || '').trim()).filter(Boolean))];
+            }
+        }
+
+        return [String(this.editor?.taskId || '').trim()].filter(Boolean);
+    }
+
+    getDraftKeys() {
+        const moduleId = String(this.editor?.moduleId || '').trim();
+        const topicId = String(this.editor?.topicId || '').trim();
+        if (!moduleId || !topicId) return [];
+
+        return this.getDraftTaskIds().map(
+            (taskId) => `${this.storageKey}_${moduleId}_${topicId}_${taskId}`
+        );
+    }
+
+    findLatestDraft() {
+        const candidates = [];
+
+        this.getDraftKeys().forEach((key) => {
+            const draftJson = localStorage.getItem(key);
+            if (!draftJson) return;
+
+            try {
+                const parsed = JSON.parse(draftJson);
+                if (parsed) {
+                    candidates.push(parsed);
+                }
+            } catch (error) {
+                console.warn('Failed to parse draft candidate:', error);
+            }
+        });
+
+        candidates.sort((left, right) => this.normalizeTimestamp(right?.timestamp) - this.normalizeTimestamp(left?.timestamp));
+        return candidates[0] || null;
     }
 }

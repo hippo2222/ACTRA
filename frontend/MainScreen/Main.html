@@ -7,6 +7,49 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>ACTRA — Главная</title>
     <style>
+        :root {
+            --main-header-height: 64px;
+            --main-update-height: 0px;
+            --connection-banner-height: 0px;
+            --main-gap: clamp(0.45rem, 0.9vh, 0.75rem);
+            --main-card-radius: 18px;
+            --main-card-radius-sm: 12px;
+            --main-card-padding: clamp(0.55rem, 1.1vh, 0.9rem);
+            --main-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
+            --main-shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.06);
+            --main-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+            --main-shadow-hover: 0 16px 30px rgba(0, 0, 0, 0.14);
+        }
+
+        html, body {
+            height: 100%;
+        }
+
+        body {
+            overflow: hidden;
+        }
+
+        body.main-update-visible {
+            --main-update-height: 40px;
+        }
+
+        body.main-update-visible .main-stats-row {
+            padding: 0.3rem 0.5rem;
+        }
+
+        #app-content {
+            height: calc(100vh - var(--connection-banner-height, 0px));
+            min-height: calc(100vh - var(--connection-banner-height, 0px));
+        }
+
+        .main-topbar {
+            height: var(--main-header-height);
+            min-height: var(--main-header-height);
+        }
+
+        #appUpdateNotice {
+            height: var(--main-update-height);
+        }
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -36,26 +79,43 @@
         }
 
         .interactive-card {
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            transition: transform 0.18s var(--main-ease),
+                box-shadow 0.18s var(--main-ease),
+                border-color 0.18s var(--main-ease),
+                background 0.18s var(--main-ease);
+            box-shadow: var(--main-shadow-soft) !important;
         }
 
         .interactive-card:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--main-shadow-hover) !important;
+            border-color: var(--color-primary-light);
         }
 
         .interactive-card:active {
             transform: translateY(0) scale(0.99);
+            box-shadow: var(--main-shadow) !important;
         }
 
         /* Page content entrance */
         .main-page-enter {
-            animation: a-slide-up 0.45s ease-out both;
+            animation: main-rise 0.45s var(--main-ease) both;
         }
 
         /* Stagger for sidebar cards */
         .main-side-enter {
-            animation: a-slide-up 0.4s ease-out both;
+            animation: main-rise 0.4s var(--main-ease) both;
+        }
+
+        @keyframes main-rise {
+            from {
+                opacity: 0;
+                transform: translateY(8px) scale(0.98);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
         }
 
         .main-side-enter:nth-child(1) {
@@ -75,23 +135,47 @@
             transition: filter 0.3s ease;
         }
 
+        .main-widget-card,
+        .main-hero-card,
+        #quick-access-list {
+            border-radius: var(--main-card-radius);
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-1);
+            box-shadow: var(--main-shadow-soft) !important;
+        }
+
+        .main-widget-card,
+        .main-primary-card,
+        .main-side-card {
+            padding: var(--main-card-padding);
+        }
+
         .main-dashboard-content {
-            padding: 0.75rem;
+            padding: var(--main-gap) clamp(0.75rem, 1.6vw, 1.5rem);
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: hidden;
+            box-sizing: border-box;
         }
 
         .main-dashboard-shell {
             width: 100%;
-            max-width: 1380px;
+            max-width: 1280px;
+            height: auto;
+            min-height: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            gap: var(--main-gap);
         }
 
         .main-dashboard-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1fr);
-            gap: 0.75rem;
-            align-items: start;
+            grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+            gap: var(--main-gap);
+            align-items: stretch;
+            align-content: start;
+            height: auto;
+            min-height: 0;
         }
 
         .main-primary-column,
@@ -103,35 +187,848 @@
         }
 
         .main-primary-column {
-            gap: 0.75rem;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: auto auto auto;
+            align-content: start;
+            gap: var(--main-gap);
+            min-width: 0;
+            min-height: 0;
         }
 
         .main-secondary-column {
-            gap: 0.625rem;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            grid-template-rows: auto minmax(0, 1fr);
+            gap: var(--main-gap);
+            min-width: 0;
+            min-height: 0;
+            align-items: start;
         }
 
-        .main-side-card {
-            min-height: 11rem;
+        #calendarCard {
+            height: auto;
         }
 
+        .main-secondary-column .main-side-card {
+            height: auto;
+            align-self: start;
+        }
+
+        .main-side-card,
+        .main-primary-card,
         .main-hero-card {
-            min-height: 11.5rem;
+            min-height: 0;
+            height: 100%;
         }
 
         .main-hero-media {
-            min-height: 9rem;
+            min-height: 0;
+            height: 100%;
+        }
+
+        /* Quick access single-row carousel */
+        .main-quick-access-carousel {
+            display: flex;
+            align-items: stretch;
+            gap: 0.35rem;
+            padding: 0.3rem 0.3rem;
+            overflow-x: auto;
+            scroll-behavior: smooth;
+        }
+
+        .main-quick-access-carousel::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .main-quick-access-carousel::-webkit-scrollbar-thumb {
+            background: var(--color-border-subtle);
+            border-radius: 999px;
+        }
+
+        .main-quick-access-chip {
+            position: relative;
+            flex: 0 0 auto;
+            width: 120px;
+            padding: 0.4rem 0.45rem;
+            border-radius: 0.75rem;
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-1);
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            cursor: pointer;
+            transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+        }
+
+        .main-quick-access-chip:hover {
+            border-color: var(--color-primary-light);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        }
+
+        .main-quick-access-chip-icon {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .main-quick-access-chip-name {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--color-text-main);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .main-quick-access-chip-meta {
+            font-size: 0.65rem;
+            color: var(--color-main-quick-access-chip-meta);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.3;
+        }
+
+        .qa-chip-remove {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--color-surface-2);
+            color: var(--color-text-secondary);
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .qa-chip-remove:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-status-error, var(--color-text-main));
+        }
+
+        /* Quick access layout */
+        #quick-access-section {
+            min-width: 0;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+        }
+
+        .main-quick-access-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 0.7rem;
+        }
+
+        .main-quick-access-heading {
+            min-width: 0;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.75rem;
+        }
+
+        .main-quick-access-heading-icon {
+            width: 2.6rem;
+            height: 2.6rem;
+            border-radius: 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            background: var(--color-main-quick-access-heading-icon-bg);
+            color: var(--color-main-quick-access-heading-icon-fg);
+            border: 1px solid var(--color-main-quick-access-heading-icon-border);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                0 4px 10px rgba(15, 23, 42, 0.08);
+        }
+
+        .main-quick-access-kicker {
+            font-size: 0.64rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--color-main-quick-access-kicker);
+        }
+
+        .main-quick-access-subtitle {
+            margin-top: 0.18rem;
+            max-width: 32rem;
+            font-size: 0.78rem;
+            line-height: 1.45;
+            color: var(--color-text-secondary);
+        }
+
+        .main-quick-access-toolbar {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+        }
+
+        .main-quick-access-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 2rem;
+            height: 2rem;
+            padding: 0 0.65rem;
+            border-radius: 999px;
+            background: var(--color-main-quick-access-count-bg);
+            border: 1px solid var(--color-main-quick-access-count-border);
+            color: var(--color-text-main);
+            font-size: 0.74rem;
+            font-weight: 800;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        #quick-access-show-all {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.38rem;
+            height: 2.15rem;
+            padding: 0 0.85rem;
+            border-radius: 999px;
+            border: 1px solid var(--color-main-quick-access-show-all-border);
+            background: var(--color-main-quick-access-show-all-bg);
+            color: var(--color-text-main);
+            font-size: 0.82rem;
+            font-weight: 700;
+            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        #quick-access-show-all:hover {
+            transform: translateY(-1px);
+            border-color: var(--color-main-quick-access-show-all-border-hover);
+            background: var(--color-main-quick-access-show-all-bg-hover);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        #quick-access-list {
+            flex: 0 0 auto;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            min-height: 0;
+            overflow: hidden;
+            border-radius: 1.15rem;
+            border: 1px solid var(--color-main-quick-access-list-border);
+            background:
+                radial-gradient(circle at top right, var(--color-main-quick-access-list-glow) 0%, transparent 42%),
+                linear-gradient(180deg, var(--color-main-quick-access-list-bg-start) 0%, var(--color-surface-1) 100%);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                0 14px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        .main-quick-access-grid {
+            display: grid;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
+            gap: 0.72rem;
+            padding: 0.75rem;
+            min-height: 0;
+            align-content: start;
+        }
+
+        .main-quick-access-card {
+            position: relative;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.95rem;
+            padding: 0.95rem 1rem 0.9rem;
+            border-radius: 1rem;
+            border: 1px solid rgba(148, 163, 184, 0.42);
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
+            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+            cursor: pointer;
+            overflow: hidden;
+            isolation: isolate;
+        }
+
+        .main-quick-access-card::before {
+            display: none;
+        }
+
+        .main-quick-access-card:hover {
+            transform: translateY(-2px);
+            border-color: rgba(99, 102, 241, 0.34);
+            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+        }
+
+        .main-quick-access-card:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
+
+        .main-quick-access-card[data-tone="paused"] {
+            border-color: rgba(148, 163, 184, 0.42);
+        }
+
+        .main-quick-access-card[data-tone="critical"] {
+            border-color: rgba(148, 163, 184, 0.42);
+        }
+
+        .main-quick-access-card[data-tone="mastered"] {
+            border-color: rgba(148, 163, 184, 0.42);
+        }
+
+        .main-quick-access-accent {
+            display: none;
+        }
+
+        .main-quick-access-card-head {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            min-width: 0;
+        }
+
+        .main-quick-access-media {
+            position: relative;
+            width: 3rem;
+            height: 3rem;
+            flex: 0 0 auto;
+            border-radius: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(226, 232, 240, 0.78);
+            border: 1px solid rgba(148, 163, 184, 0.36);
+            box-shadow: none;
+        }
+
+        .main-quick-access-body {
+            min-width: 0;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.38rem;
+        }
+
+        .main-quick-access-topline {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
+        }
+
+        .main-quick-access-pill,
+        .main-quick-access-meta-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.28rem;
+            min-width: 0;
+            max-width: 100%;
+            padding: 0.22rem 0.5rem;
+            border-radius: 999px;
+            font-size: 0.67rem;
+            font-weight: 800;
+            line-height: 1;
+            letter-spacing: 0.04em;
+            border: 1px solid transparent;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .main-quick-access-pill {
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: var(--color-main-quick-access-pill-bg);
+            color: var(--color-main-quick-access-pill-fg);
+            border-color: var(--color-main-quick-access-pill-border);
+        }
+
+        .main-quick-access-card[data-tone="paused"] .main-quick-access-pill {
+            background: var(--color-main-quick-access-pill-paused-bg);
+            color: var(--color-main-quick-access-pill-paused-fg);
+            border-color: var(--color-main-quick-access-pill-paused-border);
+        }
+
+        .main-quick-access-card[data-tone="critical"] .main-quick-access-pill {
+            background: var(--color-main-quick-access-pill-critical-bg);
+            color: var(--color-main-quick-access-pill-critical-fg);
+            border-color: var(--color-main-quick-access-pill-critical-border);
+        }
+
+        .main-quick-access-card[data-tone="mastered"] .main-quick-access-pill {
+            background: var(--color-main-quick-access-pill-mastered-bg);
+            color: var(--color-main-quick-access-pill-mastered-fg);
+            border-color: var(--color-main-quick-access-pill-mastered-border);
+        }
+
+        .main-quick-access-meta-tag {
+            background: var(--color-main-quick-access-meta-bg);
+            color: var(--color-main-quick-access-meta-fg);
+            border-color: var(--color-main-quick-access-meta-border);
+        }
+
+        .main-quick-access-title {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            line-height: 1.15;
+            font-size: 0.96rem;
+            font-weight: 800;
+            color: var(--color-text-main);
+            letter-spacing: -0.015em;
+        }
+
+        .main-quick-access-description {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            color: var(--color-main-quick-access-description);
+            font-size: 0.76rem;
+            line-height: 1.42;
+        }
+
+        .main-quick-access-remove {
+            position: absolute;
+            top: 0.82rem;
+            right: 0.82rem;
+            z-index: 2;
+            width: 1.95rem;
+            height: 1.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: var(--color-main-quick-access-remove-bg);
+            border: 1px solid var(--color-main-quick-access-remove-border);
+            color: var(--color-main-quick-access-remove-fg);
+            opacity: 0;
+            transition: opacity 0.16s ease, transform 0.16s ease, background 0.16s ease, color 0.16s ease;
+            backdrop-filter: blur(6px);
+        }
+
+        .main-quick-access-card:hover .main-quick-access-remove,
+        .main-quick-access-card:focus-within .main-quick-access-remove {
+            opacity: 1;
+        }
+
+        .main-quick-access-remove:hover {
+            transform: scale(1.04);
+            background: var(--color-main-quick-access-remove-hover-bg);
+            color: var(--color-error);
+        }
+
+        .main-quick-access-footer {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.85rem;
+            min-width: 0;
+        }
+
+        .main-quick-access-progress {
+            min-width: 0;
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.36rem;
+        }
+
+        .main-quick-access-progress-label {
+            font-size: 0.69rem;
+            font-weight: 700;
+            color: var(--color-main-quick-access-progress-label);
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            min-width: 0;
+        }
+
+        .main-quick-access-progress-track {
+            width: 100%;
+            height: 0.38rem;
+            border-radius: 999px;
+            overflow: hidden;
+            background: var(--color-main-quick-access-progress-track);
+            box-shadow: inset 0 0 0 1px var(--color-main-quick-access-progress-track-border);
+        }
+
+        .main-quick-access-progress-fill {
+            height: 100%;
+            border-radius: inherit;
+            background: var(--color-main-quick-access-progress-fill);
+            transition: width 0.25s ease;
+        }
+
+        .main-quick-access-card[data-tone="paused"] .main-quick-access-progress-fill {
+            background: var(--color-main-quick-access-progress-fill-paused);
+        }
+
+        .main-quick-access-card[data-tone="critical"] .main-quick-access-progress-fill {
+            background: var(--color-main-quick-access-progress-fill-critical);
+        }
+
+        .main-quick-access-action {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            height: 2.1rem;
+            padding: 0 0.78rem;
+            border-radius: 999px;
+            background: var(--color-main-quick-access-action-bg);
+            color: var(--color-primary-fg);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.18),
+                0 8px 20px rgba(15, 23, 42, 0.14);
+            font-size: 0.73rem;
+            font-weight: 800;
+            letter-spacing: 0.03em;
+            white-space: nowrap;
+        }
+
+        .main-quick-access-action .material-symbols-outlined {
+            font-size: 1rem;
+        }
+
+
+        .main-quick-access-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.42rem;
+        }
+
+        .main-quick-access-nav[hidden] {
+            display: none !important;
+        }
+
+        .main-quick-access-nav-btn {
+            width: 2.05rem;
+            height: 2.05rem;
+            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+        }
+
+        .main-quick-access-nav-btn:hover:not(:disabled) {
+            transform: translateY(-1px);
+            border-color: var(--color-main-quick-access-nav-border-hover);
+            background: var(--color-main-quick-access-nav-bg-hover);
+        }
+
+        .main-quick-access-nav-btn:disabled {
+            opacity: 0.42;
+            cursor: default;
+        }
+
+        .main-quick-access-grid.main-quick-access-grid--rail {
+            grid-auto-flow: column;
+            grid-auto-columns: minmax(17.5rem, calc(50% - 0.45rem));
+            grid-template-columns: none;
+            overflow-x: auto;
+            overflow-y: visible;
+            overscroll-behavior-x: contain;
+            scroll-snap-type: x proximity;
+            scrollbar-width: none;
+        }
+
+        .main-quick-access-grid.main-quick-access-grid--rail::-webkit-scrollbar {
+            display: none;
+        }
+
+        .main-quick-access-grid.main-quick-access-grid--rail .main-quick-access-card {
+            scroll-snap-align: start;
+        }
+
+        .main-quick-access-card {
+            min-height: 10.6rem;
+            gap: 0.68rem;
+            padding: 0.8rem 0.86rem 0.78rem;
+        }
+
+        .main-quick-access-card-head {
+            gap: 0.64rem;
+        }
+
+        .main-quick-access-media {
+            width: 2.6rem;
+            height: 2.6rem;
+            border-radius: 0.88rem;
+        }
+
+        .main-quick-access-body {
+            gap: 0.3rem;
+        }
+
+        .main-quick-access-title {
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            font-size: 0.93rem;
+        }
+
+        .main-quick-access-description {
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            font-size: 0.73rem;
+        }
+
+        .main-quick-access-footer {
+            gap: 0.6rem;
+        }
+
+        .main-quick-access-progress {
+            gap: 0.28rem;
+        }
+
+        .main-quick-access-progress-label {
+            font-size: 0.66rem;
+        }
+
+        .main-quick-access-action {
+            height: 1.95rem;
+            padding: 0 0.7rem;
+            font-size: 0.7rem;
+        }
+        #mainNextStepBanner {
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        #mainNextStepTitle,
+        #mainNextStepReason,
+        #mainNextStepButtonLabel {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        #mainNextStepTitle {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            line-height: 1.25;
+        }
+
+        #mainNextStepReason {
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            line-height: 1.35;
+        }
+
+        #mainNextStepButton {
+            max-width: 100%;
+            white-space: normal;
+            text-align: center;
+            min-width: 11.5rem;
+        }
+
+        /* Type + spacing tuning */
+        .main-side-card {
+            padding: var(--main-card-padding) !important;
+        }
+
+        .main-primary-card {
+            padding: var(--main-card-padding);
+        }
+
+        .main-side-card h3 {
+            font-size: 0.82rem;
+        }
+
+        .main-side-card .material-symbols-outlined {
+            font-size: 16px;
+        }
+
+        .main-widget-badge {
+            transform: scale(0.82);
+        }
+
+        .main-stats-row {
+            padding: 0.45rem 0.55rem;
+        }
+
+        .main-widget-footer-link {
+            font-size: 0.72rem;
+        }
+
+        .main-side-card .text-sm {
+            font-size: 0.82rem;
+        }
+
+        .main-side-card .text-xs,
+        .main-side-card .main-widget-loading-copy,
+        .main-side-card .main-widget-empty-copy {
+            font-size: 0.75rem;
+        }
+
+        .main-side-card .main-period-toggle button {
+            padding: 0.22rem 0.38rem;
+            font-size: 0.75rem;
+        }
+
+        .main-side-card button {
+            padding: 0.35rem 0.55rem;
+            font-size: 0.82rem;
+        }
+
+        .main-primary-cta {
+            background: var(--color-main-primary-cta-bg);
+            color: var(--color-text-main);
+            border: 1px solid var(--color-main-primary-cta-border);
+            box-shadow: none;
+        }
+
+        .main-primary-cta:hover {
+            filter: brightness(0.97);
+        }
+
+        .main-secondary-cta {
+            background: var(--color-main-secondary-cta-bg);
+            color: var(--color-text-main);
+            border: 1px solid var(--color-main-secondary-cta-border);
+            box-shadow: none;
+        }
+
+        .main-secondary-cta:hover {
+            filter: brightness(0.97);
+        }
+
+        #statsCard {
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        #statsContent {
+            min-height: 0;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+        }
+
+        #statsContent.stats-content--empty .main-stats-row,
+        #statsContent.stats-content--error .main-stats-row,
+        .main-stats-row.hidden {
+            display: none !important;
+        }
+
+        .main-stats-empty-state {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: start;
+            gap: 0.65rem;
+            min-height: 4.6rem;
+            padding: 0.65rem 0.75rem;
+            border: 1px dashed color-mix(in srgb, var(--color-primary-light) 55%, var(--color-border-subtle));
+            border-radius: 0.8rem;
+            background: var(--color-surface-2);
+            overflow: hidden;
+        }
+
+        .main-stats-empty-state__icon {
+            width: 1.75rem;
+            height: 1.75rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--color-primary-lighter) 65%, white);
+            font-size: 0.95rem;
+            color: var(--color-primary);
+        }
+
+        .main-stats-empty-state__copy {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.18rem;
+            justify-content: center;
+        }
+
+        .main-stats-empty-state__title {
+            display: block;
+            color: var(--color-text-main);
+            font-size: 0.77rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .main-stats-empty-state__text {
+            color: var(--color-text-secondary);
+            font-size: 0.7rem;
+            line-height: 1.3;
+        }
+
+        .main-stats-error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.45rem;
+            padding: 0.65rem 0.75rem;
+            border: 1px solid var(--color-error-light);
+            border-radius: 0.9rem;
+            background: color-mix(in srgb, var(--color-error-lighter) 78%, white);
+        }
+
+        .main-stats-error-state__copy {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
+        }
+
+        .main-stats-error-state__title {
+            color: var(--color-text-main);
+            font-size: 0.8rem;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .main-stats-error-state__text {
+            color: var(--color-text-secondary);
+            font-size: 0.68rem;
+            line-height: 1.25;
+        }
+
+        .main-stats-error-state__retry {
+            color: var(--color-status-error);
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-decoration: underline;
         }
 
         .main-widget-empty-copy,
         .main-widget-loading-copy,
         .main-widget-copy,
         .main-widget-kicker {
-            color: var(--color-text-secondary);
+            color: var(--color-main-secondary-copy);
+            line-height: 1.45;
         }
 
         .main-period-toggle {
-            border: 1px solid var(--color-border-subtle);
-            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-main-period-toggle-border);
+            background: var(--color-main-period-toggle-bg);
+            box-shadow: var(--shadow-component-segmented);
         }
 
         .main-widget-badge {
@@ -139,14 +1036,151 @@
         }
 
         .main-health-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 0.75rem;
             padding: 0.5rem 0.625rem;
-            background: var(--color-surface-2);
-            border: 1px solid var(--color-border-subtle);
+            background: var(--color-main-health-row-bg);
+            border: 1px solid var(--color-main-health-row-border);
             border-radius: 0.75rem;
+        }
+
+        .main-period-toggle {
+            background: var(--color-main-period-toggle-bg);
+            border: 1px solid var(--color-main-period-toggle-border);
+            border-radius: 0.75rem;
+        }
+
+        .main-period-toggle__button {
+            min-width: 2.2rem;
+            padding: 0.22rem 0.42rem;
+            border-radius: 0.55rem;
+            border: 1px solid transparent !important;
+            background: transparent !important;
+            color: var(--color-main-period-toggle-button-fg) !important;
+            font-size: 0.7rem;
+            font-weight: 800;
+            line-height: 1.1;
+            cursor: pointer;
+            transition: color 140ms ease, background 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+        }
+
+        .main-period-toggle__button:hover {
+            color: var(--color-main-period-toggle-button-hover-fg) !important;
+            background: var(--color-main-period-toggle-button-hover-bg) !important;
+        }
+
+        .main-period-toggle__button.is-active {
+            background: var(--color-main-period-toggle-button-active-bg) !important;
+            color: var(--color-main-period-toggle-button-active-fg) !important;
+            border-color: var(--color-main-period-toggle-button-active-border) !important;
+            box-shadow: var(--shadow-component-segmented-button-active);
+        }
+
+        @media (max-width: 1024px) {
+            body {
+                overflow: auto;
+            }
+
+            #app-content {
+                height: auto;
+                min-height: calc(100vh - var(--connection-banner-height, 0px));
+            }
+
+            .main-dashboard-content {
+                height: auto;
+                min-height: calc(100vh - var(--main-header-height) - var(--connection-banner-height, 0px));
+                overflow: visible;
+            }
+
+            .main-dashboard-grid {
+                grid-template-columns: minmax(0, 1fr);
+                height: auto;
+            }
+
+            .main-primary-column,
+            .main-secondary-column {
+                display: flex;
+                flex-direction: column;
+                gap: var(--main-gap);
+                min-height: auto;
+            }
+
+            #quick-access-section {
+                margin-top: 0;
+            }
+
+            .main-quick-access-header {
+                flex-direction: column;
+            }
+
+            .main-quick-access-toolbar {
+                width: 100%;
+                justify-content: space-between;
+            }
+        }
+
+        @media (max-height: 880px) {
+            #quick-access-section {
+                gap: 0.45rem;
+            }
+
+            .main-quick-access-header {
+                gap: 0.55rem;
+            }
+
+            .main-quick-access-grid {
+                gap: 0.64rem;
+                padding: 0.66rem;
+            }
+
+            .main-quick-access-card {
+                min-height: 9.95rem;
+                gap: 0.58rem;
+                padding: 0.72rem 0.8rem 0.74rem;
+            }
+
+            .main-quick-access-media {
+                width: 2.45rem;
+                height: 2.45rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main-quick-access-heading {
+                gap: 0.7rem;
+            }
+
+            .main-quick-access-heading-icon {
+                width: 2.3rem;
+                height: 2.3rem;
+                border-radius: 0.85rem;
+            }
+
+            .main-quick-access-grid {
+                grid-template-columns: minmax(0, 1fr);
+                padding: 0.7rem;
+            }
+
+            .main-quick-access-grid.main-quick-access-grid--rail {
+                grid-auto-columns: minmax(0, 88vw);
+            }
+
+            .main-quick-access-toolbar {
+                gap: 0.5rem;
+            }
+
+            .main-quick-access-card {
+                padding: 0.82rem 0.88rem 0.82rem;
+                gap: 0.78rem;
+            }
+
+            .main-quick-access-footer {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .main-quick-access-action {
+                width: 100%;
+                justify-content: center;
+            }
         }
 
         .main-health-meta {
@@ -160,11 +1194,15 @@
         .main-health-name {
             min-width: 0;
             flex: 1 1 auto;
+            display: -webkit-box;
             overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow-wrap: anywhere;
             color: var(--color-text-main);
             font-weight: 600;
+            line-height: 1.25;
         }
 
         .main-quick-access-item {
@@ -186,6 +1224,7 @@
             display: -webkit-box;
             overflow: hidden;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             line-height: 1.2;
             word-break: break-word;
@@ -200,26 +1239,140 @@
             display: -webkit-box;
             overflow: hidden;
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             -webkit-box-orient: vertical;
             line-height: 1.25;
             word-break: break-word;
         }
 
         .main-mini-heatmap {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: 3px;
+            width: 100%;
+            align-content: start;
+            margin-bottom: 0.4rem;
+        }
+
+        .main-heatmap-cell {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            border-radius: 2px;
+            background-color: var(--color-heatmap-empty);
+            border: 1px solid var(--color-main-heatmap-cell-border);
+            transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
+        }
+
+        .main-heatmap-cell:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+        }
+
+        .main-heatmap-cell[data-level="empty"] {
+            opacity: 0.58;
+        }
+
+        .main-heatmap-cell[data-level="low"] {
+            background-color: var(--color-heatmap-low);
+            opacity: 0.82;
+            box-shadow: inset 0 0 0 1px var(--color-main-heatmap-low-outline);
+        }
+
+        .main-heatmap-cell[data-level="mid"] {
+            background-color: var(--color-heatmap-mid);
+            opacity: 0.94;
+            box-shadow: inset 0 0 0 1px var(--color-main-heatmap-mid-outline);
+        }
+
+        .main-heatmap-cell[data-level="high"] {
+            background-color: var(--color-heatmap-high);
+            opacity: 1;
+            box-shadow: inset 0 0 0 1px var(--color-main-heatmap-high-outline);
+        }
+
+        .main-heatmap-cell[data-level="peak"] {
+            background: var(--color-main-heatmap-peak);
+            box-shadow: inset 0 0 0 1px var(--color-main-heatmap-peak-outline);
+        }
+
+        .main-heatmap-cell[data-today="true"] {
+            box-shadow: 0 0 0 1px var(--color-heatmap-today-ring), inset 0 0 0 1px var(--color-main-heatmap-today-inline-ring);
+        }
+
+        .main-heatmap-legend {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.4rem;
             flex-wrap: wrap;
-            justify-content: flex-start;
+        }
+
+        .main-heatmap-legend-copy {
+            font-size: 0.68rem;
+            color: var(--color-main-heatmap-legend-copy);
+            letter-spacing: 0.02em;
+        }
+
+        .main-heatmap-legend-scale {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            flex-wrap: wrap;
+        }
+
+        .main-heatmap-legend-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.22rem;
+            font-size: 0.62rem;
+            font-weight: 700;
+            color: var(--color-main-heatmap-legend-item);
+        }
+
+        .main-heatmap-legend-swatch {
+            width: 9px;
+            height: 9px;
+            border-radius: 999px;
+            border: 1px solid var(--color-main-heatmap-legend-swatch-border);
+        }
+
+        .main-heatmap-legend-swatch[data-level="empty"] {
+            background-color: var(--color-heatmap-empty);
+            opacity: 0.55;
+        }
+
+        .main-heatmap-legend-swatch[data-level="low"] {
+            background-color: var(--color-heatmap-low);
+        }
+
+        .main-heatmap-legend-swatch[data-level="mid"] {
+            background-color: var(--color-heatmap-mid);
+        }
+
+        .main-heatmap-legend-swatch[data-level="high"] {
+            background-color: var(--color-heatmap-high);
+        }
+
+        .main-heatmap-legend-swatch[data-level="peak"] {
+            background: var(--color-main-heatmap-peak);
         }
 
         .main-stats-row {
-            padding: 0.625rem;
+            padding: 0.45rem 0.55rem;
         }
 
         .main-stats-label {
-            color: var(--color-text-secondary);
+            color: var(--color-main-stats-label);
+            letter-spacing: 0.06em;
         }
 
         .main-widget-footer-link {
-            color: var(--color-primary);
+            color: var(--color-main-stats-link);
+        }
+
+        .main-stats-heading-icon {
+            color: var(--color-main-stats-heading-icon);
         }
 
         @media (min-width: 1024px) {
@@ -228,36 +1381,38 @@
             }
         }
 
-        @media (min-width: 1024px) and (max-height: 980px) {
-            .main-dashboard-content {
-                padding: 0.5rem 0.75rem;
+        @media (min-width: 1024px) and (max-height: 900px) {
+            :root {
+                --main-gap: 0.4rem;
+                --main-card-padding: 0.55rem;
             }
 
-            .main-dashboard-shell,
-            .main-dashboard-grid,
             .main-primary-column {
-                gap: 0.625rem;
+                grid-template-rows: auto auto auto;
             }
 
             .main-secondary-column {
-                gap: 0.5rem;
+                grid-template-rows: auto minmax(0, 1fr);
             }
 
-            .main-hero-card {
-                min-height: 10.5rem;
+            .main-hero-card h3 {
+                font-size: 1rem;
             }
 
-            .main-hero-media {
-                min-height: 8rem;
+            .main-hero-card p {
+                font-size: 0.8rem;
             }
 
-            .main-side-card {
-                min-height: 9.5rem;
+            .main-quick-access-grid {
+                gap: 0.35rem;
+                padding: 0.35rem;
             }
+        }
 
-            #quick-access-list .main-quick-access-item {
-                padding-top: 0.75rem;
-                padding-bottom: 0.75rem;
+        /* On very small screens, fall back to 1-column grid */
+        @media (max-width: 480px) {
+            .main-quick-access-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -274,7 +1429,7 @@
     <div id="app-content"
         class="relative flex min-h-screen w-full flex-col overflow-x-hidden transition-all duration-300">
         <header
-            class="sticky top-0 flex flex-none items-center justify-between whitespace-nowrap border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-2 z-50">
+            class="main-topbar sticky top-0 flex flex-none items-center justify-between whitespace-nowrap border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-2 z-50">
             <div class="flex items-center gap-6">
                 <div class="flex items-center gap-4 text-text-main">
                     <span class="brand-logo w-12 h-12" style="color:var(--color-primary)" aria-hidden="true"></span>
@@ -286,6 +1441,11 @@
                     class="hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">edit_document</span>
                     Редактор заданий
+                </a>
+                <a href="/ui/complexes/create"
+                    class="hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">design_services</span>
+                    Редактор комплексов
                 </a>
             </div>
             <div class="flex items-center gap-3">
@@ -304,12 +1464,14 @@
                     <span class="material-symbols-outlined text-[20px]">feedback</span>
                     <span class="hidden lg:inline">Обратная связь</span>
                 </button>
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
-                    onclick="openProfileModal()">
+                <button type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false"
+                    class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
+                    onclick="openProfileMenu(event)">
                     <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
-                    <span class="text-text-main text-sm font-medium hidden sm:inline"
+                    <span class="text-text-main text-sm font-medium hidden sm:inline max-w-[140px] truncate"
                         id="headerUserName">Загрузка...</span>
-                </div>
+                    <span class="material-symbols-outlined text-[18px] text-text-muted">expand_more</span>
+                </button>
             </div>
         </header>
         <div id="appUpdateNotice" class="hidden border-b border-border-strong bg-surface-2 px-4 py-2 md:px-6">
@@ -320,62 +1482,146 @@
             </div>
         </div>
 
-        <main class="main-dashboard-content flex flex-1 justify-center overflow-y-auto">
+        <main class="main-dashboard-content flex flex-1 justify-center">
             <div class="main-dashboard-shell main-page-enter"
                 style="transform-origin: top center;">
                 <div class="main-dashboard-grid">
-                    <div class="main-primary-column flex flex-col">
+                    <div class="main-primary-column">
                         <div class="flex flex-col gap-3">
-                            <div class="main-hero-card interactive-card relative overflow-hidden rounded-2xl bg-surface-1 border border-border-strong shadow-md group cursor-pointer flex flex-col md:flex-row"
-                                role="link" tabindex="0" data-nav="/ui/complexes">
-                                <div class="main-hero-media w-full md:w-5/12 h-36 md:h-full bg-cover bg-center relative"
-                                    style="background-image: url('/assets/images/dashboard/main_training_bg.jpg');">
-                                    <div
-                                        class="absolute inset-0 bg-scrim-light transition-all duration-300 group-hover:bg-transparent">
+                            <div class="flex gap-3 min-h-[220px]">
+                                <!-- Проходить комплексы (3/5 width) -->
+                                <div class="main-hero-card interactive-card relative overflow-hidden rounded-2xl border border-border-strong shadow-md group cursor-pointer flex flex-col flex-[3]"
+                                    role="link" tabindex="0" data-nav="/ui/complexes" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
+
+                                    <!-- Decorative subtle highlights -->
+                                    <div class="absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 mix-blend-screen transition-transform duration-700 group-hover:scale-110" style="background-color: var(--color-primary); opacity: 0.25;"></div>
+                                    <div class="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 mix-blend-screen" style="background-color: var(--color-accent, var(--color-primary)); opacity: 0.25;"></div>
+
+                                    <div class="p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
+                                        <div class="flex items-start justify-between w-full">
+                                            <span class="inline-flex items-center rounded-md backdrop-blur-md px-2.5 py-1 text-xs font-bold tracking-wider uppercase border shadow-sm" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
+                                                Основной режим
+                                            </span>
+                                        </div>
+                                        <div class="flex items-end justify-between gap-4 mt-auto">
+                                            <div class="flex flex-col">
+                                                <h3 class="text-2xl md:text-3xl font-extrabold mb-1 leading-tight tracking-tight drop-shadow-md" style="color: #ffffff;">Проходить комплексы</h3>
+                                                <p class="text-sm leading-relaxed max-w-[260px] drop-shadow-sm" style="color: #cbd5e1;">Анализируйте данные и принимайте решения в реальном времени.</p>
+                                            </div>
+                                            <button
+                                                class="flex-shrink-0 flex items-center justify-center rounded-full w-14 h-14 shadow-xl hover:-translate-y-1 transition-all duration-300 group/btn relative overflow-hidden"
+                                                style="background: rgba(255,255,255,0.18); color: #ffffff; border: 1.5px solid rgba(255,255,255,0.28); box-shadow: 0 8px 16px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);"
+                                                data-nav="/ui/complexes" title="Начать тренировку">
+                                                <span class="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></span>
+                                                <span class="material-symbols-outlined text-[32px] ml-1 relative z-10 drop-shadow-sm">play_arrow</span>
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="p-4 md:p-5 flex flex-col justify-center flex-1 relative bg-surface-1">
-                                    <div class="mb-2">
-                                        <span
-                                            class="inline-flex items-center rounded-md bg-bg-secondary px-2.5 py-0.5 text-xs font-bold text-primary ring-1 ring-inset ring-primary-light mb-2 tracking-wide uppercase">Основное
-                                            обучение</span>
-                                        <h3
-                                            class="text-xl font-extrabold text-text-main mb-1.5 group-hover:text-primary transition-colors">
-                                            Проходить комплексы</h3>
-                                        <p class="text-text-secondary text-sm leading-snug">Начните
-                                            тренировку с готовыми комплексами. Анализируйте снимки и ставьте диагнозы в
-                                            реальном времени.</p>
+
+                                <!-- Центр теории (2/5 width) -->
+                                <div id="main-theory-center-card" class="interactive-card relative overflow-hidden rounded-2xl border border-border-strong shadow-md group cursor-pointer flex flex-col flex-[2]"
+                                    role="link" tabindex="0" data-nav="/ui/theory-center" style="background: linear-gradient(135deg, #1a2744 0%, #0f1e35 100%);">
+
+                                    <div class="absolute top-0 right-0 w-40 h-40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/3 mix-blend-screen transition-transform duration-700 group-hover:scale-110" style="background-color: var(--color-info); opacity: 0.22;"></div>
+                                    <div class="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/2 mix-blend-screen" style="background-color: var(--color-primary); opacity: 0.18;"></div>
+
+                                    <div class="p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
+                                        <div>
+                                            <span class="inline-flex items-center rounded-md backdrop-blur-md px-2.5 py-1 text-xs font-bold tracking-wider uppercase border shadow-sm" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
+                                                Редактор
+                                            </span>
+                                        </div>
+                                        <div class="mt-auto">
+                                            <span class="material-symbols-outlined text-[32px] mb-2 block drop-shadow-sm" style="color: rgba(165,213,255,0.92);">hub</span>
+                                            <h3 class="text-xl md:text-2xl font-extrabold leading-tight tracking-tight drop-shadow-md" style="color: #ffffff;">Центр теории</h3>
+                                            <p class="text-xs mt-1 drop-shadow-sm" style="color: #94a3b8;">Управление теоретическими материалами</p>
+                                        </div>
                                     </div>
-                                    <button
-                                        class="flex w-fit items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-fg shadow-lg shadow-primary-light hover:bg-primary-hover hover:shadow-primary-light hover:-translate-y-0.5 transition-all duration-200"
-                                        data-nav="/ui/complexes">
-                                        <span class="material-symbols-outlined text-[18px]">play_arrow</span>
-                                        Начать тренировку
-                                    </button>
                                 </div>
-                            </div>
-                            <div class="interactive-card rounded-xl bg-surface-2 border border-border-strong p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 cursor-pointer group hover:bg-surface-1 transition-colors"
-                                role="link" tabindex="0" data-nav="/ui/complexes/create">
-                                <div class="flex items-start gap-3">
-                                    <div
-                                        class="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-surface-1 text-primary shadow-sm group-hover:scale-110 transition-transform duration-200">
-                                        <span class="material-symbols-outlined text-[24px]">edit_document</span>
-                                    </div>
-                                    <div>
-                                        <h3
-                                            class="text-lg font-bold text-text-main group-hover:text-primary transition-colors">
-                                            Редактор комплексов</h3>
-                                        <p class="text-text-secondary text-sm mt-0.5">Создавайте и управляйте
-                                            собственными учебными материалами.</p>
-                                    </div>
-                                </div><button
-                                    class="flex items-center gap-2 whitespace-nowrap rounded-lg border border-border-strong bg-surface-1 px-4 py-2 text-sm font-semibold text-text-main hover:bg-surface-2 hover:text-primary transition-all"
-                                    data-nav="/ui/complexes/create">Открыть редактор <span
-                                        class="material-symbols-outlined text-[18px]">arrow_forward</span></button>
                             </div>
                         </div>
-                        <div class="flex flex-col gap-3" id="quick-access-section">
-                            <div class="flex items-center justify-between">
+                        <div class="main-widget-card main-primary-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all"
+                            id="microcardsCard" role="link" tabindex="0" data-nav="/ui/microcards">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="text-base font-bold text-text-main flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-primary text-[18px]">style</span>Микрокарточки
+                                </h3>
+                                <div class="flex items-center gap-1 main-widget-badge pill-neutral pill-sm"
+                                    id="microcardsDueBadge">
+                                    <span class="material-symbols-outlined text-primary text-[14px]">pending_actions</span>
+                                    <span class="text-[11px] font-bold text-text-main"
+                                        id="microcardsDueCount">—</span>
+                                </div>
+                            </div>
+                            <div id="microcardsLoadingState"
+                                class="flex-1 flex flex-col items-center justify-center py-4 gap-2">
+                                <div
+                                    class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary">
+                                </div>
+                                <p class="main-widget-loading-copy text-[11px]">Загрузка...</p>
+                            </div>
+                            <div id="microcardsEmptyState"
+                                class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
+                                <span
+                                    class="material-symbols-outlined text-border-strong text-[32px]">style</span>
+                                <p class="text-sm font-medium text-text-main">Нет колод</p>
+                                <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Создайте колоду в редакторе
+                                    или из анализа</p>
+                            </div>
+                            <div id="microcardsContentState" class="hidden flex-col gap-2">
+                                <div class="grid grid-cols-3 gap-1.5">
+                                    <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                        <span
+                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">К
+                                            повтору</span>
+                                        <span class="text-xl font-black text-text-main leading-tight"
+                                            id="microcardsDueCards">0</span>
+                                    </div>
+                                    <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                        <span
+                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Новых</span>
+                                        <span class="text-xl font-black text-text-main leading-tight"
+                                            id="microcardsNewCards">0</span>
+                                    </div>
+                                    <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                        <span
+                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Сегодня</span>
+                                        <span class="text-base font-black text-text-main leading-tight"
+                                            id="microcardsTodayReviews">0 повторений</span>
+                                    </div>
+                                </div>
+                                <div class="flex items-center justify-between px-2 py-1.5 bg-surface-2 rounded-lg">
+                                    <div class="flex flex-col">
+                                        <span
+                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Точность</span>
+                                        <span class="text-base font-black text-text-main leading-tight"
+                                            id="microcardsTodayAccuracy">—</span>
+                                    </div>
+                                    <div class="flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[16px] text-success">verified</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2 pt-1.5 border-t border-border-subtle grid grid-cols-2 gap-2">
+                                <button
+                                    class="w-full inline-flex items-center justify-center gap-2 main-primary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
+                                    id="microcardsCTA"
+                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/microcards');"><span
+                                        class="material-symbols-outlined text-[16px]"
+                                        id="microcardsCTAIcon">play_arrow</span><span
+                                        id="microcardsCTAText">Открыть микрокарточки</span>
+                                </button>
+                                <button
+                                    class="w-full inline-flex items-center justify-center gap-2 main-secondary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
+                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/editor?microcards_manual=1');">
+                                    <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                                    <span>Создать вручную</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-2.5" id="quick-access-section">
+                            <div class="main-quick-access-header">
                                 <h3 class="text-base font-bold text-text-main flex items-center gap-2">
                                     <span class="material-symbols-outlined text-text-secondary text-[20px]">history</span>Быстрый доступ
                                 </h3><button
@@ -383,22 +1629,11 @@
                                     onclick="window.navigateWithTransition('/ui/complexes')" id="quick-access-show-all">Показать
                                     все</button>
                             </div>
-                            <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm divide-y divide-border-subtle overflow-hidden"
+                            <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden"
                                 id="quick-access-list"></div>
-                            <div class="bg-surface-1 rounded-xl border border-dashed border-border-subtle p-8 text-center" id="quick-access-empty" hidden>
-                                <div class="flex flex-col items-center gap-3">
-                                    <div class="w-16 h-16 rounded-2xl bg-surface-2 flex items-center justify-center">
-                                        <span class="material-symbols-outlined text-text-secondary text-[40px]">bookmark</span>
-                                    </div>
-                                    <div>
-                                        <div class="text-base font-bold text-text-main mb-1">Пока нет быстрых комплексов</div>
-                                        <div class="main-widget-empty-copy text-sm max-w-xs mx-auto">Закрепляйте комплексы или откройте любой комплекс — он появится здесь</div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                     </div>
-                    <div class="main-secondary-column flex flex-col">
+                    <div class="main-secondary-column">
                         <div class="main-widget-card main-side-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
                             id="calendarCard" role="link" tabindex="0" data-nav="/ui/calendar">
                             <!-- Header with Streak -->
@@ -406,7 +1641,7 @@
                                 <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5"><span
                                         class="material-symbols-outlined text-primary text-[18px]">calendar_month</span>Календарь
                                 </h3>
-                                <div class="flex items-center gap-1 px-2 py-0.5 bg-primary-lighter rounded-full main-widget-badge"
+                                <div class="flex items-center gap-1 main-widget-badge pill-neutral pill-sm"
                                     id="calendarStreak"><span
                                         class="material-symbols-outlined text-primary text-[14px]">local_fire_department</span><span
                                         class="text-[11px] font-bold text-text-main" id="calendarStreakDays">0</span>
@@ -450,7 +1685,7 @@
                                     </div>
                                 </div>
                                 <!-- Mini Heatmap (14 days) - using inline grid style -->
-                                <div class="main-mini-heatmap flex gap-[3px]" id="calendar-mini-heatmap">
+                                <div class="main-mini-heatmap" id="calendar-mini-heatmap">
                                     <!-- Mini heatmap squares rendered by JS -->
                                 </div>
                                 <!-- Health Summary (Critical Complexes) -->
@@ -467,108 +1702,27 @@
                                     календарь </button>
                             </div>
                         </div>
-                        <!-- Microcards Card (M9) -->
-                        <div class="main-widget-card main-side-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
-                            id="microcardsCard" role="link" tabindex="0" data-nav="/ui/microcards">
-                            <div class="flex items-center justify-between mb-1.5">
-                                <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5">
-                                    <span
-                                        class="material-symbols-outlined text-primary text-[18px]">style</span>Микрокарточки
-                                </h3>
-                                <div class="flex items-center gap-1 px-2 py-0.5 bg-primary-lighter rounded-full main-widget-badge"
-                                    id="microcardsDueBadge">
-                                    <span
-                                        class="material-symbols-outlined text-primary text-[14px]">pending_actions</span>
-                                    <span class="text-[11px] font-bold text-text-main"
-                                        id="microcardsDueCount">&mdash;</span>
-                                </div>
-                            </div>
-                            <!-- Loading State -->
-                            <div id="microcardsLoadingState"
-                                class="flex-1 flex flex-col items-center justify-center py-2 gap-1.5">
-                                <div
-                                    class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary">
-                                </div>
-                                <p class="main-widget-loading-copy text-[11px]">Загрузка...</p>
-                            </div>
-                            <!-- Empty State -->
-                            <div id="microcardsEmptyState"
-                                class="hidden flex-1 flex flex-col items-center justify-center py-2 text-center">
-                                <span
-                                    class="material-symbols-outlined text-border-strong text-[32px] mb-2">style</span>
-                                <p class="text-sm font-medium text-text-main">Нет колод</p>
-                                <p class="main-widget-empty-copy text-[11px] mt-1">Создайте колоду в редакторе
-                                    или из анализа</p>
-                            </div>
-                            <!-- Content State -->
-                            <div id="microcardsContentState" class="hidden flex-col gap-1.5">
-                                <div class="flex gap-1.5">
-                                    <div class="flex-1 flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
-                                        <span
-                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">К
-                                            повтору</span>
-                                        <span class="text-lg font-black text-text-main leading-tight"
-                                            id="microcardsDueCards">0</span>
-                                    </div>
-                                    <div class="flex-1 flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
-                                        <span
-                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Новых</span>
-                                        <span class="text-lg font-black text-text-main leading-tight"
-                                            id="microcardsNewCards">0</span>
-                                    </div>
-                                </div>
-                                <div
-                                    class="flex items-center justify-between px-2 py-1 bg-surface-2 rounded-lg">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Сегодня</span>
-                                        <span class="text-base font-black text-text-main leading-tight"
-                                            id="microcardsTodayReviews">0 повторений</span>
-                                    </div>
-                                    <span class="text-xs font-bold text-success-text dark:text-success"
-                                        id="microcardsTodayAccuracy"></span>
-                                </div>
-                            </div>
-                            <!-- Disabled State -->
-                            <div id="microcardsDisabledState"
-                                class="hidden flex-1 flex flex-col items-center justify-center py-2 text-center">
-                                <span
-                                    class="material-symbols-outlined text-border-strong text-[28px] mb-1">block</span>
-                                <p class="main-widget-empty-copy text-[11px]">Режим недоступен</p>
-                            </div>
-                            <!-- CTA Footer -->
-                            <div class="mt-auto pt-1.5 border-t border-border-subtle">
-                                <button
-                                    class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-primary-fg text-xs font-bold py-1.5 px-3 rounded-lg transition-all shadow-sm shadow-primary-light"
-                                    id="microcardsCTA"
-                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/microcards');"><span
-                                        class="material-symbols-outlined text-[16px]"
-                                        id="microcardsCTAIcon">play_arrow</span><span
-                                        id="microcardsCTAText">Открыть микрокарточки</span>
-                                </button>
-                            </div>
-                        </div>
-                        <a href="/ui/statistics"
-                            class="main-widget-card main-side-card block bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 interactive-card cursor-pointer hover:border-primary hover:shadow-md transition-all main-side-enter"
-                            id="statsCard">
+                        <div
+                            class="main-widget-card main-side-card flex flex-col bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 interactive-card cursor-pointer hover:border-primary hover:shadow-md transition-all main-side-enter"
+                            id="statsCard" role="link" tabindex="0" data-nav="/ui/statistics">
                             <div class="flex items-center justify-between mb-1.5">
                                 <h3 class="text-sm font-bold text-text-main flex items-center gap-1.5"><span
-                                        class="material-symbols-outlined text-accent text-[16px]">bar_chart</span>Статистика
+                                        class="material-symbols-outlined main-stats-heading-icon text-[16px]">bar_chart</span>Статистика
                                 </h3>
-                                <div class="main-period-toggle flex rounded-lg p-0.5" onclick="event.preventDefault()">
-                                    <button
-                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
-                                        onclick="selectStatsPeriod(1, this)" id="btnPeriod1">1д</button><button
-                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
-                                        onclick="selectStatsPeriod(7, this)" id="btnPeriod7">7д</button><button
-                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
-                                        onclick="selectStatsPeriod(30, this)" id="btnPeriod30">30д</button><button
-                                        class="px-2 py-0.5 text-[10px] font-bold rounded-md transition-all text-text-secondary hover:text-text-main"
-                                        onclick="selectStatsPeriod(0, this)" id="btnPeriod0">Все</button>
+                                <div class="main-period-toggle segmented-control flex rounded-lg p-0.5">
+                                    <button type="button"
+                                        class="main-period-toggle__button segmented-control__button is-active"
+                                        onclick="selectStatsPeriod(event, 1, this); return false;" id="btnPeriod1">1д</button><button
+                                        class="main-period-toggle__button segmented-control__button"
+                                        onclick="selectStatsPeriod(event, 7, this); return false;" id="btnPeriod7">7д</button><button
+                                        class="main-period-toggle__button segmented-control__button"
+                                        onclick="selectStatsPeriod(event, 30, this); return false;" id="btnPeriod30">30д</button><button
+                                        class="main-period-toggle__button segmented-control__button"
+                                        onclick="selectStatsPeriod(event, 0, this); return false;" id="btnPeriod0">Все</button>
                                 </div>
                             </div>
-                            <div class="space-y-1.5 transition-all duration-300 ease-in-out" id="statsContent">
-                                <div class="main-stats-row flex items-center justify-between bg-surface-2 rounded-lg">
+                            <div class="transition-all duration-300 ease-in-out" id="statsContent">
+                                <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
                                             class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Пройдено
                                             заданий</span><span
@@ -577,7 +1731,7 @@
                                     <div class="text-xs text-text-secondary">из <span id="statTotalAvailable">0</span>
                                     </div>
                                 </div>
-                                <div class="main-stats-row flex items-center justify-between bg-surface-2 rounded-lg">
+                                <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
                                             class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Успешность</span><span
                                             class="text-base font-black text-text-main leading-tight"
@@ -585,16 +1739,16 @@
                                     </div><span
                                         class="material-symbols-outlined text-success text-[20px]">verified</span>
                                 </div>
-                                <div class="main-stats-row flex items-center justify-between bg-surface-2 rounded-lg">
+                                <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
                                             class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Время обучения</span><span
                                             class="text-base font-black text-text-main leading-tight"
                                             id="statTimeSpent">0ч 0м</span>
                                     </div><span class="material-symbols-outlined text-info text-[20px]">schedule</span>
                                 </div>
-                                <div class="main-stats-row flex items-center justify-between bg-surface-2 rounded-lg">
+                                <div class="main-stats-row panel-row flex items-center justify-between bg-surface-2 rounded-lg">
                                     <div class="flex flex-col"><span
-                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider">Комплексов
+                                            class="main-stats-label text-[11px] font-bold uppercase tracking-wider" id="statComplexesLabel">Комплексов
                                             сегодня</span><span
                                             class="text-base font-black text-text-main leading-tight"
                                             id="statTodayCount">0</span></div><span
@@ -636,12 +1790,12 @@
                                     <div class="h-6 w-6 bg-border-subtle rounded-full"></div>
                                 </div>
                             </div>
-                            <div class="mt-2 pt-1.5 border-t border-border-subtle text-center"><span
+                            <div class="mt-0.5 pt-0.5 border-t border-border-subtle text-center"><span
                                     class="main-widget-footer-link text-xs font-semibold flex items-center justify-center gap-1 w-full">Подробная
                                     статистика <span
                                         class="material-symbols-outlined text-[16px]">arrow_forward</span></span>
                             </div>
-                        </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -651,12 +1805,21 @@
     <div class="modal fixed inset-0 z-[60] flex items-center justify-center bg-scrim p-4" id="profileModal">
         <div
             class="w-full max-w-lg transform rounded-3xl bg-surface-1 p-0 shadow-2xl transition-all border border-border-subtle overflow-hidden">
-            <div class="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-2">
+            <div class="p-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <h3 class="text-xl font-black text-text-main">Профили</h3>
-                </div><button onclick="closeProfileModal()"
-                    class="size-8 flex items-center justify-center rounded-full hover:bg-surface-2 transition-colors"><span
-                        class="material-symbols-outlined text-text-muted">close</span></button>
+                </div>
+                <div class="flex items-center gap-2">
+                    <a href="/ui/settings"
+                        class="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-border-strong bg-surface-1 text-xs font-bold text-text-main hover:text-primary transition-all active:scale-95">
+                        <span class="material-symbols-outlined text-[18px]">settings</span>
+                        Общие настройки
+                    </a>
+                    <button onclick="closeProfileModal()"
+                        class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
+                        <span class="material-symbols-outlined text-text-muted">close</span>
+                    </button>
+                </div>
             </div>
             <div class="p-6 max-h-[400px] overflow-y-auto space-y-3" id="profilesList">
                 <!-- User cards -->
@@ -940,6 +2103,7 @@
 
     <script src="/assets/NotificationUI.js"></script>
     <script src="/assets/MainLogic.js"></script>
+    <script src="/assets/SharedProfileModal.js"></script>
     <script src="/assets/ThemeSwitcherUI.js"></script>
     <script src="/assets/ConnectionMonitor.js"></script>
 </body>

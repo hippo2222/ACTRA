@@ -1,0 +1,51 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_theory_pages",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": false,
+  "afterThemeWaitMs": 300,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "Theory Editor",
+      "url": "/ui/editor/Theory_Editor.html",
+      "waitFor": "#theory-editor",
+      "actionsOnce": [
+        { "type": "wait", "ms": 800 },
+        {
+          "type": "evaluate",
+          "script": "const editor=document.getElementById('theory-editor'); if (editor && !editor.innerHTML.trim()) { editor.innerHTML = '<p>Контрольный абзац для аудита контрастности и читаемости.</p><blockquote>Цитата для проверки пограничных состояний.</blockquote><ul><li>Первый пункт</li><li>Второй пункт</li></ul>'; } const title=document.getElementById('theory-title'); if (title) title.value='Тест темы'; return {ok:true};",
+          "waitMs": 150
+        }
+      ],
+      "actions": [
+        { "type": "hover", "selector": "#theory-save-btn", "waitMs": 80 },
+        { "type": "focus", "selector": "#theory-title", "waitMs": 80 },
+        { "type": "focus", "selector": "#theory-editor", "waitMs": 80 }
+      ]
+    },
+    {
+      "name": "Theory Center",
+      "url": "/ui/editor/Theory_Center.html",
+      "waitFor": "#theory-center-list",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1600 }
+      ],
+      "actions": [
+        { "type": "focus", "selector": "#theory-center-search", "waitMs": 80 },
+        { "type": "hover", "selector": "[data-scope='all']", "waitMs": 80 },
+        { "type": "hover", "selector": "#theory-center-summary-toggle", "waitMs": 80 }
+      ]
+    }
+  ]
+}

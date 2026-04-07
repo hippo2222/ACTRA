@@ -14,8 +14,14 @@ window.NotificationUI = (function () {
         if (!c) {
             c = document.createElement('div');
             c.id = 'notify-toast-container';
-            c.className = 'fixed inset-0 z-[200] flex flex-col items-end justify-end gap-3 p-6 pointer-events-none overflow-hidden';
-            document.body.appendChild(c);
+            c.className = 'pointer-events-none fixed bottom-0 right-0 z-[100010] flex max-w-sm flex-col items-end gap-3 overflow-x-hidden p-4 sm:p-6';
+            c.style.position = 'fixed';
+            c.style.right = '0';
+            c.style.bottom = '0';
+            c.style.left = 'auto';
+            c.style.top = 'auto';
+            c.style.zIndex = "100010";
+            (document.body || document.documentElement).appendChild(c);
         }
         return c;
     }
@@ -29,24 +35,24 @@ window.NotificationUI = (function () {
 
     const _COLORS = {
         success: {
-            bg: 'bg-success-light border-success',
-            icon: 'text-success-dark',
-            text: 'text-success-darker',
+            bg: 'bg-success-lighter border-success-light',
+            icon: 'text-success',
+            text: 'text-success',
         },
         error: {
-            bg: 'bg-error-light border-error',
-            icon: 'text-error-dark',
-            text: 'text-error-darker',
+            bg: 'bg-error-lighter border-error-light',
+            icon: 'text-error',
+            text: 'text-error',
         },
         warning: {
-            bg: 'bg-warning-light border-warning',
-            icon: 'text-warning-dark',
-            text: 'text-warning-darker',
+            bg: 'bg-warning-lighter border-warning-light',
+            icon: 'text-warning',
+            text: 'text-warning',
         },
         info: {
-            bg: 'bg-info-light border-info',
-            icon: 'text-info-dark',
-            text: 'text-info-darker',
+            bg: 'bg-info-lighter border-info-light',
+            icon: 'text-info',
+            text: 'text-info',
         },
     };
 
@@ -81,48 +87,122 @@ window.NotificationUI = (function () {
         return parts.join(' ');
     }
 
-    function toastVoice({ what = '', impact = '', next = '', severity = 'info', timeout = 4000 } = {}) {
+    function toastVoice({ what = '', impact = '', next = '', severity = 'info', timeout = 4000, ...options } = {}) {
         const message = voiceMessage({ what, impact, next });
         if (!message) return;
-        toast(message, resolveVariant(severity), timeout);
+        toast(message, resolveVariant(severity), timeout, options);
     }
 
     // ── toast ────────────────────────────────────────────────────────────
-    function toast(message, variant = 'info', timeout = 4000) {
+    function toast(message, variant = 'info', timeout = 4000, options = {}) {
         const container = _ensureContainer();
         const colors = _COLORS[variant] || _COLORS.info;
         const icon = _ICONS[variant] || 'info';
+        const timeoutMs = Number.isFinite(timeout) ? Math.max(0, Number(timeout)) : 0;
 
         const el = document.createElement('div');
         el.className =
             `pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-lg ` +
             `${colors.bg} w-full max-w-sm transform translate-x-[120%] transition-transform duration-300`;
-        el.innerHTML = `
-            <span class="material-symbols-outlined text-[20px] ${colors.icon} shrink-0">${icon}</span>
-            <span class="text-sm font-medium ${colors.text} flex-1">${_esc(message)}</span>
-            <button class="shrink-0 p-0.5 rounded hover:bg-black/10 transition-colors ${colors.icon}">
-                <span class="material-symbols-outlined text-[16px]">close</span>
-            </button>
-        `;
+        el.setAttribute('role', 'status');
 
-        container.appendChild(el);
-        // slide in
-        requestAnimationFrame(() => {
-            el.classList.remove('translate-x-[120%]');
-            el.classList.add('translate-x-0');
-        });
+        const iconEl = document.createElement('span');
+        iconEl.className = `material-symbols-outlined text-[20px] ${colors.icon} shrink-0`;
+        iconEl.textContent = icon;
+        el.appendChild(iconEl);
+
+        const textWrap = document.createElement('div');
+        textWrap.className = 'min-w-0 flex-1';
+
+        const textEl = document.createElement('div');
+        textEl.className = `text-sm font-medium ${colors.text}`;
+        textEl.textContent = String(message || '');
+        textWrap.appendChild(textEl);
+
+        let timerEl = null;
+        if (options.showTimer && timeoutMs > 0) {
+            timerEl = document.createElement('div');
+            timerEl.className = `mt-1 text-xs font-semibold ${colors.icon} opacity-75`;
+            textWrap.appendChild(timerEl);
+        }
+
+        el.appendChild(textWrap);
+
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'ml-auto flex shrink-0 items-center gap-2';
 
         let dismissed = false;
+        let dismissTimer = null;
+        let countdownTimer = null;
+        const deadline = timeoutMs > 0 ? Date.now() + timeoutMs : 0;
+        const renderCountdown = () => {
+            if (!timerEl || !deadline) return;
+            const secondsLeft = Math.max(1, Math.ceil((deadline - Date.now()) / 1000));
+            timerEl.textContent = typeof options.timerFormatter === 'function'
+                ? String(options.timerFormatter(secondsLeft))
+                : `${secondsLeft} с`;
+        };
         const dismiss = () => {
             if (dismissed) return;
             dismissed = true;
+            if (dismissTimer) {
+                window.clearTimeout(dismissTimer);
+                dismissTimer = null;
+            }
+            if (countdownTimer) {
+                window.clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
             el.classList.remove('translate-x-0');
             el.classList.add('translate-x-[120%]');
             setTimeout(() => el.remove(), 300);
         };
 
-        el.querySelector('button').onclick = dismiss;
-        if (timeout > 0) setTimeout(dismiss, timeout);
+        if (options?.actionLabel && typeof options.onAction === 'function') {
+            const actionBtn = document.createElement('button');
+            actionBtn.type = 'button';
+            actionBtn.className = `rounded-md border border-current/20 px-2 py-1 text-xs font-semibold whitespace-nowrap transition-colors hover:bg-black/10 ${colors.icon}`;
+            actionBtn.textContent = String(options.actionLabel || '');
+            actionBtn.onclick = () => {
+                try {
+                    options.onAction();
+                } finally {
+                    if (options.dismissOnAction !== false) {
+                        dismiss();
+                    }
+                }
+            };
+            actionsEl.appendChild(actionBtn);
+        }
+
+        if (options.closeable !== false) {
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = `shrink-0 p-0.5 rounded hover:bg-black/10 transition-colors ${colors.icon}`;
+            closeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px]">close</span>';
+            closeBtn.onclick = dismiss;
+            actionsEl.appendChild(closeBtn);
+        }
+
+        if (actionsEl.childElementCount > 0) {
+            el.appendChild(actionsEl);
+        }
+        container.appendChild(el);
+
+        requestAnimationFrame(() => {
+            el.classList.remove('translate-x-[120%]');
+            el.classList.add('translate-x-0');
+        });
+
+        if (timerEl) {
+            renderCountdown();
+            countdownTimer = window.setInterval(renderCountdown, 250);
+        }
+
+        if (timeoutMs > 0) {
+            dismissTimer = window.setTimeout(dismiss, timeoutMs);
+        }
+        return { dismiss, element: el };
     }
 
     // ── confirm dialog ──────────────────────────────────────────────────
@@ -138,10 +218,36 @@ window.NotificationUI = (function () {
             overlay.className =
                 'fixed inset-0 z-[210] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm ' +
                 'opacity-0 transition-opacity duration-200';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.padding = '1rem';
+            overlay.style.overflowY = 'auto';
+            overlay.style.zIndex = '100020';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
 
             const btnColor = variant === 'error'
                 ? 'bg-status-error hover:bg-red-600 text-white'
                 : 'bg-primary hover:bg-primary-dark text-primary-fg';
+
+            const docEl = document.documentElement;
+            const body = document.body;
+            const previousDocOverflow = docEl ? docEl.style.overflow : '';
+            const previousBodyOverflow = body ? body.style.overflow : '';
+            const previousBodyPaddingRight = body ? body.style.paddingRight : '';
+            const activeElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+            const scrollbarWidth = docEl ? Math.max(0, window.innerWidth - docEl.clientWidth) : 0;
+
+            if (docEl) docEl.style.overflow = 'hidden';
+            if (body) {
+                body.style.overflow = 'hidden';
+                if (scrollbarWidth > 0) {
+                    body.style.paddingRight = `${scrollbarWidth}px`;
+                }
+            }
 
             overlay.innerHTML = `
                 <div class="bg-surface-1 rounded-2xl shadow-xl max-w-md w-full p-6 transform scale-95 transition-transform duration-200"
@@ -174,6 +280,11 @@ window.NotificationUI = (function () {
             let settled = false;
             const cleanup = () => {
                 document.removeEventListener('keydown', onKey);
+                if (docEl) docEl.style.overflow = previousDocOverflow;
+                if (body) {
+                    body.style.overflow = previousBodyOverflow;
+                    body.style.paddingRight = previousBodyPaddingRight;
+                }
             };
 
             const close = (result) => {
@@ -183,7 +294,12 @@ window.NotificationUI = (function () {
                 overlay.classList.add('opacity-0');
                 const card = overlay.querySelector('[data-role="confirm-card"]');
                 if (card) card.classList.add('scale-95');
-                setTimeout(() => overlay.remove(), 200);
+                setTimeout(() => {
+                    overlay.remove();
+                    if (activeElement && typeof activeElement.focus === 'function') {
+                        activeElement.focus({ preventScroll: true });
+                    }
+                }, 200);
                 resolve(result);
             };
 

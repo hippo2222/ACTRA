@@ -39,7 +39,8 @@
         setPauseInFlight,
         setCanGoNext,
         setLoading,
-        showTaskSkeleton
+        showTaskSkeleton,
+        setButtonBusy
     } = UIHelpers;
 
     const {
@@ -74,13 +75,23 @@
         });
 
         const totalQuestions = questions.length;
-        const answeredCount = answeredIds.size;
-        const unansweredCount = Math.max(0, totalQuestions - answeredCount);
+        const questionIds = questions.map((question, index) => {
+            if (question && question.id != null) {
+                return String(question.id);
+            }
+            return String(index);
+        });
+        const answeredQuestionIds = questionIds.filter((qid) => answeredIds.has(qid));
+        const unansweredQuestionIds = questionIds.filter((qid) => !answeredIds.has(qid));
+        const answeredCount = answeredQuestionIds.length;
+        const unansweredCount = unansweredQuestionIds.length;
 
         return {
             totalQuestions,
             answeredCount,
             unansweredCount,
+            answeredQuestionIds,
+            unansweredQuestionIds,
             allAnswered: totalQuestions > 0 && unansweredCount === 0
         };
     }
@@ -97,6 +108,395 @@
         return null;
     }
 
+    const TEST_DRAFT_AUTOSAVE_DEBOUNCE_MS = 250;
+    let testDraftAutosaveTimer = null;
+    const UI_STATE_AUTOSAVE_DEBOUNCE_MS = 1200;
+    let uiStateAutosaveTimer = null;
+    let uiStateAutosaveListenerBound = false;
+    let uiStateAutosaveInFlight = false;
+    let uiStateAutosavePending = false;
+    let lastUiStateAutosaveSignature = null;
+    const TEST_FORCE_SUBMIT_WINDOW_MS = 6000;
+    let testForceSubmitTimer = null;
+    let testForceSubmitActive = false;
+    let testForceSubmitTaskKey = null;
+
+    function clearPendingTestDraftAutosave() {
+        if (testDraftAutosaveTimer) {
+            clearTimeout(testDraftAutosaveTimer);
+            testDraftAutosaveTimer = null;
+        }
+    }
+
+    function scheduleTestDraftAutosave() {
+        clearPendingTestDraftAutosave();
+
+        if (
+            typeof DraftStorage === "undefined" ||
+            !SessionState ||
+            !SessionState.sessionId ||
+            !SessionState.currentTask ||
+            !buildCurrentDraftStorageKey() ||
+            getCurrentEffectiveTaskType() !== "test" ||
+            typeof TestUI === "undefined" ||
+            typeof TestUI.getUserAnswerPayload !== "function"
+        ) {
+            return;
+        }
+
+        const sessionId = SessionState.sessionId;
+        const draftKey = buildCurrentDraftStorageKey();
+        const payload = TestUI.getUserAnswerPayload() || null;
+        if (!payload || !draftKey) return;
+
+        testDraftAutosaveTimer = setTimeout(() => {
+            testDraftAutosaveTimer = null;
+            try {
+                DraftStorage.saveDraft(sessionId, draftKey, payload);
+            } catch (err) {
+                // best-effort
+            }
+        }, TEST_DRAFT_AUTOSAVE_DEBOUNCE_MS);
+    }
+
+    function clearPendingUiStateAutosave(resetSignature = false) {
+        if (uiStateAutosaveTimer) {
+            clearTimeout(uiStateAutosaveTimer);
+            uiStateAutosaveTimer = null;
+        }
+        uiStateAutosavePending = false;
+        if (resetSignature) {
+            lastUiStateAutosaveSignature = null;
+        }
+    }
+
+    function buildCurrentTaskRef() {
+        const task = SessionState && SessionState.currentTask ? SessionState.currentTask : null;
+        if (!task) return null;
+        if (task.task_ref) return String(task.task_ref);
+        if (task.module_id && task.topic_id && task.task_id) {
+            return `${task.module_id}/${task.topic_id}/${task.task_id}`;
+        }
+        return null;
+    }
+
+    function buildCurrentTaskQueueIndex() {
+        const task = SessionState && SessionState.currentTask ? SessionState.currentTask : null;
+        if (!task || !task.queue || !Number.isInteger(task.queue.index)) {
+            return null;
+        }
+        return task.queue.index;
+    }
+
+    function buildCurrentDraftStorageKey(taskOverride = null) {
+        const task = taskOverride || (SessionState && SessionState.currentTask ? SessionState.currentTask : null);
+        if (!task) return null;
+
+        const taskRef =
+            task.task_ref
+                ? String(task.task_ref)
+                : (task.module_id && task.topic_id && task.task_id)
+                    ? `${task.module_id}/${task.topic_id}/${task.task_id}`
+                    : null;
+        const queueIndex =
+            task.queue && Number.isInteger(task.queue.index)
+                ? task.queue.index
+                : null;
+        const iteration =
+            Number.isInteger(task.iteration)
+                ? task.iteration
+                : null;
+        const iterationSuffix = iteration != null ? `#iter${iteration}` : "";
+
+        if (taskRef && queueIndex != null) {
+            return `${taskRef}@${queueIndex}${iterationSuffix}`;
+        }
+        if (task.task_id != null) {
+            return `${String(task.task_id)}${iterationSuffix}`;
+        }
+        return taskRef ? `${taskRef}${iterationSuffix}` : null;
+    }
+
+    function getCheckButton() {
+        return document.getElementById("check-answer-btn");
+    }
+
+    function getCheckButtonLabelEl(button = null) {
+        const targetButton = button || getCheckButton();
+        if (!targetButton) return null;
+        return targetButton.querySelector(".truncate") || targetButton;
+    }
+
+    function setCheckButtonLabel(label) {
+        const checkBtn = getCheckButton();
+        const labelEl = getCheckButtonLabelEl(checkBtn);
+        if (!checkBtn || !labelEl) return;
+        const nextLabel = String(label || "").trim();
+        labelEl.textContent = nextLabel;
+        checkBtn.dataset.defaultLabel = nextLabel;
+    }
+
+    function getCheckButtonToolbar(button = null) {
+        const targetButton = button || getCheckButton();
+        return targetButton && targetButton.closest ? targetButton.closest(".s1-toolbar") : null;
+    }
+
+    function buildCurrentTestForceSubmitTaskKey() {
+        return buildCurrentDraftStorageKey()
+            || buildCurrentTaskRef()
+            || (SessionState && SessionState.currentTask && SessionState.currentTask.task_id != null
+                ? String(SessionState.currentTask.task_id)
+                : null);
+    }
+
+    function clearPendingTestForceSubmitTimer() {
+        if (testForceSubmitTimer) {
+            clearTimeout(testForceSubmitTimer);
+            testForceSubmitTimer = null;
+        }
+    }
+
+    function syncPendingIncompleteTestSidebar(progress) {
+        if (typeof TestUI === "undefined") return;
+        const unansweredIds = progress && Array.isArray(progress.unansweredQuestionIds)
+            ? progress.unansweredQuestionIds
+            : [];
+        if (unansweredIds.length > 0 && typeof TestUI.setPendingUnansweredQuestionIds === "function") {
+            TestUI.setPendingUnansweredQuestionIds(unansweredIds);
+            return;
+        }
+        if (typeof TestUI.clearPendingUnansweredQuestionIds === "function") {
+            TestUI.clearPendingUnansweredQuestionIds();
+        }
+    }
+
+    function resetPendingIncompleteTestSubmit(options = {}) {
+        clearPendingTestForceSubmitTimer();
+        testForceSubmitActive = false;
+        testForceSubmitTaskKey = null;
+
+        const clearSidebar = options.clearSidebar !== false;
+        const restoreLabel = options.restoreLabel !== false;
+        const checkBtn = getCheckButton();
+        if (checkBtn) {
+            checkBtn.removeAttribute("data-test-force-mode");
+            if (restoreLabel) {
+                setCheckButtonLabel("Проверить");
+            }
+        }
+
+        const toolbar = getCheckButtonToolbar(checkBtn);
+        if (toolbar) {
+            toolbar.removeAttribute("data-force-submit-active");
+        }
+
+        if (clearSidebar) {
+            syncPendingIncompleteTestSidebar(null);
+        }
+    }
+
+    function armPendingIncompleteTestSubmit(progress) {
+        const unansweredIds = progress && Array.isArray(progress.unansweredQuestionIds)
+            ? progress.unansweredQuestionIds
+            : [];
+        if (!unansweredIds.length) {
+            resetPendingIncompleteTestSubmit();
+            return;
+        }
+
+        clearPendingTestForceSubmitTimer();
+        testForceSubmitActive = true;
+        testForceSubmitTaskKey = buildCurrentTestForceSubmitTaskKey();
+
+        const checkBtn = getCheckButton();
+        if (checkBtn) {
+            checkBtn.setAttribute("data-test-force-mode", "true");
+            setCheckButtonLabel("Всё равно проверить");
+        }
+
+        const toolbar = getCheckButtonToolbar(checkBtn);
+        if (toolbar) {
+            toolbar.setAttribute("data-force-submit-active", "true");
+        }
+
+        syncPendingIncompleteTestSidebar(progress);
+
+        testForceSubmitTimer = setTimeout(() => {
+            resetPendingIncompleteTestSubmit();
+            refreshCheckButtonState();
+        }, TEST_FORCE_SUBMIT_WINDOW_MS);
+    }
+
+    function isPendingIncompleteTestSubmitActive() {
+        return testForceSubmitActive
+            && !!testForceSubmitTaskKey
+            && testForceSubmitTaskKey === buildCurrentTestForceSubmitTaskKey();
+    }
+
+    function buildAutosavePayload() {
+        if (!SessionState || !SessionState.sessionId || !SessionState.currentTask || SessionState.paused) {
+            return null;
+        }
+
+        const taskRef = buildCurrentTaskRef();
+        if (!taskRef) return null;
+
+        const userInput = getCurrentAnswerPayload();
+        const viewState = getCurrentViewState();
+        const payload = buildPausePayload(userInput, viewState);
+
+        if (!payload.user_input && !payload.view_state && !payload.evaluation_result) {
+            return null;
+        }
+        return payload;
+    }
+
+    function computeUiStateAutosaveSignature(payload) {
+        if (!payload || typeof payload !== "object") return null;
+        try {
+            return JSON.stringify(payload);
+        } catch (err) {
+            return null;
+        }
+    }
+
+    function shouldPersistDraftLocally(payload) {
+        return !!(
+            payload &&
+            payload.user_input &&
+            typeof payload.user_input === "object" &&
+            SessionState &&
+            !SessionState.currentTaskChecked
+        );
+    }
+
+    function persistDraftSnapshotLocally(payload) {
+        if (!shouldPersistDraftLocally(payload)) return;
+        if (
+            typeof DraftStorage === "undefined" ||
+            !SessionState ||
+            !SessionState.sessionId ||
+            !SessionState.currentTask ||
+            !buildCurrentDraftStorageKey()
+        ) {
+            return;
+        }
+        try {
+            const draftKey = buildCurrentDraftStorageKey();
+            if (!draftKey) return;
+            DraftStorage.saveDraft(
+                SessionState.sessionId,
+                draftKey,
+                payload.user_input
+            );
+        } catch (err) {
+            // best-effort
+        }
+    }
+
+    async function persistCurrentUiStateNow(options = {}) {
+        const force = options && options.force === true;
+        const allowWhileLoading = options && options.allowWhileLoading === true;
+        if (
+            !SessionState ||
+            !SessionState.sessionId ||
+            SessionState.paused ||
+            (SessionState.isLoading && !allowWhileLoading) ||
+            typeof SessionAPI === "undefined" ||
+            typeof SessionAPI.saveTaskUiState !== "function"
+        ) {
+            return false;
+        }
+
+        const payload = buildAutosavePayload();
+        if (!payload) return false;
+
+        const signature = computeUiStateAutosaveSignature(payload);
+        if (!force && signature && signature === lastUiStateAutosaveSignature) {
+            return false;
+        }
+
+        if (uiStateAutosaveInFlight) {
+            uiStateAutosavePending = true;
+            return false;
+        }
+
+        uiStateAutosaveInFlight = true;
+        try {
+            persistDraftSnapshotLocally(payload);
+            const { status, data } = await SessionAPI.saveTaskUiState(
+                SessionState.sessionId,
+                payload
+            );
+            if (status === 200 && data && data.ok === true) {
+                lastUiStateAutosaveSignature = signature;
+                return true;
+            }
+            return false;
+        } catch (err) {
+            return false;
+        } finally {
+            uiStateAutosaveInFlight = false;
+            if (uiStateAutosavePending) {
+                uiStateAutosavePending = false;
+                scheduleUiStateAutosave(0);
+            }
+        }
+    }
+
+    function scheduleUiStateAutosave(delayMs = UI_STATE_AUTOSAVE_DEBOUNCE_MS) {
+        if (!SessionState || !SessionState.sessionId || !SessionState.currentTask || SessionState.paused) {
+            return;
+        }
+        if (uiStateAutosaveTimer) {
+            clearTimeout(uiStateAutosaveTimer);
+        }
+        uiStateAutosaveTimer = setTimeout(() => {
+            uiStateAutosaveTimer = null;
+            void persistCurrentUiStateNow();
+        }, Math.max(0, Number(delayMs) || 0));
+    }
+
+    function shouldIgnoreUiAutosaveEvent(target) {
+        if (!target || !target.closest) return false;
+        return !!target.closest(
+            "#check-answer-btn, #next-task-btn, #finish-complex-btn, #back-to-complexes-btn, #pause-confirm-submit, #pause-confirm-discard, #pause-confirm-continue, #resume-continue-btn, #resume-exit-btn"
+        );
+    }
+
+    function isTaskSurfaceEventTarget(target) {
+        if (!target || !target.closest) return false;
+        return !!target.closest("#task-content, #result-box");
+    }
+
+    function initUiStateAutosave() {
+        if (uiStateAutosaveListenerBound || typeof document === "undefined" || typeof window === "undefined") {
+            return;
+        }
+        uiStateAutosaveListenerBound = true;
+
+        const scheduleFromEvent = (ev) => {
+            const target = ev && ev.target;
+            if (shouldIgnoreUiAutosaveEvent(target)) return;
+            if (!isTaskSurfaceEventTarget(target)) return;
+            scheduleUiStateAutosave();
+        };
+
+        document.addEventListener("input", scheduleFromEvent, true);
+        document.addEventListener("change", scheduleFromEvent, true);
+        document.addEventListener("click", scheduleFromEvent, true);
+        document.addEventListener("pointerup", scheduleFromEvent, true);
+        document.addEventListener("scroll", scheduleFromEvent, true);
+        document.addEventListener("wheel", scheduleFromEvent, { passive: true, capture: true });
+        window.addEventListener("test:answer-state-changed", () => {
+            scheduleUiStateAutosave();
+        });
+    }
+
+    function resetUiStateAutosaveTracking() {
+        clearPendingUiStateAutosave(true);
+    }
+
     function setCheckButtonBlockedVisual(blocked, progress) {
         const checkBtn = document.getElementById("check-answer-btn");
         if (!checkBtn) return;
@@ -107,7 +507,7 @@
             return;
         }
 
-        checkBtn.disabled = !!blocked;
+        checkBtn.disabled = false;
         checkBtn.classList.remove("cursor-not-allowed");
 
         if (!blocked) {
@@ -117,30 +517,85 @@
             return;
         }
 
-        checkBtn.setAttribute("aria-disabled", "true");
+        checkBtn.removeAttribute("aria-disabled");
         checkBtn.setAttribute("data-test-incomplete", "true");
-        checkBtn.classList.add("cursor-not-allowed");
         if (progress && Number.isFinite(progress.answeredCount) && Number.isFinite(progress.totalQuestions) && progress.totalQuestions > 0) {
-            checkBtn.title = `Ответьте на все вопросы (${progress.answeredCount}/${progress.totalQuestions})`;
+            checkBtn.title = isPendingIncompleteTestSubmitActive()
+                ? `Есть вопросы без ответа. Повторное нажатие проверит как есть (${progress.answeredCount}/${progress.totalQuestions})`
+                : `Есть вопросы без ответа (${progress.answeredCount}/${progress.totalQuestions})`;
         } else {
-            checkBtn.title = "Ответьте на все вопросы перед проверкой";
+            checkBtn.title = isPendingIncompleteTestSubmitActive()
+                ? "Есть вопросы без ответа. Повторное нажатие проверит как есть"
+                : "Есть вопросы без ответа";
         }
     }
 
+    function isPendingUserJudgementResult(result) {
+        return !!(
+            result &&
+            result.details &&
+            typeof result.details === "object" &&
+            result.details.requires_user_judgement === true
+        );
+    }
+
     function refreshCheckButtonState(progressOverride = null) {
+        if (SessionState && SessionState.currentTaskChecked) {
+            resetPendingIncompleteTestSubmit();
+            const checkBtn = document.getElementById("check-answer-btn");
+            if (checkBtn) {
+                checkBtn.disabled = true;
+                checkBtn.setAttribute("aria-disabled", "true");
+                checkBtn.removeAttribute("data-test-incomplete");
+                checkBtn.setAttribute("title", "Задание уже проверено");
+            }
+            return null;
+        }
+
+        if (SessionState && SessionState.pendingManualJudgement) {
+            resetPendingIncompleteTestSubmit();
+            const checkBtn = document.getElementById("check-answer-btn");
+            if (checkBtn) {
+                checkBtn.disabled = true;
+                checkBtn.setAttribute("aria-disabled", "true");
+                checkBtn.removeAttribute("data-test-incomplete");
+                checkBtn.setAttribute("title", "Сначала выберите итог проверки");
+            }
+            return null;
+        }
+
         const taskType = getCurrentEffectiveTaskType();
         if (taskType !== "test") {
+            resetPendingIncompleteTestSubmit();
             setCheckButtonBlockedVisual(false, null);
             return null;
         }
 
+        if (testForceSubmitActive && !isPendingIncompleteTestSubmitActive()) {
+            resetPendingIncompleteTestSubmit();
+        }
+
         const progress = progressOverride || getCurrentTestProgress();
         const blocked = !!(progress && progress.totalQuestions > 0 && !progress.allAnswered);
+        if (!blocked) {
+            resetPendingIncompleteTestSubmit();
+        } else if (isPendingIncompleteTestSubmitActive()) {
+            syncPendingIncompleteTestSidebar(progress);
+        }
         setCheckButtonBlockedVisual(blocked, progress);
         return progress;
     }
 
     function handleCheckAnswerClick(event) {
+        if (SessionState && SessionState.pendingManualJudgement) {
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            showStatus("Сначала выберите, считать ли ответ верным");
+            return;
+        }
+
         const taskType = getCurrentEffectiveTaskType();
         if (taskType === "test") {
             const progress = refreshCheckButtonState();
@@ -150,8 +605,14 @@
                     event.preventDefault();
                     event.stopPropagation();
                 }
-                showStatus(`Ответьте на все вопросы перед проверкой (${progress.answeredCount}/${progress.totalQuestions})`);
-                showEvaluationResult(null);
+                if (!isPendingIncompleteTestSubmitActive()) {
+                    armPendingIncompleteTestSubmit(progress);
+                    showStatus(`Ответьте на все вопросы перед проверкой (${progress.answeredCount}/${progress.totalQuestions})`);
+                    showEvaluationResult(null);
+                    return;
+                }
+                resetPendingIncompleteTestSubmit();
+                handleSubmitAnswer({ allowIncompleteTest: true });
                 return;
             }
         }
@@ -169,6 +630,7 @@
         window.addEventListener("test:answer-state-changed", (ev) => {
             const detail = ev && ev.detail && typeof ev.detail === "object" ? ev.detail : null;
             refreshCheckButtonState(detail);
+            scheduleTestDraftAutosave();
         });
 
         if (!testBlockedHintListenerBound && typeof document !== "undefined") {
@@ -178,6 +640,7 @@
                     ? ev.target.closest("#check-answer-btn")
                     : null;
                 if (!target) return;
+                if (!target.disabled) return;
                 if (target.getAttribute("data-test-incomplete") !== "true") return;
                 const progress = getCurrentTestProgress();
                 if (progress && progress.totalQuestions > 0 && !progress.allAnswered) {
@@ -218,11 +681,11 @@
             }
 
             if (hasNext) {
-                window.navigateWithTransition(`/ui/session/${encodeURIComponent(
+                navigateWithoutPrompt(`/ui/session/${encodeURIComponent(
                     SessionState.sessionId
                 )}/iteration/${encodeURIComponent(iteration)}`);
             } else {
-                window.navigateWithTransition(`/ui/session/${encodeURIComponent(
+                navigateWithoutPrompt(`/ui/session/${encodeURIComponent(
                     SessionState.sessionId
                 )}/results`);
             }
@@ -247,7 +710,9 @@
         const spinner = document.getElementById("resume-spinner");
         if (spinner) spinner.classList.remove("hidden");
         try {
-            const { status, data } = await SessionAPI.resumeSession(SessionState.sessionId);
+            const { status, data } = await SessionAPI.resumeSession(SessionState.sessionId, {
+                source: "s1_resume_modal",
+            });
             const resp = data;
             if (status === 200 && resp && resp.ok) {
                 hideResumeModal();
@@ -256,6 +721,14 @@
                 // But index.html had `const setPaused = UIHelpers.setPausedUI`.
                 // I should verify if setPausedUI is valid. I'll assume yes for now.
                 showStatus("");
+                const resumeUrl =
+                    typeof resp?.resume_target?.url === "string"
+                        ? resp.resume_target.url
+                        : "";
+                if (resumeUrl && resumeUrl !== window.location.pathname) {
+                    navigateWithoutPrompt(resumeUrl);
+                    return;
+                }
                 const reloadTask =
                     (window.Main && typeof window.Main.loadInitialTask === "function")
                         ? window.Main.loadInitialTask.bind(window.Main)
@@ -283,10 +756,25 @@
             showStatus("Сессия не найдена. Обновите страницу", "error");
             return;
         }
+        clearPendingUiStateAutosave();
         setPauseInFlight(true);
         showStatus("");
         try {
-            const { status, data } = await SessionAPI.pauseSession(SessionState.sessionId);
+            const payload = getCurrentAnswerPayload();
+            const viewState = getCurrentViewState();
+            if (
+                payload &&
+                typeof DraftStorage !== "undefined" &&
+                SessionState.currentTask &&
+                buildCurrentDraftStorageKey()
+            ) {
+                DraftStorage.saveDraft(SessionState.sessionId, buildCurrentDraftStorageKey(), payload);
+            }
+
+            const { status, data } = await SessionAPI.pauseSession(
+                SessionState.sessionId,
+                buildPausePayload(payload, viewState)
+            );
             const resp = data;
             if (status === 409) {
                 await handlePausedConflict();
@@ -299,7 +787,7 @@
                 showStatus(message, "error");
                 return;
             }
-            window.navigateWithTransition(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
+            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
         } catch (err) {
             console.error("Pause request failed", err);
             showStatus("Не удалось поставить сессию на паузу. Проверьте соединение и попробуйте снова", "error");
@@ -310,10 +798,11 @@
 
     async function handleDiscardSession() {
         if (!SessionState.sessionId) {
-            window.navigateWithTransition(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
+            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
             return;
         }
 
+        clearPendingUiStateAutosave();
         setPauseInFlight(true);
         showStatus("");
         try {
@@ -332,7 +821,7 @@
                 return;
             }
 
-            window.navigateWithTransition(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
+            navigateWithoutPrompt(SessionRoutes.COMPLEXES || SessionRoutes.MAIN || "/ui/complexes");
         } catch (err) {
             console.error("Discard session failed", err);
             showStatus("Не удалось выйти без сохранения. Попробуйте снова", "error");
@@ -344,20 +833,158 @@
     // -------------------------------------------------------------------
     // Submit Answer
     // -------------------------------------------------------------------
-    async function handleSubmitAnswer() {
+    function applyTaskCheckFeedback(taskType, result) {
+        if (taskType === "test" && typeof TestUI !== "undefined") TestUI.applyCheckFeedback(result);
+        else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined") SequenceUI.applyCheckFeedback(result);
+        else if (taskType === "click") {
+            const subtype = getTaskSubtype(SessionState.currentTask);
+            if (subtype !== "error_detection" && typeof ClickUI !== "undefined") ClickUI.applyCheckFeedback(result);
+        } else if (taskType === "draw") {
+            if (typeof DrawUI !== "undefined") DrawUI.applyCheckFeedback(result);
+        } else if (taskType === "open_answer" && typeof OpenAnswerUI !== "undefined") OpenAnswerUI.applyCheckFeedback(result);
+    }
+
+    function applyPendingUserJudgementState(result, currentTaskType) {
+        showStatus("");
+        showEvaluationResult(result);
+
+        if (SessionState) {
+            SessionState.currentTaskChecked = false;
+            SessionState.pendingManualJudgement = true;
+            SessionState.currentEvaluationResult = result || null;
+        }
+
+        setCanGoNext(false);
+        void persistCurrentUiStateNow({ force: true, allowWhileLoading: true });
+        applyTaskCheckFeedback(currentTaskType, result);
+    }
+
+    function finalizeCheckedResult(result, currentTaskType) {
+        const isSuccess = !!result && result.success === true;
+
+        if (SessionState) {
+            SessionState.pendingManualJudgement = false;
+        }
+
+        if (typeof SuccessEffects !== 'undefined') {
+            if (isSuccess) { SuccessEffects.recordSuccess(); }
+            else { SuccessEffects.recordFailure(); }
+        }
+
+        showEvaluationResult(result);
+
+        if (SessionState) {
+            SessionState.currentTaskChecked = true;
+            SessionState.currentEvaluationResult = result || null;
+        }
+        setCanGoNext(true);
+        void persistCurrentUiStateNow({ force: true, allowWhileLoading: true });
+
+        if (typeof SuccessEffects !== 'undefined') {
+            SuccessEffects.playResultEffects(isSuccess);
+        }
+
+        applyTaskCheckFeedback(currentTaskType, result);
+    }
+
+    async function handleDrawLabelJudgementChoice(choice) {
+        if (!SessionState || !SessionState.sessionId || !SessionState.currentTask || !SessionState.pendingManualJudgement) {
+            return;
+        }
+
+        const normalizedChoice = choice === "accept" ? "accept" : "reject";
+        const mode = normalizedChoice === "accept" ? "force_success" : "force_failure";
+        const message =
+            normalizedChoice === "accept"
+                ? "Ответ принят по вашему выбору."
+                : "Ответ отмечен как неверный по вашему выбору.";
+        const baseResult =
+            SessionState.currentEvaluationResult && typeof SessionState.currentEvaluationResult === "object"
+                ? SessionState.currentEvaluationResult
+                : null;
+        const baseDetails =
+            baseResult && baseResult.details && typeof baseResult.details === "object"
+                ? baseResult.details
+                : {};
+        const manualLabelJudgement =
+            baseDetails.manual_label_judgement && typeof baseDetails.manual_label_judgement === "object"
+                ? baseDetails.manual_label_judgement
+                : {};
+        const auditDetails = {
+            ...baseDetails,
+            requires_user_judgement: false,
+            pending_user_judgement: false,
+            user_judgement_resolved: true,
+            manual_label_judgement: {
+                ...manualLabelJudgement,
+                resolved: true,
+                user_choice: normalizedChoice,
+            },
+        };
+
+        try {
+            setLoading(true);
+            showStatus("");
+
+            const answer =
+                (typeof getCurrentAnswerPayload === "function" && getCurrentAnswerPayload()) ||
+                {};
+            const { status, data } = await SessionAPI.submitAnswer(
+                SessionState.sessionId,
+                SessionState.currentTask.task_id,
+                answer,
+                {
+                    auditControl: {
+                        enabled: true,
+                        mode,
+                        message,
+                        details: auditDetails,
+                    },
+                }
+            );
+
+            if (status === 409) {
+                await handlePausedConflict();
+                return;
+            }
+
+            const response = data;
+            if (!response || !response.ok || !response.result) {
+                showStatus((response && (response.error || response.message)) || "Не удалось сохранить ваш выбор", "error");
+                return;
+            }
+
+            showStatus("");
+            finalizeCheckedResult(response.result, getCurrentEffectiveTaskType());
+        } catch (err) {
+            console.error(err);
+            showStatus("Не удалось сохранить ваш выбор. Попробуйте ещё раз", "error");
+        } finally {
+            setLoading(false);
+            refreshCheckButtonState();
+        }
+    }
+
+    async function handleSubmitAnswer(options = {}) {
         if (SessionState.isLoading) return;
         if (!SessionState.sessionId || !SessionState.currentTask) return;
         if (SessionState.paused) {
             showResumeModal();
             return;
         }
+        clearPendingTestDraftAutosave();
+        clearPendingUiStateAutosave();
 
         let answer = {};
         const currentTaskType = getCurrentEffectiveTaskType();
+        const allowIncompleteTest = !!(options && options.allowIncompleteTest === true);
         let testAnsweredCount = null;
         let testTotalQuestions = null;
 
         setCanGoNext(false);
+        if (currentTaskType !== "test" || allowIncompleteTest) {
+            resetPendingIncompleteTestSubmit();
+        }
         refreshCheckButtonState();
 
         // Extract answer from UIs
@@ -376,10 +1003,7 @@
         } else if (currentTaskType === "click" && typeof ClickUI !== "undefined") {
             answer = ClickUI.getUserAnswerPayload() || {};
         } else if (currentTaskType === "draw") {
-            const rawType = getRawTaskType(SessionState.currentTask);
-            if (rawType === "draw" && typeof ClickUI !== "undefined") {
-                answer = ClickUI.getUserAnswerPayload() || {};
-            } else if (typeof DrawUI !== "undefined") {
+            if (typeof DrawUI !== "undefined") {
                 answer = DrawUI.getUserAnswerPayload() || {};
             }
         } else if (currentTaskType === "open_answer" && typeof OpenAnswerUI !== "undefined") {
@@ -388,6 +1012,15 @@
 
         // Validation
         try {
+            if (currentTaskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.validateBeforeSubmit === "function") {
+                const validation = SequenceUI.validateBeforeSubmit();
+                if (validation && validation.valid === false) {
+                    showStatus(validation.message || "Проверьте уровни перед проверкой", "error");
+                    showEvaluationResult(null);
+                    return;
+                }
+                answer = SequenceUI.getUserAnswerPayload() || answer;
+            }
             if (currentTaskType === "open_answer") {
                 const isValid = typeof OpenAnswerUI !== "undefined" && typeof OpenAnswerUI.isAnswerValid === "function"
                     ? !!OpenAnswerUI.isAnswerValid()
@@ -408,34 +1041,37 @@
                     (SessionState.currentTask.task_data && SessionState.currentTask.task_data.difficulty) ||
                     1
                 );
-                if (difficulty === 2 || difficulty === 3) {
-                    const levels = answer && Array.isArray(answer.levels) ? answer.levels : [];
-                    const hasAnyBlock = levels.some((l) => Array.isArray(l && l.blocks) && l.blocks.some((x) => x != null));
-                    if (!hasAnyBlock) {
-                        showStatus("Сначала создайте уровень и разместите хотя бы один элемент", "error");
+                const levels = answer && Array.isArray(answer.levels) ? answer.levels : [];
+                const hasAnyBlock = levels.some((l) => Array.isArray(l && l.blocks) && l.blocks.some((x) => x != null));
+                if (!hasAnyBlock) {
+                    const emptyMessage = difficulty >= 3
+                        ? "Сначала создайте уровень и введите хотя бы одно название элемента"
+                        : difficulty >= 2
+                            ? "Сначала создайте уровень и разместите хотя бы один элемент"
+                            : "Сначала разместите хотя бы один элемент перед проверкой";
+                    showStatus(emptyMessage, "error");
+                    showEvaluationResult(null);
+                    return;
+                }
+                if (difficulty === 3) {
+                    let missingName = false;
+                    for (const lvl of levels) {
+                        const blocks = Array.isArray(lvl && lvl.blocks) ? lvl.blocks : [];
+                        const names = lvl && typeof lvl === "object" ? (lvl.block_names || lvl.blockNames) : null;
+                        for (const id of blocks) {
+                            if (id == null) continue;
+                            const name = names && typeof names === "object" ? String(names[id] || "") : "";
+                            if (!name.trim()) {
+                                missingName = true;
+                                break;
+                            }
+                        }
+                        if (missingName) break;
+                    }
+                    if (missingName) {
+                        showStatus("\u0414\u043b\u044f \u0432\u0441\u0435\u0445 \u0440\u0430\u0437\u043c\u0435\u0449\u0435\u043d\u043d\u044b\u0445 \u044d\u043b\u0435\u043c\u0435\u043d\u0442\u043e\u0432 \u043d\u0443\u0436\u043d\u043e \u0443\u043a\u0430\u0437\u0430\u0442\u044c \u043d\u0430\u0437\u0432\u0430\u043d\u0438\u044f", "error");
                         showEvaluationResult(null);
                         return;
-                    }
-                    if (difficulty === 3) {
-                        let missingName = false;
-                        for (const lvl of levels) {
-                            const blocks = Array.isArray(lvl && lvl.blocks) ? lvl.blocks : [];
-                            const names = lvl && typeof lvl === "object" ? (lvl.block_names || lvl.blockNames) : null;
-                            for (const id of blocks) {
-                                if (id == null) continue;
-                                const name = names && typeof names === "object" ? String(names[id] || "") : "";
-                                if (!name.trim()) {
-                                    missingName = true;
-                                    break;
-                                }
-                            }
-                            if (missingName) break;
-                        }
-                        if (missingName) {
-                            showStatus("Для всех размещенных элементов нужно указать названия", "error");
-                            showEvaluationResult(null);
-                            return;
-                        }
                     }
                 }
             }
@@ -448,35 +1084,29 @@
                     (answer.answers && Object.keys(answer.answers).length > 0) ||
                     (answer.text_answers && Object.keys(answer.text_answers).length > 0);
 
-                if (!hasAnyAnswer) {
+                if (!hasAnyAnswer && !allowIncompleteTest) {
                     showStatus("Ответьте хотя бы на один вопрос перед проверкой", "error");
                     showEvaluationResult(null);
                     return;
                 }
-            
-                const totalQuestions = Array.isArray(answer.questions) ? answer.questions.length : 0;
+
+                const progress = buildTestProgress(answer);
+                const totalQuestions = progress.totalQuestions;
                 if (totalQuestions > 0) {
-                    const answeredIds = new Set([
-                        ...Object.keys(answer.answers || {}),
-                        ...Object.keys(answer.text_answers || {})
-                    ]);
-                    const answeredCount = answeredIds.size;
-                    const unansweredCount = Math.max(0, totalQuestions - answeredCount);
-                    testAnsweredCount = answeredCount;
+                    testAnsweredCount = progress.answeredCount;
                     testTotalQuestions = totalQuestions;
                     console.info("[SubmitAnswer][test] payload summary", {
                         totalQuestions,
-                        answeredCount,
-                        unansweredCount,
-                        answeredQuestionIds: Array.from(answeredIds),
+                        answeredCount: progress.answeredCount,
+                        unansweredCount: progress.unansweredCount,
+                        answeredQuestionIds: Array.from(progress.answeredQuestionIds || []),
+                        unansweredQuestionIds: Array.from(progress.unansweredQuestionIds || []),
                         answerKeys: Object.keys(answer.answers || {}),
                         textAnswerKeys: Object.keys(answer.text_answers || {})
                     });
 
-                    // Prevent misleading "wrong answer" result when user checked
-                    // only part of the test.
-                    if (unansweredCount > 0) {
-                        showStatus(`Ответьте на все вопросы перед проверкой (${answeredCount}/${totalQuestions})`);
+                    if (progress.unansweredCount > 0 && !allowIncompleteTest) {
+                        showStatus(`Ответьте на все вопросы перед проверкой (${progress.answeredCount}/${totalQuestions})`);
                         showEvaluationResult(null);
                         return;
                     }
@@ -484,18 +1114,131 @@
             }
         } catch (e) { /* ignore */ }
 
+        function getTaskDifficultyLevel(task) {
+            try {
+                const taskData = task && task.task_data ? task.task_data : {};
+                const content = taskData && taskData.content ? taskData.content : {};
+                const settings =
+                    (taskData && taskData.settings) ||
+                    (content && content.settings) ||
+                    {};
+                const candidates = [
+                    task && task.difficulty,
+                    taskData && taskData._difficulty_level,
+                    taskData && taskData.difficulty,
+                    settings && settings.difficulty,
+                    content && content.difficulty,
+                ];
+                for (const candidate of candidates) {
+                    const parsed = Number(candidate);
+                    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+                }
+            } catch (e) { /* ignore */ }
+            return null;
+        }
+
+        function requiresLabelsForAnswer(task, fallbackDifficulty) {
+            let explicitRequiresLabels = null;
+            try {
+                const taskData = task && task.task_data ? task.task_data : {};
+                const content = taskData && taskData.content ? taskData.content : {};
+                explicitRequiresLabels =
+                    content.requires_labels ??
+                    taskData.requires_labels ??
+                    (task && task.requires_labels);
+            } catch (e) { /* ignore */ }
+            const inferredDifficulty = Math.max(
+                Number(fallbackDifficulty) || 0,
+                Number(getTaskDifficultyLevel(task)) || 0,
+                Number(task && task.iteration) || 0,
+                1
+            );
+            if (explicitRequiresLabels === true) return true;
+            if (inferredDifficulty >= 2) return true;
+            if (explicitRequiresLabels === false) return false;
+            return inferredDifficulty >= 2;
+        }
+
+        function hasAllFilledLabels(labels, expectedCount) {
+            if (!expectedCount || expectedCount <= 0) return true;
+            const normalized = Array.isArray(labels) ? labels : [];
+            if (normalized.length < expectedCount) return false;
+            for (let index = 0; index < expectedCount; index += 1) {
+                if (!String(normalized[index] || '').trim()) return false;
+            }
+            return true;
+        }
+
+        function missingRequiredLabels(answerPayload, markCounts, task, fallbackDifficulty) {
+            if (!requiresLabelsForAnswer(task, fallbackDifficulty)) return false;
+            const clickCount = Number(markCounts && markCounts.clicks || 0);
+            const polygonCount = Number(markCounts && markCounts.polygons || 0);
+            const lineCount = Number(markCounts && markCounts.lines || 0);
+            const drawingCount = Number(markCounts && markCounts.drawing || 0);
+
+            const labelsClicks = Array.isArray(answerPayload && answerPayload.labels_clicks)
+                ? answerPayload.labels_clicks
+                : [];
+            const labelsPolygons = Array.isArray(answerPayload && answerPayload.labels_polygons)
+                ? answerPayload.labels_polygons
+                : [];
+            const labelsLines = Array.isArray(answerPayload && answerPayload.labels_lines)
+                ? answerPayload.labels_lines
+                : [];
+            const legacyLabels = answerPayload && answerPayload.labels && typeof answerPayload.labels === 'object'
+                ? Object.values(answerPayload.labels)
+                : [];
+
+            if (clickCount > 0) {
+                const clicksSatisfied =
+                    hasAllFilledLabels(labelsClicks, clickCount) ||
+                    hasAllFilledLabels(legacyLabels, clickCount);
+                if (!clicksSatisfied) return true;
+            }
+            if (polygonCount > 0 && !hasAllFilledLabels(labelsPolygons, polygonCount)) return true;
+            if (lineCount > 0 && !hasAllFilledLabels(labelsLines, lineCount)) return true;
+            if (drawingCount > 0 && polygonCount <= 0 && lineCount <= 0) {
+                const legacyLabel = String(answerPayload && answerPayload.label || '').trim();
+                if (!legacyLabel) return true;
+            }
+            return false;
+        }
+
         // Validation 4: Click must have at least one interaction
         try {
-            if (currentTaskType === "click") {
+            if (currentTaskType === 'click') {
                 const subtype = getTaskSubtype(SessionState.currentTask);
+                const rawTaskType = getRawTaskType(SessionState.currentTask);
                 // Skip validation for error_detection (auto-submit)
-                if (subtype !== "error_detection") {
-                    const clicks = answer.clicks || [];
+                if (subtype !== 'error_detection') {
+                    const clicks = Array.isArray(answer.clicks) ? answer.clicks : [];
                     const labels = answer.labels || {};
-                    const hasAnyInteraction = clicks.length > 0 || Object.keys(labels).length > 0;
+                    const polygons = Array.isArray(answer.polygons) ? answer.polygons : [];
+                    const lines = Array.isArray(answer.lines) ? answer.lines : [];
+                    const drawing = Array.isArray(answer.drawing) ? answer.drawing : [];
+                    const hasShapeInteraction =
+                        polygons.length > 0 || lines.length > 0 || drawing.length > 0;
+                    const hasDrawInteraction =
+                        (rawTaskType === 'draw' || (rawTaskType === 'click' && hasShapeInteraction)) &&
+                        hasShapeInteraction;
+                    const hasAnyInteraction =
+                        clicks.length > 0 ||
+                        Object.keys(labels).length > 0 ||
+                        hasDrawInteraction;
 
                     if (!hasAnyInteraction) {
-                        showStatus("Сделайте хотя бы одно действие (клик или подпись) перед проверкой", "error");
+                        showStatus('Сделайте хотя бы одно действие (клик или подпись) перед проверкой', 'error');
+                        showEvaluationResult(null);
+                        return;
+                    }
+
+                    if (missingRequiredLabels(answer, {
+                        clicks: clicks.length,
+                        polygons: polygons.length,
+                        lines: lines.length,
+                        drawing: drawing.length,
+                    }, SessionState.currentTask)) {
+                        showStatus('Заполните названия для всех отметок перед проверкой', 'error');
                         showEvaluationResult(null);
                         return;
                     }
@@ -505,11 +1248,11 @@
 
         // Validation 5: Draw must have at least one drawing
         try {
-            if (currentTaskType === "draw") {
+            if (currentTaskType === 'draw') {
                 // Check if DrawUI has validation method
-                if (typeof DrawUI !== "undefined" && typeof DrawUI.hasAnyDrawing === "function") {
+                if (typeof DrawUI !== 'undefined' && typeof DrawUI.hasAnyDrawing === 'function') {
                     if (!DrawUI.hasAnyDrawing()) {
-                        showStatus("Нарисуйте хотя бы одну метку перед проверкой", "error");
+                        showStatus('Нарисуйте хотя бы одну метку перед проверкой', 'error');
                         showEvaluationResult(null);
                         return;
                     }
@@ -517,39 +1260,46 @@
                     // Fallback: check payload structure
                     const hasDrawing =
                         (answer.drawings && Array.isArray(answer.drawings) && answer.drawings.length > 0) ||
-                        (answer.strokes && Array.isArray(answer.strokes) && answer.strokes.length > 0);
+                        (answer.strokes && Array.isArray(answer.strokes) && answer.strokes.length > 0) ||
+                        (answer.drawing && Array.isArray(answer.drawing) && answer.drawing.length > 0) ||
+                        (answer.polygons && Array.isArray(answer.polygons) && answer.polygons.length > 0) ||
+                        (answer.lines && Array.isArray(answer.lines) && answer.lines.length > 0);
 
                     if (!hasDrawing) {
-                        showStatus("Нарисуйте хотя бы одну метку перед проверкой", "error");
+                        showStatus('Нарисуйте хотя бы одну метку перед проверкой', 'error');
                         showEvaluationResult(null);
                         return;
                     }
+                }
+
+                const polygons = Array.isArray(answer.polygons) ? answer.polygons : [];
+                const lines = Array.isArray(answer.lines) ? answer.lines : [];
+                const drawing = Array.isArray(answer.drawing) ? answer.drawing : [];
+                if (missingRequiredLabels(answer, {
+                    clicks: 0,
+                    polygons: polygons.length,
+                    lines: lines.length,
+                    drawing: drawing.length,
+                }, SessionState.currentTask)) {
+                    showStatus('Заполните названия для всех отметок перед проверкой', 'error');
+                    showEvaluationResult(null);
+                    return;
                 }
             }
         } catch (e) { /* ignore */ }
 
         // Save draft
         if (typeof DraftStorage !== 'undefined') {
-            DraftStorage.saveDraft(SessionState.sessionId, SessionState.currentTask.task_id, answer);
+            const draftKey = buildCurrentDraftStorageKey();
+            if (draftKey) {
+                DraftStorage.saveDraft(SessionState.sessionId, draftKey, answer);
+            }
         }
 
         try {
             setLoading(true);
-            const currentSubtype = getTaskSubtype(SessionState.currentTask);
-            if (!(currentSubtype === "error_detection" && getCurrentEffectiveTaskType() === "click")) {
-                if (
-                    currentTaskType === "test" &&
-                    Number.isFinite(testAnsweredCount) &&
-                    Number.isFinite(testTotalQuestions) &&
-                    testTotalQuestions > 0
-                ) {
-                    showStatus(`Проверяем ответ... (отвечено ${testAnsweredCount}/${testTotalQuestions})`);
-                } else {
-                    showStatus("Проверяем ответ...");
-                }
-            } else {
-                showStatus("");
-            }
+            setButtonBusy("check-answer-btn", true, { label: "Проверяем" });
+            showStatus("");
 
             const { status, data } = await SessionAPI.submitAnswer(
                 SessionState.sessionId,
@@ -572,45 +1322,26 @@
 
             // Clear draft
             if (typeof DraftStorage !== 'undefined') {
-                DraftStorage.clearDraft(SessionState.sessionId, SessionState.currentTask.task_id);
+                clearPendingTestDraftAutosave();
+                const draftKey = buildCurrentDraftStorageKey();
+                if (draftKey) {
+                    DraftStorage.clearDraft(SessionState.sessionId, draftKey);
+                }
             }
 
             showStatus("");
-
-            // Update streak BEFORE rendering result so the badge shows the correct value
-            const isSuccess = !!response.result && response.result.success === true;
-            if (typeof SuccessEffects !== 'undefined') {
-                if (isSuccess) { SuccessEffects.recordSuccess(); }
-                else { SuccessEffects.recordFailure(); }
+            if (isPendingUserJudgementResult(response.result)) {
+                applyPendingUserJudgementState(response.result, currentTaskType);
+            } else {
+                finalizeCheckedResult(response.result, currentTaskType);
             }
-
-            showEvaluationResult(response.result);
-
-            setCanGoNext(true);
-
-            // Play success/failure game effects (confetti, glow, shake)
-            if (typeof SuccessEffects !== 'undefined') {
-                SuccessEffects.playResultEffects(isSuccess);
-            }
-
-            // Apply feedback
-            // Note: Simplified logic to call applyCheckFeedback on various UIs
-            if (currentTaskType === "test" && typeof TestUI !== "undefined") TestUI.applyCheckFeedback(response.result);
-            else if (currentTaskType === "sequence_assembly" && typeof SequenceUI !== "undefined") SequenceUI.applyCheckFeedback(response.result);
-            else if (currentTaskType === "click") {
-                const subtype = getTaskSubtype(SessionState.currentTask);
-                if (subtype !== "error_detection" && typeof ClickUI !== "undefined") ClickUI.applyCheckFeedback(response.result);
-            } else if (currentTaskType === "draw") {
-                const rawType = getRawTaskType(SessionState.currentTask);
-                if (rawType === "draw" && typeof ClickUI !== "undefined") ClickUI.applyCheckFeedback(response.result);
-                else if (typeof DrawUI !== "undefined") DrawUI.applyCheckFeedback(response.result);
-            } else if (currentTaskType === "open_answer" && typeof OpenAnswerUI !== "undefined") OpenAnswerUI.applyCheckFeedback(response.result);
 
         } catch (err) {
             console.error(err);
             showRetryOption(handleSubmitAnswer);
             showEvaluationResult(null);
         } finally {
+            setButtonBusy("check-answer-btn", false);
             setLoading(false);
             refreshCheckButtonState();
         }
@@ -626,9 +1357,15 @@
             showResumeModal();
             return;
         }
+        if (!SessionState.currentTaskChecked || !SessionState.canGoNext) {
+            showStatus("Сначала проверьте задание", "error");
+            return;
+        }
+        clearPendingUiStateAutosave(true);
         try {
             setLoading(true);
-            showStatus("Загружаем следующее задание...");
+            setButtonBusy("next-task-btn", true, { label: "Загрузка" });
+            showStatus("");
 
             const prevTask = SessionState.currentTask || null;
             if (!prevTask) {
@@ -636,7 +1373,7 @@
             }
             const { status, data } = await SessionAPI.nextTask(SessionState.sessionId);
 
-            if (status === 409) {
+            if (status === 409 && data && data.error === "session_paused") {
                 await handlePausedConflict();
                 return;
             }
@@ -649,12 +1386,16 @@
                     sessionId: SessionState.sessionId,
                     status,
                     response,
-                    redirect: (url) => { window.navigateWithTransition(url); },
+                    redirect: (url) => { navigateWithoutPrompt(url); },
                 });
                 if (handled && handled.handled) return;
             }
 
             if (!response.ok) {
+                if (response.error === "task_not_checked") {
+                    showStatus("Сначала проверьте задание", "error");
+                    return;
+                }
                 const redirected = await maybeRedirectToResults();
                 if (!redirected) showStatus(response.error || "Следующее задание не найдено", "error");
                 return;
@@ -696,6 +1437,7 @@
             console.error(err);
             showStatus("Неожиданная ошибка при загрузке следующего задания", "error");
         } finally {
+            setButtonBusy("next-task-btn", false);
             setLoading(false);
         }
     }
@@ -708,6 +1450,7 @@
             showStatus("Сессия не найдена. Обновите страницу", "error");
             return;
         }
+        clearPendingUiStateAutosave();
 
         const confirmed = await NotificationUI.confirm({
             title: 'Прервать комплекс?',
@@ -737,7 +1480,7 @@
                 if (finishBtn) finishBtn.removeAttribute("disabled");
                 return;
             }
-            window.navigateWithTransition(SessionRoutes.MAIN);
+            navigateWithoutPrompt(SessionRoutes.MAIN);
         } catch (err) {
             console.error("Cancel session failed", err);
             showStatus("Не удалось завершить комплекс. Попробуйте ещё раз", "error");
@@ -769,36 +1512,157 @@
         return null;
     }
 
+    function getCurrentViewState() {
+        const taskType = getCurrentEffectiveTaskType();
+        if (!taskType) return null;
+        try {
+            if (taskType === "test" && typeof TestUI !== "undefined" && typeof TestUI.getViewState === "function") {
+                return TestUI.getViewState() || null;
+            } else if (taskType === "sequence_assembly" && typeof SequenceUI !== "undefined" && typeof SequenceUI.getViewState === "function") {
+                return SequenceUI.getViewState() || null;
+            } else if (taskType === "click" && typeof ClickUI !== "undefined" && typeof ClickUI.getViewState === "function") {
+                return ClickUI.getViewState() || null;
+            } else if (taskType === "draw" && typeof DrawUI !== "undefined" && typeof DrawUI.getViewState === "function") {
+                return DrawUI.getViewState() || null;
+            }
+        } catch (e) {
+            return null;
+        }
+        return null;
+    }
+
+    function buildPausePayload(userInput, viewState) {
+        const payload = {};
+        const taskRef = buildCurrentTaskRef();
+        const queueIndex = buildCurrentTaskQueueIndex();
+        if (taskRef) {
+            payload.task_ref = taskRef;
+        }
+        if (Number.isInteger(queueIndex)) {
+            payload.task_index = queueIndex;
+        }
+        if (userInput && typeof userInput === "object") {
+            payload.user_input = userInput;
+        }
+        if (viewState && typeof viewState === "object") {
+            payload.view_state = viewState;
+        }
+        if (
+            SessionState &&
+            SessionState.currentEvaluationResult &&
+            (SessionState.currentTaskChecked || SessionState.pendingManualJudgement) &&
+            typeof SessionState.currentEvaluationResult === "object"
+        ) {
+            payload.evaluation_result = SessionState.currentEvaluationResult;
+        }
+        return payload;
+    }
+
+    function buildPauseRequestBody(userInput, viewState) {
+        return JSON.stringify(buildPausePayload(userInput, viewState));
+    }
+
+    function tryPauseSessionOnUnload(userInput, viewState) {
+        if (!SessionState || !SessionState.sessionId || SessionState.paused) return false;
+        const pauseUrl =
+            SessionRoutes &&
+            SessionRoutes.API &&
+            typeof SessionRoutes.API.PAUSE === "function"
+                ? SessionRoutes.API.PAUSE(SessionState.sessionId)
+                : null;
+        if (!pauseUrl) return false;
+        const requestBody = buildPauseRequestBody(userInput, viewState);
+
+        let requested = false;
+        try {
+            if (typeof navigator !== "undefined" && typeof navigator.sendBeacon === "function") {
+                const body = typeof Blob !== "undefined"
+                    ? new Blob([requestBody], { type: "application/json" })
+                    : requestBody;
+                requested = navigator.sendBeacon(pauseUrl, body) === true;
+            }
+        } catch (err) {
+            requested = false;
+        }
+
+        if (!requested) {
+            try {
+                if (typeof fetch === "function") {
+                    fetch(pauseUrl, {
+                        method: "POST",
+                        credentials: "same-origin",
+                        keepalive: true,
+                        headers: { "Content-Type": "application/json" },
+                        body: requestBody
+                    }).catch(() => { });
+                    requested = true;
+                }
+            } catch (err) {
+                requested = false;
+            }
+        }
+
+        if (requested) {
+            SessionState.paused = true;
+        }
+        return requested;
+    }
+
     function initBeforeUnloadGuard() {
         if (typeof window === "undefined") return;
         window.addEventListener("beforeunload", (e) => {
             if (!SessionState.sessionId || !SessionState.currentTask) return;
-            if (SessionState.canGoNext) return;
+            if (SessionState.skipBeforeUnloadPrompt) return;
 
+            let payload = null;
+            let viewState = null;
             try {
-                const payload = getCurrentAnswerPayload();
+                payload = getCurrentAnswerPayload();
+                viewState = getCurrentViewState();
                 if (payload && typeof DraftStorage !== "undefined") {
-                    DraftStorage.saveDraft(SessionState.sessionId, SessionState.currentTask.task_id, payload);
+                    const draftKey = buildCurrentDraftStorageKey();
+                    if (draftKey) {
+                        DraftStorage.saveDraft(SessionState.sessionId, draftKey, payload);
+                    }
                 }
             } catch (err) {
                 // best-effort
             }
 
-            e.preventDefault();
-            e.returnValue = "";
+            try {
+                tryPauseSessionOnUnload(payload, viewState);
+            } catch (err) {
+                // best-effort
+            }
         });
+    }
+
+    function allowNavigationWithoutPrompt() {
+        if (!SessionState) return;
+        SessionState.skipBeforeUnloadPrompt = true;
+    }
+
+    function navigateWithoutPrompt(url) {
+        if (!url) return;
+        allowNavigationWithoutPrompt();
+        window.navigateWithTransition(url);
     }
 
     return {
         handleCheckAnswerClick,
         handleSubmitAnswer,
+        handleDrawLabelJudgementChoice,
         handleNextTask,
         handleCancelSession,
         handlePauseConfirm,
         handleResumeConfirm,
         handleDiscardSession,
         initTestSubmitGuard,
+        initUiStateAutosave,
         refreshCheckButtonState,
-        initBeforeUnloadGuard
+        initBeforeUnloadGuard,
+        resetUiStateAutosaveTracking,
+        allowNavigationWithoutPrompt,
+        navigateWithoutPrompt
     };
 }));

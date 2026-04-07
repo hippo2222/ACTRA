@@ -27,8 +27,8 @@
     class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
     <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
         <header
-            class="h-16 flex items-center justify-between px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
-            <div class="flex items-center gap-4">
+            class="click-editor-header h-16 flex items-center px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
+            <div class="click-editor-header__primary flex items-center gap-4">
                 <button id="back-btn" class="p-2 hover:bg-bg-hover rounded-full text-text-secondary transition-colors"
                     onclick="window.navigateWithTransition('/ui/editor')" title="Библиотека заданий">
                     <span class="material-symbols-outlined">arrow_back</span>
@@ -67,12 +67,23 @@
                     </button>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
-                <div id="save-status-container"
-                    class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-border-subtle transition-all duration-300">
-                    <div id="save-status-indicator" class="w-2 h-2 rounded-full bg-success transition-all">
-                    </div>
-                    <div class="flex flex-col">
+            <div class="click-editor-header__drawing-status-shell" id="toolbar-status-row">
+                <div data-drawing-status
+                    class="click-editor-header__drawing-status flex min-h-[2.5rem] items-center gap-3 rounded-xl border border-border-subtle px-3.5 py-2 transition-all duration-200 shadow-sm bg-surface-2 text-text-secondary">
+                    <span data-drawing-status-icon=""
+                        class="material-symbols-outlined text-[18px] text-primary shrink-0">info</span>
+                    <span data-drawing-status-text="" class="min-w-0 flex-1 text-sm leading-snug">Режим ожидания</span>
+                    <span class="hidden 2xl:inline-flex shrink-0 items-center gap-1.5 border-l border-border-subtle pl-2.5 text-[11px] text-text-secondary"
+                        data-finish-hint="">
+                        <span class="material-symbols-outlined text-[15px] text-primary">touch_app</span>
+                        Двойной клик завершает
+                    </span>
+                </div>
+            </div>
+            <div class="click-editor-header__actions flex items-center gap-3">
+                <div id="save-status-container" class="status-cluster" data-tone="success">
+                    <div id="save-status-indicator" class="status-cluster__dot"></div>
+                    <div class="status-cluster__body">
                         <span id="save-status-text"
                             class="text-xs font-bold text-text-secondary leading-none">Сохранено</span>
                         <span id="save-status-detail"
@@ -91,55 +102,67 @@
                 <div class="flex-1 flex flex-col relative bg-canvas-bg canvas-pattern">
                     <div
                         class="h-auto bg-surface-1 border-b border-border-color flex flex-col gap-2 px-4 py-3 shadow-sm z-10">
-                        <div class="flex items-center gap-2 w-full overflow-x-auto flex-nowrap" id="toolbar-row">
-                            <div class="flex items-center gap-2 flex-none">
-                                <button id="lasso-tool-btn" data-tool="polygon" aria-pressed="true"
-                                    class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
-                                    <span class="material-symbols-outlined text-[18px]">gesture</span>
-                                    Прямолинейное лассо
-                                </button>
-                                <button id="freehand-tool-btn" data-tool="freehand" aria-pressed="false"
-                                    class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
-                                    <span class="material-symbols-outlined text-[18px]">draw</span>
-                                    Свободное рисование
-                                </button>
-                            </div>
-                            <div class="flex items-center gap-2 text-sm flex-1 min-w-[200px] whitespace-nowrap">
-                                <button id="finish-polygon-btn" title="Завершить контур"
-                                    class="icon-action-btn border border-primary text-primary transition disabled:opacity-50 disabled:pointer-events-none"
-                                    aria-label="Завершить контур" disabled>
-                                    <span class="material-symbols-outlined text-[18px]">done</span>
-                                    <span class="sr-only">Завершить контур</span>
-                                </button>
-                                <button id="delete-last-point-btn" title="Удалить точку"
-                                    class="icon-action-btn border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
-                                    aria-label="Удалить точку" disabled>
-                                    <span class="material-symbols-outlined text-[18px]">undo</span>
-                                    <span class="sr-only">Удалить точку</span>
-                                </button>
-                                <button id="cancel-polygon-btn" title="Отменить рисование"
-                                    class="icon-action-btn border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
-                                    aria-label="Отменить рисование" disabled>
-                                    <span class="material-symbols-outlined text-[18px]">close</span>
-                                    <span class="sr-only">Отменить рисование</span>
-                                </button>
+                        <div class="flex items-center gap-3 gap-y-2 w-full flex-wrap xl:flex-nowrap" id="toolbar-row">
+                            <div
+                                class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm">
+                                <span class="inline-flex" data-toolbar-tooltip="Прямолинейное лассо: ставьте точки по контуру объекта">
+                                    <button id="lasso-tool-btn" data-tool="polygon" aria-pressed="true"
+                                        class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
+                                        <span class="material-symbols-outlined text-[18px]">gesture</span>
+                                        Прямолинейное лассо
+                                    </button>
+                                </span>
+                                <span class="inline-flex" data-toolbar-tooltip="Свободное рисование: проведите линию или линейный контур непрерывным движением">
+                                    <button id="freehand-tool-btn" data-tool="freehand" aria-pressed="false"
+                                        class="tool-toggle inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-transparent transition-all">
+                                        <span class="material-symbols-outlined text-[18px]">draw</span>
+                                        Свободное рисование
+                                    </button>
+                                </span>
                             </div>
                             <div
-                                class="flex items-center gap-3 text-xs text-text-secondary ml-auto justify-end text-right min-w-[320px]">
-                                <span
-                                    class="inline-flex items-center gap-1 px-3 py-1 bg-surface-2 rounded-full whitespace-nowrap text-xs tracking-tight max-w-[360px] text-right justify-end"
-                                    data-drawing-status>Режим ожидания</span>
-                                <button id="toggle-label-visibility-btn"
-                                    class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover transition text-xs font-semibold"
-                                    title="Переключить отображение названий">
-                                    <span class="material-symbols-outlined text-[16px]">visibility</span>
-                                    <span id="label-visibility-mode-text" class="tracking-tight">Смарт</span>
-                                </button>
-                                <button id="clear-annotations-btn"
-                                    class="flex items-center gap-1 px-3 py-1.5 rounded-lg text-error hover:bg-error-lighter transition-colors text-sm font-medium">
-                                    <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
-                                    Очистить всё
-                                </button>
+                                class="inline-flex items-center gap-2 rounded-2xl border border-border-subtle bg-surface-2 p-1 shadow-sm text-sm flex-none">
+                                <span class="inline-flex" data-toolbar-tooltip="Завершить текущий контур после трёх и более точек">
+                                    <button id="finish-polygon-btn" type="button" title="Завершить контур (или двойной клик)"
+                                        class="inline-flex h-11 shrink-0 min-w-[12.75rem] items-center justify-center gap-2 px-3 py-2 rounded-xl border border-primary bg-primary-lighter text-primary shadow-sm transition-all disabled:opacity-70 disabled:pointer-events-none"
+                                        aria-label="Завершить контур" disabled>
+                                        <span class="material-symbols-outlined text-[18px]">done</span>
+                                        <span class="text-sm font-semibold whitespace-nowrap">Завершить контур</span>
+                                    </button>
+                                </span>
+                                <span class="inline-flex" data-toolbar-tooltip="Удалить последнюю точку незавершённого контура или выбранную точку">
+                                    <button id="delete-last-point-btn" type="button" title="Удалить последнюю точку"
+                                        class="icon-action-btn h-11 w-11 rounded-xl border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
+                                        aria-label="Удалить последнюю точку" disabled>
+                                        <span class="material-symbols-outlined text-[18px]">backspace</span>
+                                        <span class="sr-only">Удалить последнюю точку</span>
+                                    </button>
+                                </span>
+                                <span class="inline-flex" data-toolbar-tooltip="Сбросить незавершённый контур и начать заново">
+                                    <button id="cancel-polygon-btn" type="button" title="Отменить рисование"
+                                        class="icon-action-btn h-11 w-11 rounded-xl border border-border-subtle text-text-secondary transition disabled:opacity-40 disabled:pointer-events-none"
+                                        aria-label="Отменить рисование" disabled>
+                                        <span class="material-symbols-outlined text-[18px]">close</span>
+                                        <span class="sr-only">Отменить рисование</span>
+                                    </button>
+                                </span>
+                            </div>
+                            <div class="flex items-center gap-2 text-xs text-text-secondary xl:ml-auto justify-end">
+                                <span class="inline-flex" data-toolbar-tooltip="Переключить отображение подписей у контуров">
+                                    <button id="toggle-label-visibility-btn"
+                                        class="inline-flex h-11 items-center gap-1 px-3 py-1.5 rounded-xl border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover transition text-xs font-semibold shadow-sm"
+                                        title="Переключить отображение названий">
+                                        <span class="material-symbols-outlined text-[16px]">visibility</span>
+                                        <span id="label-visibility-mode-text" class="tracking-tight">Смарт</span>
+                                    </button>
+                                </span>
+                                <span class="inline-flex" data-toolbar-tooltip="Удалить все контуры на изображении">
+                                    <button id="clear-annotations-btn" type="button"
+                                        class="inline-flex h-11 items-center gap-2 px-4 py-1.5 rounded-xl border border-error-light bg-surface-1 text-error-text hover:bg-error-lighter transition-colors text-sm font-semibold shadow-sm">
+                                        <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+                                        Очистить всё
+                                    </button>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -201,26 +224,34 @@
                             <label class="text-xs font-semibold uppercase tracking-wider text-text-muted">Критерии
                                 успеха</label>
                             <div>
-                                <label class="block text-sm font-medium text-text-main mb-1">Необходимое количество
-                                    правильных ответов</label>
+                                <label class="block text-sm font-medium text-text-main mb-1">Сколько аннотаций нужно
+                                    отметить</label>
                                 <div class="flex items-center gap-2">
                                     <input id="required-correct-input"
-                                        class="w-20 rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-0 sm:text-sm text-text-main shadow-sm p-2"
-                                        min="1" type="number" value="1" />
-                                    <span class="text-sm text-text-secondary">правильных аннотаций требуется</span>
+                                        class="w-20 rounded-lg border-border-subtle bg-surface-2 focus:border-primary focus:ring-0 sm:text-sm text-text-main shadow-sm p-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        min="1" type="number" value="1"
+                                        aria-describedby="required-correct-context required-correct-hint" />
+                                    <span id="required-correct-context" class="text-sm text-text-secondary"
+                                        aria-live="polite">из 0
+                                        контуров</span>
                                 </div>
+                                <p id="required-correct-hint" class="mt-1 text-xs text-text-secondary"
+                                    aria-live="polite">Сначала добавьте
+                                    хотя бы один контур.</p>
                             </div>
                         </div>
                         <hr class="border-border-subtle" />
-                        <div class="flex flex-col gap-2 group">
-                            <div class="flex items-center justify-between w-full text-left">
-                                <label
-                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary cursor-default">Дополнительные
-                                    материалы</label>
+                        <div class="flex flex-col gap-2">
+                            <button id="additional-info-toggle-btn" type="button"
+                                class="flex items-center justify-between w-full text-left rounded-lg px-1 py-1.5 hover:bg-bg-hover transition"
+                                aria-expanded="true">
                                 <span
+                                    class="text-xs font-semibold uppercase tracking-wider text-text-secondary">Дополнительные
+                                    материалы</span>
+                                <span id="additional-info-toggle-icon"
                                     class="material-symbols-outlined text-text-disabled text-[18px]">expand_less</span>
-                            </div>
-                            <div class="flex flex-col gap-3 mt-1">
+                            </button>
+                            <div id="additional-info-content" class="flex flex-col gap-3 mt-1">
                                 <div>
                                     <label class="block text-xs font-medium text-text-secondary mb-1">Тип</label>
                                     <select id="additional-type-select"
@@ -399,6 +430,17 @@
                                             Значение по умолчанию совпадает с количеством отмеченных ошибок (0, если ни
                                             одной), но можно указать меньшее число — не меньше 0 и не больше M.
                                         </div>
+                                        <div class="flex items-center gap-3 px-4 py-3 bg-surface-2 rounded-lg border border-border-subtle">
+                                            <input type="checkbox" id="errors-require-all" data-errors-require-all
+                                                class="w-4 h-4 rounded border-border-subtle text-primary focus:ring-primary focus:ring-offset-0"
+                                                checked />
+                                            <label for="errors-require-all" class="text-sm text-text-main cursor-pointer flex-1">
+                                                <span class="font-semibold">Требовать найти все ошибки</span>
+                                                <span class="block text-xs text-text-secondary mt-0.5">
+                                                    Если отключено, пользователь может пройти задание, найдя только указанное выше количество ошибок
+                                                </span>
+                                            </label>
+                                        </div>
                                     </div>
                                     <section
                                         class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden">
@@ -420,8 +462,7 @@
                                             <div data-prompt-area class="hidden flex flex-col gap-2">
                                                 <label class="text-xs font-medium text-text-secondary">Формулировка
                                                     задания
-                                                    (если оставить пустым, возьмём стандартное «Выберите правильный
-                                                    вариант текста»)</label>
+                                                    (если оставить пустым, возьмём стандартное «Найдите ошибки в тексте»)</label>
                                                 <textarea id="prompt-textarea"
                                                     class="w-full rounded-lg border border-border-subtle bg-surface-1 text-sm leading-relaxed text-text-main p-3 shadow-sm focus:border-primary focus:ring-primary min-h-[100px]"
                                                     placeholder="Введите инструкцию, если нужно что-то особенное..."></textarea>
@@ -574,7 +615,6 @@
         </main>
     </template>
 
-    <script src="../../assets/ThemeSwitcherUI.js"></script>
     <script src="../../assets/ConnectionMonitor.js"></script>
 </body>
 

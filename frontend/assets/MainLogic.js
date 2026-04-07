@@ -59,6 +59,20 @@
         }[char] || char));
     }
 
+    function compactUiLabel(value, maxLength = 56) {
+        const text = String(value ?? '').trim();
+        if (!text) return '';
+        if (text.length <= maxLength) return text;
+
+        const separatorCount = (text.match(/[_:/-]/g) || []).length;
+        const looksMachineLike = separatorCount >= 4 || /\b(session|complex|iteration|task)\b/i.test(text);
+        if (!looksMachineLike) return text;
+
+        const head = Math.max(18, Math.floor(maxLength * 0.62));
+        const tail = Math.max(10, maxLength - head - 1);
+        return `${text.slice(0, head)}\u2026${text.slice(-tail)}`;
+    }
+
     function escapeInlineJsString(value) {
         const escaped = String(value ?? '')
             .replace(/\\/g, '\\\\')
@@ -110,11 +124,11 @@
 
         const title = document.createElement('p');
         title.id = 'mainNextStepTitle';
-        title.className = 'mt-1 text-sm font-bold text-text-main';
+        title.className = 'mt-1 text-sm font-bold text-text-main min-w-0';
 
         const reason = document.createElement('p');
         reason.id = 'mainNextStepReason';
-        reason.className = 'mt-1 text-xs text-text-secondary';
+        reason.className = 'mt-1 text-xs text-text-secondary min-w-0';
 
         textWrap.appendChild(eyebrow);
         textWrap.appendChild(title);
@@ -138,41 +152,9 @@
         wrap.appendChild(button);
         banner.appendChild(wrap);
 
-        const referenceNode = document.getElementById('quick-access-list');
+        const referenceNode = document.getElementById('quick-access-empty');
         if (referenceNode) {
-            host.insertBefore(banner, referenceNode);
-        } else {
-            host.appendChild(banner);
-        }
-
-        return banner;
-    }
-
-    function ensureWorkspaceOwnershipBanner() {
-        const host = document.getElementById('quick-access-section');
-        if (!host) return null;
-
-        let banner = document.getElementById('workspaceOwnershipBanner');
-        if (banner) return banner;
-
-        banner = document.createElement('div');
-        banner.id = 'workspaceOwnershipBanner';
-        banner.className = 'rounded-xl border border-border-subtle bg-surface-1 p-3';
-        banner.innerHTML = `
-            <div class="flex items-start gap-3">
-                <div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-lighter text-primary">
-                    <span class="material-symbols-outlined text-[20px]">groups</span>
-                </div>
-                <div class="min-w-0">
-                    <p class="text-sm font-bold text-text-main">Профиль хранит личный прогресс</p>
-                    <p class="mt-1 text-xs text-text-secondary">Комплексы, теория и микрокарточки могут быть частью общей локальной библиотеки. Прогресс, календарь, статистика и активные сессии остаются личными.</p>
-                </div>
-            </div>
-        `;
-
-        const referenceNode = document.getElementById('mainNextStepBanner') || document.getElementById('quick-access-list');
-        if (referenceNode) {
-            host.insertBefore(banner, referenceNode);
+            host.insertBefore(banner, referenceNode.nextSibling);
         } else {
             host.appendChild(banner);
         }
@@ -231,26 +213,8 @@
     }
 
     function renderMainNextStepBanner() {
-        const banner = ensureMainNextStepBanner();
-        if (!banner) return;
-
-        const recommendation = mainRecommendationState.preferredAction || getMainFallbackRecommendation();
-        const titleEl = document.getElementById('mainNextStepTitle');
-        const reasonEl = document.getElementById('mainNextStepReason');
-        const labelEl = document.getElementById('mainNextStepButtonLabel');
-        const iconEl = document.getElementById('mainNextStepButtonIcon');
-        const buttonEl = document.getElementById('mainNextStepButton');
-        if (!titleEl || !reasonEl || !labelEl || !iconEl || !buttonEl) return;
-
-        titleEl.textContent = recommendation.title;
-        reasonEl.textContent = recommendation.reason;
-        labelEl.textContent = recommendation.label;
-        iconEl.textContent = recommendation.icon || 'arrow_forward';
-        buttonEl.onclick = () => {
-            if (typeof recommendation.action === 'function') {
-                recommendation.action();
-            }
-        };
+        const banner = document.getElementById('mainNextStepBanner');
+        if (banner) banner.remove();
     }
 
     function showFeedbackError(message) {
@@ -340,6 +304,7 @@
         const wrapEl = document.getElementById('appUpdateNotice');
         const textEl = document.getElementById('appUpdateNoticeText');
         const linkEl = document.getElementById('appUpdateNoticeLink');
+        const root = document.body;
         if (!wrapEl || !textEl || !linkEl) return;
 
         if (!text) {
@@ -347,6 +312,9 @@
             linkEl.classList.add('hidden');
             linkEl.removeAttribute('href');
             wrapEl.classList.add('hidden');
+            if (root) {
+                root.classList.remove('main-update-visible');
+            }
             return;
         }
 
@@ -359,6 +327,9 @@
             linkEl.removeAttribute('href');
         }
         wrapEl.classList.remove('hidden');
+        if (root) {
+            root.classList.add('main-update-visible');
+        }
     }
 
     window.checkForAppUpdates = async function (force = false) {
@@ -766,7 +737,6 @@
 
         // 2. Load User
         await loadCurrentUser();
-        ensureWorkspaceOwnershipBanner();
 
         // 3. Load Dynamic Content
         if (currentUser) {
@@ -839,7 +809,7 @@
     }
 
     // --- User Management ---
-    window.openProfileModal = async function () {
+    window.openProfileManagementModal = async function () {
         const termsEl = document.getElementById('newProfileAcceptTerms');
         const privacyEl = document.getElementById('newProfileAcceptPrivacy');
         const nameEl = document.getElementById('newUserName');
@@ -853,9 +823,13 @@
         await loadProfilesList();
     }
 
-    window.closeProfileModal = function () {
+    window.openProfileModal = window.openProfileManagementModal;
+
+    window.closeProfileManagementModal = function () {
         closeModal('profileModal');
     }
+
+    window.closeProfileModal = window.closeProfileManagementModal;
 
     async function loadProfilesList() {
         const listEl = document.getElementById('profilesList');
@@ -970,6 +944,9 @@
         });
 
         if (ok) {
+            if (typeof window.closeProfileMenu === 'function') {
+                window.closeProfileMenu();
+            }
             closeModal('profileModal');
 
             if (typeof NotificationUI !== 'undefined') {
@@ -1260,18 +1237,27 @@
         [1, 7, 30, 0].forEach(d => {
             const btn = document.getElementById(`btnPeriod${d}`);
             if (btn) {
-                btn.className = "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all cursor-pointer";
-                // Using strict semantics for active/inactive states
-                if (currentStatsPeriod === d) {
-                    btn.classList.add('bg-surface-1', 'shadow-sm', 'text-text-main', 'border', 'border-border-strong');
-                } else {
-                    btn.classList.add('text-text-secondary', 'hover:text-text-main', 'hover:bg-surface-1', 'border', 'border-transparent');
-                }
+                btn.type = 'button';
+                btn.className = "main-period-toggle__button segmented-control__button";
+                btn.classList.toggle('is-active', currentStatsPeriod === d);
             }
         });
     }
 
-    window.selectStatsPeriod = async function (days, btn) {
+    window.selectStatsPeriod = async function (eventOrDays, maybeDays, maybeBtn) {
+        let days = eventOrDays;
+        const forwardedEvent = typeof eventOrDays !== 'number'
+            ? eventOrDays
+            : (typeof window !== 'undefined' ? window.event : null);
+
+        if (forwardedEvent?.preventDefault) forwardedEvent.preventDefault();
+        if (forwardedEvent?.stopPropagation) forwardedEvent.stopPropagation();
+        if (forwardedEvent?.stopImmediatePropagation) forwardedEvent.stopImmediatePropagation();
+
+        if (typeof eventOrDays !== 'number') {
+            days = maybeDays;
+        }
+
         if (days === currentStatsPeriod) return;
         currentStatsPeriod = days;
         updatePeriodButtons();
@@ -1335,11 +1321,21 @@
 
         if (ok) {
             const s = data.stats;
+            const statComplexesLabel = document.getElementById('statComplexesLabel');
+            const completedComplexesMetric = currentStatsPeriod === 1
+                ? (s.completed_complexes_today || 0)
+                : (s.completed_complexes_period || 0);
+
             // Update values
             document.getElementById('statSolvedTasks').textContent = s.tasks_mastered || 0;
             document.getElementById('statTotalAvailable').textContent = s.total_tasks_available || 0;
             document.getElementById('statSuccessRate').textContent = `${Math.round((s.success_rate || 0) * 100)}%`;
-            document.getElementById('statTodayCount').textContent = s.completed_complexes_today || 0;
+            if (statComplexesLabel) {
+                statComplexesLabel.textContent = currentStatsPeriod === 1
+                    ? 'Комплексов сегодня'
+                    : 'Комплексов пройдено';
+            }
+            document.getElementById('statTodayCount').textContent = completedComplexesMetric;
 
             const combinedSeconds = (s.learning_sources && s.learning_sources.combined)
                 ? (s.learning_sources.combined.time_spent_seconds || 0)
@@ -1350,7 +1346,7 @@
             document.getElementById('statTimeSpent').textContent = `${h}ч ${m}м`;
 
             // UX-30: Show welcome message if all stats are zero
-            const isEmpty = !(s.tasks_mastered || s.success_rate || s.total_time_spent || s.completed_complexes_today);
+            const isEmpty = !(s.tasks_mastered || s.success_rate || s.total_time_spent || completedComplexesMetric);
             setMainRecommendationState({ statsEmpty: isEmpty });
             let welcomeEl = document.getElementById('statsWelcomeMessage');
             if (isEmpty) {
@@ -1359,10 +1355,36 @@
                     welcomeEl.id = 'statsWelcomeMessage';
                     welcomeEl.className = 'p-3 bg-primary-lighter/40 border border-primary-light rounded-lg text-center mb-2';
                     welcomeEl.innerHTML = '<p class="text-sm font-medium text-primary-dark">Запустите первый комплекс: после него здесь появятся прогресс, время и ежедневная динамика.</p>';
-                    statsContent.parentElement.insertBefore(welcomeEl, statsContent);
+                    statsContent.prepend(welcomeEl);
                 }
             } else if (welcomeEl) {
                 welcomeEl.remove();
+                welcomeEl = null;
+            }
+
+            const statRows = statsContent ? Array.from(statsContent.querySelectorAll('.main-stats-row')) : [];
+            if (isEmpty && statsContent && welcomeEl) {
+                const emptyCopy = currentStatsPeriod === 1
+                    ? 'Сегодня активности пока нет.'
+                    : 'Запустите первый комплекс, и здесь появится прогресс.';
+                welcomeEl.className = 'main-stats-empty-state';
+                welcomeEl.innerHTML = `
+                    <span class="material-symbols-outlined main-stats-empty-state__icon">insights</span>
+                    <div class="main-stats-empty-state__copy">
+                        <p class="main-stats-empty-state__title">Статистика появится после первой активности</p>
+                        <p class="main-stats-empty-state__text">${emptyCopy}</p>
+                    </div>
+                `;
+                statsContent.prepend(welcomeEl);
+                statsContent.classList.add('stats-content--empty');
+                statsContent.classList.remove('stats-content--error');
+                statRows.forEach((row) => row.classList.add('hidden'));
+            } else {
+                if (statsContent) {
+                    statsContent.classList.remove('stats-content--empty');
+                    statsContent.classList.remove('stats-content--error');
+                }
+                statRows.forEach((row) => row.classList.remove('hidden'));
             }
 
             // Hide skeleton and error, show content
@@ -1404,19 +1426,21 @@
         if (!statsContent) return;
         const welcomeEl = document.getElementById('statsWelcomeMessage');
         if (welcomeEl) welcomeEl.remove();
+        statsContent.classList.remove('stats-content--empty');
+        statsContent.querySelectorAll('.main-stats-row').forEach((row) => row.classList.add('hidden'));
         // Check if error message already exists
         let errorEl = document.getElementById('statsErrorMessage');
 
         if (!errorEl) {
             errorEl = document.createElement('div');
             errorEl.id = 'statsErrorMessage';
-            errorEl.className = 'p-3 bg-error-lighter border border-error-light rounded-lg text-center';
+            errorEl.className = 'main-stats-error-state';
             errorEl.innerHTML = `<div class="flex flex-col gap-2"><span class="material-symbols-outlined text-status-error text-[24px]">error</span><p class="text-sm font-semibold text-text-main">Статистика временно недоступна</p><p class="text-xs text-text-secondary">Ваш прогресс не потерян. Попробуйте загрузить блок ещё раз.</p><button onclick="retryLoadStatistics()" class="text-xs font-medium text-status-error hover:text-text-main underline">Загрузить снова</button></div>`;
-            statsContent.parentElement.insertBefore(errorEl, statsContent);
+            statsContent.prepend(errorEl);
         }
 
-        // Hide content, show error
-        statsContent.classList.add('hidden');
+        // Keep the card height stable by rendering the error inside the content area
+        statsContent.classList.add('stats-content--error');
         errorEl.classList.remove('hidden');
     }
 
@@ -1424,7 +1448,7 @@
         const errorEl = document.getElementById('statsErrorMessage');
         const statsContent = document.getElementById('statsContent');
         if (errorEl) errorEl.classList.add('hidden');
-        if (statsContent) statsContent.classList.remove('hidden');
+        if (statsContent) statsContent.classList.remove('stats-content--error');
     }
 
     window.retryLoadStatistics = async function () {
@@ -1605,7 +1629,15 @@
 
         // WEAK-1 fix: only fetch time-dynamics for heatmap (removed duplicate /api/statistics/overall)
         const { ok: statsOk, data: statsData } = await apiFetch('/api/statistics/time-dynamics?days=14');
-        const hasActivity = statsOk && statsData?.dynamics?.some(d => (d.tasks_attempted > 0) || (d.microcards_reviews > 0) || (d.activity_attempts_total > 0));
+        const hasActivity = statsOk && statsData?.dynamics?.some(d => {
+            const taskAttempts = d?.total_attempts ?? d?.tasks_attempted ?? d?.attempts ?? 0;
+            const studyMinutes = d?.combined_study_minutes ?? d?.study_minutes ?? 0;
+            return taskAttempts > 0
+                || (d?.microcards_reviews > 0)
+                || (d?.activity_attempts_total > 0)
+                || (d?.completed_complexes > 0)
+                || studyMinutes > 0;
+        });
         const criticalHealth = (data?.health_summary?.complexes || []).filter(c => c.health_percent < 80).length > 0;
         hasData = hasData || hasActivity || criticalHealth;
         setMainRecommendationState({ calendarHasData: hasData, calendarMixCount: mixCount });
@@ -1653,9 +1685,61 @@
         }
 
         // Render health summary
-        if (ok && data?.health_summary) {
-            renderHealthSummary(data.health_summary);
+        renderHealthSummary(ok ? data?.health_summary : null);
+    }
+
+    function calculateMiniHeatmapScore(day) {
+        const taskAttempts = day?.task_attempts ?? 0;
+        const microcardsReviews = day?.microcards_reviews ?? 0;
+        const completedComplexes = day?.completed_complexes ?? 0;
+        const studyMinutes = day?.study_minutes ?? 0;
+
+        return (taskAttempts * 1.0)
+            + (microcardsReviews * 0.35)
+            + (completedComplexes * 8.0)
+            + (studyMinutes * 0.2);
+    }
+
+    function resolveMiniHeatmapLevel(score) {
+        if (score <= 0) return 'empty';
+        if (score >= 40) return 'peak';
+        if (score >= 20) return 'high';
+        if (score >= 8) return 'mid';
+        return 'low';
+    }
+
+    function describeMiniHeatmapLevel(level) {
+        switch (level) {
+            case 'peak': return 'Пиковый день';
+            case 'high': return 'Сильная активность';
+            case 'mid': return 'Хорошая активность';
+            case 'low': return 'Небольшая активность';
+            default: return 'Нет активности';
         }
+    }
+
+    function ensureMiniHeatmapLegend(container) {
+        if (!container) return;
+        const parent = container.parentElement;
+        if (!parent) return;
+
+        let legend = parent.querySelector('.main-heatmap-legend');
+        if (!legend) {
+            legend = document.createElement('div');
+            legend.className = 'main-heatmap-legend';
+            container.insertAdjacentElement('afterend', legend);
+        }
+
+        legend.innerHTML = `
+            <span class="main-heatmap-legend-copy">Интенсивность за 14 дней</span>
+            <div class="main-heatmap-legend-scale" aria-hidden="true">
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="empty"></span>0</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="low"></span>Низко</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="mid"></span>Нормально</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="high"></span>Сильно</span>
+                <span class="main-heatmap-legend-item"><span class="main-heatmap-legend-swatch" data-level="peak"></span>Пик</span>
+            </div>
+        `;
     }
 
     function renderMiniHeatmap(dynamics) {
@@ -1673,41 +1757,64 @@
             const dateStr = d.toISOString().split('T')[0];
             const data = activityMap.get(dateStr);
             const hasMC = (data?.microcards_reviews || 0) > 0;
-            const hasTasks = (data?.tasks_attempted || 0) > 0;
+            const taskAttempts = data?.total_attempts ?? data?.tasks_attempted ?? data?.attempts ?? 0;
+            const hasTasks = taskAttempts > 0;
+            const completedComplexes = data?.completed_complexes || 0;
+            const studyMinutes = data?.combined_study_minutes ?? data?.study_minutes ?? 0;
+            const successRate = data?.success_rate ?? null;
             days.push({
                 date: dateStr,
-                completion_percent: data ? (data.success_rate || 0) * 100 : 0,
-                has_activity: hasTasks || hasMC,
+                completion_percent: successRate != null ? successRate * 100 : 0,
+                task_attempts: taskAttempts,
+                microcards_reviews: data?.microcards_reviews || 0,
+                completed_complexes: completedComplexes,
+                study_minutes: studyMinutes,
+                success_rate: successRate,
+                has_activity: hasTasks || hasMC || completedComplexes > 0,
                 has_microcards: hasMC,
                 has_tasks: hasTasks,
                 is_today: dateStr === todayStr
             });
         }
 
+        days.forEach(day => {
+            day.activity_score = calculateMiniHeatmapScore(day);
+            day.level = resolveMiniHeatmapLevel(day.activity_score);
+        });
+
         container.innerHTML = days.map(day => {
-            let bgClass = 'bg-border-strong border border-border-strong';
-            let style = '';
-            if (day.is_today) {
-                bgClass = 'ring-1 ring-accent';
-                style = 'background-color: color-mix(in srgb, var(--color-accent), transparent 70%);';
-            } else if (day.has_activity) {
-                if (day.completion_percent >= 80) bgClass = 'bg-primary';
-                else if (day.completion_percent >= 50) bgClass = 'bg-primary-dark';
-                else if (day.completion_percent > 0) bgClass = 'bg-primary-light';
-                else bgClass = 'bg-primary-light';
-            }
             let statusText = 'Нет активности';
-            if (day.is_today) {
-                statusText = 'Сегодня';
+            if (day.is_today && !day.has_activity) {
+                statusText = 'Сегодня, активности пока нет';
             } else if (day.has_activity) {
-                const parts = [];
-                if (day.has_tasks) parts.push(`задания: ${Math.round(day.completion_percent)}%`);
-                if (day.has_microcards) parts.push('микрокарточки');
-                statusText = parts.length ? parts.join(', ') : 'Активность';
+                const parts = [describeMiniHeatmapLevel(day.level)];
+                if (day.completed_complexes > 0) {
+                    parts.push(`Комплексы: ${day.completed_complexes}`);
+                }
+                if (day.task_attempts > 0) {
+                    parts.push(`Попытки: ${day.task_attempts}`);
+                }
+                if (day.microcards_reviews > 0) {
+                    parts.push(`Микрокарточки: ${day.microcards_reviews}`);
+                }
+                if (day.study_minutes > 0) {
+                    parts.push(`Время: ${day.study_minutes} мин`);
+                }
+                if (day.has_tasks && day.success_rate != null) {
+                    parts.push(`Успешность: ${Math.round(day.success_rate * 100)}%`);
+                }
+                statusText = parts.join('\n');
+                if (day.is_today) {
+                    statusText = `Сегодня\n${statusText}`;
+                }
+            } else if (day.is_today) {
+                statusText = 'Сегодня';
             }
             const tooltip = `${day.date}\n${statusText}`;
-            return `<div class="w-3 h-3 rounded-[2px] ${bgClass}" style="${style}" title="${tooltip}"></div>`;
+            const todayAttr = day.is_today ? ' data-today="true"' : '';
+            return `<div class="main-heatmap-cell" data-level="${day.level}"${todayAttr} title="${tooltip}"></div>`;
         }).join('');
+        ensureMiniHeatmapLegend(container);
     }
 
     function renderHealthSummary(healthSummary) {
@@ -1718,17 +1825,21 @@
             return;
         }
         const complexes = healthSummary.complexes || [];
+        if (complexes.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
         const toShow = complexes.filter(c => c.health_percent < 80).slice(0, 2);
 
         if (toShow.length === 0) {
-            container.innerHTML = '<p class="text-[11px] text-text-secondary text-center py-1">Все комплексы в норме</p>';
+            container.innerHTML = '<p class="text-[11px] text-text-secondary text-center py-1">Критичных комплексов нет</p>';
             return;
         }
 
         container.innerHTML = toShow.map(c => {
             const tooltip = c.message ? `${c.hint_title || ''}\n${c.message}`.trim() : `Здоровье: ${c.health_percent}%`;
             return `
-                <div class="main-health-row" title="${escapeHtml(tooltip)}">
+                <div class="main-health-row panel-row" title="${escapeHtml(tooltip)}">
                     <div class="main-health-meta">
                         <div class="w-1.5 h-1.5 rounded-full ${c.is_critical ? 'bg-status-error' : 'bg-accent'}"></div>
                         <span class="main-health-name">${escapeHtml(c.name || '')}</span>
@@ -1739,16 +1850,114 @@
     }
 
     // --- Navigation & Quick Access ---
+    function ensureQuickAccessHeader() {
+        const section = document.getElementById('quick-access-section');
+        const header = section ? section.querySelector('.main-quick-access-header') : null;
+        if (!header || header.dataset.enhanced === 'true') return header;
+
+        header.dataset.enhanced = 'true';
+        header.innerHTML = `
+            <div class="main-quick-access-heading">
+                <div class="main-quick-access-heading-icon">
+                    <span class="material-symbols-outlined text-[20px]">bolt</span>
+                </div>
+                <div class="min-w-0">
+                    <p class="main-quick-access-kicker">\u0411\u0435\u0437 \u041b\u0438\u0448\u043d\u0438\u0445 \u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0439</p>
+                    <h3 class="text-base font-bold text-text-main">\u0411\u044b\u0441\u0442\u0440\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f</h3>
+                </div>
+            </div>
+            <div class="main-quick-access-toolbar">
+                <span class="main-quick-access-count" id="quick-access-count" title="Комплексов в быстром доступе">0</span>
+                <div class="main-quick-access-nav" id="quick-access-nav" hidden>
+                    <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-prev" aria-label="Previous complex">
+                        <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                    </button>
+                    <button type="button" class="main-quick-access-nav-btn icon-button-muted" id="quick-access-next" aria-label="Next complex">
+                        <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                    </button>
+                </div>
+                <button type="button" id="quick-access-show-all">
+                    <span>\u041a\u0430\u0442\u0430\u043b\u043e\u0433</span>
+                    <span class="material-symbols-outlined text-[16px]">arrow_outward</span>
+                </button>
+            </div>
+        `;
+        header.querySelector('#quick-access-show-all')?.addEventListener('click', () => {
+            window.navigateWithTransition('/ui/complexes');
+        });
+        return header;
+    }
+
+    function updateQuickAccessCount(total, previewLimit = 4) {
+        const el = document.getElementById('quick-access-count');
+        if (!el) return;
+        if (!Number.isFinite(total) || total < 0) {
+            el.textContent = '\u2014';
+            el.title = 'Количество комплексов неизвестно';
+            return;
+        }
+        el.textContent = String(total);
+        el.title = total > previewLimit
+            ? `Показаны ${Math.min(total, previewLimit)} из ${total}`
+            : `Комплексов в быстром доступе: ${total}`;
+    }
+
+    function setupQuickAccessRail(totalItems = 0) {
+        const list = document.getElementById('quick-access-list');
+        const nav = document.getElementById('quick-access-nav');
+        const prev = document.getElementById('quick-access-prev');
+        const next = document.getElementById('quick-access-next');
+        if (!list) return;
+
+        const useRail = Number(totalItems) > 1;
+        list.classList.toggle('main-quick-access-grid--rail', useRail);
+
+        if (!nav || !prev || !next) return;
+
+        nav.hidden = !useRail;
+        if (!useRail) {
+            list.onscroll = null;
+            prev.disabled = true;
+            next.disabled = true;
+            return;
+        }
+
+        const updateNavState = () => {
+            const maxScrollLeft = Math.max(0, list.scrollWidth - list.clientWidth - 6);
+            prev.disabled = list.scrollLeft <= 6;
+            next.disabled = list.scrollLeft >= maxScrollLeft;
+        };
+
+        const scrollStep = (direction) => {
+            const amount = Math.max(260, Math.round(list.clientWidth * 0.88));
+            list.scrollBy({ left: direction * amount, behavior: 'smooth' });
+        };
+
+        prev.onclick = () => scrollStep(-1);
+        next.onclick = () => scrollStep(1);
+        list.onscroll = updateNavState;
+        if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+            window.requestAnimationFrame(updateNavState);
+        } else {
+            updateNavState();
+        }
+    }
+
     async function loadQuickAccess() {
+        ensureQuickAccessHeader();
         const container = document.getElementById("quick-access-list");
         const emptyEl = document.getElementById("quick-access-empty");
         const showAllBtn = document.getElementById("quick-access-show-all");
         const quickAccessPreviewLimit = 4;
         if (!container) return;
+        const emptyCta = document.getElementById('quick-access-empty-cta');
+        if (emptyCta) {
+            emptyCta.className = 'qa-empty-cta btn-primary inline-flex items-center gap-2';
+        }
 
         const [{ ok, data }, sessionsResp] = await Promise.all([
             apiFetch(`/api/ui/quick-access?user_id=${encodeURIComponent(currentUser.user_id)}`),
-            apiFetch(`/api/sessions/active`)
+            apiFetch(`/api/sessions/active?user_id=${encodeURIComponent(currentUser.user_id)}`)
         ]);
         const sessions = (sessionsResp && sessionsResp.ok && Array.isArray(sessionsResp.data?.items)) ? sessionsResp.data.items : [];
         const parseSessionTime = (value) => {
@@ -1803,16 +2012,22 @@
             if (isPaused && pausedSession.session_id) {
                 return {
                     title: 'Вернитесь к сессии на паузе',
-                    reason: `У вас уже есть незавершённый прогон по комплексу «${complexName}». Самый быстрый следующий шаг — продолжить его.`,
+                    reason: `Незавершённая сессия по комплексу «${complexName}» уже ждёт вас.`,
                     label: 'Продолжить сессию',
                     icon: 'restart_alt',
-                    action: () => window.handleStartSession(complexId, pausedSession.session_id),
+                    action: () => window.handleStartSession(
+                        complexId,
+                        pausedSession.session_id,
+                        (pausedSession && pausedSession.resume_target && typeof pausedSession.resume_target.url === 'string')
+                            ? pausedSession.resume_target.url
+                            : ''
+                    ),
                 };
             }
 
             return {
                 title: 'Продолжите активный комплекс',
-                reason: `Комплекс «${complexName}» уже у вас под рукой. Проще всего вернуться в обучение через него.`,
+                reason: `Комплекс «${complexName}» уже под рукой — можно продолжить с него.`,
                 label: 'Открыть комплекс',
                 icon: 'play_arrow',
                 action: () => window.handleStartSession(complexId),
@@ -1823,22 +2038,26 @@
             container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-secondary">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="mt-1 text-xs font-semibold text-primary hover:underline">Попробовать снова</button></div>`;
             if (emptyEl) emptyEl.hidden = true;
             if (showAllBtn) showAllBtn.hidden = false;
+            updateQuickAccessCount(NaN, quickAccessPreviewLimit);
+            setupQuickAccessRail(0);
             return;
         }
         if (!data.items?.length) {
             container.innerHTML = "";
             if (emptyEl) emptyEl.hidden = false;
             if (showAllBtn) showAllBtn.hidden = true;
+            updateQuickAccessCount(0, quickAccessPreviewLimit);
+            setupQuickAccessRail(0);
             if (emptyEl) {
                 let cta = document.getElementById('quick-access-empty-cta');
                 if (!cta) {
                     cta = document.createElement('button');
                     cta.type = 'button';
                     cta.id = 'quick-access-empty-cta';
-                    cta.className = 'mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-primary-fg transition-all hover:bg-primary-hover';
+                    cta.className = 'qa-empty-cta btn-primary mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-bold';
                     cta.textContent = 'Открыть комплексы';
                     cta.addEventListener('click', () => window.navigateWithTransition('/ui/complexes'));
-                    emptyEl.querySelector('.flex')?.appendChild(cta);
+                    emptyEl.querySelector('.qa-empty-text')?.appendChild(cta);
                 }
             }
             return;
@@ -1847,25 +2066,272 @@
         setMainRecommendationState({ preferredAction: buildQuickAccessRecommendation(data.items[0]) });
         if (emptyEl) emptyEl.hidden = true;
         if (showAllBtn) showAllBtn.hidden = false;
+        updateQuickAccessCount(data.items.length, quickAccessPreviewLimit);
         const previewItems = data.items.slice(0, quickAccessPreviewLimit);
 
-        container.innerHTML = previewItems.map(item => {
+        container.innerHTML = '';
+        container.className = 'main-quick-access-grid';
+
+        const buildQuickAccessCard = (item) => {
             const complex = item.complex;
             const complexName = String(complex.name || '');
-            const safeComplexName = escapeHtml(complexName);
-            const safeComplexDescription = escapeHtml(complex.description || 'Нет описания');
-            const safeComplexInitials = escapeHtml(complexName.slice(0, 2));
-            const complexIdLiteral = escapeInlineJsString(complex.id);
+            const safeComplexInitials = complexName.slice(0, 2);
+            const complexId = complex.id;
             const pausedSession = pausedMap.get(complex.id) || item.paused_session || null;
             const isPaused = !!(pausedSession && pausedSession.paused);
             const stats = item.stats || {};
             const health = item.health || {};
-            const ctaIcon = isPaused ? 'restart_alt' : 'play_arrow';
-            const pausedSessionIdLiteral = pausedSession ? escapeInlineJsString(pausedSession.session_id) : '';
-            const onClickHandler = isPaused ? `window.handleStartSession('${complexIdLiteral}', '${pausedSessionIdLiteral}')` : `window.handleStartSession('${complexIdLiteral}')`;
+            const pausedSessionId = pausedSession ? pausedSession.session_id : null;
+            const pausedResumeUrl =
+                pausedSession && pausedSession.resume_target && typeof pausedSession.resume_target.url === "string"
+                    ? pausedSession.resume_target.url
+                    : "";
             const pausedAtLabel = formatPausedAt(pausedSession && pausedSession.paused_at);
-            const pausedProgress = pausedSession && typeof pausedSession.current_task_index === "number"
-                ? pausedSession.current_task_index + 1
+            const pausedDisplayIndex = pausedSession && typeof pausedSession.display_task_index === "number"
+                ? pausedSession.display_task_index
+                : (pausedSession && typeof pausedSession.current_task_index === "number"
+                    ? Math.max(0, pausedSession.current_task_index - 1)
+                    : null);
+            const pausedProgress = typeof pausedDisplayIndex === "number"
+                ? pausedDisplayIndex + 1
+                : null;
+            const pausedTotal = pausedSession && typeof pausedSession.total_tasks === "number"
+                ? pausedSession.total_tasks
+                : null;
+            const progress = Math.round(stats.progress || 0);
+            const isMastered = progress >= 100;
+
+            const activateCard = () => {
+                if (isPaused) {
+                    window.handleStartSession(complexId, pausedSessionId, pausedResumeUrl);
+                } else {
+                    window.handleStartSession(complexId);
+                }
+            };
+
+            let healthBadge = '';
+            if (health.is_critical) {
+                healthBadge = `<div class="absolute -top-1 -right-1 flex h-3 w-3"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-status-error opacity-75"></span><span class="relative inline-flex rounded-full h-3 w-3 bg-status-error"></span></div>`;
+            } else if (health.status === 'frozen') {
+                healthBadge = `<div class="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-border-strong border-2 border-text-on-dark dark:border-border-strong"></div>`;
+            }
+
+            let iconContent = '';
+            if (isMastered) {
+                iconContent = `<div class="w-8 h-8 rounded-full bg-primary-lighter text-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[16px]">check</span></div>`;
+            } else if (progress > 0) {
+                iconContent = `<div class="relative w-8 h-8 flex items-center justify-center shrink-0"><svg class="w-full h-full transform -rotate-90"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"/><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - progress}" stroke-linecap="round" class="text-primary transition-all duration-500 ease-out"/></svg><span class="absolute text-[8px] font-bold text-text-secondary dark:text-text-on-dark">${progress}%</span></div>`;
+            } else {
+                iconContent = `<div class="w-8 h-8 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-[10px] uppercase shrink-0">${escapeHtml(safeComplexInitials)}</div>`;
+            }
+
+            let cardTone = 'ready';
+            let statusPill = '\u0413\u043e\u0442\u043e\u0432';
+            let metaTag = '';
+            let description = complex.description || '\u0411\u044b\u0441\u0442\u0440\u044b\u0439 \u0432\u0445\u043e\u0434 \u0432 \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0431\u0435\u0437 \u043b\u0438\u0448\u043d\u0435\u0433\u043e \u043f\u043e\u0438\u0441\u043a\u0430.';
+            let progressLabel = '\u0413\u043e\u0442\u043e\u0432 \u043a \u0437\u0430\u043f\u0443\u0441\u043a\u0443';
+            let progressValue = 0;
+            let actionLabel = '\u0417\u0430\u043f\u0443\u0441\u0442\u0438\u0442\u044c';
+            let actionIcon = 'play_arrow';
+
+            if (isPaused) {
+                cardTone = 'paused';
+                statusPill = '\u041d\u0430 \u043f\u0430\u0443\u0437\u0435';
+                metaTag = (pausedProgress && pausedTotal) ? '\u0428\u0430\u0433 ' + pausedProgress + '/' + pausedTotal : '\u0415\u0441\u0442\u044c \u0441\u0435\u0441\u0441\u0438\u044f';
+                description = pausedAtLabel
+                    ? '\u041f\u0430\u0443\u0437\u0430 \u0441 ' + pausedAtLabel + '. \u041c\u043e\u0436\u043d\u043e \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c \u0441 \u043f\u043e\u0441\u043b\u0435\u0434\u043d\u0435\u0433\u043e \u0437\u0430\u0434\u0430\u043d\u0438\u044f.'
+                    : '\u0421\u0435\u0441\u0441\u0438\u044f \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0435\u043d\u0438\u044f \u0441 \u0442\u043e\u0433\u043e \u043c\u0435\u0441\u0442\u0430, \u0433\u0434\u0435 \u0432\u044b \u043e\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u043b\u0438\u0441\u044c.';
+                progressLabel = (pausedProgress && pausedTotal)
+                    ? '\u0421\u0435\u0439\u0447\u0430\u0441 ' + pausedProgress + '/' + pausedTotal
+                    : '\u0413\u043e\u0442\u043e\u0432\u043e \u043a \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0435\u043d\u0438\u044e';
+                progressValue = (pausedProgress && pausedTotal && pausedTotal > 0)
+                    ? Math.round((pausedProgress / pausedTotal) * 100)
+                    : Math.max(progress, 8);
+                actionLabel = '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c';
+                actionIcon = 'restart_alt';
+            } else if (health.is_critical) {
+                cardTone = 'critical';
+                statusPill = '\u041d\u0443\u0436\u0435\u043d \u043f\u043e\u0432\u0442\u043e\u0440';
+                metaTag = '\u0420\u0438\u0441\u043a \u0437\u0430\u0431\u044b\u0432\u0430\u043d\u0438\u044f';
+                description = complex.description || '\u041c\u0430\u0442\u0435\u0440\u0438\u0430\u043b \u043f\u0440\u043e\u0441\u0438\u0442 \u0432\u043d\u0438\u043c\u0430\u043d\u0438\u044f: \u043b\u0443\u0447\u0448\u0435 \u0431\u044b\u0441\u0442\u0440\u043e \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f \u0438 \u043e\u0441\u0432\u0435\u0436\u0438\u0442\u044c \u043a\u043b\u044e\u0447\u0435\u0432\u044b\u0435 \u0448\u0430\u0433\u0438.';
+                progressLabel = progress > 0 ? '\u041e\u0441\u0432\u043e\u0435\u043d\u043e ' + progress + '%' : '\u041f\u043e\u0440\u0430 \u0432\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f';
+                progressValue = progress > 0 ? progress : 18;
+                actionLabel = '\u0412\u0435\u0440\u043d\u0443\u0442\u044c\u0441\u044f';
+                actionIcon = 'local_fire_department';
+            } else if (health.status === 'frozen') {
+                cardTone = 'frozen';
+                statusPill = '\u0417\u0430\u043c\u043e\u0440\u043e\u0436\u0435\u043d';
+                metaTag = '\u0412 \u043a\u0430\u043b\u0435\u043d\u0434\u0430\u0440\u0435';
+                description = complex.description || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0437\u0430\u043c\u043e\u0440\u043e\u0436\u0435\u043d \u0432 \u0440\u0430\u0441\u043f\u0438\u0441\u0430\u043d\u0438\u0438, \u043d\u043e \u0435\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u043e\u0442\u043a\u0440\u044b\u0442\u044c \u0432\u0440\u0443\u0447\u043d\u0443\u044e.';
+                progressLabel = progress > 0 ? '\u041e\u0441\u0432\u043e\u0435\u043d\u043e ' + progress + '%' : '\u0420\u0443\u0447\u043d\u043e\u0439 \u0437\u0430\u043f\u0443\u0441\u043a';
+                progressValue = progress;
+                actionLabel = '\u041e\u0442\u043a\u0440\u044b\u0442\u044c';
+                actionIcon = 'ac_unit';
+            } else if (isMastered) {
+                cardTone = 'mastered';
+                statusPill = '\u041f\u0440\u043e\u0439\u0434\u0435\u043d';
+                metaTag = '\u041c\u043e\u0436\u043d\u043e \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c';
+                description = complex.description || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0437\u0430\u0432\u0435\u0440\u0448\u0451\u043d \u0438 \u0433\u043e\u0442\u043e\u0432 \u043a \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e\u043c\u0443 \u043f\u0440\u043e\u0445\u043e\u0434\u0443 \u0431\u0435\u0437 \u0434\u043e\u043b\u0433\u043e\u0433\u043e \u043f\u043e\u0438\u0441\u043a\u0430.';
+                progressLabel = '\u041e\u0441\u0432\u043e\u0435\u043d\u043e 100%';
+                progressValue = 100;
+                actionLabel = '\u041e\u0442\u043a\u0440\u044b\u0442\u044c';
+                actionIcon = 'task_alt';
+            } else if (progress > 0) {
+                cardTone = 'active';
+                statusPill = '\u0412 \u0440\u0430\u0431\u043e\u0442\u0435';
+                metaTag = String(progress) + '% \u043e\u0441\u0432\u043e\u0435\u043d\u043e';
+                description = complex.description || '\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0441 \u0442\u043e\u0433\u043e \u043c\u0435\u0441\u0442\u0430, \u0433\u0434\u0435 \u0443\u0436\u0435 \u043d\u0430\u043a\u043e\u043f\u043b\u0435\u043d \u043f\u0440\u043e\u0433\u0440\u0435\u0441\u0441.';
+                progressLabel = '\u041e\u0441\u0432\u043e\u0435\u043d\u043e ' + progress + '%';
+                progressValue = progress;
+                actionLabel = '\u041e\u0442\u043a\u0440\u044b\u0442\u044c';
+                actionIcon = 'arrow_forward';
+            } else {
+                description = complex.description || '\u041a\u043e\u043c\u043f\u043b\u0435\u043a\u0441 \u0433\u043e\u0442\u043e\u0432 \u043a \u043d\u043e\u0432\u043e\u043c\u0443 \u0437\u0430\u043f\u0443\u0441\u043a\u0443 \u0438 \u0431\u044b\u0441\u0442\u0440\u043e\u043c\u0443 \u0432\u0445\u043e\u0434\u0443 \u0432 \u0440\u0430\u0431\u043e\u0442\u0443.';
+            }
+
+            if (!metaTag && item.is_pinned) {
+                metaTag = '\u0417\u0430\u043a\u0440\u0435\u043f\u043b\u0451\u043d';
+            } else if (!metaTag && health.days_since_last !== null && health.days_since_last !== undefined) {
+                metaTag = health.days_since_last === 0 ? '\u0421\u0435\u0433\u043e\u0434\u043d\u044f' : String(health.days_since_last) + ' \u0434\u043d. \u043d\u0430\u0437\u0430\u0434';
+            }
+
+            const card = document.createElement("div");
+            card.className = "main-quick-access-card interactive-card group";
+            card.dataset.tone = cardTone;
+            card.title = complexName;
+            card.tabIndex = 0;
+            card.setAttribute('role', 'button');
+            card.onclick = activateCard;
+            card.onkeydown = (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    activateCard();
+                }
+            };
+
+            const accentEl = document.createElement("div");
+            accentEl.className = "main-quick-access-accent";
+
+            const removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "main-quick-access-remove icon-button-muted";
+            removeBtn.title = '\u0423\u0431\u0440\u0430\u0442\u044c';
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                window._removeFromQuickAccess(complexId);
+            };
+            const rmIcon = document.createElement("span");
+            rmIcon.className = "material-symbols-outlined text-[14px]";
+            rmIcon.textContent = "close";
+            removeBtn.appendChild(rmIcon);
+
+            const headEl = document.createElement("div");
+            headEl.className = "main-quick-access-card-head";
+
+            const mediaEl = document.createElement("div");
+            mediaEl.className = "main-quick-access-media";
+            mediaEl.innerHTML = iconContent + healthBadge;
+
+            const bodyEl = document.createElement("div");
+            bodyEl.className = "main-quick-access-body";
+
+            const toplineEl = document.createElement("div");
+            toplineEl.className = "main-quick-access-topline";
+
+            const pillEl = document.createElement("span");
+            pillEl.className = "main-quick-access-pill pill-neutral pill-sm pill-kicker";
+            pillEl.textContent = statusPill;
+            toplineEl.appendChild(pillEl);
+
+            if (metaTag) {
+                const metaTagEl = document.createElement("span");
+                metaTagEl.className = "main-quick-access-meta-tag";
+                metaTagEl.textContent = compactUiLabel(metaTag, 28);
+                metaTagEl.title = metaTag;
+                toplineEl.appendChild(metaTagEl);
+            }
+
+            const titleEl = document.createElement("div");
+            titleEl.className = "main-quick-access-title";
+            titleEl.textContent = compactUiLabel(complexName, 58);
+            titleEl.title = complexName;
+
+            const descriptionEl = document.createElement("div");
+            descriptionEl.className = "main-quick-access-description";
+            descriptionEl.textContent = compactUiLabel(description, 118);
+            descriptionEl.title = description;
+
+            bodyEl.appendChild(toplineEl);
+            bodyEl.appendChild(titleEl);
+            bodyEl.appendChild(descriptionEl);
+
+            headEl.appendChild(mediaEl);
+            headEl.appendChild(bodyEl);
+
+            const footerEl = document.createElement("div");
+            footerEl.className = "main-quick-access-footer";
+
+            const progressEl = document.createElement("div");
+            progressEl.className = "main-quick-access-progress";
+
+            const progressLabelEl = document.createElement("div");
+            progressLabelEl.className = "main-quick-access-progress-label";
+            progressLabelEl.textContent = progressLabel;
+            progressEl.appendChild(progressLabelEl);
+
+            if (progressValue > 0) {
+                const trackEl = document.createElement("div");
+                trackEl.className = "main-quick-access-progress-track";
+                const fillEl = document.createElement("div");
+                fillEl.className = "main-quick-access-progress-fill";
+                fillEl.style.width = `${Math.max(4, Math.min(100, progressValue))}%`;
+                trackEl.appendChild(fillEl);
+                progressEl.appendChild(trackEl);
+            }
+
+            const actionEl = document.createElement("div");
+            actionEl.className = "main-quick-access-action";
+            actionEl.innerHTML = `<span>${escapeHtml(actionLabel)}</span><span class="material-symbols-outlined">${escapeHtml(actionIcon)}</span>`;
+
+            footerEl.appendChild(progressEl);
+            footerEl.appendChild(actionEl);
+
+            card.appendChild(accentEl);
+            card.appendChild(removeBtn);
+            card.appendChild(headEl);
+            card.appendChild(footerEl);
+
+            return card;
+        };
+
+        previewItems.forEach((item) => {
+            container.appendChild(buildQuickAccessCard(item));
+        });
+        setupQuickAccessRail(previewItems.length);
+        return;
+
+        previewItems.forEach(item => {
+            const complex = item.complex;
+            const complexName = String(complex.name || '');
+            const safeComplexInitials = complexName.slice(0, 2);
+            const complexId = complex.id;
+            const pausedSession = pausedMap.get(complex.id) || item.paused_session || null;
+            const isPaused = !!(pausedSession && pausedSession.paused);
+            const stats = item.stats || {};
+            const health = item.health || {};
+            const pausedSessionId = pausedSession ? pausedSession.session_id : null;
+            const pausedResumeUrl =
+                pausedSession && pausedSession.resume_target && typeof pausedSession.resume_target.url === "string"
+                    ? pausedSession.resume_target.url
+                    : "";
+            const pausedAtLabel = formatPausedAt(pausedSession && pausedSession.paused_at);
+            const pausedDisplayIndex = pausedSession && typeof pausedSession.display_task_index === "number"
+                ? pausedSession.display_task_index
+                : (pausedSession && typeof pausedSession.current_task_index === "number"
+                    ? Math.max(0, pausedSession.current_task_index - 1)
+                    : null);
+            const pausedProgress = typeof pausedDisplayIndex === "number"
+                ? pausedDisplayIndex + 1
                 : null;
             const pausedTotal = pausedSession && typeof pausedSession.total_tasks === "number"
                 ? pausedSession.total_tasks
@@ -1882,49 +2348,77 @@
             const isMastered = progress >= 100;
             let iconContent = '';
             if (isMastered) {
-                iconContent = `<div class="w-10 h-10 rounded-full bg-primary-lighter text-primary flex items-center justify-center"><span class="material-symbols-outlined text-[20px]">check</span></div>`;
+                iconContent = `<div class="w-8 h-8 rounded-full bg-primary-lighter text-primary flex items-center justify-center shrink-0"><span class="material-symbols-outlined text-[16px]">check</span></div>`;
             } else if (progress > 0) {
-                iconContent = `<div class="relative w-10 h-10 flex items-center justify-center"><svg class="w-full h-full transform -rotate-90"><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"/><circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="3" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - progress}" stroke-linecap="round" class="text-primary transition-all duration-500 ease-out"/></svg><span class="absolute text-[9px] font-bold text-text-secondary dark:text-text-on-dark">${progress}%</span></div>`;
+                iconContent = `<div class="relative w-8 h-8 flex items-center justify-center shrink-0"><svg class="w-full h-full transform -rotate-90"><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"/><circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="${100 - progress}" stroke-linecap="round" class="text-primary transition-all duration-500 ease-out"/></svg><span class="absolute text-[8px] font-bold text-text-secondary dark:text-text-on-dark">${progress}%</span></div>`;
             } else {
-                iconContent = `<div class="w-10 h-10 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-xs uppercase">${safeComplexInitials}</div>`;
+                iconContent = `<div class="w-8 h-8 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-[10px] uppercase shrink-0">${escapeHtml(safeComplexInitials)}</div>`;
             }
 
             let statusLine = '';
             if (isPaused) {
-                const pauseText = pausedAtLabel
-                    ? `На паузе с ${pausedAtLabel}`
-                    : "На паузе";
-                const progressText = (pausedProgress && pausedTotal) ? ` В· ${pausedProgress}/${pausedTotal}` : "";
-                statusLine = `<span class="main-quick-access-status-copy text-accent text-[10px] font-semibold uppercase tracking-[0.16em]">${escapeHtml(`${pauseText}${progressText}`)}</span>`;
+                const pauseText = pausedAtLabel ? `На паузе с ${pausedAtLabel}` : "На паузе";
+                const progressText = (pausedProgress && pausedTotal) ? ` Шаг ${pausedProgress}/${pausedTotal}` : "";
+                statusLine = `${pauseText}${progressText}`;
             } else if (item.is_pinned) {
-                statusLine = `<span class="inline-flex items-center gap-1 text-[11px] text-text-secondary"><span class="material-symbols-outlined text-[11px]">push_pin</span> Закреплено</span>`;
+                statusLine = 'Закреплено';
             } else {
                 if (health.days_since_last !== null && health.days_since_last !== undefined) {
-                    const dayText = health.days_since_last === 0 ? 'Сегодня' : `${health.days_since_last}дн. назад`;
-                    statusLine = `<span class="main-quick-access-status-copy text-[11px] text-text-secondary">Активность: ${dayText}</span>`;
+                    statusLine = health.days_since_last === 0 ? 'Сегодня' : `${health.days_since_last} дн. назад`;
                 } else {
-                    statusLine = `<span class="main-quick-access-status-copy text-[11px] text-text-secondary">${safeComplexDescription}</span>`;
+                    statusLine = complex.description || 'Нет описания';
                 }
             }
 
-            return `
-                <div class="main-quick-access-item group relative bg-surface-1 rounded-xl p-3 border border-border-subtle hover:border-primary-light hover:shadow-lg transition-all cursor-pointer"
-                onclick="${onClickHandler}">
-                    <div class="main-quick-access-left">
-                        <div class="relative shrink-0">${iconContent}${healthBadge}</div>
-                        <div class="main-quick-access-copy flex flex-col">
-                            <h4 class="main-quick-access-title font-bold text-sm text-text-main group-hover:text-primary transition-colors" title="${safeComplexName}">${safeComplexName}</h4>
-                            <div class="main-quick-access-status">${statusLine}</div>
-                        </div>
-                    </div>
-                    <div class="flex shrink-0 items-center gap-1">
-                        <button class="h-7 w-7 rounded-full flex items-center justify-center text-text-secondary hover:text-status-error hover:bg-surface-2 transition-all opacity-70 group-hover:opacity-100" onclick="event.stopPropagation();window._removeFromQuickAccess('${complexIdLiteral}')" title="Убрать"><span class="material-symbols-outlined text-[14px]">close</span></button>
-                        <button class="h-8 w-8 rounded-full border border-border-strong bg-surface-2 flex items-center justify-center text-text-secondary group-hover:border-primary group-hover:bg-primary group-hover:text-primary-fg transition-all shadow-sm">
-                            <span class="material-symbols-outlined text-[18px]">${ctaIcon}</span>
-                        </button>
-                    </div>
-                </div>`;
-        }).join('');
+            const card = document.createElement("div");
+            card.className = "main-quick-access-card interactive-card group";
+            card.title = complexName;
+            card.onclick = () => {
+                if (isPaused) {
+                    window.handleStartSession(complexId, pausedSessionId, pausedResumeUrl);
+                } else {
+                    window.handleStartSession(complexId);
+                }
+            };
+
+            const iconWrap = document.createElement("div");
+            iconWrap.className = "relative flex-shrink-0";
+            iconWrap.innerHTML = iconContent + healthBadge;
+
+            const textWrap = document.createElement("div");
+            textWrap.className = "flex flex-col min-w-0 flex-1";
+
+            const titleEl = document.createElement("span");
+            titleEl.className = "text-text-main font-bold text-xs leading-tight min-w-0 main-quick-access-title";
+                titleEl.textContent = compactUiLabel(complexName, 58);
+            titleEl.title = complexName;
+
+            const metaEl = document.createElement("span");
+            metaEl.className = "text-text-secondary text-[10px] mt-0.5 leading-tight min-w-0 main-quick-access-status-copy";
+            metaEl.textContent = compactUiLabel(statusLine, 74);
+            metaEl.title = statusLine;
+
+            const removeBtn = document.createElement("button");
+            removeBtn.className = "absolute top-1 right-1 w-6 h-6 flex items-center justify-center rounded-full bg-surface-1 text-text-secondary opacity-0 group-hover:opacity-100 transition hover:bg-error-lighter hover:text-error";
+            removeBtn.title = "Убрать";
+            removeBtn.onclick = (e) => {
+                e.stopPropagation();
+                window._removeFromQuickAccess(complexId);
+            };
+            const rmIcon = document.createElement("span");
+            rmIcon.className = "material-symbols-outlined text-[14px]";
+            rmIcon.textContent = "close";
+            removeBtn.appendChild(rmIcon);
+
+            textWrap.appendChild(titleEl);
+            textWrap.appendChild(metaEl);
+
+            card.appendChild(iconWrap);
+            card.appendChild(textWrap);
+            card.appendChild(removeBtn);
+
+            container.appendChild(card);
+        });
     }
 
     window._retryQuickAccess = async function () {
@@ -1962,64 +2456,81 @@
         }
     }
 
-    window.handleStartSession = async function (complexId, pausedSessionId = null) {
+    async function resumePausedComplexSession(complexId, sessionId, preferredResumeUrl = "") {
+        sessionStartAbortController = new AbortController();
+        const response = await apiFetch(`/api/session/${encodeURIComponent(sessionId)}/resume`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(
+                currentUser?.user_id
+                    ? { user_id: currentUser.user_id, source: "main_quick_access" }
+                    : { source: "main_quick_access" }
+            ),
+            signal: sessionStartAbortController.signal
+        });
+        const { ok, data, cancelled } = response;
+        if (cancelled) return false;
+        if (!ok || !data?.ok) {
+            NotificationUI.toast(`Ошибка при возобновлении: ${data?.error || 'Неизвестная ошибка'}`, 'error');
+            return false;
+        }
+        await markRecentComplex(complexId);
+        const resumeUrl =
+            (typeof preferredResumeUrl === "string" && preferredResumeUrl) ||
+            (typeof data?.resume_target?.url === "string" && data.resume_target.url) ||
+            `/ui/session/${encodeURIComponent(sessionId)}`;
+        window.navigateWithTransition(resumeUrl);
+        return true;
+    }
+
+    async function startOrRestartComplexSession(complexId, force = false) {
+        sessionStartAbortController = new AbortController();
+        const response = await apiFetch(`/api/session/${encodeURIComponent(complexId)}/start`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(force ? { user_id: currentUser.user_id, force: true } : { user_id: currentUser.user_id }),
+            signal: sessionStartAbortController.signal
+        });
+
+        const { ok, data, cancelled } = response;
+        if (cancelled) return false;
+
+        if (!ok && data?.error === "paused_session_exists" && data?.session_id) {
+            const resume = await NotificationUI.confirm({
+                title: 'Найдена сессия на паузе',
+                message: 'Для этого комплекса уже есть сессия на паузе.\nПродолжить её или начать заново?',
+                confirmText: 'Продолжить',
+                cancelText: 'Начать заново',
+                variant: 'primary'
+            });
+            if (resume) {
+                return resumePausedComplexSession(complexId, data.session_id);
+            }
+            return startOrRestartComplexSession(complexId, true);
+        }
+
+        if (!ok || !data?.session_id) {
+            const errorMsg = data?.error || data?.message || "Неизвестная ошибка";
+            NotificationUI.toast(`Ошибка при запуске: ${errorMsg}`, 'error');
+            return false;
+        }
+
+        await markRecentComplex(complexId);
+        window.navigateWithTransition(`/ui/session/${data.session_id}`);
+        return true;
+    }
+
+    window.handleStartSession = async function (complexId, pausedSessionId = null, preferredResumeUrl = "") {
         try {
             if (sessionStartAbortController && !sessionStartAbortController.signal.aborted) {
                 return;
             }
             if (pausedSessionId) {
-                await markRecentComplex(complexId);
-                window.navigateWithTransition(`/ui/session/${pausedSessionId}`);
+                await resumePausedComplexSession(complexId, pausedSessionId, preferredResumeUrl);
                 return;
             }
-            sessionStartAbortController = new AbortController();
-            const response = await apiFetch(`/api/session/${encodeURIComponent(complexId)}/start`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ user_id: currentUser.user_id }),
-                signal: sessionStartAbortController.signal
-            });
-
-            const { ok, data, cancelled } = response;
-            if (cancelled) return;
-
-            // MISSING-3: сервер нашёл паузированную сессию — предлагаем выбор
-            if (!ok && data?.error === "paused_session_exists" && data?.session_id) {
-                const resume = await NotificationUI.confirm({
-                    title: 'Найдена сессия на паузе',
-                    message: 'Для этого комплекса уже есть сессия на паузе.\nПродолжить её или начать заново?',
-                    confirmText: 'Продолжить',
-                    cancelText: 'Начать заново',
-                    variant: 'primary'
-                });
-                if (resume) {
-                    await markRecentComplex(complexId);
-                    window.navigateWithTransition(`/ui/session/${data.session_id}`);
-                } else {
-                    sessionStartAbortController = new AbortController();
-                    const resp2 = await apiFetch(`/api/session/${encodeURIComponent(complexId)}/start`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ user_id: currentUser.user_id, force: true }),
-                        signal: sessionStartAbortController.signal
-                    });
-                    if (resp2.ok && resp2.data?.session_id) {
-                        await markRecentComplex(complexId);
-                        window.navigateWithTransition(`/ui/session/${resp2.data.session_id}`);
-                    } else {
-                        NotificationUI.toast(`Ошибка при запуске: ${resp2.data?.error || 'Неизвестная ошибка'}`, 'error');
-                    }
-                }
-                return;
-            }
-
-            if (ok && data?.session_id) {
-                await markRecentComplex(complexId);
-                window.navigateWithTransition(`/ui/session/${data.session_id}`);
-            } else {
-                const errorMsg = data?.error || data?.message || "Неизвестная ошибка";
-                NotificationUI.toast(`Ошибка при запуске: ${errorMsg}`, 'error');
-            }
+            await startOrRestartComplexSession(complexId, false);
+            return;
         } catch (error) {
             console.error("Session start exception:", error);
             NotificationUI.toast('Ошибка подключения. Проверьте интернет', 'error');
@@ -2034,6 +2545,9 @@
     }
 
     document.addEventListener("click", e => {
+        if (e.target?.closest('button, input, select, textarea, label, .main-period-toggle, [data-stop-nav="true"]')) {
+            return;
+        }
         const el = e.target?.closest("[data-nav]");
         if (el) window.navigateWithTransition(el.getAttribute("data-nav"));
     });

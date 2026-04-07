@@ -69,8 +69,14 @@
         const count = opts.particleCount || 80;
         const originX = opts.originX != null ? opts.originX : 0.5;
         const originY = opts.originY != null ? opts.originY : 0.3;
+        const baseAngle = opts.baseAngle != null ? opts.baseAngle : -Math.PI / 2;
         const spread = (opts.spread || 90) * Math.PI / 180;
         const duration = opts.duration || 2200;
+        const sizeMultiplier = opts.sizeMultiplier || 1;
+        const speedMultiplier = opts.speedMultiplier || 1;
+        const origins = Array.isArray(opts.origins) && opts.origins.length
+            ? opts.origins
+            : [{ particleCount: count, originX: originX, originY: originY, baseAngle: baseAngle }];
 
         _ensureCanvas();
         const dpr = window.devicePixelRatio || 1;
@@ -78,28 +84,35 @@
         _canvas.height = window.innerHeight * dpr;
         _ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const cx = window.innerWidth * originX;
-        const cy = window.innerHeight * originY;
         const colors = _getConfettiColors();
 
         const particles = [];
-        for (let i = 0; i < count; i++) {
-            const angle = -Math.PI / 2 + (Math.random() - 0.5) * spread;
-            const speed = 3 + Math.random() * 7;
-            particles.push({
-                x: cx, y: cy,
-                vx: Math.cos(angle) * speed * (0.5 + Math.random()),
-                vy: Math.sin(angle) * speed * (0.5 + Math.random()),
-                size: 4 + Math.random() * 5,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                rotation: Math.random() * Math.PI * 2,
-                rotSpeed: (Math.random() - 0.5) * 0.3,
-                opacity: 1,
-                shape: Math.random() > 0.4 ? 'rect' : 'circle',
-                gravity: 0.10 + Math.random() * 0.05,
-                friction: 0.985,
-            });
-        }
+        origins.forEach(function (source) {
+            const sourceCount = source && source.particleCount != null ? source.particleCount : count;
+            const sourceX = source && source.originX != null ? source.originX : originX;
+            const sourceY = source && source.originY != null ? source.originY : originY;
+            const sourceAngle = source && source.baseAngle != null ? source.baseAngle : baseAngle;
+            const cx = window.innerWidth * sourceX;
+            const cy = window.innerHeight * sourceY;
+
+            for (let i = 0; i < sourceCount; i++) {
+                const angle = sourceAngle + (Math.random() - 0.5) * spread;
+                const speed = (3 + Math.random() * 7) * speedMultiplier;
+                particles.push({
+                    x: cx, y: cy,
+                    vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+                    vy: Math.sin(angle) * speed * (0.5 + Math.random()),
+                    size: (4 + Math.random() * 5) * sizeMultiplier,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 0.3,
+                    opacity: 1,
+                    shape: Math.random() > 0.4 ? 'rect' : 'circle',
+                    gravity: 0.10 + Math.random() * 0.05,
+                    friction: 0.985,
+                });
+            }
+        });
 
         const start = performance.now();
         function frame(now) {
@@ -165,6 +178,101 @@
         requestAnimationFrame(tick);
     }
 
+    function _resolveContainedElements(containedOpts) {
+        const opts = containedOpts === true ? {} : (containedOpts || {});
+        const selectors = Array.isArray(opts.selectors) ? opts.selectors : [];
+        const explicitElements = Array.isArray(opts.elements) ? opts.elements : [];
+        const nodes = [];
+
+        selectors.forEach(function (selector) {
+            if (typeof selector !== 'string' || !selector.trim()) return;
+            try {
+                document.querySelectorAll(selector).forEach(function (node) {
+                    nodes.push(node);
+                });
+            } catch (_) { }
+        });
+
+        explicitElements.forEach(function (node) {
+            if (node && typeof node.animate === 'function') {
+                nodes.push(node);
+            }
+        });
+
+        if (!nodes.length) {
+            ['#iteration-hero', '.s2-metric-card', '#breakdown-panel'].forEach(function (selector) {
+                try {
+                    document.querySelectorAll(selector).forEach(function (node) {
+                        nodes.push(node);
+                    });
+                } catch (_) { }
+            });
+        }
+
+        const unique = [];
+        const seen = new Set();
+        nodes.forEach(function (node) {
+            if (!node || seen.has(node)) return;
+            seen.add(node);
+            unique.push(node);
+        });
+        return unique;
+    }
+
+    function _pulseContainedElements(elements, successRate) {
+        if (!Array.isArray(elements) || !elements.length) return;
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+        const emphasis = successRate >= 90 ? 1 : successRate >= 75 ? 0.82 : 0.68;
+        const shadowOpacity = (0.12 + emphasis * 0.16).toFixed(3);
+        const lift = successRate >= 90 ? -5 : -3;
+
+        elements.forEach(function (el, index) {
+            if (!el || typeof el.animate !== 'function') return;
+
+            const delay = Math.min(index * 70, 240);
+            const originalWillChange = el.style.willChange || '';
+            el.style.willChange = 'transform, box-shadow, filter';
+
+            try {
+                const animation = el.animate([
+                    {
+                        transform: 'translateY(0px) scale(1)',
+                        boxShadow: '0 16px 34px rgba(15, 23, 42, 0.08)',
+                        filter: 'saturate(1)',
+                    },
+                    {
+                        transform: 'translateY(' + lift + 'px) scale(1.01)',
+                        boxShadow: '0 24px 44px rgba(15, 23, 42, ' + shadowOpacity + ')',
+                        filter: 'saturate(' + (1 + emphasis * 0.14).toFixed(2) + ')',
+                    },
+                    {
+                        transform: 'translateY(0px) scale(1)',
+                        boxShadow: '0 16px 34px rgba(15, 23, 42, 0.08)',
+                        filter: 'saturate(1)',
+                    }
+                ], {
+                    duration: 760,
+                    delay: delay,
+                    easing: 'cubic-bezier(0.22, 1, 0.36, 1)',
+                    fill: 'none',
+                });
+
+                if (animation && animation.finished && typeof animation.finished.finally === 'function') {
+                    animation.finished.finally(function () {
+                        el.style.willChange = originalWillChange;
+                    });
+                } else {
+                    setTimeout(function () {
+                        el.style.willChange = originalWillChange;
+                    }, 1000);
+                }
+            } catch (_) {
+                el.style.willChange = originalWillChange;
+            }
+        });
+    }
+
     // =========================================================================
     //  CELEBRATION ORCHESTRATOR
     // =========================================================================
@@ -178,22 +286,36 @@
     function celebrate(successRate, opts) {
         opts = opts || {};
 
-        if (successRate >= 80 || opts.isPerfect) {
-            // Great result — full confetti
-            const count = opts.isPerfect ? 120 : 80;
-            setTimeout(function () {
-                launchConfetti({ particleCount: count });
-            }, 400);
+        if (opts.contained) {
+            _pulseContainedElements(_resolveContainedElements(opts.contained), successRate);
+            return;
         }
 
-        if (opts.isFinalResults && successRate >= 70) {
-            // S3: second burst from sides for extra celebration
+        if (successRate >= 80 || opts.isPerfect) {
+            const count = opts.isPerfect ? 120 : 96;
             setTimeout(function () {
-                launchConfetti({ particleCount: 50, originX: 0.15, originY: 0.5, spread: 60 });
-            }, 800);
-            setTimeout(function () {
-                launchConfetti({ particleCount: 50, originX: 0.85, originY: 0.5, spread: 60 });
-            }, 1000);
+                launchConfetti({
+                    particleCount: count,
+                    origins: [
+                        {
+                            particleCount: Math.ceil(count / 2),
+                            originX: -0.018,
+                            originY: 1.025,
+                            baseAngle: -Math.PI * 0.31,
+                        },
+                        {
+                            particleCount: Math.floor(count / 2),
+                            originX: 1.018,
+                            originY: 1.025,
+                            baseAngle: -Math.PI * 0.69,
+                        }
+                    ],
+                    spread: 24,
+                    duration: 1900,
+                    sizeMultiplier: 1.95,
+                    speedMultiplier: 1.22,
+                });
+            }, 360);
         }
     }
 

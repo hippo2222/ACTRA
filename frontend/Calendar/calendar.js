@@ -1,6 +1,6 @@
 /**
  * Calendar Module - JavaScript логика для календаря обучения.
- * 
+ *
  * Модули:
  * - CalendarState - управление состоянием
  * - CalendarAPI - работа с бэкендом
@@ -37,23 +37,23 @@ class CalendarState {
         this.notifications = [];
         this.listeners = [];
     }
-    
+
     subscribe(callback) {
         this.listeners.push(callback);
         return () => {
             this.listeners = this.listeners.filter(l => l !== callback);
         };
     }
-    
+
     notify() {
         this.listeners.forEach(callback => callback(this));
     }
-    
+
     update(partial) {
         Object.assign(this, partial);
         this.notify();
     }
-    
+
     updateSettings(settings) {
         Object.assign(this.settings, settings);
         this.notify();
@@ -67,12 +67,12 @@ class CalendarAPI {
     constructor(baseUrl = '/api/calendar') {
         this.baseUrl = baseUrl;
     }
-    
+
     async fetchTodayPlan() {
         const response = await fetch(`${this.baseUrl}/today`);
         return response.json();
     }
-    
+
     async updateSettings(settings) {
         const response = await fetch(`${this.baseUrl}/settings`, {
             method: 'POST',
@@ -81,7 +81,7 @@ class CalendarAPI {
         });
         return response.json();
     }
-    
+
     async startSession(sessionType, complexId = null) {
         const response = await fetch(`${this.baseUrl}/session/start`, {
             method: 'POST',
@@ -90,7 +90,7 @@ class CalendarAPI {
         });
         return response.json();
     }
-    
+
     async completeSession(sessionId, tasksCompleted, activeTimeSeconds) {
         const response = await fetch(`${this.baseUrl}/session/${sessionId}/complete`, {
             method: 'POST',
@@ -99,24 +99,24 @@ class CalendarAPI {
         });
         return response.json();
     }
-    
+
     async getHealth() {
         const response = await fetch(`${this.baseUrl}/health`);
         return response.json();
     }
-    
+
     async getActivity(days = 30) {
         const response = await fetch(`${this.baseUrl}/activity?days=${days}`);
         return response.json();
     }
-    
+
     async dismissNotification(notificationId) {
         const response = await fetch(`${this.baseUrl}/notification/${notificationId}/dismiss`, {
             method: 'POST',
         });
         return response.json();
     }
-    
+
     async freezeComplex(complexId, days) {
         const response = await fetch(`${this.baseUrl}/complex/${complexId}/freeze`, {
             method: 'POST',
@@ -134,43 +134,41 @@ class CalendarUI {
     constructor(state) {
         this.state = state;
     }
-    
+
     // Streak Badge
     renderStreakBadge(container) {
         const streak = this.state.settings.streak_days;
         const isHot = streak >= 7;
-        
-        container.className = `flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-full border transition-all ${
-            isHot ? 'border-primary-light' : 'border-border-subtle'
-        }`;
+
+        container.className = isHot ? 'pill-warning pill-sm' : 'pill-neutral pill-sm';
         container.innerHTML = `
-            <span class="material-symbols-outlined ${isHot ? 'text-primary' : 'text-text-muted'} text-[18px]">local_fire_department</span>
-            <span class="text-xs font-bold ${isHot ? 'text-primary' : 'text-text-muted'}">${streak} ${this.getDaysWord(streak)}</span>
+            <span class="material-symbols-outlined text-[18px]">local_fire_department</span>
+            <span class="text-xs font-bold">${streak} ${this.getDaysWord(streak)}</span>
         `;
     }
-    
+
     // Time Controller
     renderTimeController(container) {
+        container.classList.add('segmented-control', 'calendar-time-controller');
         const buttons = container.querySelectorAll('.time-btn');
         buttons.forEach(btn => {
             const time = parseInt(btn.dataset.time);
             const isActive = time === this.state.settings.daily_time_limit_minutes;
-            
-            btn.className = `time-btn px-4 py-1.5 rounded text-sm font-medium transition-all ${
-                isActive 
-                    ? 'bg-primary text-primary-fg shadow-lg shadow-primary-light font-bold transform scale-105' 
-                    : 'border border-border-subtle bg-bg-secondary text-text-main hover:border-primary-light hover:bg-surface-1 hover:text-primary'
-            }`;
+
+            btn.className = 'time-btn segmented-control__button px-4 py-1.5 text-sm font-medium transition-all';
+            btn.classList.toggle('active', isActive);
+            btn.classList.toggle('is-active', isActive);
+            btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
         });
     }
-    
+
     // Recipe Cards
     renderDailyMixCard(elements) {
         const plan = this.state.daily_plan;
-        
+
         elements.count.textContent = plan.daily_mix_count || 0;
         elements.time.textContent = `задач (~${plan.daily_mix_minutes || 0} мин)`;
-        
+
         if (plan.is_adapted) {
             elements.badge.textContent = 'Адаптация очереди';
             elements.desc.textContent = 'Очередь адаптирована, но эта подборка остается обязательной.';
@@ -181,7 +179,7 @@ class CalendarUI {
             elements.btnText.textContent = 'Начать';
         }
     }
-    
+
     renderMainFocusCard(elements) {
         const plan = this.state.daily_plan;
         const limit = this.state.settings.daily_time_limit_minutes || 0;
@@ -198,19 +196,19 @@ class CalendarUI {
                 : 'Нет активного комплекса.';
         }
     }
-    
+
     // Schedule Strip
     renderScheduleStrip(container) {
         container.innerHTML = this.state.schedule.map(day => {
             const isToday = day.is_today;
             const isMissed = day.status === 'missed';
             const isFuture = day.is_future;
-            
+
             let borderClass = 'border-border-subtle';
             let stateClass = '';
             let bgClass = 'bg-surface-1';
             let extraContent = '';
-            
+
             if (isToday) {
                 borderClass = 'border-primary';
                 stateClass = 'schedule-card-today';
@@ -221,21 +219,21 @@ class CalendarUI {
             } else if (isFuture) {
                 bgClass = 'bg-surface-1';
             }
-            
+
             const tasksHtml = (day.tasks || []).filter(t => t).map(task => `
                 <div class="schedule-task-row flex items-start gap-2">
                     <div class="schedule-task-icon size-1.5 rounded-full ${isToday ? 'bg-text-main' : 'bg-text-secondary'}"></div>
                     <span class="schedule-task-name text-sm ${isToday ? 'text-text-main font-medium' : 'text-text-secondary'}" title="${task}">${task}</span>
                 </div>
             `).join('');
-            
+
             const badgesHtml = (day.badges || []).map(badge => {
                 let badgeClass = 'bg-bg-secondary border border-border-subtle text-text-secondary';
                 if (badge === 'Пропущено') badgeClass = 'bg-error-lighter border border-error-light text-error-text';
                 if (badge === 'Пересчитано' || badge === 'Смещено') badgeClass = 'bg-primary-lighter border border-primary-light text-primary-dark';
                 return `<div class="px-2 py-0.5 rounded ${badgeClass} w-fit"><span class="text-[10px] uppercase font-medium">${badge}</span></div>`;
             }).join('');
-            
+
             return `
                 <div class="schedule-card ${stateClass} ${bgClass} border ${borderClass} rounded-xl p-4 flex flex-col gap-3 transition-all shadow-sm relative">
                     ${extraContent}
@@ -252,18 +250,18 @@ class CalendarUI {
             `;
         }).join('');
     }
-    
+
     // Heatmap
     renderHeatmap(container) {
         container.innerHTML = this.state.activity.map(day => {
             let bgClass = 'bg-border-light';
             let extraClass = '';
-            
+
             const tasksSolved = day.tasks_solved || 0;
             const tasksAttempted = day.tasks_attempted || 0;
             const secondsSpent = day.seconds_spent || 0;
             const minutesSpent = Math.round(secondsSpent / 60);
-            
+
             if (day.is_future) {
                 bgClass = 'bg-surface-1 border border-dashed border-border-subtle';
             } else if (day.is_today) {
@@ -283,7 +281,7 @@ class CalendarUI {
             } else if (tasksSolved > 0) {
                 bgClass = 'bg-heat-low';
             }
-            
+
             // Улучшенный tooltip с деталями
             let tooltip = '';
             if (day.is_today) {
@@ -300,17 +298,17 @@ class CalendarUI {
             } else {
                 tooltip = '0 задач';
             }
-            
+
             return `<div class="aspect-square rounded ${bgClass} ${extraClass} tooltip" data-tooltip="${tooltip}"></div>`;
         }).join('');
     }
-    
+
     // Activity Banner
     renderActivityBanner(container) {
         const streak = this.state.settings.streak_days;
         const hasMissed = this.state.activity.some(d => d.is_missed);
         const isAdapted = this.state.daily_plan.is_adapted;
-        
+
         if (streak >= 30) {
             container.innerHTML = this.getCongratulationsBanner(streak);
             container.classList.remove('hidden');
@@ -322,7 +320,7 @@ class CalendarUI {
             container.classList.remove('hidden');
         }
     }
-    
+
     getCongratulationsBanner(streak) {
         return `
             <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-bg-secondary to-secondary-light border border-secondary-light p-5 shadow-sm animate-slide-in">
@@ -339,10 +337,10 @@ class CalendarUI {
             </div>
         `;
     }
-    
+
     getMissedDayBanner() {
         return `
-            <div class="flex items-start gap-4 p-4 rounded-xl bg-bg-secondary border border-border-subtle shadow-sm animate-slide-in">
+            <div class="panel-row panel-row--soft items-start gap-4 animate-slide-in">
                 <div class="flex items-center justify-center size-10 rounded-full bg-secondary-light text-secondary-text shrink-0">
                     <span class="material-symbols-outlined">event_busy</span>
                 </div>
@@ -355,10 +353,10 @@ class CalendarUI {
             </div>
         `;
     }
-    
+
     getDefaultBanner() {
         return `
-            <div class="flex items-start gap-3 p-3 rounded-lg bg-bg-secondary border border-border-subtle shadow-sm">
+            <div class="panel-row panel-row--soft items-start gap-3">
                 <span class="material-symbols-outlined text-text-muted mt-0.5">info</span>
                 <div class="flex flex-col gap-1">
                     <p class="text-sm text-text-main font-medium">Это нормально — пропускать дни</p>
@@ -369,42 +367,44 @@ class CalendarUI {
             </div>
         `;
     }
-    
+
     // Notification Card
     renderNotificationCard(container) {
         if (this.state.notifications.length === 0) {
             container.classList.add('hidden');
             return;
         }
-        
+
         const notif = this.state.notifications[0];
         container.innerHTML = `
-            <div class="flex items-center justify-between p-4 bg-warning-light border border-warning-light rounded-xl shadow-sm animate-slide-in">
+            <div class="panel-row panel-row--soft justify-between animate-slide-in">
                 <div class="flex items-center gap-3">
-                    <div class="bg-warning-lighter text-warning-dark rounded-full p-1.5">
+                    <div class="pill-warning pill-sm">
                         <span class="material-symbols-outlined text-[18px]">warning</span>
                     </div>
                     <div>
-                        <p class="text-warning-dark text-sm font-medium">${notif.title}</p>
-                        <p class="text-warning-dark text-xs">${notif.message}</p>
+                        <p class="text-text-main text-sm font-medium">${notif.title}</p>
+                        <p class="text-text-secondary text-xs">${notif.message}</p>
                     </div>
                 </div>
-                <button data-action="notification-action" data-type="${notif.action_type}" class="text-xs bg-warning-lighter hover:bg-warning-light text-warning-dark px-3 py-1.5 rounded-md font-bold transition-colors">
+                <button data-action="notification-action" data-type="${notif.action_type}" class="btn-secondary text-xs px-3 py-1.5 rounded-md font-bold">
                     ${notif.action_type === 'fix' ? 'Исправить' : 'Обновить'}
                 </button>
             </div>
         `;
         container.classList.remove('hidden');
     }
-    
+
     // Health Indicator
-    renderHealthIndicator(elements) {
-        const health = this.state.health_summary;
-        const percent = Math.round(health.overall_health * 100);
-        
-        elements.percent.textContent = `${percent}%`;
-        
-        // Conic gradient
+      renderHealthIndicator(elements) {
+          const health = this.state.health_summary;
+          const percent = Math.round(health.overall_health * 100);
+          const hasFewComplexes = (health.complexes || []).length <= 1;
+
+          elements.percent.textContent = `${percent}%`;
+          elements.chart?.parentElement?.classList.toggle('health-content--sparse', hasFewComplexes);
+
+          // Conic gradient
         let gradient = 'conic-gradient(';
         let pos = 0;
         health.complexes.forEach((c, i) => {
@@ -416,19 +416,19 @@ class CalendarUI {
         });
         gradient += ')';
         elements.ring.style.background = gradient;
-        
+
         // List
-        elements.list.innerHTML = health.complexes.map(c => `
-            <div class="flex items-center justify-between group cursor-pointer" data-action="review-complex" data-complex="${c.complex_id || c.name}">
-                <div class="health-complex-meta flex items-center gap-2">
-                    <div class="size-2 rounded-full ${c.is_critical ? 'bg-warning' : (c.health_percent >= 80 ? 'bg-primary' : 'bg-primary-light')}"></div>
-                    <span class="health-complex-name text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors" title="${c.name}">${c.name}</span>
-                </div>
-                <span class="text-xs ${c.is_critical ? 'text-warning-dark' : (c.health_percent >= 80 ? 'text-primary' : 'text-text-muted')} font-bold">${c.health_percent}%</span>
-            </div>
-        `).join('');
-    }
-    
+          elements.list.innerHTML = health.complexes.map(c => `
+              <div class="health-complex-item panel-row panel-row--soft group cursor-pointer" data-action="review-complex" data-complex="${c.complex_id || c.name}">
+                  <div class="health-complex-meta flex items-center gap-2">
+                      <div class="size-2 rounded-full ${c.is_critical ? 'bg-warning' : (c.health_percent >= 80 ? 'bg-primary' : 'bg-primary-light')}"></div>
+                      <span class="health-complex-name text-sm text-text-main group-hover:${c.is_critical ? 'text-warning-dark' : 'text-primary'} transition-colors" title="${c.name}">${c.name}</span>
+                  </div>
+                  <span class="health-complex-score panel-chip ${c.is_critical ? 'text-warning-dark' : (c.health_percent >= 80 ? 'text-primary' : 'text-text-muted')} font-bold">${c.health_percent}%</span>
+              </div>
+          `).join('');
+      }
+
     // Utils
     getDaysWord(n) {
         const abs = Math.abs(n) % 100;
@@ -450,7 +450,7 @@ class CalendarInteractions {
         this.ui = ui;
         this.dragState = { isDragging: false, startX: 0, scrollLeft: 0 };
     }
-    
+
     setupDragScroll(container) {
         container.addEventListener('mousedown', (e) => {
             this.dragState.isDragging = true;
@@ -458,10 +458,10 @@ class CalendarInteractions {
             this.dragState.startX = e.pageX - container.offsetLeft;
             this.dragState.scrollLeft = container.scrollLeft;
         });
-        
+
         container.addEventListener('mouseleave', () => this.endDrag(container));
         container.addEventListener('mouseup', () => this.endDrag(container));
-        
+
         container.addEventListener('mousemove', (e) => {
             if (!this.dragState.isDragging) return;
             e.preventDefault();
@@ -470,19 +470,19 @@ class CalendarInteractions {
             container.scrollLeft = this.dragState.scrollLeft - walk;
         });
     }
-    
+
     endDrag(container) {
         this.dragState.isDragging = false;
         container.classList.remove('dragging');
     }
-    
+
     setupGlobalClickHandler() {
         document.addEventListener('click', (e) => {
             const action = e.target.closest('[data-action]');
             if (!action) return;
-            
+
             const actionType = action.dataset.action;
-            
+
             switch (actionType) {
                 case 'switch-mode':
                     this.handleSwitchMode(action.dataset.mode);
@@ -496,7 +496,7 @@ class CalendarInteractions {
             }
         });
     }
-    
+
     async handleSwitchMode(mode) {
         try {
             await this.api.updateSettings({ schedule_mode: mode });
@@ -505,7 +505,7 @@ class CalendarInteractions {
             console.error('Failed to switch mode:', e);
         }
     }
-    
+
     handleNotificationAction(type) {
         if (type === 'fix') {
             const critical = this.state.health_summary.complexes.find(c => c.is_critical);
@@ -514,7 +514,7 @@ class CalendarInteractions {
             }
         }
     }
-    
+
     async handleReviewComplex(complexId) {
         console.log('Starting unplanned review:', complexId);
         try {

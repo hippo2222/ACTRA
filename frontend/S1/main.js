@@ -38,7 +38,11 @@
     } = UIHelpers;
 
     const {
-        renderTask
+        renderTask,
+        restoreCheckedTaskState,
+        restoreDraftToUI,
+        restoreViewStateToUI,
+        pickEffectiveTaskType
     } = TaskRenderer;
 
     const {
@@ -50,8 +54,11 @@
         handleResumeConfirm,
         handleDiscardSession,
         initTestSubmitGuard,
+        initUiStateAutosave,
         refreshCheckButtonState,
-        initBeforeUnloadGuard
+        initBeforeUnloadGuard,
+        resetUiStateAutosaveTracking,
+        navigateWithoutPrompt
     } = SessionControls;
 
     function syncCheckButtonState() {
@@ -224,7 +231,7 @@
             if (status === 410) {
                 showStatus('Сессия завершена', 'success');
                 setTimeout(() => {
-                    window.navigateWithTransition(SessionRoutes.SESSION_RESULTS(sessionId));
+                    navigateWithoutPrompt(SessionRoutes.SESSION_RESULTS(sessionId));
                 }, 1000);
                 renderTask(null);
                 syncCheckButtonState();
@@ -248,10 +255,66 @@
                 hideResumeModal();
             }
 
-            showStatus('');
+            const restoredEvaluationResult =
+                response.task && response.task.restored_evaluation_result && typeof response.task.restored_evaluation_result === 'object'
+                    ? response.task.restored_evaluation_result
+                    : null;
+            const restoredUserInput =
+                response.task && response.task.restored_user_input && typeof response.task.restored_user_input === 'object'
+                    ? response.task.restored_user_input
+                    : null;
+            const restoredViewState =
+                response.task && response.task.restored_view_state && typeof response.task.restored_view_state === 'object'
+                    ? response.task.restored_view_state
+                    : null;
+
+            if (restoredEvaluationResult) {
+                showStatus(
+                    '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438',
+                    'info',
+                    { dismissible: true, autoHideMs: 8000 }
+                );
+            } else {
+                showStatus('');
+            }
+
             const theoryContext = await resolveTheorySessionContext(response.task);
             renderTheorySessionContext(theoryContext);
+            if (typeof resetUiStateAutosaveTracking === 'function') {
+                resetUiStateAutosaveTracking();
+            }
             renderTask(response.task);
+            const effectiveTaskType =
+                typeof pickEffectiveTaskType === 'function'
+                    ? pickEffectiveTaskType(response.task)
+                    : null;
+
+            if (
+                restoredUserInput &&
+                typeof restoreDraftToUI === 'function' &&
+                effectiveTaskType
+            ) {
+                restoreDraftToUI(effectiveTaskType, restoredUserInput);
+            }
+
+            if (restoredEvaluationResult && typeof restoreCheckedTaskState === 'function') {
+                restoreCheckedTaskState(response.task, restoredEvaluationResult);
+                const pendingUserJudgement = !!(
+                    restoredEvaluationResult.details &&
+                    typeof restoredEvaluationResult.details === 'object' &&
+                    restoredEvaluationResult.details.requires_user_judgement === true
+                );
+                setCanGoNext(!pendingUserJudgement);
+            }
+
+            if (
+                restoredViewState &&
+                typeof restoreViewStateToUI === 'function' &&
+                effectiveTaskType
+            ) {
+                restoreViewStateToUI(effectiveTaskType, restoredViewState);
+            }
+
             syncCheckButtonState();
         } catch (err) {
             console.error(err);
@@ -272,6 +335,10 @@
     }
 
     function init() {
+        if (typeof window !== 'undefined') {
+            window.handleSubmitAnswer = handleSubmitAnswer;
+        }
+
         document
             .getElementById('check-answer-btn')
             .addEventListener('click', handleCheckAnswerClick || handleSubmitAnswer);
@@ -305,6 +372,10 @@
         const resumeExit = document.getElementById('resume-exit-btn');
         if (resumeExit) {
             resumeExit.addEventListener('click', () => {
+                if (typeof navigateWithoutPrompt === 'function') {
+                    navigateWithoutPrompt(SessionRoutes.COMPLEXES || '/ui/complexes');
+                    return;
+                }
                 window.navigateWithTransition(SessionRoutes.COMPLEXES || '/ui/complexes');
             });
         }
@@ -323,6 +394,10 @@
 
         if (typeof initBeforeUnloadGuard === 'function') {
             initBeforeUnloadGuard();
+        }
+
+        if (typeof initUiStateAutosave === 'function') {
+            initUiStateAutosave();
         }
 
         loadInitialTask();

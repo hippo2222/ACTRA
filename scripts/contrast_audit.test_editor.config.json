@@ -1,0 +1,41 @@
+{
+  "baseUrl": "http://127.0.0.1:8000",
+  "outputDir": "reports/contrast_test_editor",
+  "headless": true,
+  "failOnIssues": true,
+  "failOnCoverageMissing": false,
+  "themes": ["light-a", "light-b", "neutral-a", "neutral-b", "dark-a", "dark-b"],
+  "afterThemeWaitMs": 250,
+  "auditOptions": {
+    "simulateStates": true,
+    "simulatedStates": ["hover", "focus", "active", "disabled", "data-active=true"],
+    "strictAA": true,
+    "uiGuideStrict": true,
+    "minTextContrast": 4.5,
+    "selectedOptionMinContrast": 5.5,
+    "tolerance": 0
+  },
+  "pages": [
+    {
+      "name": "Test Editor default",
+      "url": "/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_sistemy_slozhnosti&topic=testovaya_tema&task=task_b67affee",
+      "waitFor": "#editor-difficulty-authoring",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1400 }
+      ]
+    },
+    {
+      "name": "Test Editor difficulty blocking",
+      "url": "/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_sistemy_slozhnosti&topic=testovaya_tema&task=task_b67affee",
+      "waitFor": "#editor-difficulty-authoring",
+      "actionsOnce": [
+        { "type": "wait", "ms": 1400 },
+        {
+          "type": "evaluate",
+          "script": "const editor=window.editor; if(!editor) return {ok:false,error:'editor_missing'}; const state=editor.difficultyAuthoring && editor.difficultyAuthoring.state; if(!state) return {ok:false,error:'difficulty_state_missing'}; state.mode='custom'; state.selectedLevels=[]; state.lastCustomSelectedLevels=[]; editor.applyDifficultyAuthoringStateToTaskData(); editor.renderDifficultyAuthoringControls(); editor.updateSaveStatus(); const container=document.getElementById('editor-difficulty-authoring'); return {ok:true, blocking:container ? container.dataset.blocking : null};"
+        },
+        { "type": "wait", "ms": 180 }
+      ]
+    }
+  ]
+}

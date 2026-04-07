@@ -23,7 +23,6 @@ const FRONTEND_DIR = path.resolve(__dirname, "../frontend/assets");
 const THEME_CSS_FILES = [
   "input.css",
   "lightB-variables.css",
-  "hotfix_contrast.css",
 ];
 
 /**
@@ -123,6 +122,43 @@ function parseThemeBlocks(filePath) {
   }
 
   return themes;
+}
+
+/**
+ * Extract the global :root block from a CSS file.
+ * Returns Map<varName, { value, line, file }>
+ */
+function parseRootVariables(filePath) {
+  const content = fs.readFileSync(filePath, "utf8");
+  const fileName = path.basename(filePath);
+  const vars = new Map();
+  const rootMatch = content.match(/:root\s*\{/);
+  if (!rootMatch) return vars;
+
+  const blockStart = rootMatch.index + rootMatch[0].length;
+  let depth = 1;
+  let i = blockStart;
+  while (i < content.length && depth > 0) {
+    if (content[i] === "{") depth++;
+    else if (content[i] === "}") depth--;
+    i++;
+  }
+
+  const blockContent = content.slice(blockStart, i - 1);
+  const varRegex = /(--[\w-]+)\s*:\s*([^;]+);/g;
+  let varMatch;
+  while ((varMatch = varRegex.exec(blockContent)) !== null) {
+    const varName = varMatch[1].trim();
+    const varValue = varMatch[2].trim();
+    const linesBefore = content.slice(0, rootMatch.index + varMatch.index).split("\n").length;
+    vars.set(varName, {
+      value: varValue,
+      line: linesBefore,
+      file: fileName,
+    });
+  }
+
+  return vars;
 }
 
 // ── Color Utilities ────────────────────────────────────────────────────────────
@@ -349,6 +385,7 @@ function main() {
 
   // 1. Parse all CSS files
   const allThemes = new Map(); // themeName -> Map<varName, {value, line, file}>
+  const globalVars = new Map();
 
   for (const file of THEME_CSS_FILES) {
     const filePath = path.join(FRONTEND_DIR, file);
@@ -357,6 +394,10 @@ function main() {
       continue;
     }
     console.log(`  📄 Parsing ${file}...`);
+    const rootVars = parseRootVariables(filePath);
+    for (const [k, v] of rootVars) {
+      globalVars.set(k, v);
+    }
     const parsed = parseThemeBlocks(filePath);
     for (const [themeName, vars] of parsed) {
       if (!allThemes.has(themeName)) {
@@ -365,6 +406,14 @@ function main() {
       const existing = allThemes.get(themeName);
       for (const [k, v] of vars) {
         existing.set(k, v);
+      }
+    }
+  }
+
+  for (const [, vars] of allThemes) {
+    for (const [k, v] of globalVars) {
+      if (!vars.has(k)) {
+        vars.set(k, v);
       }
     }
   }

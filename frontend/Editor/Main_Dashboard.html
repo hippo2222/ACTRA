@@ -5,7 +5,7 @@
     <script src="../../assets/ThemeManager.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>ACTRA вЂ” Редактор</title>
+    <title>ACTRA — Редактор</title>
     <base href="/ui/editor/">
     <link rel="stylesheet" href="styles.css">
     <script>
@@ -31,6 +31,7 @@
                 module: params.get('module'),
                 topic: params.get('topic'),
                 sort: params.get('sort'),
+                microcards_manual: params.get('microcards_manual'),
             };
 
             // Restore sidebar width immediately to avoid jump
@@ -116,7 +117,8 @@
         .editor-task-card-title {
             display: -webkit-box;
             -webkit-box-orient: vertical;
-            -webkit-line-clamp: 3;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
             overflow: hidden;
             line-height: 1.25;
         }
@@ -398,8 +400,10 @@
         class="bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full editor-sidebar-enter"
         style="width: var(--sidebar-width, 250px);">
         <div class="h-16 flex items-center px-6 border-b border-border-subtle gap-3">
-            <span class="brand-logo w-8 h-8" style="color:var(--color-primary)" aria-hidden="true"></span>
-            <h1 class="text-text-main font-bold text-lg tracking-tight">ACTRA</h1>
+            <div class="brand-lockup">
+                <span class="brand-logo" style="color:var(--color-primary)" aria-hidden="true"></span>
+                <h1 class="brand-lockup__word">ACTRA</h1>
+            </div>
             <button data-role="return-main"
                 class="ml-auto h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors shadow-sm"
                 title="Вернуться на главный экран">
@@ -431,14 +435,7 @@
                     <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Анализ теории</span>
                 </button>
             </div>
-            <div class="px-4 mb-4">
-                <button data-role="open-theory-hub"
-                    class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
-                    <span
-                        class="material-symbols-outlined text-[18px] group-hover:scale-110 transition-transform">hub</span>
-                    <span class="editor-sidebar-action-label text-xs font-bold uppercase tracking-wider">Theory Hub</span>
-                </button>
-            </div>
+
             <div class="px-4 mb-4">
                 <button data-role="open-recovery-center"
                     class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover rounded-lg transition-all shadow-sm group">
@@ -454,7 +451,11 @@
             </div>
         </div>
         <div class="p-4 border-t border-border-subtle">
-            <div id="theme-switcher-sidebar-target" class="w-full"></div>
+            <button id="theory-center-sidebar-btn" type="button"
+                class="flex w-full items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-sm font-semibold text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors min-w-0">
+                <span class="material-symbols-outlined text-[18px] shrink-0">hub</span>
+                <span class="editor-sidebar-action-label truncate">Центр теории</span>
+            </button>
         </div>
     </aside>
     <!-- Sidebar Resizer Handle -->
@@ -495,6 +496,34 @@
             </div>
         </div>
     </div>
+    <!-- Sidebar Sync Confirmation Modal -->
+    <div id="topic-sync-confirm-modal" class="hidden fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div id="topic-sync-blur-overlay" class="absolute inset-0 bg-black/40 backdrop-blur-md opacity-0 transition-opacity duration-200"></div>
+        <div id="topic-sync-modal-content"
+            class="relative w-full max-w-sm bg-surface-1 rounded-2xl shadow-2xl border border-white/10 p-6 transform scale-95 opacity-0 transition-all duration-200">
+            <div class="flex flex-col items-center text-center gap-4">
+                <div class="w-12 h-12 rounded-full bg-primary-lighter flex items-center justify-center text-primary">
+                    <span class="material-symbols-outlined text-2xl">sync</span>
+                </div>
+                <div class="space-y-2">
+                    <h3 class="text-xl font-bold text-text-main">Обновить из тем?</h3>
+                    <p class="text-sm text-text-secondary leading-relaxed">
+                        Это действие обновит теоретический контент во всех связанных комплексах на основе текущих тем в <span id="topic-sync-confirm-target" class="font-bold text-text-main">—</span>.
+                    </p>
+                </div>
+                <div class="flex flex-col w-full gap-2 pt-2">
+                    <button id="topic-sync-confirm-btn"
+                        class="w-full py-3 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-xl transition-all shadow-lg active:scale-98">
+                        Подтвердить обновление
+                    </button>
+                    <button id="topic-sync-cancel-btn"
+                        class="w-full py-3 bg-transparent text-text-secondary font-medium rounded-xl hover:bg-bg-hover transition-colors">
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
         <header
             class="h-20 flex items-center justify-between px-8 bg-surface-1 border-b border-border-subtle shrink-0 sticky top-0 z-10 transition-colors">
@@ -502,7 +531,7 @@
                 class="flex items-center gap-2 text-text-main font-bold text-2xl tracking-tight shrink-1 min-w-0 flex-1">
                 <span class="cursor-pointer hover:text-primary transition-colors">Библиотека</span>
             </nav>
-            <div class="editor-header-actions flex items-center gap-8 justify-end min-w-0 shrink-0">
+            <div class="editor-header-actions flex items-center gap-4 justify-end min-w-0 shrink-0">
                 <div class="relative search-container-expanding shrink-0 rounded-lg">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-text-disabled">search</span>
@@ -726,15 +755,41 @@
             </div>
         </div>
     </div>
-    <div id="topic-theory-modal"
-        class="hidden fixed inset-0 z-[65] overflow-y-auto modal-backdrop items-center justify-center p-4">
-        <div
-            class="inline-block align-bottom bg-surface-1 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+    <dialog id="topic-theory-modal"
+        class="bg-transparent p-0 overflow-visible border-none outline-none backdrop:backdrop-blur-lg backdrop:bg-black/70">
+        <style>
+            #topic-theory-modal::backdrop {
+                backdrop-filter: blur(12px);
+                background-color: rgba(0, 0, 0, 0.7);
+                transition: opacity 0.3s ease;
+            }
+            #topic-theory-modal[open]::backdrop {
+                opacity: 1;
+            }
+            #topic-theory-modal[open] .modal-content {
+                animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+            #topic-theory-modal.closing .modal-content {
+                animation: scaleOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            #topic-theory-modal.closing::backdrop {
+                opacity: 0;
+            }
+            @keyframes scaleIn {
+                from { opacity: 0; transform: scale(0.95) translateY(10px); }
+                to { opacity: 1; transform: scale(1) translateY(0); }
+            }
+            @keyframes scaleOut {
+                from { opacity: 1; transform: scale(1) translateY(0); }
+                to { opacity: 0; transform: scale(0.95) translateY(10px); }
+            }
+        </style>
+        <div class="modal-content relative bg-surface-1 rounded-3xl text-left shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border-2 border-border-strong sm:max-w-xl sm:w-full mx-auto my-auto overflow-hidden">
             <div class="bg-surface-1 px-6 pt-6 pb-4">
                 <div class="flex items-start justify-between gap-3 mb-4">
                     <div class="min-w-0">
-                        <h3 class="text-xl font-bold text-text-main">Теория темы</h3>
-                        <p id="topic-theory-meta" class="editor-flow-wrap text-xs text-text-secondary mt-1">Выберите теорию для темы.</p>
+                        <h3 class="text-xl font-bold text-text-main">Управление теорией темы</h3>
+                        <p id="topic-theory-meta" class="editor-flow-wrap text-xs text-text-secondary mt-1">Настройте обучающие материалы для этой темы (Менеджер теории).</p>
                     </div>
                     <button type="button" data-role="topic-theory-close"
                         class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
@@ -742,64 +797,94 @@
                         <span class="material-symbols-outlined text-[20px]">close</span>
                     </button>
                 </div>
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-semibold text-text-secondary mb-1" for="topic-theory-picker">Связать с теорией</label>
-                        <select id="topic-theory-picker"
-                            class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                            <option value="">Без теории</option>
-                        </select>
-                        <p class="editor-flow-wrap text-xs text-text-secondary mt-1">Связь хранится на уровне темы и наследуется комплексами в режиме Inherit.</p>
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-xs font-semibold text-text-secondary mb-1" for="topic-theory-relation">Тип связи</label>
-                            <select id="topic-theory-relation"
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                <option value="link">Ссылка (link)</option>
-                                <option value="copy">Копия (copy)</option>
-                            </select>
+                <div class="space-y-5">
+                    <!-- Theory State Selection -->
+                    <div id="topic-theory-selection-state" class="space-y-4">
+                        <div id="topic-theory-current-info" class="hidden rounded-xl border border-primary/20 bg-primary/5 p-4">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-primary block mb-1">Привязанная теория</span>
+                                    <p id="topic-theory-current-title" class="text-sm font-bold text-text-main truncate">Загрузка...</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button id="topic-theory-edit-content-btn" type="button" 
+                                        class="p-2.5 rounded-xl bg-surface-1 border border-primary-light text-primary shadow-sm transition-all hover:border-primary hover:bg-primary-lighter hover:text-primary-darker hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:scale-95" title="Редактировать материалы">
+                                        <span class="material-symbols-outlined text-[18px]">edit_note</span>
+                                    </button>
+                                    <button id="topic-theory-clear-btn" type="button" 
+                                        class="p-2.5 rounded-xl bg-surface-1 border border-border-subtle text-error-text shadow-sm transition-all hover:border-error hover:bg-error-lighter hover:text-error-text hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-error active:scale-95" title="Убрать привязку">
+                                        <span class="material-symbols-outlined text-[18px]">link_off</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-text-secondary mb-1" for="topic-theory-propagation-mode">Режим синхронизации</label>
-                            <select id="topic-theory-propagation-mode"
-                                class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
-                                <option value="safe">Safe (только inherit)</option>
-                                <option value="inherit_only_force">Inherit force-refresh</option>
-                                <option value="all_force">All force (включая override)</option>
-                            </select>
+
+                        <div id="topic-theory-empty-state" class="space-y-3">
+                            <div class="flex flex-col sm:flex-row gap-3">
+                                <button id="topic-theory-create-new-btn" type="button"
+                                    class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary text-primary-fg hover:bg-primary-hover font-bold text-sm transition-all shadow-sm">
+                                    <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                                    Создать новую теорию
+                                </button>
+                                <div class="relative flex-1">
+                                    <select id="topic-theory-picker"
+                                        class="block w-full h-full rounded-xl border-border-subtle bg-surface-2 pl-4 pr-10 py-3 text-text-main focus:ring-2 focus:ring-primary sm:text-sm appearance-none cursor-pointer">
+                                        <option value="">Выбрать из библиотеки...</option>
+                                    </select>
+                                    <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-text-muted pointer-events-none text-[18px]">expand_more</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-3 space-y-2">
-                        <label class="inline-flex items-center gap-2 text-sm text-text-secondary">
-                            <input id="topic-theory-apply" type="checkbox"
-                                class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary bg-surface-1">
-                            Применить к связанным комплексам
-                        </label>
-                        <label class="inline-flex items-center gap-2 text-sm text-text-secondary">
-                            <input id="topic-theory-dry-run" type="checkbox"
-                                class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary bg-surface-1" checked>
-                            Только preview (dry-run, комплексы не обновляются)
-                        </label>
-                        <p id="topic-theory-propagation-summary" class="text-xs text-text-secondary">
-                            Preview: вЂ”
-                        </p>
+
+                    <!-- Propagation Settings -->
+                    <div class="space-y-3 pt-2 border-t border-border-subtle">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Распространение на комплексы</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-bold text-text-muted px-1.5 py-0.5 rounded border border-border-subtle uppercase">Автосинхронизация</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] uppercase font-bold text-text-muted mb-1 ml-1" for="topic-theory-relation" title="Выберите, как теория будет связана с темой">
+                                    Способ привязки
+                                    <span class="material-symbols-outlined text-[12px] align-middle ml-0.5 opacity-60">info</span>
+                                </label>
+                                <select id="topic-theory-relation"
+                                    class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                    <option value="link">Динамическая ссылка</option>
+                                    <option value="copy">Статическая копия</option>
+                                </select>
+                                <p id="topic-theory-relation-hint" class="mt-1 ml-1 text-[10px] text-text-secondary leading-snug">Изменения в теории автоматически появится в комплексах после синхронизации.</p>
+                            </div>
+                            <div class="rounded-xl border border-border-subtle bg-surface-2 px-4 py-3">
+                                <div class="flex items-center justify-between gap-3">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-text-secondary">Синхронизация комплексов</span>
+                                    <span class="text-[10px] font-bold text-text-muted px-1.5 py-0.5 rounded border border-border-subtle uppercase">Safe</span>
+                                </div>
+                                <p class="mt-2 text-[11px] text-text-secondary leading-snug">
+                                    При сохранении темы связанные комплексы-наследники обновляются автоматически. Комплексы с ручной переопределённой теорией не перезаписываются.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="topic-theory-propagation-summary" class="text-[11px] font-medium text-primary bg-primary/10 rounded-lg px-3 py-2 hidden">
+                            Сводка синхронизации появится после загрузки.
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="bg-surface-2 px-6 py-4 flex items-center justify-between gap-3 flex-wrap">
-                <button id="topic-theory-preview-btn" type="button"
-                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
-                    Обновить preview
-                </button>
+            <div class="bg-surface-2 px-6 py-4 flex items-center justify-between gap-3 flex-wrap border-t border-border-subtle">
                 <div class="flex items-center gap-2 flex-wrap">
+                    <button id="topic-theory-open-center-btn" type="button"
+                        class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors">
+                        Центр теории
+                    </button>
                     <button id="topic-theory-open-complexes-btn" type="button"
                         class="hidden px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors">
                         К комплексам
-                    </button>
-                    <button id="topic-theory-open-hub-btn" type="button"
-                        class="hidden px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary transition-colors">
-                        Theory Hub
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
@@ -814,7 +899,196 @@
                 </div>
             </div>
         </div>
-    </div>
+    </dialog>
+
+    <!-- Create Theory Modal -->
+    <dialog id="create-theory-modal"
+        class="bg-transparent p-0 overflow-visible border-none outline-none backdrop:backdrop-blur-lg backdrop:bg-black/70">
+        <style>
+            #create-theory-modal::backdrop {
+                backdrop-filter: blur(12px);
+                background-color: rgba(0, 0, 0, 0.7);
+                transition: opacity 0.3s ease;
+            }
+            #create-theory-modal[open]::backdrop {
+                opacity: 1;
+            }
+            #create-theory-modal[open] .modal-content {
+                animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+            #create-theory-modal.closing .modal-content {
+                animation: scaleOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            #create-theory-modal.closing::backdrop {
+                opacity: 0;
+            }
+        </style>
+        <div class="modal-content relative bg-surface-1 rounded-3xl text-left shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border-2 border-border-strong sm:max-w-md sm:w-full mx-auto my-auto overflow-hidden">
+            <div class="bg-surface-1 px-6 pt-6 pb-4">
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div class="min-w-0">
+                        <h3 class="text-xl font-bold text-text-main">Создать новую теорию</h3>
+                        <p class="text-xs text-text-secondary mt-1">Введите название для новой теории</p>
+                    </div>
+                    <button type="button" data-role="create-theory-close"
+                        class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
+                        aria-label="Закрыть">
+                        <span class="material-symbols-outlined text-[20px]">close</span>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-sm font-semibold text-text-secondary mb-2" for="create-theory-title-input">Название теории</label>
+                    <input type="text" id="create-theory-title-input"
+                        class="block w-full rounded-xl border-border-subtle bg-surface-2 px-4 py-3 text-text-main placeholder:text-text-disabled focus:ring-2 focus:ring-primary sm:text-sm"
+                        placeholder="Например: КТ органов грудной клетки">
+                </div>
+            </div>
+            <div class="bg-surface-2 px-6 py-4 flex items-center justify-end gap-3 border-t border-border-subtle">
+                <button type="button" data-role="create-theory-close"
+                    class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
+                    Отмена
+                </button>
+                <button id="create-theory-confirm-btn" type="button"
+                    class="px-5 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all">
+                    Создать теорию
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- Theory Hub Modal -->
+    <dialog id="theory-hub-modal"
+        class="bg-transparent p-0 overflow-visible border-none outline-none backdrop:backdrop-blur-lg backdrop:bg-black/70">
+        <style>
+            #theory-hub-modal::backdrop {
+                backdrop-filter: blur(12px);
+                background-color: rgba(0, 0, 0, 0.7);
+                transition: opacity 0.3s ease;
+            }
+            #theory-hub-modal[open]::backdrop {
+                opacity: 1;
+            }
+            #theory-hub-modal[open] .modal-content {
+                animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+            }
+            #theory-hub-modal.closing .modal-content {
+                animation: scaleOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            }
+            #theory-hub-modal.closing::backdrop {
+                opacity: 0;
+            }
+        </style>
+        <div class="modal-content relative bg-surface-1 rounded-3xl text-left shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border-2 border-border-strong w-[95vw] max-w-6xl h-[90vh] mx-auto my-auto overflow-hidden flex flex-col">
+            <!-- Header -->
+            <div class="bg-surface-1 px-8 pt-6 pb-4 border-b border-border-subtle shrink-0">
+                <div class="flex items-start justify-between gap-4 mb-4">
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-3">
+                            <span class="material-symbols-outlined text-primary text-[28px]">hub</span>
+                            <h3 class="text-2xl font-bold text-text-main">Theory Hub</h3>
+                        </div>
+                        <p class="text-sm text-text-secondary mt-1">Центральное управление связями теории и их распространением.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button id="theory-hub-refresh-btn" type="button" 
+                            class="p-2.5 rounded-xl bg-surface-2 border border-border-subtle text-text-secondary hover:text-primary hover:border-primary transition-all group" title="Обновить данные">
+                            <span class="material-symbols-outlined text-[20px] group-hover:rotate-180 transition-transform duration-500">refresh</span>
+                        </button>
+                        <button type="button" data-role="theory-hub-close"
+                            class="p-2.5 rounded-xl text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
+                            aria-label="Закрыть">
+                            <span class="material-symbols-outlined text-[24px]">close</span>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Filters & Global Actions -->
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="relative min-w-[200px]">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-muted text-[18px]">search</span>
+                            <input id="theory-hub-search" type="text" placeholder="Поиск по теории или теме..."
+                                class="w-full pl-10 pr-4 py-2 bg-surface-2 border border-border-subtle rounded-xl text-sm focus:ring-2 focus:ring-primary transition-shadow">
+                        </div>
+                        <select id="theory-hub-focus-theory" class="bg-surface-2 border border-border-subtle rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary min-w-[180px]">
+                            <option value="">Все теории</option>
+                        </select>
+                        <select id="theory-hub-ownership-filter" class="bg-surface-2 border border-border-subtle rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-primary min-w-[150px]">
+                            <option value="all">Все комплексы</option>
+                            <option value="my">Мои комплексы</option>
+                            <option value="system">Системные</option>
+                        </select>
+                    </div>
+                    <div id="theory-hub-summary" class="flex flex-wrap items-center gap-2">
+                        <!-- Summary chips injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Body (Scrollable) -->
+            <div class="flex-1 overflow-y-auto bg-surface-2/30 p-8 no-scrollbar">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 h-full">
+                    <!-- Map Column -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between px-1">
+                            <h4 class="text-xs font-bold uppercase tracking-widest text-text-secondary flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">account_tree</span>
+                                Карта зависимостей (Topics)
+                            </h4>
+                        </div>
+                        <div id="theory-hub-map" class="grid grid-cols-1 gap-4">
+                            <!-- Topic cards injected here -->
+                        </div>
+                    </div>
+
+                    <!-- Conflicts/Queue Column -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between px-1">
+                            <h4 class="text-xs font-bold uppercase tracking-widest text-text-secondary flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[16px]">priority_high</span>
+                                Очередь обновлений & Конфликты
+                            </h4>
+                            <div class="flex items-center gap-2">
+                                <button id="theory-hub-select-all-btn" class="text-[10px] font-bold text-primary hover:underline uppercase">Выбрать все</button>
+                            </div>
+                        </div>
+                        <div id="theory-hub-conflicts" class="grid grid-cols-1 gap-4">
+                            <!-- Conflict cards injected here -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Impact/Preview Section -->
+                <div class="mt-8 pt-8 border-t border-border-subtle">
+                    <div id="theory-hub-impact">
+                         <!-- Impact details injected here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-surface-1 px-8 py-5 border-t border-border-subtle flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold text-text-secondary whitespace-nowrap">Режим: safe-автосинхронизация</span>
+                    <span class="text-[11px] text-text-muted">Наследуемые комплексы обновляются, переопределённые не трогаем.</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="theory-hub-sync-all-btn" type="button" 
+                        class="px-5 py-2.5 bg-surface-2 border border-border-subtle text-text-main hover:text-primary hover:border-primary font-bold rounded-xl text-sm transition-all shadow-sm">
+                        Синхронизовать все
+                    </button>
+                    <button id="theory-hub-sync-selected-btn" type="button" 
+                        class="px-5 py-2.5 bg-bg-hover border border-border-subtle text-text-main hover:text-primary hover:border-primary font-bold rounded-xl text-sm transition-all shadow-sm">
+                        Синхронизовать выбранные
+                    </button>
+                    <button id="theory-hub-force-resolve-btn" type="button" 
+                        class="px-6 py-2.5 bg-primary text-primary-contrast font-bold rounded-xl text-sm hover:bg-primary-dark transition-all shadow-lg shadow-primary/20 active:scale-95">
+                        Применить принудительно
+                    </button>
+                </div>
+            </div>
+        </div>
+    </dialog>
     </div>
     <!-- Import Tasks Modal -->
     <div id="import-modal" class="hidden fixed inset-0 modal-backdrop z-50 flex items-center justify-center p-4">
@@ -907,114 +1181,7 @@
             </div>
         </div>
     </div>
-    <div id="theory-hub-modal" class="hidden fixed inset-0 z-[72] modal-backdrop items-center justify-center p-4">
-        <div class="bg-surface-1 rounded-2xl shadow-xl w-full max-w-6xl max-h-[92vh] overflow-hidden flex flex-col">
-            <div class="editor-theory-hub-header px-6 py-4 border-b border-border-subtle flex items-start justify-between gap-4">
-                <div class="editor-theory-hub-title-wrap">
-                    <h3 class="text-lg font-bold text-text-main">Theory Hub</h3>
-                    <p class="editor-theory-hub-subtitle text-xs mt-1">Карта theory/topic/complex, conflict center и единый вход в sync-операции.</p>
-                </div>
-                <div class="flex items-center gap-2 shrink-0">
-                    <button id="theory-hub-refresh-btn" type="button"
-                        class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-2 text-xs font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors">
-                        <span class="material-symbols-outlined text-[16px]">refresh</span>
-                        Обновить
-                    </button>
-                    <button type="button" data-role="theory-hub-close"
-                        class="p-2 rounded-lg text-text-disabled hover:text-text-main hover:bg-bg-hover transition-colors"
-                        aria-label="Закрыть">
-                        <span class="material-symbols-outlined text-[20px]">close</span>
-                    </button>
-                </div>
-            </div>
-            <div class="editor-theory-hub-controls px-6 py-4 border-b border-border-subtle bg-surface-2 flex flex-wrap items-center gap-3">
-                <label class="text-xs font-semibold text-text-secondary" for="theory-hub-focus-theory">Фокус теории</label>
-                <select id="theory-hub-focus-theory"
-                    class="min-w-[180px] rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-2.5 text-sm text-text-main focus:ring-2 focus:ring-primary">
-                    <option value="">Все теории</option>
-                </select>
-                <input id="theory-hub-search" type="search" autocomplete="off" spellcheck="false" placeholder="Поиск по theory/topic/complex"
-                    class="min-w-[220px] flex-1 rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-3 text-sm text-text-main placeholder:text-text-muted focus:ring-2 focus:ring-primary">
-                <label class="text-xs font-semibold text-text-secondary" for="theory-hub-ownership-filter">Ownership</label>
-                <select id="theory-hub-ownership-filter"
-                    class="min-w-[160px] rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-2.5 text-sm text-text-main focus:ring-2 focus:ring-primary">
-                    <option value="all">Все комплексы</option>
-                    <option value="mine">Моё</option>
-                    <option value="shared">Общее</option>
-                    <option value="imported">Импорт</option>
-                </select>
-                <label class="text-xs font-semibold text-text-secondary" for="theory-hub-propagation-mode">Режим sync</label>
-                <select id="theory-hub-propagation-mode"
-                    class="rounded-lg border border-border-subtle bg-surface-1 py-1.5 px-2.5 text-sm text-text-main focus:ring-2 focus:ring-primary">
-                    <option value="safe">Safe (inherit only)</option>
-                    <option value="inherit_only_force">Inherit force-refresh</option>
-                    <option value="all_force">All force (incl. override)</option>
-                </select>
-                <label class="inline-flex items-center gap-2 text-xs text-text-secondary">
-                    <input id="theory-hub-dry-run" type="checkbox"
-                        class="h-4 w-4 rounded border-border-strong text-primary focus:ring-primary bg-surface-1">
-                    Dry-run (preview)
-                </label>
-                <button id="theory-hub-sync-all-btn" type="button"
-                    class="inline-flex items-center gap-1 px-4 py-2 rounded-lg bg-primary text-primary-contrast text-xs font-bold hover:bg-primary-dark transition-colors shadow-sm">
-                    <span class="material-symbols-outlined text-[16px]">sync_alt</span>
-                    Синхронизировать всё
-                </button>
-                <p id="theory-hub-ownership-note" class="editor-theory-hub-note basis-full text-[11px]">Theory Hub фильтрует общую библиотеку комплексов. Прогресс по ним остаётся личным.</p>
-            </div>
-            <div id="theory-hub-summary" class="editor-theory-hub-summary px-6 py-3 border-b border-border-subtle bg-surface-1 flex flex-wrap gap-2">
-                <span class="inline-flex items-center px-2.5 py-1 rounded-full border border-border-subtle bg-surface-2 text-xs text-text-secondary">Загрузка...</span>
-            </div>
-            <div class="editor-theory-hub-body flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-3 gap-4">
-                <section class="editor-theory-hub-panel lg:col-span-2 rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[260px]">
-                    <div class="flex items-start justify-between gap-3 mb-3">
-                        <h4 class="text-sm font-bold text-text-main">Граф связей theory ↔ topics ↔ complexes</h4>
-                        <p class="editor-theory-hub-panel-subtitle text-[11px]">Sync-кнопки учитывают выбранный mode и dry-run.</p>
-                    </div>
-                    <div id="theory-hub-map" class="space-y-2">
-                        <div class="text-sm text-text-secondary">Загрузка...</div>
-                    </div>
-                </section>
-                <div class="flex flex-col gap-4">
-                    <section class="editor-theory-hub-panel rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
-                        <div class="flex items-start justify-between gap-3 mb-3">
-                            <h4 class="text-sm font-bold text-text-main">Conflict Queue</h4>
-                            <p class="editor-theory-hub-panel-subtitle text-[11px]">Batch-resolve + переход в Builder.</p>
-                        </div>
-                        <div class="mb-3 flex flex-wrap items-center gap-2">
-                            <button id="theory-hub-select-all-btn" type="button"
-                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-xs font-semibold text-text-secondary hover:text-primary hover:border-primary transition-colors">
-                                <span class="material-symbols-outlined text-[15px]">checklist</span>
-                                Выбрать все
-                            </button>
-                            <button id="theory-hub-sync-selected-btn" type="button"
-                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary text-primary-contrast text-xs font-semibold hover:bg-primary-dark transition-colors">
-                                <span class="material-symbols-outlined text-[15px]">sync</span>
-                                Sync выбранных
-                            </button>
-                            <button id="theory-hub-force-resolve-btn" type="button"
-                                class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-warning-light bg-warning-lighter text-xs font-semibold text-warning-darker hover:bg-warning-light transition-colors">
-                                <span class="material-symbols-outlined text-[15px]">gavel</span>
-                                Force resolve
-                            </button>
-                        </div>
-                        <div id="theory-hub-conflicts" class="space-y-2">
-                            <div class="text-sm text-text-secondary">Загрузка...</div>
-                        </div>
-                    </section>
-                    <section class="editor-theory-hub-panel rounded-xl border border-border-subtle bg-surface-2 p-4 min-h-[220px]">
-                        <div class="flex items-start justify-between gap-3 mb-3">
-                            <h4 class="text-sm font-bold text-text-main">Impact Map</h4>
-                            <p class="editor-theory-hub-panel-subtitle text-[11px]">Что связано с выбранной теорией.</p>
-                        </div>
-                        <div id="theory-hub-impact" class="space-y-2">
-                            <div class="text-sm text-text-secondary">Выберите теорию, чтобы увидеть связи и быстрые действия.</div>
-                        </div>
-                    </section>
-                </div>
-            </div>
-        </div>
-    </div>
+
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 

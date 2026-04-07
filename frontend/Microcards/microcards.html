@@ -203,10 +203,12 @@
 
         .mc-deck-title {
             -webkit-line-clamp: 2;
+            line-clamp: 2;
         }
 
         .mc-deck-meta {
             -webkit-line-clamp: 2;
+            line-clamp: 2;
             line-height: 1.35;
         }
 
@@ -543,26 +545,26 @@
                                     <div class="grid grid-cols-4 gap-2" role="group" aria-label="Оценка знания">
                                         <button type="button" onclick="mcApp.submitRating('again')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-error-light bg-error-lighter text-error-text hover:bg-error-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnAgain" aria-label="Again — не знаю (клавиша 1)">
-                                            <span class="text-sm font-bold">Again</span>
+                                            id="mcBtnAgain" aria-label="Снова — не знаю (клавиша 1)">
+                                            <span class="text-sm font-bold">Снова</span>
                                             <span class="text-[10px]">1</span>
                                         </button>
                                         <button type="button" onclick="mcApp.submitRating('hard')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-warning-light bg-warning-lighter text-warning-text hover:bg-warning-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnHard" aria-label="Hard — сложно (клавиша 2)">
-                                            <span class="text-sm font-bold">Hard</span>
+                                            id="mcBtnHard" aria-label="Сложно — трудно вспомнить (клавиша 2)">
+                                            <span class="text-sm font-bold">Сложно</span>
                                             <span class="text-[10px]">2</span>
                                         </button>
                                         <button type="button" onclick="mcApp.submitRating('good')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-success-light bg-success-lighter text-success-text hover:bg-success-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnGood" aria-label="Good — знаю (клавиша 3)">
-                                            <span class="text-sm font-bold">Good</span>
+                                            id="mcBtnGood" aria-label="Хорошо — вспомнил (клавиша 3)">
+                                            <span class="text-sm font-bold">Хорошо</span>
                                             <span class="text-[10px]">3</span>
                                         </button>
                                         <button type="button" onclick="mcApp.submitRating('easy')"
                                             class="flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl border border-info-light bg-info-lighter text-info-text hover:bg-info-light transition-all active:scale-[0.97] disabled:opacity-50"
-                                            id="mcBtnEasy" aria-label="Easy — легко (клавиша 4)">
-                                            <span class="text-sm font-bold">Easy</span>
+                                            id="mcBtnEasy" aria-label="Легко — очень просто (клавиша 4)">
+                                            <span class="text-sm font-bold">Легко</span>
                                             <span class="text-[10px]">4</span>
                                         </button>
                                     </div>
@@ -646,22 +648,22 @@
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-error-lighter border border-error-light">
                                 <span class="text-xs font-bold text-error-text" id="mcSumRAgain">0</span>
-                                <span class="text-[10px] text-error-text">Again</span>
+                                <span class="text-[10px] text-error-text">Снова</span>
                             </div>
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-warning-lighter border border-warning-light">
                                 <span class="text-xs font-bold text-warning-text" id="mcSumRHard">0</span>
-                                <span class="text-[10px] text-warning-text">Hard</span>
+                                <span class="text-[10px] text-warning-text">Сложно</span>
                             </div>
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-success-lighter border border-success-light">
                                 <span class="text-xs font-bold text-success-text" id="mcSumRGood">0</span>
-                                <span class="text-[10px] text-success-text">Good</span>
+                                <span class="text-[10px] text-success-text">Хорошо</span>
                             </div>
                             <div
                                 class="flex items-center gap-1 px-2 py-1 rounded-lg bg-info-lighter border border-info-light">
                                 <span class="text-xs font-bold text-info-text" id="mcSumREasy">0</span>
-                                <span class="text-[10px] text-info-text">Easy</span>
+                                <span class="text-[10px] text-info-text">Легко</span>
                             </div>
                         </div>
 

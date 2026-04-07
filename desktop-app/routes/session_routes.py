@@ -16,7 +16,7 @@ Endpoints:
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from urllib.parse import unquote
 
 from flask import Blueprint, jsonify, request, send_file
@@ -31,14 +31,152 @@ logger = logging.getLogger(__name__)
 session_bp = Blueprint("session", __name__)
 
 
+def _resolve_active_sessions_user_id(session_api: Any, requested_user_id: Any = None) -> str:
+    if isinstance(requested_user_id, str):
+        normalized = requested_user_id.strip()
+        if normalized:
+            return normalized
+
+    ctx_user_id = getattr(get_ctx(), "user_id", None)
+    candidates = [
+        ctx_user_id,
+        getattr(session_api, "default_user_id", None),
+        getattr(session_api, "_default_user_id", None),
+        "default_user",
+    ]
+    for candidate in candidates:
+        if isinstance(candidate, str):
+            normalized = candidate.strip()
+            if normalized:
+                return normalized
+    return "default_user"
+
+
+def _resolve_display_task_index(session_api: Any, session: Any) -> Optional[int]:
+    if session is None:
+        return None
+
+    try:
+        resolver = getattr(session_api, "_resolve_current_queue_slot", None)
+        if callable(resolver):
+            _, queue_index = resolver(session)
+            if isinstance(queue_index, int) and queue_index >= 0:
+                return queue_index
+    except Exception:
+        logger.debug("[HTTP] Failed to resolve display task index from SessionAPI", exc_info=True)
+
+    queue = getattr(session, "queue", None)
+    if not isinstance(queue, list) or not queue:
+        return None
+
+    current_index = getattr(session, "current_task_index", 0)
+    if not isinstance(current_index, int):
+        current_index = 0
+
+    if getattr(session, "complex_id", None) == "daily_mix":
+        return max(0, min(current_index, len(queue) - 1))
+
+    return max(0, min(current_index - 1, len(queue) - 1))
+
+
+def _serialize_active_session_item(session: Any, session_api: Any = None) -> Dict[str, Any]:
+    queue = getattr(session, "queue", None)
+    if not isinstance(queue, list):
+        queue = []
+    paused_at = getattr(session, "paused_at", None)
+    start_time = getattr(session, "start_time", None)
+    end_time = getattr(session, "end_time", None)
+    updated_at = paused_at or end_time or start_time
+
+    payload = {
+        "session_id": getattr(session, "id", None),
+        "complex_id": getattr(session, "complex_id", None),
+        "paused": bool(getattr(session, "paused", False)),
+        "paused_at": _json_safe(paused_at),
+        "last_resume_source": getattr(session, "last_resume_source", None),
+        "last_resumed_at": _json_safe(getattr(session, "last_resumed_at", None)),
+        "start_time": _json_safe(start_time),
+        "updated_at": _json_safe(updated_at),
+        "iteration": getattr(session, "iteration", None),
+        "current_task_index": getattr(session, "current_task_index", None),
+        "total_tasks": len(queue),
+        "is_active": bool(getattr(session, "is_active", False)),
+    }
+    try:
+        if session_api is not None and hasattr(session_api, "get_resume_target"):
+            payload["resume_target"] = _json_safe(session_api.get_resume_target(session))
+    except Exception:
+        logger.debug("[HTTP] Failed to serialize resume_target for active session", exc_info=True)
+    return payload
+
+
+def _normalize_recoverable_session(session_api: Any, session: Any) -> Any:
+    if session is None:
+        return None
+
+    normalizer = getattr(session_api, "mark_interrupted_session_as_paused", None)
+    if callable(normalizer):
+        try:
+            return normalizer(session)
+        except Exception:
+            logger.debug("[HTTP] Failed to normalize repository-restored session", exc_info=True)
+    return session
+
+
+def _list_active_session_items(session_api: Any, user_id: str) -> List[Dict[str, Any]]:
+    sm = getattr(session_api, "_session_manager", None)
+    repo = getattr(sm, "session_repository", None) if sm is not None else None
+
+    items_by_session_id: Dict[str, Dict[str, Any]] = {}
+
+    if repo is not None:
+        for loaded in repo.load_all_sessions(user_id):
+            loaded = _normalize_recoverable_session(session_api, loaded)
+            if not getattr(loaded, "is_active", False):
+                continue
+            session_id = str(getattr(loaded, "id", "") or "").strip()
+            if not session_id:
+                continue
+            payload = _serialize_active_session_item(loaded, session_api=session_api)
+            payload["display_task_index"] = _resolve_display_task_index(session_api, loaded)
+            items_by_session_id[session_id] = payload
+
+    in_memory_sessions = getattr(sm, "_active_sessions", {}) if sm is not None else {}
+    if isinstance(in_memory_sessions, dict):
+        for loaded in in_memory_sessions.values():
+            if not loaded or not getattr(loaded, "is_active", False):
+                continue
+            if str(getattr(loaded, "user_id", "") or "").strip() != user_id:
+                continue
+            session_id = str(getattr(loaded, "id", "") or "").strip()
+            if not session_id:
+                continue
+            payload = _serialize_active_session_item(loaded, session_api=session_api)
+            payload["display_task_index"] = _resolve_display_task_index(session_api, loaded)
+            items_by_session_id[session_id] = payload
+
+    return sorted(
+        items_by_session_id.values(),
+        key=lambda item: str(item.get("updated_at") or item.get("start_time") or ""),
+        reverse=True,
+    )
+
+
 @session_bp.route("/api/session/<string:session_id>/task", methods=["GET"])
 def get_current_task(session_id: str) -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
     # BUG-5 fix: не снимаем паузу автоматически в GET-запросе.
     # Если сессия на паузе, возвращаем флаг paused — фронтенд покажет модалку resume.
-    session_obj = session_api.get_session(session_id)
+    session_obj = session_api.get_session(session_id, user_id=getattr(ctx, "user_id", None))
     if session_obj and session_obj.paused:
+        logger.info(
+            "[HTTP] get_current_task session_id=%s paused=true current_task_index=%s ui_task_ref=%s ui_task_index=%s",
+            session_id,
+            getattr(session_obj, "current_task_index", None),
+            ((getattr(session_obj, "ui_state", None) or {}).get("task_ref") if isinstance(getattr(session_obj, "ui_state", None), dict) else None),
+            ((getattr(session_obj, "ui_state", None) or {}).get("task_index") if isinstance(getattr(session_obj, "ui_state", None), dict) else None),
+        )
         return jsonify({"ok": True, "paused": True, "task": None})
 
     data = session_api.get_current_task(session_id, auto_resume=False)
@@ -159,7 +297,10 @@ def list_active_sessions() -> Any:
     try:
         session_api = get_ctx().session_api
         sm = getattr(session_api, "_session_manager", None)
-        user_id = getattr(session_api, "_default_user_id", "default_user")
+        user_id = _resolve_active_sessions_user_id(
+            session_api,
+            requested_user_id=request.args.get("user_id"),
+        )
         repo = sm.session_repository if sm is not None else None
         if repo is None:
             return jsonify({"ok": False, "error": "session_repository_unavailable"}), 500
@@ -171,31 +312,7 @@ def list_active_sessions() -> Any:
         except Exception:
             logger.warning("[HTTP] Failed to cleanup stale sessions", exc_info=True)
 
-        # BUG-6 fix: load full session objects once instead of double-loading
-        all_sessions = repo.load_all_sessions(user_id)
-        result = []
-        for loaded in all_sessions:
-            if not loaded.is_active:
-                continue
-            queue = loaded.queue or []
-            paused_at = loaded.paused_at
-            start_time = loaded.start_time
-            end_time = loaded.end_time
-            updated_at = paused_at or end_time or start_time
-            result.append(
-                {
-                    "session_id": loaded.id,
-                    "complex_id": loaded.complex_id,
-                    "paused": loaded.paused,
-                    "paused_at": _json_safe(paused_at),
-                    "start_time": _json_safe(start_time),
-                    "updated_at": _json_safe(updated_at),
-                    "iteration": loaded.iteration,
-                    "current_task_index": loaded.current_task_index,
-                    "total_tasks": len(queue),
-                    "is_active": True,
-                }
-            )
+        result = _list_active_session_items(session_api, user_id)
         return jsonify({"ok": True, "items": result})
     except Exception as exc:
         logger.exception("[HTTP] Failed to list active sessions: %s", exc)
@@ -328,6 +445,13 @@ def submit_task(session_id: str) -> Any:
 
         forced_success = mode == "force_success"
         forced_score = 100.0 if forced_success else 0.0
+        audit_details = audit_control.get("details") if isinstance(audit_control, dict) else None
+        if not isinstance(audit_details, dict):
+            audit_details = {}
+        audit_message = str(
+            audit_control.get("message")
+            or ("Ответ принят по вашему выбору." if forced_success else "Ответ отмечен как неверный по вашему выбору.")
+        ).strip()
         expected_iteration = session_obj.iteration
         submit_payload = {
             "task_ref": task_ref,
@@ -339,6 +463,7 @@ def submit_task(session_id: str) -> Any:
             "details": {
                 "task_type": task_type or "unknown",
                 "audit_control": {"enabled": True, "mode": mode, "forced": True},
+                **audit_details,
             },
         }
 
@@ -349,6 +474,7 @@ def submit_task(session_id: str) -> Any:
         serialized = session_api._serialize_evaluation_result(
             result_obj, session_id=session_id, task_ref=task_ref
         )
+        serialized["message"] = audit_message
         resp = {"ok": True, "result": serialized}
         return jsonify(_json_safe(resp))
 
@@ -548,7 +674,10 @@ def submit_task(session_id: str) -> Any:
 
     # Hook: Update Calendar with task attempt
     calendar_service = get_extra("calendar_service")
-    if calendar_service is not None:
+    skip_calendar_attempt = bool(
+        isinstance(details, dict) and details.get("requires_user_judgement") is True
+    )
+    if calendar_service is not None and not skip_calendar_attempt:
         try:
             # Extract complex_id from session
             sm = getattr(session_api, "_session_manager", None)
@@ -587,7 +716,7 @@ def submit_task(session_id: str) -> Any:
 @session_bp.route("/api/session/<string:session_id>/task/next", methods=["POST"])
 def next_task(session_id: str) -> Any:
     session_api = get_ctx().session_api
-    session = session_api.get_session(session_id)
+    session = session_api.get_session(session_id, user_id=getattr(get_ctx(), "user_id", None))
     if session and session.paused:
         return jsonify({"ok": False, "error": "session_paused"}), 409
 
@@ -629,29 +758,140 @@ def next_task(session_id: str) -> Any:
 
 @session_bp.route("/api/session/<string:session_id>/pause", methods=["POST"])
 def pause_session(session_id: str) -> Any:
-    session_api = get_ctx().session_api
-    session = session_api.get_session(session_id)
+    ctx = get_ctx()
+    session_api = ctx.session_api
+    payload = request.get_json(silent=True) or {}
+    requested_user_id = payload.get("user_id") if isinstance(payload, dict) else None
+    if not isinstance(requested_user_id, str) or not requested_user_id.strip():
+        requested_user_id = getattr(ctx, "user_id", None)
+    user_input = payload.get("user_input") if isinstance(payload, dict) else None
+    evaluation_result = payload.get("evaluation_result") if isinstance(payload, dict) else None
+    view_state = payload.get("view_state") if isinstance(payload, dict) else None
+    task_ref = payload.get("task_ref") if isinstance(payload, dict) else None
+    task_index = payload.get("task_index") if isinstance(payload, dict) else None
+    resume_target = payload.get("resume_target") if isinstance(payload, dict) else None
+    if not isinstance(user_input, dict):
+        user_input = None
+    if not isinstance(evaluation_result, dict):
+        evaluation_result = None
+    if not isinstance(view_state, dict):
+        view_state = None
+    if not isinstance(resume_target, dict):
+        resume_target = None
+    if not isinstance(task_ref, str) or not task_ref.strip():
+        task_ref = None
+    if not isinstance(task_index, int):
+        task_index = None
+    session = session_api.get_session(session_id, user_id=requested_user_id)
     if not session:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
     if session.paused:
         return jsonify({"ok": True, "paused": True, "paused_at": _json_safe(session.paused_at)})
 
-    session_api.pause_session(session_id)
-    session = session_api.get_session(session_id)
+    logger.info(
+        "[HTTP] pause_session session_id=%s task_ref=%s task_index=%s has_user_input=%s has_view_state=%s has_evaluation=%s",
+        session_id,
+        task_ref,
+        task_index,
+        bool(user_input),
+        bool(view_state),
+        bool(evaluation_result),
+    )
+
+    session_api.pause_session(
+        session_id,
+        user_id=requested_user_id,
+        user_input=user_input,
+        evaluation_result=evaluation_result,
+        view_state=view_state,
+        task_ref=task_ref,
+        task_index=task_index,
+        resume_target=resume_target,
+    )
+    session = session_api.get_session(session_id, user_id=requested_user_id)
     return jsonify({"ok": True, "paused": True, "paused_at": _json_safe(session.paused_at)})
+
+
+@session_bp.route("/api/session/<string:session_id>/ui-state", methods=["POST"])
+def save_task_ui_state(session_id: str) -> Any:
+    session_api = get_ctx().session_api
+    payload = request.get_json(silent=True) or {}
+    user_input = payload.get("user_input") if isinstance(payload, dict) else None
+    evaluation_result = payload.get("evaluation_result") if isinstance(payload, dict) else None
+    view_state = payload.get("view_state") if isinstance(payload, dict) else None
+    task_ref = payload.get("task_ref") if isinstance(payload, dict) else None
+    task_index = payload.get("task_index") if isinstance(payload, dict) else None
+
+    if not isinstance(user_input, dict):
+        user_input = None
+    if not isinstance(evaluation_result, dict):
+        evaluation_result = None
+    if not isinstance(view_state, dict):
+        view_state = None
+    if not isinstance(task_ref, str) or not task_ref.strip():
+        task_ref = None
+    if not isinstance(task_index, int):
+        task_index = None
+
+    result = session_api.save_task_ui_state(
+        session_id,
+        task_ref=task_ref,
+        task_index=task_index,
+        user_input=user_input,
+        evaluation_result=evaluation_result,
+        view_state=view_state,
+    )
+
+    if not result.get("ok"):
+        error = result.get("error")
+        if error == "session_not_found":
+            return jsonify(result), 404
+        if error in {"session_paused", "stale_task"}:
+            return jsonify(result), 409
+        return jsonify(result), 400
+
+    return jsonify(result)
 
 
 @session_bp.route("/api/session/<string:session_id>/resume", methods=["POST"])
 def resume_session(session_id: str) -> Any:
-    session = get_ctx().session_api.resume_session(session_id)
+    session_api = get_ctx().session_api
+    payload = request.get_json(silent=True) or {}
+    requested_user_id = payload.get("user_id") if isinstance(payload, dict) else None
+    resume_source = payload.get("source") if isinstance(payload, dict) else None
+    if not isinstance(requested_user_id, str) or not requested_user_id.strip():
+        requested_user_id = getattr(get_ctx(), "user_id", None)
+    if not isinstance(resume_source, str) or not resume_source.strip():
+        resume_source = "http_resume"
+    else:
+        resume_source = resume_source.strip()
+    session = session_api.resume_session(
+        session_id,
+        user_id=requested_user_id,
+        source=resume_source,
+    )
     if not session:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
-    return jsonify({"ok": True, "paused": False})
+    resume_target = session_api.get_resume_target(session)
+    logger.info(
+        "[HTTP] resume_session session_id=%s source=%s current_task_index=%s ui_task_ref=%s ui_task_index=%s resume_target=%s",
+        session_id,
+        resume_source,
+        getattr(session, "current_task_index", None),
+        ((getattr(session, "ui_state", None) or {}).get("task_ref") if isinstance(getattr(session, "ui_state", None), dict) else None),
+        ((getattr(session, "ui_state", None) or {}).get("task_index") if isinstance(getattr(session, "ui_state", None), dict) else None),
+        resume_target,
+    )
+    return jsonify({"ok": True, "paused": False, "resume_target": _json_safe(resume_target)})
 
 
 @session_bp.route("/api/session/<string:session_id>/cancel", methods=["POST"])
 def cancel_session(session_id: str) -> Any:
-    data = get_ctx().session_api.cancel_session(session_id)
+    payload = request.get_json(silent=True) or {}
+    requested_user_id = payload.get("user_id") if isinstance(payload, dict) else None
+    if not isinstance(requested_user_id, str) or not requested_user_id.strip():
+        requested_user_id = getattr(get_ctx(), "user_id", None)
+    data = get_ctx().session_api.cancel_session(session_id, user_id=requested_user_id)
     status = 200 if data.get("ok") else 400
     return jsonify(_json_safe(data)), status
 
@@ -659,7 +899,12 @@ def cancel_session(session_id: str) -> Any:
 @session_bp.route("/api/session/<string:session_id>/iteration-results", methods=["GET"])
 def get_iteration_results(session_id: str) -> Any:
     session_api = get_ctx().session_api
-    data = session_api.get_iteration_results(session_id)
+    requested_iteration = request.args.get("iteration")
+    try:
+        iteration_number = int(requested_iteration) if requested_iteration is not None else None
+    except Exception:
+        iteration_number = None
+    data = session_api.get_iteration_results(session_id, iteration_number=iteration_number)
     if data is None:
         resp = {"ok": False, "error": "iteration_results_not_found"}
         try:

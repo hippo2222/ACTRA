@@ -52,6 +52,14 @@ function setupDomSkeleton() {
     <div id="create-module-modal" class="hidden"><div class="bg-surface-1"></div></div>
     <div id="create-topic-modal" class="hidden"><div class="bg-surface-1"></div></div>
     <div id="import-modal" class="hidden"><div class="bg-surface-1"></div></div>
+    <div id="topic-sync-confirm-modal" class="hidden">
+      <div id="topic-sync-blur-overlay"></div>
+      <div id="topic-sync-modal-content">
+        <span id="topic-sync-confirm-target"></span>
+        <button id="topic-sync-confirm-btn" type="button">Подтвердить обновление</button>
+        <button id="topic-sync-cancel-btn" type="button">Отмена</button>
+      </div>
+    </div>
     <div id="toast-container"></div>
 
     <div id="topic-theory-modal" class="hidden">
@@ -59,9 +67,17 @@ function setupDomSkeleton() {
         <button data-role="topic-theory-close" type="button"></button>
         <button data-role="topic-theory-close" type="button"></button>
         <p id="topic-theory-meta"></p>
-        <select id="topic-theory-picker">
-          <option value="">Без теории</option>
-        </select>
+        <div id="topic-theory-current-info" class="hidden">
+          <p id="topic-theory-current-title"></p>
+          <button id="topic-theory-edit-content-btn" type="button"></button>
+          <button id="topic-theory-clear-btn" type="button"></button>
+        </div>
+        <div id="topic-theory-empty-state">
+          <button id="topic-theory-create-new-btn" type="button"></button>
+          <select id="topic-theory-picker">
+            <option value="">Без теории</option>
+          </select>
+        </div>
         <select id="topic-theory-relation">
           <option value="link">link</option>
           <option value="copy">copy</option>
@@ -76,7 +92,6 @@ function setupDomSkeleton() {
         <p id="topic-theory-propagation-summary"></p>
         <button id="topic-theory-preview-btn" type="button"></button>
         <button id="topic-theory-open-complexes-btn" type="button" class="hidden"></button>
-        <button id="topic-theory-open-hub-btn" type="button" class="hidden"></button>
         <button id="topic-theory-save-btn" type="button"></button>
       </div>
     </div>
@@ -199,7 +214,7 @@ describe("EditorDashboard topic theory modal", () => {
     expect(modal.classList.contains("flex")).toBe(true);
     expect(picker.value).toBe("th_a");
     expect(relation.value).toBe("copy");
-    expect(summary.textContent).toContain("Preview (safe)");
+    expect(summary.textContent).toContain("Проверка (safe)");
     expect(summary.textContent).toContain("1");
     expect(workspaceNote).toBeTruthy();
     expect(workspaceNote.textContent).toContain("общей библиотеке");
@@ -249,6 +264,7 @@ describe("EditorDashboard topic theory modal", () => {
     expect(syncAction).toBeTruthy();
 
     syncAction.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document.getElementById("topic-sync-confirm-btn").click();
     await flushPromises();
 
     expect(putPayloads.length).toBeGreaterThan(0);
@@ -270,39 +286,42 @@ describe("EditorDashboard topic theory modal", () => {
     expect(syncAction).toBeTruthy();
 
     syncAction.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document.getElementById("topic-sync-confirm-btn").click();
     await flushPromises();
 
     expect(putPayloads.length).toBe(0);
     expect(window.NotificationUI.toast).toHaveBeenCalledWith(expect.any(String), "warning", expect.any(Number));
   });
 
-  it("opens related complexes and theory hub from topic theory modal", async () => {
+  it("opens related complexes and standalone theory editor from topic theory modal", async () => {
     const dashboard = window.dashboard;
     expect(dashboard).toBeDefined();
 
     await dashboard.showTopicTheoryModal("m1", "t1");
 
     const openComplexesBtn = document.getElementById("topic-theory-open-complexes-btn");
-    const openHubBtn = document.getElementById("topic-theory-open-hub-btn");
+    const editContentBtn = document.getElementById("topic-theory-edit-content-btn");
     const workspaceNote = document.getElementById("topic-theory-workspace-note-text");
 
     expect(openComplexesBtn.classList.contains("hidden")).toBe(false);
-    expect(openHubBtn.classList.contains("hidden")).toBe(false);
-    expect(workspaceNote.textContent).toContain("унаследуют");
+    expect(workspaceNote.textContent).toContain("Комплексы");
 
     openComplexesBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(window.navigateWithTransition).toHaveBeenLastCalledWith("/ui/complexes?theory_id=th_a");
 
     await dashboard.showTopicTheoryModal("m1", "t1");
-    openHubBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(window.navigateWithTransition).toHaveBeenLastCalledWith("/ui/editor?theory_hub=1&theory_id=th_a");
+    editContentBtn.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const theoryEditorUrl = window.navigateWithTransition.mock.lastCall[0];
+    expect(theoryEditorUrl).toContain("/ui/editor/Theory_Editor.html?theory_id=th_a");
+    expect(theoryEditorUrl).toContain("context=topic");
+    expect(theoryEditorUrl).toContain("module_id=m1");
+    expect(theoryEditorUrl).toContain("topic_id=t1");
 
     await dashboard.showTopicTheoryModal("m1", "t1");
     const picker = document.getElementById("topic-theory-picker");
     picker.value = "";
     picker.dispatchEvent(new Event("change"));
     expect(openComplexesBtn.classList.contains("hidden")).toBe(true);
-    expect(openHubBtn.classList.contains("hidden")).toBe(true);
-    expect(workspaceNote.textContent).toContain("Выберите теорию");
+    expect(workspaceNote.textContent).toContain("Теории хранятся");
   });
 });

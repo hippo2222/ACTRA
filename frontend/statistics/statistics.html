@@ -2,276 +2,299 @@
 <html lang="ru">
 
 <head>
-    <script src="../assets/ThemeManager.js"></script>
-    <meta charset="utf-8" />
-    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>Статистика — ACTRA</title>
-    <link rel="stylesheet" href="/ui/statistics/statistics.css">
-    <link href="/assets/tailwind.css" rel="stylesheet" />
-    <link href="/assets/fonts.css" rel="stylesheet" />
-    <link href="/assets/lightB-variables.css" rel="stylesheet" />
-    <link href="/assets/lightB-components.css" rel="stylesheet" />
-    <link href="/assets/animations.css" rel="stylesheet" />
+  <script src="../assets/ThemeManager.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Статистика — ACTRA</title>
+
+  <link href="/assets/tailwind.css" rel="stylesheet" />
+  <link href="/assets/fonts.css" rel="stylesheet" />
+  <link href="/assets/lightB-variables.css" rel="stylesheet" />
+  <link href="/assets/lightB-components.css" rel="stylesheet" />
+  <link href="/assets/animations.css" rel="stylesheet" />
+  <link href="/ui/statistics/statistics.css" rel="stylesheet" />
 </head>
 
-<body
-    class="bg-bg-main text-text-main min-h-screen overflow-x-hidden overflow-y-auto flex flex-col font-display antialiased selection:bg-primary-light selection:text-primary">
-    <header class="sticky top-0 z-50 border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-3">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <a href="/ui/main"
-                    class="flex items-center justify-center size-8 rounded-lg text-text-secondary hover:text-primary hover:bg-bg-hover transition-colors"
-                    title="На главную">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </a>
-                <div class="flex items-center gap-3">
-                    <span class="brand-logo size-8" style="color:var(--color-primary)" aria-hidden="true"></span>
-                    <div class="flex flex-col">
-                        <h1 class="text-lg font-bold leading-tight tracking-tight text-text-main">
-                            Статистика</h1>
-                        <p class="text-xs text-text-secondary">Ваш прогресс обучения</p>
-                    </div>
-                </div>
-            </div>
-            <div class="flex items-center gap-3">
-                <!-- Streak Badge -->
-                <div id="streak-badge"
-                    class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-full border border-border-subtle transition-all">
-                </div>
-                <!-- User Avatar (same as Main/Calendar page) -->
-                <div class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
-                    onclick="openProfileModal()">
-                    <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
-                    <span class="text-text-main text-sm font-medium hidden sm:inline" id="headerUserName">Гость</span>
-                </div>
-            </div>
+<body class="stats-body">
+
+  <!-- ── HEADER ──────────────────────────────────────────────── -->
+  <header class="stats-header">
+    <div class="stats-header-inner">
+
+      <div class="stats-header-start">
+        <a href="/ui/main" class="st-icon-btn" title="На главную" aria-label="На главную">
+          <span class="material-symbols-outlined">arrow_back</span>
+        </a>
+        <div class="stats-brand">
+          <span class="brand-logo stats-brand-logo" style="color:var(--color-primary)" aria-hidden="true"></span>
+          <div class="stats-brand-copy">
+            <h1 class="stats-brand-title">Статистика</h1>
+            <p class="stats-brand-sub">Ваш прогресс обучения</p>
+          </div>
         </div>
-    </header>
-    <main class="stats-shell flex-1 min-h-0 w-full max-w-[1920px] mx-auto p-4 md:p-5 xl:p-6 grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-6 stats-page-enter">
-        <section class="lg:col-span-8 flex flex-col gap-5 xl:gap-6 min-h-0">
-            <div class="stats-metrics-grid grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4 shrink-0">
-                <div id="metric-tasks"
-                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                    <div class="flex justify-between items-start">
-                        <div id="metric-tasks-icon"
-                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
-                            <span class="material-symbols-outlined">school</span>
-                        </div>
-                        <span id="metric-tasks-badge" class="hidden text-xs px-2 py-1 rounded-full font-medium"></span>
-                    </div>
-                    <div id="metric-tasks-value" class="metric-card-content">
-                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
-                            <span id="tasks-mastered">—</span>
-                            <span id="tasks-total" class="text-text-muted text-lg font-semibold tracking-tight">/
-                                0</span>
-                        </div>
-                        <p class="text-text-secondary text-sm font-semibold mt-1">Освоено задач</p>
-                    </div>
-                    <p id="metric-tasks-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Начни решать задачи, чтобы увидеть прогресс</p>
-                    <button type="button" class="tooltip-dot tooltip-parent"
-                        data-tooltip="Количество уникальных заданий с успешной попыткой"
-                        aria-label="Что означает &quot;Освоено задач&quot;">
-                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
-                    </button>
-                </div>
-                <div id="metric-time"
-                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                    <div class="flex justify-between items-start">
-                        <div id="metric-time-icon"
-                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
-                            <span class="material-symbols-outlined">schedule</span>
-                        </div>
-                        <span id="metric-time-badge" class="hidden text-xs px-2 py-1 rounded-full font-medium"></span>
-                    </div>
-                    <div id="metric-time-value" class="metric-card-content">
-                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2 tracking-tight">
-                            <span id="time-hours">0</span>
-                            <span class="text-lg text-text-muted font-semibold">ч</span>
-                            <span id="time-minutes">00</span>
-                            <span class="text-lg text-text-muted font-semibold">м</span>
-                        </div>
-                        <p class="text-text-secondary text-sm font-semibold mt-1">Время обучения
-                            <span id="time-source-hint" class="text-[10px] text-text-muted font-medium"></span>
-                        </p>
-                    </div>
-                    <p id="metric-time-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Начни заниматься, чтобы увидеть время обучения</p>
-                    <button type="button" class="tooltip-dot tooltip-parent"
-                        data-tooltip="Суммарное время обучения (задачи + микрокарточки)"
-                        aria-label="Что означает &quot;Время обучения&quot;">
-                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
-                    </button>
-                </div>
-                <div id="metric-microcards"
-                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                    <div class="flex justify-between items-start">
-                        <div id="metric-microcards-icon"
-                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
-                            <span class="material-symbols-outlined">style</span>
-                        </div>
-                        <span id="microcards-correct-badge"
-                            class="hidden text-xs px-2 py-1 rounded-full font-bold"></span>
-                    </div>
-                    <div id="metric-microcards-value" class="metric-card-content">
-                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
-                            <span id="microcards-reviews-count">0</span>
-                            <span id="microcards-correct-rate" class="text-lg font-semibold text-text-muted"></span>
-                        </div>
-                        <p class="text-text-secondary text-sm font-semibold mt-1">Микрокарточки</p>
-                    </div>
-                    <p id="metric-microcards-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Пройди карточки, чтобы увидеть прогресс</p>
-                    <button type="button" class="tooltip-dot tooltip-parent"
-                        data-tooltip="Всего пройдено карточек и точность ответов"
-                        aria-label="Что означает &quot;Микрокарточки&quot;">
-                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
-                    </button>
-                </div>
-                <div id="metric-streak"
-                    class="metric-card stats-metric-card metric-card-enter relative bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between group hover:shadow-lg hover:-translate-y-0.5 transition-all">
-                    <div class="flex justify-between items-start">
-                        <div id="metric-streak-icon"
-                            class="size-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-muted">
-                            <span class="material-symbols-outlined">local_fire_department</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <div
-                                class="flex items-center gap-1 text-[10px] font-bold text-text-secondary px-2.5 py-1 rounded-lg bg-bg-secondary border border-border-subtle leading-none">
-                                <span class="text-text-main tracking-tighter">MAX:</span>
-                                <span id="streak-best" class="text-text-main">0</span>
-                            </div>
-                            <a href="/ui/calendar"
-                                class="size-8 flex items-center justify-center rounded-lg bg-bg-secondary text-text-muted hover:text-primary transition-all border border-border-subtle hover:border-primary-light"
-                                title="Показать в календаре">
-                                <span class="material-symbols-outlined text-[18px]">calendar_today</span>
-                            </a>
-                        </div>
-                    </div>
-                    <div id="metric-streak-value" class="metric-card-content">
-                        <div class="flex items-baseline gap-2 text-3xl font-bold text-text-main mt-2">
-                            <span id="streak-days">0</span>
-                            <span class="text-lg font-semibold text-text-muted">дней</span>
-                        </div>
-                        <p class="text-text-secondary text-sm font-semibold mt-1">Серия</p>
-                    </div>
-                    <p id="metric-streak-empty" class="metric-card-empty hidden text-xs text-text-muted mt-3">Занимайся регулярно, чтобы увидеть серию</p>
-                    <button type="button" class="tooltip-dot tooltip-parent"
-                        data-tooltip="Количество последовательных дней с любой учебной активностью"
-                        aria-label="Что означает &quot;Серия&quot;">
-                        <span class="material-symbols-outlined text-[16px] leading-none">help</span>
-                    </button>
-                </div>
-            </div>
+      </div>
 
-            <div id="chart-card"
-                class="statistics-panel stats-chart-card card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex-1 min-h-0 flex flex-col gap-3 relative overflow-hidden hover:shadow-md transition-shadow">
-                <div id="chart-header" class="chart-top flex items-center justify-between gap-3">
-                    <div class="flex-1 min-w-0">
-                        <h3 class="text-base font-bold text-text-main leading-tight" id="chart-title">
-                            Активность</h3>
-                        <div id="chart-period-delta" class="text-xs mt-0.5 font-semibold text-text-secondary">—</div>
-                        <div id="chart-insight" class="hidden mt-1 text-[11px] leading-normal text-text-muted"></div>
-                    </div>
-                    <div class="chart-controls flex items-center gap-2">
-                        <div class="chart-toggle" id="chart-metric-selector" role="tablist" aria-label="Метрика">
-                            <button class="chart-toggle-btn active" data-metric="study" role="tab" aria-selected="true">
-                                <span>⏱️</span>
-                                <span>Время</span>
-                            </button>
-                            <button class="chart-toggle-btn" data-metric="attempts" role="tab" aria-selected="false">
-                                <span>✓</span>
-                                <span>Активность</span>
-                            </button>
-                        </div>
-                        <div class="chart-period-switch">
-                            <button data-period="7"
-                                class="period-btn active bg-surface-1 text-text-main shadow-sm border border-border-subtle transition-all">7 дней</button>
-                            <button data-period="30"
-                                class="period-btn text-text-secondary hover:text-text-main transition-all">30</button>
-                            <button data-period="90"
-                                class="period-btn text-text-secondary hover:text-text-main transition-all">90</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="chart-body flex flex-col gap-2 min-h-0">
-                    <div class="chart-viewport flex-1 min-h-[220px] relative">
-                        <div id="chart-skeleton" class="chart-skeleton hidden">
-                            <div class="chart-skeleton-bars">
-                                <div class="chart-skeleton-bar"></div>
-                                <div class="chart-skeleton-bar"></div>
-                                <div class="chart-skeleton-bar"></div>
-                                <div class="chart-skeleton-bar"></div>
-                                <div class="chart-skeleton-bar"></div>
-                                <div class="chart-skeleton-bar"></div>
-                                <div class="chart-skeleton-bar"></div>
-                            </div>
-                        </div>
-                        <div id="chart-content" class="chart-canvas w-full h-full"></div>
-                        <div id="empty-chart"
-                            class="hidden absolute inset-0 flex flex-col items-center justify-center text-center px-4">
-                            <span class="material-symbols-outlined text-text-muted text-5xl mb-2">insights</span>
-                            <h3 class="text-sm font-bold text-text-main mb-1">Нет данных</h3>
-                            <p class="text-text-secondary text-xs">Начни тренировку, чтобы увидеть
-                                прогресс</p>
-                        </div>
-                    </div>
-                    <div id="chart-summary"
-                        class="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-bg-secondary text-xs">
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-2 h-2 rounded-full bg-info"></div>
-                            <span id="legend-primary-label" class="text-text-secondary">Минуты</span>
-                        </div>
-                        <div class="flex items-center gap-1.5">
-                            <div class="w-3 h-0.5 bg-primary rounded-full"></div>
-                            <span class="text-text-secondary">Тренд</span>
-                        </div>
-                    </div>
-                </div>
+      <div class="stats-header-end">
+        <div class="pill pill--neutral pill--sm" id="streak-badge"></div>
+        <button class="stats-user-chip" onclick="openProfileModal()" aria-label="Открыть профиль">
+          <img src="/api/assets/avatars/1.png" class="stats-avatar" alt="" id="headerAvatar" aria-hidden="true">
+          <span class="stats-username" id="headerUserName">Гость</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ── MAIN SHELL ───────────────────────────────────────────── -->
+  <main class="stats-shell stats-page-enter">
+
+    <!-- LEFT COLUMN: metrics + chart -->
+    <section class="stats-left-col" aria-label="Метрики и активность">
+
+      <!-- ── METRIC CARDS ──────────────────────────────────── -->
+      <div class="stats-metrics-grid" role="list">
+
+        <!-- Tasks -->
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-tasks" role="listitem">
+          <div class="st-metric-top">
+            <div class="st-metric-icon" id="metric-tasks-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">school</span>
             </div>
-        </section>
-        <section id="right-column" class="stats-sidebar lg:col-span-4 flex flex-col gap-5 xl:gap-6 min-h-0 stats-side-enter">
-            <div id="performance-card"
-                class="stats-side-card card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="material-symbols-outlined text-text-secondary text-sm">pie_chart</span>
-                    <h3 class="text-base font-bold text-text-main">Производительность</h3>
-                </div>
-                <div id="performance-bars" class="space-y-3"></div>
-                <div id="microcards-performance" class="hidden mt-3 pt-3 border-t border-border-subtle">
-                    <div class="flex items-center gap-2 mb-3">
-                        <span class="material-symbols-outlined text-text-secondary text-sm">style</span>
-                        <h4 class="text-sm font-bold text-text-main">Микрокарточки</h4>
-                    </div>
-                    <div id="microcards-performance-bars" class="space-y-3"></div>
-                </div>
-                <button type="button" class="tooltip-dot tooltip-dot--static tooltip-parent static-tooltip"
-                    data-tooltip="Распределение успешности по типам задач и микрокарточек"
-                    aria-label="Что означает блок &quot;Производительность&quot;">
-                    <span class="material-symbols-outlined text-[16px] leading-none">help</span>
-                </button>
+            <div class="st-metric-top-meta">
+              <span class="st-metric-badge hidden" id="metric-tasks-badge"></span>
+              <button type="button" class="tooltip-dot tooltip-parent st-tooltip-anchor"
+                data-tooltip="Количество уникальных заданий с успешной попыткой"
+                aria-label="Что означает «Освоено задач»">
+                <span class="material-symbols-outlined" aria-hidden="true">help</span>
+              </button>
             </div>
-            <div id="theory-analytics-card"
-                class="stats-side-card card-with-tooltip bg-surface-1 rounded-xl p-4 lg:p-5 shadow-sm border border-border-subtle flex flex-col justify-between shrink-0 hover:shadow-lg hover:-translate-y-0.5 transition-all relative">
-                <div class="flex items-center gap-2 mb-4">
-                    <span class="material-symbols-outlined text-text-secondary text-sm">account_tree</span>
-                    <h3 class="text-base font-bold text-text-main">Theory Flow</h3>
-                </div>
-                <div id="theory-analytics-list" class="space-y-3">
-                    <p class="text-sm text-text-muted">Теоретические связи появятся после первых связанных complex-сессий.</p>
-                </div>
+          </div>
+          <div class="st-metric-body" id="metric-tasks-value">
+            <div class="st-metric-value">
+              <span class="st-metric-num" id="tasks-mastered">—</span>
+              <span class="st-metric-denom" id="tasks-total">/ 0</span>
             </div>
-            <div class="shrink-0 stats-complexes-section">
-                <div class="flex items-center gap-2 mb-3">
-                    <span class="material-symbols-outlined text-text-secondary text-sm">history</span>
-                    <h3 class="text-base font-bold text-text-main">Последние комплексы</h3>
-                </div>
-                <div id="complexes-grid" class="stats-complexes-grid grid grid-cols-2 gap-3 md:gap-4"></div>
+            <p class="st-metric-label">Освоено задач</p>
+          </div>
+          <p class="st-metric-empty hidden" id="metric-tasks-empty">Начни решать задачи, чтобы увидеть прогресс</p>
+        </div>
+
+        <!-- Time -->
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-time" role="listitem">
+          <div class="st-metric-top">
+            <div class="st-metric-icon" id="metric-time-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">schedule</span>
             </div>
-        </section>
-    </main>
-    <!-- Profile Modal (injected by SharedProfileModal.js) -->
-    <script src="/ui/statistics/statistics.js"></script>
-    <script src="../assets/SharedProfileModal.js"></script>
-    <script src="../assets/ThemeSwitcherUI.js"></script>
-    <script src="../assets/ConnectionMonitor.js"></script>
+            <div class="st-metric-top-meta">
+              <span class="st-metric-badge hidden" id="metric-time-badge"></span>
+              <button type="button" class="tooltip-dot tooltip-parent st-tooltip-anchor"
+                data-tooltip="Суммарное время обучения (задачи + микрокарточки)"
+                aria-label="Что означает «Время обучения»">
+                <span class="material-symbols-outlined" aria-hidden="true">help</span>
+              </button>
+            </div>
+          </div>
+          <div class="st-metric-body" id="metric-time-value">
+            <div class="st-metric-value">
+              <span class="st-metric-num" id="time-hours">0</span>
+              <span class="st-metric-unit">ч</span>
+              <span class="st-metric-num" id="time-minutes">00</span>
+              <span class="st-metric-unit">м</span>
+            </div>
+            <p class="st-metric-label">
+              Время обучения
+              <span class="st-metric-hint" id="time-source-hint"></span>
+            </p>
+          </div>
+          <p class="st-metric-empty hidden" id="metric-time-empty">Начни заниматься, чтобы увидеть время обучения</p>
+        </div>
+
+        <!-- Microcards -->
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-microcards" role="listitem">
+          <div class="st-metric-top">
+            <div class="st-metric-icon" id="metric-microcards-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">style</span>
+            </div>
+            <div class="st-metric-top-meta">
+              <span class="st-metric-badge hidden" id="microcards-correct-badge"></span>
+              <button type="button" class="tooltip-dot tooltip-parent st-tooltip-anchor"
+                data-tooltip="Всего пройдено карточек и точность ответов"
+                aria-label="Что означает «Микрокарточки»">
+                <span class="material-symbols-outlined" aria-hidden="true">help</span>
+              </button>
+            </div>
+          </div>
+          <div class="st-metric-body" id="metric-microcards-value">
+            <div class="st-metric-value">
+              <span class="st-metric-num" id="microcards-reviews-count">0</span>
+              <span class="st-metric-denom" id="microcards-correct-rate"></span>
+            </div>
+            <p class="st-metric-label">Микрокарточки</p>
+          </div>
+          <p class="st-metric-empty hidden" id="metric-microcards-empty">Пройди карточки, чтобы увидеть прогресс</p>
+        </div>
+
+        <!-- Streak -->
+        <div class="st-metric-card card-elevated metric-card-enter" id="metric-streak" role="listitem">
+          <div class="st-metric-top">
+            <div class="st-metric-icon" id="metric-streak-icon">
+              <span class="material-symbols-outlined" aria-hidden="true">local_fire_department</span>
+            </div>
+            <div class="st-metric-top-meta st-metric-top-meta--wide">
+              <div class="st-metric-streak-actions">
+                <div class="st-streak-max">
+                  <span class="st-streak-max-label">MAX:</span>
+                  <span class="st-streak-max-value" id="streak-best">0</span>
+                </div>
+                <a href="/ui/calendar" class="st-icon-btn" title="Показать в календаре" aria-label="Открыть календарь">
+                  <span class="material-symbols-outlined" aria-hidden="true">calendar_today</span>
+                </a>
+              </div>
+              <button type="button" class="tooltip-dot tooltip-parent st-tooltip-anchor"
+                data-tooltip="Количество последовательных дней с любой учебной активностью"
+                aria-label="Что означает «Серия»">
+                <span class="material-symbols-outlined" aria-hidden="true">help</span>
+              </button>
+            </div>
+          </div>
+          <div class="st-metric-body" id="metric-streak-value">
+            <div class="st-metric-value">
+              <span class="st-metric-num" id="streak-days">0</span>
+              <span class="st-metric-unit">дней</span>
+            </div>
+            <p class="st-metric-label">Серия</p>
+          </div>
+          <p class="st-metric-empty hidden" id="metric-streak-empty">Занимайся регулярно, чтобы увидеть серию</p>
+        </div>
+
+      </div>
+
+      <!-- ── CHART CARD ────────────────────────────────────── -->
+      <div class="st-chart-card card-elevated card-with-tooltip" id="chart-card">
+
+        <header class="st-chart-head" id="chart-header">
+          <div class="st-chart-copy">
+            <h3 class="st-chart-title" id="chart-title">Активность</h3>
+            <div class="st-chart-delta" id="chart-period-delta">—</div>
+            <div class="st-chart-insight hidden" id="chart-insight"></div>
+          </div>
+          <div class="chart-controls">
+            <div class="chart-toggle" id="chart-metric-selector" role="tablist" aria-label="Метрика графика">
+              <button class="chart-toggle-btn segmented-control__button active" data-metric="study" role="tab" aria-selected="true">
+                <span aria-hidden="true">⏱️</span>
+                <span>Время</span>
+              </button>
+              <button class="chart-toggle-btn segmented-control__button" data-metric="attempts" role="tab" aria-selected="false">
+                <span aria-hidden="true">✓</span>
+                <span>Активность</span>
+              </button>
+            </div>
+            <div class="chart-period-switch segmented-control">
+              <button data-period="7" class="period-btn active">7 дней</button>
+              <button data-period="30" class="period-btn">30</button>
+              <button data-period="90" class="period-btn">90</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="chart-body">
+          <div class="chart-viewport">
+            <div id="chart-skeleton" class="chart-skeleton hidden">
+              <div class="chart-skeleton-bars">
+                <div class="chart-skeleton-bar"></div>
+                <div class="chart-skeleton-bar"></div>
+                <div class="chart-skeleton-bar"></div>
+                <div class="chart-skeleton-bar"></div>
+                <div class="chart-skeleton-bar"></div>
+                <div class="chart-skeleton-bar"></div>
+                <div class="chart-skeleton-bar"></div>
+              </div>
+            </div>
+            <div id="chart-content" class="chart-canvas"></div>
+            <div id="empty-chart" class="hidden st-empty-overlay">
+              <span class="material-symbols-outlined st-empty-icon" aria-hidden="true">insights</span>
+              <h3 class="st-empty-title">Нет данных</h3>
+              <p class="st-empty-sub">Начни тренировку, чтобы увидеть прогресс</p>
+            </div>
+          </div>
+          <div class="st-chart-legend" id="chart-summary">
+            <div class="st-legend-item">
+              <span class="st-legend-dot st-legend-dot--info" aria-hidden="true"></span>
+              <span id="legend-primary-label">Минуты</span>
+            </div>
+            <div class="st-legend-item">
+              <span class="st-legend-line" aria-hidden="true"></span>
+              <span>Тренд</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- RIGHT COLUMN: sidebar -->
+    <section class="stats-sidebar stats-side-enter" id="right-column" aria-label="Детальная аналитика">
+
+      <!-- Theory analytics -->
+      <div class="st-side-card card-elevated card-with-tooltip" id="theory-analytics-card">
+        <header class="st-side-head">
+          <span class="material-symbols-outlined st-side-icon" aria-hidden="true">account_tree</span>
+          <h3 class="st-side-title">Аналитика теории</h3>
+        </header>
+        <div class="st-theory-list" id="theory-analytics-list">
+          <p class="st-placeholder-text">Теоретические связи появятся после первых связанных complex-сессий.</p>
+        </div>
+      </div>
+
+      <!-- Performance -->
+      <div class="st-side-card card-elevated card-with-tooltip" id="performance-card">
+        <header class="st-side-head">
+          <span class="material-symbols-outlined st-side-icon tooltip-parent"
+            data-tooltip="Распределение успешности по типам задач и микрокарточек"
+            aria-label="Что означает блок «Производительность»">pie_chart</span>
+          <h3 class="st-side-title">Производительность</h3>
+        </header>
+        <div id="performance-bars" class="st-perf-list"></div>
+        <div id="microcards-performance" class="st-perf-section hidden">
+          <div class="st-side-subsection-head">
+            <span class="material-symbols-outlined st-side-icon" aria-hidden="true">style</span>
+            <h4 class="st-subsection-title">Микрокарточки</h4>
+          </div>
+          <div id="microcards-performance-bars" class="st-perf-list"></div>
+        </div>
+      </div>
+
+      <!-- Recent complexes -->
+      <div class="stats-complexes-section">
+        <header class="st-complexes-head">
+          <div class="st-side-head">
+            <span class="material-symbols-outlined st-side-icon" aria-hidden="true">history</span>
+            <h3 class="st-side-title">Последние комплексы</h3>
+          </div>
+          <nav class="st-carousel-nav" id="complexes-nav" style="display:none" aria-label="Страницы комплексов">
+            <button id="complexes-prev" class="st-icon-btn st-icon-btn--sm" aria-label="Назад" disabled>
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+            </button>
+            <span id="complexes-counter" class="st-carousel-counter" aria-live="polite"></span>
+            <button id="complexes-next" class="st-icon-btn st-icon-btn--sm" aria-label="Вперёд">
+              <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+            </button>
+          </nav>
+        </header>
+        <div id="complexes-carousel" class="complexes-carousel">
+          <div id="complexes-grid" class="complexes-carousel-track"></div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="/ui/statistics/statistics.js"></script>
+  <script src="../assets/SharedProfileModal.js"></script>
+  <script src="../assets/ThemeSwitcherUI.js"></script>
+  <script src="../assets/ConnectionMonitor.js"></script>
+
 </body>
-
 </html>

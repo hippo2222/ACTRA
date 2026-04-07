@@ -215,6 +215,19 @@ class TestBug2CancelFallback:
         result = mgr.cancel_session("nonexistent", user_id="user1")
         assert result is False
 
+    def test_cancel_removes_only_requested_session_when_complex_matches(self, tmp_path):
+        mgr, repo = _make_manager(tmp_path)
+        session_a = _make_session(session_id="sess-a", complex_id="same-complex")
+        session_b = _make_session(session_id="sess-b", complex_id="same-complex")
+        repo.save_session(session_a, session_a.user_id)
+        repo.save_session(session_b, session_b.user_id)
+
+        result = mgr.cancel_session(session_a.id, user_id=session_a.user_id)
+
+        assert result is True
+        assert repo.load_session_by_session_id(session_a.user_id, session_a.id) is None
+        assert repo.load_session_by_session_id(session_b.user_id, session_b.id) is not None
+
 
 # ===========================================================================
 # BUG-3: delete_complex cleans up session (tested at repo level)

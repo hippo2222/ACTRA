@@ -32,20 +32,20 @@
 @keyframes mistakesFade { to { opacity:1; transform: translateY(0); } }
 .mistakes-ref { overflow:hidden; opacity:0; max-height:0; transition: opacity 220ms ease, max-height 220ms ease, transform 220ms ease; transform: translateY(6px); }
 .mistakes-ref.visible { opacity:1; max-height:800px; transform: translateY(0); }
-.choice-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:16px; margin-top:16px; }
-.choice-card { position:relative; padding:16px; border:1px solid var(--color-border-subtle); border-radius:12px; background: var(--color-surface-1); box-shadow: var(--shadow-sm); transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; display:flex; flex-direction:column; gap:10px; }
+.choice-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:16px; margin-top:16px; }
+.choice-card { position:relative; padding:18px; border:1px solid var(--color-border-subtle); border-radius:16px; background: color-mix(in srgb, var(--color-surface-1) 92%, var(--color-bg-secondary)); box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05); transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; display:flex; flex-direction:column; gap:10px; }
 .choice-card:hover { border-color: var(--color-primary); box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .choice-card.selected { border-color: var(--color-primary); box-shadow: var(--shadow-lg); }
 .choice-card .choice-check { position:absolute; top:10px; right:10px; height:32px; width:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; background: var(--color-success-lighter); color: var(--color-success-text); border:1px solid var(--color-success-light); opacity:0; transform: scale(0.9); transition: opacity 150ms ease, transform 150ms ease; }
 .choice-card.selected .choice-check { opacity:1; transform: scale(1); }
 .choice-card.success { border-color: var(--color-success); background: var(--color-success-lighter); box-shadow: var(--shadow-md); }
 .choice-card.fail { border-color: var(--color-error-light); background: var(--color-error-lighter); box-shadow: var(--shadow-md); }
-.choice-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:9999px; font-weight:600; font-size:12px; background: var(--color-bg-tertiary); color: var(--color-text-main); }
+.choice-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border-radius:9999px; font-weight:600; font-size:12px; background: color-mix(in srgb, var(--color-surface-1) 70%, var(--color-bg-secondary)); color: var(--color-text-main); border: 1px solid var(--color-border-subtle); }
 .choice-pill.success { background: var(--color-success-lighter); color: var(--color-success-text); border:1px solid var(--color-success-light); }
-.choice-btn { align-self:flex-start; padding:10px 12px; border-radius:10px; border:1px solid var(--color-border-subtle); font-weight:600; font-size:14px; color: var(--color-text-main); background: var(--color-surface-1); cursor:pointer; transition: all 150ms ease; }
+.choice-btn { align-self:flex-start; padding:10px 12px; border-radius:12px; border:1px solid var(--color-border-subtle); font-weight:600; font-size:14px; color: var(--color-text-main); background: var(--color-surface-1); cursor:pointer; transition: all 150ms ease; }
 .choice-btn:hover { border-color: var(--color-primary); color: var(--color-primary); box-shadow: var(--shadow-sm); }
 .choice-btn.selected { background: var(--color-primary); color: var(--color-primary-fg); border-color: var(--color-primary-dark); }
-.choice-status { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:10px; background: var(--color-success-lighter); color: var(--color-success-text); border:1px solid var(--color-success-light); font-weight:600; font-size:13px; margin-top:12px; }
+.choice-status { display:flex; align-items:center; gap:8px; padding:10px 12px; border-radius:12px; background: var(--color-success-lighter); color: var(--color-success-text); border:1px solid var(--color-success-light); font-weight:600; font-size:13px; margin-top:12px; }
 .choice-status .material-symbols-outlined { font-size:18px; }
 `;
     document.head.appendChild(style);
@@ -147,7 +147,7 @@
 
   function renderStatusSidebar(foundCount, totalKnown, completed) {
     const wrap = document.createElement("div");
-    wrap.className = "sticky top-4 flex flex-col gap-4 p-5 rounded-xl border border-border-subtle dark:border-border-strong bg-surface-1 dark:bg-surface-2";
+    wrap.className = "sticky top-4 flex flex-col gap-4 p-5 rounded-2xl border border-border-subtle dark:border-border-strong bg-surface-1 dark:bg-surface-2 shadow-sm";
 
     const title = document.createElement("h3");
     title.className = "text-xs font-bold uppercase tracking-wider text-text-muted dark:text-text-muted";
@@ -165,7 +165,7 @@
     dot.className = "h-2 w-2 rounded-full bg-primary animate-pulse";
     dotWrap.appendChild(dot);
     const pulseText = document.createElement("p");
-    pulseText.className = "text-sm text-text-secondary dark:text-text-muted";
+    pulseText.className = "text-sm leading-relaxed text-text-secondary dark:text-text-muted";
     pulseText.textContent = completed ? "Ошибки отмечены" : "Продолжайте изучение текста...";
     pulseRow.appendChild(dotWrap);
     pulseRow.appendChild(pulseText);
@@ -197,7 +197,7 @@
     stack.appendChild(statBlock);
 
     const hint = document.createElement("div");
-    hint.className = "p-3 rounded-lg bg-info-lighter dark:bg-info-light border border-info-light dark:border-info-light";
+    hint.className = "p-3.5 rounded-xl bg-info-lighter dark:bg-info-light border border-info-light dark:border-info-light shadow-sm";
     const hintText = document.createElement("p");
     hintText.className = "text-xs text-info-dark dark:text-info-light leading-normal";
     const hintPrefix = document.createElement("span");
@@ -303,7 +303,7 @@
     grid.className = "p-4 grid grid-cols-1 lg:grid-cols-4 gap-6";
 
     const mainCol = document.createElement("div");
-    mainCol.className = "lg:col-span-3 flex flex-col rounded-xl shadow-lg bg-surface-1 dark:bg-surface-2 p-6 sm:p-8 mistakes-fade";
+    mainCol.className = "lg:col-span-3 flex flex-col rounded-2xl shadow-lg bg-surface-1 dark:bg-surface-2 p-6 sm:p-8 border border-border-subtle dark:border-border-strong mistakes-fade";
 
     const headerBlock = document.createElement("div");
     headerBlock.className = "mb-6";
@@ -317,7 +317,7 @@
     headerBlock.appendChild(divider);
 
     const wordsWrap = document.createElement("div");
-    wordsWrap.className = "pt-2 text-lg leading-loose tracking-wide font-normal flex flex-wrap gap-1";
+    wordsWrap.className = "pt-2 text-lg leading-loose tracking-wide font-normal flex flex-wrap gap-1.5";
 
     function handleWordClick(el, idx) {
       if (state.selections.has(idx)) return;
@@ -405,10 +405,10 @@
     const refButton = document.createElement("button");
     refButton.type = "button";
     refButton.className =
-      "hidden px-4 py-2 rounded-lg border border-success text-success-text font-semibold text-sm bg-success-lighter hover:bg-success-light dark:border-success-dark dark:text-success-light dark:bg-success-light dark:hover:bg-success-light transition";
+      "hidden px-4 py-2 rounded-xl border border-success text-success-text font-semibold text-sm bg-success-lighter hover:bg-success-light dark:border-success-dark dark:text-success-light dark:bg-success-light dark:hover:bg-success-light shadow-sm transition";
     refButton.textContent = "Показать референсный текст";
     const refHint = document.createElement("p");
-    refHint.className = "hidden text-sm text-text-muted dark:text-text-muted leading-normal";
+    refHint.className = "hidden text-sm text-text-muted dark:text-text-muted leading-relaxed";
     refHint.textContent =
       "Вы нашли минимально необходимое число ошибок. Можно открыть референс или продолжить поиск.";
     referenceControls.appendChild(refButton);

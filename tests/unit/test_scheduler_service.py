@@ -12,7 +12,7 @@ if str(DESKTOP_APP) not in sys.path:
     sys.path.append(str(DESKTOP_APP))
 
 from services.calendar.scheduler_service import SchedulerService  # type: ignore
-from services.calendar.models import DayStatus  # type: ignore
+from services.calendar.models import DailyPlan, DayStatus, ScheduledTask, TaskType  # type: ignore
 
 
 @pytest.fixture
@@ -64,6 +64,36 @@ def test_build_schedule_strip_includes_date_fields_and_flags(scheduler):
     # Future day should be planned or rest day (weekend in flexible mode would be rest)
     assert tomorrow.status in {DayStatus.PLANNED, DayStatus.REST_DAY}
     assert "Daily Mix" in tomorrow.tasks
+
+
+def test_daily_plan_to_dict_keeps_main_focus_frontend_aliases():
+    main_focus = ScheduledTask(
+        task_id="task-1",
+        complex_id="complex-1",
+        complex_name="Комплекс 1",
+        task_type=TaskType.MAIN,
+        priority=1.0,
+        estimated_duration_seconds=600,
+    )
+    plan = DailyPlan(
+        date=date(2026, 4, 5),
+        daily_mix=[main_focus],
+        main_focus=main_focus,
+        main_focus_complex_name="Комплекс 1",
+        main_focus_tasks_count=4,
+        total_estimated_minutes=30,
+        daily_mix_estimated_minutes=10,
+        main_focus_estimated_minutes=20,
+    )
+
+    payload = plan.to_dict()
+
+    assert payload["main_focus_complex_name"] == "Комплекс 1"
+    assert payload["main_focus_name"] == "Комплекс 1"
+    assert payload["main_focus_tasks_count"] == 4
+    assert payload["main_focus_count"] == 4
+    assert payload["main_focus_estimated_minutes"] == 20
+    assert payload["main_focus_minutes"] == 20
 
 
 # ✅ НОВЫЕ ТЕСТЫ ДЛЯ ИСПРАВЛЕНИЙ ОБЛАСТИ 6.2

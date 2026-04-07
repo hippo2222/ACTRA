@@ -113,16 +113,36 @@
     let _confettiCanvas = null;
     let _confettiCtx = null;
     let _confettiRAF = null;
+    let _confettiHost = null;
 
-    function _ensureCanvas() {
-        if (_confettiCanvas && _confettiCanvas.parentNode) return;
+    function _ensureCanvas(targetElement) {
+        const host = targetElement && targetElement.nodeType === 1
+            ? targetElement
+            : document.body;
+        if (_confettiCanvas && _confettiCanvas.parentNode === host) return;
+
+        _removeCanvas();
+
         _confettiCanvas = document.createElement('canvas');
         _confettiCanvas.id = 'success-confetti-canvas';
-        _confettiCanvas.style.cssText =
-            'position:fixed;top:0;left:0;width:100%;height:100%;' +
-            'pointer-events:none;z-index:9999;';
-        document.body.appendChild(_confettiCanvas);
+        if (host === document.body) {
+            _confettiCanvas.style.cssText =
+                'position:fixed;top:0;left:0;width:100%;height:100%;' +
+                'pointer-events:none;z-index:9999;';
+        } else {
+            try {
+                const computed = window.getComputedStyle ? window.getComputedStyle(host) : null;
+                if (computed && computed.position === 'static') {
+                    host.style.position = 'relative';
+                }
+            } catch (e) { /* ignore */ }
+            _confettiCanvas.style.cssText =
+                'position:absolute;inset:0;width:100%;height:100%;' +
+                'pointer-events:none;z-index:2;';
+        }
+        host.appendChild(_confettiCanvas);
         _confettiCtx = _confettiCanvas.getContext('2d');
+        _confettiHost = host;
     }
 
     function _removeCanvas() {
@@ -131,6 +151,7 @@
         }
         _confettiCanvas = null;
         _confettiCtx = null;
+        _confettiHost = null;
         if (_confettiRAF) {
             cancelAnimationFrame(_confettiRAF);
             _confettiRAF = null;
@@ -144,7 +165,9 @@
      * @param {number} opts.originX - 0..1 horizontal origin (default 0.5)
      * @param {number} opts.originY - 0..1 vertical origin (default 0.35)
      * @param {number} opts.spread - spread angle in degrees (default 70)
+     * @param {number} opts.angleDeg - burst direction in degrees (default -90)
      * @param {number} opts.duration - ms (default 1800)
+     * @param {HTMLElement} opts.targetElement - clip the confetti to a specific element
      */
     function launchConfetti(opts) {
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -154,23 +177,32 @@
         const originX = opts.originX != null ? opts.originX : 0.5;
         const originY = opts.originY != null ? opts.originY : 0.35;
         const spread = (opts.spread || 70) * Math.PI / 180;
+        const baseAngle = ((opts.angleDeg != null ? opts.angleDeg : -90) * Math.PI) / 180;
         const duration = opts.duration || 1800;
+        const targetElement = opts.targetElement && opts.targetElement.nodeType === 1
+            ? opts.targetElement
+            : null;
 
-        _ensureCanvas();
+        _ensureCanvas(targetElement);
         const canvas = _confettiCanvas;
         const ctx = _confettiCtx;
         const dpr = window.devicePixelRatio || 1;
-        canvas.width = window.innerWidth * dpr;
-        canvas.height = window.innerHeight * dpr;
+        const bounds = targetElement
+            ? targetElement.getBoundingClientRect()
+            : { width: window.innerWidth, height: window.innerHeight };
+        const width = Math.max(1, Math.round(bounds.width || window.innerWidth));
+        const height = Math.max(1, Math.round(bounds.height || window.innerHeight));
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-        const cx = window.innerWidth * originX;
-        const cy = window.innerHeight * originY;
+        const cx = width * originX;
+        const cy = height * originY;
 
         const confettiColors = _getConfettiColors();
         const particles = [];
         for (let i = 0; i < count; i++) {
-            const angle = -Math.PI / 2 + (Math.random() - 0.5) * spread;
+            const angle = baseAngle + (Math.random() - 0.5) * spread;
             const speed = 4 + Math.random() * 6;
             const size = 4 + Math.random() * 4;
             particles.push({
@@ -195,7 +227,7 @@
             const elapsed = now - start;
             const progress = Math.min(elapsed / duration, 1);
 
-            ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+            ctx.clearRect(0, 0, width, height);
 
             for (const p of particles) {
                 p.vy += p.gravity;
@@ -513,8 +545,34 @@
             // Animated checkmark is handled in task-renderer via renderAnimatedCheckmark
 
             // Confetti — intensity scales with streak
-            const confettiCount = streak >= 5 ? 100 : streak >= 3 ? 80 : 60;
-            launchConfetti({ particleCount: confettiCount });
+            const resultCard = document.getElementById('result-inner') || document.getElementById('result-box');
+            const bounds = resultCard && typeof resultCard.getBoundingClientRect === 'function'
+                ? resultCard.getBoundingClientRect()
+                : null;
+            const area = bounds ? bounds.width * bounds.height : 0;
+            const areaScale = area > 0 ? Math.max(0.65, Math.min(1.2, area / 220000)) : 1;
+            const baseConfettiCount = streak >= 5 ? 56 : streak >= 3 ? 44 : 34;
+            const burstCount = Math.max(18, Math.round(baseConfettiCount * areaScale));
+            const burstDuration = area > 0 && area < 120000 ? 1350 : 1550;
+
+            launchConfetti({
+                particleCount: burstCount,
+                targetElement: resultCard,
+                originX: 0.12,
+                originY: 0.94,
+                angleDeg: -58,
+                spread: 34,
+                duration: burstDuration,
+            });
+            launchConfetti({
+                particleCount: burstCount,
+                targetElement: resultCard,
+                originX: 0.88,
+                originY: 0.94,
+                angleDeg: -122,
+                spread: 34,
+                duration: burstDuration,
+            });
 
             // Glow on result box
             glowResultBox(true);

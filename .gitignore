@@ -39,7 +39,17 @@ htmlcov/
 .pytest_tmp/
 .pytest_tmp_*/
 .mypy_cache/
+tmp_audit_fixtures/
 test_output.txt
+
+# Generated reports and temporary audits
+reports/
+playwright-report/
+archive/
+tmp/
+.codex-artifacts/
+.codex_tmp_*.png
+nul
 
 # Logs
 logs/
@@ -65,6 +75,12 @@ data/app_state.json
 
 # Runtime content — modules, complexes, import history are user-generated at runtime
 # data/modules/  # Commented out to allow demo modules for CI validation
+data/ai_runs/
+data/complexes/history/
+data/complexes/theories/th_*/
+data/complexes/theories/release_smoke_theory/
+data/microcards/
+data/modules/test_*/
 data/import_journal.json
 data/import_manifests/
 data/feedback/

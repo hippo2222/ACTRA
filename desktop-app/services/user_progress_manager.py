@@ -540,47 +540,52 @@ class UserProgressManager:
         # Получаем доступные уровни через DifficultyManager
         if self.difficulty_manager and task_type:
             try:
-                available_levels = self.difficulty_manager.get_available_levels(
-                    task_type, task_ref
-                )
-                if available_levels:
-                    min_level = min(available_levels)
-                    max_level = max(available_levels)
-                else:
-                    # Fallback если нет доступных уровней
-                    min_level, max_level = 1, 3
+                available_levels = self.difficulty_manager.get_available_levels(task_type, task_ref)
+                if not available_levels:
+                    available_levels = [1, 2, 3]
             except Exception as e:
                 self.logger.warning(
                     f"Ошибка при получении доступных уровней для {task_ref}: {e}, "
                     f"используем fallback"
                 )
-                min_level, max_level = 1, 3
+                available_levels = [1, 2, 3]
         else:
             # Fallback если DifficultyManager не доступен или task_type не указан
-            min_level, max_level = 1, 3
+            available_levels = [1, 2, 3]
+
+        normalized_current = (
+            self.difficulty_manager.normalize_requested_level(current_difficulty, available_levels)
+            if self.difficulty_manager
+            else current_difficulty
+        )
         
         # Логика эскалации
         if success:
-            # Успех - повысить уровень
-            new_level = min(current_difficulty + 1, max_level)
-            if new_level != current_difficulty:
+            new_level = (
+                self.difficulty_manager.get_next_allowed_level(normalized_current, available_levels)
+                if self.difficulty_manager
+                else min(normalized_current + 1, max(available_levels))
+            )
+            if new_level != normalized_current:
                 self.logger.info(
-                    f"Эскалация: уровень {current_difficulty} → {new_level} "
+                    f"Эскалация: уровень {normalized_current} → {new_level} "
                     f"(успех) для {task_ref}"
                 )
             return new_level
         elif not success:
-            # Неудача - понизить уровень
-            new_level = max(current_difficulty - 1, min_level)
-            if new_level != current_difficulty:
+            new_level = (
+                self.difficulty_manager.get_previous_allowed_level(normalized_current, available_levels)
+                if self.difficulty_manager
+                else max(normalized_current - 1, min(available_levels))
+            )
+            if new_level != normalized_current:
                 self.logger.info(
-                    f"Эскалация: уровень {current_difficulty} → {new_level} "
+                    f"Эскалация: уровень {normalized_current} → {new_level} "
                     f"(неудача) для {task_ref}"
                 )
             return new_level
         else:
-            # Оставить текущий уровень
-            return current_difficulty
+            return normalized_current
     
     def _truncate_attempts_history(self, task_entry: Dict[str, Any]):
         """

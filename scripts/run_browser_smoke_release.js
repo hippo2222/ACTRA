@@ -94,13 +94,12 @@ async function waitForComplexesTheoryFilter(page, theoryId, timeout = 30000) {
   );
 }
 
-async function waitForTheoryHubUrl(page, theoryId, timeout = 30000) {
+async function waitForTheoryEditorUrl(page, theoryId, timeout = 30000) {
   await page.waitForFunction(
     (expectedTheoryId) => {
       const url = new URL(window.location.href);
       return (
-        url.pathname.startsWith("/ui/editor") &&
-        url.searchParams.get("theory_hub") === "1" &&
+        url.pathname === "/ui/editor/Theory_Editor.html" &&
         url.searchParams.get("theory_id") === expectedTheoryId
       );
     },
@@ -195,7 +194,7 @@ async function openTopicTheoryModal(page, baseUrl, fixture) {
     { timeout: 20000 }
   );
   await waitForVisible(page, "#topic-theory-open-complexes-btn", 10000);
-  await waitForVisible(page, "#topic-theory-open-hub-btn", 10000);
+  await waitForVisible(page, "#topic-theory-edit-content-btn", 10000);
 }
 
 async function waitForEditorTaskCard(page, uniqueId, timeout = 30000) {
@@ -228,8 +227,8 @@ async function openComplexTheoryModal(page, baseUrl, fixture, options = {}) {
   await theoryButton.waitFor({ state: "visible", timeout: 20000 });
   await theoryButton.click();
 
-  await waitForVisible(page, ".theory-modal-open-complexes", 20000);
-  await waitForVisible(page, ".theory-modal-open-hub", 20000);
+  await waitForVisible(page, "#tm-open-complexes", 20000);
+  await waitForVisible(page, "#tm-open-hub", 20000);
   await page.waitForFunction(
     ({ theoryTitle, theoryId }) => {
       const modalButton = document.querySelector(".theory-modal-open-complexes");
@@ -389,61 +388,10 @@ async function scenarioS3BasicResults({ page, baseUrl, fixture }) {
   await finishSmokeSessionFromS1(page);
 
   await waitForVisible(page, "#to-main-btn", 10000);
-  await waitForVisible(page, "#to-theory-hub-btn", 10000);
+
 }
 
-async function scenarioTheoryHubRoundtrip({ page, baseUrl, fixture }) {
-  await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);
-  await page.goto(
-    resolveUrl(
-      baseUrl,
-      `/ui/editor?theory_hub=1&theory_id=${encodeURIComponent(fixture.theoryId)}`
-    ),
-    {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    }
-  );
 
-  await waitForVisible(page, "#theory-hub-modal", 30000);
-  await page.waitForFunction(
-    ({ theoryId, complexName }) => {
-      const host = document.getElementById("theory-hub-impact");
-      if (!host) return false;
-      const text = host.textContent || "";
-      return text.includes(theoryId) && text.includes(complexName);
-    },
-    {
-      theoryId: fixture.theoryId,
-      complexName: fixture.complexName,
-    },
-    { timeout: 30000 }
-  );
-
-  const startBtn = page
-    .locator(`[data-action="hub-start-theory-training"][data-theory-id="${fixture.theoryId}"]`)
-    .first();
-  await startBtn.waitFor({ state: "visible", timeout: 20000 });
-  await startBtn.click();
-
-  await page.waitForURL(/\/ui\/session\/[^/]+(?:[?#]|$)/, { timeout: 30000 });
-  await waitForVisible(page, "#theory-session-banner", 20000);
-  const bridgeStored = await page.evaluate(() =>
-    Object.keys(window.sessionStorage || {}).some((key) =>
-      key.startsWith("theory_training_bridge_v1:")
-    )
-  );
-  if (!bridgeStored) {
-    throw new Error("theory_hub_roundtrip.bridge_context_not_persisted");
-  }
-
-  await finishSmokeSessionFromS1(page);
-  await waitForVisible(page, "#to-theory-hub-btn", 10000);
-  await page.click("#to-theory-hub-btn");
-
-  await waitForTheoryHubUrl(page, fixture.theoryId, 30000);
-  await waitForVisible(page, "#theory-hub-modal", 20000);
-}
 
 async function scenarioTopicTheoryModalNavigation({ page, baseUrl, fixture }) {
   await openTopicTheoryModal(page, baseUrl, fixture);
@@ -466,9 +414,9 @@ async function scenarioTopicTheoryModalNavigation({ page, baseUrl, fixture }) {
   );
 
   await openTopicTheoryModal(page, baseUrl, fixture);
-  await page.click("#topic-theory-open-hub-btn");
-  await waitForTheoryHubUrl(page, fixture.theoryId, 30000);
-  await waitForVisible(page, "#theory-hub-modal", 20000);
+  await page.click("#topic-theory-edit-content-btn");
+  await waitForTheoryEditorUrl(page, fixture.theoryId, 30000);
+  await waitForVisible(page, "#theory-editor", 20000);
 }
 
 async function scenarioComplexesTheoryModalBuilderContext({
@@ -509,9 +457,9 @@ async function scenarioComplexesTheoryModalBuilderContext({
   );
 
   await openComplexTheoryModal(page, baseUrl, fixture, { filtered: false });
-  await page.click(".theory-modal-open-hub");
-  await waitForTheoryHubUrl(page, fixture.theoryId, 30000);
-  await waitForVisible(page, "#theory-hub-modal", 20000);
+  await page.click("#tm-open-hub");
+  await waitForTheoryEditorUrl(page, fixture.theoryId, 30000);
+  await waitForVisible(page, "#theory-editor", 20000);
 
   await page.goto(
     resolveUrl(
@@ -549,8 +497,8 @@ async function scenarioStatisticsTheoryFlow({ page, baseUrl, fixture }) {
   }
 
   await theoryButton.click();
-  await waitForTheoryHubUrl(page, fixture.theoryId, 30000);
-  await waitForVisible(page, "#theory-hub-modal", 20000);
+  await waitForTheoryEditorUrl(page, fixture.theoryId, 30000);
+  await waitForVisible(page, "#theory-editor", 20000);
 }
 
 async function scenarioCalendarRecommendedAction({ page, baseUrl, fixture }) {
@@ -1236,16 +1184,8 @@ async function scenarioGuardEditorInvalidTheoryHub({ page, baseUrl }) {
     }
   );
 
-  await waitForVisible(page, "#theory-hub-modal", 30000);
-  await page.waitForFunction(
-    () => {
-      const focus = document.getElementById("theory-hub-focus-theory");
-      const map = document.getElementById("theory-hub-map");
-      return !!focus && !!map && !String(map.textContent || "").includes("Загрузка...");
-    },
-    null,
-    { timeout: 30000 }
-  );
+  await waitForTheoryEditorUrl(page, "guardrail_missing_theory", 30000);
+  await waitForVisible(page, "#theory-editor", 30000);
 }
 
 async function scenarioGuardComplexesUnknownTheoryFilter({ page, baseUrl, fixture }) {
@@ -1332,12 +1272,7 @@ const SCENARIOS = [
     suites: ["p0"],
     run: scenarioS3BasicResults,
   },
-  {
-    id: "theory_hub_roundtrip",
-    label: "Theory Hub roundtrip",
-    suites: ["p0"],
-    run: scenarioTheoryHubRoundtrip,
-  },
+
   {
     id: "topic_theory_modal_navigation",
     label: "Topic theory modal navigation",
@@ -1394,7 +1329,7 @@ const SCENARIOS = [
   },
   {
     id: "guard_editor_invalid_theory_hub",
-    label: "Guardrail: invalid theory hub deep-link",
+    label: "Guardrail: legacy theory deep-link redirect",
     suites: ["guardrail"],
     run: scenarioGuardEditorInvalidTheoryHub,
   },

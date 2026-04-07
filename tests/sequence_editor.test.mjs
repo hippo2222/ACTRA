@@ -62,6 +62,7 @@ function mountEditorDom() {
         <textarea id="prompt-textarea"></textarea>
         <input id="order-inside-matters" type="checkbox" />
         <input id="level-order-matters" type="checkbox" />
+        <div id="settings-help-text"></div>
         <div id="levels-container"></div>
         <button id="clear-all-btn"></button>
         <button id="add-level-btn"></button>
@@ -220,7 +221,26 @@ describe('SequenceEditor', () => {
         expect(statusSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'warning' }));
         expect(toastSpy).toHaveBeenCalledWith(expect.stringContaining('замечания'), 'warning', 5200);
         expect(toastSpy).not.toHaveBeenCalledWith('Задание сохранено', 'success');
-        expect(editor.getSemanticWarnings().join(' ')).toContain('Повторяются');
+        expect(editor.getSemanticWarnings().join(' ')).toContain('взаимозаменяемыми');
+        expect(editor.getSemanticWarnings().join(' ')).toContain('семантически не различаются');
+    });
+
+    it('buildStructure assigns same semantic_key to equal labels with different ids', () => {
+        editor.levels = [
+            {
+                levelId: 'level_1',
+                title: 'Level 1',
+                items: [
+                    { id: 'elem_1', label: 'Same step', image: '' },
+                    { id: 'elem_2', label: 'Same   step', image: '' }
+                ]
+            }
+        ];
+
+        const result = editor.buildStructure();
+        const semanticKeys = result.elements.map((item) => item.semantic_key);
+
+        expect(semanticKeys).toEqual(['text:same step', 'text:same step']);
     });
 
     it('deleteLevel prevents removing the last level', async () => {
@@ -245,5 +265,86 @@ describe('SequenceEditor', () => {
 
         expect(toastSpy).toHaveBeenCalledWith('В уровне должен быть хотя бы один шаг.', 'error');
         expect(editor.levels[0].items).toHaveLength(1);
+    });
+
+    it('captureState and restoreState preserve prompt and sequence settings', () => {
+        document.querySelector('#prompt-textarea').value = 'Черновик последовательности';
+        document.querySelector('#order-inside-matters').checked = true;
+        document.querySelector('#level-order-matters').checked = true;
+
+        editor.levels = [
+            {
+                levelId: 'level_1',
+                title: 'Подготовка',
+                items: [
+                    { id: 'elem_1', label: 'Шаг 1', target_image: '' },
+                    { id: 'elem_2', label: 'Шаг 2', target_image: '' }
+                ]
+            },
+            {
+                levelId: 'level_2',
+                title: 'Проверка',
+                items: [
+                    { id: 'elem_3', label: 'Контроль', target_image: '' }
+                ]
+            }
+        ];
+        editor.renderLevels();
+
+        const snapshot = editor.captureState();
+
+        document.querySelector('#prompt-textarea').value = 'Другое значение';
+        document.querySelector('#order-inside-matters').checked = false;
+        document.querySelector('#level-order-matters').checked = false;
+        editor.levels = [
+            {
+                levelId: 'level_other',
+                title: 'Сброшено',
+                items: [{ id: 'elem_x', label: 'Пусто', target_image: '' }]
+            }
+        ];
+        editor.renderLevels();
+
+        editor.restoreState(snapshot);
+
+        expect(document.querySelector('#prompt-textarea').value).toBe('Черновик последовательности');
+        expect(document.querySelector('#order-inside-matters').checked).toBe(true);
+        expect(document.querySelector('#level-order-matters').checked).toBe(true);
+        expect(editor.levels).toHaveLength(2);
+        expect(document.querySelectorAll('.level-title-input')).toHaveLength(2);
+        expect(document.querySelector('.level-title-input').value).toBe('Подготовка');
+        expect(document.querySelectorAll('.block-title-input')[0].value).toBe('Шаг 1');
+        expect(document.querySelectorAll('.block-title-input')[2].value).toBe('Контроль');
+    });
+
+    it('renders compact step controls to keep narrow cards stable', () => {
+        editor.levels = [
+            {
+                levelId: 'level_1',
+                title: 'Level 1',
+                items: [
+                    { id: 'elem_1', label: 'Step 1', image: null, semanticKey: null }
+                ]
+            }
+        ];
+
+        editor.renderLevels();
+
+        const actionRow = document.querySelector('.sequence-block-actions');
+        const moveLeft = document.querySelector('.move-left');
+        const moveRight = document.querySelector('.move-right');
+        const deleteBtn = document.querySelector('.delete-block');
+        const addBtn = document.querySelector('.sequence-add-block-btn');
+        const levelActions = document.querySelector('.sequence-level-actions');
+
+        expect(actionRow).not.toBeNull();
+        expect(actionRow.className).toContain('grid');
+        expect(actionRow.className).toContain('grid-cols-2');
+        expect(moveLeft.className).toContain('btn-secondary--compact');
+        expect(moveLeft.className).toContain('sequence-block-move-btn');
+        expect(moveRight.className).toContain('btn-secondary--compact');
+        expect(deleteBtn.className).toContain('icon-button-muted--xs');
+        expect(addBtn.className).toContain('empty-state-card--icon-only');
+        expect(levelActions.className).toContain('sequence-level-actions');
     });
 });

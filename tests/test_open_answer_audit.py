@@ -57,6 +57,21 @@ class TestNormalizeAnswerKeyOpenAnswer(unittest.TestCase):
         self.assertEqual(result.get('min_keywords'), 2)
         self.assertFalse(result.get('require_all_keywords'))
 
+    def test_copies_max_length(self):
+        """D-11: max_length must be copied from content to answer_key."""
+        task_data = {
+            'type': 'open_answer',
+            'content': {
+                'keywords': ['a'],
+                'max_length': 120,
+            },
+            'settings': {
+                'max_length': 500,
+            }
+        }
+        result = self._normalize(task_data, {})
+        self.assertEqual(result.get('max_length'), 120)
+
     def test_copies_require_all_keywords(self):
         """D-1: require_all_keywords must be copied."""
         task_data = {
@@ -118,6 +133,33 @@ class TestEvaluatorMinKeywords(unittest.TestCase):
         }
         result = self.service.evaluate_open_answer_task(user_input, answer_key)
         self.assertTrue(result.success)
+
+    def test_max_length_rejects_too_long_answer(self):
+        """D-11: evaluator rejects answers longer than max_length."""
+        user_input = {'answer': 'a' * 12}
+        answer_key = {
+            'keywords': ['a'],
+            'sequence_matters': False,
+            'max_length': 10,
+        }
+        result = self.service.evaluate_open_answer_task(user_input, answer_key)
+        self.assertFalse(result.success)
+        self.assertEqual(result.details.get('error'), 'answer_too_long')
+
+    def test_task_data_max_length_overrides_legacy_settings(self):
+        """D-11: task_data.content.max_length overrides legacy settings.max_length."""
+        user_input = {'answer': 'a' * 12}
+        answer_key = {
+            'keywords': ['a'],
+            'sequence_matters': False,
+        }
+        task_data = {
+            'content': {'max_length': 10},
+            'settings': {'max_length': 50},
+        }
+        result = self.service.evaluate_open_answer_task(user_input, answer_key, task_data)
+        self.assertFalse(result.success)
+        self.assertEqual(result.details.get('max_length'), 10)
 
     def test_min_keywords_not_met(self):
         """D-1: With min_keywords=2 and only 1 found, should fail."""

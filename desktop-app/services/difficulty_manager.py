@@ -1,26 +1,42 @@
 """
-Difficulty Manager - Система уровней сложности для заданий
+Difficulty manager for task-level difficulty progression.
 
-Модифицирует задания в памяти для разных уровней сложности.
-НЕ изменяет исходные файлы заданий.
+This service modifies task payloads in memory only.
 """
+
+from __future__ import annotations
 
 import copy
 import logging
-from typing import Dict, Any, Optional, List
-from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-# Импортируем загрузчик конфигурации
 try:
     from services.difficulty_config_loader import DifficultyConfigLoader
+
     CONFIG_LOADER_AVAILABLE = True
 except ImportError:
     CONFIG_LOADER_AVAILABLE = False
     DifficultyConfigLoader = None
 
-# Импортируем hooks для интеграции с плагинами
+try:
+    from services.analysis_capability_matrix import get_task_difficulty_metadata
+except ImportError:
+    def get_task_difficulty_metadata(task_type: Optional[str], subtype: Optional[str] = None) -> Dict[str, Any]:
+        return {
+            "task_type": str(task_type or "").strip().upper(),
+            "subtype": str(subtype or "").strip().lower() or None,
+            "supported_levels": [],
+            "level_role_map": [],
+            "progression_is_fixed": False,
+            "progression_kind": "unknown",
+            "authoring_enabled": False,
+            "complex_role": "none",
+            "fixed_progression_note": "",
+        }
+
 try:
     from task_system.core.hooks.difficulty_hooks import difficulty_hooks
+
     HOOKS_AVAILABLE = True
 except ImportError:
     HOOKS_AVAILABLE = False
@@ -30,453 +46,463 @@ logger = logging.getLogger(__name__)
 
 
 class DifficultyManager:
-    """
-    Менеджер уровней сложности для заданий.
-    
-    Модифицирует задания в памяти для разных уровней сложности.
-    НЕ изменяет исходные файлы заданий.
-    
-    Использует DifficultyConfigLoader для загрузки конфигурации из difficulty_config.json.
-    Поддерживает переопределения уровней для конкретных заданий и типов заданий.
-    
-    Поддерживаемые типы заданий:
-    - click: уровни 1-3 (клик → клик+название → обводка+название)
-    - draw: уровни 1-2 (рисование → рисование+название)
-    - test: уровни 1-2 (множественный выбор → открытый вопрос)
-    - sequence_assembly: уровни 1-3 (все подсказки → названия уровней → названия уровней и блоков)
-    - open_answer: только уровень 1 (не поддерживает уровни)
-    - Плагинные типы: через hooks (fallback на уровень 1)
-    """
-    
-    def __init__(self, config_path: Optional[str] = None):
-        """
-        Инициализация DifficultyManager.
-        
-        Args:
-            config_path: Путь к файлу конфигурации (если None, определяется автоматически)
-        """
+    def __init__(self, config_path: Optional[str] = None, storage_service: Optional[Any] = None):
         self.config_path = config_path
+        self.storage_service = storage_service
         self.logger = logging.getLogger(self.__class__.__name__)
-        
-        # Загружаем конфигурацию через DifficultyConfigLoader
+        self._task_payload_cache: Dict[str, Optional[Dict[str, Any]]] = {}
+
         if CONFIG_LOADER_AVAILABLE and DifficultyConfigLoader:
             try:
                 self.config = DifficultyConfigLoader.load_config(config_path)
-                self.logger.debug(f"Конфигурация уровней сложности загружена")
-            except Exception as e:
-                self.logger.warning(f"Ошибка загрузки конфигурации: {e}, используем дефолтные значения")
+            except Exception as exc:
+                self.logger.warning("Failed to load difficulty config: %s", exc)
                 self.config = {}
         else:
-            self.logger.warning("DifficultyConfigLoader не доступен, используем дефолтные значения")
             self.config = {}
-        
-        # Получаем дефолтные уровни из конфигурации или используем значения по умолчанию
+
         self.default_levels = self._get_default_levels()
-        
-        # Hooks для интеграции с плагинами
         self.hooks_available = HOOKS_AVAILABLE
-    
+
     def _get_default_levels(self) -> Dict[str, List[int]]:
-        """
-        Получает дефолтные уровни из конфигурации или возвращает значения по умолчанию.
-        
-        Returns:
-            Словарь с дефолтными уровнями для каждого типа задания
-        """
-        if self.config and 'default_levels' in self.config:
-            return self.config['default_levels'].copy()
-        
-        # Fallback на дефолтные значения
+        if self.config and "default_levels" in self.config:
+            configured: Dict[str, Any] = self.config["default_levels"]
+            return {
+                self._normalize_task_type(task_type): self._normalize_levels(levels)
+                for task_type, levels in configured.items()
+            }
         return {
             "click": [1, 2, 3],
-            "draw": [1, 2],  # Убрали уровень 3 для заданий типа рисование
+            "draw": [1, 2],
             "test": [1, 2],
             "sequence_assembly": [1, 2, 3],
-            "open_answer": [1]
+            "open_answer": [1],
         }
-    
-    def get_available_levels(self, task_type: str, task_ref: Optional[str] = None) -> List[int]:
-        """
-        Получить доступные уровни для задания.
-        
-        Args:
-            task_type: Тип задания (click, draw, test, sequence_assembly, open_answer)
-            task_ref: Ссылка на задание (module/topic/task) для проверки переопределений
-        
-        Returns:
-            Список доступных уровней [1, 2, 3]
-        """
-        # Проверяем hooks для плагинных типов
-        if self.hooks_available and difficulty_hooks:
-            plugin_levels = difficulty_hooks.call_get_levels(task_type, task_ref)
-            if plugin_levels is not None:
-                self.logger.debug(f"Плагин вернул уровни для {task_type}: {plugin_levels}")
-                return plugin_levels
-        
-        # 1. Проверяем переопределение для конкретного задания
-        if task_ref and self.config.get('task_overrides', {}).get(task_ref):
-            override_levels = self.config['task_overrides'][task_ref].get('levels')
-            if override_levels:
-                self.logger.debug(f"Найдено переопределение для задания {task_ref}: {override_levels}")
-                return override_levels
-        
-        # 2. Проверяем переопределение для типа
-        if self.config.get('type_overrides', {}).get(task_type):
-            max_level = self.config['type_overrides'][task_type].get('max_level', 3)
-            levels = list(range(1, max_level + 1))
-            self.logger.debug(f"Найдено переопределение для типа {task_type}: {levels}")
-            return levels
-        
-        # 3. Используем значения по умолчанию
-        return self.default_levels.get(task_type, [1])
-    
-    def get_smart_retry_config(self) -> Dict[str, Any]:
-        """
-        Возвращает конфигурацию Smart Retry.
-        """
-        return self.config.get('smart_retry_defaults', {
-            "near_offset": 2,
-            "near_jitter_max": 2,
-            "max_copies": 5,
-            "training_control_enabled": True
-        })
-    
-    def enhance_task_for_level(
-        self, 
-        task_data: Dict[str, Any], 
-        level: int,
-        task_ref: Optional[str] = None
-    ) -> Dict[str, Any]:
-        """
-        Модифицирует задание в памяти для заданного уровня.
-        
-        НЕ изменяет исходный файл.
-        
-        Args:
-            task_data: Исходные данные задания (из task.json)
-            level: Уровень сложности (1, 2, 3)
-            task_ref: Ссылка на задание для логирования
-        
-        Returns:
-            Модифицированное задание (копия, исходное не изменено)
-        
-        ВАЖНО: Добавляет флаги валидации:
-        - _difficulty_enhanced: True - помечает, что задание модифицировано
-        - _original_type: исходный тип задания - для сохранения исходного типа
-        """
+
+    @staticmethod
+    def _normalize_task_type(task_type: Optional[str]) -> str:
+        value = str(task_type or "").strip().lower()
+        if value == "sequence":
+            return "sequence_assembly"
+        return value
+
+    def _resolve_task_identity(
+        self,
+        task_type: Optional[str] = None,
+        task_data: Optional[Dict[str, Any]] = None,
+        subtype: Optional[str] = None,
+    ) -> Tuple[str, Optional[str]]:
+        data = task_data if isinstance(task_data, dict) else {}
+        content = data.get("content") if isinstance(data.get("content"), dict) else {}
+        resolved_task_type = self._normalize_task_type(
+            task_type
+            or data.get("type")
+            or data.get("task_type")
+            or content.get("type")
+        )
+        resolved_subtype = str(
+            subtype
+            or data.get("subtype")
+            or content.get("subtype")
+            or ""
+        ).strip().lower() or None
+        return resolved_task_type, resolved_subtype
+
+    @staticmethod
+    def _normalize_levels(levels: Optional[List[Any]], supported_levels: Optional[List[int]] = None) -> List[int]:
+        normalized: List[int] = []
+        seen = set()
+        allowed = {int(level) for level in (supported_levels or []) if isinstance(level, int)}
+
+        for raw_level in levels or []:
+            try:
+                level = int(raw_level)
+            except Exception:
+                continue
+            if level < 1:
+                continue
+            if allowed and level not in allowed:
+                continue
+            if level in seen:
+                continue
+            normalized.append(level)
+            seen.add(level)
+
+        normalized.sort()
+        return normalized
+
+    def get_task_difficulty_metadata(self, task_type: Optional[str], subtype: Optional[str] = None) -> Dict[str, Any]:
+        return get_task_difficulty_metadata(self._normalize_task_type(task_type), subtype)
+
+    def _get_supported_levels(self, task_type: str, subtype: Optional[str] = None) -> List[int]:
+        metadata = self.get_task_difficulty_metadata(task_type, subtype)
+        supported_levels = self._normalize_levels(metadata.get("supported_levels"))
+        if supported_levels:
+            return supported_levels
+        return self.default_levels.get(self._normalize_task_type(task_type), [1])
+
+    def _load_task_data_from_ref(self, task_ref: Optional[str]) -> Optional[Dict[str, Any]]:
+        if not task_ref:
+            return None
+        if task_ref in self._task_payload_cache:
+            return copy.deepcopy(self._task_payload_cache[task_ref])
+        if self.storage_service is None:
+            return None
+
         try:
-            # Логируем начало модификации
-            self.logger.debug(
-                f"Начало модификации задания для уровня {level}, "
-                f"ref={task_ref}"
-            )
-            
-            # Создаем глубокую копию для модификации
-            enhanced = copy.deepcopy(task_data)
-            
-            # Определяем исходный тип задания
-            original_type = enhanced.get('type') or enhanced.get('content', {}).get('type', 'unknown')
-            
-            self.logger.debug(
-                f"Исходный тип задания: {original_type}, "
-                f"применяемый уровень: {level}"
-            )
-            
-            # ВАЖНО: Добавляем флаги валидации
-            # Эти флаги используются для идентификации модифицированных заданий
-            enhanced['_difficulty_enhanced'] = True
-            enhanced['_original_type'] = original_type
-            enhanced['_difficulty_level'] = level
-            
-            # Вызываем hook before_enhance (если доступен)
+            parts = [str(part).strip() for part in str(task_ref).split("/") if str(part).strip()]
+            if len(parts) < 3:
+                return None
+            payload = self.storage_service.load_task(parts[0], parts[1], parts[2])
+            task_data = payload.get("task_data") if isinstance(payload, dict) else None
+            cached = copy.deepcopy(task_data) if isinstance(task_data, dict) else None
+            self._task_payload_cache[task_ref] = cached
+            return copy.deepcopy(cached)
+        except Exception as exc:
+            self.logger.debug("Failed to load task payload for %s: %s", task_ref, exc)
+            self._task_payload_cache[task_ref] = None
+            return None
+
+    def _get_task_override_levels(self, task_ref: Optional[str], supported_levels: List[int]) -> List[int]:
+        if not task_ref:
+            return []
+        override = self.config.get("task_overrides", {}).get(task_ref) or {}
+        return self._normalize_levels(override.get("levels"), supported_levels=supported_levels)
+
+    def _get_type_override_levels(self, task_type: str, supported_levels: List[int]) -> List[int]:
+        override = self.config.get("type_overrides", {}).get(self._normalize_task_type(task_type)) or {}
+        try:
+            max_level = int(override.get("max_level"))
+        except Exception:
+            return []
+        del supported_levels
+        return self._normalize_levels(list(range(1, max_level + 1)))
+
+    def _get_task_authored_levels(
+        self,
+        task_data: Optional[Dict[str, Any]],
+        *,
+        supported_levels: List[int],
+        authoring_enabled: bool,
+    ) -> List[int]:
+        if not authoring_enabled or not isinstance(task_data, dict):
+            return []
+        settings = task_data.get("settings")
+        if not isinstance(settings, dict):
+            return []
+
+        for field_name in ("allowed_difficulties", "available_difficulties"):
+            if field_name not in settings:
+                continue
+            return self._normalize_levels(settings.get(field_name), supported_levels=supported_levels)
+        return []
+
+    def get_available_levels(
+        self,
+        task_type: str,
+        task_ref: Optional[str] = None,
+        task_data: Optional[Dict[str, Any]] = None,
+        subtype: Optional[str] = None,
+    ) -> List[int]:
+        resolved_task_data = (
+            copy.deepcopy(task_data)
+            if isinstance(task_data, dict)
+            else self._load_task_data_from_ref(task_ref)
+        )
+        resolved_task_type, resolved_subtype = self._resolve_task_identity(task_type, resolved_task_data, subtype)
+        supported_levels = self._get_supported_levels(resolved_task_type, resolved_subtype)
+        metadata = self.get_task_difficulty_metadata(resolved_task_type, resolved_subtype)
+
+        if self.hooks_available and difficulty_hooks:
+            plugin_levels = difficulty_hooks.call_get_levels(resolved_task_type, task_ref)
+            if plugin_levels is not None:
+                normalized_plugin_levels = self._normalize_levels(plugin_levels, supported_levels=supported_levels)
+                if normalized_plugin_levels:
+                    return normalized_plugin_levels
+
+        override_levels = self._get_task_override_levels(task_ref, supported_levels)
+        if override_levels:
+            return override_levels
+
+        type_override_levels = self._get_type_override_levels(resolved_task_type, supported_levels)
+        base_levels = type_override_levels or supported_levels
+
+        authored_levels = self._get_task_authored_levels(
+            resolved_task_data,
+            supported_levels=base_levels,
+            authoring_enabled=bool(metadata.get("authoring_enabled")),
+        )
+        if authored_levels:
+            return authored_levels
+
+        if type_override_levels:
+            return type_override_levels
+
+        return supported_levels or self.default_levels.get(resolved_task_type, [1])
+
+    def uses_explicit_level_selection(
+        self,
+        task_type: str,
+        task_ref: Optional[str] = None,
+        task_data: Optional[Dict[str, Any]] = None,
+        subtype: Optional[str] = None,
+    ) -> bool:
+        resolved_task_data = (
+            copy.deepcopy(task_data)
+            if isinstance(task_data, dict)
+            else self._load_task_data_from_ref(task_ref)
+        )
+        resolved_task_type, resolved_subtype = self._resolve_task_identity(task_type, resolved_task_data, subtype)
+        supported_levels = self._get_supported_levels(resolved_task_type, resolved_subtype)
+        metadata = self.get_task_difficulty_metadata(resolved_task_type, resolved_subtype)
+
+        if self.hooks_available and difficulty_hooks:
+            plugin_levels = difficulty_hooks.call_get_levels(resolved_task_type, task_ref)
+            if plugin_levels is not None:
+                normalized_plugin_levels = self._normalize_levels(plugin_levels, supported_levels=supported_levels)
+                if normalized_plugin_levels:
+                    return normalized_plugin_levels != supported_levels
+
+        override_levels = self._get_task_override_levels(task_ref, supported_levels)
+        if override_levels:
+            return override_levels != supported_levels
+
+        type_override_levels = self._get_type_override_levels(resolved_task_type, supported_levels)
+        base_levels = type_override_levels or supported_levels
+        authored_levels = self._get_task_authored_levels(
+            resolved_task_data,
+            supported_levels=base_levels,
+            authoring_enabled=bool(metadata.get("authoring_enabled")),
+        )
+        if authored_levels:
+            return authored_levels != base_levels
+
+        return False
+
+    def get_smart_retry_config(self) -> Dict[str, Any]:
+        return self.config.get(
+            "smart_retry_defaults",
+            {
+                "near_offset": 2,
+                "near_jitter_max": 2,
+                "max_copies": 5,
+                "training_control_enabled": True,
+            },
+        )
+
+    @staticmethod
+    def normalize_requested_level(requested_level: Any, available_levels: List[int]) -> int:
+        normalized_levels = sorted(int(level) for level in available_levels if isinstance(level, int))
+        if not normalized_levels:
+            return 1
+
+        try:
+            requested = int(requested_level)
+        except Exception:
+            return normalized_levels[0]
+
+        if requested in normalized_levels:
+            return requested
+
+        lower_or_equal = [level for level in normalized_levels if level <= requested]
+        if lower_or_equal:
+            return lower_or_equal[-1]
+        return normalized_levels[0]
+
+    @classmethod
+    def get_next_allowed_level(cls, current_level: Any, available_levels: List[int]) -> int:
+        normalized_levels = sorted(int(level) for level in available_levels if isinstance(level, int))
+        if not normalized_levels:
+            return 1
+        current = cls.normalize_requested_level(current_level, normalized_levels)
+        for level in normalized_levels:
+            if level > current:
+                return level
+        return normalized_levels[-1]
+
+    @classmethod
+    def get_previous_allowed_level(cls, current_level: Any, available_levels: List[int]) -> int:
+        normalized_levels = sorted(int(level) for level in available_levels if isinstance(level, int))
+        if not normalized_levels:
+            return 1
+        current = cls.normalize_requested_level(current_level, normalized_levels)
+        previous = normalized_levels[0]
+        for level in normalized_levels:
+            if level >= current:
+                return previous
+            previous = level
+        return normalized_levels[-1]
+
+    @staticmethod
+    def get_progression_step_count(available_levels: List[int]) -> int:
+        normalized_levels = [int(level) for level in available_levels if isinstance(level, int)]
+        return max(1, len(normalized_levels))
+
+    @classmethod
+    def get_iteration_level_by_step(cls, target_step: Any, available_levels: List[int]) -> int:
+        normalized_levels = sorted(int(level) for level in available_levels if isinstance(level, int))
+        if not normalized_levels:
+            return 1
+        try:
+            step = max(1, int(target_step))
+        except Exception:
+            step = 1
+        return normalized_levels[min(step - 1, len(normalized_levels) - 1)]
+
+    def enhance_task_for_level(
+        self,
+        task_data: Dict[str, Any],
+        level: int,
+        task_ref: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        try:
+            if not isinstance(task_data, dict):
+                return {"_difficulty_enhanced": False}
+            enhanced = copy.deepcopy(task_data or {})
+            task_type, subtype = self._resolve_task_identity(task_data=enhanced)
+            del subtype
+            try:
+                normalized_level = max(1, int(level))
+            except Exception:
+                normalized_level = 1
+
+            original_type = enhanced.get("type") or enhanced.get("content", {}).get("type", "unknown")
+            enhanced["_difficulty_enhanced"] = True
+            enhanced["_original_type"] = original_type
+            enhanced["_difficulty_level"] = normalized_level
+
             if self.hooks_available and difficulty_hooks:
-                enhanced_before = copy.deepcopy(enhanced)
-                enhanced = difficulty_hooks.call_before_enhance(enhanced, level, task_ref)
-                if enhanced != enhanced_before:
-                    self.logger.debug(
-                        f"Hook before_enhance модифицировал задание для типа {original_type}"
-                    )
-            
-            # Определяем тип задания для модификации
-            task_type = enhanced.get('type') or enhanced.get('content', {}).get('type', 'unknown')
-            
-            # Модифицируем задание в зависимости от типа и уровня
-            if task_type == 'click':
-                self.logger.debug(f"Применение модификации для click задания, уровень {level}")
-                enhanced = self._enhance_click_task(enhanced, level)
-            elif task_type == 'draw':
-                self.logger.debug(f"Применение модификации для draw задания, уровень {level}")
-                enhanced = self._enhance_draw_task(enhanced, level)
-            elif task_type == 'test':
-                self.logger.debug(f"Применение модификации для test задания, уровень {level}")
-                enhanced = self._enhance_test_task(enhanced, level)
-            elif task_type == 'sequence_assembly':
-                self.logger.debug(f"Применение модификации для sequence_assembly задания, уровень {level}")
-                enhanced = self._enhance_sequence_task(enhanced, level)
-            elif task_type == 'open_answer':
-                # Open Answer не поддерживает уровни - возвращаем как есть
-                self.logger.debug("Open Answer не поддерживает уровни сложности, возвращаем исходное задание")
+                enhanced = difficulty_hooks.call_before_enhance(enhanced, normalized_level, task_ref)
+
+            if task_type == "click":
+                enhanced = self._enhance_click_task(enhanced, normalized_level)
+            elif task_type == "draw":
+                enhanced = self._enhance_draw_task(enhanced, normalized_level)
+            elif task_type == "test":
+                enhanced = self._enhance_test_task(enhanced, normalized_level)
+            elif task_type == "sequence_assembly":
+                enhanced = self._enhance_sequence_task(enhanced, normalized_level)
+            elif task_type == "open_answer":
                 pass
-            else:
-                # Неизвестный тип - проверяем hooks для плагинных типов
-                if self.hooks_available and difficulty_hooks:
-                    # Проверяем, есть ли обработчики для плагинного типа
-                    plugin_levels = difficulty_hooks.call_get_levels(task_type, task_ref)
-                    if plugin_levels and level in plugin_levels:
-                        # Плагин поддерживает этот уровень - используем hooks для модификации
-                        # hook already called in call_before_enhance above
-                        plugin_enhanced = difficulty_hooks.call_before_enhance(enhanced, level, task_ref)
-                        if plugin_enhanced != enhanced:
-                            enhanced = plugin_enhanced
-                            self.logger.debug(
-                                f"Плагин модифицировал задание типа {task_type} для уровня {level}"
-                            )
-                    else:
-                        # Плагин не поддерживает этот уровень или нет обработчиков
-                        # Возвращаем задание как есть (уровень 1)
-                        self.logger.debug(
-                            f"Плагин не поддерживает уровень {level} для типа {task_type}, "
-                            f"доступные уровни: {plugin_levels}"
-                        )
-                else:
-                    # Hooks не доступны - возвращаем задание как есть (уровень 1)
-                    self.logger.debug(
-                        f"Hooks не доступны, тип {task_type} не поддерживает уровни сложности, "
-                        f"возвращаем исходное задание"
-                    )
-            
-            # Вызываем hook after_enhance (если доступен)
+            elif self.hooks_available and difficulty_hooks:
+                plugin_levels = difficulty_hooks.call_get_levels(task_type, task_ref)
+                if plugin_levels and normalized_level in plugin_levels:
+                    enhanced = difficulty_hooks.call_before_enhance(enhanced, normalized_level, task_ref)
+
             if self.hooks_available and difficulty_hooks:
-                enhanced_after = copy.deepcopy(enhanced)
-                enhanced = difficulty_hooks.call_after_enhance(enhanced, level, task_ref)
-                if enhanced != enhanced_after:
-                    self.logger.debug(
-                        f"Hook after_enhance модифицировал задание для типа {task_type}"
-                    )
-            
-            # Логируем итоговые изменения
-            content = enhanced.get('content', {})
-            mode = content.get('mode', 'unknown')
-            requires_labels = content.get('requires_labels', False)
-            requires_drawing = content.get('requires_drawing', False)
-            
-            self.logger.info(
-                f"Задание успешно модифицировано для уровня {level}: "
-                f"тип={task_type}, ref={task_ref}, mode={mode}, "
-                f"requires_labels={requires_labels}, requires_drawing={requires_drawing}"
-            )
-            
-            self.logger.debug(
-                f"Детали модификации: "
-                f"flags=[_difficulty_enhanced={enhanced.get('_difficulty_enhanced')}, "
-                f"_original_type={enhanced.get('_original_type')}, "
-                f"_difficulty_level={enhanced.get('_difficulty_level')}]"
-            )
-            
+                enhanced = difficulty_hooks.call_after_enhance(enhanced, normalized_level, task_ref)
+
             return enhanced
-            
-        except Exception as e:
-            # При ошибке логируем и возвращаем исходное задание (fallback на уровень 1)
-            self.logger.error(
-                f"Ошибка при модификации задания для уровня {level}: {e}, "
-                f"ref={task_ref}, возвращаем исходное задание"
-            )
-            # Возвращаем исходное задание без модификации
-            if task_data is None:
-                # Если task_data None, возвращаем пустой словарь с флагом
-                return {'_difficulty_enhanced': False}
-            original = copy.deepcopy(task_data)
-            original['_difficulty_enhanced'] = False  # Помечаем как не модифицированное
+        except Exception as exc:
+            self.logger.error("Failed to enhance task for level %s (%s): %s", level, task_ref, exc)
+            original = copy.deepcopy(task_data or {})
+            original["_difficulty_enhanced"] = False
             return original
-    
+
     def _enhance_click_task(self, task_data: Dict[str, Any], level: int) -> Dict[str, Any]:
-        """
-        Модификация click задания для уровня.
-        
-        Args:
-            task_data: Данные задания
-            level: Уровень сложности (1, 2, 3)
-        
-        Returns:
-            Модифицированное задание
-        """
-        content = task_data.get('content', {})
-        
+        content = task_data.get("content", {})
+
         if level == 1:
-            # Уровень 1: базовый клик (без изменений)
-            content['mode'] = 'click'
-            content['requires_labels'] = False
-            content['requires_drawing'] = False
+            content["mode"] = "click"
+            content["requires_labels"] = False
+            content["requires_drawing"] = False
         elif level == 2:
-            # Уровень 2: клик + название
-            content['mode'] = 'click_and_label'
-            content['requires_labels'] = True
-            content['requires_drawing'] = False
-            original_prompt = content.get('prompt', 'Кликните на область')
-            content['prompt'] = f"{original_prompt} и назовите её"
-        elif level == 3:
-            # Уровень 3: обводка + название
-            content['mode'] = 'draw_and_label'
-            content['requires_labels'] = True
-            content['requires_drawing'] = True
-            original_prompt = content.get('prompt', 'Кликните на область')
-            content['prompt'] = f"Обведите контур и назовите: {original_prompt}"
-        
-        task_data['content'] = content
+            content["mode"] = "click_and_label"
+            content["requires_labels"] = True
+            content["requires_drawing"] = False
+            original_prompt = content.get("prompt", "Кликните на область")
+            content["prompt"] = f"{original_prompt} и назовите её"
+        elif level >= 3:
+            content["mode"] = "draw_and_label"
+            content["requires_labels"] = True
+            content["requires_drawing"] = True
+            original_prompt = content.get("prompt", "Кликните на область")
+            content["prompt"] = f"Обведите контур и назовите: {original_prompt}"
+
+        task_data["content"] = content
         return task_data
-    
+
     def _enhance_draw_task(self, task_data: Dict[str, Any], level: int) -> Dict[str, Any]:
-        """
-        Модификация draw задания для уровня.
-        
-        Args:
-            task_data: Данные задания
-            level: Уровень сложности (1, 2, 3)
-        
-        Returns:
-            Модифицированное задание
-        """
-        content = task_data.get('content', {})
-        
+        content = task_data.get("content", {})
+
         if level == 1:
-            content['mode'] = 'draw'
-            content['requires_labels'] = False
-            content['requires_explanation'] = False
+            content["mode"] = "draw"
+            content["requires_labels"] = False
+            content["requires_explanation"] = False
+            content["requires_drawing"] = False
         elif level == 2:
-            # Уровень 2: рисование контуров + название (как уровень 3 для click)
-            content['mode'] = 'draw_and_label'
-            content['requires_labels'] = True
-            content['requires_drawing'] = True  # Добавить это поле
-            content['requires_explanation'] = False
-            original_prompt = content.get('prompt', 'Обведите контур')
-            content['prompt'] = f"Обведите контур и назовите: {original_prompt}"  # Изменить промпт как в click уровне 3
-        elif level == 3:
-            content['mode'] = 'draw_multiple_and_explain'
-            content['requires_labels'] = True
-            content['requires_explanation'] = True
-            original_prompt = content.get('prompt', 'Обведите контур')
-            content['prompt'] = f"Обведите несколько связанных структур и опишите связь между ними: {original_prompt}"
-        
-        task_data['content'] = content
+            content["mode"] = "draw_and_label"
+            content["requires_labels"] = True
+            content["requires_drawing"] = True
+            content["requires_explanation"] = False
+            original_prompt = content.get("prompt", "Обведите контур")
+            content["prompt"] = f"Обведите контур и назовите: {original_prompt}"
+        elif level >= 3:
+            content["mode"] = "draw_multiple_and_explain"
+            content["requires_labels"] = True
+            content["requires_explanation"] = True
+            content["requires_drawing"] = True
+            original_prompt = content.get("prompt", "Обведите контур")
+            content["prompt"] = f"Обведите несколько связанных структур и опишите связь между ними: {original_prompt}"
+
+        task_data["content"] = content
         return task_data
-    
+
     def _enhance_test_task(self, task_data: Dict[str, Any], level: int) -> Dict[str, Any]:
-        """
-        Модификация test задания для уровня.
-        
-        Args:
-            task_data: Данные задания
-            level: Уровень сложности (1, 2)
-        
-        Returns:
-            Модифицированное задание
-        """
-        content = task_data.get('content', {})
+        content = task_data.get("content", {})
+        content.pop("show_level_labels", None)
+        content.pop("show_block_labels", None)
+        content.pop("requires_level_names", None)
+        content.pop("requires_block_names", None)
 
-        # P0 fix: test task must not inherit sequence_assembly flags.
-        content.pop('show_level_labels', None)
-        content.pop('show_block_labels', None)
-        content.pop('requires_level_names', None)
-        content.pop('requires_block_names', None)
+        if level <= 1:
+            content["mode"] = "multiple_choice"
+            content["show_options"] = True
+            content["requires_text_input"] = False
+        else:
+            content["mode"] = "open_question"
+            content["show_options"] = False
+            content["requires_text_input"] = True
 
-        if level == 1:
-            # TEST L1: multiple choice
-            content['mode'] = 'multiple_choice'
-            content['show_options'] = True
-            content['requires_text_input'] = False
-        elif level >= 2:
-            # TEST supports only two levels; 2+ maps to open-text mode.
-            content['mode'] = 'open_question'
-            content['show_options'] = False
-            content['requires_text_input'] = True
-
-        task_data['content'] = content
+        task_data["content"] = content
         return task_data
 
     def _enhance_sequence_task(self, task_data: Dict[str, Any], level: int) -> Dict[str, Any]:
-        """
-        Sequence Assembly difficulty progression flags.
-
-        L1: show level/block labels
-        L2: require level names
-        L3: require level names and block names
-        """
-        content = task_data.get('content', {})
-
-        # Remove unrelated test flags if they leaked into content.
-        content.pop('show_options', None)
-        content.pop('requires_text_input', None)
+        content = task_data.get("content", {})
+        content.pop("show_options", None)
+        content.pop("requires_text_input", None)
 
         if level == 1:
-            content['show_level_labels'] = True
-            content['show_block_labels'] = True
-            content['requires_level_names'] = False
-            content['requires_block_names'] = False
+            content["show_level_labels"] = True
+            content["show_block_labels"] = True
+            content["requires_level_names"] = False
+            content["requires_block_names"] = False
         elif level == 2:
-            content['show_level_labels'] = False
-            content['show_block_labels'] = True
-            content['requires_level_names'] = True
-            content['requires_block_names'] = False
-        elif level == 3:
-            content['show_level_labels'] = False
-            content['show_block_labels'] = False
-            content['requires_level_names'] = True
-            content['requires_block_names'] = True
+            content["show_level_labels"] = False
+            content["show_block_labels"] = True
+            content["requires_level_names"] = True
+            content["requires_block_names"] = False
+        elif level >= 3:
+            content["show_level_labels"] = False
+            content["show_block_labels"] = False
+            content["requires_level_names"] = True
+            content["requires_block_names"] = True
 
-        task_data['content'] = content
+        task_data["content"] = content
         return task_data
-    
-    def _should_use_draw_instead_of_click(self, task_data: Dict[str, Any]) -> bool:
-        """
-        Определяет, нужно ли использовать Draw вместо Click.
-        
-        Draw нужен, если в задании есть хотя бы одна freehand-аннотация.
-        Если только полигоны - можно использовать Click.
-        
-        ПРИМЕЧАНИЕ: В текущей реализации этот метод не используется.
-        Задания типа 'draw' всегда остаются типом 'draw' на всех уровнях.
-        Оставлен для возможного будущего использования.
-        """
-        content = task_data.get('content', {})
-        annotations = content.get('annotations', [])
-        
-        # Проверяем наличие freehand-аннотаций
-        for ann in annotations:
-            ann_type = ann.get('type', '')
-            shape = ann.get('shape', '')
-            if ann_type == 'freehand' or shape == 'freehand':
-                return True  # Есть freehand - нужен Draw
-        
-        # Только полигоны - можно использовать Click
-        return False
-    
-    def get_initial_level(self, task_data: Dict[str, Any]) -> int:
-        """
-        Определяет начальный уровень для задания.
-        
-        Использует settings.difficulty для обратной совместимости.
-        Если уровень больше максимального доступного, возвращает максимальный.
-        Если уровень меньше минимального доступного, возвращает минимальный.
-        """
-        # Используем settings.difficulty как начальный уровень
-        default_level = task_data.get('settings', {}).get('difficulty', 1)
-        
-        # Ограничиваем диапазон в зависимости от типа задания
-        task_type = task_data.get('type') or task_data.get('content', {}).get('type', 'click')
-        available_levels = self.get_available_levels(task_type)
-        
-        if not available_levels:
-            # Если нет доступных уровней, возвращаем 1
-            return 1
-        
-        if default_level not in available_levels:
-            # Если уровень не доступен, ограничиваем диапазон
-            if default_level < min(available_levels):
-                # Уровень меньше минимального - возвращаем минимальный
-                return min(available_levels)
-            else:
-                # Уровень больше максимального - возвращаем максимальный
-                return max(available_levels)
-        
-        return default_level
 
+    def _should_use_draw_instead_of_click(self, task_data: Dict[str, Any]) -> bool:
+        content = task_data.get("content", {})
+        annotations = content.get("annotations", [])
+        for annotation in annotations:
+            annotation_type = annotation.get("type", "")
+            shape = annotation.get("shape", "")
+            if annotation_type == "freehand" or shape == "freehand":
+                return True
+        return False
+
+    def get_initial_level(self, task_data: Dict[str, Any]) -> int:
+        default_level = task_data.get("settings", {}).get("difficulty", 1)
+        task_type, subtype = self._resolve_task_identity(task_data=task_data)
+        available_levels = self.get_available_levels(task_type, task_data=task_data, subtype=subtype)
+        return self.normalize_requested_level(default_level, available_levels)

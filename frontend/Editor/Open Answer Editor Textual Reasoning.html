@@ -25,19 +25,18 @@
 <body class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display antialiased">
     <main class="flex-1 flex flex-col h-full overflow-hidden relative">
         <header
-            class="h-16 flex items-center justify-between px-6 bg-surface-1 border-b border-border-subtle shrink-0 z-10">
-            <div class="flex items-center gap-4">
+            class="open-answer-editor-header h-16 flex items-center justify-between gap-4 px-6 bg-surface-1 border-b border-border-subtle shrink-0 z-10">
+            <div class="open-answer-editor-header__main flex min-w-0 flex-1 items-center gap-4">
                 <button id="back-to-dashboard-btn" title="Библиотека заданий"
                     class="p-2 rounded-full hover:bg-bg-hover text-text-secondary transition-colors">
                     <span class="material-symbols-outlined">arrow_back</span>
                 </button>
-                <div class="flex flex-col">
+                <div class="open-answer-editor-header__title-row flex min-w-0 flex-1 items-center gap-4">
                     <h2 id="editor-title" class="text-lg font-bold text-text-main tracking-tight">Редактирование задания
                     </h2>
-                    <div id="save-status-container" class="flex items-center gap-2.5 transition-all duration-300">
-                        <div id="save-status-indicator" class="w-1.5 h-1.5 rounded-full bg-success transition-all">
-                        </div>
-                        <div class="flex flex-col">
+                    <div id="save-status-container" class="open-answer-header-status status-cluster" data-tone="success">
+                        <div id="save-status-indicator" class="status-cluster__dot"></div>
+                        <div class="status-cluster__body">
                             <span id="save-status-text"
                                 class="text-[10px] font-bold text-text-secondary uppercase tracking-tight leading-none">Изменения
                                 сохранены</span>
@@ -47,9 +46,9 @@
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="open-answer-editor-header__actions flex items-center gap-3">
                 <button id="save-task-btn" class="btn-primary flex items-center gap-2 text-sm font-semibold shadow-md">
-                    <span class="material-symbols-outlined text-[18px]">Сохранить</span>
+                    <span class="material-symbols-outlined text-[18px]">save</span>
                     Сохранить
                 </button>
             </div>
@@ -133,17 +132,6 @@
                             <h3 class="text-sm font-bold text-text-main">Требования к ответу</h3>
                         </div>
                         <div class="flex flex-col gap-4">
-                            <div class="flex flex-col gap-1.5">
-                                <label class="text-xs font-semibold text-text-secondary uppercase tracking-wide">Минимум
-                                    ключевых слов</label>
-                                <select id="min-keywords-input"
-                                    class="w-full rounded-md border-border-subtle py-2 pl-3 pr-8 text-sm focus:ring-primary focus:border-primary text-text-main bg-surface-1">
-                                    <option value="-1" selected>Все ключевые слова обязательны</option>
-                                    <option value="1">Минимум 1 ключевое слово</option>
-                                    <option value="2">Минимум 2 ключевых слова</option>
-                                    <option value="3">Минимум 3 ключевых слова</option>
-                                </select>
-                            </div>
                             <div class="flex items-start gap-3 mt-2">
                                 <div class="flex h-5 items-center">
                                     <input
@@ -156,6 +144,15 @@
                                     <p class="text-xs text-text-muted mt-0.5">Ключевые слова должны встречаться в
                                         эталонном порядке.</p>
                                 </div>
+                            </div>
+                            <div class="flex flex-col gap-1.5 pt-2 border-t border-border-subtle">
+                                <label class="text-xs font-semibold text-text-secondary uppercase tracking-wide"
+                                    for="max-length-input">Максимальная длина ответа</label>
+                                <input id="max-length-input" type="number" min="1" inputmode="numeric"
+                                    class="w-full rounded-md border-border-subtle py-2 px-3 text-sm focus:ring-primary focus:border-primary text-text-main bg-surface-1"
+                                    placeholder="Оставьте пустым, если ответ можно вводить без лимита" />
+                                <p class="text-xs text-text-muted">Необязательная настройка. Если задать лимит, в
+                                    тренажёре появится счётчик символов и ограничение на ввод.</p>
                             </div>
                         </div>
                     </div>
@@ -200,7 +197,6 @@
         </div>
     </div>
 
-    <script src="../../assets/ThemeSwitcherUI.js"></script>
     <script src="../../assets/ConnectionMonitor.js"></script>
 </body>
 

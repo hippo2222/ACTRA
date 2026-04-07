@@ -29,6 +29,296 @@
    /* Light glass on dark surfaces */
    --color-glass-light: rgba(255, 255, 255, 0.1);
    --color-glass-strong: rgba(255, 255, 255, 0.2);
+
+   /* Heatmap defaults (override per theme as needed) */
+   --color-heatmap-empty: var(--color-border-strong);
+   --color-heatmap-low: var(--color-primary-light);
+   --color-heatmap-mid: var(--color-primary);
+   --color-heatmap-high: var(--color-primary-dark);
+   --color-heatmap-today-ring: var(--color-accent);
+
+   /* Token architecture:
+      - theme blocks below own base primitives
+      - component tokens describe reusable UI patterns across screens
+      - page aliases stay reserved for screen-specific compositions only
+   */
+
+   /* Component tokens: secondary copy */
+   --color-component-secondary-copy: color-mix(in srgb, var(--color-text-secondary) 58%, var(--color-text-main) 42%);
+   --color-component-secondary-copy-strong: color-mix(in srgb, var(--color-text-secondary) 54%, var(--color-text-main) 46%);
+
+   /* Component tokens: elevated cards/surfaces */
+   --color-component-card-elevated-bg-start: color-mix(in srgb, var(--color-surface-1) 90%, var(--color-primary-light) 10%);
+   --color-component-card-elevated-bg-mid: color-mix(in srgb, var(--color-surface-1) 96%, var(--color-primary-light) 4%);
+   --color-component-card-elevated-bg-end: color-mix(in srgb, var(--color-surface-1) 96%, var(--color-accent-light) 4%);
+   --color-component-card-elevated-bg: linear-gradient(155deg, var(--color-component-card-elevated-bg-start) 0%, var(--color-component-card-elevated-bg-mid) 52%, var(--color-component-card-elevated-bg-end) 100%);
+   --color-component-card-elevated-border: color-mix(in srgb, var(--color-border-strong) 44%, var(--color-primary-light) 56%);
+   --color-component-card-elevated-border-hover: color-mix(in srgb, var(--color-primary) 56%, var(--color-border-strong) 44%);
+
+   /* Component tokens: muted buttons and icon actions */
+   --color-component-button-muted-bg: color-mix(in srgb, var(--color-surface-1) 84%, var(--color-primary-light) 16%);
+   --color-component-button-muted-border: color-mix(in srgb, var(--color-border-strong) 38%, var(--color-primary-light) 62%);
+   --color-component-button-muted-fg: color-mix(in srgb, var(--color-text-secondary) 18%, var(--color-text-main) 82%);
+   --color-component-button-muted-hover-bg: color-mix(in srgb, var(--color-surface-1) 68%, var(--color-primary-light) 32%);
+   --color-component-button-muted-hover-border: color-mix(in srgb, var(--color-primary) 58%, var(--color-border-strong) 42%);
+   --color-component-button-muted-hover-fg: var(--color-text-main);
+   --color-component-button-muted-active-bg: color-mix(in srgb, var(--color-surface-1) 58%, var(--color-primary-light) 42%);
+
+   --color-component-icon-button-muted-bg: color-mix(in srgb, var(--color-surface-1) 82%, var(--color-surface-2) 18%);
+   --color-component-icon-button-muted-border: color-mix(in srgb, var(--color-border-strong) 24%, transparent);
+   --color-component-icon-button-muted-fg: color-mix(in srgb, var(--color-text-secondary) 44%, var(--color-text-main) 56%);
+   --color-component-icon-button-muted-hover-bg: color-mix(in srgb, var(--color-surface-1) 72%, var(--color-primary-light) 28%);
+   --color-component-icon-button-muted-hover-border: color-mix(in srgb, var(--color-primary) 42%, var(--color-border-strong) 58%);
+   --color-component-icon-button-muted-hover-fg: var(--color-text-main);
+
+   /* Component tokens: segmented controls/tabs */
+   --color-component-segmented-bg: color-mix(in srgb, var(--color-surface-2) 82%, var(--color-surface-1) 18%);
+   --color-component-segmented-border: color-mix(in srgb, var(--color-border-subtle) 64%, var(--color-border-strong) 36%);
+   --color-component-segmented-button-fg: color-mix(in srgb, var(--color-text-secondary) 18%, var(--color-text-main) 82%);
+   --color-component-segmented-button-hover-bg: color-mix(in srgb, var(--color-surface-1) 72%, transparent);
+   --color-component-segmented-button-hover-fg: var(--color-text-main);
+   --color-component-segmented-button-active-bg: var(--color-surface-1);
+   --color-component-segmented-button-active-fg: var(--color-text-main);
+   --color-component-segmented-button-active-border: color-mix(in srgb, var(--color-border-strong) 56%, var(--color-primary-light) 44%);
+   --shadow-component-segmented: inset 0 1px 0 color-mix(in srgb, var(--color-surface-1) 18%, transparent);
+   --shadow-component-segmented-button-active: 0 1px 2px rgba(15, 23, 42, 0.12), inset 0 1px 0 color-mix(in srgb, var(--color-surface-1) 28%, transparent);
+
+   /* Component tokens: pills/badges */
+   --color-component-pill-neutral-bg: color-mix(in srgb, var(--color-surface-1) 58%, var(--color-primary-light) 42%);
+   --color-component-pill-neutral-fg: color-mix(in srgb, var(--color-text-main) 62%, var(--color-primary) 38%);
+   --color-component-pill-neutral-border: color-mix(in srgb, var(--color-border-strong) 34%, var(--color-primary-light) 66%);
+   --color-component-pill-success-bg: color-mix(in srgb, var(--color-surface-1) 44%, var(--color-success-light) 56%);
+   --color-component-pill-success-fg: color-mix(in srgb, var(--color-text-main) 54%, var(--color-success-darker) 46%);
+   --color-component-pill-success-border: color-mix(in srgb, var(--color-border-strong) 26%, var(--color-success) 74%);
+   --color-component-pill-warning-bg: color-mix(in srgb, var(--color-surface-1) 48%, var(--color-warning-light) 52%);
+   --color-component-pill-warning-fg: color-mix(in srgb, var(--color-text-main) 56%, var(--color-warning-darker) 44%);
+   --color-component-pill-warning-border: color-mix(in srgb, var(--color-border-strong) 28%, var(--color-warning) 72%);
+   --color-component-pill-error-bg: color-mix(in srgb, var(--color-surface-1) 48%, var(--color-error-light) 52%);
+   --color-component-pill-error-fg: color-mix(in srgb, var(--color-text-main) 52%, var(--color-error-darker) 48%);
+   --color-component-pill-error-border: color-mix(in srgb, var(--color-border-strong) 28%, var(--color-error) 72%);
+   --color-component-pill-info-bg: color-mix(in srgb, var(--color-surface-1) 50%, var(--color-info-light) 50%);
+   --color-component-pill-info-fg: color-mix(in srgb, var(--color-text-main) 54%, var(--color-info-darker) 46%);
+   --color-component-pill-info-border: color-mix(in srgb, var(--color-border-strong) 28%, var(--color-info) 72%);
+
+   /* Component tokens: rows, alerts, empty states */
+   --color-component-panel-row-bg: color-mix(in srgb, var(--color-surface-2) 86%, var(--color-surface-1) 14%);
+   --color-component-panel-row-border: color-mix(in srgb, var(--color-border-subtle) 62%, var(--color-border-strong) 38%);
+   --color-component-panel-row-soft-bg: color-mix(in srgb, var(--color-surface-1) 90%, var(--color-bg-secondary));
+   --color-component-panel-row-soft-border: var(--color-border-subtle);
+   --color-component-panel-row-chip-bg: color-mix(in srgb, var(--color-surface-1) 82%, var(--color-bg-secondary));
+   --color-component-panel-row-chip-fg: color-mix(in srgb, var(--color-text-secondary) 82%, var(--color-text-main));
+   --color-component-empty-state-bg: linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 92%, var(--color-primary-light) 8%) 0%, color-mix(in srgb, var(--color-surface-1) 96%, var(--color-accent-light) 4%) 100%);
+   --color-component-empty-state-border: color-mix(in srgb, var(--color-border-strong) 34%, var(--color-primary-light) 66%);
+   --color-component-empty-state-icon-bg: color-mix(in srgb, var(--color-primary-light) 18%, var(--color-surface-1) 82%);
+   --color-component-empty-state-icon-fg: color-mix(in srgb, var(--color-primary) 48%, var(--color-text-main) 52%);
+   --color-component-empty-state-copy: var(--color-component-secondary-copy);
+   --color-component-icon-tint-bg: color-mix(in srgb, var(--color-primary-light) 52%, var(--color-surface-1));
+   --color-component-icon-tint-ring: color-mix(in srgb, var(--color-primary-light) 70%, transparent);
+   --color-component-tooltip-button-bg: color-mix(in srgb, var(--color-surface-1) 70%, var(--color-bg-secondary));
+   --color-component-tooltip-button-fg: color-mix(in srgb, var(--color-text-main) 78%, var(--color-text-secondary));
+   --color-component-tooltip-button-hover-bg: color-mix(in srgb, var(--color-primary-light) 44%, var(--color-surface-1));
+   --color-component-tooltip-button-hover-border: rgba(71, 85, 105, 0.28);
+   --color-component-tooltip-button-hover-fg: var(--color-text-main);
+
+   /* Component tokens: heatmap/calendar cells */
+   --color-component-heatmap-cell-border: color-mix(in srgb, var(--color-border-strong) 28%, transparent);
+   --color-component-heatmap-low-outline: color-mix(in srgb, var(--color-heatmap-low) 44%, var(--color-surface-1));
+   --color-component-heatmap-mid-outline: color-mix(in srgb, var(--color-heatmap-mid) 52%, var(--color-surface-1));
+   --color-component-heatmap-high-outline: color-mix(in srgb, var(--color-heatmap-high) 62%, var(--color-surface-1));
+   --color-component-heatmap-peak: color-mix(in srgb, var(--color-heatmap-high) 72%, var(--color-accent));
+   --color-component-heatmap-peak-outline: color-mix(in srgb, var(--color-accent) 68%, transparent);
+   --color-component-heatmap-today-inline-ring: color-mix(in srgb, var(--color-surface-1) 40%, transparent);
+   --color-component-heatmap-swatch-border: color-mix(in srgb, var(--color-border-subtle) 65%, transparent);
+   --color-component-heatmap-legend-copy: var(--color-component-secondary-copy);
+
+   /* Page aliases: Main screen only */
+   --color-main-secondary-copy: var(--color-component-secondary-copy);
+   --color-main-secondary-copy-strong: var(--color-component-secondary-copy-strong);
+
+   --color-main-quick-access-heading-icon-bg: color-mix(in srgb, var(--color-primary-light) 18%, var(--color-surface-1) 82%);
+   --color-main-quick-access-heading-icon-fg: color-mix(in srgb, var(--color-primary) 48%, var(--color-text-main) 52%);
+   --color-main-quick-access-heading-icon-border: color-mix(in srgb, var(--color-primary-light) 54%, var(--color-border-strong) 46%);
+   --color-main-quick-access-kicker: color-mix(in srgb, var(--color-primary) 72%, var(--color-text-main) 28%);
+   --color-main-quick-access-count-bg: color-mix(in srgb, var(--color-surface-2) 86%, var(--color-primary-light) 14%);
+   --color-main-quick-access-count-border: color-mix(in srgb, var(--color-border-strong) 42%, var(--color-primary-light) 58%);
+   --color-main-quick-access-show-all-bg: var(--color-component-button-muted-bg);
+   --color-main-quick-access-show-all-border: var(--color-component-button-muted-border);
+   --color-main-quick-access-show-all-bg-hover: var(--color-component-button-muted-hover-bg);
+   --color-main-quick-access-show-all-border-hover: var(--color-component-button-muted-hover-border);
+   --color-main-quick-access-list-border: color-mix(in srgb, var(--color-border-strong) 42%, var(--color-primary-light) 58%);
+   --color-main-quick-access-list-glow: color-mix(in srgb, var(--color-primary-light) 16%, transparent);
+   --color-main-quick-access-list-bg-start: color-mix(in srgb, var(--color-surface-1) 94%, var(--color-primary-light) 6%);
+   --color-main-quick-access-card-border: var(--color-component-card-elevated-border);
+   --color-main-quick-access-card-border-hover: var(--color-component-card-elevated-border-hover);
+   --color-main-quick-access-card-border-paused: color-mix(in srgb, var(--color-warning) 40%, var(--color-border-subtle) 60%);
+   --color-main-quick-access-card-border-critical: color-mix(in srgb, var(--color-error) 34%, var(--color-border-subtle) 66%);
+   --color-main-quick-access-card-border-mastered: color-mix(in srgb, var(--color-success) 28%, var(--color-border-subtle) 72%);
+   --color-main-quick-access-card-bg-start: var(--color-component-card-elevated-bg-start);
+   --color-main-quick-access-card-bg-mid: var(--color-component-card-elevated-bg-mid);
+   --color-main-quick-access-card-bg-end: var(--color-component-card-elevated-bg-end);
+   --color-main-quick-access-media-bg: linear-gradient(145deg, color-mix(in srgb, var(--color-primary-light) 58%, white 42%), color-mix(in srgb, var(--color-surface-1) 68%, var(--color-primary-light) 32%));
+   --color-main-quick-access-media-border: color-mix(in srgb, var(--color-primary-light) 70%, var(--color-border-subtle) 30%);
+   --color-main-quick-access-pill-bg: var(--color-component-pill-neutral-bg);
+   --color-main-quick-access-pill-fg: var(--color-component-pill-neutral-fg);
+   --color-main-quick-access-pill-border: var(--color-component-pill-neutral-border);
+   --color-main-quick-access-pill-paused-bg: var(--color-component-pill-warning-bg);
+   --color-main-quick-access-pill-paused-fg: var(--color-component-pill-warning-fg);
+   --color-main-quick-access-pill-paused-border: var(--color-component-pill-warning-border);
+   --color-main-quick-access-pill-critical-bg: var(--color-component-pill-error-bg);
+   --color-main-quick-access-pill-critical-fg: var(--color-component-pill-error-fg);
+   --color-main-quick-access-pill-critical-border: var(--color-component-pill-error-border);
+   --color-main-quick-access-pill-mastered-bg: var(--color-component-pill-success-bg);
+   --color-main-quick-access-pill-mastered-fg: var(--color-component-pill-success-fg);
+   --color-main-quick-access-pill-mastered-border: var(--color-component-pill-success-border);
+   --color-main-quick-access-meta-bg: color-mix(in srgb, var(--color-surface-2) 74%, var(--color-surface-1) 26%);
+   --color-main-quick-access-meta-fg: var(--color-component-secondary-copy);
+   --color-main-quick-access-meta-border: color-mix(in srgb, var(--color-border-subtle) 58%, var(--color-border-strong) 42%);
+   --color-main-quick-access-chip-meta: color-mix(in srgb, var(--color-text-secondary) 88%, var(--color-text-main));
+   --color-main-quick-access-description: color-mix(in srgb, var(--color-text-secondary) 62%, var(--color-text-main) 38%);
+   --color-main-quick-access-remove-bg: var(--color-component-icon-button-muted-bg);
+   --color-main-quick-access-remove-border: var(--color-component-icon-button-muted-border);
+   --color-main-quick-access-remove-fg: var(--color-component-icon-button-muted-fg);
+   --color-main-quick-access-remove-hover-bg: color-mix(in srgb, var(--color-error-lighter) 78%, white 22%);
+   --color-main-quick-access-progress-label: var(--color-component-secondary-copy);
+   --color-main-quick-access-progress-track: color-mix(in srgb, var(--color-surface-2) 84%, var(--color-surface-1) 16%);
+   --color-main-quick-access-progress-track-border: color-mix(in srgb, var(--color-border-subtle) 28%, transparent);
+   --color-main-quick-access-progress-fill: linear-gradient(90deg, var(--color-primary), color-mix(in srgb, var(--color-accent) 72%, var(--color-primary) 28%));
+   --color-main-quick-access-progress-fill-paused: linear-gradient(90deg, var(--color-warning), color-mix(in srgb, var(--color-accent) 78%, var(--color-warning) 22%));
+   --color-main-quick-access-progress-fill-critical: linear-gradient(90deg, var(--color-error), color-mix(in srgb, var(--color-warning) 42%, var(--color-error) 58%));
+   --color-main-quick-access-action-bg: linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 86%, black 14%), var(--color-primary));
+   --color-main-quick-access-nav-border: color-mix(in srgb, var(--color-border-subtle) 72%, var(--color-primary-light) 28%);
+   --color-main-quick-access-nav-bg: color-mix(in srgb, var(--color-surface-1) 90%, var(--color-primary-light) 10%);
+   --color-main-quick-access-nav-border-hover: var(--color-primary-light);
+   --color-main-quick-access-nav-bg-hover: color-mix(in srgb, var(--color-surface-1) 76%, var(--color-primary-light) 24%);
+
+   --color-main-period-toggle-bg: var(--color-component-segmented-bg);
+   --color-main-period-toggle-border: var(--color-component-segmented-border);
+   --color-main-period-toggle-button-fg: var(--color-component-segmented-button-fg);
+   --color-main-period-toggle-button-hover-bg: var(--color-component-segmented-button-hover-bg);
+   --color-main-period-toggle-button-hover-fg: var(--color-component-segmented-button-hover-fg);
+   --color-main-period-toggle-button-active-bg: var(--color-component-segmented-button-active-bg);
+   --color-main-period-toggle-button-active-fg: var(--color-component-segmented-button-active-fg);
+   --color-main-period-toggle-button-active-border: var(--color-component-segmented-button-active-border);
+
+   --color-main-health-row-bg: var(--color-component-panel-row-bg);
+   --color-main-health-row-border: var(--color-component-panel-row-border);
+
+   --color-main-primary-cta-bg: color-mix(in srgb, var(--color-primary), var(--color-surface-1) 70%);
+   --color-main-primary-cta-border: color-mix(in srgb, var(--color-primary), var(--color-surface-1) 45%);
+   --color-main-secondary-cta-bg: color-mix(in srgb, var(--color-accent), var(--color-surface-1) 70%);
+   --color-main-secondary-cta-border: color-mix(in srgb, var(--color-accent), var(--color-surface-1) 45%);
+
+   --color-main-heatmap-cell-border: var(--color-component-heatmap-cell-border);
+   --color-main-heatmap-low-outline: var(--color-component-heatmap-low-outline);
+   --color-main-heatmap-mid-outline: var(--color-component-heatmap-mid-outline);
+   --color-main-heatmap-high-outline: var(--color-component-heatmap-high-outline);
+   --color-main-heatmap-peak: var(--color-component-heatmap-peak);
+   --color-main-heatmap-peak-outline: var(--color-component-heatmap-peak-outline);
+   --color-main-heatmap-today-inline-ring: var(--color-component-heatmap-today-inline-ring);
+   --color-main-heatmap-legend-swatch-border: var(--color-component-heatmap-swatch-border);
+   --color-main-heatmap-legend-copy: var(--color-component-heatmap-legend-copy);
+   --color-main-heatmap-legend-item: var(--color-component-heatmap-legend-copy);
+
+   --color-main-stats-label: var(--color-component-secondary-copy-strong);
+   --color-main-stats-link: color-mix(in srgb, var(--color-primary) 56%, var(--color-text-main) 44%);
+   --color-main-stats-heading-icon: color-mix(in srgb, var(--color-accent) 42%, var(--color-text-main) 58%);
+
+   /* Page aliases: Complex Builder */
+   --color-page-builder-surface: var(--color-component-panel-row-soft-bg);
+   --color-page-builder-surface-strong: var(--color-component-panel-row-bg);
+   --color-page-builder-border: var(--color-component-panel-row-border);
+   --color-page-builder-border-strong: var(--color-component-card-elevated-border-hover);
+   --color-page-builder-primary-bg: var(--color-component-pill-info-bg);
+   --color-page-builder-primary-bg-strong: var(--color-component-empty-state-icon-bg);
+   --color-page-builder-primary-border: var(--color-component-pill-info-border);
+   --color-page-builder-success-bg: var(--color-component-pill-success-bg);
+   --color-page-builder-success-bg-strong: var(--color-component-pill-success-bg);
+   --color-page-builder-success-border: var(--color-component-pill-success-border);
+   --color-page-builder-warning-bg: var(--color-component-pill-warning-bg);
+   --color-page-builder-warning-bg-strong: var(--color-component-pill-warning-bg);
+   --color-page-builder-warning-border: var(--color-component-pill-warning-border);
+   --color-page-builder-error-bg: var(--color-component-pill-error-bg);
+   --color-page-builder-error-bg-strong: var(--color-component-pill-error-bg);
+   --color-page-builder-error-border: var(--color-component-pill-error-border);
+   --color-page-builder-shadow-soft: var(--shadow-sm);
+   --color-page-builder-shadow-strong: var(--shadow-md);
+   --color-page-builder-shadow-modal: var(--shadow-lg);
+   --color-page-builder-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+   --color-page-builder-modal-scrim: rgba(15, 23, 42, 0.56);
+   --color-page-builder-modal-scrim-dark: rgba(0, 0, 0, 0.72);
+   --color-page-builder-field-inset-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 3%, transparent);
+   --color-page-builder-field-focus-ring: 0 0 0 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+   --color-page-builder-task-checkbox-inset-shadow: inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 5%, transparent);
+   --color-page-builder-task-checkbox-checked-shadow:
+      0 2px 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
+      inset 0 1px 2px color-mix(in srgb, var(--color-text-main) 10%, transparent);
+   --color-page-builder-section-header-shadow: 0 1px 3px color-mix(in srgb, var(--color-text-main) 5%, transparent);
+   --color-page-builder-section-header-shadow-hover: 0 4px 12px color-mix(in srgb, var(--color-text-main) 8%, transparent);
+   --color-page-builder-add-button-shadow:
+      0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent),
+      0 2px 4px color-mix(in srgb, var(--color-primary) 20%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+   --color-page-builder-add-button-shadow-hover:
+      0 8px 20px color-mix(in srgb, var(--color-primary) 40%, transparent),
+      0 4px 8px color-mix(in srgb, var(--color-primary) 30%, transparent),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+   --color-page-builder-add-button-shadow-active:
+      0 2px 8px color-mix(in srgb, var(--color-primary) 25%, transparent),
+      inset 0 1px 3px rgba(0, 0, 0, 0.15);
+   --color-page-builder-add-button-compact-shadow: 0 2px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+   --color-page-builder-add-button-compact-shadow-hover: 0 4px 12px color-mix(in srgb, var(--color-primary) 40%, transparent);
+   --color-page-builder-primary-button-shadow:
+      0 4px 12px color-mix(in srgb, var(--color-primary) 30%, transparent),
+      0 2px 4px color-mix(in srgb, var(--color-text-main) 10%, transparent);
+   --color-page-builder-primary-button-shadow-hover:
+      0 6px 20px color-mix(in srgb, var(--color-primary) 40%, transparent),
+      0 4px 8px color-mix(in srgb, var(--color-text-main) 15%, transparent);
+   --color-page-builder-danger-border-soft: color-mix(in srgb, var(--color-status-error) 80%, transparent);
+   --color-page-builder-danger-hover-bg: color-mix(in srgb, var(--color-status-error) 5%, transparent);
+   --color-page-builder-sidebar-rail-shadow: -4px 0 16px color-mix(in srgb, var(--color-text-main) 12%, transparent);
+   --color-page-builder-sidebar-panel-border: color-mix(in srgb, var(--color-border-normal) 60%, transparent);
+   --color-page-builder-module-card-shadow: 0 1px 4px color-mix(in srgb, var(--color-text-main) 8%, transparent);
+   --color-page-builder-module-card-hover-bg: color-mix(in srgb, var(--color-primary) 8%, transparent);
+   --color-page-builder-module-icon-bg: color-mix(in srgb, var(--color-primary) 20%, transparent);
+   --color-page-builder-task-chip-selected-shadow: 0 2px 6px color-mix(in srgb, var(--color-primary) 25%, transparent);
+   --color-page-builder-card-section-shadow: 0 2px 8px color-mix(in srgb, var(--color-text-main) 4%, transparent);
+   --color-page-builder-card-section-shadow-hover: 0 8px 24px color-mix(in srgb, var(--color-text-main) 8%, transparent);
+   --color-page-builder-task-card-shadow: 0 1px 1px color-mix(in srgb, var(--color-text-main) var(--sidebar-shadow-opacity, 4%), transparent);
+   --color-page-builder-task-card-hover-shadow:
+      0 2px 8px color-mix(in srgb, var(--color-text-main) 5%, transparent),
+      0 1px 3px color-mix(in srgb, var(--color-primary) 10%, transparent);
+   --color-page-builder-task-card-selected-bg: color-mix(in srgb, var(--color-primary) 6%, transparent);
+   --color-page-builder-custom-checkbox-inset-shadow: inset 0 1px 0 color-mix(in srgb, var(--color-text-main) 5%, transparent);
+   --color-page-builder-custom-checkbox-hover-bg: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-1));
+   --color-page-builder-custom-checkbox-selected-shadow:
+      0 8px 16px -16px color-mix(in srgb, var(--color-primary) 42%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--color-text-main) 8%, transparent);
+   --color-page-builder-task-tag-flat-primary-bg: color-mix(in srgb, var(--color-primary) 12%, transparent);
+   --color-page-builder-task-tag-flat-primary-border: color-mix(in srgb, var(--color-primary) 28%, transparent);
+   --color-page-builder-task-tag-flat-success-bg: color-mix(in srgb, var(--color-success) 16%, transparent);
+   --color-page-builder-task-tag-flat-success-border: color-mix(in srgb, var(--color-success) 32%, transparent);
+   --color-page-builder-task-tag-flat-chain-1-bg: color-mix(in srgb, var(--color-chain-1) 12%, transparent);
+   --color-page-builder-task-tag-flat-chain-1-border: color-mix(in srgb, var(--color-chain-1) 28%, transparent);
+   --color-page-builder-task-tag-flat-chain-2-bg: color-mix(in srgb, var(--color-chain-2) 12%, transparent);
+   --color-page-builder-task-tag-flat-chain-2-border: color-mix(in srgb, var(--color-chain-2) 28%, transparent);
+   --color-page-builder-task-tag-flat-chain-3-bg: color-mix(in srgb, var(--color-chain-3) 12%, transparent);
+   --color-page-builder-task-tag-flat-chain-3-border: color-mix(in srgb, var(--color-chain-3) 28%, transparent);
+   --color-page-builder-task-tag-flat-chain-4-bg: color-mix(in srgb, var(--color-chain-4) 12%, transparent);
+   --color-page-builder-task-tag-flat-chain-4-border: color-mix(in srgb, var(--color-chain-4) 28%, transparent);
+   --color-page-builder-task-tag-flat-hover-bg: color-mix(in srgb, var(--color-primary) 15%, transparent);
+   --color-page-builder-task-tag-flat-hover-shadow: 0 2px 8px color-mix(in srgb, var(--color-text-main) 10%, transparent);
+   --color-page-builder-task-tag-chain-1-bg:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-chain-1) 28%, var(--color-surface-1)), color-mix(in srgb, var(--color-chain-1) 18%, var(--color-surface-1)));
+   --color-page-builder-task-tag-chain-1-border: color-mix(in srgb, var(--color-chain-1) 58%, var(--color-border-strong));
+   --color-page-builder-task-tag-chain-2-bg:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-chain-2) 28%, var(--color-surface-1)), color-mix(in srgb, var(--color-chain-2) 18%, var(--color-surface-1)));
+   --color-page-builder-task-tag-chain-2-border: color-mix(in srgb, var(--color-chain-2) 58%, var(--color-border-strong));
+   --color-page-builder-task-tag-chain-3-bg:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-chain-3) 28%, var(--color-surface-1)), color-mix(in srgb, var(--color-chain-3) 18%, var(--color-surface-1)));
+   --color-page-builder-task-tag-chain-3-border: color-mix(in srgb, var(--color-chain-3) 58%, var(--color-border-strong));
+   --color-page-builder-task-tag-chain-4-bg:
+      linear-gradient(180deg, color-mix(in srgb, var(--color-chain-4) 28%, var(--color-surface-1)), color-mix(in srgb, var(--color-chain-4) 18%, var(--color-surface-1)));
+   --color-page-builder-task-tag-chain-4-border: color-mix(in srgb, var(--color-chain-4) 58%, var(--color-border-strong));
 }
 
 /* ============================================================================
@@ -155,6 +445,12 @@
    /* ========== GLASS EFFECTS ========== */
    --sidebar-shadow-opacity: 0.12;
    --sidebar-rim-opacity: 0.1;
+
+   /* ========== HEATMAP (Mini Calendar) ========== */
+   --color-heatmap-empty: #b0b6bf;
+   --color-heatmap-low: #958ec0;
+   --color-heatmap-mid: #8880b8;
+   --color-heatmap-high: #7970af;
 }
 
 /* ============================================================================
@@ -266,6 +562,12 @@
    /* ========== GLASS EFFECTS ========== */
    --sidebar-shadow-opacity: 0.12;
    --sidebar-rim-opacity: 0.1;
+
+   /* ========== HEATMAP (Mini Calendar) ========== */
+   --color-heatmap-empty: #e0ac92;
+   --color-heatmap-low: #c08669;
+   --color-heatmap-mid: #b87757;
+   --color-heatmap-high: #ae643f;
 }
 
 /* ============================================================================
@@ -406,6 +708,12 @@
    /* ========== GLASS EFFECTS ========== */
    --sidebar-shadow-opacity: 0.12;
    --sidebar-rim-opacity: 0.1;
+
+   /* ========== HEATMAP (Mini Calendar) ========== */
+   --color-heatmap-empty: #b3a6a1;
+   --color-heatmap-low: #97837b;
+   --color-heatmap-mid: #8b756d;
+   --color-heatmap-high: #7f675f;
 }
 
 /* ============================================================================
@@ -517,6 +825,12 @@
    /* ========== GLASS EFFECTS ========== */
    --sidebar-shadow-opacity: 0.12;
    --sidebar-rim-opacity: 0.1;
+
+   /* ========== HEATMAP (Mini Calendar) ========== */
+   --color-heatmap-empty: #a398b0;
+   --color-heatmap-low: #717e9c;
+   --color-heatmap-mid: #617192;
+   --color-heatmap-high: #506286;
 }
 
 /* ============================================================================
@@ -697,6 +1011,20 @@
    /* ========== GLASS EFFECTS ========== */
    --sidebar-shadow-opacity: 0.2;
    --sidebar-rim-opacity: 0.15;
+
+   /* ========== HEATMAP (Mini Calendar) ========== */
+   --color-heatmap-empty: #705d42;
+   --color-heatmap-low: #a37147;
+   --color-heatmap-mid: #b67c4e;
+   --color-heatmap-high: #cd8955;
+
+   --color-component-segmented-button-fg: var(--color-text-on-dark);
+   --color-component-segmented-button-hover-fg: var(--color-text-on-dark);
+   --color-component-segmented-button-active-bg: color-mix(in srgb, var(--color-surface-1) 84%, var(--color-bg-main) 16%);
+   --color-component-segmented-button-active-fg: var(--color-text-on-dark);
+   --color-component-card-elevated-bg-start: color-mix(in srgb, var(--color-surface-1) 94%, var(--color-primary-light) 6%);
+   --color-component-card-elevated-bg-mid: color-mix(in srgb, var(--color-surface-1) 98%, var(--color-primary-light) 2%);
+   --color-component-card-elevated-bg-end: color-mix(in srgb, var(--color-surface-1) 96%, var(--color-accent-light) 4%);
 }
 
 /* ============================================================================
@@ -822,4 +1150,18 @@
    /* ========== GLASS EFFECTS ========== */
    --sidebar-shadow-opacity: 0.2;
    --sidebar-rim-opacity: 0.15;
+
+   /* ========== HEATMAP (Mini Calendar) ========== */
+   --color-heatmap-empty: #555273;
+   --color-heatmap-low: #836682;
+   --color-heatmap-mid: #93728d;
+   --color-heatmap-high: #a6809a;
+
+   --color-component-segmented-button-fg: var(--color-text-on-dark);
+   --color-component-segmented-button-hover-fg: var(--color-text-on-dark);
+   --color-component-segmented-button-active-bg: color-mix(in srgb, var(--color-surface-1) 84%, var(--color-bg-main) 16%);
+   --color-component-segmented-button-active-fg: var(--color-text-on-dark);
+   --color-component-card-elevated-bg-start: color-mix(in srgb, var(--color-surface-1) 94%, var(--color-primary-light) 6%);
+   --color-component-card-elevated-bg-mid: color-mix(in srgb, var(--color-surface-1) 98%, var(--color-primary-light) 2%);
+   --color-component-card-elevated-bg-end: color-mix(in srgb, var(--color-surface-1) 96%, var(--color-accent-light) 4%);
 }

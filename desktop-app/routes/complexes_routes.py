@@ -26,7 +26,7 @@ from services.complex_service import ConflictError  # type: ignore
 from services.theory_service import TheoryNotFoundError  # type: ignore
 
 from routes._context import get_ctx
-from routes._helpers import _serialize_complex_payload
+from routes._helpers import _compute_inherited_theory_for_topics, _serialize_complex_payload
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,56 @@ def _collect_topic_refs_from_tasks(task_refs: Any) -> Set[Tuple[str, str]]:
     return refs
 
 
+def _build_inherited_theory_context(task_refs: Any, *, source: str) -> Dict[str, Any]:
+    topic_refs = _collect_topic_refs_from_tasks(task_refs)
+    inherited = _compute_inherited_theory_for_topics(topic_refs)
+    inherited_status = str(inherited.get("status") or "none")
+
+    updates: Dict[str, Any] = {
+        "theory_sync_status": inherited_status,
+        "theory_sync_meta": {
+            "source": source,
+            "updated_at": datetime.utcnow().isoformat(),
+            "topic_count": len(topic_refs),
+            "theory_ids": inherited.get("theory_ids") or [],
+        },
+    }
+
+    if inherited_status == "ok":
+        updates["theory_link"] = inherited.get("inherited_theory_link")
+    elif inherited_status == "none":
+        updates["theory_link"] = None
+    elif inherited_status == "composite":
+        updates["theory_link"] = None
+        updates["theory_sync_meta"]["composite_topics"] = inherited.get("topic_rows") or []
+        updates["theory_sync_meta"]["composite_theory_links"] = (
+            inherited.get("inherited_theory_links") or []
+        )
+    else:
+        updates["theory_link"] = None
+
+    return updates
+
+
+def _build_override_theory_context(task_refs: Any, theory_link: Any, *, source: str) -> Dict[str, Any]:
+    topic_refs = _collect_topic_refs_from_tasks(task_refs)
+    theory_id = (
+        str(theory_link.get("theory_id") or "").strip()
+        if isinstance(theory_link, dict)
+        else ""
+    )
+    theory_ids = [theory_id] if theory_id else []
+    return {
+        "theory_sync_status": "ok" if theory_ids else "none",
+        "theory_sync_meta": {
+            "source": source,
+            "updated_at": datetime.utcnow().isoformat(),
+            "topic_count": len(topic_refs),
+            "theory_ids": theory_ids,
+        },
+    }
+
+
 def _resolve_complex_theory_mode(payload: Dict[str, Any]) -> str:
     raw = str(payload.get("theory_mode") or "").strip().lower()
     if raw in {"inherit", "override"}:
@@ -112,53 +162,6 @@ def _json_like_equal(left: Any, right: Any) -> bool:
         except Exception:
             return left == right
     return left == right
-
-
-def _compute_inherited_theory_for_topics(topic_refs: Set[Tuple[str, str]]) -> Dict[str, Any]:
-    storage = get_ctx().storage_service
-    topic_rows: List[Dict[str, Any]] = []
-    unique_theory_links: Dict[str, Dict[str, Any]] = {}
-
-    for module_id, topic_id in sorted(topic_refs):
-        theory_link = storage.get_topic_theory_link(module_id, topic_id)
-        theory_id = (
-            str(theory_link.get("theory_id") or "").strip()
-            if isinstance(theory_link, dict)
-            else ""
-        )
-        topic_rows.append(
-            {
-                "module_id": module_id,
-                "topic_id": topic_id,
-                "theory_id": theory_id or None,
-            }
-        )
-        if theory_id and isinstance(theory_link, dict):
-            unique_theory_links[theory_id] = dict(theory_link)
-
-    if not unique_theory_links:
-        return {
-            "status": "none",
-            "inherited_theory_link": None,
-            "theory_ids": [],
-            "topic_rows": topic_rows,
-        }
-
-    if len(unique_theory_links) == 1:
-        theory_id = next(iter(unique_theory_links.keys()))
-        return {
-            "status": "ok",
-            "inherited_theory_link": unique_theory_links[theory_id],
-            "theory_ids": [theory_id],
-            "topic_rows": topic_rows,
-        }
-
-    return {
-        "status": "conflict",
-        "inherited_theory_link": None,
-        "theory_ids": sorted(unique_theory_links.keys()),
-        "topic_rows": topic_rows,
-    }
 
 
 @complexes_bp.route("/api/complexes", methods=["POST"])
@@ -253,6 +256,22 @@ def create_complex() -> Any:
             "content_scope": "shared_local",
         }
 
+        effective_mode = _resolve_complex_theory_mode(complex_data)
+        if effective_mode == "inherit":
+            complex_data.update(
+                _build_inherited_theory_context(normalized["tasks"], source="complex_create")
+            )
+            complex_data["theory_mode"] = "inherit"
+        else:
+            complex_data.update(
+                _build_override_theory_context(
+                    normalized["tasks"],
+                    normalized.get("theory_link"),
+                    source="complex_create",
+                )
+            )
+            complex_data["theory_mode"] = "override"
+
         created = ctx.complex_service.create_complex(complex_data)
         return jsonify({"ok": True, "item": _serialize_complex_response_item(created)}), 200
     except Exception as exc:
@@ -310,13 +329,30 @@ def update_complex(complex_id: str) -> Any:
                         400,
                     )
 
+        update_payload = {
+            **normalized,
+            "updated_by_user_id": ctx.user_id,
+        }
+        effective_mode = _resolve_complex_theory_mode(update_payload)
+        if effective_mode == "inherit":
+            update_payload.update(
+                _build_inherited_theory_context(normalized["tasks"], source="complex_update")
+            )
+            update_payload["theory_mode"] = "inherit"
+        else:
+            update_payload.update(
+                _build_override_theory_context(
+                    normalized["tasks"],
+                    normalized.get("theory_link"),
+                    source="complex_update",
+                )
+            )
+            update_payload["theory_mode"] = "override"
+
         # Update with version check
         updated = ctx.complex_service.update_complex(
             complex_id,
-            {
-                **normalized,
-                "updated_by_user_id": ctx.user_id,
-            },
+            update_payload,
             expected_version=expected_version,
         )
 
@@ -424,9 +460,14 @@ def sync_complex_theory_from_topics(complex_id: str) -> Any:
             updates["theory_link"] = inherited.get("inherited_theory_link")
         elif inherited_status == "none":
             updates["theory_link"] = None
+        elif inherited_status == "composite":
+            updates["theory_link"] = None
+            updates["theory_sync_meta"]["composite_topics"] = inherited.get("topic_rows") or []
+            updates["theory_sync_meta"]["composite_theory_links"] = (
+                inherited.get("inherited_theory_links") or []
+            )
         else:
-            updates.pop("theory_link", None)
-            updates["theory_sync_meta"]["conflict_topics"] = inherited.get("topic_rows") or []
+            updates["theory_link"] = None
 
         changed_keys: List[str] = []
         for key, next_value in updates.items():

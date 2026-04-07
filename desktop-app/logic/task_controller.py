@@ -140,10 +140,12 @@ class TaskController:
         self.current_difficulty_level: Optional[int] = None
         
         # Флаг для явного указания уровня сложности из UI
+        # Нужно явно хранить выбранный уровень сложности из UI
         self._explicit_difficulty_level: Optional[int] = None
-        
-        # Флаг для явного указания уровня сложности из UI
-        self._explicit_difficulty_level: Optional[int] = None
+
+        # Complex-session orchestration can defer persistence until the
+        # adaptive session manager enriches the attempt with session metadata.
+        self.defer_progress_persistence: bool = False
     
     # =========================================================================
     # ЗАГРУЗКА ЗАДАНИЯ
@@ -398,23 +400,29 @@ class TaskController:
         
         # Совместимость: для draw используем task_data, если в answer_key нет targets с полигонами
         if task.task_type == 'draw':
-            def _has_polygon_targets(obj):
+            def _has_draw_targets(obj):
                 try:
                     if not isinstance(obj, dict):
                         return False
                     targets = obj.get('targets', [])
                     if not targets:
                         return False
-                    # Проверяем наличие хотя бы одного полигона
-                    # Полигон может быть без поля 'shape', если есть 'points' - это тоже полигон
+                    # Для draw важны любые корректные targets: polygon/freehand/point.
                     for target in targets:
                         points = target.get('points', [])
-                        # Если есть points и их >= 3, это полигон (даже без shape)
-                        if isinstance(points, list) and len(points) >= 3:
+                        shape = str(target.get('shape') or target.get('type') or '').lower().strip()
+                        if shape == 'freehand' and isinstance(points, list) and len(points) >= 2:
                             return True
-                        # Или явно указано shape == 'polygon'
-                        if target.get('shape') == 'polygon' and points:
+                        if shape == 'polygon' and isinstance(points, list) and len(points) >= 3:
+                            return True
+                        if shape == 'point':
+                            point = target.get('point') or target.get('coordinates')
+                            if isinstance(point, (list, tuple)) and len(point) >= 2:
+                                return True
+                        if not shape and isinstance(points, list):
                             if len(points) >= 3:
+                                return True
+                            if len(points) >= 2:
                                 return True
                     return False
                 except Exception:
@@ -441,10 +449,24 @@ class TaskController:
                             ann_type = ann.get('type', '')
                             points = ann.get('points', [])
                             
+                            if ann_type == 'freehand' and isinstance(points, list) and len(points) >= 2:
+                                target = {
+                                    'shape': 'freehand',
+                                    'points': points,
+                                    'label': ann.get('label', '')
+                                }
+                                targets.append(target)
                             # Если это полигон и есть точки
-                            if (ann_type == 'polygon' or points) and isinstance(points, list) and len(points) >= 3:
+                            elif (ann_type == 'polygon' or (not ann_type and points)) and isinstance(points, list) and len(points) >= 3:
                                 target = {
                                     'shape': 'polygon',
+                                    'points': points,
+                                    'label': ann.get('label', '')
+                                }
+                                targets.append(target)
+                            elif isinstance(points, list) and len(points) >= 2:
+                                target = {
+                                    'shape': 'freehand',
                                     'points': points,
                                     'label': ann.get('label', '')
                                 }
@@ -457,8 +479,8 @@ class TaskController:
                     self.logger.warning(f"Ошибка преобразования аннотаций: {e}")
                     return None
             
-            if not _has_polygon_targets(answer_key_or_data):
-                # Если в answer_key нет полигонов, пробуем преобразовать аннотации из task_data
+            if not _has_draw_targets(answer_key_or_data):
+                # Если в answer_key нет валидных draw targets, пробуем преобразовать аннотации из task_data
                 if isinstance(task.task_data, dict):
                     converted = _convert_annotations_to_targets(task.task_data)
                     if converted:
@@ -532,6 +554,13 @@ class TaskController:
         # Добавляем difficulty в result.details для сохранения
         if result.details is None:
             result.details = {}
+
+        requires_user_judgement = bool(
+            isinstance(result.details, dict)
+            and result.details.get('requires_user_judgement')
+        )
+        if requires_user_judgement:
+            self.task_state = TaskState.IN_PROGRESS
         
         # Используем сохраненный уровень сложности (из load_task)
         # Если не установлен, используем fallback
@@ -546,20 +575,39 @@ class TaskController:
         if 'task_type' not in result.details:
             result.details['task_type'] = task.task_type
         
-        # Сохранение прогресса через ProgressService (Блок B)
-        try:
-            self.progress_service.save_evaluation_result(
-                module_id=task.module_id,
-                topic_id=task.topic_id,
-                task_id=task.task_id,
-                result=result
+        # Сохраняем результат через ProgressService в обычном режиме.
+        # В complex-session orchestration adaptive session manager выполняет
+        # сохранение сам в session-aware режиме с retries/iteration metadata.
+        # Не дублируем запись в task_history до того же submit.
+        managed_session_persists_progress = bool(
+            getattr(self, 'defer_progress_persistence', False)
+        ) or (
+            self.session_manager is not None and hasattr(self.session_manager, 'submit_result')
+        )
+        if requires_user_judgement:
+            self.logger.debug(
+                "Task %s requires user judgement before progress persistence",
+                task.full_id,
             )
-        except Exception as e:
-            self.logger.warning(f"Failed to save progress for task {task.full_id}: {e}")
-            # Не выбрасываем исключение для сохранения прогресса
+        elif not managed_session_persists_progress:
+            try:
+                self.progress_service.save_evaluation_result(
+                    module_id=task.module_id,
+                    topic_id=task.topic_id,
+                    task_id=task.task_id,
+                    result=result
+                )
+            except Exception as e:
+                self.logger.warning(f"Failed to save progress for task {task.full_id}: {e}")
+                # Не прерываем выполнение из-за ошибки сохранения прогресса
+        else:
+            self.logger.debug(
+                "Managed session detected for %s; progress will be persisted by session manager",
+                task.full_id,
+            )
         
         # Записываем результат в SessionManager для текущей сессии
-        if self.session_manager:
+        if self.session_manager and not requires_user_judgement:
             try:
                 self.session_manager.record_task_result(
                     task_id=task.task_id,

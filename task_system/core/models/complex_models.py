@@ -149,7 +149,7 @@ class ComplexSession(BaseModel):
     test_failed_subtests: Dict[str, List[int]] = Field(default_factory=dict)
     
     # Временные метки для каждой итерации
-    iteration_timestamps: Dict[int, Dict[str, datetime]] = Field(
+    iteration_timestamps: Dict[int, Dict[str, Optional[datetime]]] = Field(
         default_factory=dict,
         description="Временные метки для каждой итерации: {iteration: {'start': datetime, 'end': datetime}}"
     )

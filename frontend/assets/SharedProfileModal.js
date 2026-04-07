@@ -1,16 +1,16 @@
 /**
  * SharedProfileModal.js
- * Unified profile switching modal for Calendar, Statistics, and other secondary pages.
- * Main.html keeps its own full-featured modal (create/edit/delete/password).
+ * Shared lightweight profile switcher menu for Calendar, Statistics,
+ * Microcards, and Main. Main.html still owns the heavy management modal.
  *
- * Usage: include <script src="/assets/SharedProfileModal.js"></script> before </body>.
- * The script auto-injects the modal HTML and exposes global functions:
- *   openProfileModal(), closeProfileModal(), selectProfile(userId)
+ * Exposes:
+ *   openProfileMenu(eventOrAnchor)
+ *   closeProfileMenu()
+ *   selectProfile(userId)    // only when a page has not provided its own
  */
 (function () {
     'use strict';
 
-    // --- Helpers ---
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
             '&': '&amp;',
@@ -19,20 +19,6 @@
             '"': '&quot;',
             "'": '&#39;',
         }[char] || char));
-    }
-
-    function escapeInlineJsString(value) {
-        return escapeHtml(
-            String(value ?? '')
-                .replace(/\\/g, '\\\\')
-                .replace(/'/g, "\\'")
-                .replace(/\r/g, '\\r')
-                .replace(/\n/g, '\\n')
-                .replace(/\u2028/g, '\\u2028')
-                .replace(/\u2029/g, '\\u2029')
-                .replace(/</g, '\\x3C')
-                .replace(/>/g, '\\x3E')
-        );
     }
 
     function showToast(message, type = 'error', duration = 2000) {
@@ -63,90 +49,205 @@
         }, Math.max(1200, duration));
     }
 
-    function getAvatarUrl(avatarSeed, userId) {
-        if (!avatarSeed) avatarSeed = '1.png';
-        if (avatarSeed.includes('.')) {
-            return `/api/assets/avatars/${encodeURIComponent(String(avatarSeed))}`;
+    function getAvatarUrl(avatarSeed) {
+        const safeSeed = avatarSeed || '1.png';
+        if (String(safeSeed).includes('.')) {
+            return `/api/assets/avatars/${encodeURIComponent(String(safeSeed))}`;
         }
         return '/api/assets/avatars/1.png';
     }
 
-    // --- State ---
-    let _currentUserId = null;
+    let currentUserId = null;
+    let activeAnchor = null;
+    let globalListenersBound = false;
 
-    // --- Modal HTML ---
-    function injectModal() {
-        if (document.getElementById('sharedProfileModal')) return;
+    function getElements() {
+        return {
+            overlay: document.getElementById('sharedProfileMenuOverlay'),
+            panel: document.getElementById('sharedProfileMenuPanel'),
+            current: document.getElementById('sharedProfileMenuCurrent'),
+            list: document.getElementById('sharedProfileList'),
+            manageButton: document.getElementById('sharedProfileManage'),
+        };
+    }
+
+    function injectMenu() {
+        if (document.getElementById('sharedProfileMenuOverlay')) {
+            return getElements();
+        }
 
         const wrapper = document.createElement('div');
         wrapper.innerHTML = `
-        <div id="sharedProfileModal" class="fixed inset-0 z-[100] hidden transition-opacity duration-200">
-            <div class="absolute inset-0 bg-scrim-strong backdrop-blur-sm" data-profile-backdrop></div>
-            <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md">
-                <div class="bg-surface-1 rounded-2xl shadow-2xl border border-border-subtle overflow-hidden mx-4">
-                    <div class="p-5 border-b border-border-subtle flex items-center justify-between bg-surface-2">
-                        <h3 class="text-lg font-bold text-text-main">Профили</h3>
-                        <button data-profile-close
-                            class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
-                            <span class="material-symbols-outlined text-text-muted">close</span>
-                        </button>
+        <div id="sharedProfileMenuOverlay" class="fixed inset-0 z-[100] hidden">
+            <div id="sharedProfileMenuPanel"
+                class="absolute w-[min(24rem,calc(100vw-1rem))] overflow-hidden rounded-2xl border border-border-subtle bg-surface-1 shadow-2xl">
+                <div class="border-b border-border-subtle bg-surface-2 px-4 py-3">
+                    <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">Текущий профиль</p>
+                    <div id="sharedProfileMenuCurrent" class="mt-3 flex items-center gap-3">
+                        <div class="text-sm text-text-secondary">Загрузка...</div>
                     </div>
-                    <div id="sharedProfileList" class="p-4 max-h-[320px] overflow-y-auto space-y-2">
-                        <div class="text-center text-text-secondary py-6">Загрузка...</div>
-                    </div>
-                    <div class="px-5 py-4 border-t border-border-subtle bg-surface-2">
-                        <a href="/ui/main"
-                            class="flex items-center justify-center gap-2 w-full py-2.5 text-sm font-medium text-primary hover:bg-bg-hover rounded-lg transition-colors">
-                            <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
-                            Управление профилями
+                </div>
+                <div class="px-2 py-2">
+                    <div class="flex items-center justify-between gap-3 px-2 pb-2">
+                        <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-text-secondary">Быстрое переключение</p>
+                        <a href="/ui/settings"
+                            class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-primary transition-colors hover:bg-bg-hover">
+                            <span class="material-symbols-outlined text-[16px]">settings</span>
+                            Настройки профиля
                         </a>
                     </div>
+                    <div id="sharedProfileList" class="max-h-[320px] overflow-y-auto space-y-1 px-1 pb-1">
+                        <div class="text-center text-text-secondary py-6">
+                            <div class="inline-flex items-center gap-2">
+                                <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+                                <span class="text-sm">Загрузка профилей...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="border-t border-border-subtle bg-surface-2 p-2">
+                    <button id="sharedProfileManage" type="button"
+                        class="flex w-full items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold text-text-main transition-colors hover:bg-surface-1 hover:text-primary">
+                        <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
+                        Управление профилями
+                    </button>
                 </div>
             </div>
         </div>`;
 
         document.body.appendChild(wrapper.firstElementChild);
 
-        // Event listeners
-        const modal = document.getElementById('sharedProfileModal');
-        modal.querySelector('[data-profile-backdrop]').addEventListener('click', closeProfileModal);
-        modal.querySelector('[data-profile-close]').addEventListener('click', closeProfileModal);
-
-        // ESC key
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape' && !modal.classList.contains('hidden')) {
-                closeProfileModal();
+        const elements = getElements();
+        elements.overlay.addEventListener('click', (event) => {
+            if (event.target === elements.overlay) {
+                closeProfileMenu();
             }
         });
+        elements.panel.addEventListener('click', (event) => {
+            event.stopPropagation();
+        });
+        elements.manageButton.addEventListener('click', () => {
+            closeProfileMenu();
+            openProfileManagement();
+        });
+
+        if (!globalListenersBound) {
+            globalListenersBound = true;
+            document.addEventListener('keydown', (event) => {
+                const { overlay } = getElements();
+                if (event.key === 'Escape' && overlay && !overlay.classList.contains('hidden')) {
+                    closeProfileMenu();
+                }
+            });
+            window.addEventListener('resize', () => {
+                const { overlay } = getElements();
+                if (overlay && !overlay.classList.contains('hidden')) {
+                    positionMenu();
+                }
+            });
+            window.addEventListener('scroll', () => {
+                const { overlay } = getElements();
+                if (overlay && !overlay.classList.contains('hidden')) {
+                    closeProfileMenu();
+                }
+            }, true);
+        }
+
+        return elements;
     }
 
-    // --- API ---
-    async function loadProfileList() {
-        const listEl = document.getElementById('sharedProfileList');
-        if (!listEl) return;
+    function resolveAnchor(source) {
+        if (source?.currentTarget) return source.currentTarget;
+        if (source?.target?.closest) return source.target.closest('[data-profile-menu-anchor]');
+        if (typeof window.Element !== 'undefined' && source instanceof window.Element) return source;
+        if (window.event?.currentTarget) return window.event.currentTarget;
+        return activeAnchor;
+    }
 
-        listEl.innerHTML = `<div class="text-center text-text-secondary py-6">
-            <div class="inline-flex items-center gap-2">
-                <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
-                <span class="text-sm">Загрузка профилей...</span>
+    function setAnchorExpanded(expanded) {
+        if (!activeAnchor || typeof activeAnchor.setAttribute !== 'function') return;
+        activeAnchor.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+
+    function positionMenu() {
+        const { panel } = getElements();
+        if (!panel || !activeAnchor) return;
+
+        const anchorRect = activeAnchor.getBoundingClientRect();
+        const menuWidth = panel.offsetWidth || 360;
+        const menuHeight = panel.offsetHeight || 420;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 8;
+
+        let left = anchorRect.right - menuWidth;
+        if (left < margin) left = margin;
+        if (left + menuWidth > viewportWidth - margin) {
+            left = viewportWidth - menuWidth - margin;
+        }
+
+        let top = anchorRect.bottom + 10;
+        if (top + menuHeight > viewportHeight - margin) {
+            const aboveTop = anchorRect.top - menuHeight - 10;
+            top = aboveTop >= margin
+                ? aboveTop
+                : Math.max(margin, viewportHeight - menuHeight - margin);
+        }
+
+        panel.style.left = `${Math.round(left)}px`;
+        panel.style.top = `${Math.round(top)}px`;
+    }
+
+    function renderCurrentProfile(user) {
+        const { current } = getElements();
+        if (!current) return;
+
+        if (!user) {
+            current.innerHTML = `<div class="text-sm text-text-secondary">Текущий профиль не найден</div>`;
+            return;
+        }
+
+        const safeName = escapeHtml(user.name || 'Гость');
+        const safeAvatar = escapeHtml(getAvatarUrl(user.avatar_seed));
+
+        current.innerHTML = `
+            <img src="${safeAvatar}" class="h-11 w-11 rounded-full bg-surface-1 object-cover" alt="${safeName}">
+            <div class="min-w-0">
+                <div class="truncate font-semibold text-text-main">${safeName}</div>
+                <div class="mt-0.5 text-xs text-text-secondary">Тема и ключи сохраняются для этого профиля</div>
             </div>
-        </div>`;
+        `;
+    }
+
+    async function loadProfileList() {
+        const { list } = injectMenu();
+        if (!list) return;
+
+        list.innerHTML = `
+            <div class="text-center text-text-secondary py-6">
+                <div class="inline-flex items-center gap-2">
+                    <span class="material-symbols-outlined animate-spin text-primary">progress_activity</span>
+                    <span class="text-sm">Загрузка профилей...</span>
+                </div>
+            </div>
+        `;
 
         try {
-            // Fetch current user to highlight
-            try {
-                const curRes = await fetch('/api/users/current');
-                const curData = await curRes.json();
-                if (curData.ok && curData.user) {
-                    _currentUserId = curData.user.user_id;
-                }
-            } catch (_) { /* ignore */ }
+            const [currentData, usersData] = await Promise.all([
+                fetch('/api/users/current').then((response) => response.json()).catch(() => null),
+                fetch('/api/users').then((response) => response.json()).catch(() => null),
+            ]);
 
-            const res = await fetch('/api/users');
-            const data = await res.json();
+            if (currentData?.ok && currentData.user) {
+                currentUserId = currentData.user.user_id;
+                renderCurrentProfile(currentData.user);
+            } else {
+                currentUserId = null;
+                renderCurrentProfile(null);
+            }
 
-            if (!data.ok || !Array.isArray(data.items) || data.items.length === 0) {
-                listEl.innerHTML = `
+            if (!usersData?.ok || !Array.isArray(usersData.items) || usersData.items.length === 0) {
+                list.innerHTML = `
                     <div class="text-center py-8">
                         <span class="material-symbols-outlined text-text-secondary text-[32px] mb-2">person_off</span>
                         <p class="text-sm text-text-secondary">Нет профилей</p>
@@ -155,31 +256,47 @@
                 return;
             }
 
-            listEl.innerHTML = data.items.map(user => {
-                const isActive = _currentUserId === user.user_id;
-                const avatar = getAvatarUrl(user.avatar_seed, user.user_id);
-                const userIdLiteral = escapeInlineJsString(user.user_id);
-                const safeAvatar = escapeHtml(avatar);
+            list.innerHTML = usersData.items.map((user) => {
+                const isActive = currentUserId === user.user_id;
+                const safeAvatar = escapeHtml(getAvatarUrl(user.avatar_seed));
                 const safeName = escapeHtml(user.name || 'Гость');
+                const meta = isActive
+                    ? 'Активный профиль'
+                    : (user.has_password ? 'Пароль при входе' : 'Переключить');
+
                 return `
-                    <div class="flex items-center gap-4 p-3 rounded-xl border ${isActive
-                        ? 'border-primary bg-primary-lighter'
-                        : 'border-border-subtle hover:border-primary'} cursor-pointer transition-all"
-                        onclick="selectProfile('${userIdLiteral}')">
-                        <img src="${safeAvatar}" class="w-10 h-10 rounded-full bg-surface-2 object-cover" alt="${safeName}">
-                        <div class="flex-1 min-w-0">
-                            <div class="font-medium text-text-main truncate">${safeName}</div>
-                            <div class="text-xs text-text-muted">${isActive ? 'Текущий профиль' : ''}</div>
+                    <button type="button"
+                        class="flex w-full items-center gap-4 rounded-xl border p-3 text-left transition-all ${isActive
+                            ? 'border-primary bg-primary-lighter'
+                            : 'border-border-subtle hover:border-primary hover:bg-bg-hover'}"
+                        data-profile-switch="${escapeHtml(String(user.user_id || ''))}">
+                        <img src="${safeAvatar}" class="h-10 w-10 rounded-full bg-surface-2 object-cover" alt="${safeName}">
+                        <div class="min-w-0 flex-1">
+                            <div class="truncate font-medium text-text-main">${safeName}</div>
+                            <div class="text-xs text-text-muted">${meta}</div>
                         </div>
                         ${isActive
-                        ? '<span class="material-symbols-outlined text-primary shrink-0">check_circle</span>'
-                        : ''}
-                    </div>`;
+                            ? '<span class="material-symbols-outlined shrink-0 text-primary">check_circle</span>'
+                            : '<span class="material-symbols-outlined shrink-0 text-text-muted">arrow_forward</span>'}
+                    </button>`;
             }).join('');
 
-        } catch (e) {
-            console.error('[SharedProfileModal] Failed to load profiles:', e);
-            listEl.innerHTML = `
+            list.querySelectorAll('[data-profile-switch]').forEach((button) => {
+                button.addEventListener('click', async () => {
+                    const userId = button.getAttribute('data-profile-switch');
+                    if (!userId) return;
+
+                    closeProfileMenu();
+                    if (typeof window.selectProfile === 'function' && window.selectProfile !== selectProfile) {
+                        await window.selectProfile(userId);
+                        return;
+                    }
+                    await selectProfile(userId);
+                });
+            });
+        } catch (error) {
+            console.error('[SharedProfileMenu] Failed to load profiles:', error);
+            list.innerHTML = `
                 <div class="text-center py-8 text-text-secondary">
                     <span class="material-symbols-outlined text-[32px] mb-2">error</span>
                     <p class="text-sm">Не удалось загрузить профили</p>
@@ -187,49 +304,88 @@
         }
     }
 
-    // --- Public API ---
-    function openProfileModal() {
-        injectModal();
-        const modal = document.getElementById('sharedProfileModal');
-        modal.classList.remove('hidden');
-        document.body.classList.add('profile-modal-open');
+    function openProfileManagement() {
+        if (typeof window.openProfileManagementModal === 'function') {
+            window.openProfileManagementModal();
+            return;
+        }
+
+        if (typeof window.openProfileModal === 'function' && window.openProfileModal !== openProfileMenu) {
+            window.openProfileModal();
+            return;
+        }
+
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition('/ui/main');
+            return;
+        }
+
+        window.location.assign('/ui/main');
+    }
+
+    function openProfileMenu(source) {
+        const elements = injectMenu();
+        const anchor = resolveAnchor(source);
+        if (!anchor) return;
+
+        if (activeAnchor === anchor && !elements.overlay.classList.contains('hidden')) {
+            closeProfileMenu();
+            return;
+        }
+
+        activeAnchor = anchor;
+        setAnchorExpanded(true);
+        elements.overlay.classList.remove('hidden');
+        positionMenu();
         loadProfileList();
     }
 
-    function closeProfileModal() {
-        const modal = document.getElementById('sharedProfileModal');
-        if (modal) modal.classList.add('hidden');
-        document.body.classList.remove('profile-modal-open');
+    function closeProfileMenu() {
+        const { overlay } = getElements();
+        if (overlay) {
+            overlay.classList.add('hidden');
+        }
+        setAnchorExpanded(false);
+        activeAnchor = null;
     }
 
     async function selectProfile(userId) {
         if (!userId) return;
+
         try {
-            const res = await fetch('/api/users/select', {
+            const response = await fetch('/api/users/select', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ user_id: userId })
+                body: JSON.stringify({ user_id: userId }),
             });
-            const data = await res.json();
+            const data = await response.json();
+
             if (data.ok) {
-                closeProfileModal();
+                closeProfileMenu();
                 showToast('Профиль переключен', 'success', 1500);
                 setTimeout(() => window.location.reload(), 400);
                 return;
             }
+
             showToast('Не удалось переключить профиль');
-        } catch (e) {
-            console.error('[SharedProfileModal] Failed to select profile:', e);
+        } catch (error) {
+            console.error('[SharedProfileMenu] Failed to select profile:', error);
             showToast('Ошибка сети при переключении профиля');
         }
     }
 
-    // Expose globally
-    window.openProfileModal = openProfileModal;
-    window.closeProfileModal = closeProfileModal;
-    window.selectProfile = selectProfile;
+    window.openProfileMenu = openProfileMenu;
+    window.closeProfileMenu = closeProfileMenu;
 
-    // Also expose getAvatarUrl for pages that need it
+    if (typeof window.openProfileModal !== 'function') {
+        window.openProfileModal = openProfileMenu;
+    }
+    if (typeof window.closeProfileModal !== 'function') {
+        window.closeProfileModal = closeProfileMenu;
+    }
+    if (typeof window.selectProfile !== 'function') {
+        window.selectProfile = selectProfile;
+    }
     if (!window.getAvatarUrl) {
         window.getAvatarUrl = getAvatarUrl;
     }

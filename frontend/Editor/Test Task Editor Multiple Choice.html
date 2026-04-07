@@ -5,14 +5,13 @@
     <script src="../../assets/ThemeManager.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>ACTRA — Редактор тестовых заданий</title>
+    <title>ACTRA - Редактор тестовых заданий</title>
     <link rel="stylesheet" href="test_editor.css">
-    <!-- BaseEditor dependencies -->
     <script src="undo_manager.js"></script>
     <script src="autosave_manager.js"></script>
+    <script src="../../assets/NotificationUI.js"></script>
     <script src="ai_ux_messages.js"></script>
     <script src="base_editor.js"></script>
-    <!-- BaseEditor must be loaded before test_editor.js -->
     <script src="test_editor.js" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
@@ -20,17 +19,18 @@
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
-
-
 </head>
 
-<body class="bg-bg-main text-text-main h-screen overflow-hidden flex font-body selection:bg-primary-light antialiased">
+<body
+    class="test-editor-shell bg-bg-main text-text-main h-screen overflow-hidden flex font-body selection:bg-primary-light antialiased">
     <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50 pointer-events-none"></div>
+
     <div id="loading-overlay"
-        class="hidden fixed inset-0 bg-surface-1 backdrop-blur-sm z-40 flex flex-col items-center justify-center text-primary">
+        class="hidden fixed inset-0 bg-surface-1 backdrop-blur-md z-40 flex flex-col items-center justify-center text-primary">
         <div class="w-10 h-10 border-4 border-primary-light border-t-primary rounded-full animate-spin mb-3"></div>
         <p id="loading-text" class="text-sm font-semibold tracking-wide">Загрузка...</p>
     </div>
+
     <div id="import-modal"
         class="hidden fixed inset-0 bg-scrim backdrop-blur-sm z-50 flex items-center justify-center px-4">
         <div class="bg-surface-1 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
@@ -40,15 +40,17 @@
                     <h3 class="text-lg font-bold text-text-main mt-1">Подтвердите импорт</h3>
                 </div>
                 <button id="import-modal-close"
-                    class="p-2 rounded-full text-text-disabled hover:text-text-main hover:bg-bg-hover transition">
+                    class="p-2 rounded-full text-text-disabled hover:text-text-main hover:bg-bg-hover transition"
+                    title="Закрыть окно импорта" aria-label="Закрыть окно импорта">
                     <span class="material-symbols-outlined text-[20px]">close</span>
+                    <span class="sr-only">Закрыть</span>
                 </button>
             </div>
             <div class="bg-surface-2 rounded-xl p-4 text-sm text-text-main space-y-4">
                 <div class="flex items-center justify-between gap-4">
                     <span class="text-text-secondary">Файл</span>
                     <span id="import-file-name"
-                        class="font-semibold text-text-main text-right truncate max-w-[240px]">—</span>
+                        class="font-semibold text-text-main text-right truncate max-w-[240px]">-</span>
                 </div>
                 <div class="flex items-center justify-between gap-4">
                     <span class="text-text-secondary">Найдено вопросов</span>
@@ -59,25 +61,23 @@
                     В файле не найдено вопросов. Продолжение очистит текущий тест.
                 </div>
                 <div id="import-parser-status"
-                    class="text-xs px-3 py-2 rounded-lg bg-surface-2 text-text-secondary font-medium">Файл ещё не выбран
+                    class="text-xs px-3 py-2 rounded-lg bg-surface-2 text-text-secondary font-medium">Файл еще не выбран
                 </div>
                 <div>
                     <div class="flex items-center justify-between text-xs font-semibold text-text-secondary mb-1">
                         <span>Предпросмотр</span>
-                        <span class="text-[10px] text-text-disabled">Первых 10 вопросов</span>
+                        <span class="text-[10px] text-text-disabled">Первые 10 вопросов</span>
                     </div>
                     <div id="import-question-preview"
                         class="max-h-40 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1 text-[12px] text-text-main divide-y divide-border-subtle">
-                        <p class="p-3 text-text-muted">Файл ещё не выбран</p>
+                        <p class="p-3 text-text-muted">Файл еще не выбран</p>
                     </div>
                 </div>
             </div>
             <div id="import-error"
-                class="hidden text-xs px-3 py-2 rounded-lg bg-error-lighter text-error font-semibold">
-            </div>
-            <div class="flex items-center justify-between pt-1">
-                <p class="text-xs text-text-secondary" id="import-mode-hint">Текущие вопросы будут заменены
-                    импортированными
+                class="hidden text-xs px-3 py-2 rounded-lg bg-error-lighter text-error font-semibold"></div>
+            <div class="flex items-center justify-between pt-1 gap-4">
+                <p class="text-xs text-text-secondary" id="import-mode-hint">Текущие вопросы будут заменены импортированными
                     данными.</p>
                 <button id="choose-import-file-btn"
                     class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
@@ -110,170 +110,235 @@
             </div>
         </div>
     </div>
-    <aside class="w-[200px] bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full">
-        <div class="h-16 flex items-center px-4 border-b border-border-subtle gap-2">
-            <span class="brand-logo w-6 h-6 shrink-0" style="color:var(--color-primary)" aria-hidden="true"></span>
-            <h1 class="text-text-main font-bold text-sm tracking-tight truncate">ACTRA</h1>
+
+    <aside
+        class="test-editor-sidebar test-editor-sidebar--left w-[200px] bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full">
+        <div class="test-editor-sidebar__brand h-16 flex items-center px-4 border-b border-border-subtle">
+            <div class="brand-lockup brand-lockup--compact">
+                <span class="brand-logo" style="color:var(--color-primary)" aria-hidden="true"></span>
+                <div class="test-editor-sidebar__brand-copy">
+                    <h1 class="brand-lockup__word">ACTRA</h1>
+                    <p class="test-editor-sidebar__brand-subtitle">Редактор теста</p>
+                </div>
+            </div>
         </div>
-        <div class="px-4 py-3 border-b border-border-subtle">
-            <h2 class="text-xs font-bold text-text-secondary uppercase tracking-wider">Вопросы теста</h2>
+
+        <div class="test-editor-sidebar__heading px-4 py-4 border-b border-border-subtle">
+            <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <p class="section-label">Структура теста</p>
+                    <h2 class="test-editor-sidebar__title">Вопросы</h2>
+                    <p id="sidebar-task-name" class="test-editor-sidebar__subtitle">Новый тест</p>
+                </div>
+                <span id="question-count-badge" class="test-editor-count-badge">1 вопрос</span>
+            </div>
         </div>
-        <div id="question-list" class="flex-1 overflow-y-auto py-2 no-scrollbar px-2 space-y-1">
+
+        <div id="question-list" class="flex-1 overflow-y-auto custom-scrollbar px-3 py-3 space-y-2">
             <!-- Questions will be rendered here -->
         </div>
-        <div class="p-3 border-t border-border-subtle bg-surface-2 backdrop-blur space-y-2">
-            <button id="add-question-btn"
-                class="flex items-center justify-center gap-2 w-full px-3 py-2 bg-surface-1 border border-border-subtle text-primary hover:border-primary hover:bg-bg-hover rounded-md transition-all shadow-sm">
+
+        <div class="test-editor-sidebar__footer p-3 border-t border-border-subtle bg-surface-2 backdrop-blur space-y-3">
+            <button id="add-question-btn" class="test-editor-sidebar__primary-btn" type="button">
                 <span class="material-symbols-outlined text-[18px]">add</span>
-                <span class="text-xs font-bold">Добавить вопрос</span>
+                <span class="text-sm font-bold">Добавить вопрос</span>
             </button>
-            <div class="flex gap-2 pt-1">
-                <button id="import-btn"
-                    class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-text-secondary hover:text-text-main hover:bg-surface-1 rounded transition-colors"
-                    title="Import from JSON">
+
+            <div class="test-editor-sidebar__tool-row">
+                <button id="import-btn" class="test-editor-sidebar__tool-btn" type="button"
+                    title="Импортировать вопросы из файла">
                     <span class="material-symbols-outlined text-[16px]">upload_file</span>
-                    <span class="hidden xl:inline">Импорт</span>
+                    <span>Импорт</span>
                 </button>
-                <button id="export-btn"
-                    class="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 text-xs font-medium text-text-secondary hover:text-text-main hover:bg-surface-1 rounded transition-colors"
-                    title="Export to JSON">
+                <button id="export-btn" class="test-editor-sidebar__tool-btn" type="button"
+                    title="Экспортировать вопросы в файл">
                     <span class="material-symbols-outlined text-[16px]">download</span>
-                    <span class="hidden xl:inline">Экспорт</span>
+                    <span>Экспорт</span>
                 </button>
             </div>
+
+            <div class="pt-3 mt-1 border-t border-border-subtle space-y-2">
+                <p class="sidebar-section-title">Действия</p>
+                <button id="clear-test-sidebar-btn" class="test-editor-sidebar__action-btn" type="button">
+                    <span class="material-symbols-outlined text-[18px]">refresh</span>
+                    Очистить тест
+                </button>
+                <button id="delete-test-sidebar-btn" class="test-editor-sidebar__action-btn is-danger" type="button">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                    Удалить задание
+                </button>
+            </div>
+
             <input type="file" id="import-input" class="hidden" accept=".txt,.json">
         </div>
     </aside>
-    <main class="flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
+
+    <main class="test-editor-main flex-1 flex flex-col h-full overflow-hidden relative bg-bg-main">
         <header
-            class="h-16 flex items-center justify-between px-6 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
-            <div class="flex items-center gap-4">
-                <button onclick="window.navigateWithTransition('/ui/editor')" title="Библиотека заданий"
-                    class="p-2 hover:bg-bg-hover rounded-full text-text-secondary transition-colors">
-                    <span class="material-symbols-outlined">arrow_back</span>
-                </button>
-                <div class="h-6 w-px bg-border-subtle"></div>
-                <h2 class="text-sm font-bold text-text-main tracking-tight">Редактор тестового задания</h2>
-            </div>
-            <div class="flex items-center gap-3">
-                <div id="save-status-container"
-                    class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg border border-transparent transition-all duration-300">
-                    <div id="save-status-indicator"
-                        class="w-2 h-2 rounded-full bg-success shadow-[0_0_8px_var(--color-success-light)] transition-all">
-                    </div>
-                    <div class="flex flex-col">
-                        <span id="save-status-text"
-                            class="text-[11px] font-bold text-text-secondary leading-none">Сохранено</span>
-                        <span id="save-status-detail"
-                            class="text-[10px] text-text-disabled leading-none mt-1 hidden"></span>
+            class="test-editor-header px-6 py-3 bg-surface-1 backdrop-blur-md border-b border-border-subtle shrink-0 z-30 shadow-sm sticky top-0">
+            <div class="test-editor-header__inner">
+                <div class="test-editor-header__title">
+                    <button onclick="window.navigateWithTransition('/ui/editor')" title="Библиотека заданий"
+                        class="test-editor-back-btn p-2 hover:bg-bg-hover rounded-full text-text-secondary transition-colors"
+                        type="button">
+                        <span class="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    <div class="test-editor-header__copy">
+                        <div class="test-editor-header__eyebrow">
+                            <span class="test-editor-header__badge">Редактор теста</span>
+                            <span id="task-name-caption" class="test-editor-header__eyebrow-text">Новый тест</span>
+                        </div>
+                        <h2 class="test-editor-header__headline">Тестовые задания</h2>
+                        <p id="active-question-caption" class="test-editor-header__caption">Вопрос 1 из 1</p>
                     </div>
                 </div>
-                <!-- Undo/Redo buttons -->
-                <div class="flex items-center gap-1 border-l border-border-subtle pl-3">
-                    <button id="undo-btn" disabled title="Отменить (Ctrl+Z)"
-                        class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled disabled:active:scale-100">
-                        <span class="material-symbols-outlined text-[20px]">undo</span>
-                    </button>
-                    <button id="redo-btn" disabled title="Повторить (Ctrl+Y)"
-                        class="p-2 rounded-lg text-text-disabled hover:text-primary hover:bg-bg-hover transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-disabled disabled:active:scale-100">
-                        <span class="material-symbols-outlined text-[20px]">redo</span>
-                    </button>
-                </div>
-                <button id="clear-test-btn"
-                    class="flex items-center gap-2 h-[37px] px-4 py-1.5 text-sm font-semibold text-text-secondary bg-surface-1 border border-border-subtle rounded-lg hover:text-text-main hover:border-border-normal transition-all active:scale-95">
-                    <span class="material-symbols-outlined text-[18px]">refresh</span>
-                    Очистить
-                </button>
-                <button id="delete-test-btn"
-                    class="flex items-center gap-2 h-[37px] px-4 py-1.5 text-sm font-semibold text-error bg-surface-1 border border-error-light rounded-lg hover:bg-error-lighter transition-all active:scale-95">
-                    <span class="material-symbols-outlined text-[18px]">delete</span>
-                    Удалить
-                </button>
-                <button id="save-task-btn" style="height: 37px;"
-                    class="flex items-center justify-center gap-2 px-4 py-1.5 bg-primary text-primary-fg text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all active:scale-95 border border-primary">
-                    <span class="material-symbols-outlined text-[18px]">cloud_upload</span>
-                    Сохранить
-                </button>
-            </div>
-        </header>
-        <div class="flex-1 overflow-y-auto p-4 md:p-6">
-            <div class="max-w-3xl mx-auto space-y-6">
-                <section class="space-y-2">
-                    <label class="block text-sm font-bold text-text-main tracking-tight">Текст вопроса</label>
-                    <div class="relative group">
-                        <textarea id="question-textarea" style="padding-right: 5rem;"
-                            class="block w-full rounded-lg border-border-subtle bg-surface-1 py-3 pl-3 pr-20 text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-primary shadow-sm focus:shadow-md text-base leading-relaxed resize-none transition-all min-h-[84px]"
-                            placeholder="Введите формулировку вопроса..." rows="2"></textarea>
-                        <div class="absolute top-3 right-3 flex flex-col items-end gap-2">
-                            <button id="upload-image-btn" type="button"
-                                class="w-10 h-10 rounded-full bg-surface-1 border border-border-subtle text-icon-secondary flex items-center justify-center shadow-sm hover:text-primary hover:border-primary transition-all active:scale-95 opacity-90 hover:opacity-100"
-                                title="Добавить изображение к вопросу">
-                                <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
+                <div class="test-editor-header__actions">
+                    <div class="test-editor-header__controls">
+                        <div class="test-editor-header__history">
+                            <button id="undo-btn" disabled title="Отменить (Ctrl+Z)" class="test-editor-icon-btn"
+                                type="button">
+                                <span class="material-symbols-outlined text-[20px]">undo</span>
                             </button>
-                            <div id="question-image-thumb"
-                                class="relative w-16 h-16 rounded-lg border border-border-subtle shadow hidden overflow-hidden opacity-90 hover:opacity-100 transition">
-                                <img id="question-image" src="" alt="Question Image" class="w-full h-full object-cover">
-                                <button id="remove-question-image-btn" type="button"
-                                    class="absolute -top-2 -right-2 bg-surface-1 border border-border-subtle rounded-full p-0.5 shadow text-text-secondary hover:text-error">
-                                    <span class="material-symbols-outlined text-[16px] leading-none">close</span>
-                                </button>
-                            </div>
+                            <button id="redo-btn" disabled title="Повторить (Ctrl+Y)" class="test-editor-icon-btn"
+                                type="button">
+                                <span class="material-symbols-outlined text-[20px]">redo</span>
+                            </button>
+                        </div>
+                        <button id="save-task-btn"
+                            class="test-editor-save-btn shrink-0 flex items-center justify-center gap-2 px-4 py-1.5 bg-primary text-primary-fg text-sm font-semibold rounded-lg hover:bg-primary-dark transition-all active:scale-95 border border-primary"
+                            type="button">
+                            <span class="material-symbols-outlined text-[18px]">save</span>
+                            Сохранить
+                        </button>
+                    </div>
+                    <div id="save-status-container" class="status-cluster test-editor-header__status" data-tone="success">
+                        <div id="save-status-indicator" class="status-cluster__dot"></div>
+                        <div class="status-cluster__body">
+                            <span id="save-status-text"
+                                class="status-cluster__label text-[11px] font-bold text-text-secondary leading-none">Сохранено</span>
+                            <span id="save-status-detail"
+                                class="status-cluster__detail text-[10px] text-text-disabled leading-none mt-1 hidden"></span>
                         </div>
                     </div>
-                    <input type="file" id="image-upload-input" class="hidden" accept="image/*">
-                </section>
-                <section class="space-y-4 pt-3 border-t border-border-subtle">
-                    <div class="flex items-center justify-between mb-2">
-                        <label class="block text-sm font-bold text-text-main tracking-tight">Варианты ответов</label>
-                        <span class="text-xs bg-info-lighter text-info-text px-2 py-0.5 rounded font-medium">Выберите
-                            верные
-                            варианты</span>
-                    </div>
-                    <div id="options-container" class="flex flex-col gap-3">
-                        <!-- Options will be rendered here -->
-                    </div>
-                    <div class="pt-2 flex flex-col gap-2">
-                        <button id="add-option-btn"
-                            class="flex items-center gap-2 text-sm font-semibold text-primary hover:bg-bg-hover px-3 py-2 rounded-md transition-all active:scale-95 w-max">
-                            <span class="material-symbols-outlined text-[20px]">add_circle</span>
-                            Добавить вариант
-                        </button>
-                        <input type="file" id="option-image-input" class="hidden" accept="image/*">
-                    </div>
-                </section>
+                </div>
             </div>
-            <div class="h-10"></div>
+        </header>
+
+        <div class="test-editor-main__scroll flex-1 overflow-y-auto">
+            <div class="test-editor-main__inner p-4 md:p-6">
+                <div class="editor-workspace">
+                    <section class="editor-card editor-card--hero">
+                        <div class="editor-card__header">
+                            <div>
+                                <h3 class="editor-card__title">Вопрос</h3>
+                            </div>
+                            <p class="editor-card__meta">Сделайте текст вопроса коротким, ясным и без двусмысленности.</p>
+                        </div>
+
+                        <div class="relative group">
+                            <textarea id="question-textarea"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-1 py-4 pl-4 pr-28 text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-primary shadow-sm focus:shadow-md text-base leading-relaxed resize-none transition-all min-h-[112px]"
+                                placeholder="Введите формулировку вопроса..." rows="3"></textarea>
+
+                            <div class="question-media-dock absolute top-3 right-3 flex flex-col items-end gap-2">
+                                <button id="upload-image-btn" type="button"
+                                    class="question-media-trigger rounded-full bg-surface-1 border border-border-subtle text-icon-secondary flex items-center justify-center shadow-sm hover:text-primary hover:border-primary transition-all active:scale-95 opacity-95 hover:opacity-100"
+                                    title="Добавить изображение к вопросу" aria-label="Добавить изображение к вопросу">
+                                    <span class="material-symbols-outlined text-[20px]">add_photo_alternate</span>
+                                    <span class="question-media-trigger__label">Фото</span>
+                                </button>
+
+                                <div id="question-image-thumb"
+                                    class="question-media-thumb relative rounded-2xl border border-border-subtle shadow hidden overflow-hidden opacity-95 hover:opacity-100 transition"
+                                    aria-hidden="true">
+                                    <img id="question-image" src="" alt="Изображение вопроса" class="w-full h-full object-cover">
+                                    <button id="remove-question-image-btn" type="button"
+                                        class="question-media-thumb__remove absolute top-2 right-2 bg-surface-1 border border-border-subtle rounded-full px-2 py-1 shadow text-text-secondary hover:text-error hover:border-error-light"
+                                        title="Удалить изображение вопроса" aria-label="Удалить изображение вопроса">
+                                        <span class="material-symbols-outlined text-[16px] leading-none">close</span>
+                                        <span class="question-media-thumb__remove-label">Удалить</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="test-editor-inline-note">
+                            <span class="material-symbols-outlined text-[18px] text-info">tips_and_updates</span>
+                            <span>При необходимости добавьте иллюстрацию: она будет привязана именно к текущему вопросу.</span>
+                        </div>
+
+                        <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+                    </section>
+
+                    <section class="editor-card">
+                        <div class="editor-card__header editor-card__header--stack-sm">
+                            <div>
+                                <div class="flex items-center gap-3 flex-wrap">
+                                    <h3 class="editor-card__title">Варианты</h3>
+                                    <span
+                                        class="text-xs bg-info-lighter text-info-text px-2.5 py-1 rounded-full font-semibold">Выберите
+                                        верные варианты</span>
+                                </div>
+                            </div>
+                            <p class="editor-card__meta">Нажмите на букву варианта, чтобы отметить правильный ответ.</p>
+                        </div>
+
+                        <div id="options-container" class="flex flex-col gap-3">
+                            <!-- Options will be rendered here -->
+                        </div>
+
+                        <div class="pt-2 flex flex-col gap-2">
+                            <button id="add-option-btn" class="test-editor-secondary-action" type="button">
+                                <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                                Добавить вариант
+                            </button>
+                            <input type="file" id="option-image-input" class="hidden" accept="image/*">
+                        </div>
+                    </section>
+                </div>
+                <div class="h-10"></div>
+            </div>
         </div>
     </main>
-    <aside class="w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 overflow-y-auto"
-        style="width: 320px;">
+
+    <aside
+        class="test-editor-sidebar test-editor-sidebar--right w-[320px] bg-surface-1 border-l border-border-subtle flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
         <div
-            class="h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 backdrop-blur sticky top-0 z-10">
-            <h2 class="text-base font-bold text-text-main">Настройки вопроса</h2>
+            class="test-editor-inspector__header h-16 flex items-center px-6 border-b border-border-subtle bg-surface-1 backdrop-blur sticky top-0 z-10">
+            <div>
+                <p class="section-label">Инспектор</p>
+                <h2 class="text-base font-bold text-text-main">Настройки вопроса</h2>
+            </div>
         </div>
-        <div class="p-6 space-y-8">
-            <div class="space-y-2">
-                <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Тип ответа</label>
-                <div class="flex items-center gap-2 text-sm font-semibold text-text-main">
-                    <span class="material-symbols-outlined text-[18px] text-primary">tune</span>
-                    <span id="answer-type-display">Определяется по ответам</span>
+
+        <div class="p-6 space-y-8 test-editor-inspector__content">
+            <section class="test-editor-inspector-card space-y-3">
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Тип ответа</label>
+                    <div class="flex items-center gap-2 text-sm font-semibold text-text-main">
+                        <span class="material-symbols-outlined text-[18px] text-primary">tune</span>
+                        <span id="answer-type-display">Определяется по ответам</span>
+                    </div>
                 </div>
-                <p class="text-[11px] text-text-secondary leading-tight">Определяется автоматически по количеству
-                    правильных
-                    ответов.</p>
-            </div>
-            <div class="space-y-2">
-                <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Обратная
-                    связь</label>
+                <p class="text-[12px] text-text-secondary leading-relaxed">Тип определяется автоматически по количеству
+                    правильных вариантов. Как только отметите несколько ответов, редактор переключится в множественный
+                    выбор.</p>
+            </section>
+
+            <section class="test-editor-inspector-card space-y-3">
+                <div class="space-y-1">
+                    <label class="block text-xs font-bold text-text-secondary uppercase tracking-wider">Обратная связь</label>
+                    <h3 class="text-base font-bold text-text-main">Комментарий после ответа</h3>
+                </div>
                 <textarea id="explanation-textarea"
-                    class="block w-full rounded-lg border-border-subtle bg-surface-1 text-sm py-3 px-3 focus:border-primary focus:ring-primary shadow-sm focus:shadow-md transition-all"
-                    placeholder="Комментарий, который увидит пользователь после ответа..." rows="4"></textarea>
-                <p class="text-[11px] text-text-secondary">Показывается пользователю после отправки ответа.</p>
-            </div>
+                    class="block w-full rounded-xl border-border-subtle bg-surface-1 text-sm py-3 px-3 focus:border-primary focus:ring-primary shadow-sm focus:shadow-md transition-all min-h-[148px]"
+                    placeholder="Комментарий, который увидит пользователь после ответа..." rows="5"></textarea>
+                <p class="text-[12px] text-text-secondary leading-relaxed">Подскажите, почему ответ верный, на что обратить
+                    внимание и как не ошибиться в следующий раз.</p>
+            </section>
         </div>
     </aside>
 
-    <script src="../../assets/ThemeSwitcherUI.js"></script>
     <script src="../../assets/ConnectionMonitor.js"></script>
 </body>
 

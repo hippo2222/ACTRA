@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <script src="/assets/ThemeManager.js"></script>
+    <script src="/assets/NotificationUI.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Центр теории</title>
+    <link href="/assets/tailwind.css" rel="stylesheet" />
+    <link href="/assets/fonts.css" rel="stylesheet" />
+    <link href="/assets/lightB-variables.css" rel="stylesheet" />
+    <link href="/assets/lightB-components.css" rel="stylesheet" />
+    <link href="/assets/animations.css" rel="stylesheet" />
+    <style>
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 15%, transparent), transparent 34%),
+                radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-info) 14%, transparent), transparent 28%),
+                var(--color-bg-main);
+        }
+
+        .theory-center-shell {
+            max-width: 1480px;
+        }
+
+        .theory-center-panel {
+            background: var(--color-component-card-elevated-bg);
+            border: 1px solid var(--color-component-card-elevated-border);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .theory-center-enter {
+            animation: none;
+        }
+
+        .theory-center-header {
+            display: grid;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .theory-header-actions {
+            align-content: start;
+        }
+
+        .theory-center-header > .min-w-0 > .inline-flex:first-child {
+            display: none;
+        }
+
+        .theory-center-header > .min-w-0 > .inline-flex:first-child + .space-y-2 {
+            margin-top: 0 !important;
+        }
+
+        .theory-summary-wrap[data-collapsed="1"] {
+            display: none;
+        }
+
+        @media (min-width: 1280px) {
+            .theory-center-header {
+                grid-template-columns: minmax(0, 1fr) auto;
+            }
+
+            .theory-header-actions {
+                justify-self: end;
+                flex-wrap: nowrap;
+            }
+
+            .theory-header-title {
+                white-space: nowrap;
+            }
+        }
+
+        #theory-center-list-subtitle {
+            white-space: nowrap;
+            margin-top: 0.35rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .theory-summary-card {
+            transition:
+                transform 0.16s ease,
+                border-color 0.16s ease,
+                box-shadow 0.16s ease,
+                background-color 0.16s ease;
+        }
+
+        .theory-summary-card:hover,
+        .theory-summary-card:focus-visible {
+            transform: translateY(-2px);
+            border-color: var(--color-component-card-elevated-border-hover);
+            box-shadow: var(--shadow-md);
+            outline: none;
+        }
+
+        .theory-selection-toggle[data-active="1"] {
+            background: var(--color-primary);
+            border-color: var(--color-primary);
+            color: var(--color-primary-fg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .theory-selection-toggle:disabled {
+            cursor: not-allowed;
+            pointer-events: none;
+            border-color: var(--color-component-button-muted-border);
+            background: var(--color-component-button-muted-bg);
+            color: var(--color-text-muted);
+            box-shadow: none;
+            opacity: 1;
+        }
+
+        #theory-center-selection-toggle-wrap[data-disabled="1"] {
+            cursor: not-allowed;
+        }
+
+        .theory-scope-btn[data-active="1"] {
+            background: var(--color-primary);
+            border-color: var(--color-primary);
+            color: var(--color-primary-fg);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .theory-row-card {
+            transition:
+                transform 0.16s ease,
+                border-color 0.16s ease,
+                box-shadow 0.16s ease,
+                background-color 0.16s ease;
+            content-visibility: auto;
+            contain-intrinsic-size: 280px;
+        }
+
+        .theory-row-card[data-selected="1"] {
+            border-color: var(--color-component-pill-info-border);
+            background: var(--color-component-pill-info-bg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .theory-row-card[data-selection-mode="1"][data-selectable="1"] {
+            cursor: pointer;
+        }
+
+        .theory-row-card:hover {
+            transform: translateY(-1px);
+            border-color: var(--color-component-card-elevated-border-hover);
+            box-shadow: var(--shadow-md);
+        }
+
+        .theory-mini-btn {
+            transition:
+                transform 0.16s ease,
+                border-color 0.16s ease,
+                color 0.16s ease,
+                background-color 0.16s ease,
+                box-shadow 0.16s ease;
+        }
+
+        .theory-tone-surface,
+        .theory-tone-chip,
+        .theory-mini-btn--tone,
+        .theory-pill-tone {
+            --theory-tone-border: var(--color-component-pill-info-border);
+            --theory-tone-soft-bg: var(--color-component-pill-info-bg);
+            --theory-tone-strong-bg: var(--color-component-empty-state-icon-bg);
+            --theory-tone-accent: var(--color-component-pill-info-fg);
+        }
+
+        .theory-tone--primary {
+            --theory-tone-border: var(--color-component-pill-info-border);
+            --theory-tone-soft-bg: var(--color-component-pill-info-bg);
+            --theory-tone-strong-bg: var(--color-component-empty-state-icon-bg);
+            --theory-tone-accent: var(--color-component-pill-info-fg);
+        }
+
+        .theory-tone--success {
+            --theory-tone-border: var(--color-component-pill-success-border);
+            --theory-tone-soft-bg: var(--color-component-pill-success-bg);
+            --theory-tone-strong-bg: var(--color-component-pill-success-bg);
+            --theory-tone-accent: var(--color-component-pill-success-fg);
+        }
+
+        .theory-tone--info {
+            --theory-tone-border: var(--color-component-pill-info-border);
+            --theory-tone-soft-bg: var(--color-component-pill-info-bg);
+            --theory-tone-strong-bg: var(--color-component-pill-info-bg);
+            --theory-tone-accent: var(--color-component-pill-info-fg);
+        }
+
+        .theory-tone--warning {
+            --theory-tone-border: var(--color-component-pill-warning-border);
+            --theory-tone-soft-bg: var(--color-component-pill-warning-bg);
+            --theory-tone-strong-bg: var(--color-component-pill-warning-bg);
+            --theory-tone-accent: var(--color-component-pill-warning-fg);
+        }
+
+        .theory-tone--error {
+            --theory-tone-border: var(--color-component-pill-error-border);
+            --theory-tone-soft-bg: var(--color-component-pill-error-bg);
+            --theory-tone-strong-bg: var(--color-component-pill-error-bg);
+            --theory-tone-accent: var(--color-component-pill-error-fg);
+        }
+
+        .theory-pill-tone {
+            color: var(--color-text-main);
+            border-color: var(--theory-tone-border);
+            background: linear-gradient(180deg, var(--theory-tone-strong-bg), var(--theory-tone-soft-bg));
+        }
+
+        .theory-tone-surface {
+            color: var(--color-text-main);
+            border-color: var(--theory-tone-border);
+            background:
+                linear-gradient(
+                    180deg,
+                    var(--theory-tone-strong-bg),
+                    var(--theory-tone-soft-bg)
+                );
+        }
+
+        .theory-tone-chip {
+            color: var(--color-text-main);
+            border-color: var(--theory-tone-border);
+            background: linear-gradient(180deg, var(--theory-tone-strong-bg), var(--theory-tone-soft-bg));
+        }
+
+        .theory-neutral-chip {
+            color: var(--color-component-secondary-copy-strong);
+            border-color: var(--color-component-pill-neutral-border);
+            background: var(--color-component-pill-neutral-bg);
+        }
+
+        .theory-neutral-chip--muted {
+            color: var(--color-text-muted);
+        }
+
+        .theory-mini-btn--tone {
+            color: var(--color-text-main);
+            border-color: var(--theory-tone-border);
+            background: linear-gradient(180deg, var(--theory-tone-strong-bg), var(--theory-tone-soft-bg));
+            box-shadow: var(--shadow-sm);
+        }
+
+        .theory-mini-btn--tone:hover,
+        .theory-mini-btn--tone:focus-visible {
+            color: var(--color-text-main);
+            border-color: var(--theory-tone-border);
+            background: linear-gradient(180deg, var(--theory-tone-strong-bg), var(--theory-tone-soft-bg));
+        }
+
+        .theory-mini-btn--tone:disabled {
+            color: var(--color-text-muted);
+            border-color: var(--color-border-subtle);
+            background: var(--color-component-panel-row-soft-bg);
+            box-shadow: none;
+        }
+
+        .theory-mini-btn--neutral {
+            color: var(--color-text-main);
+            border-color: var(--color-component-button-muted-border);
+            background: var(--color-component-button-muted-bg);
+        }
+
+        .theory-mini-btn--neutral:hover,
+        .theory-mini-btn--neutral:focus-visible {
+            color: var(--color-component-button-muted-hover-fg);
+            border-color: var(--color-component-button-muted-hover-border);
+            background: var(--color-component-button-muted-hover-bg);
+        }
+
+        .theory-tone-accent {
+            color: var(--theory-tone-accent);
+        }
+
+        .theory-mini-btn:hover,
+        .theory-mini-btn:focus-visible {
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        .theory-chip {
+            transition:
+                transform 0.15s ease,
+                border-color 0.15s ease,
+                background-color 0.15s ease;
+        }
+
+        .theory-chip:hover,
+        .theory-chip:focus-visible {
+            outline: none;
+            transform: translateY(-1px);
+            border-color: var(--color-component-pill-info-border);
+            background: var(--color-component-pill-info-bg);
+        }
+
+        .theory-bulk-bar {
+            position: fixed;
+            bottom: 1.5rem;
+            z-index: 70;
+            left: 0;
+            right: 0;
+            align-items: flex-end;
+            justify-content: center;
+            padding: 0 0.75rem;
+            pointer-events: none;
+            display: none;
+        }
+
+        .theory-bulk-bar:not(.hidden) {
+            display: flex;
+        }
+
+        .theory-bulk-bar.hidden {
+            display: none !important;
+        }
+
+        .theory-bulk-bar > * {
+            width: min(920px, calc(100vw - 1.5rem));
+            pointer-events: auto;
+        }
+
+        .theory-card-select-anchor {
+            min-width: 42px;
+            min-height: 42px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .theory-summary-card,
+            .theory-row-card,
+            .theory-mini-btn,
+            .theory-chip {
+                transition: none !important;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .theory-header-actions {
+                width: 100%;
+            }
+
+            .theory-header-actions > * {
+                flex: 1 1 calc(50% - 0.5rem);
+            }
+        }
+    </style>
+</head>
+
+<body class="text-text-main">
+    <main class="theory-center-enter px-4 py-6 sm:px-6 lg:px-8" data-page-transition-root>
+        <div class="theory-center-shell mx-auto flex flex-col gap-5">
+            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6 lg:p-7">
+                <div class="theory-center-header">
+                    <div class="min-w-0 space-y-3">
+                        <div class="theory-pill-tone theory-tone--primary inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em]">
+                            <span class="theory-tone-accent material-symbols-outlined text-[15px]">hub</span>
+                            Центр теории
+                        </div>
+                        <div class="space-y-2">
+                            <h1 class="theory-header-title text-3xl font-bold tracking-[-0.02em] text-text-main sm:text-4xl">Теории тем и комплексов в одном месте</h1>
+                            <p class="max-w-3xl text-sm leading-5 text-text-secondary sm:text-[14px] lg:max-w-none lg:whitespace-nowrap">
+                                Обзор теории по темам и комплексам: где она уже есть, где ее еще нет и где нужна синхронизация.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="theory-header-actions flex flex-wrap items-center justify-end gap-2">
+                        <button id="theory-center-go-home" type="button"
+                            class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary" title="На главную">
+                            <span class="material-symbols-outlined text-[18px]">home</span>
+                        </button>
+                        <button id="theory-center-go-editor" type="button"
+                            class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
+                            <span class="material-symbols-outlined text-[18px]">design_services</span>
+                            Редактор заданий
+                        </button>
+                        <button id="theory-center-back-complexes" type="button"
+                            class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
+                            <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+                            К комплексам
+                        </button>
+                        <button id="theory-center-open-editor" type="button"
+                            class="theory-mini-btn theory-mini-btn--tone theory-tone--primary inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold">
+                            <span class="material-symbols-outlined text-[18px]">edit_square</span>
+                            Редактор теории
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div class="min-w-0">
+                        <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-text-secondary">Быстрые подборки</p>
+                        <h2 class="mt-1 text-lg font-bold text-text-main">Сортировки по состоянию теории</h2>
+                    </div>
+                    <button id="theory-center-summary-toggle" type="button"
+                        class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary"
+                        aria-expanded="true">
+                        <span id="theory-center-summary-toggle-icon" class="material-symbols-outlined text-[18px]">expand_less</span>
+                        <span id="theory-center-summary-toggle-label">Свернуть</span>
+                    </button>
+                </div>
+                <div id="theory-center-summary-wrap" class="theory-summary-wrap mt-4" data-collapsed="0">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5" id="theory-center-summary">
+                        <div class="theory-center-panel rounded-[24px] p-4 text-sm text-text-secondary">Загрузка...</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
+                <div class="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1.3fr)_auto_auto] xl:items-end">
+                    <label class="flex min-w-0 flex-col gap-2">
+                        <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Поиск</span>
+                        <span class="relative flex items-center">
+                            <span class="pointer-events-none absolute left-4 text-text-secondary">
+                                <span class="material-symbols-outlined text-[18px]">search</span>
+                            </span>
+                            <input id="theory-center-search" type="search" autocomplete="off" spellcheck="false"
+                                placeholder="Найти тему, комплекс или теорию"
+                                class="w-full rounded-2xl border border-border-strong bg-bg-main py-3 pl-12 pr-4 text-sm text-text-main outline-none transition-colors placeholder:text-text-muted focus:border-primary focus:ring-2 focus:ring-primary-light" />
+                        </span>
+                    </label>
+
+                    <div class="flex flex-col gap-2">
+                        <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Раздел</span>
+                        <div class="flex flex-wrap rounded-2xl border border-border-subtle bg-surface-1 p-1">
+                            <button id="theory-center-scope-all" type="button" data-scope="all" data-active="0"
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Все</button>
+                            <button id="theory-center-scope-topics" type="button" data-scope="topics" data-active="1"
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Темы</button>
+                            <button id="theory-center-scope-complexes" type="button" data-scope="complexes" data-active="0"
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Комплексы</button>
+                            <button id="theory-center-scope-orphans" type="button" data-scope="orphans" data-active="0"
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Без привязки</button>
+                            <button id="theory-center-scope-only-title" type="button" data-scope="only_title" data-active="0"
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Только заголовок</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:min-w-[360px]">
+                        <label class="flex flex-col gap-2">
+                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Модуль</span>
+                            <select id="theory-center-module-filter"
+                                class="rounded-2xl border border-border-strong bg-bg-main px-4 py-3 text-sm text-text-main outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-light">
+                                <option value="all">Все модули</option>
+                            </select>
+                        </label>
+                        <label class="flex flex-col gap-2">
+                            <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Состояние</span>
+                            <select id="theory-center-state-filter"
+                                class="rounded-2xl border border-border-strong bg-bg-main px-4 py-3 text-sm text-text-main outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary-light">
+                                <option value="all">Все состояния</option>
+                            </select>
+                        </label>
+                    </div>
+                </div>
+                <div id="theory-center-flash" class="mt-4 hidden rounded-2xl border px-4 py-3 text-sm"></div>
+            </section>
+
+            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                    <div class="min-w-0 sm:flex-1">
+                        <h2 id="theory-center-list-title" class="text-xl font-bold text-text-main">Темы</h2>
+                        <p id="theory-center-list-subtitle" class="mt-1 text-sm text-text-secondary">
+                            Показываем темы и их теоретический статус.
+                        </p>
+                    </div>
+                    <div class="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto sm:max-w-none">
+                        <p id="theory-center-result-summary" class="text-right text-sm font-medium text-text-secondary">Подготавливаем данные...</p>
+                        <span id="theory-center-selection-toggle-wrap" class="inline-flex"
+                            title="Массовые операции доступны в разделах «Все» и «Без привязки»">
+                            <button id="theory-center-selection-toggle" type="button" data-active="0"
+                                class="theory-selection-toggle theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary"
+                                title="Массовые операции доступны в разделах «Все» и «Без привязки»">
+                                <span id="theory-center-selection-toggle-icon" class="material-symbols-outlined text-[18px]">checklist</span>
+                                <span id="theory-center-selection-toggle-label">Массовые операции</span>
+                            </button>
+                        </span>
+                    </div>
+                </div>
+
+                <div id="theory-center-list" class="mt-5 grid grid-cols-1 gap-4">
+                    <div class="rounded-3xl border border-border-subtle bg-surface-1 px-5 py-10 text-center text-sm text-text-secondary">
+                        Загружаем обзор теории...
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <div id="theory-center-bulk-bar" class="theory-bulk-bar hidden" hidden aria-hidden="true">
+        <div class="theory-center-panel rounded-[24px] p-3 sm:p-4">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div class="min-w-0">
+                    <p id="theory-center-selection-counter" class="text-sm font-semibold text-text-main">Выбрано: 0</p>
+                    <p id="theory-center-selection-note" class="mt-1 text-xs leading-5 text-text-secondary">
+                        Массовое удаление доступно только для теорий без привязки к темам и комплексам.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <button id="theory-center-selection-select-visible" type="button"
+                        class="theory-mini-btn inline-flex min-w-[124px] items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-55">
+                        <span class="material-symbols-outlined text-[18px]">select_all</span>
+                        Все видимые
+                    </button>
+                    <button id="theory-center-selection-delete" type="button"
+                        class="theory-mini-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-error-light bg-error-lighter px-4 py-2 text-sm font-semibold text-error-text hover:border-error disabled:cursor-not-allowed disabled:opacity-55">
+                        <span class="material-symbols-outlined text-[18px]">delete</span>
+                        Удалить
+                    </button>
+                    <button id="theory-center-selection-cancel" type="button"
+                        class="theory-mini-btn inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-border-subtle bg-surface-1 px-4 py-2 text-sm font-semibold text-text-secondary hover:border-primary hover:text-primary disabled:cursor-not-allowed disabled:opacity-55">
+                        <span class="material-symbols-outlined text-[18px]">close</span>
+                        Отмена
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/ui/editor/theory_center.js"></script>
+</body>
+
+</html>

@@ -29,6 +29,7 @@ class TaskData:
     DEFAULT = {
         "id": None,
         "type": None,
+        "subtype": None,  # Подтип задания (например, "error_detection" для Click)
         "meta": {
             "name": "",
             "module": "",

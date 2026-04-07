@@ -3,6 +3,8 @@
 Endpoints:
 - GET    /api/theories                                          - List theories
 - POST   /api/theories                                          - Create theory
+- POST   /api/theories/bulk-delete                              - Delete multiple orphan theories
+- DELETE /api/theories/<id>                                     - Delete one orphan theory
 - GET    /api/theories/<id>                                     - Get theory
 - POST   /api/theories/<id>/copy                                - Clone theory
 - PUT    /api/theories/<id>                                     - Update theory
@@ -23,21 +25,184 @@ from services.theory_service import (  # type: ignore
 )
 
 from routes._context import get_ctx
+from routes._helpers import _serialize_complex_payload, compute_theory_usage_stats
 
 logger = logging.getLogger(__name__)
 
 theories_bp = Blueprint("theories", __name__)
 
 
+class TheoryInUseError(Exception):
+    def __init__(self, theory_id: str, usage_topics: int, usage_complexes: int):
+        super().__init__("Theory is linked to topics or complexes")
+        self.theory_id = theory_id
+        self.usage_topics = usage_topics
+        self.usage_complexes = usage_complexes
+
+
+def _load_theory_usage_stats(ctx: Any) -> Dict[str, Dict[str, int]]:
+    try:
+        modules = ctx.storage_service.load_modules()
+        serialized_complexes = [
+            _serialize_complex_payload(obj, current_user_id=ctx.user_id)
+            for obj in ctx.complex_service.get_all_complexes()
+        ]
+        usage_stats, _ = compute_theory_usage_stats(
+            modules=modules,
+            complex_payloads=serialized_complexes,
+        )
+        return usage_stats
+    except Exception as exc:
+        logger.warning("[HTTP] Failed to compute theory usage stats: %s", exc)
+        return {}
+
+
+def _build_theory_in_use_error(theory_id: str, usage_topics: int, usage_complexes: int) -> Dict[str, Any]:
+    return {
+        "theory_id": theory_id,
+        "error": "theory_in_use",
+        "message": "Theory is linked to topics or complexes",
+        "usage_topics": usage_topics,
+        "usage_complexes": usage_complexes,
+    }
+
+
+def _delete_theory_if_orphan(
+    ctx: Any,
+    theory_id: str,
+    usage_stats: Dict[str, Dict[str, int]],
+) -> Dict[str, Any]:
+    usage = usage_stats.get(theory_id, {"topics": 0, "complexes": 0})
+    usage_topics = int(usage.get("topics") or 0)
+    usage_complexes = int(usage.get("complexes") or 0)
+    if (usage_topics + usage_complexes) > 0:
+        raise TheoryInUseError(theory_id, usage_topics, usage_complexes)
+    return ctx.theory_service.delete_theory(theory_id)
+
+
 @theories_bp.route("/api/theories", methods=["GET"])
 def list_theories() -> Any:
     query = request.args.get("query")
     try:
-        items = get_ctx().theory_service.list_theories(query=query)
+        ctx = get_ctx()
+        items = ctx.theory_service.list_theories(query=query)
+        usage_stats = _load_theory_usage_stats(ctx)
+
+        for item in items:
+            theory_id = str(item.get("id") or "").strip()
+            usage = usage_stats.get(theory_id, {"topics": 0, "complexes": 0})
+            usage_topics = int(usage.get("topics") or 0)
+            usage_complexes = int(usage.get("complexes") or 0)
+            item["usage_topics"] = usage_topics
+            item["usage_complexes"] = usage_complexes
+            item["is_orphan"] = (usage_topics + usage_complexes) == 0
+
         return jsonify({"ok": True, "items": items})
     except Exception as exc:
         logger.exception("[HTTP] Failed to list theories: %s", exc)
         return jsonify({"ok": False, "error": "theories_load_failed"}), 500
+
+
+@theories_bp.route("/api/theories/bulk-delete", methods=["POST"])
+def bulk_delete_theories() -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    raw_theory_ids = payload.get("theory_ids")
+    if not isinstance(raw_theory_ids, list):
+        return jsonify({"ok": False, "error": "theory_ids_required"}), 400
+
+    theory_ids = []
+    seen = set()
+    for raw_theory_id in raw_theory_ids:
+        theory_id = str(raw_theory_id or "").strip()
+        if not theory_id or theory_id in seen:
+            continue
+        seen.add(theory_id)
+        theory_ids.append(theory_id)
+
+    if not theory_ids:
+        return jsonify({"ok": False, "error": "theory_ids_required"}), 400
+
+    usage_stats = _load_theory_usage_stats(ctx)
+    deleted_items = []
+    errors = []
+
+    for theory_id in theory_ids:
+        try:
+            deleted_items.append(_delete_theory_if_orphan(ctx, theory_id, usage_stats))
+        except TheoryInUseError as exc:
+            errors.append(
+                _build_theory_in_use_error(
+                    exc.theory_id,
+                    exc.usage_topics,
+                    exc.usage_complexes,
+                )
+            )
+        except TheoryNotFoundError:
+            errors.append(
+                {
+                    "theory_id": theory_id,
+                    "error": "theory_not_found",
+                    "message": "Theory not found",
+                }
+            )
+        except TheoryValidationError as exc:
+            errors.append(
+                {
+                    "theory_id": theory_id,
+                    "error": "validation_error",
+                    "message": str(exc),
+                }
+            )
+        except Exception as exc:
+            logger.exception("[HTTP] Failed to delete theory %s: %s", theory_id, exc)
+            errors.append(
+                {
+                    "theory_id": theory_id,
+                    "error": "theory_delete_failed",
+                    "message": "Failed to delete theory",
+                }
+            )
+
+    return jsonify(
+        {
+            "ok": True,
+            "requested": len(theory_ids),
+            "deleted": len(deleted_items),
+            "deleted_items": deleted_items,
+            "errors": errors,
+            "partial": bool(errors),
+        }
+    )
+
+
+@theories_bp.route("/api/theories/<string:theory_id>", methods=["DELETE"])
+def delete_theory(theory_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+
+    try:
+        usage_stats = _load_theory_usage_stats(ctx)
+        item = _delete_theory_if_orphan(ctx, theory_id, usage_stats)
+        return jsonify({"ok": True, "item": item})
+    except TheoryInUseError as exc:
+        payload = _build_theory_in_use_error(
+            exc.theory_id,
+            exc.usage_topics,
+            exc.usage_complexes,
+        )
+        return jsonify({"ok": False, **payload}), 409
+    except TheoryNotFoundError:
+        return jsonify({"ok": False, "error": "theory_not_found"}), 404
+    except TheoryValidationError as exc:
+        return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to delete theory %s: %s", theory_id, exc)
+        return jsonify({"ok": False, "error": "theory_delete_failed"}), 500
 
 
 @theories_bp.route("/api/theories", methods=["POST"])

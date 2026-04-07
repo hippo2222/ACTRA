@@ -1,4 +1,4 @@
-﻿/**
+/**
  * ConnectionMonitor.js
  * Lightweight global connectivity detector for the desktop app.
  * Distinguishes local server outage from internet outage.
@@ -14,6 +14,8 @@
     const PING_TIMEOUT_MS = 5000;
 
     let bannerEl = null;
+    // Keep internet_offline for retry cadence, but avoid a global banner for it:
+    // feature-level UI can explain availability more precisely.
     let currentState = 'ok'; // ok | server_offline | internet_offline
     let timerId = null;
 
@@ -30,6 +32,7 @@
 
     function adjustLayout(bannerHeight) {
         const h = bannerHeight || 0;
+        document.documentElement.style.setProperty('--connection-banner-height', h ? h + 'px' : '0px');
         document.body.style.paddingTop = h ? h + 'px' : '';
         // Offset sticky / fixed headers so they sit below the banner.
         document.querySelectorAll('header.sticky, header[class*="sticky"]').forEach(el => {
@@ -64,9 +67,7 @@
         }
 
         if (state === 'internet_offline') {
-            bannerEl.className = 'fixed top-0 left-0 right-0 z-[10000] flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium shadow-lg transition-transform duration-300 border-b bg-surface-2 text-text-main border-border-strong';
-            bannerEl.innerHTML = '<span class="material-symbols-outlined text-base">wifi_off</span> Нет интернета: обновления и обратная связь недоступны';
-            showBanner();
+            hideBanner();
             return;
         }
 
