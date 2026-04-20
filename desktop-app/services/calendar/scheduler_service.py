@@ -618,6 +618,14 @@ class SchedulerService:
                         if p.status in (ComplexStatus.IN_PROGRESS, ComplexStatus.MASTERED)
                         and str(p.complex_id).lower() != "daily_mix"
                     ]
+
+                    known_complex_ids = set(task_pool.keys()) | set(complex_names.keys())
+                    if known_complex_ids:
+                        active_complexes = [
+                            p for p in active_complexes
+                            if p.complex_id in known_complex_ids
+                        ]
+
                     
                     # Применяем адаптивную частоту: фильтруем по необходимости повторения
                     complexes_needing_review = [

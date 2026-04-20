@@ -19,6 +19,42 @@ function setupDom() {
     const html = `<!DOCTYPE html>
     <html>
       <body>
+        <img id="settings-account-avatar" />
+        <div id="settings-account-name"></div>
+        <div id="settings-account-caption"></div>
+        <div id="settings-account-subline"></div>
+        <div id="settings-account-email"></div>
+        <button id="settings-logout-btn" type="button"></button>
+        <img id="settings-avatar-preview-image" />
+        <div id="settings-avatar-preview-name"></div>
+        <div id="settings-avatar-preview-note"></div>
+        <input id="settings-avatar-file-input" type="file" />
+        <button id="settings-avatar-upload-btn" type="button"></button>
+        <div id="settings-avatar-save-status" class="hidden"></div>
+        <input id="settings-name-input" />
+        <button id="settings-name-save-btn" type="button"></button>
+        <div id="settings-name-save-status" class="hidden"></div>
+        <div id="settings-email-value"></div>
+        <div id="settings-email-note"></div>
+        <button id="settings-email-toggle-btn" type="button"></button>
+        <div id="settings-email-form" class="hidden"></div>
+        <input id="settings-email-input" />
+        <button id="settings-email-save-btn" type="button"></button>
+        <button id="settings-email-cancel-btn" type="button"></button>
+        <div id="settings-email-save-status" class="hidden"></div>
+        <div id="settings-password-state"></div>
+        <button id="settings-password-toggle-btn" type="button"></button>
+        <div id="settings-password-form" class="hidden"></div>
+        <label><span>Текущий пароль</span><input id="settings-password-current" type="password" /></label>
+        <input id="settings-password-new" type="password" />
+        <input id="settings-password-confirm" type="password" />
+        <button id="settings-password-save-btn" type="button"></button>
+        <button id="settings-password-cancel-btn" type="button"></button>
+        <div id="settings-password-save-status" class="hidden"></div>
+        <div id="theme-options"></div>
+        <div id="theme-save-status" class="hidden"></div>
+        <div id="settings-profile-caption"></div>
+        <div id="settings-footer-profile-note"></div>
         <div id="providers-container"></div>
         <div id="settings-draft-banner" class="hidden"></div>
         <div id="settings-draft-banner-text"></div>
@@ -49,6 +85,7 @@ async function flushPromises(rounds = 6) {
     for (let index = 0; index < rounds; index += 1) {
         await Promise.resolve();
     }
+    await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe('Settings voice feedback on load failures', () => {
@@ -70,11 +107,36 @@ describe('Settings voice feedback on load failures', () => {
     });
 
     it('shows voice error when /api/users/ai-keys responds with ok=false', async () => {
-        const fetchMock = vi.fn(async () => ({
-            ok: true,
-            status: 200,
-            json: async () => ({ ok: false, error: 'load_failed' }),
-        }));
+        const fetchMock = vi.fn(async (input, init = {}) => {
+            const url = typeof input === 'string' ? input : String(input?.url || '');
+            const method = String(init?.method || 'GET').toUpperCase();
+
+            if (url === '/api/auth/me' && method === 'GET') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        ok: true,
+                        authenticated: true,
+                        user: { user_id: 'u1', name: 'Анна', email: 'anna@example.com', avatar_seed: '1.png', has_password: true },
+                    }),
+                };
+            }
+
+            if (url === '/api/ui/settings' && method === 'GET') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+                };
+            }
+
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ ok: false, error: 'load_failed' }),
+            };
+        });
         dom.window.fetch = fetchMock;
         defineGlobal('fetch', fetchMock);
 
@@ -88,7 +150,26 @@ describe('Settings voice feedback on load failures', () => {
     });
 
     it('shows voice error when /api/users/ai-keys request fails by network', async () => {
-        const fetchMock = vi.fn(async () => {
+        const fetchMock = vi.fn(async (input) => {
+            const url = typeof input === 'string' ? input : String(input?.url || '');
+            if (url === '/api/auth/me') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        ok: true,
+                        authenticated: true,
+                        user: { user_id: 'u1', name: 'Анна', email: 'anna@example.com', avatar_seed: '1.png', has_password: true },
+                    }),
+                };
+            }
+            if (url === '/api/ui/settings') {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+                };
+            }
             throw new Error('network down');
         });
         dom.window.fetch = fetchMock;

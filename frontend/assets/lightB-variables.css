@@ -135,6 +135,25 @@
    --color-main-secondary-copy: var(--color-component-secondary-copy);
    --color-main-secondary-copy-strong: var(--color-component-secondary-copy-strong);
 
+   --color-main-hero-title: var(--color-text-on-dark);
+   --color-main-hero-description: color-mix(in srgb, var(--color-text-on-dark) 74%, var(--color-primary-light) 26%);
+   --color-main-hero-eyebrow-bg: color-mix(in srgb, var(--color-text-on-dark) 10%, transparent);
+   --color-main-hero-eyebrow-border: color-mix(in srgb, var(--color-text-on-dark) 18%, transparent);
+   --color-main-hero-eyebrow-fg: color-mix(in srgb, var(--color-text-on-dark) 92%, var(--color-primary-light) 8%);
+   --color-main-hero-action-bg: color-mix(in srgb, var(--color-text-on-dark) 16%, transparent);
+   --color-main-hero-action-bg-hover: color-mix(in srgb, var(--color-text-on-dark) 24%, transparent);
+   --color-main-hero-action-border: color-mix(in srgb, var(--color-text-on-dark) 24%, transparent);
+   --color-main-hero-action-shadow:
+      0 8px 16px -4px color-mix(in srgb, var(--color-bg-ink) 42%, transparent),
+      inset 0 1px 0 color-mix(in srgb, var(--color-text-on-dark) 18%, transparent);
+   --color-main-hero-support-bg: color-mix(in srgb, var(--color-info-light) 20%, var(--color-text-on-dark) 10%);
+   --color-main-hero-support-border: color-mix(in srgb, var(--color-text-on-dark) 20%, transparent);
+   --color-main-hero-support-fg: color-mix(in srgb, var(--color-text-on-dark) 84%, var(--color-info-light) 16%);
+   --color-main-hero-primary-bg-start: color-mix(in srgb, var(--color-primary) 42%, var(--color-bg-ink) 58%);
+   --color-main-hero-primary-bg-end: color-mix(in srgb, var(--color-bg-ink) 76%, var(--color-primary-dark) 24%);
+   --color-main-hero-theory-bg-start: color-mix(in srgb, var(--color-info) 34%, var(--color-bg-ink) 66%);
+   --color-main-hero-theory-bg-end: color-mix(in srgb, var(--color-bg-ink) 76%, var(--color-accent) 24%);
+
    --color-main-quick-access-heading-icon-bg: color-mix(in srgb, var(--color-primary-light) 18%, var(--color-surface-1) 82%);
    --color-main-quick-access-heading-icon-fg: color-mix(in srgb, var(--color-primary) 48%, var(--color-text-main) 52%);
    --color-main-quick-access-heading-icon-border: color-mix(in srgb, var(--color-primary-light) 54%, var(--color-border-strong) 46%);

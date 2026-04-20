@@ -300,6 +300,53 @@ describe("TaskRenderer UI state", () => {
     expect(promptEl?.nextElementSibling?.querySelector("img")).toBeTruthy();
   });
 
+  it("renders hosted open-answer media through the canonical asset content URL", () => {
+    window.eval(loadScript("frontend/OpenAnswerUI/OpenAnswerUI.web.js"));
+    const TaskRenderer = initTaskRenderer();
+
+    TaskRenderer.renderTask({
+      task_type: "open_answer",
+      task_id: "task_oa_asset",
+      module_id: "m1",
+      topic_id: "t1",
+      task_data: {
+        meta: { name: "Asset-backed open answer" },
+        content: {
+          question: "Inspect hosted image",
+          image_asset_id: "asset_open_answer_1",
+        },
+      },
+    });
+
+    const image = document.querySelector("#task-content .group.relative img");
+    expect(image).toBeTruthy();
+    expect(image.getAttribute("src")).toBe("/api/assets/asset_open_answer_1/content");
+  });
+
+  it("prefers canonical asset refs over legacy image_path in hosted open-answer render flow", () => {
+    window.eval(loadScript("frontend/OpenAnswerUI/OpenAnswerUI.web.js"));
+    const TaskRenderer = initTaskRenderer();
+
+    TaskRenderer.renderTask({
+      task_type: "open_answer",
+      task_id: "task_oa_asset_path",
+      module_id: "m1",
+      topic_id: "t1",
+      task_data: {
+        meta: { name: "Asset-path mixed open answer" },
+        content: {
+          question: "Inspect hosted image",
+          image_asset_id: "asset_open_answer_2",
+          image_path: "legacy/open-answer.png",
+        },
+      },
+    });
+
+    const image = document.querySelector("#task-content .group.relative img");
+    expect(image).toBeTruthy();
+    expect(image.getAttribute("src")).toBe("/api/assets/asset_open_answer_2/content");
+  });
+
   it("renders task name and task type into the S1 header for click tasks", () => {
     const TaskRenderer = initTaskRenderer();
 

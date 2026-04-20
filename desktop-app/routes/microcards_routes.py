@@ -30,11 +30,28 @@ from typing import Any, Dict, Optional, Tuple
 
 from flask import Blueprint, jsonify, request
 
-from routes._context import get_ctx, get_extra
+from routes._context import get_ctx, get_extra, is_hosted_web_runtime
+from routes._helpers import _maybe_hosted_shadow_write_error_response
+from services.hosted_shadow_fallback import (
+    HostedShadowReadFallbackDisabledError,
+    HostedShadowWriteFallbackDisabledError,
+)
 
 logger = logging.getLogger(__name__)
 
 microcards_bp = Blueprint("microcards", __name__)
+
+_MICROCARDS_FILE_BACKED_SERVICE_CONTRACT = {
+    "namespace": "microcards_legacy_file_storage",
+    "source_of_truth": "filesystem",
+    "hosted_ready": False,
+}
+_MICROCARDS_HOSTED_DECKS_SERVICE_CONTRACT = {
+    "namespace": "hosted_microcards_decks",
+    "source_of_truth": "postgres",
+    "hosted_ready": True,
+    "surface_scope": "deck_documents_only",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -45,6 +62,98 @@ microcards_bp = Blueprint("microcards", __name__)
 def _mch() -> Dict[str, Any]:
     """Return the microcards helpers dict registered by server.py."""
     return get_extra("microcards_helpers")
+
+
+def _current_microcards_user_id(ctx: Any) -> str:
+    """Resolve current request user without falling back to legacy default_user."""
+    return str(getattr(ctx, "user_id", "") or "").strip() or "guest"
+
+
+def _invalidate_microcards_cache(h: Dict[str, Any], ctx: Any) -> None:
+    """Invalidate analytics cache for the current request user only."""
+    h["invalidate_microcards_analytics_cache"](_current_microcards_user_id(ctx))
+
+
+def _public_microcards_route_contract(*, mode: str, surface: str) -> Dict[str, Any]:
+    return {
+        "namespace": "public_microcards",
+        "mode": mode,
+        "surface": surface,
+        "public_api": True,
+        "hosted_storage_required": True,
+    }
+
+
+def _hosted_public_microcards_blocked_response(
+    *,
+    mode: str,
+    surface: str,
+    operation: str,
+    write_path: bool,
+) -> Optional[Any]:
+    if not is_hosted_web_runtime():
+        return None
+    error_cls = (
+        HostedShadowWriteFallbackDisabledError
+        if write_path
+        else HostedShadowReadFallbackDisabledError
+    )
+    exc = error_cls(
+        operation,
+        reason="microcards_hosted_source_of_truth_not_implemented",
+    )
+    details = {
+        "operation": operation,
+        "reason": "microcards_hosted_source_of_truth_not_implemented",
+        "runtime_mode": "hosted_web",
+        "source_of_truth": "not_implemented",
+        "legacy_storage": "filesystem",
+    }
+    return _maybe_hosted_shadow_write_error_response(
+        exc,
+        extra_payload={
+            "details": details,
+            "route_contract": _public_microcards_route_contract(
+                mode=mode,
+                surface=surface,
+            ),
+            "service_contract": dict(_MICROCARDS_FILE_BACKED_SERVICE_CONTRACT),
+        },
+    )
+
+
+def _microcards_service_contract(service: Optional[Any] = None) -> Dict[str, Any]:
+    contract = getattr(service, "hosted_service_contract", None)
+    if isinstance(contract, dict):
+        return dict(contract)
+    return dict(_MICROCARDS_HOSTED_DECKS_SERVICE_CONTRACT)
+
+
+def _maybe_microcards_shadow_error_response(
+    exc: Exception,
+    *,
+    mode: str,
+    surface: str,
+    service: Optional[Any] = None,
+) -> Optional[Any]:
+    if not isinstance(
+        exc,
+        (
+            HostedShadowReadFallbackDisabledError,
+            HostedShadowWriteFallbackDisabledError,
+        ),
+    ):
+        return None
+    return _maybe_hosted_shadow_write_error_response(
+        exc,
+        extra_payload={
+            "route_contract": _public_microcards_route_contract(
+                mode=mode,
+                surface=surface,
+            ),
+            "service_contract": _microcards_service_contract(service),
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -150,8 +259,9 @@ def microcards_summary() -> Any:
     except Exception:
         dynamics_days = 30
 
+    svc = None
     try:
-        user_id = ctx.user_id or "default_user"
+        user_id = _current_microcards_user_id(ctx)
         svc = h["microcards_analytics_service"]()
         payload = svc.get_summary(
             user_id=user_id,
@@ -162,6 +272,14 @@ def microcards_summary() -> Any:
         payload["microcards_feature_flags"] = h["get_microcards_prod_feature_flags"]()
         return jsonify({"ok": True, **payload})
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="summary",
+            surface="runtime_summary",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards summary failed: %s", exc)
         return jsonify({"ok": False, "error": "microcards_summary_failed"}), 500
 
@@ -178,6 +296,7 @@ def microcards_list_decks() -> Any:
         limit = max(1, min(int(request.args.get("limit") or 50), 200))
     except Exception:
         limit = 50
+    svc = None
     try:
         svc = h["microcards_service"]()
         items = svc.list_decks(limit=limit)
@@ -188,6 +307,14 @@ def microcards_list_decks() -> Any:
         )
         return jsonify({"ok": True, "items": items, "user_id": ctx.user_id})
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="list_decks",
+            surface="deck_library",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards/decks list failed: %s", exc)
         return jsonify({"ok": False, "error": "microcards_list_failed"}), 500
 
@@ -200,6 +327,7 @@ def microcards_get_deck(deck_id: str) -> Any:
         return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
     if not h["is_editor_feature_enabled"]("microcards_mode"):
         return h["feature_disabled_json"]("microcards_mode_disabled", status_code=404)
+    svc = None
     try:
         svc = h["microcards_service"]()
         deck = svc.get_deck(deck_id)
@@ -212,6 +340,14 @@ def microcards_get_deck(deck_id: str) -> Any:
         )
         return jsonify({"ok": True, "deck": deck, "user_id": ctx.user_id})
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="get_deck",
+            surface="deck_library",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards/decks/%s get failed: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_get_failed"}), 500
 
@@ -222,8 +358,18 @@ def microcards_create_deck_from_analysis() -> Any:
     h = _mch()
     if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not h["is_editor_feature_enabled"]("ai_mode"):
+        return h["feature_disabled_json"]("ai_mode_in_progress", status_code=404)
     if not h["is_editor_feature_enabled"]("microcards_mode"):
         return h["feature_disabled_json"]("microcards_mode_disabled", status_code=404)
+    blocked_response = _hosted_public_microcards_blocked_response(
+        mode="create_from_analysis",
+        surface="deck_generation",
+        operation="microcards.decks.create_from_analysis",
+        write_path=True,
+    )
+    if blocked_response is not None:
+        return blocked_response
     payload = request.get_json(silent=True) or {}
     run_id = str(payload.get("ai_run_id") or "").strip()
     if not run_id:
@@ -247,7 +393,7 @@ def microcards_create_deck_from_analysis() -> Any:
             selector=selector,
             deck_name=str(deck_name).strip() if isinstance(deck_name, str) else None,
         )
-        h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+        _invalidate_microcards_cache(h, ctx)
         cards = deck.get("cards") if isinstance(deck.get("cards"), list) else []
         pair_match_cards = sum(
             1
@@ -287,8 +433,18 @@ def microcards_append_to_deck_from_analysis(deck_id: str) -> Any:
     h = _mch()
     if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_use_microcards"}), 403
+    if not h["is_editor_feature_enabled"]("ai_mode"):
+        return h["feature_disabled_json"]("ai_mode_in_progress", status_code=404)
     if not h["is_editor_feature_enabled"]("microcards_mode"):
         return h["feature_disabled_json"]("microcards_mode_disabled", status_code=404)
+    blocked_response = _hosted_public_microcards_blocked_response(
+        mode="append_from_analysis",
+        surface="deck_generation",
+        operation="microcards.decks.append_from_analysis",
+        write_path=True,
+    )
+    if blocked_response is not None:
+        return blocked_response
     payload = request.get_json(silent=True) or {}
     run_id = str(payload.get("ai_run_id") or "").strip()
     if not run_id:
@@ -310,7 +466,7 @@ def microcards_append_to_deck_from_analysis(deck_id: str) -> Any:
             ai_run_id=run_id,
             selector=selector,
         )
-        h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+        _invalidate_microcards_cache(h, ctx)
         deck = result.get("deck") if isinstance(result.get("deck"), dict) else {}
         h["emit_theory_rollout_telemetry"](
             "microcards_deck_appended_from_analysis",
@@ -359,6 +515,7 @@ def microcards_get_deck_queue(deck_id: str) -> Any:
     except Exception:
         limit = 20
     restart = str(request.args.get("restart") or "").strip().lower() in {"1", "true", "yes", "on"}
+    svc = None
     try:
         svc = h["microcards_service"]()
         queue_payload = svc.get_due_queue(deck_id, limit=limit, resume=True, restart=restart)
@@ -385,6 +542,14 @@ def microcards_get_deck_queue(deck_id: str) -> Any:
         logger.warning("[HTTP] microcards queue lookup failed deck_id=%s: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_queue_lookup_failed"}), 404
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="deck_queue",
+            surface="review_runtime",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards/decks/%s/queue failed: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_queue_failed"}), 500
 
@@ -409,6 +574,7 @@ def microcards_submit_review() -> Any:
     if rating not in {"again", "hard", "good", "easy"}:
         return jsonify({"ok": False, "error": "invalid_rating"}), 400
 
+    svc = None
     try:
         svc = h["microcards_service"]()
         result = svc.submit_review(
@@ -464,6 +630,14 @@ def microcards_submit_review() -> Any:
         logger.warning("[HTTP] microcards review invalid submit: %s", exc)
         return jsonify({"ok": False, "error": "microcards_review_invalid_submit"}), 400
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="submit_review",
+            surface="review_runtime",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards review submit failed: %s", exc)
         return jsonify({"ok": False, "error": "microcards_review_submit_failed"}), 500
 
@@ -487,10 +661,11 @@ def microcards_create_deck_manual() -> Any:
         return jsonify({"ok": False, "error": "name_required"}), 400
     tags = payload.get("tags") if isinstance(payload.get("tags"), list) else []
     target_language = str(payload.get("target_language") or "unknown").strip()
+    svc = None
     try:
         svc = h["microcards_service"]()
         deck = svc.create_deck_manual(name=name, tags=tags, target_language=target_language)
-        h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+        _invalidate_microcards_cache(h, ctx)
         h["emit_theory_rollout_telemetry"](
             "microcards_manual_deck_created",
             deck_id=deck.get("id"),
@@ -503,6 +678,14 @@ def microcards_create_deck_manual() -> Any:
         )
         return jsonify({"ok": True, "deck": deck, "user_id": ctx.user_id})
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="create_manual_deck",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards create-manual failed: %s", exc)
         return jsonify({"ok": False, "error": "microcards_create_manual_failed"}), 500
 
@@ -521,6 +704,7 @@ def microcards_rename_deck(deck_id: str) -> Any:
     new_name = str(payload.get("name") or "").strip()
     if not new_name:
         return jsonify({"ok": False, "error": "name_required"}), 400
+    svc = None
     try:
         svc = h["microcards_service"]()
         deck = svc.rename_deck(deck_id, new_name)
@@ -528,6 +712,14 @@ def microcards_rename_deck(deck_id: str) -> Any:
     except LookupError:
         return jsonify({"ok": False, "error": "deck_not_found"}), 404
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="rename_deck",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards rename failed deck_id=%s: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_rename_failed"}), 500
 
@@ -544,14 +736,23 @@ def microcards_archive_deck(deck_id: str) -> Any:
         return h["microcards_prod_feature_disabled_json"]("microcards_manual_editor_disabled", status_code=404)
     payload = request.get_json(silent=True) or {}
     archive = payload.get("archive", True)
+    svc = None
     try:
         svc = h["microcards_service"]()
         deck = svc.archive_deck(deck_id, archive=bool(archive))
-        h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+        _invalidate_microcards_cache(h, ctx)
         return jsonify({"ok": True, "deck": deck, "user_id": ctx.user_id})
     except LookupError:
         return jsonify({"ok": False, "error": "deck_not_found"}), 404
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="archive_deck",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards archive failed deck_id=%s: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_archive_failed"}), 500
 
@@ -566,14 +767,23 @@ def microcards_delete_deck(deck_id: str) -> Any:
         return h["feature_disabled_json"]("microcards_mode_disabled", status_code=404)
     if not h["is_microcards_prod_feature_enabled"]("microcards_manual_editor"):
         return h["microcards_prod_feature_disabled_json"]("microcards_manual_editor_disabled", status_code=404)
+    svc = None
     try:
         svc = h["microcards_service"]()
         deleted = svc.delete_deck(deck_id)
         if not deleted:
             return jsonify({"ok": False, "error": "deck_not_found"}), 404
-        h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+        _invalidate_microcards_cache(h, ctx)
         return jsonify({"ok": True, "deleted": True, "user_id": ctx.user_id})
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="delete_deck",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards delete failed deck_id=%s: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_delete_failed"}), 500
 
@@ -595,6 +805,7 @@ def microcards_create_card(deck_id: str) -> Any:
     difficulty_hint = str(payload.get("difficulty_hint") or "medium").strip()
     if not front_text:
         return jsonify({"ok": False, "error": "front_text_required"}), 400
+    svc = None
     try:
         svc = h["microcards_service"]()
         if card_type == "pair_match":
@@ -609,7 +820,7 @@ def microcards_create_card(deck_id: str) -> Any:
                 tags=tags,
                 difficulty_hint=difficulty_hint,
             )
-            h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+            _invalidate_microcards_cache(h, ctx)
             h["emit_theory_rollout_telemetry"](
                 "microcards_pair_match_card_created",
                 deck_id=deck_id,
@@ -626,7 +837,7 @@ def microcards_create_card(deck_id: str) -> Any:
                 tags=tags,
                 difficulty_hint=difficulty_hint,
             )
-            h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+            _invalidate_microcards_cache(h, ctx)
             h["emit_theory_rollout_telemetry"](
                 "microcards_manual_card_created",
                 deck_id=deck_id,
@@ -640,6 +851,14 @@ def microcards_create_card(deck_id: str) -> Any:
         status = 409 if err == "duplicate_card" else 400
         return jsonify({"ok": False, "error": err}), status
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="create_card",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards create card failed deck_id=%s: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_create_card_failed"}), 500
 
@@ -656,6 +875,7 @@ def microcards_update_card(deck_id: str, card_id: str) -> Any:
         return h["microcards_prod_feature_disabled_json"]("microcards_manual_editor_disabled", status_code=404)
     payload = request.get_json(silent=True) or {}
     card_type = str(payload.get("card_type") or "").strip().lower()
+    svc = None
     try:
         svc = h["microcards_service"]()
         # M15: pair_match card update with structured pairs
@@ -672,7 +892,7 @@ def microcards_update_card(deck_id: str, card_id: str) -> Any:
             if "status" in payload:
                 pm_kwargs["status"] = str(payload["status"] or "").strip() or None
             card = svc.update_pair_match_card(deck_id=deck_id, card_id=card_id, **pm_kwargs)
-            h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+            _invalidate_microcards_cache(h, ctx)
             h["emit_theory_rollout_telemetry"](
                 "microcards_pair_match_card_updated",
                 deck_id=deck_id,
@@ -691,7 +911,7 @@ def microcards_update_card(deck_id: str, card_id: str) -> Any:
             if "status" in payload:
                 kwargs["status"] = str(payload["status"] or "").strip() or None
             card = svc.update_card(deck_id=deck_id, card_id=card_id, **kwargs)
-            h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+            _invalidate_microcards_cache(h, ctx)
         return jsonify({"ok": True, "card": card, "user_id": ctx.user_id})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
@@ -700,6 +920,14 @@ def microcards_update_card(deck_id: str, card_id: str) -> Any:
         status = 409 if err == "duplicate_card" else 400
         return jsonify({"ok": False, "error": err}), status
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="update_card",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards update card failed deck=%s card=%s: %s", deck_id, card_id, exc)
         return jsonify({"ok": False, "error": "microcards_update_card_failed"}), 500
 
@@ -714,14 +942,23 @@ def microcards_delete_card(deck_id: str, card_id: str) -> Any:
         return h["feature_disabled_json"]("microcards_mode_disabled", status_code=404)
     if not h["is_microcards_prod_feature_enabled"]("microcards_manual_editor"):
         return h["microcards_prod_feature_disabled_json"]("microcards_manual_editor_disabled", status_code=404)
+    svc = None
     try:
         svc = h["microcards_service"]()
         svc.delete_card(deck_id, card_id)
-        h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+        _invalidate_microcards_cache(h, ctx)
         return jsonify({"ok": True, "deleted": True, "user_id": ctx.user_id})
     except LookupError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="delete_card",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards delete card failed deck=%s card=%s: %s", deck_id, card_id, exc)
         return jsonify({"ok": False, "error": "microcards_delete_card_failed"}), 500
 
@@ -740,6 +977,7 @@ def microcards_reorder_cards(deck_id: str) -> Any:
     card_ids = payload.get("card_ids")
     if not isinstance(card_ids, list) or not card_ids:
         return jsonify({"ok": False, "error": "card_ids_required"}), 400
+    svc = None
     try:
         svc = h["microcards_service"]()
         deck = svc.reorder_cards(deck_id, card_ids)
@@ -755,6 +993,14 @@ def microcards_reorder_cards(deck_id: str) -> Any:
     except LookupError:
         return jsonify({"ok": False, "error": "deck_not_found"}), 404
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="reorder_cards",
+            surface="manual_editor",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards reorder failed deck_id=%s: %s", deck_id, exc)
         return jsonify({"ok": False, "error": "microcards_reorder_failed"}), 500
 
@@ -845,6 +1091,7 @@ def microcards_import_execute_text() -> Any:
     if mode == "append_to_deck" and not target_deck_id:
         return jsonify({"ok": False, "error": "target_deck_id_required"}), 400
 
+    svc = None
     try:
         svc = h["microcards_service"]()
         result = svc.import_cards_from_parsed(
@@ -854,7 +1101,7 @@ def microcards_import_execute_text() -> Any:
             deck_name=deck_name,
             target_language=target_language,
         )
-        h["invalidate_microcards_analytics_cache"](ctx.user_id or "default_user")
+        _invalidate_microcards_cache(h, ctx)
 
         deck = result.get("deck") if isinstance(result.get("deck"), dict) else {}
         h["emit_theory_rollout_telemetry"](
@@ -898,5 +1145,13 @@ def microcards_import_execute_text() -> Any:
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
+        shadow_response = _maybe_microcards_shadow_error_response(
+            exc,
+            mode="execute_text_import",
+            surface="text_import",
+            service=svc,
+        )
+        if shadow_response is not None:
+            return shadow_response
         logger.exception("[HTTP] microcards import execute-text failed: %s", exc)
         return jsonify({"ok": False, "error": "microcards_execute_failed"}), 500

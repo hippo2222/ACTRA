@@ -1,0 +1,97 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.hosted
+    environment:
+      ACTRA_RUNTIME_MODE: hosted_web
+      ACTRA_BIND_HOST: 0.0.0.0
+      TRAINER_HTTP_PORT: 8000
+      TRAINER_DATA_ROOT: /app/data
+      ACTRA_RUNTIME_STATE_ROOT: /app/runtime_state
+      ACTRA_HOSTED_PERSISTENCE_STRICT: "${ACTRA_HOSTED_PERSISTENCE_STRICT:-1}"
+      TRAINER_TASK_SYSTEM_ROOT: /app/task_system
+      ACTRA_SECRET_KEY: "${ACTRA_SECRET_KEY:-change-me-before-production}"
+      ACTRA_SESSION_COOKIE_SECURE: "${ACTRA_SESSION_COOKIE_SECURE:-1}"
+      ACTRA_SESSION_COOKIE_SAMESITE: "${ACTRA_SESSION_COOKIE_SAMESITE:-Lax}"
+      ACTRA_AUTH_SESSION_TTL_DAYS: "${ACTRA_AUTH_SESSION_TTL_DAYS:-30}"
+      ACTRA_UPDATE_CHECK_ENABLED: "0"
+      ACTRA_FEEDBACK_EMAIL_ENABLED: "0"
+      ACTRA_AUTH_EMAIL_ENABLED: "${ACTRA_AUTH_EMAIL_ENABLED:-1}"
+      ACTRA_AUTH_PUBLIC_BASE_URL: "${ACTRA_AUTH_PUBLIC_BASE_URL:-http://localhost:8000}"
+      ACTRA_AUTH_SMTP_HOST: "${ACTRA_AUTH_SMTP_HOST:-mailpit}"
+      ACTRA_AUTH_SMTP_PORT: "${ACTRA_AUTH_SMTP_PORT:-1025}"
+      ACTRA_AUTH_SMTP_USER: "${ACTRA_AUTH_SMTP_USER:-}"
+      ACTRA_AUTH_SMTP_FROM: "${ACTRA_AUTH_SMTP_FROM:-noreply@localhost.test}"
+      ACTRA_AUTH_SMTP_PASSWORD: "${ACTRA_AUTH_SMTP_PASSWORD:-}"
+      ACTRA_AUTH_SMTP_USE_TLS: "${ACTRA_AUTH_SMTP_USE_TLS:-0}"
+      ACTRA_AUTH_SMTP_USE_SSL: "${ACTRA_AUTH_SMTP_USE_SSL:-0}"
+      ACTRA_POSTGRES_DSN: "${ACTRA_POSTGRES_DSN:-postgresql://actra:${POSTGRES_PASSWORD:-change-me-before-production}@postgres:5432/actra}"
+      ACTRA_S3_ENDPOINT: "${ACTRA_S3_ENDPOINT:-http://minio:9000}"
+      ACTRA_S3_BUCKET: "${ACTRA_S3_BUCKET:-actra}"
+      ACTRA_S3_ACCESS_KEY: "${ACTRA_S3_ACCESS_KEY:-minioadmin}"
+      ACTRA_S3_SECRET_KEY: "${ACTRA_S3_SECRET_KEY:-minioadmin}"
+      ACTRA_HOSTED_DEV_AUTH_BRIDGE: "${ACTRA_HOSTED_DEV_AUTH_BRIDGE:-0}"
+      ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK: "${ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK:-0}"
+    ports:
+      - "${ACTRA_HOSTED_APP_PORT:-8000}:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    volumes:
+      - "${ACTRA_HOSTED_DATA_ROOT_HOST:-./data}:/app/data"
+      - "${ACTRA_HOSTED_LOGS_ROOT_HOST:-./logs}:/app/logs"
+      - "${ACTRA_HOSTED_RUNTIME_STATE_ROOT_HOST:-./runtime_state}:/app/runtime_state"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: actra
+      POSTGRES_USER: actra
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-change-me-before-production}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U actra -d actra"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:RELEASE.2025-02-18T16-25-55Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "${ACTRA_S3_ACCESS_KEY:-minioadmin}"
+      MINIO_ROOT_PASSWORD: "${ACTRA_S3_SECRET_KEY:-minioadmin}"
+    volumes:
+      - minio_data:/data
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-02-21T16-00-46Z
+    depends_on:
+      - minio
+    environment:
+      ACTRA_S3_ENDPOINT: "${ACTRA_S3_ENDPOINT:-http://minio:9000}"
+      ACTRA_S3_BUCKET: "${ACTRA_S3_BUCKET:-actra}"
+      ACTRA_S3_ACCESS_KEY: "${ACTRA_S3_ACCESS_KEY:-minioadmin}"
+      ACTRA_S3_SECRET_KEY: "${ACTRA_S3_SECRET_KEY:-minioadmin}"
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local \"$${ACTRA_S3_ENDPOINT}\" \"$${ACTRA_S3_ACCESS_KEY}\" \"$${ACTRA_S3_SECRET_KEY}\"; do
+        sleep 1;
+      done;
+      mc mb --ignore-existing local/\"$${ACTRA_S3_BUCKET}\";
+      "
+
+  mailpit:
+    image: axllent/mailpit:v1.26
+    ports:
+      - "${ACTRA_HOSTED_MAILPIT_HTTP_PORT:-8025}:8025"
+
+volumes:
+  postgres_data:
+  minio_data:

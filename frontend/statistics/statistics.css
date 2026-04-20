@@ -515,14 +515,14 @@ html, body { height: 100%; }
   height: 100%;
   min-height: 0;
   overflow: hidden;
+  padding-top: 3px;
+  margin-top: -3px;
+  box-sizing: border-box;
 }
 
 /* Theory: только по контенту, с минимумом */
 #theory-analytics-card {
-  flex: 0 0 auto;
-  min-height: 0;
-  /* если пустая — не раздувается */
-  max-height: 30%;
+  display: none !important;
 }
 
 /* Performance: занимает оставшееся пространство */
@@ -597,8 +597,10 @@ html, body { height: 100%; }
   flex-direction: column;
   gap: var(--stats-gap-sm);
   min-height: 0;
-  overflow: hidden;
+  overflow: visible;
   flex: 1 1 0;
+  padding: 3px;
+  margin: -3px;
 }
 
 .st-placeholder-text {
@@ -606,6 +608,59 @@ html, body { height: 100%; }
   font-size: 0.8rem;
   color: var(--color-text-secondary);
   line-height: 1.5;
+}
+
+.stats-side-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 7.5rem;
+  padding: 0.95rem 1rem;
+  border: 1px dashed var(--color-border-subtle);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, var(--color-surface-1) 0%, var(--color-bg-secondary) 100%);
+}
+
+.stats-side-empty--fill {
+  flex: 1 1 auto;
+  min-height: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.stats-side-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 0.95rem;
+  background: var(--color-component-empty-state-icon-bg);
+  color: var(--color-component-empty-state-icon-fg);
+  flex-shrink: 0;
+  font-size: 1.4rem;
+}
+
+.stats-side-empty__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.24rem;
+}
+
+.stats-side-empty__title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.88rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.stats-side-empty__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.74rem;
+  line-height: 1.45;
 }
 
 /* ─── PERFORMANCE ────────────────────────────────────────────────────────────*/
@@ -638,7 +693,7 @@ html, body { height: 100%; }
 /* ─── COMPLEXES SECTION ──────────────────────────────────────────────────────*/
 
 .stats-complexes-section {
-  flex: 0 0 auto;
+  flex: 1 1 0;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -812,6 +867,9 @@ html, body { height: 100%; }
   overflow: hidden;
   padding: 3px;
   margin: -3px;
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
 }
 
 .complexes-carousel-track {
@@ -820,6 +878,9 @@ html, body { height: 100%; }
   grid-auto-rows: 1fr;
   gap: var(--stats-gap-sm);
   min-height: 0;
+  width: 100%;
+  height: 100%;
+  align-content: stretch;
   will-change: transform;
 }
 
@@ -835,6 +896,58 @@ html, body { height: 100%; }
   -webkit-line-clamp: 2;
   font-size: 0.78rem;
   line-height: 1.25;
+}
+
+.stats-complexes-empty {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  min-height: 8.75rem;
+  height: 100%;
+  flex: 1 1 auto;
+  width: 100%;
+  box-sizing: border-box;
+  grid-column: 1 / -1;
+  padding: 1rem 1.1rem;
+  border: 1px dashed var(--color-border-subtle);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, var(--color-surface-1) 0%, var(--color-bg-secondary) 100%);
+}
+
+.stats-complexes-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: var(--color-component-empty-state-icon-bg);
+  color: var(--color-component-empty-state-icon-fg);
+  flex-shrink: 0;
+  font-size: 1.55rem;
+}
+
+.stats-complexes-empty__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.stats-complexes-empty__title {
+  margin: 0;
+  color: var(--color-text-main);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.stats-complexes-empty__text {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  max-width: 24rem;
 }
 
 .complexes-carousel-track > .stats-complex-card-compact:only-child {
@@ -1299,6 +1412,24 @@ span.tooltip-parent {
 
   .complexes-carousel-track {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stats-complexes-empty {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stats-complexes-empty__copy {
+    align-items: center;
+  }
+
+  .stats-side-empty {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .stats-side-empty__copy {
+    align-items: center;
   }
 
   .stats-header-inner {

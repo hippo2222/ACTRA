@@ -448,29 +448,10 @@
       if (raw) {
         let questionImagePath = null;
 
-        if (raw.image_url) {
-          questionImagePath = raw.image_url;
-        } else if (raw.image_path) {
-          questionImagePath = resolveImageUrlForWeb(raw.image_path);
-        } else if (Array.isArray(raw.images) && raw.images.length > 0) {
+        questionImagePath = resolveImageUrlForWeb(raw);
+        if (!questionImagePath && Array.isArray(raw.images) && raw.images.length > 0) {
           const img0 = raw.images[0];
-          if (img0 && typeof img0 === "object") {
-            if (img0.url) {
-              questionImagePath = img0.url;
-            } else if (img0.path) {
-              questionImagePath = resolveImageUrlForWeb(img0.path);
-            }
-          } else if (typeof img0 === "string") {
-            questionImagePath = resolveImageUrlForWeb(img0);
-          }
-        } else if (raw.image && typeof raw.image === "object") {
-          if (raw.image.url) {
-            questionImagePath = raw.image.url;
-          } else if (raw.image.path) {
-            questionImagePath = resolveImageUrlForWeb(raw.image.path);
-          }
-        } else if (typeof raw.image === "string") {
-          questionImagePath = resolveImageUrlForWeb(raw.image);
+          questionImagePath = resolveImageUrlForWeb(img0);
         }
 
         if (questionImagePath) {
@@ -499,10 +480,10 @@
       let allImageOptions = false;
       if (hasOptions) {
         hasImageOptions = raw.answers.some(
-          (a) => a && (a.image_path || a.image_url || (a.image && a.image.url))
+          (a) => Boolean(resolveImageUrlForWeb(a))
         );
         allImageOptions = hasImageOptions && raw.answers.every(
-          (a) => a && (a.image_path || a.image_url || (a.image && a.image.url))
+          (a) => Boolean(resolveImageUrlForWeb(a))
         );
       }
 
@@ -895,13 +876,7 @@
                 : answer.correct === true || normalizedOptionIds.includes(index);
             if (!isCorrect) return;
 
-            const imageSource =
-              answer.image_url ||
-              answer.image_path ||
-              (answer.image &&
-                typeof answer.image === "object" &&
-                (answer.image.url || answer.image.path)) ||
-              null;
+            const imageSource = resolveImageUrlForWeb(answer);
             const rawText = String(
               answer.text || answer.label || answer.title || ""
             ).trim();
@@ -962,13 +937,7 @@
             if (!answer || typeof answer !== "object") return;
             if (!normalizedOptionIds.includes(index)) return;
 
-            const imageSource =
-              answer.image_url ||
-              answer.image_path ||
-              (answer.image &&
-                typeof answer.image === "object" &&
-                (answer.image.url || answer.image.path)) ||
-              null;
+            const imageSource = resolveImageUrlForWeb(answer);
             const rawText = String(
               answer.text || answer.label || answer.title || ""
             ).trim();
@@ -1479,6 +1448,37 @@
 
     function resolveImageUrlForWeb(imgSrc) {
       if (!imgSrc) return null;
+      if (typeof imgSrc === "object") {
+        const nestedImage =
+          imgSrc.image && typeof imgSrc.image === "object" ? imgSrc.image : null;
+        const directUrl =
+          imgSrc.asset_url ||
+          imgSrc.image_asset_url ||
+          imgSrc.image_url ||
+          imgSrc.url ||
+          imgSrc.src ||
+          null;
+        if (directUrl) return resolveImageUrlForWeb(directUrl);
+        const directAssetId =
+          imgSrc.asset_id ||
+          imgSrc.image_asset_id ||
+          (nestedImage && (nestedImage.asset_id || nestedImage.image_asset_id)) ||
+          null;
+        if (directAssetId) {
+          return `/api/assets/${encodeURIComponent(String(directAssetId))}/content`;
+        }
+        const legacyPath =
+          imgSrc.image_path ||
+          imgSrc.path ||
+          (nestedImage && (nestedImage.image_path || nestedImage.path)) ||
+          null;
+        if (legacyPath) return resolveImageUrlForWeb(legacyPath);
+        if (nestedImage) return resolveImageUrlForWeb(nestedImage);
+        return null;
+      }
+      if (typeof imgSrc !== "string") return null;
+      imgSrc = String(imgSrc || "").trim();
+      if (!imgSrc) return null;
 
       // Уже HTTP/HTTPS или абсолютный web-путь — не трогаем
       if (/^https?:\/\//i.test(imgSrc)) return imgSrc;
@@ -1704,10 +1704,7 @@
       }
 
       raw.answers.forEach((ans, idx) => {
-        const imgSrc =
-          (ans && (ans.image_url || ans.image_path)) ||
-          (ans && ans.image && ans.image.url) ||
-          null;
+        const imgSrc = resolveImageUrlForWeb(ans);
         const caption = ans && ans.text ? ans.text : "";
 
         // Оборачиваем карточку в отдельный контейнер, чтобы лупа могла жить

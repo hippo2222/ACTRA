@@ -116,10 +116,14 @@ class NotificationService:
     ) -> List[Notification]:
         """Проверить падение здоровья комплексов."""
         notifications = []
+        known_complex_ids = set(complex_names.keys())
         
         for progress in all_progress:
             # Skip if complex is synthetic (e.g. daily_mix)
             if progress.complex_id in self.SYNTHETIC_COMPLEXES:
+                continue
+
+            if known_complex_ids and progress.complex_id not in known_complex_ids:
                 continue
 
             if progress.status not in (ComplexStatus.IN_PROGRESS, ComplexStatus.MASTERED):

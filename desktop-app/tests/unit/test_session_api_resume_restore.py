@@ -1232,7 +1232,7 @@ def test_pause_resume_get_current_task_clears_stale_results_for_in_progress_task
     storage_service.load_task.assert_called_once_with("module", "topic", "task_001")
 
 
-def test_get_current_task_partial_retry_uses_original_failed_question_after_shuffle():
+def test_get_current_task_partial_retry_uses_shuffled_failed_question_after_shuffle():
     queue = [
         _queued_task("module/topic/task_001", is_retry=True),
     ]
@@ -1276,8 +1276,8 @@ def test_get_current_task_partial_retry_uses_original_failed_question_after_shuf
     assert result is not None
     questions = result["task_data"]["content"]["questions"]
     assert len(questions) == 1
-    assert questions[0]["id"] == 1
-    assert questions[0]["text"] == "Second original question"
+    assert questions[0]["id"] == 0
+    assert questions[0]["text"] == "First original question"
 
 
 def test_get_current_task_remaps_restored_test_answers_and_feedback_for_shuffle():

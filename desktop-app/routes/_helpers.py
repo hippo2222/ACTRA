@@ -7,7 +7,14 @@ from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-from routes._context import get_ctx
+from flask import jsonify
+
+from persistence.runtime import HOSTED_SHADOW_WRITE_FALLBACK_ENV
+from routes._context import get_authenticated_user_id, get_ctx, is_hosted_web_runtime
+from services.hosted_shadow_fallback import (
+    HostedShadowReadFallbackDisabledError,
+    HostedShadowWriteFallbackDisabledError,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +45,29 @@ def compute_theory_usage_stats(
                 refs.add((module_id, topic_id))
         return refs
 
+    def _collect_direct_complex_theory_ids(payload: Any) -> Set[str]:
+        if not isinstance(payload, dict):
+            return set()
+        theory_ids: Set[str] = set()
+        theory_link = payload.get("theory_link") if isinstance(payload.get("theory_link"), dict) else {}
+        if theory_link:
+            source_kind = _normalize_optional_text(theory_link.get("source_kind")) or "workspace"
+            access_state = str(theory_link.get("access_state") or "").strip().lower()
+            if source_kind != "linked_library" or access_state != "revoked":
+                direct_theory_id = _normalize_optional_text(
+                    theory_link.get("source_theory_id") or theory_link.get("theory_id")
+                )
+                if direct_theory_id:
+                    theory_ids.add(direct_theory_id)
+
+        sync_meta = payload.get("theory_sync_meta") if isinstance(payload.get("theory_sync_meta"), dict) else {}
+        raw_theory_ids = sync_meta.get("theory_ids") if isinstance(sync_meta.get("theory_ids"), list) else []
+        for raw_theory_id in raw_theory_ids:
+            theory_id = _normalize_optional_text(raw_theory_id)
+            if theory_id:
+                theory_ids.add(theory_id)
+        return theory_ids
+
     storage = get_ctx().storage_service
     usage: Dict[str, Dict[str, int]] = defaultdict(lambda: {"topics": 0, "complexes": 0})
     topic_theory_map: Dict[Tuple[str, str], Optional[str]] = {}
@@ -63,7 +93,7 @@ def compute_theory_usage_stats(
 
     for payload in complex_payloads or []:
         task_refs = payload.get("tasks") if isinstance(payload.get("tasks"), list) else []
-        theory_ids_in_complex: Set[str] = set()
+        theory_ids_in_complex: Set[str] = set(_collect_direct_complex_theory_ids(payload))
         for module_id, topic_id in _collect_topic_refs(task_refs):
             theory_id = topic_theory_map.get((module_id, topic_id))
             if theory_id:
@@ -171,8 +201,66 @@ def _normalize_optional_text(value: Any) -> Optional[str]:
     return normalized or None
 
 
+def _should_skip_linked_library_enrichment(catalog_service: Any) -> bool:
+    if not is_hosted_web_runtime():
+        return False
+    if bool(getattr(catalog_service, "hosted_shadow_read_fallback_blocked", False)):
+        return True
+    persistence_settings = getattr(catalog_service, "persistence_settings", None)
+    postgres_dsn = str(getattr(persistence_settings, "postgres_dsn", "") or "").strip()
+    return postgres_dsn == ""
+
+
+def _maybe_hosted_shadow_write_error_response(
+    exc: Exception,
+    *,
+    extra_payload: Optional[Dict[str, Any]] = None,
+    status: int = 503,
+) -> Optional[Any]:
+    if isinstance(exc, HostedShadowReadFallbackDisabledError):
+        payload: Dict[str, Any] = {
+            "ok": False,
+            "error": "hosted_shadow_read_blocked",
+            "degraded": True,
+            "details": {
+                "operation": str(exc.operation or "").strip() or None,
+                "reason": str(exc.reason or "").strip() or None,
+                "runtime_mode": "hosted_web" if is_hosted_web_runtime() else "legacy_local",
+                "source_of_truth": "postgres",
+            },
+        }
+        if isinstance(extra_payload, dict):
+            payload.update(extra_payload)
+        return jsonify(payload), int(status)
+
+    if not isinstance(exc, HostedShadowWriteFallbackDisabledError):
+        return None
+
+    payload: Dict[str, Any] = {
+        "ok": False,
+        "error": "hosted_shadow_write_blocked",
+        "degraded": True,
+        "details": {
+            "operation": str(exc.operation or "").strip() or None,
+            "reason": str(exc.reason or "").strip() or None,
+            "runtime_mode": "hosted_web" if is_hosted_web_runtime() else "legacy_local",
+            "env_opt_in": HOSTED_SHADOW_WRITE_FALLBACK_ENV,
+        },
+    }
+    if isinstance(extra_payload, dict):
+        payload.update(extra_payload)
+    return jsonify(payload), int(status)
+
+
 def _resolve_effective_user_id(value: Any = None, *, fallback: str = "default_user") -> str:
     """Resolve a non-empty user id for routes that must stay functional without active profile."""
+    if is_hosted_web_runtime():
+        hosted_user_id = get_authenticated_user_id()
+        if hosted_user_id:
+            return hosted_user_id
+        guest_fallback = str(fallback or "guest").strip() or "guest"
+        return "guest" if guest_fallback == "default_user" else guest_fallback
+
     if isinstance(value, str):
         candidate = value.strip()
         if candidate:
@@ -187,22 +275,206 @@ def _resolve_effective_user_id(value: Any = None, *, fallback: str = "default_us
     return fallback
 
 
+def _is_imported_library_theory_payload(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    created_via = str(
+        item.get("created_via")
+        or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
+        or ""
+    ).strip().lower()
+    if created_via in {"workspace_import", "archive_import"}:
+        return True
+    return bool(
+        _normalize_optional_text(item.get("source_catalog_item_id"))
+        or _normalize_optional_text(
+            (item.get("source_lineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("source_lineage"), dict)
+            else None
+        )
+        or _normalize_optional_text(
+            (item.get("sourceLineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("sourceLineage"), dict)
+            else None
+        )
+    )
+
+
+def _is_visible_workspace_theory_payload_for_current_user(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    if ownership.get("is_owned_by_current_user") is True:
+        return True
+    return _is_imported_library_theory_payload(item)
+
+
 def _build_theory_link_snapshot(theory_link: Any) -> Optional[dict]:
     """Return a UI-friendly theory link enriched with cached title/version when possible."""
     if not isinstance(theory_link, dict):
         return None
 
+    source_kind = _normalize_optional_text(theory_link.get("source_kind")) or "workspace"
+    snapshot = dict(theory_link)
+    snapshot["source_kind"] = source_kind
+
+    def _mark_linked_snapshot_unresolved() -> dict:
+        snapshot["missing"] = True
+        return snapshot
+
+    def _build_workspace_fallback_from_source() -> Optional[dict]:
+        source_theory_id = _normalize_optional_text(
+            theory_link.get("source_theory_id") or theory_link.get("theory_id")
+        )
+        if source_theory_id is None:
+            return None
+        try:
+            from services.theory_service import TheoryNotFoundError  # type: ignore
+
+            theory_item = get_ctx().theory_service.get_theory(source_theory_id, include_delta=False)
+            serialized_theory_item = _serialize_theory_payload(
+                theory_item,
+                current_user_id=_resolve_effective_user_id(),
+            )
+            if is_hosted_web_runtime() and not _is_visible_workspace_theory_payload_for_current_user(serialized_theory_item):
+                return None
+            return {
+                "source_kind": "workspace",
+                "theory_id": source_theory_id,
+                "relation": snapshot.get("relation") or "link",
+                "title_cache": _normalize_optional_text(
+                    theory_item.get("title") or snapshot.get("title_cache")
+                ) or source_theory_id,
+                "updated_at": _json_safe(
+                    theory_item.get("updated_at") or theory_item.get("version") or snapshot.get("updated_at")
+                ),
+                "catalog_item_id": _normalize_optional_text(snapshot.get("catalog_item_id")),
+                "source_theory_id": source_theory_id,
+            }
+        except TheoryNotFoundError:
+            return None
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning(
+                "[HTTP] Failed to fallback linked theory snapshot %s to workspace theory %s: %s",
+                _normalize_optional_text(theory_link.get("library_entry_id")) or "",
+                source_theory_id,
+                exc,
+            )
+            return None
+
+    if source_kind == "linked_library":
+        library_entry_id = _normalize_optional_text(theory_link.get("library_entry_id"))
+        if library_entry_id is None:
+            if is_hosted_web_runtime():
+                return _mark_linked_snapshot_unresolved()
+            return _build_workspace_fallback_from_source()
+        snapshot["library_entry_id"] = library_entry_id
+        catalog_service = getattr(get_ctx(), "catalog_service", None)
+        if catalog_service is None or _should_skip_linked_library_enrichment(catalog_service):
+            if is_hosted_web_runtime():
+                return _mark_linked_snapshot_unresolved()
+            workspace_fallback = _build_workspace_fallback_from_source()
+            if workspace_fallback is not None:
+                return workspace_fallback
+            return snapshot
+        try:
+            detail = catalog_service.get_theory_library_entry(
+                library_entry_id,
+                requested_by_user_id=_resolve_effective_user_id(),
+            )
+            entry = detail.get("library_entry") if isinstance(detail.get("library_entry"), dict) else {}
+            item = detail.get("item") if isinstance(detail.get("item"), dict) else {}
+            linked_snapshot = detail.get("snapshot") if isinstance(detail.get("snapshot"), dict) else {}
+            title = _normalize_optional_text(
+                linked_snapshot.get("title")
+                or item.get("title")
+                or snapshot.get("title_cache")
+            )
+            if title is not None:
+                snapshot["title_cache"] = title
+            updated_at = _json_safe(
+                linked_snapshot.get("updated_at")
+                or linked_snapshot.get("version")
+                or snapshot.get("updated_at")
+                or entry.get("updated_at")
+            )
+            if updated_at is not None:
+                snapshot["updated_at"] = updated_at
+            access_state = _normalize_optional_text(entry.get("access_state"))
+            if access_state is None and linked_snapshot:
+                access_state = "active"
+            if access_state is not None:
+                snapshot["access_state"] = access_state
+            access_reason = _normalize_optional_text(entry.get("access_reason"))
+            if access_reason is not None:
+                snapshot["access_reason"] = access_reason
+            catalog_item_id = _normalize_optional_text(
+                item.get("item_id") or snapshot.get("catalog_item_id")
+            )
+            if catalog_item_id is not None:
+                snapshot["catalog_item_id"] = catalog_item_id
+            source_theory_id = _normalize_optional_text(
+                linked_snapshot.get("workspace_entity_id")
+                or linked_snapshot.get("id")
+                or item.get("source_workspace_id")
+                or snapshot.get("source_theory_id")
+            )
+            if source_theory_id is not None:
+                snapshot["source_theory_id"] = source_theory_id
+            if str(snapshot.get("access_state") or "").strip().lower() in {
+                "revoked",
+                "deleted_source",
+                "requires_access_code",
+            }:
+                if is_hosted_web_runtime():
+                    return _mark_linked_snapshot_unresolved()
+                workspace_fallback = _build_workspace_fallback_from_source()
+                if workspace_fallback is not None:
+                    return workspace_fallback
+                snapshot["missing"] = True
+        except ValueError:
+            if is_hosted_web_runtime():
+                return _mark_linked_snapshot_unresolved()
+            workspace_fallback = _build_workspace_fallback_from_source()
+            if workspace_fallback is not None:
+                return workspace_fallback
+            snapshot["missing"] = True
+        except HostedShadowReadFallbackDisabledError:
+            if is_hosted_web_runtime():
+                return _mark_linked_snapshot_unresolved()
+            workspace_fallback = _build_workspace_fallback_from_source()
+            if workspace_fallback is not None:
+                return workspace_fallback
+        except Exception as exc:  # pragma: no cover - defensive logging
+            logger.warning(
+                "[HTTP] Failed to enrich linked theory snapshot %s: %s",
+                library_entry_id,
+                exc,
+            )
+            if is_hosted_web_runtime():
+                return _mark_linked_snapshot_unresolved()
+            workspace_fallback = _build_workspace_fallback_from_source()
+            if workspace_fallback is not None:
+                return workspace_fallback
+        return snapshot
+
     theory_id = _normalize_optional_text(theory_link.get("theory_id"))
     if theory_id is None:
         return None
 
-    snapshot = dict(theory_link)
     snapshot["theory_id"] = theory_id
 
     try:
         from services.theory_service import TheoryNotFoundError  # type: ignore
 
         theory_item = get_ctx().theory_service.get_theory(theory_id, include_delta=False)
+        serialized_theory_item = _serialize_theory_payload(
+            theory_item,
+            current_user_id=_resolve_effective_user_id(),
+        )
+        if is_hosted_web_runtime() and not _is_visible_workspace_theory_payload_for_current_user(serialized_theory_item):
+            snapshot["missing"] = True
+            return snapshot
         title = _normalize_optional_text(theory_item.get("title"))
         if title is not None:
             snapshot["title_cache"] = title
@@ -227,12 +499,15 @@ def _compute_inherited_theory_for_topics(
     unique_theory_links: Dict[str, Dict[str, Any]] = {}
 
     for module_id, topic_id in sorted(topic_refs):
+        module_payload = storage.get_module(module_id)
+        topic_payload = storage.get_topic(module_id, topic_id)
         theory_link = _build_theory_link_snapshot(
             storage.get_topic_theory_link(module_id, topic_id)
         )
+        theory_link_missing = bool(theory_link.get("missing")) if isinstance(theory_link, dict) else False
         theory_id = (
             _normalize_optional_text(theory_link.get("theory_id"))
-            if isinstance(theory_link, dict)
+            if isinstance(theory_link, dict) and not theory_link_missing
             else None
         )
 
@@ -241,8 +516,18 @@ def _compute_inherited_theory_for_topics(
             "topic_id": topic_id,
             "theory_id": theory_id,
         }
+        module_title = _normalize_optional_text(
+            module_payload.get("name") if isinstance(module_payload, dict) else None
+        )
+        topic_title = _normalize_optional_text(
+            topic_payload.get("name") if isinstance(topic_payload, dict) else None
+        )
+        if module_title is not None:
+            topic_row["module_title"] = module_title
+        if topic_title is not None:
+            topic_row["topic_title"] = topic_title
         theory_title = _normalize_optional_text(
-            theory_link.get("title_cache") if isinstance(theory_link, dict) else None
+            theory_link.get("title_cache") if isinstance(theory_link, dict) and not theory_link_missing else None
         )
         if theory_title is not None:
             topic_row["theory_title"] = theory_title
@@ -324,6 +609,115 @@ def _build_complex_ownership_payload(
     }
 
 
+def _serialize_theory_payload(
+    theory_obj: Any,
+    *,
+    current_user_id: Optional[str] = None,
+) -> dict:
+    obj = theory_obj.dict() if hasattr(theory_obj, "dict") else dict(theory_obj or {})
+    created_at = obj.get("created_at")
+    updated_at = obj.get("updated_at")
+    if created_at is not None:
+        obj["created_at"] = (
+            created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+        )
+    if updated_at is not None:
+        obj["updated_at"] = (
+            updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
+        )
+    obj["ownership"] = _build_complex_ownership_payload(
+        obj,
+        current_user_id=current_user_id,
+    )
+    return obj
+
+
+def _serialize_workspace_graph_entry(
+    graph_obj: Any,
+    *,
+    current_user_id: Optional[str] = None,
+) -> dict:
+    obj = graph_obj.dict() if hasattr(graph_obj, "dict") else dict(graph_obj or {})
+    created_at = obj.get("created_at")
+    updated_at = obj.get("updated_at")
+    if created_at is not None:
+        obj["created_at"] = (
+            created_at.isoformat() if hasattr(created_at, "isoformat") else str(created_at)
+        )
+    if updated_at is not None:
+        obj["updated_at"] = (
+            updated_at.isoformat() if hasattr(updated_at, "isoformat") else str(updated_at)
+        )
+    obj["ownership"] = _build_complex_ownership_payload(
+        obj,
+        current_user_id=current_user_id,
+    )
+    return obj
+
+
+def _serialize_workspace_catalog_modules(
+    modules: Any,
+    *,
+    current_user_id: Optional[str] = None,
+) -> List[dict]:
+    serialized_modules: List[dict] = []
+    if not isinstance(modules, list):
+        return serialized_modules
+
+    for module in modules:
+        module_payload = _serialize_workspace_graph_entry(
+            module,
+            current_user_id=current_user_id,
+        )
+        serialized_topics: List[dict] = []
+        for topic in module_payload.get("topics") or []:
+            topic_payload = _serialize_workspace_graph_entry(
+                topic,
+                current_user_id=current_user_id,
+            )
+            topic_payload["tasks"] = [
+                _serialize_workspace_graph_entry(task, current_user_id=current_user_id)
+                for task in (topic_payload.get("tasks") or [])
+                if isinstance(task, dict)
+            ]
+            serialized_topics.append(topic_payload)
+        module_payload["topics"] = serialized_topics
+        serialized_modules.append(module_payload)
+    return serialized_modules
+
+
+def _serialize_workspace_task_payload(
+    task_obj: Any,
+    *,
+    current_user_id: Optional[str] = None,
+) -> dict:
+    obj = task_obj.dict() if hasattr(task_obj, "dict") else dict(task_obj or {})
+
+    metadata = obj.get("metadata")
+    if isinstance(metadata, dict):
+        metadata_payload = _serialize_workspace_graph_entry(
+            metadata,
+            current_user_id=current_user_id,
+        )
+        obj["metadata"] = metadata_payload
+        obj["ownership"] = metadata_payload.get("ownership")
+
+    task_data = obj.get("task_data")
+    if isinstance(task_data, dict):
+        task_data_payload = dict(task_data)
+        meta = task_data_payload.get("meta")
+        if isinstance(meta, dict):
+            task_data_payload["meta"] = _serialize_workspace_graph_entry(
+                meta,
+                current_user_id=current_user_id,
+            )
+            if not isinstance(obj.get("ownership"), dict):
+                obj["ownership"] = task_data_payload["meta"].get("ownership")
+        obj["task_data"] = task_data_payload
+
+    return obj
+
+
 def _serialize_complex_payload(
     complex_obj: Any,
     *,
@@ -348,30 +742,25 @@ def _serialize_complex_payload(
 
 def _enrich_complex_with_theory_link(obj: dict) -> dict:
     """Attach cached theory metadata to complex payload for UI convenience."""
-    from services.theory_service import TheoryNotFoundError  # type: ignore
-
     theory_link = obj.get("theory_link")
     if not isinstance(theory_link, dict):
         obj["has_theory"] = False
         return obj
 
-    theory_id = theory_link.get("theory_id")
-    if not isinstance(theory_id, str) or not theory_id.strip():
+    enriched_link = _build_theory_link_snapshot(theory_link)
+    if not isinstance(enriched_link, dict):
         obj["has_theory"] = False
         return obj
-
-    try:
-        theory_item = get_ctx().theory_service.get_theory(
-            theory_id.strip(), include_delta=False
-        )
-        theory_link["title_cache"] = theory_item.get("title", "")
-        obj["has_theory"] = True
-    except TheoryNotFoundError:
-        theory_link["missing"] = True
-        obj["has_theory"] = False
-    except Exception as exc:  # pragma: no cover - defensive logging
-        logger.warning("[HTTP] Failed to enrich theory link for complex %s: %s", obj.get("id"), exc)
-        obj["has_theory"] = False
+    obj["theory_link"] = enriched_link
+    source_kind = _normalize_optional_text(enriched_link.get("source_kind")) or "workspace"
+    if source_kind == "linked_library":
+        library_entry_id = _normalize_optional_text(enriched_link.get("library_entry_id"))
+        access_state = str(enriched_link.get("access_state") or "").strip().lower()
+        obj["has_theory"] = bool(library_entry_id) and access_state != "revoked"
+        return obj
+    obj["has_theory"] = bool(_normalize_optional_text(enriched_link.get("theory_id"))) and not bool(
+        enriched_link.get("missing")
+    )
     return obj
 
 

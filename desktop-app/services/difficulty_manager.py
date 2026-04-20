@@ -94,8 +94,11 @@ class DifficultyManager:
     ) -> Tuple[str, Optional[str]]:
         data = task_data if isinstance(task_data, dict) else {}
         content = data.get("content") if isinstance(data.get("content"), dict) else {}
+        requested_task_type = self._normalize_task_type(task_type)
+        if requested_task_type == "unknown":
+            requested_task_type = ""
         resolved_task_type = self._normalize_task_type(
-            task_type
+            requested_task_type
             or data.get("type")
             or data.get("task_type")
             or content.get("type")

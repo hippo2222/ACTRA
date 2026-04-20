@@ -1,6 +1,11 @@
 ﻿import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile } from "node:fs/promises";
+
+import {
+  maybeAttachAuthHeaders,
+  translateRuntimePathForApp,
+} from "./runtime_context.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,7 +20,9 @@ function sleep(ms) {
 }
 
 export async function fetchJson(baseUrl, route, options = {}) {
-  const response = await fetch(resolveUrl(baseUrl, route), options);
+  const nextOptions = { ...options };
+  nextOptions.headers = maybeAttachAuthHeaders(baseUrl, options.headers || {});
+  const response = await fetch(resolveUrl(baseUrl, route), nextOptions);
   let data = null;
   try {
     data = await response.json();
@@ -359,6 +366,19 @@ async function listUsers(baseUrl) {
   return assertApiOk(result, "list_users");
 }
 
+async function readRuntimeMode(baseUrl) {
+  const result = await fetchJson(baseUrl, "/api/health");
+  if (!result?.response?.ok) {
+    return "";
+  }
+  return String(result?.data?.runtime_mode || "").trim();
+}
+
+async function readCurrentUser(baseUrl) {
+  const result = await fetchJson(baseUrl, "/api/users/current");
+  return assertApiOk(result, "current_user");
+}
+
 async function createUser(baseUrl, payload) {
   const result = await fetchJson(baseUrl, "/api/users", {
     method: "POST",
@@ -491,6 +511,19 @@ export async function cancelActiveSessionsForComplex(baseUrl, complexId) {
 }
 
 async function ensureAuditUser(baseUrl, slug) {
+  const runtimeMode = await readRuntimeMode(baseUrl);
+  if (runtimeMode === "hosted_web") {
+    const current = await readCurrentUser(baseUrl);
+    const userId = String(current?.user?.user_id || "").trim();
+    if (!userId) {
+      throw new Error("hosted_current_user_missing_user_id");
+    }
+    return {
+      userId,
+      name: String(current?.user?.name || "").trim() || String(slug || "hosted_audit_user"),
+    };
+  }
+
   const shortSlug = String(slug || "")
     .replace(/[^a-z0-9_-]+/gi, "_")
     .slice(0, 24);
@@ -662,7 +695,7 @@ export function buildSmokeTestL1Fixture(runId) {
       adaptive_difficulty: false,
       escalation_on_success: false,
       error_pool_enabled: false,
-      max_iterations: 1,
+      max_iterations: 2,
       smart_retry_near_offset: 0,
       smart_retry_near_jitter_max: 0,
       smart_retry_max_copies_per_task: 0,
@@ -1125,7 +1158,7 @@ export function buildPartialRetryFixture(runId) {
       adaptive_difficulty: false,
       escalation_on_success: false,
       error_pool_enabled: false,
-      max_iterations: 1,
+      max_iterations: 2,
       smart_retry_near_offset: 0,
       smart_retry_near_jitter_max: 0,
       smart_retry_max_copies_per_task: 2,
@@ -1201,7 +1234,7 @@ export function buildHighLevelRetryFixture(runId) {
       adaptive_difficulty: false,
       escalation_on_success: false,
       error_pool_enabled: false,
-      max_iterations: 1,
+      max_iterations: 2,
       smart_retry_near_offset: 0,
       smart_retry_near_jitter_max: 0,
       smart_retry_max_copies_per_task: 2,
@@ -1292,7 +1325,7 @@ export function buildHighLevelFlowResultsFixture(runId, taskType, difficulty) {
       adaptive_difficulty: false,
       escalation_on_success: false,
       error_pool_enabled: false,
-      max_iterations: 1,
+      max_iterations: Math.max(1, normalizedDifficulty),
       smart_retry_near_offset: 0,
       smart_retry_near_jitter_max: 0,
       smart_retry_max_copies_per_task: 0,
@@ -1659,7 +1692,7 @@ export function buildTypeHappyPathFixture(runId, taskType, difficulty = 1) {
       adaptive_difficulty: false,
       escalation_on_success: false,
       error_pool_enabled: false,
-      max_iterations: 1,
+      max_iterations: Math.max(1, normalizedDifficulty),
       smart_retry_near_offset: 0,
       smart_retry_near_jitter_max: 0,
       smart_retry_max_copies_per_task: 0,
@@ -1931,12 +1964,11 @@ export async function seedAdaptiveTypeFixture({ baseUrl, runId, taskType, dataDi
   const user = await ensureAuditUser(baseUrl, fixture.slug);
 
   await ensureModuleAndTopic(baseUrl, fixture.moduleId, fixture.topicId);
+  await prepareTaskImageFixture(baseUrl, dataDir, fixture);
 
   for (const task of fixture.tasks) {
     await saveEditorTask(baseUrl, fixture.moduleId, fixture.topicId, task.taskId, task.payload);
   }
-
-  await patchTaskImageFixture(dataDir, fixture);
   await ensureSmokeComplex(baseUrl, fixture);
   await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);
 
@@ -2011,12 +2043,11 @@ export async function seedHighLevelFlowResultsFixture({ baseUrl, runId, taskType
   const user = await ensureAuditUser(baseUrl, fixture.slug);
 
   await ensureModuleAndTopic(baseUrl, fixture.moduleId, fixture.topicId);
+  await prepareTaskImageFixture(baseUrl, dataDir, fixture);
 
   for (const task of fixture.tasks) {
     await saveEditorTask(baseUrl, fixture.moduleId, fixture.topicId, task.taskId, task.payload);
   }
-
-  await patchTaskImageFixture(dataDir, fixture);
 
   await ensureSmokeComplex(baseUrl, fixture);
   await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);
@@ -2026,12 +2057,64 @@ export async function seedHighLevelFlowResultsFixture({ baseUrl, runId, taskType
     user,
   };
 }
-async function patchTaskImageFixture(dataDir, fixture) {
+async function prepareTaskImageFixture(baseUrl, dataDir, fixture) {
   if (!dataDir || !fixture || !["click", "draw"].includes(fixture.taskType)) {
     return;
   }
 
+  const runtimeMode = await readRuntimeMode(baseUrl);
+  const hostedRuntime = runtimeMode === "hosted_web";
+
   for (const task of fixture.tasks || []) {
+    if (hostedRuntime) {
+      const uploadForm = new FormData();
+      uploadForm.set("module", fixture.moduleId);
+      uploadForm.set("topic", fixture.topicId);
+      uploadForm.set("task", task.taskId);
+      uploadForm.set(
+        "file",
+        new Blob([await readFile(SHARED_SAMPLE_IMAGE_FILE)], { type: "image/svg+xml" }),
+        path.basename(SHARED_SAMPLE_IMAGE_FILE)
+      );
+
+      const uploadResponse = await fetch(resolveUrl(baseUrl, "/api/editor/upload-image"), {
+        method: "POST",
+        headers: maybeAttachAuthHeaders(baseUrl, {}),
+        body: uploadForm,
+      });
+      let uploadPayload = null;
+      try {
+        uploadPayload = await uploadResponse.json();
+      } catch (_) {
+        uploadPayload = null;
+      }
+      if (!uploadResponse.ok || !uploadPayload || uploadPayload.ok === false) {
+        throw new Error(
+          `upload_editor_image_failed:${uploadResponse.status}:${JSON.stringify(uploadPayload)}`
+        );
+      }
+
+      const assetId = String(uploadPayload.asset_id || "").trim();
+      const assetUrl = String(uploadPayload.asset_url || "").trim();
+      if (!assetId && !assetUrl) {
+        throw new Error(`upload_editor_image_missing_asset_ref:${JSON.stringify(uploadPayload)}`);
+      }
+
+      if (task.payload?.content && typeof task.payload.content === "object") {
+        if (assetId) {
+          task.payload.content.image_asset_id = assetId;
+        }
+        if (assetUrl) {
+          task.payload.content.image_asset_url = assetUrl;
+          task.payload.content.image = assetUrl;
+        } else if (assetId) {
+          task.payload.content.image = `/api/assets/${encodeURIComponent(assetId)}/content`;
+        }
+        delete task.payload.content.image_url;
+      }
+      continue;
+    }
+
     const taskDir = path.join(
       dataDir,
       "modules",
@@ -2043,25 +2126,12 @@ async function patchTaskImageFixture(dataDir, fixture) {
     );
     const imagesDir = path.join(taskDir, "images");
     const targetImagePath = path.join(imagesDir, path.basename(SHARED_SAMPLE_IMAGE_FILE));
-    const taskJsonPath = path.join(taskDir, "task.json");
-
     await mkdir(imagesDir, { recursive: true });
     await copyFile(SHARED_SAMPLE_IMAGE_FILE, targetImagePath);
-
-    const raw = await readFile(taskJsonPath, "utf-8");
-    const payload = JSON.parse(raw);
-    if (!payload.content || typeof payload.content !== "object") {
-      payload.content = {};
-    }
-
-    payload.content.image = targetImagePath;
-    delete payload.content.image_url;
-    delete payload.image_url;
-
-    await writeFile(taskJsonPath, `${JSON.stringify(payload, null, 2)}\n`, "utf-8");
+    const runtimeImagePath = translateRuntimePathForApp(baseUrl, targetImagePath);
 
     if (task.payload?.content && typeof task.payload.content === "object") {
-      task.payload.content.image = targetImagePath;
+      task.payload.content.image = runtimeImagePath;
       delete task.payload.content.image_url;
     }
   }
@@ -2072,12 +2142,11 @@ export async function seedTypeHappyPathFixture({ baseUrl, runId, taskType, diffi
   const user = await ensureAuditUser(baseUrl, fixture.slug);
 
   await ensureModuleAndTopic(baseUrl, fixture.moduleId, fixture.topicId);
+  await prepareTaskImageFixture(baseUrl, dataDir, fixture);
 
   for (const task of fixture.tasks) {
     await saveEditorTask(baseUrl, fixture.moduleId, fixture.topicId, task.taskId, task.payload);
   }
-
-  await patchTaskImageFixture(dataDir, fixture);
 
   await ensureSmokeComplex(baseUrl, fixture);
   await cancelActiveSessionsForComplex(baseUrl, fixture.complexId);

@@ -24,6 +24,13 @@ def client():
     with app.test_client() as client:
         yield client
 
+
+@pytest.fixture(autouse=True)
+def enable_ai_mode(monkeypatch):
+    monkeypatch.setenv("RP_EDITOR_FF_AI_MODE", "1")
+    monkeypatch.setenv("RP_THEORY_ROLLOUT_STAGE", "full")
+    yield
+
 @pytest.fixture(autouse=True)
 def mock_ai_service_defaults():
     """Default mocks for AI service to pass basic validation checks."""

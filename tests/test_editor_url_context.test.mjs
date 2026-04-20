@@ -170,4 +170,46 @@ describe("TestEditor URL context", () => {
         expect(dom.window.navigateWithTransition).toHaveBeenCalledWith("/ui/editor");
         expect(editor.hasUnsavedChanges).toBe(false);
     });
+    it("preserves nested hosted image refs when normalizing backend questions", () => {
+        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html");
+        const EditorClass = dom.window.TestEditor;
+        const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
+        const editor = new EditorClass();
+        initSpy.mockRestore();
+
+        const [question] = editor.normalizeQuestionsFromBackend([
+            {
+                text: "Hosted image question",
+                image: {
+                    asset_url: "/api/assets/question_asset_1/content",
+                    path: "legacy/question-image.png"
+                },
+                answers: [
+                    {
+                        text: "Option A",
+                        correct: true,
+                        image: {
+                            asset_id: "answer_asset_1",
+                            path: "legacy/answer-image.png"
+                        }
+                    }
+                ]
+            }
+        ]);
+
+        expect(question.image).toBe("legacy/question-image.png");
+        expect(question.image_asset_url).toBe("/api/assets/question_asset_1/content");
+        expect(question.options[0]).toMatchObject({
+            image_path: "legacy/answer-image.png",
+            image_asset_id: "answer_asset_1",
+            image_asset_url: null,
+        });
+        expect(
+            editor.resolveImageSource(
+                question.options[0].image_path,
+                question.options[0].image_asset_url,
+                question.options[0].image_asset_id
+            )
+        ).toBe("/api/editor/image?asset_id=answer_asset_1");
+    });
 });

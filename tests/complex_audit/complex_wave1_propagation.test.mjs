@@ -3,7 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { test, expect } from "@playwright/test";
 
-import { makeRunId } from "./helpers/base.mjs";
+import { makeRunId, waitForPageStable } from "./helpers/base.mjs";
 import {
   assertCalendarShell,
   openCalendar,
@@ -15,6 +15,7 @@ import {
   completeFixtureSession,
   startComplexFromList,
 } from "./helpers/s1_helpers.mjs";
+import { buildSessionResultsUrl } from "./helpers/session_api.mjs";
 import {
   assertStatisticsShell,
   openStatistics,
@@ -38,19 +39,25 @@ async function createCompletedSmokeRun(page, prefix) {
       runId,
     });
 
-    await startComplexFromList(page, {
+    const sessionId = await startComplexFromList(page, {
       baseUrl: runtime.baseUrl,
       complexId: fixture.complexId,
       complexName: fixture.complexName,
     });
-    await completeFixtureSession(page, {
+    const flow = await completeFixtureSession(page, {
       baseUrl: runtime.baseUrl,
       fixture,
     });
 
+    if (flow.terminalScreen !== "s3") {
+      await page.goto(buildSessionResultsUrl(runtime.baseUrl, sessionId));
+      await waitForPageStable(page);
+    }
+
     return {
       runtime,
       fixture,
+      sessionId,
     };
   } catch (error) {
     await runtime.dispose();

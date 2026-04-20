@@ -14,10 +14,18 @@ import os
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from datetime import datetime
+from uuid import uuid4
+
+from werkzeug.utils import secure_filename
 
 from task_system.core.schemas.complex_schema import ComplexSchema
 from task_system.core.models.complex_models import Complex
 from task_system.core.exceptions import TaskValidationError
+from services.workspace_lineage import (
+    build_source_lineage_key,
+    find_first_by_source_lineage,
+    normalize_workspace_lineage_fields,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +71,13 @@ def _normalize_complex_ownership_fields(
     payload["updated_by_user_id"] = updated_by_user_id
     payload["created_via"] = created_via
     payload["content_scope"] = content_scope
-    return payload
+    return normalize_workspace_lineage_fields(
+        payload,
+        entity_kind="complex",
+        entity_id=payload.get("id"),
+        entity_ref=payload.get("id"),
+        existing=existing_payload,
+    )
 
 
 class ConflictError(Exception):
@@ -179,6 +193,90 @@ class ComplexService:
         self._ensure_initialized()
         return self._complexes_cache.get(complex_id)
 
+    def _reserve_complex_id(
+        self,
+        preferred_complex_id: Any = None,
+        *,
+        complex_name: Any = None,
+    ) -> str:
+        explicit_id = _normalize_optional_text(preferred_complex_id)
+        if explicit_id is not None:
+            base_id = secure_filename(explicit_id).strip().lower()
+        else:
+            base_id = secure_filename(str(complex_name or "").strip().lower().replace(" ", "_"))
+        if not base_id:
+            base_id = f"complex_{uuid4().hex[:8]}"
+
+        candidate = base_id
+        suffix = 1
+        while candidate in self._complexes_cache:
+            candidate = f"{base_id}_{suffix:02d}"
+            suffix += 1
+        return candidate
+
+    def find_complex_by_source_lineage(
+        self,
+        *,
+        source_catalog_item_id: Any = None,
+        source_catalog_version_id: Any = None,
+        source_entity_kind: Any = "complex",
+        source_entity_id: Any = None,
+    ) -> Optional[Complex]:
+        self._ensure_initialized()
+        return find_first_by_source_lineage(
+            self._complexes_cache.values(),
+            source_catalog_item_id=source_catalog_item_id,
+            source_catalog_version_id=source_catalog_version_id,
+            source_entity_kind=source_entity_kind,
+            source_entity_id=source_entity_id,
+        )
+
+    def ensure_workspace_complex_copy(
+        self,
+        complex_data: Dict[str, Any],
+        *,
+        prefer_existing_by_lineage: bool = True,
+    ) -> Dict[str, Any]:
+        self._ensure_initialized()
+        normalized_payload = _normalize_complex_ownership_fields(
+            dict(complex_data or {}),
+            fallback_source="workspace_copy",
+        )
+
+        if prefer_existing_by_lineage and build_source_lineage_key(normalized_payload):
+            existing = self.find_complex_by_source_lineage(
+                source_catalog_item_id=normalized_payload.get("source_catalog_item_id"),
+                source_catalog_version_id=normalized_payload.get("source_catalog_version_id"),
+                source_entity_kind=normalized_payload.get("source_entity_kind") or "complex",
+                source_entity_id=normalized_payload.get("source_entity_id"),
+            )
+            if existing is not None:
+                return {
+                    "created": False,
+                    "reused": True,
+                    "complex_id": existing.id,
+                    "item": existing,
+                }
+
+        preferred_complex_id = normalized_payload.get("id")
+        if not _normalize_optional_text(preferred_complex_id) or self.get_complex(str(preferred_complex_id)):
+            normalized_payload["id"] = self._reserve_complex_id(
+                preferred_complex_id,
+                complex_name=normalized_payload.get("name"),
+            )
+            normalized_payload = _normalize_complex_ownership_fields(
+                normalized_payload,
+                fallback_source="workspace_copy",
+            )
+
+        created = self.create_complex(normalized_payload)
+        return {
+            "created": True,
+            "reused": False,
+            "complex_id": created.id,
+            "item": created,
+        }
+
     def create_complex(self, complex_data: Dict[str, Any]) -> Complex:
         """
         Создает новый комплекс.
@@ -223,7 +321,15 @@ class ComplexService:
         logger.info(f"Created new complex: {complex_id}")
         return new_complex
 
-    def _save_history_snapshot(self, complex_id: str, complex_data: Dict[str, Any]) -> None:
+    def _save_history_snapshot(
+        self,
+        complex_id: str,
+        complex_data: Dict[str, Any],
+        *,
+        snapshot_kind: str = "manual",
+        snapshot_label: Optional[str] = None,
+        max_versions: int = 20,
+    ) -> str:
         """
         Сохраняет snapshot комплекса в историю.
         """
@@ -250,6 +356,10 @@ class ComplexService:
                 snapshot_data["updated_at"], datetime
             ):
                 snapshot_data["updated_at"] = snapshot_data["updated_at"].isoformat()
+            snapshot_data["_history_kind"] = str(snapshot_kind or "manual").strip() or "manual"
+            snapshot_data["_history_saved_at"] = datetime.utcnow().isoformat()
+            if snapshot_label:
+                snapshot_data["_history_label"] = str(snapshot_label).strip()
 
             # Сохраняем snapshot
             with open(history_file, "w", encoding="utf-8") as f:
@@ -257,14 +367,89 @@ class ComplexService:
 
             logger.info(f"Saved history snapshot: {history_file}")
 
-            # Ограничиваем количество версий (последние 10)
+            # Ограничиваем количество версий
             history_files = sorted(history_dir.glob("*.json"))
-            if len(history_files) > 10:
-                for old_file in history_files[:-10]:
+            if len(history_files) > max_versions:
+                for old_file in history_files[:-max_versions]:
                     old_file.unlink()
                     logger.info(f"Deleted old history snapshot: {old_file}")
+            return history_file.stem
         except Exception as e:
             logger.error(f"Failed to save history snapshot for {complex_id}: {e}")
+            raise
+
+    def save_autosave_snapshot(self, complex_id: str, snapshot_payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Сохраняет автосохранённое состояние как историю изменений, не меняя текущую сохранённую версию комплекса.
+        """
+        self._ensure_initialized()
+
+        if complex_id not in self._complexes_cache:
+            raise ValueError(f"Complex with ID '{complex_id}' not found")
+
+        current_complex = self._complexes_cache[complex_id]
+        current_data = current_complex.dict()
+        payload = snapshot_payload.copy() if isinstance(snapshot_payload, dict) else {}
+
+        snapshot_data = current_data.copy()
+        snapshot_data.update(payload)
+        snapshot_data["id"] = complex_id
+        snapshot_data["created_at"] = current_data.get("created_at")
+        snapshot_data["updated_at"] = current_data.get("updated_at")
+        snapshot_data = _normalize_complex_ownership_fields(
+            snapshot_data,
+            fallback_source="manual_editor",
+            existing=current_data,
+        )
+        self._save_history_snapshot(
+            complex_id,
+            snapshot_data,
+            snapshot_kind="autosave",
+            snapshot_label="Автосохранение",
+        )
+        return snapshot_data
+
+    def get_latest_autosave_snapshot(self, complex_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Возвращает последний autosave-snapshot из истории комплекса.
+        """
+        history_dir = self.complexes_dir / "history" / complex_id
+        if not history_dir.exists():
+            return None
+
+        history_files = sorted(history_dir.glob("*.json"), reverse=True)
+        for file in history_files:
+            try:
+                with open(file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if str(data.get("_history_kind") or "").strip().lower() != "autosave":
+                    continue
+                data["_snapshot_timestamp"] = file.stem
+                return data
+            except Exception as e:
+                logger.error(f"Error reading autosave history file {file}: {e}")
+        return None
+
+    def delete_autosave_snapshots(self, complex_id: str) -> int:
+        """
+        Удаляет autosave-snapshots для комплекса из истории изменений.
+        """
+        history_dir = self.complexes_dir / "history" / complex_id
+        if not history_dir.exists():
+            return 0
+
+        deleted = 0
+        for file in history_dir.glob("*.json"):
+            try:
+                with open(file, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if str(data.get("_history_kind") or "").strip().lower() != "autosave":
+                    continue
+                file.unlink()
+                deleted += 1
+            except Exception as e:
+                logger.error(f"Error deleting autosave history file {file}: {e}")
+        return deleted
 
     def update_complex(
         self, complex_id: str, updates: Dict[str, Any], expected_version: Optional[str] = None
@@ -307,7 +492,7 @@ class ComplexService:
         current_data = current_complex.dict()
 
         # Save snapshot BEFORE applying updates
-        self._save_history_snapshot(complex_id, current_data)
+        self._save_history_snapshot(complex_id, current_data, snapshot_kind="manual")
 
         # Обновляем поля
         current_data.update(updates)
@@ -401,6 +586,9 @@ class ComplexService:
 
             # Удаляем служебные поля если есть
             snapshot_data.pop("_snapshot_timestamp", None)
+            snapshot_data.pop("_history_kind", None)
+            snapshot_data.pop("_history_label", None)
+            snapshot_data.pop("_history_saved_at", None)
 
             # Валидация и сохранение
             # Используем update_complex чтобы сохранить историю ПЕРЕД восстановлением (безопасность)
@@ -410,7 +598,7 @@ class ComplexService:
             # 1. Сохраняем текущее состояние (которое затрется)
             current_complex = self.get_complex(complex_id)
             if current_complex:
-                self._save_history_snapshot(complex_id, current_complex.dict())
+                self._save_history_snapshot(complex_id, current_complex.dict(), snapshot_kind="manual")
                 snapshot_data = _normalize_complex_ownership_fields(
                     snapshot_data,
                     fallback_source="legacy_unknown",

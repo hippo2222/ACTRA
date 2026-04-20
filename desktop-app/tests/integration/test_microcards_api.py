@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 import server as server_module  # type: ignore
 from server import app, _headless_app_ctx  # type: ignore
+from persistence.runtime import resolve_persistence_runtime_settings  # type: ignore
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -83,12 +84,23 @@ def temp_data(monkeypatch):
     local_tmp_root = Path.cwd() / ".pytest_tmp_p9_microcards_api"
     local_tmp_root.mkdir(parents=True, exist_ok=True)
     tmp_path = Path(tempfile.mkdtemp(prefix="mcapi_", dir=str(local_tmp_root)))
+    monkeypatch.setenv("RP_EDITOR_FF_AI_MODE", "1")
+    monkeypatch.setenv("RP_EDITOR_FF_MICROCARDS_MODE", "1")
+    monkeypatch.setenv("RP_EDITOR_FF_MICROCARDS_PAIR_MATCH", "1")
+    monkeypatch.setenv("RP_THEORY_ROLLOUT_STAGE", "full")
     original_data_dir = _headless_app_ctx.data_dir
+    original_persistence_runtime = _headless_app_ctx.persistence_runtime
     original_user_id = _headless_app_ctx.user_id
     original_stats_data_dir = _headless_app_ctx.statistics_service.data_dir
     original_stats_users_dir = _headless_app_ctx.statistics_service.users_dir
     original_stats_mc_bridge = getattr(_headless_app_ctx.statistics_service, "_microcards_analytics_service", None)
+    test_runtime = resolve_persistence_runtime_settings(
+        data_root=tmp_path,
+        project_root=Path(__file__).resolve().parents[3],
+    )
+    test_runtime.ensure_runtime_dirs()
     monkeypatch.setattr(_headless_app_ctx, "data_dir", tmp_path)
+    monkeypatch.setattr(_headless_app_ctx, "persistence_runtime", test_runtime)
     monkeypatch.setattr(_headless_app_ctx, "user_id", "user_a")
     monkeypatch.setattr(_headless_app_ctx.statistics_service, "data_dir", tmp_path)
     monkeypatch.setattr(_headless_app_ctx.statistics_service, "users_dir", tmp_path / "users")
@@ -97,6 +109,7 @@ def temp_data(monkeypatch):
         yield tmp_path
     finally:
         monkeypatch.setattr(_headless_app_ctx, "data_dir", original_data_dir)
+        monkeypatch.setattr(_headless_app_ctx, "persistence_runtime", original_persistence_runtime)
         monkeypatch.setattr(_headless_app_ctx, "user_id", original_user_id)
         stats_service = getattr(_headless_app_ctx, "statistics_service", None)
         if stats_service is not None and hasattr(stats_service, "data_dir"):

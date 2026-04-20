@@ -640,7 +640,7 @@ class SequenceEditor extends BaseEditor {
             for (let j = 0; j < level.items.length; j++) {
                 const label = (level.items[j].label || "").trim();
                 if (!label) {
-                    const levelLabel = level.title ? `В«${level.title}В»` : `#${i + 1}`;
+                    const levelLabel = level.title ? `«${level.title}»` : `#${i + 1}`;
                     return `Заполните описание шага ${j + 1} в уровне ${levelLabel}.`;
                 }
             }

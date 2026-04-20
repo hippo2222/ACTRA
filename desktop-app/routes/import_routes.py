@@ -12,22 +12,33 @@ Endpoints:
 """
 
 import hashlib
-import json
 import logging
 import re
 import threading
 import time
 from datetime import datetime
-from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from flask import Blueprint, jsonify, request
 
-from routes._context import get_ctx, get_extra
+from routes._context import get_ctx, get_extra, is_hosted_web_runtime
+from routes._helpers import _maybe_hosted_shadow_write_error_response
+from services.hosted_shadow_fallback import (
+    HostedShadowReadFallbackDisabledError,
+    HostedShadowWriteFallbackDisabledError,
+)
 
 logger = logging.getLogger(__name__)
 
 import_bp = Blueprint("import", __name__)
+
+_WORKSPACE_IMPORT_MARKER_KEYS = (
+    "source_complex_id",
+    "source_catalog_item_id",
+    "source_catalog_version_id",
+    "prefer_existing_by_lineage",
+    "requested_by_user_id",
+)
 
 
 # ---------------------------------------------------------------------------
@@ -37,6 +48,68 @@ import_bp = Blueprint("import", __name__)
 def _ih() -> Dict[str, Any]:
     """Return the import helpers dict registered by server.py."""
     return get_extra("import_helpers")
+
+
+def _public_import_route_contract(*, mode: str, import_family: str) -> Dict[str, Any]:
+    return {
+        "namespace": "public_editor_import_export",
+        "mode": mode,
+        "import_family": import_family,
+        "public_api": True,
+        "workspace_import": False,
+    }
+
+
+def _with_public_import_route_contract(
+    payload: Any,
+    *,
+    mode: str,
+    import_family: str,
+) -> Any:
+    if not isinstance(payload, dict):
+        return payload
+    normalized = dict(payload)
+    normalized["route_contract"] = _public_import_route_contract(
+        mode=mode,
+        import_family=import_family,
+    )
+    return normalized
+
+
+def _hosted_public_import_export_blocked_response(
+    *,
+    mode: str,
+    import_family: str,
+    operation: str,
+    write_path: bool,
+    service_contract: Optional[Dict[str, Any]] = None,
+) -> Optional[Any]:
+    if not is_hosted_web_runtime():
+        return None
+    error_cls = (
+        HostedShadowWriteFallbackDisabledError
+        if write_path
+        else HostedShadowReadFallbackDisabledError
+    )
+    exc = error_cls(
+        operation,
+        reason="public_import_export_hosted_source_of_truth_not_implemented",
+    )
+    extra_payload: Dict[str, Any] = {
+        "route_contract": _public_import_route_contract(
+            mode=mode,
+            import_family=import_family,
+        ),
+    }
+    if isinstance(service_contract, dict):
+        extra_payload["service_contract"] = dict(service_contract)
+    return _maybe_hosted_shadow_write_error_response(exc, extra_payload=extra_payload)
+
+
+def _workspace_import_markers_in_payload(payload: Any) -> List[str]:
+    if not isinstance(payload, dict):
+        return []
+    return [key for key in _WORKSPACE_IMPORT_MARKER_KEYS if key in payload]
 
 
 # ---------------------------------------------------------------------------
@@ -312,117 +385,100 @@ def _generate_unique_task_ids(
     return ids
 
 
-def _save_task_to_storage(
+def _build_imported_task_payload(
     task: Dict[str, Any],
     module_id: str,
     topic_id: str,
     task_id: str,
-    modules_dir: Path,
     import_context: Optional[Dict[str, Any]] = None,
-) -> bool:
-    """
-    Save task to file system.
-
-    Args:
-        task: Task data to save
-        module_id: Module ID
-        topic_id: Topic ID
-        task_id: Task ID
-        data_dir: Data directory path
-
-    Returns:
-        True if successful, False otherwise
-    """
+) -> Dict[str, Any]:
+    """Build canonical task payload for imported task persistence."""
     h = _ih()
-    try:
-        import_context = import_context if isinstance(import_context, dict) else {}
-        import_source = str(import_context.get("source") or "text").strip().lower() or "text"
-        ai_run_id = str(import_context.get("ai_run_id") or "").strip() or None
+    import_context = import_context if isinstance(import_context, dict) else {}
+    import_source = str(import_context.get("source") or "text").strip().lower() or "text"
+    ai_run_id = str(import_context.get("ai_run_id") or "").strip() or None
 
-        # Create task directory
-        task_dir = modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
-        task_dir.mkdir(parents=True, exist_ok=True)
-
-        # Prepare task.json data
-        now_iso = datetime.now().isoformat()
-        task_json_data = {
+    now_iso = datetime.now().isoformat()
+    task_json_data = {
+        "id": task_id,
+        "name": task.get("name", task_id),
+        "type": task.get("type", "unknown"),
+        "description": "",
+        "meta": {
+            "created_at": now_iso,
+            "imported": True,
+            "import_date": now_iso,
+            "import_source": import_source,
+            "created_via": f"{import_source}_import",
+            "content_scope": "shared_local",
+            "module": module_id,
+            "topic": topic_id,
             "id": task_id,
             "name": task.get("name", task_id),
-            "type": task.get("type", "unknown"),
-            "description": "",
-            "meta": {
-                "created_at": now_iso,
-                "imported": True,
-                "import_date": now_iso,
-                "import_source": import_source,
-                "module": module_id,
-                "topic": topic_id,
-                "id": task_id,
-                "name": task.get("name", task_id),
-                "task_schema_version": h["CURRENT_SCHEMA_VERSION"],
-            },
-        }
+            "task_schema_version": h["CURRENT_SCHEMA_VERSION"],
+        },
+    }
 
-        # Merge parser-provided metadata into meta/content
-        task_metadata = task.get("data", {}).get("metadata", {})
-        if task_metadata:
-            if "difficulty" in task_metadata:
-                task_json_data["meta"]["difficulty"] = task_metadata["difficulty"]
-            if "tags" in task_metadata:
-                task_json_data["meta"]["tags"] = task_metadata["tags"]
-            for extra_key in ("max_length", "time_limit", "case_sensitive"):
-                if extra_key in task_metadata:
-                    task_json_data["meta"][extra_key] = task_metadata[extra_key]
-            for passthrough_key in ("language", "source_file_name"):
-                if passthrough_key in task_metadata and passthrough_key not in task_json_data["meta"]:
-                    task_json_data["meta"][passthrough_key] = task_metadata[passthrough_key]
+    # Merge parser-provided metadata into meta/content
+    task_metadata = task.get("data", {}).get("metadata", {})
+    if task_metadata:
+        if "difficulty" in task_metadata:
+            task_json_data["meta"]["difficulty"] = task_metadata["difficulty"]
+        if "tags" in task_metadata:
+            task_json_data["meta"]["tags"] = task_metadata["tags"]
+        for extra_key in ("max_length", "time_limit", "case_sensitive"):
+            if extra_key in task_metadata:
+                task_json_data["meta"][extra_key] = task_metadata[extra_key]
+        for passthrough_key in ("language", "source_file_name"):
+            if passthrough_key in task_metadata and passthrough_key not in task_json_data["meta"]:
+                task_json_data["meta"][passthrough_key] = task_metadata[passthrough_key]
 
-        if ai_run_id:
-            task_json_data["meta"]["ai_run_id"] = ai_run_id
-        ai_provider = import_context.get("ai_provider")
-        if ai_provider:
-            task_json_data["meta"]["ai_provider"] = ai_provider
-        ai_model = import_context.get("ai_model")
-        if ai_model:
-            task_json_data["meta"]["ai_model"] = ai_model
-        source_file_info = import_context.get("source_file_info")
-        if isinstance(source_file_info, dict):
-            source_file_name = source_file_info.get("name") or source_file_info.get("filename")
-            if source_file_name:
-                task_json_data["meta"]["source_file_name"] = source_file_name
-        source_file_name = import_context.get("source_file_name")
-        if source_file_name and not task_json_data["meta"].get("source_file_name"):
+    if ai_run_id:
+        task_json_data["meta"]["ai_run_id"] = ai_run_id
+    ai_provider = import_context.get("ai_provider")
+    if ai_provider:
+        task_json_data["meta"]["ai_provider"] = ai_provider
+    ai_model = import_context.get("ai_model")
+    if ai_model:
+        task_json_data["meta"]["ai_model"] = ai_model
+    source_file_info = import_context.get("source_file_info")
+    if isinstance(source_file_info, dict):
+        source_file_name = source_file_info.get("name") or source_file_info.get("filename")
+        if source_file_name:
             task_json_data["meta"]["source_file_name"] = source_file_name
+    source_file_name = import_context.get("source_file_name")
+    if source_file_name and not task_json_data["meta"].get("source_file_name"):
+        task_json_data["meta"]["source_file_name"] = source_file_name
 
-        task_ai_meta = task.get("ai_meta")
-        if isinstance(task_ai_meta, dict):
-            unit_ids = task_ai_meta.get("educational_unit_ids")
-            if isinstance(unit_ids, list) and unit_ids:
-                task_json_data["meta"]["educational_unit_ids"] = list(unit_ids)
-            source_grounding = task_ai_meta.get("source_grounding")
-            if isinstance(source_grounding, dict):
-                grounded_meta = {}
-                if source_grounding.get("primary_unit_id") is not None:
-                    grounded_meta["primary_unit_id"] = source_grounding.get("primary_unit_id")
-                if source_grounding.get("primary_unit_title"):
-                    grounded_meta["primary_unit_title"] = source_grounding.get("primary_unit_title")
-                if isinstance(source_grounding.get("score"), (int, float)):
-                    grounded_meta["score"] = float(source_grounding.get("score"))
-                if isinstance(source_grounding.get("shared_token_count"), int):
-                    grounded_meta["shared_token_count"] = int(source_grounding.get("shared_token_count"))
-                if isinstance(source_grounding.get("shared_number_count"), int):
-                    grounded_meta["shared_number_count"] = int(source_grounding.get("shared_number_count"))
-                if isinstance(source_grounding.get("weak"), bool):
-                    grounded_meta["weak"] = bool(source_grounding.get("weak"))
-                if grounded_meta:
-                    task_json_data["meta"]["source_grounding"] = grounded_meta
-            if task_ai_meta.get("provider_used") and not task_json_data["meta"].get("ai_provider"):
-                task_json_data["meta"]["ai_provider"] = task_ai_meta.get("provider_used")
-            if task_ai_meta.get("run_id") and not task_json_data["meta"].get("ai_run_id"):
-                task_json_data["meta"]["ai_run_id"] = task_ai_meta.get("run_id")
+    task_ai_meta = task.get("ai_meta")
+    if isinstance(task_ai_meta, dict):
+        unit_ids = task_ai_meta.get("educational_unit_ids")
+        if isinstance(unit_ids, list) and unit_ids:
+            task_json_data["meta"]["educational_unit_ids"] = list(unit_ids)
+        source_grounding = task_ai_meta.get("source_grounding")
+        if isinstance(source_grounding, dict):
+            grounded_meta = {}
+            if source_grounding.get("primary_unit_id") is not None:
+                grounded_meta["primary_unit_id"] = source_grounding.get("primary_unit_id")
+            if source_grounding.get("primary_unit_title"):
+                grounded_meta["primary_unit_title"] = source_grounding.get("primary_unit_title")
+            if isinstance(source_grounding.get("score"), (int, float)):
+                grounded_meta["score"] = float(source_grounding.get("score"))
+            if isinstance(source_grounding.get("shared_token_count"), int):
+                grounded_meta["shared_token_count"] = int(source_grounding.get("shared_token_count"))
+            if isinstance(source_grounding.get("shared_number_count"), int):
+                grounded_meta["shared_number_count"] = int(source_grounding.get("shared_number_count"))
+            if isinstance(source_grounding.get("weak"), bool):
+                grounded_meta["weak"] = bool(source_grounding.get("weak"))
+            if grounded_meta:
+                task_json_data["meta"]["source_grounding"] = grounded_meta
+        if task_ai_meta.get("provider_used") and not task_json_data["meta"].get("ai_provider"):
+            task_json_data["meta"]["ai_provider"] = task_ai_meta.get("provider_used")
+        if task_ai_meta.get("run_id") and not task_json_data["meta"].get("ai_run_id"):
+            task_json_data["meta"]["ai_run_id"] = task_ai_meta.get("run_id")
 
-        # Add type-specific data
-        if task.get("type") == "open_answer":
+    # Add type-specific data
+    if task.get("type") == "open_answer":
             oa_data = task.get("data", {})
             oa_content = {
                 "question": oa_data.get("question", task.get("prompt", "")),
@@ -439,7 +495,7 @@ def _save_task_to_storage(
             if isinstance(oa_data.get("require_all_keywords"), bool):
                 oa_content["require_all_keywords"] = oa_data["require_all_keywords"]
             task_json_data["content"] = oa_content
-        elif task.get("type") == "sequence_assembly":
+    elif task.get("type") == "sequence_assembly":
             data = task.get("data", {})
             # Convert to editor format
             sequence = []
@@ -464,7 +520,7 @@ def _save_task_to_storage(
                 "order_inside_matters": True,
                 "level_order_matters": True,
             }
-        elif task.get("type") == "click":
+    elif task.get("type") == "click":
             data = _normalize_click_import_data(task.get("data", {}))
             task_json_data["subtype"] = data.get("subtype", "error_detection")
 
@@ -492,7 +548,7 @@ def _save_task_to_storage(
                 task_json_data["content"] = content
             else:
                 raise ValueError(f"Unsupported click import mode: {data.get('mode')}")
-        elif task.get("type") == "test":
+    elif task.get("type") == "test":
             data = task.get("data", {})
             questions, inferred_test_type = _canonicalize_test_questions(data.get("questions", []))
             requested_test_type = str(data.get("test_type") or "").strip()
@@ -518,17 +574,35 @@ def _save_task_to_storage(
                 ),
             }
 
-        # Save task.json
-        task_json_path = task_dir / "task.json"
-        with open(task_json_path, "w", encoding="utf-8") as f:
-            json.dump(task_json_data, f, indent=2, ensure_ascii=False)
+    return task_json_data
 
+
+def _save_task_to_storage(
+    task: Dict[str, Any],
+    module_id: str,
+    topic_id: str,
+    task_id: str,
+    storage_service: Any,
+    import_context: Optional[Dict[str, Any]] = None,
+) -> bool:
+    """Persist imported task through the active storage service."""
+    task_json_data = _build_imported_task_payload(
+        task,
+        module_id,
+        topic_id,
+        task_id,
+        import_context=import_context,
+    )
+    success = storage_service.save_task(
+        module_id,
+        topic_id,
+        task_id,
+        task_json_data,
+        validate=False,
+    )
+    if success:
         logger.info(f"[HTTP] Saved imported task: {module_id}/{topic_id}/{task_id}")
-        return True
-
-    except Exception as exc:
-        logger.exception(f"[HTTP] Failed to save task {task_id}: {exc}")
-        return False
+    return bool(success)
 
 
 # ---------------------------------------------------------------------------
@@ -570,6 +644,9 @@ def delete_editor_tasks() -> Any:
         return jsonify({"ok": True, "deleted": deleted_count, "errors": errors})
 
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to delete tasks: %s", exc)
         return jsonify({"ok": False, "error": "delete_failed"}), 500
 
@@ -584,7 +661,6 @@ def export_tasks_to_text() -> Any:
     task_refs = payload.get("tasks", [])
     if not task_refs:
         return jsonify({"ok": False, "error": "no_tasks"}), 400
-
     storage = ctx.storage_service
     lines: List[str] = []
 
@@ -594,13 +670,26 @@ def export_tasks_to_text() -> Any:
         task_id = ref.get("task_id")
         if not mid or not tid or not task_id:
             continue
-        task_path = storage.modules_dir / mid / "topics" / tid / "tasks" / task_id / "task.json"
-        if not task_path.exists():
-            continue
         try:
-            with open(task_path, "r", encoding="utf-8") as f:
-                td = json.load(f)
-        except Exception:
+            loaded_task = storage.load_task(mid, tid, task_id)
+        except Exception as exc:
+            degraded_response = _maybe_hosted_shadow_write_error_response(
+                exc,
+                extra_payload={
+                    "route_contract": _public_import_route_contract(
+                        mode="export_text",
+                        import_family="text_task_export",
+                    ),
+                },
+            )
+            if degraded_response is not None:
+                return degraded_response
+            logger.exception("[HTTP] Failed to export task %s/%s/%s: %s", mid, tid, task_id, exc)
+            return jsonify({"ok": False, "error": "export_failed"}), 500
+        if not isinstance(loaded_task, dict):
+            continue
+        td = loaded_task.get("task_data")
+        if not isinstance(td, dict):
             continue
 
         ttype = td.get("type", "")
@@ -689,7 +778,13 @@ def export_tasks_to_text() -> Any:
                     lines.append(f"{prefix} {a.get('text', '')}")
                 lines.append("")
 
-    return jsonify({"ok": True, "text": "\n".join(lines)})
+    return jsonify(
+        _with_public_import_route_contract(
+            {"ok": True, "text": "\n".join(lines)},
+            mode="export_text",
+            import_family="text_task_export",
+        )
+    )
 
 
 @import_bp.route("/api/editor/modules/delete", methods=["POST"])
@@ -721,6 +816,9 @@ def delete_editor_module() -> Any:
             )
 
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to delete module %s: %s", payload.get("module_id"), exc)
         return jsonify({"ok": False, "error": "delete_failed"}), 500
 
@@ -755,6 +853,9 @@ def delete_editor_topic() -> Any:
             )
 
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception(
             "[HTTP] Failed to delete topic %s/%s: %s",
             payload.get("module_id"),
@@ -784,6 +885,9 @@ def rename_editor_module() -> Any:
         else:
             return jsonify({"ok": False, "error": "rename_failed"}), 404
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to rename module %s: %s", payload.get("module_id"), exc)
         return jsonify({"ok": False, "error": "rename_failed"}), 500
 
@@ -809,6 +913,9 @@ def rename_editor_topic() -> Any:
         else:
             return jsonify({"ok": False, "error": "rename_failed"}), 404
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception(
             "[HTTP] Failed to rename topic %s/%s: %s",
             payload.get("module_id"),
@@ -831,6 +938,22 @@ def import_parse() -> Any:
     payload = request.get_json(silent=True) or {}
 
     try:
+        workspace_markers = _workspace_import_markers_in_payload(payload)
+        if workspace_markers:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f"workspace_import_payload_not_supported:{','.join(workspace_markers)}",
+                        "route_contract": _public_import_route_contract(
+                            mode="parse",
+                            import_family="text_task_import",
+                        ),
+                    }
+                ),
+                400,
+            )
+
         # Validate payload
         module_id = payload.get("module_id")
         topic_id = payload.get("topic_id")
@@ -992,7 +1115,13 @@ def import_parse() -> Any:
             summary["errors"],
         )
 
-        return jsonify(response)
+        return jsonify(
+            _with_public_import_route_contract(
+                response,
+                mode="parse",
+                import_family="text_task_import",
+            )
+        )
 
     except Exception as exc:
         logger.exception("[HTTP] Failed to parse import text: %s", exc)
@@ -1012,6 +1141,21 @@ def import_execute() -> Any:
     payload = request.get_json(silent=True) or {}
 
     try:
+        workspace_markers = _workspace_import_markers_in_payload(payload)
+        if workspace_markers:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f"workspace_import_payload_not_supported:{','.join(workspace_markers)}",
+                        "route_contract": _public_import_route_contract(
+                            mode="execute",
+                            import_family="text_task_import",
+                        ),
+                    }
+                ),
+                400,
+            )
         # Validate payload
         module_id = payload.get("module_id")
         topic_id = payload.get("topic_id")
@@ -1050,7 +1194,13 @@ def import_execute() -> Any:
                 topic_id,
                 idempotency_key,
             )
-            return jsonify(cached_response)
+            return jsonify(
+                _with_public_import_route_contract(
+                    cached_response,
+                    mode="execute",
+                    import_family="text_task_import",
+                )
+            )
 
         # Validate module and topic exist
         storage_service = ctx.storage_service
@@ -1073,11 +1223,10 @@ def import_execute() -> Any:
         task_ids = _generate_unique_task_ids(
             storage_service, module_id, topic_id, len(importable_tasks)
         )
-        modules_dir = storage_service.modules_dir
 
         imported_ids = []
         errors = []
-        saved_dirs = []  # Track saved dirs for rollback
+        rollback_task_ids = []
 
         for idx, (i, task) in enumerate(importable_tasks):
             try:
@@ -1099,39 +1248,52 @@ def import_execute() -> Any:
                     module_id,
                     topic_id,
                     task_id,
-                    modules_dir,
+                    storage_service,
                     import_context=import_context,
                 )
 
                 if success:
                     imported_ids.append(task_id)
-                    saved_dirs.append(
-                        modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
-                    )
+                    rollback_task_ids.append(task_id)
                 else:
                     errors.append(f"Failed to save task {i}")
-                    # Rollback all previously saved tasks
-                    for d in saved_dirs:
+                    for rollback_task_id in rollback_task_ids:
                         try:
-                            import shutil
-
-                            shutil.rmtree(d, ignore_errors=True)
+                            storage_service.delete_task(module_id, topic_id, rollback_task_id)
                         except Exception:
-                            pass
+                            logger.exception(
+                                "[HTTP] Failed to rollback imported task %s/%s/%s",
+                                module_id,
+                                topic_id,
+                                rollback_task_id,
+                            )
                     imported_ids.clear()
                     break
 
             except Exception as task_exc:
+                degraded_response = _maybe_hosted_shadow_write_error_response(
+                    task_exc,
+                    extra_payload={
+                        "route_contract": _public_import_route_contract(
+                            mode="execute",
+                            import_family="text_task_import",
+                        ),
+                    },
+                )
+                if degraded_response is not None:
+                    return degraded_response
                 logger.exception(f"[HTTP] Failed to import task {i}: {task_exc}")
                 errors.append(f"Task {i}: {str(task_exc)}")
-                # Rollback on exception
-                for d in saved_dirs:
+                for rollback_task_id in rollback_task_ids:
                     try:
-                        import shutil
-
-                        shutil.rmtree(d, ignore_errors=True)
+                        storage_service.delete_task(module_id, topic_id, rollback_task_id)
                     except Exception:
-                        pass
+                        logger.exception(
+                            "[HTTP] Failed to rollback imported task %s/%s/%s",
+                            module_id,
+                            topic_id,
+                            rollback_task_id,
+                        )
                 imported_ids.clear()
                 break
 
@@ -1146,6 +1308,11 @@ def import_execute() -> Any:
         }
         if idempotency_key:
             response["idempotency_key"] = idempotency_key
+        response = _with_public_import_route_contract(
+            response,
+            mode="execute",
+            import_family="text_task_import",
+        )
         _import_idempotency_store(idempotency_key, request_fingerprint, response)
 
         ai_run_id = str(import_context.get("ai_run_id") or "").strip()
@@ -1204,5 +1371,16 @@ def import_execute() -> Any:
             )
         except Exception:
             pass
+        degraded_response = _maybe_hosted_shadow_write_error_response(
+            exc,
+            extra_payload={
+                "route_contract": _public_import_route_contract(
+                    mode="execute",
+                    import_family="text_task_import",
+                ),
+            },
+        )
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to execute import: %s", exc)
         return jsonify({"ok": False, "error": "import_failed"}), 500

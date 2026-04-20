@@ -14,7 +14,7 @@ Endpoints:
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional
 
 from flask import Blueprint, jsonify, request
 
@@ -24,8 +24,14 @@ from services.theory_service import (  # type: ignore
     TheoryValidationError,
 )
 
-from routes._context import get_ctx
-from routes._helpers import _serialize_complex_payload, compute_theory_usage_stats
+from routes._context import get_ctx, is_hosted_web_runtime
+from persistence.postgres import PostgresUnavailableError
+from routes._helpers import (
+    _maybe_hosted_shadow_write_error_response,
+    _serialize_complex_payload,
+    _serialize_theory_payload,
+    compute_theory_usage_stats,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +44,136 @@ class TheoryInUseError(Exception):
         self.theory_id = theory_id
         self.usage_topics = usage_topics
         self.usage_complexes = usage_complexes
+
+
+def _hosted_theory_asset_degraded_response(
+    *,
+    error: str,
+    operation: str,
+    reason: str,
+    status: int = 503,
+) -> Any:
+    payload: Dict[str, Any] = {
+        "ok": False,
+        "error": str(error or "").strip() or "hosted_asset_contract_blocked",
+        "degraded": True,
+        "details": {
+            "operation": str(operation or "").strip() or None,
+            "reason": str(reason or "").strip() or None,
+            "runtime_mode": "hosted_web" if is_hosted_web_runtime() else "legacy_local",
+            "source_of_truth": "asset_id/asset_url",
+        },
+        "route_contract": {
+            "mode": "upload_image",
+            "public_api": False,
+        },
+    }
+    return jsonify(payload), int(status)
+
+
+def _normalize_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _is_imported_library_theory_payload(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    created_via = str(
+        item.get("created_via")
+        or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
+        or ""
+    ).strip().lower()
+    if created_via in {"workspace_import", "archive_import"}:
+        return True
+    return bool(
+        _normalize_optional_text(item.get("source_catalog_item_id"))
+        or _normalize_optional_text(
+            (item.get("source_lineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("source_lineage"), dict)
+            else None
+        )
+        or _normalize_optional_text(
+            (item.get("sourceLineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("sourceLineage"), dict)
+            else None
+        )
+    )
+
+
+def _is_visible_library_theory_for_current_user(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    if ownership.get("is_owned_by_current_user") is True:
+        return True
+    return _is_imported_library_theory_payload(item)
+
+
+def _should_adopt_ownerless_theory_payload(item: Any, *, current_user_id: str) -> bool:
+    normalized_user_id = _normalize_optional_text(current_user_id)
+    if not normalized_user_id or normalized_user_id == "guest":
+        return False
+    if not isinstance(item, dict):
+        return False
+    created_by_user_id = _normalize_optional_text(item.get("created_by_user_id"))
+    if created_by_user_id is not None:
+        return False
+    if bool(item.get("has_source_lineage")):
+        return False
+    if _normalize_optional_text(item.get("source_catalog_item_id")) is not None:
+        return False
+    workspace_copy_kind = str(item.get("workspace_copy_kind") or "").strip().lower()
+    if workspace_copy_kind and workspace_copy_kind != "local_draft":
+        return False
+    content_scope = str(item.get("content_scope") or "").strip().lower()
+    if content_scope and content_scope != "shared_local":
+        return False
+    return True
+
+
+def _adopt_ownerless_theories_for_current_user(
+    theories: Any,
+    *,
+    current_user_id: str,
+) -> Any:
+    normalized_user_id = _normalize_optional_text(current_user_id)
+    if not normalized_user_id or normalized_user_id == "guest" or not isinstance(theories, list):
+        return theories
+
+    service = get_ctx().theory_service
+    adopted_any = False
+    for theory_obj in list(theories):
+        raw_payload = theory_obj.dict() if hasattr(theory_obj, "dict") else dict(theory_obj or {})
+        if not _should_adopt_ownerless_theory_payload(raw_payload, current_user_id=normalized_user_id):
+            continue
+        theory_id = _normalize_optional_text(raw_payload.get("id"))
+        if not theory_id:
+            continue
+        try:
+            service.update_theory(
+                theory_id,
+                {
+                    "created_by_user_id": normalized_user_id,
+                    "updated_by_user_id": normalized_user_id,
+                    "created_via": str(raw_payload.get("created_via") or "manual_editor").strip() or "manual_editor",
+                    "content_scope": "shared_local",
+                },
+            )
+            adopted_any = True
+            logger.info("[HTTP] Adopted ownerless theory %s for hosted user %s", theory_id, normalized_user_id)
+        except Exception as exc:
+            logger.warning(
+                "[HTTP] Failed to adopt ownerless theory %s for hosted user %s: %s",
+                theory_id,
+                normalized_user_id,
+                exc,
+            )
+    if adopted_any:
+        return service.list_theories()
+    return theories
 
 
 def _load_theory_usage_stats(ctx: Any) -> Dict[str, Dict[str, int]]:
@@ -86,6 +222,21 @@ def list_theories() -> Any:
     try:
         ctx = get_ctx()
         items = ctx.theory_service.list_theories(query=query)
+        if is_hosted_web_runtime():
+            items = _adopt_ownerless_theories_for_current_user(
+                items,
+                current_user_id=ctx.user_id,
+            )
+        items = [
+            _serialize_theory_payload(item, current_user_id=ctx.user_id)
+            for item in items
+        ]
+        if is_hosted_web_runtime():
+            items = [
+                item
+                for item in items
+                if _is_visible_library_theory_for_current_user(item)
+            ]
         usage_stats = _load_theory_usage_stats(ctx)
 
         for item in items:
@@ -99,8 +250,101 @@ def list_theories() -> Any:
 
         return jsonify({"ok": True, "items": items})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to list theories: %s", exc)
         return jsonify({"ok": False, "error": "theories_load_failed"}), 500
+
+
+@theories_bp.route("/api/theory-library", methods=["GET"])
+def list_theory_library() -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_read_library_status"}), 403
+    try:
+        payload = ctx.catalog_service.list_theory_library_entries(requested_by_user_id=ctx.user_id)
+        return jsonify(payload)
+    except ValueError as exc:
+        error = str(exc)
+        status = 404 if error.endswith("_not_found") else 403 if "forbidden" in error else 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to list theory library: %s", exc)
+        return jsonify({"ok": False, "error": "theory_library_load_failed"}), 500
+
+
+@theories_bp.route("/api/theory-library/<string:library_entry_id>", methods=["GET"])
+def get_theory_library_entry(library_entry_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_read_library_status"}), 403
+    try:
+        payload = ctx.catalog_service.get_theory_library_entry(
+            library_entry_id,
+            requested_by_user_id=ctx.user_id,
+            access_code=request.args.get("access_code"),
+        )
+        return jsonify(payload)
+    except ValueError as exc:
+        error = str(exc)
+        if error.endswith("_not_found"):
+            status = 404
+        elif "forbidden" in error or error in {"catalog_access_code_required", "theory_library_entry_not_accessible"}:
+            status = 403
+        else:
+            status = 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to get theory library entry %s: %s", library_entry_id, exc)
+        return jsonify({"ok": False, "error": "theory_library_detail_failed"}), 500
+
+
+@theories_bp.route("/api/theory-library/<string:library_entry_id>/access-code", methods=["POST"])
+def submit_theory_library_access_code(library_entry_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_read_library_status"}), 403
+    payload = request.get_json(silent=True) or {}
+    try:
+        result = ctx.catalog_service.submit_theory_library_access_code(
+            library_entry_id,
+            requested_by_user_id=ctx.user_id,
+            access_code=payload.get("access_code"),
+        )
+        return jsonify(result)
+    except ValueError as exc:
+        error = str(exc)
+        if error.endswith("_not_found"):
+            status = 404
+        elif "forbidden" in error or error in {"catalog_access_code_required", "theory_library_entry_not_accessible"}:
+            status = 403
+        else:
+            status = 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to submit theory library access code %s: %s", library_entry_id, exc)
+        return jsonify({"ok": False, "error": "theory_library_access_code_failed"}), 500
+
+
+@theories_bp.route("/api/theory-library/<string:library_entry_id>", methods=["DELETE"])
+def delete_theory_library_entry(library_entry_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+    try:
+        result = ctx.catalog_service.remove_theory_library_entry(
+            library_entry_id,
+            requested_by_user_id=ctx.user_id,
+        )
+        return jsonify(result)
+    except ValueError as exc:
+        error = str(exc)
+        status = 404 if error.endswith("_not_found") else 403 if "forbidden" in error else 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to delete theory library entry %s: %s", library_entry_id, exc)
+        return jsonify({"ok": False, "error": "theory_library_delete_failed"}), 500
 
 
 @theories_bp.route("/api/theories/bulk-delete", methods=["POST"])
@@ -201,6 +445,9 @@ def delete_theory(theory_id: str) -> Any:
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to delete theory %s: %s", theory_id, exc)
         return jsonify({"ok": False, "error": "theory_delete_failed"}), 500
 
@@ -213,11 +460,17 @@ def create_theory() -> Any:
 
     payload = request.get_json(silent=True) or {}
     try:
+        payload["created_by_user_id"] = ctx.user_id
+        payload["updated_by_user_id"] = ctx.user_id
         item = ctx.theory_service.create_theory(payload)
+        item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item}), 200
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to create theory: %s", exc)
         return jsonify({"ok": False, "error": "theory_create_failed"}), 500
 
@@ -225,13 +478,25 @@ def create_theory() -> Any:
 @theories_bp.route("/api/theories/<string:theory_id>", methods=["GET"])
 def get_theory(theory_id: str) -> Any:
     try:
-        item = get_ctx().theory_service.get_theory(theory_id, include_delta=True)
+        ctx = get_ctx()
+        if is_hosted_web_runtime():
+            _adopt_ownerless_theories_for_current_user(
+                ctx.theory_service.list_theories(),
+                current_user_id=ctx.user_id,
+            )
+        item = ctx.theory_service.get_theory(theory_id, include_delta=True)
+        item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
+        if is_hosted_web_runtime() and not _is_visible_library_theory_for_current_user(item):
+            return jsonify({"ok": False, "error": "theory_not_found"}), 404
         return jsonify({"ok": True, "item": item})
     except TheoryNotFoundError:
         return jsonify({"ok": False, "error": "theory_not_found"}), 404
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to get theory %s: %s", theory_id, exc)
         return jsonify({"ok": False, "error": "theory_load_failed"}), 500
 
@@ -245,13 +510,21 @@ def copy_theory(theory_id: str) -> Any:
     payload = request.get_json(silent=True) or {}
     title = payload.get("title")
     try:
-        item = ctx.theory_service.clone_theory(theory_id, title=title)
+        item = ctx.theory_service.clone_theory(
+            theory_id,
+            title=title,
+            created_by_user_id=ctx.user_id,
+        )
+        item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item})
     except TheoryNotFoundError:
         return jsonify({"ok": False, "error": "theory_not_found"}), 404
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to copy theory %s: %s", theory_id, exc)
         return jsonify({"ok": False, "error": "theory_copy_failed"}), 500
 
@@ -268,6 +541,8 @@ def update_theory(theory_id: str) -> Any:
     for field in ("title", "delta", "images"):
         if field in payload:
             updates[field] = payload.get(field)
+    if updates:
+        updates["updated_by_user_id"] = ctx.user_id
 
     try:
         if not updates:
@@ -278,6 +553,7 @@ def update_theory(theory_id: str) -> Any:
                 updates,
                 expected_version=expected_version,
             )
+        item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item})
     except TheoryConflictError as exc:
         return (
@@ -299,6 +575,9 @@ def update_theory(theory_id: str) -> Any:
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to update theory %s: %s", theory_id, exc)
         return jsonify({"ok": False, "error": "theory_update_failed"}), 500
 
@@ -314,12 +593,80 @@ def upload_theory_image(theory_id: str) -> Any:
 
     try:
         result = ctx.theory_service.add_image(theory_id, request.files["file"])
-        return jsonify({"ok": True, **result}), 200
+        response_payload: Dict[str, Any] = {"ok": True, **result}
+        asset_service = getattr(ctx, "asset_service", None)
+        rel_path = str(result.get("path") or "").strip()
+        if is_hosted_web_runtime() and asset_service is None:
+            return _hosted_theory_asset_degraded_response(
+                error="hosted_asset_contract_blocked",
+                operation="theory.upload_image",
+                reason="asset_service_not_available",
+            )
+        if asset_service is not None and rel_path:
+            abs_path = (ctx.data_dir / rel_path).resolve()
+            try:
+                asset = asset_service.register_existing_file(
+                    abs_path,
+                    owner_user_id=getattr(ctx, "user_id", None),
+                    visibility_scope="private_workspace",
+                    asset_kind="theory_image",
+                    metadata={"theory_id": theory_id},
+                )
+                response_payload["asset_id"] = asset.get("asset_id")
+                response_payload["asset_url"] = asset.get("asset_url")
+            except PostgresUnavailableError as exc:
+                if is_hosted_web_runtime():
+                    logger.warning(
+                        "[HTTP] Hosted asset registration unavailable for theory image %s: %s",
+                        rel_path,
+                        exc,
+                    )
+                    return _hosted_theory_asset_degraded_response(
+                        error="hosted_asset_contract_blocked",
+                        operation="theory.upload_image",
+                        reason="asset_registration_storage_unavailable",
+                    )
+                logger.warning(
+                    "[HTTP][DEV-FALLBACK] Asset registration skipped (Postgres unavailable) for theory image %s: %s",
+                    rel_path,
+                    exc,
+                )
+            except Exception as exc:
+                if is_hosted_web_runtime():
+                    logger.exception(
+                        "[HTTP] Hosted asset registration failed for theory image %s",
+                        rel_path,
+                    )
+                    return _hosted_theory_asset_degraded_response(
+                        error="hosted_asset_contract_blocked",
+                        operation="theory.upload_image",
+                        reason="asset_registration_failed",
+                    )
+                logger.warning(
+                    "[HTTP] Asset registration skipped for theory image %s: %s",
+                    rel_path,
+                    exc,
+                )
+        if is_hosted_web_runtime():
+            if not (
+                str(response_payload.get("asset_id") or "").strip()
+                or str(response_payload.get("asset_url") or "").strip()
+            ):
+                return _hosted_theory_asset_degraded_response(
+                    error="hosted_asset_contract_blocked",
+                    operation="theory.upload_image",
+                    reason="asset_id_or_asset_url_required_in_hosted_runtime",
+                )
+            response_payload.pop("path", None)
+        return jsonify(response_payload), 200
     except TheoryNotFoundError:
         return jsonify({"ok": False, "error": "theory_not_found"}), 404
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to upload theory image %s: %s", theory_id, exc)
         return jsonify({"ok": False, "error": "theory_image_upload_failed"}), 500
 
@@ -329,9 +676,14 @@ def get_theory_history(theory_id: str) -> Any:
     try:
         history = get_ctx().theory_service.get_history(theory_id)
         return jsonify({"ok": True, "history": history})
+    except TheoryNotFoundError:
+        return jsonify({"ok": False, "error": "theory_not_found"}), 404
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to load theory history %s: %s", theory_id, exc)
         return jsonify({"ok": False, "error": "theory_history_failed"}), 500
 
@@ -343,13 +695,21 @@ def restore_theory(theory_id: str, snapshot_timestamp: str) -> Any:
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
 
     try:
-        item = ctx.theory_service.restore_from_history(theory_id, snapshot_timestamp)
+        item = ctx.theory_service.restore_from_history(
+            theory_id,
+            snapshot_timestamp,
+            restored_by_user_id=ctx.user_id,
+        )
+        item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item})
     except TheoryNotFoundError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception(
             "[HTTP] Failed to restore theory %s from %s: %s",
             theory_id,

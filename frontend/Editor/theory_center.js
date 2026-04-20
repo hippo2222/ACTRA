@@ -13,6 +13,7 @@
     selectedTheoryIds: new Set(),
     lastSelectedTheoryId: '',
     bulkDeleting: false,
+    linkedEntryAutoOpened: false,
   };
 
   const SUMMARY_COLLAPSE_STORAGE_KEY = 'theory-center-summary-collapsed';
@@ -21,6 +22,10 @@
   const THEORY_DELETE_UNDO_WINDOW_MS = 5000;
   const pendingTheoryDeleteJobs = new Map();
   const pendingTheoryDeleteIds = new Set();
+  const theoryPublicationBySourceId = new Map();
+  const theoryPublicationByItemId = new Map();
+  let allTheoryPublicationItems = [];
+  let currentTheoryCenterUserId = '';
   let searchTimer = null;
 
   function $(id) {
@@ -38,7 +43,16 @@
         variant: String(options?.variant || 'warning'),
       });
     }
-    return Promise.resolve(window.confirm(fallbackMessage));
+    if (window.WorkspaceImportClient && typeof window.WorkspaceImportClient.confirmAction === 'function') {
+      return window.WorkspaceImportClient.confirmAction({
+        title: String(options?.title || 'Подтвердите действие'),
+        message: fallbackMessage,
+        confirmText: String(options?.confirmText || 'Продолжить'),
+        cancelText: String(options?.cancelText || 'Отмена'),
+        variant: String(options?.variant || 'warning'),
+      });
+    }
+    return Promise.resolve(false);
   }
 
   function supportsTheorySelectionScope(scope = state.scope) {
@@ -50,7 +64,7 @@
   }
 
   function getTheoryRowId(row) {
-    return String(row?.id || '').trim();
+    return String(row?.id || row?.library_entry_id || '').trim();
   }
 
   function getTheoryUsageCount(row) {
@@ -58,7 +72,16 @@
   }
 
   function isTheoryRowDeletable(row) {
+    if (row?.is_linked_publication) return false;
     return Boolean(getTheoryRowId(row)) && getTheoryUsageCount(row) === 0;
+  }
+
+  function getLinkedTheoryRows() {
+    return Array.isArray(state.overview?.linked_theories) ? state.overview.linked_theories : [];
+  }
+
+  function getWorkspaceTheoryRows() {
+    return Array.isArray(state.overview?.theories) ? state.overview.theories : [];
   }
 
   function isTheoryPendingDeletion(theoryId) {
@@ -70,11 +93,11 @@
       return Array.isArray(state.overview?.complexes) ? state.overview.complexes : [];
     }
     if (scope === 'only_title') {
-      const theoryRows = Array.isArray(state.overview?.theories) ? state.overview.theories : [];
+      const theoryRows = getWorkspaceTheoryRows();
       return theoryRows.filter((row) => row?.has_content === false);
     }
     if (scope === 'all') {
-      return Array.isArray(state.overview?.theories) ? state.overview.theories : [];
+      return getWorkspaceTheoryRows().concat(getLinkedTheoryRows());
     }
     if (scope === 'orphans') {
       return Array.isArray(state.overview?.orphans) ? state.overview.orphans : [];
@@ -209,6 +232,92 @@
     }
   }
 
+  function theoryViewerAssetSrc(assetId, assetUrl) {
+    if (assetUrl) return assetUrl;
+    if (assetId) return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+    return '';
+  }
+
+  function normalizeTheoryViewerImageRef(raw) {
+    let value = String(raw || '').trim();
+    if (!value) return '';
+    if (value.startsWith('/api/local-image?')) {
+      try {
+        const parsed = new URL(value, window.location.origin);
+        const assetId = String(parsed.searchParams.get('asset_id') || '').trim();
+        if (assetId) {
+          return theoryViewerAssetSrc(assetId, '');
+        }
+        value = String(parsed.searchParams.get('path') || '').trim();
+        if (!value) return '';
+      } catch (error) {
+        return '';
+      }
+    }
+    if (/^(https?:|data:|blob:|\/api\/|\/assets\/)/i.test(value)) return value;
+    return `/api/local-image?path=${encodeURIComponent(value)}`;
+  }
+
+  function renderLinkedTheoryDeltaHtml(delta) {
+    const ops = Array.isArray(delta?.ops) ? delta.ops : [];
+    let html = '';
+    let paragraph = '';
+    const flushParagraph = () => {
+      const text = paragraph.trim();
+      if (text) {
+        html += `<p style="margin:0 0 1rem 0;line-height:1.7;color:var(--color-text-main);">${text}</p>`;
+      }
+      paragraph = '';
+    };
+    ops.forEach((op) => {
+      const insert = op?.insert;
+      const attrs = op?.attributes && typeof op.attributes === 'object' ? op.attributes : {};
+      if (insert && typeof insert === 'object' && insert.image) {
+        flushParagraph();
+        const src = normalizeTheoryViewerImageRef(insert.image);
+        if (src) {
+          const align = ['left', 'center', 'right'].includes(String(attrs.align || '').trim()) ? String(attrs.align).trim() : 'left';
+          const width = String(attrs.width || 'min(100%, 680px)').trim() || 'min(100%, 680px)';
+          const wrapperAlign = align === 'center' ? 'center' : align === 'right' ? 'flex-end' : 'flex-start';
+          html += `<div style="display:flex;justify-content:${wrapperAlign};margin:0 0 1rem 0;"><img src="${escapeHtml(src)}" alt="" style="display:block;max-width:${escapeHtml(width)};width:${escapeHtml(width)};border-radius:18px;"></div>`;
+        }
+        return;
+      }
+      if (typeof insert !== 'string') return;
+      const fragments = insert.split('\n');
+      fragments.forEach((part, index) => {
+        if (part) {
+          let text = escapeHtml(part);
+          if (attrs.bold) text = `<strong>${text}</strong>`;
+          if (attrs.italic) text = `<em>${text}</em>`;
+          if (attrs.underline) text = `<u>${text}</u>`;
+          paragraph += text;
+        }
+        if (index < fragments.length - 1) {
+          flushParagraph();
+        }
+      });
+    });
+    flushParagraph();
+    return html || '<p style="margin:0;color:var(--color-text-secondary);">Контент теории пока недоступен.</p>';
+  }
+
+  function openTheoryCenterModal(markup, bind) {
+    const overlay = document.createElement('div');
+    overlay.className = 'fixed inset-0 z-[1300] bg-scrim backdrop-blur-sm flex items-center justify-center p-4';
+    overlay.innerHTML = markup;
+    const close = () => overlay.remove();
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) close();
+    });
+    overlay.querySelectorAll('[data-close]').forEach((button) => {
+      button.addEventListener('click', close);
+    });
+    document.body.appendChild(overlay);
+    if (typeof bind === 'function') bind(overlay, close);
+    return close;
+  }
+
   async function fetchTheoryCatalogRows() {
     const response = await fetch('/api/theories');
     const data = await readJsonSafely(response);
@@ -216,6 +325,357 @@
       throw new Error(data?.error || `HTTP ${response.status}`);
     }
     return data.items;
+  }
+
+  async function resolveCurrentTheoryCenterUserId() {
+    if (currentTheoryCenterUserId) return currentTheoryCenterUserId;
+    try {
+      const authResponse = await fetch('/api/auth/me');
+      const authData = await readJsonSafely(authResponse);
+      const userId = String(authData?.user?.user_id || '').trim();
+      if (authResponse.ok && authData?.ok && authData?.authenticated && userId) {
+        currentTheoryCenterUserId = userId;
+        return currentTheoryCenterUserId;
+      }
+    } catch (error) {
+      console.warn('[Theory Center] Failed to resolve current user through auth/me', error);
+    }
+    return '';
+  }
+
+  function getCatalogVisibilityLabel(value) {
+    switch (String(value || '').trim().toLowerCase()) {
+      case 'access_code':
+        return 'По коду';
+      case 'private':
+        return 'Приватная';
+      case 'public':
+      default:
+        return 'Общий доступ';
+    }
+  }
+
+  function getCatalogVisibilityToneClass(value) {
+    switch (String(value || '').trim().toLowerCase()) {
+      case 'access_code':
+        return getTheoryToneClass('info');
+      case 'private':
+        return getTheoryNeutralChipClass();
+      case 'public':
+      default:
+        return getTheoryToneClass('success');
+    }
+  }
+
+  function getTheoryCatalogVisibilityDescription(value) {
+    switch (String(value || '').trim().toLowerCase()) {
+      case 'access_code':
+        return 'Теория не видна в общем каталоге. Добавить её можно только по коду доступа.';
+      case 'private':
+        return 'Теория доступна только вам. Другие пользователи не увидят её в каталоге и не смогут открыть по коду.';
+      case 'public':
+      default:
+        return 'Теория видна в общем каталоге и доступна для добавления в библиотеку.';
+    }
+  }
+
+  function getTheoryVisibilityLock(item) {
+    const lock = item?.visibility_lock && typeof item.visibility_lock === 'object' ? item.visibility_lock : null;
+    if (!lock) return null;
+    return String(lock.forced_visibility || '').trim().toLowerCase() === 'public' ? lock : null;
+  }
+
+  function formatTheoryVisibilityLockMessage(lock) {
+    const complexTitles = Array.isArray(lock?.complex_titles)
+      ? lock.complex_titles.filter((value) => String(value || '').trim())
+      : [];
+    if (complexTitles.length === 1) {
+      return `Теория привязана к публичному комплексу «${complexTitles[0]}», поэтому должна оставаться в общем доступе.`;
+    }
+    if (complexTitles.length > 1) {
+      return `Теория привязана к нескольким публичным комплексам, поэтому должна оставаться в общем доступе.`;
+    }
+    return 'Теория привязана к опубликованному для всех комплексу, поэтому должна оставаться в общем доступе.';
+  }
+
+  function getTheoryPublicationErrorMessage(error, fallback = '') {
+    const message = String(error?.message || error || '').trim();
+    if (message.includes('theory_catalog_visibility_locked_by_public_complex')) {
+      return 'Теория привязана к опубликованному для всех комплексу. Сначала измените публикацию комплекса.';
+    }
+    return message || fallback;
+  }
+
+  function formatPublicationTimestamp(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return 'ещё не публиковалась';
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    return date.toLocaleString('ru-RU', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+  }
+
+  function getAccessCodeValue(item) {
+    return String(item?.access_code || item?.payload?.access_code || '').trim();
+  }
+
+  function formatAccessCodeDisplay(value) {
+    const code = String(value || '').trim().replace(/\s+/g, '').replace(/-/g, '').toUpperCase();
+    if (!code) return '';
+    return code.match(/.{1,4}/g)?.join('-') || code;
+  }
+
+  function rebuildTheoryPublicationIndex(items) {
+    theoryPublicationBySourceId.clear();
+    theoryPublicationByItemId.clear();
+    const normalizedItems = Array.isArray(items) ? items : [];
+    normalizedItems.forEach((item) => {
+      const itemId = String(item?.item_id || '').trim();
+      const sourceId = String(item?.source_workspace_id || item?.source_workspace_ref || '').trim();
+      if (itemId) theoryPublicationByItemId.set(itemId, item);
+      if (sourceId) theoryPublicationBySourceId.set(sourceId, item);
+    });
+    allTheoryPublicationItems = normalizedItems;
+  }
+
+  function resolveTheoryPublication(row) {
+    const sourceItemId = String(
+      row?.catalog_item_id
+      || row?.item_id
+      || row?.source_catalog_item_id
+      || row?.sourceLineage?.catalog_item_id
+      || row?.source_lineage?.catalog_item_id
+      || ''
+    ).trim();
+    if (sourceItemId && theoryPublicationByItemId.has(sourceItemId)) {
+      return theoryPublicationByItemId.get(sourceItemId) || null;
+    }
+    const theoryId = getTheoryRowId(row);
+    if (!theoryId) return null;
+    return theoryPublicationBySourceId.get(theoryId) || null;
+  }
+
+  async function fetchTheoryPublicationItems() {
+    const userId = await resolveCurrentTheoryCenterUserId();
+    if (!userId) {
+      rebuildTheoryPublicationIndex([]);
+      return [];
+    }
+    const params = new URLSearchParams({
+      content_type: 'theory',
+      owner_user_id: userId,
+      include_owned_non_public: 'true',
+    });
+    const response = await fetch(`/api/catalog/items?${params.toString()}`);
+    const data = await readJsonSafely(response);
+    if (!response.ok || !data?.ok || !Array.isArray(data.items)) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+    rebuildTheoryPublicationIndex(data.items);
+    return data.items;
+  }
+
+  function normalizeTheoryLibraryEntryRow(entry) {
+    const libraryEntry = entry?.library_entry && typeof entry.library_entry === 'object' ? entry.library_entry : {};
+    const item = entry?.item && typeof entry.item === 'object' ? entry.item : {};
+    const version = entry?.version && typeof entry.version === 'object' ? entry.version : {};
+    return {
+      id: String(libraryEntry.library_entry_id || '').trim(),
+      library_entry_id: String(libraryEntry.library_entry_id || '').trim(),
+      catalog_item_id: String(item.item_id || libraryEntry.catalog_item_id || '').trim(),
+      title: String(item.title || 'Связанная теория').trim() || 'Связанная теория',
+      owner_user_id: String(item.owner_user_id || '').trim(),
+      owner_display_name: String(item.owner_display_name || item.owner_name || '').trim(),
+      catalog_visibility: String(item.catalog_visibility || '').trim(),
+      updated_at: String(version.published_at || item.latest_published_at || libraryEntry.updated_at || '').trim(),
+      created_at: String(libraryEntry.created_at || '').trim(),
+      access_state: String(libraryEntry.access_state || 'active').trim(),
+      access_reason: String(libraryEntry.access_reason || '').trim(),
+      resolved_version_id: String(libraryEntry.resolved_version_id || version.version_id || '').trim(),
+      has_content: true,
+      image_count: Number(version?.manifest?.image_count || item?.latest_manifest?.image_count || 0),
+      is_linked_publication: true,
+      can_open_linked: String(libraryEntry.access_state || '').trim() === 'active',
+    };
+  }
+
+  function getTheoryAuthorMeta(row) {
+    if (row?.is_linked_publication) {
+      const ownerId = String(row?.owner_user_id || '').trim();
+      const ownerName = String(row?.owner_display_name || '').trim();
+      return {
+        ownerId,
+        ownerName,
+        isOwnedByCurrentUser: !!currentTheoryCenterUserId && ownerId === currentTheoryCenterUserId,
+      };
+    }
+    const ownership = resolveComplexOwnership(row);
+    return {
+      ownerId: String(ownership.createdByUserId || '').trim(),
+      ownerName: String(ownership.createdByUserName || '').trim(),
+      isOwnedByCurrentUser: ownership.isOwnedByCurrentUser === true,
+    };
+  }
+
+  function getTheoryAuthorLabel(row) {
+    const meta = getTheoryAuthorMeta(row);
+    if (meta.ownerName) return meta.ownerName;
+    if (meta.isOwnedByCurrentUser) return 'Вы';
+    return meta.ownerId || 'Автор не указан';
+  }
+
+  function renderTheoryAuthorBadge(row) {
+    const meta = getTheoryAuthorMeta(row);
+    const toneClass = meta.isOwnedByCurrentUser ? getTheoryToneClass('success') : getTheoryNeutralChipClass();
+    return `
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${toneClass}">
+        <span class="material-symbols-outlined text-[14px]">person</span>
+        ${escapeHtml(getTheoryAuthorLabel(row))}
+      </span>
+    `;
+  }
+
+  function renderTheoryOriginBadge(row) {
+    let icon = 'edit_note';
+    let label = 'Родная';
+    let toneClass = getTheoryToneClass('primary');
+    if (row?.is_linked_publication) {
+      icon = 'public';
+      label = 'Из каталога';
+      toneClass = getTheoryToneClass('info');
+    } else {
+      const sourceItemId = String(
+        row?.source_catalog_item_id
+        || row?.sourceLineage?.catalog_item_id
+        || row?.source_lineage?.catalog_item_id
+        || ''
+      ).trim();
+      if (sourceItemId) {
+        icon = 'download_done';
+        label = 'Добавлена из каталога';
+        toneClass = getTheoryNeutralChipClass();
+      }
+    }
+    return `
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${toneClass}">
+        <span class="material-symbols-outlined text-[14px]">${escapeHtml(icon)}</span>
+        ${escapeHtml(label)}
+      </span>
+    `;
+  }
+
+  function renderTheoryCatalogStatusBadge(row) {
+    const publication = resolveTheoryPublication(row);
+    const visibility = String(
+      publication?.catalog_visibility
+      || row?.catalog_visibility
+      || ''
+    ).trim().toLowerCase();
+    const hasPublication = !!visibility;
+    const label = hasPublication ? getCatalogVisibilityLabel(visibility) : 'Не опубликована';
+    const toneClass = hasPublication ? getCatalogVisibilityToneClass(visibility) : getTheoryNeutralChipClass();
+    const title = hasPublication
+      ? getTheoryCatalogVisibilityDescription(visibility)
+      : 'Теория пока не опубликована в каталоге.';
+    return `
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${toneClass}" title="${escapeHtml(title)}">
+        <span class="material-symbols-outlined text-[14px]">public</span>
+        ${escapeHtml(label)}
+      </span>
+    `;
+  }
+
+  function getTheoryLinkedComplexRows(row) {
+    if (row?.is_linked_publication) return [];
+    const theoryId = getTheoryRowId(row);
+    if (!theoryId) return [];
+    const complexes = Array.isArray(state.overview?.complexes) ? state.overview.complexes : [];
+    return complexes.filter((complexRow) => {
+      const theoryIds = Array.isArray(complexRow?.theory_ids) ? complexRow.theory_ids : [];
+      return theoryIds.some((value) => String(value || '').trim() === theoryId);
+    });
+  }
+
+  function getTheoryLinkedComplexNames(row) {
+    return Array.from(new Set(
+      getTheoryLinkedComplexRows(row)
+        .map((complexRow) => String(complexRow?.complex_name || complexRow?.complex_id || '').trim())
+        .filter(Boolean)
+    ));
+  }
+
+  function renderTheoryLinkedComplexBadge(row) {
+    const names = getTheoryLinkedComplexNames(row);
+    if (!names.length) return '';
+    const preview = names.slice(0, 2).join(', ');
+    const suffix = names.length > 2 ? ` +${names.length - 2}` : '';
+    const label = `${names.length === 1 ? 'Комплекс' : 'Комплексы'}: ${preview}${suffix}`;
+    const title = names.length === 1
+      ? `Теория привязана к комплексу «${names[0]}» из раздела «Свои комплексы».`
+      : `Теория привязана к комплексам из раздела «Свои комплексы»: ${names.join(', ')}.`;
+    return `
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}" title="${escapeHtml(title)}">
+        <span class="material-symbols-outlined text-[14px]">hub</span>
+        ${escapeHtml(label)}
+      </span>
+    `;
+  }
+
+  function canOpenTheoryInEditor(row) {
+    if (row?.is_linked_publication) return false;
+    return getTheoryAuthorMeta(row).isOwnedByCurrentUser === true;
+  }
+
+  function getTheoryOpenMeta(row) {
+    if (canOpenTheoryInEditor(row)) {
+      return {
+        label: 'Открыть',
+        title: 'Открыть теорию в редакторе',
+        opensEditor: true,
+      };
+    }
+    return {
+      label: 'Открыть',
+      title: `Открыть теорию в режиме просмотра. Редактирование доступно только автору ${getTheoryAuthorLabel(row)}.`,
+      opensEditor: false,
+    };
+  }
+
+  function findTheoryRowById(theoryId) {
+    const normalizedId = String(theoryId || '').trim();
+    if (!normalizedId) return null;
+    return getWorkspaceTheoryRows().find((row) => getTheoryRowId(row) === normalizedId) || null;
+  }
+
+  async function fetchTheoryLibraryEntries() {
+    const response = await fetch('/api/theory-library');
+    const data = await readJsonSafely(response);
+    if (!response.ok || !data?.ok || !Array.isArray(data.entries)) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+    return data.entries.map(normalizeTheoryLibraryEntryRow);
+  }
+
+  async function copyTheoryAccessCode(value) {
+    const code = String(value || '').trim().replace(/\s+/g, '').replace(/-/g, '').toUpperCase();
+    if (!code) return;
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(code);
+        if (typeof window.NotificationUI !== 'undefined' && typeof window.NotificationUI.toast === 'function') {
+          window.NotificationUI.toast('Код доступа скопирован.', 'success', 2500);
+          return;
+        }
+      }
+    } catch (error) {
+      console.warn('[Theory Center] Failed to copy access code', error);
+    }
+    setFlash(`Код доступа: ${code}`, 'info');
   }
 
   function mergeTheoryCatalogIntoOverview(overview, theoryRows) {
@@ -232,6 +692,131 @@
       orphan_theories: nextOverview.orphans.length,
     };
     return nextOverview;
+  }
+
+  async function openLinkedTheoryViewer(libraryEntryId) {
+    const normalizedId = String(libraryEntryId || '').trim();
+    if (!normalizedId) return;
+    const response = await fetch(`/api/theory-library/${encodeURIComponent(normalizedId)}`);
+    const data = await readJsonSafely(response);
+    if (!response.ok || !data?.ok) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+    const entry = data.library_entry && typeof data.library_entry === 'object' ? data.library_entry : {};
+    const snapshot = data.snapshot && typeof data.snapshot === 'object' ? data.snapshot : {};
+    const deltaHtml = renderLinkedTheoryDeltaHtml(snapshot.delta);
+    openTheoryCenterModal(`
+      <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[30px] border border-border-subtle bg-surface-1 shadow-xl">
+        <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
+          <div>
+            <p class="text-lg font-bold text-text-main">${escapeHtml(snapshot.title || data?.item?.title || 'Теория')}</p>
+            <p class="mt-2 text-sm text-text-secondary">${escapeHtml(entry.access_reason || 'Связанная публикация из каталога.')}</p>
+          </div>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>Закрыть</button>
+        </div>
+        <div class="custom-scrollbar overflow-y-auto p-5">
+          <div style="max-width:820px;margin:0 auto;">${deltaHtml}</div>
+        </div>
+      </div>
+    `);
+  }
+
+  function openWorkspaceTheoryViewer(item, row = null) {
+    const itemData = item && typeof item === 'object' ? item : {};
+    const rowData = row && typeof row === 'object' ? row : itemData;
+    const linkedComplexNames = getTheoryLinkedComplexNames(rowData);
+    const deltaHtml = renderLinkedTheoryDeltaHtml(itemData.delta);
+    openTheoryCenterModal(`
+      <div class="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-[30px] border border-border-subtle bg-surface-1 shadow-xl">
+        <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
+          <div class="min-w-0 space-y-3">
+            <div>
+              <p class="text-lg font-bold text-text-main">${escapeHtml(itemData.title || rowData.title || itemData.id || 'Теория')}</p>
+              <p class="mt-2 text-sm text-text-secondary">Просмотр без редактирования. Оригинал доступен для изменения только автору.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+              ${renderTheoryAuthorBadge(rowData)}
+              ${renderTheoryOriginBadge(rowData)}
+              ${renderTheoryCatalogStatusBadge(rowData)}
+              ${renderTheoryLinkedComplexBadge(rowData)}
+              <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass({ muted: true })}">
+                <span class="material-symbols-outlined text-[14px]">event</span>
+                ${escapeHtml(formatDateLabel(itemData.updated_at || itemData.version || rowData.updated_at || rowData.version))}
+              </span>
+            </div>
+          </div>
+          <button type="button" class="btn-secondary h-10 px-4 shrink-0" data-close>Закрыть</button>
+        </div>
+        <div class="custom-scrollbar overflow-y-auto p-5 space-y-4">
+          ${linkedComplexNames.length ? `
+            <div class="rounded-[22px] border border-border-subtle bg-bg-secondary px-4 py-3">
+              <p class="text-xs font-bold uppercase tracking-[0.14em] text-text-secondary">Связанные комплексы</p>
+              <p class="mt-2 text-sm text-text-main">${escapeHtml(linkedComplexNames.join(', '))}</p>
+            </div>
+          ` : ''}
+          <div style="max-width:820px;margin:0 auto;">${deltaHtml}</div>
+        </div>
+      </div>
+    `);
+  }
+
+  async function openWorkspaceTheoryViewerById(theoryId, row = null) {
+    const normalizedTheoryId = String(theoryId || '').trim();
+    if (!normalizedTheoryId) return;
+    const response = await fetch(`/api/theories/${encodeURIComponent(normalizedTheoryId)}`);
+    const data = await readJsonSafely(response);
+    if (!response.ok || !data?.ok || !data?.item) {
+      throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+    openWorkspaceTheoryViewer(data.item, row);
+  }
+
+  async function openLinkedAccessCodeDialog(libraryEntryId) {
+    const normalizedId = String(libraryEntryId || '').trim();
+    if (!normalizedId) return;
+    openTheoryCenterModal(`
+      <div class="w-full max-w-lg overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
+        <div class="border-b border-border-subtle px-5 py-4">
+          <p class="text-lg font-bold text-text-main">Код доступа</p>
+          <p class="mt-2 text-sm text-text-secondary">Введите код автора, чтобы открыть связанную теорию.</p>
+        </div>
+        <div class="space-y-4 p-5">
+          <input id="theory-linked-access-code" type="text" class="w-full rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3 text-base text-text-main outline-none focus:border-primary" placeholder="Например, AB12CD34" />
+          <div id="theory-linked-access-feedback" class="hidden rounded-2xl border border-error-light bg-error-lighter px-4 py-3 text-sm text-error-text"></div>
+        </div>
+        <div class="flex justify-end gap-3 border-t border-border-subtle px-5 py-4">
+          <button type="button" class="btn-secondary h-10 px-4" data-close>Отмена</button>
+          <button type="button" class="btn-primary h-10 px-4" data-role="submit-access-code">Открыть</button>
+        </div>
+      </div>
+    `, (overlay, close) => {
+      const input = overlay.querySelector('#theory-linked-access-code');
+      const feedback = overlay.querySelector('#theory-linked-access-feedback');
+      overlay.querySelector('[data-role="submit-access-code"]')?.addEventListener('click', async () => {
+        const accessCode = String(input?.value || '').trim();
+        if (!accessCode) return;
+        try {
+          const response = await fetch(`/api/theory-library/${encodeURIComponent(normalizedId)}/access-code`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ access_code: accessCode }),
+          });
+          const data = await readJsonSafely(response);
+          if (!response.ok || !data?.ok) {
+            throw new Error(data?.error || `HTTP ${response.status}`);
+          }
+          close();
+          await loadOverview({ silent: true });
+          await openLinkedTheoryViewer(normalizedId);
+        } catch (error) {
+          if (feedback) {
+            feedback.textContent = `Не удалось подтвердить доступ: ${String(error?.message || 'catalog_access_code_required')}`;
+            feedback.classList.remove('hidden');
+          }
+        }
+      });
+      input?.focus();
+    });
   }
 
   async function deleteTheoryById(theoryId) {
@@ -263,6 +848,36 @@
         message: String(data?.message || data?.details?.message || `HTTP ${response.status}`),
         usage_topics: Number(data?.usage_topics || 0),
         usage_complexes: Number(data?.usage_complexes || 0),
+    };
+  }
+
+  async function deleteLinkedTheoryByLibraryEntryId(libraryEntryId) {
+    const normalizedLibraryEntryId = String(libraryEntryId || '').trim();
+    if (!normalizedLibraryEntryId) {
+      return {
+        ok: false,
+        library_entry_id: '',
+        error: 'library_entry_id_required',
+        message: 'Library entry id is required',
+      };
+    }
+
+    const response = await fetch(`/api/theory-library/${encodeURIComponent(normalizedLibraryEntryId)}`, {
+      method: 'DELETE',
+    });
+    const data = await readJsonSafely(response);
+    if (response.ok && data?.ok) {
+      return {
+        ok: true,
+        library_entry_id: normalizedLibraryEntryId,
+      };
+    }
+
+    return {
+      ok: false,
+      library_entry_id: normalizedLibraryEntryId,
+      error: String(data?.error || 'theory_library_delete_failed'),
+      message: String(data?.message || data?.details?.message || `HTTP ${response.status}`),
     };
   }
 
@@ -677,7 +1292,7 @@
             ${escapeHtml(card.label)}
           </span>
           <strong class="text-3xl font-bold tracking-[-0.03em]">${escapeHtml(card.value)}</strong>
-          ${selectedModuleName ? `<span class="text-xs opacity-75">в модуле В«${escapeHtml(selectedModuleName)}В»</span>` : ''}
+          ${selectedModuleName ? `<span class="text-xs opacity-75">в модуле «${escapeHtml(selectedModuleName)}»</span>` : ''}
         </button>
       `;
     }).join('');
@@ -804,7 +1419,8 @@
     });
   }
 
-  function renderBadges(row) {
+  function renderBadges(row, options = {}) {
+    const shouldWrap = options.wrap !== false;
     if (state.scope === 'topics') {
       const badgeClass = row.theory_state === 'missing'
         ? getTheoryToneClass('warning')
@@ -829,8 +1445,7 @@
           </span>
         `);
       }
-      return `
-        <div class="flex flex-wrap items-center gap-2">
+        const content = `
           <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${badgeClass}">
             <span class="material-symbols-outlined text-[14px]">${row.theory_state === 'missing' ? 'warning' : 'menu_book'}</span>
             ${escapeHtml(row.theory_state_label)}
@@ -839,9 +1454,11 @@
             ${escapeHtml(linkedLabel)}
           </span>
           ${extraBadges.join('')}
-        </div>
-      `;
-    }
+        `;
+        return shouldWrap
+          ? `<div class="flex flex-wrap items-center gap-2">${content}</div>`
+          : content;
+      }
 
     const sourceTone = row.theory_source === 'own'
       ? getTheoryToneClass('primary')
@@ -861,8 +1478,7 @@
         </span>
       `);
     }
-    return `
-      <div class="flex flex-wrap items-center gap-2">
+      const content = `
         <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${sourceTone}">
           <span class="material-symbols-outlined text-[14px]">${row.theory_source === 'own' ? 'edit_note' : 'account_tree'}</span>
           ${escapeHtml(row.theory_source_label)}
@@ -881,8 +1497,367 @@
           </span>
         ` : ''}
         ${extraBadges.join('')}
+      `;
+      return shouldWrap
+        ? `<div class="flex flex-wrap items-center gap-2">${content}</div>`
+        : content;
+    }
+
+  function resolveComplexOwnership(row) {
+    if (window.WorkspaceImportClient && typeof window.WorkspaceImportClient.resolveComplexOwnership === 'function') {
+      return window.WorkspaceImportClient.resolveComplexOwnership(row);
+    }
+    const ownership = (row && typeof row.ownership === 'object') ? row.ownership : {};
+    return {
+      createdByUserId: String(
+        ownership.created_by_user_id
+        || ownership.createdByUserId
+        || row?.created_by_user_id
+        || ''
+      ).trim(),
+      createdByUserName: String(
+        ownership.created_by_user_name
+        || ownership.createdByUserName
+        || row?.created_by_user_name
+        || ''
+      ).trim(),
+      createdVia: String(
+        ownership.created_via
+        || ownership.createdVia
+        || row?.created_via
+        || ''
+      ).trim() || 'legacy_unknown',
+      contentScope: String(
+        ownership.content_scope
+        || ownership.contentScope
+        || row?.content_scope
+        || ''
+      ).trim() || 'shared_local',
+      hasOwner: ownership.has_owner === true || ownership.hasOwner === true || !!ownership.created_by_user_id || !!row?.created_by_user_id,
+      isOwnedByCurrentUser: ownership.is_owned_by_current_user === true || ownership.isOwnedByCurrentUser === true,
+    };
+  }
+
+  function getComplexCreatedViaLabel(createdVia) {
+    if (window.WorkspaceImportClient && typeof window.WorkspaceImportClient.getCreatedViaLabel === 'function') {
+      return window.WorkspaceImportClient.getCreatedViaLabel(createdVia);
+    }
+    const normalized = String(createdVia || '').trim().toLowerCase();
+    if (normalized === 'workspace_import') return 'Legacy import';
+    if (normalized === 'archive_import') return 'Legacy import';
+    if (normalized === 'manual_editor') return 'Редактор';
+    return normalized || 'Источник не определён';
+  }
+
+  function renderComplexOwnershipBadges(row) {
+    const ownership = resolveComplexOwnership(row);
+    const badges = [];
+    if (ownership.isOwnedByCurrentUser) {
+      badges.push(`
+        <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryToneClass('success')}">
+          <span class="material-symbols-outlined text-[14px]">person</span>
+          Моё
+        </span>
+      `);
+    } else if (ownership.hasOwner) {
+      badges.push(`
+        <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">
+          <span class="material-symbols-outlined text-[14px]">badge</span>
+          ${escapeHtml(ownership.createdByUserName || ownership.createdByUserId)}
+        </span>
+      `);
+    }
+    badges.push(`
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">
+        <span class="material-symbols-outlined text-[14px]">inventory_2</span>
+        ${escapeHtml(getComplexCreatedViaLabel(ownership.createdVia))}
+      </span>
+    `);
+    return badges.join('');
+  }
+
+  function renderTheoryPublicationBadge(row) {
+    const ownership = resolveComplexOwnership(row);
+    if (!ownership.isOwnedByCurrentUser) return '';
+    const publication = resolveTheoryPublication(row);
+    const label = publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : 'Не опубликована';
+    const toneClass = publication ? getCatalogVisibilityToneClass(publication.catalog_visibility) : getTheoryNeutralChipClass();
+    const title = publication
+      ? getTheoryCatalogVisibilityDescription(publication.catalog_visibility)
+      : 'Теория ещё не публиковалась и доступна только вам.';
+    return `
+      <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${toneClass}" title="${escapeHtml(title)}">
+        <span class="material-symbols-outlined text-[14px]">public</span>
+        ${escapeHtml(label)}
+      </span>
+    `;
+  }
+
+  async function openTheoryPublicationDialog(row = {}) {
+    const theoryId = getTheoryRowId(row);
+    if (!theoryId) {
+      setFlash('Управление публикацией недоступно: не удалось определить теорию.', 'error');
+      return;
+    }
+    const ownership = resolveComplexOwnership(row);
+    if (!ownership.isOwnedByCurrentUser) {
+      setFlash('Публикацией можно управлять только для своих теорий.', 'warning');
+      return;
+    }
+
+    const publication = resolveTheoryPublication(row);
+    const currentVisibility = String(publication?.catalog_visibility || 'public').trim().toLowerCase() || 'public';
+    const visibilityLock = getTheoryVisibilityLock(publication);
+    const accessCode = getAccessCodeValue(publication);
+    const theoryTitle = escapeHtml(row?.title || theoryId || 'Без названия');
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 z-[1220] bg-scrim backdrop-blur-sm flex items-center justify-center p-4';
+    modal.innerHTML = `
+      <div class="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
+        <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4">
+          <div class="space-y-1">
+            <p class="text-xs font-bold uppercase tracking-[0.16em] text-text-muted">Публикация теории</p>
+            <h3 class="text-xl font-bold text-text-main">${theoryTitle}</h3>
+            <p class="text-sm text-text-secondary">Здесь можно опубликовать теорию, изменить режим доступа и при необходимости получить код доступа.</p>
+          </div>
+          <button type="button" class="btn-secondary h-10 px-4" data-role="close">Закрыть</button>
+        </div>
+        <div class="custom-scrollbar space-y-5 overflow-y-auto p-5">
+          <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Текущий статус</div>
+                <div id="theory-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${escapeHtml(publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : 'Не опубликована')}</div>
+                <div id="theory-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `Последняя публикация: ${escapeHtml(formatPublicationTimestamp(publication.latest_published_at))}` : 'После первой публикации теория появится в каталоге или станет доступна по коду.'}</div>
+              </div>
+              <span id="theory-publish-current-badge" class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${publication ? getCatalogVisibilityToneClass(currentVisibility) : getTheoryNeutralChipClass()}">${escapeHtml(publication ? getCatalogVisibilityLabel(currentVisibility) : 'Не опубликована')}</span>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <div class="text-sm font-semibold text-text-main">Режим доступа</div>
+              <p class="mt-1 text-sm text-text-secondary">${visibilityLock ? escapeHtml(formatTheoryVisibilityLockMessage(visibilityLock)) : 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.'}</p>
+            </div>
+            ${visibilityLock ? `
+              <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
+                Теория используется публичным комплексом. Режим доступа зафиксирован на «Общий доступ».
+              </div>
+            ` : ''}
+            <div class="grid gap-3 md:grid-cols-3">
+              ${['public', 'access_code', 'private'].map((visibility) => `
+                <label class="rounded-2xl border border-border-subtle bg-surface-1 p-4 transition-colors hover:border-primary-light ${visibilityLock && visibility !== 'public' ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}">
+                  <div class="flex items-start gap-3">
+                    <input type="radio" name="theory-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? 'checked' : ''} ${visibilityLock && visibility !== 'public' ? 'disabled' : ''} class="mt-1 h-4 w-4 text-primary" />
+                    <div class="space-y-1 min-w-0">
+                      <div class="text-sm font-semibold text-text-main">${escapeHtml(getCatalogVisibilityLabel(visibility))}</div>
+                      <div class="text-sm text-text-secondary">${escapeHtml(getTheoryCatalogVisibilityDescription(visibility))}</div>
+                    </div>
+                  </div>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+
+          <div id="theory-publish-access-box" class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4 ${currentVisibility === 'access_code' ? '' : 'hidden'}">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Код доступа</div>
+                <div id="theory-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeHtml(accessCode ? formatAccessCodeDisplay(accessCode) : 'Код будет создан после публикации')}</div>
+              </div>
+              <button type="button" class="btn-secondary h-10 px-4" data-role="copy-access-code">Скопировать код</button>
+            </div>
+          </div>
+
+          <div id="theory-publish-feedback" class="hidden rounded-2xl border px-4 py-3 text-sm"></div>
+        </div>
+        <div class="flex flex-wrap justify-end gap-3 border-t border-border-subtle px-5 py-4">
+          <button type="button" data-role="update-visibility" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${publication ? '' : 'hidden'}">
+            <span class="material-symbols-outlined text-[18px]">tune</span>
+            <span>Сохранить доступ</span>
+          </button>
+          <button type="button" data-role="publish-version" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
+            <span class="material-symbols-outlined text-[18px]">publish</span>
+            <span>${publication ? 'Опубликовать версию' : 'Опубликовать'}</span>
+          </button>
+        </div>
       </div>
     `;
+
+    const close = () => modal.remove();
+    const getSelectedVisibility = () => {
+      const selected = modal.querySelector('input[name="theory-publish-visibility"]:checked');
+      return String(selected?.value || currentVisibility || 'public').trim().toLowerCase() || 'public';
+    };
+    let modalBusy = false;
+    const applyVisibilityControlState = (item = null) => {
+      const lock = getTheoryVisibilityLock(item || publication);
+      const radios = Array.from(modal.querySelectorAll('input[name="theory-publish-visibility"]'));
+      let publicRadio = null;
+      radios.forEach((radio) => {
+        const visibility = String(radio?.value || '').trim().toLowerCase();
+        const disabledByLock = !!lock && visibility !== 'public';
+        if (visibility === 'public') {
+          publicRadio = radio;
+        }
+        radio.disabled = modalBusy || disabledByLock;
+      });
+      if (lock) {
+        const selected = getSelectedVisibility();
+        if (selected !== 'public' && publicRadio) {
+          publicRadio.checked = true;
+        }
+      }
+      return lock;
+    };
+    const setBusy = (busy) => {
+      modalBusy = !!busy;
+      modal.querySelectorAll('button, input[type="radio"]').forEach((node) => {
+        if (busy) {
+          node.setAttribute('disabled', 'true');
+        } else {
+          node.removeAttribute('disabled');
+        }
+      });
+      applyVisibilityControlState(resolveTheoryPublication(row));
+    };
+    const setFeedback = (message = '', tone = 'info') => {
+      const box = modal.querySelector('#theory-publish-feedback');
+      if (!box) return;
+      if (!message) {
+        box.className = 'hidden rounded-2xl border px-4 py-3 text-sm';
+        box.textContent = '';
+        return;
+      }
+      const toneClass = tone === 'error'
+        ? 'border-error-light bg-error-lighter text-error-text'
+        : tone === 'success'
+          ? 'border-success-light bg-success-lighter text-success-text'
+          : 'border-info-light bg-info-lighter text-info-text';
+      box.className = `rounded-2xl border px-4 py-3 text-sm ${toneClass}`;
+      box.textContent = message;
+    };
+    const syncModalState = (item) => {
+      const currentItem = item && typeof item === 'object' ? item : null;
+      const lock = applyVisibilityControlState(currentItem);
+      const selectedVisibility = getSelectedVisibility();
+      const currentStatus = modal.querySelector('#theory-publish-current-status');
+      const currentMeta = modal.querySelector('#theory-publish-current-meta');
+      const currentBadge = modal.querySelector('#theory-publish-current-badge');
+      const accessBox = modal.querySelector('#theory-publish-access-box');
+      const accessCodeEl = modal.querySelector('#theory-publish-access-code');
+      const updateBtn = modal.querySelector('[data-role="update-visibility"]');
+
+      if (currentStatus) {
+        currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликована';
+      }
+      if (currentMeta) {
+        currentMeta.textContent = currentItem
+          ? `Последняя публикация: ${formatPublicationTimestamp(currentItem.latest_published_at)}`
+          : 'После первой публикации теория появится в каталоге или станет доступна по коду.';
+      }
+      if (currentBadge) {
+        currentBadge.className = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold ${currentItem ? getCatalogVisibilityToneClass(currentItem.catalog_visibility) : getTheoryNeutralChipClass()}`;
+        currentBadge.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликована';
+      }
+      const activeCode = getAccessCodeValue(currentItem);
+      const showAccess = selectedVisibility === 'access_code';
+      if (accessBox) accessBox.classList.toggle('hidden', !showAccess);
+      if (accessCodeEl) {
+        accessCodeEl.textContent = activeCode
+          ? formatAccessCodeDisplay(activeCode)
+          : (selectedVisibility === 'access_code' ? 'Код будет создан после публикации' : '');
+      }
+      if (updateBtn) {
+        const currentItemVisibility = String(currentItem?.catalog_visibility || '').trim().toLowerCase();
+        const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility && !(lock && selectedVisibility !== 'public');
+        updateBtn.disabled = !canUpdateVisibility;
+        updateBtn.classList.toggle('opacity-60', !canUpdateVisibility);
+      }
+    };
+
+    modal.querySelectorAll('[data-role="close"]').forEach((node) => {
+      node.addEventListener('click', close);
+    });
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) close();
+    });
+    modal.querySelectorAll('input[name="theory-publish-visibility"]').forEach((radio) => {
+      radio.addEventListener('change', () => syncModalState(resolveTheoryPublication(row)));
+    });
+    modal.querySelector('[data-role="copy-access-code"]')?.addEventListener('click', async () => {
+      await copyTheoryAccessCode(modal.querySelector('#theory-publish-access-code')?.textContent);
+    });
+    modal.querySelector('[data-role="update-visibility"]')?.addEventListener('click', async () => {
+      const currentItem = resolveTheoryPublication(row);
+      if (!currentItem) return;
+      const nextVisibility = getSelectedVisibility();
+      if (nextVisibility === String(currentItem.catalog_visibility || '').trim().toLowerCase()) {
+        setFeedback('Выбранный режим доступа уже сохранён.', 'info');
+        return;
+      }
+      setBusy(true);
+      setFeedback('');
+      try {
+        const resp = await fetch(`/api/catalog/items/${encodeURIComponent(currentItem.item_id)}/visibility`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ catalog_visibility: nextVisibility }),
+        });
+        const data = await readJsonSafely(resp);
+        if (!resp.ok || data?.ok === false) {
+          throw new Error(data?.error || `catalog_visibility_update_failed:${resp.status}`);
+        }
+        rebuildTheoryPublicationIndex(
+          allTheoryPublicationItems
+            .filter((item) => String(item?.item_id || '').trim() !== String(currentItem.item_id || '').trim())
+            .concat(data.item ? [data.item] : [])
+        );
+        syncModalState(data.item);
+        setFeedback(`Доступ обновлён: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        setFlash(`Статус публикации теории обновлён: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        renderView();
+      } catch (error) {
+        console.error('[Theory Center] Visibility update failed', error);
+        setFeedback(`Не удалось изменить доступ: ${getTheoryPublicationErrorMessage(error, 'catalog_visibility_update_failed')}`, 'error');
+      } finally {
+        setBusy(false);
+      }
+    });
+    modal.querySelector('[data-role="publish-version"]')?.addEventListener('click', async () => {
+      const selectedVisibility = getSelectedVisibility();
+      setBusy(true);
+      setFeedback('');
+      try {
+        const resp = await fetch(`/api/catalog/theories/${encodeURIComponent(theoryId)}/publish`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ catalog_visibility: selectedVisibility }),
+        });
+        const data = await readJsonSafely(resp);
+        if (!resp.ok || data?.ok === false) {
+          throw new Error(data?.error || `catalog_publish_failed:${resp.status}`);
+        }
+        rebuildTheoryPublicationIndex(
+          allTheoryPublicationItems
+            .filter((item) => String(item?.item_id || '').trim() !== String(data.item?.item_id || '').trim())
+            .concat(data.item ? [data.item] : [])
+        );
+        syncModalState(data.item);
+        setFeedback(`Публикация обновлена. Режим доступа: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        setFlash(`Теория опубликована: ${getCatalogVisibilityLabel(data.item?.catalog_visibility)}.`, 'success');
+        renderView();
+      } catch (error) {
+        console.error('[Theory Center] Publish failed', error);
+        setFeedback(`Не удалось опубликовать теорию: ${getTheoryPublicationErrorMessage(error, 'catalog_publish_failed')}`, 'error');
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    syncModalState(publication);
+    document.body.appendChild(modal);
   }
 
   function renderTopicCard(row) {
@@ -954,6 +1929,8 @@
     const modulesText = Array.isArray(row.module_names) && row.module_names.length
       ? row.module_names.join(', ')
       : 'Без модулей';
+    const ownershipBadges = renderComplexOwnershipBadges(row);
+    const combinedBadges = [renderBadges(row, { wrap: false }), ownershipBadges].filter(Boolean).join('');
     return `
       <article class="theory-row-card card-elevated rounded-[28px] p-5">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
@@ -961,7 +1938,11 @@
             <div class="space-y-2">
               <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] ${getTheoryNeutralChipClass()}">${escapeHtml(modulesText)}</span>
               <h3 class="text-xl font-bold tracking-[-0.02em] text-text-main">${escapeHtml(row.complex_name || row.complex_id)}</h3>
-              ${renderBadges(row)}
+              ${combinedBadges ? `
+                <div class="flex flex-wrap items-center gap-2 xl:flex-nowrap xl:overflow-x-auto xl:pb-1">
+                  ${combinedBadges}
+                </div>
+              ` : ''}
             </div>
             <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-3">
               <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Теоретический контекст</p>
@@ -1010,6 +1991,8 @@
     const usageTopics = Number(row.usage_topics || 0);
     const usageComplexes = Number(row.usage_complexes || 0);
     const hasContent = row.has_content !== false;
+    const ownership = resolveComplexOwnership(row);
+    const openMeta = getTheoryOpenMeta(row);
     const selected = state.selectedTheoryIds.has(theoryId);
     const selectable = isTheoryRowDeletable(row);
     const selectionMode = state.selectionMode && supportsTheorySelectionScope();
@@ -1031,17 +2014,30 @@
               <button type="button"
                 class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-3 py-2 text-xs font-semibold"
                 data-action="open-orphan-theory"
-                data-theory-id="${escapeHtml(row.id)}">
-                Открыть
+                data-theory-id="${escapeHtml(row.id)}"
+                title="${escapeHtml(openMeta.title)}">
+                ${escapeHtml(openMeta.label)}
               </button>
+              ${ownership.isOwnedByCurrentUser ? `
+                <button type="button"
+                  class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary"
+                  data-action="manage-theory-publication"
+                  data-theory-id="${escapeHtml(row.id)}">
+                  Публикация
+                </button>
+              ` : ''}
             </div>
           </div>
           <div class="flex items-end justify-between gap-3">
             <div class="min-w-0 flex flex-1 flex-wrap items-center gap-2 text-xs">
+              ${renderTheoryAuthorBadge(row)}
+              ${renderTheoryOriginBadge(row)}
+              ${renderTheoryCatalogStatusBadge(row)}
               <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="Тема или комплекс не используют эту теорию">
                 <span class="material-symbols-outlined text-[14px]">priority_high</span>
                 Не привязана
               </span>
+              ${renderTheoryLinkedComplexBadge(row)}
               <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
                 <span class="material-symbols-outlined text-[14px]">menu_book</span>
                 Тем: ${usageTopics}
@@ -1071,11 +2067,87 @@
   }
 
   function renderTheoryCatalogCard(row) {
+    if (row?.is_linked_publication) {
+      const accessState = String(row.access_state || 'active').trim();
+      const isLocked = accessState === 'requires_access_code' || accessState === 'revoked' || accessState === 'deleted_source';
+      const accessTone = accessState === 'active'
+        ? getTheoryToneClass('success')
+        : accessState === 'requires_access_code'
+          ? getTheoryToneClass('warning')
+          : getTheoryNeutralChipClass();
+      const accessLabel = accessState === 'active'
+        ? 'Связанная публикация'
+        : accessState === 'requires_access_code'
+          ? 'Нужен код доступа'
+          : accessState === 'revoked'
+            ? 'Доступ отозван'
+            : 'Источник недоступен';
+      return `
+        <article class="theory-row-card card-elevated rounded-[28px] p-5"
+          data-theory-id="${escapeHtml(getTheoryRowId(row))}"
+          data-selectable="0"
+          data-selection-mode="0"
+          data-selected="0">
+          <div class="flex flex-col gap-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 space-y-1">
+                <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Связанная теория</p>
+                <h3 class="text-xl font-semibold tracking-[-0.02em] text-text-main truncate">${escapeHtml(row.title || row.id)}</h3>
+              </div>
+              <div class="flex items-start gap-2 shrink-0">
+                <button type="button"
+                  class="theory-mini-btn rounded-2xl border border-error-light bg-error-lighter px-3 py-2 text-xs font-semibold text-error-text hover:border-error"
+                  data-action="delete-linked-theory-record"
+                  data-library-entry-id="${escapeHtml(row.library_entry_id)}"
+                  title="Убрать связанную теорию из библиотеки">
+                  Убрать
+                </button>
+                <button type="button"
+                  class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-3 py-2 text-xs font-semibold"
+                  data-action="${accessState === 'requires_access_code' ? 'enter-linked-access-code' : 'open-linked-theory'}"
+                  data-library-entry-id="${escapeHtml(row.library_entry_id)}">
+                  ${accessState === 'requires_access_code' ? 'Ввести код' : 'Открыть'}
+                </button>
+              </div>
+            </div>
+            <div class="flex items-end justify-between gap-3">
+              <div class="min-w-0 flex flex-1 flex-wrap items-center gap-2 text-xs">
+                ${renderTheoryAuthorBadge(row)}
+                ${renderTheoryOriginBadge(row)}
+                ${renderTheoryCatalogStatusBadge(row)}
+                <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${accessTone}">
+                  <span class="material-symbols-outlined text-[14px]">${accessState === 'active' ? 'link' : accessState === 'requires_access_code' ? 'password' : 'lock'}</span>
+                  ${escapeHtml(accessLabel)}
+                </span>
+                ${row.image_count > 0 ? `
+                  <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
+                    <span class="material-symbols-outlined text-[14px]">imagesmode</span>
+                    Фото: ${escapeHtml(String(row.image_count))}
+                  </span>
+                ` : ''}
+                <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass({ muted: true })}">
+                  <span class="material-symbols-outlined text-[14px]">event</span>
+                  ${escapeHtml(formatDateLabel(row.updated_at))}
+                </span>
+                ${row.access_reason ? `
+                  <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
+                    <span class="material-symbols-outlined text-[14px]">info</span>
+                    ${escapeHtml(row.access_reason)}
+                  </span>
+                ` : ''}
+              </div>
+            </div>
+          </div>
+        </article>
+      `;
+    }
     const theoryId = getTheoryRowId(row);
     const usageTopics = Number(row.usage_topics || 0);
     const usageComplexes = Number(row.usage_complexes || 0);
     const hasContent = row.has_content !== false;
     const imageCount = Number(row.image_count || 0);
+    const ownership = resolveComplexOwnership(row);
+    const openMeta = getTheoryOpenMeta(row);
     const selected = state.selectedTheoryIds.has(theoryId);
     const selectable = isTheoryRowDeletable(row);
     const selectionMode = state.selectionMode && supportsTheorySelectionScope();
@@ -1096,13 +2168,25 @@
               <button type="button"
                 class="theory-mini-btn ${getTheoryToneClass('primary', 'button')} rounded-2xl border px-3 py-2 text-xs font-semibold"
                 data-action="open-theory-record"
-                data-theory-id="${escapeHtml(row.id)}">
-                Открыть
+                data-theory-id="${escapeHtml(row.id)}"
+                title="${escapeHtml(openMeta.title)}">
+                ${escapeHtml(openMeta.label)}
               </button>
+              ${ownership.isOwnedByCurrentUser ? `
+                <button type="button"
+                  class="theory-mini-btn ${getTheoryNeutralButtonClass()} rounded-2xl border px-3 py-2 text-xs font-semibold hover:border-primary hover:text-primary"
+                  data-action="manage-theory-publication"
+                  data-theory-id="${escapeHtml(row.id)}">
+                  Публикация
+                </button>
+              ` : ''}
             </div>
           </div>
           <div class="flex items-end justify-between gap-3">
             <div class="min-w-0 flex flex-1 flex-wrap items-center gap-2 text-xs">
+              ${renderTheoryAuthorBadge(row)}
+              ${renderTheoryOriginBadge(row)}
+              ${renderTheoryCatalogStatusBadge(row)}
               ${row.is_orphan ? `
                 <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold ${getTheoryToneClass('warning')}" title="Теория пока не связана ни с темами, ни с комплексами">
                   <span class="material-symbols-outlined text-[14px]">link_off</span>
@@ -1117,6 +2201,7 @@
                 <span class="material-symbols-outlined text-[14px]">inventory_2</span>
                 Комплексов: ${usageComplexes}
               </span>
+              ${renderTheoryLinkedComplexBadge(row)}
               ${imageCount > 0 ? `
                 <span class="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 ${getTheoryNeutralChipClass()}">
                   <span class="material-symbols-outlined text-[14px]">imagesmode</span>
@@ -1415,6 +2500,41 @@
     `;
   }
 
+  function renderAllTheoryGroups(rows) {
+    const linkedRows = rows.filter((row) => row?.is_linked_publication);
+    const workspaceRows = rows.filter((row) => !row?.is_linked_publication);
+    const sections = [];
+    if (linkedRows.length) {
+      sections.push(`
+        <section class="space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Связанные публикации</p>
+              <p class="mt-1 text-sm text-text-secondary">Теории из каталога, которые читаются в центре как связанные публикации.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">${escapeHtml(String(linkedRows.length))}</span>
+          </div>
+          ${linkedRows.map(renderTheoryCatalogCard).join('')}
+        </section>
+      `);
+    }
+    if (workspaceRows.length) {
+      sections.push(`
+        <section class="space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <p class="text-[11px] font-bold uppercase tracking-[0.14em] text-text-secondary">Рабочие теории</p>
+              <p class="mt-1 text-sm text-text-secondary">Авторские материалы и локальные теории, которые можно редактировать.</p>
+            </div>
+            <span class="inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${getTheoryNeutralChipClass()}">${escapeHtml(String(workspaceRows.length))}</span>
+          </div>
+          ${workspaceRows.map(renderTheoryCatalogCard).join('')}
+        </section>
+      `);
+    }
+    return sections.join('<div class="h-2"></div>');
+  }
+
   function renderList() {
     const title = $('theory-center-list-title');
     const subtitle = $('theory-center-list-subtitle');
@@ -1438,7 +2558,7 @@
     }
     if (subtitle) {
       subtitle.textContent = state.scope === 'all'
-        ? 'Каталог всех доступных теорий с быстрым доступом к использованию и наполнению.'
+        ? 'Рабочие теории и связанные публикации из каталога в одном центре.'
         : state.scope === 'complexes'
         ? 'Показываем источник теории у комплексов и быстрые действия по обновлению.'
         : state.scope === 'orphans'
@@ -1459,7 +2579,9 @@
     }
 
     if (state.scope === 'all' || state.scope === 'only_title') {
-      host.innerHTML = rows.map(renderTheoryCatalogCard).join('');
+      host.innerHTML = state.scope === 'all'
+        ? renderAllTheoryGroups(rows)
+        : rows.map(renderTheoryCatalogCard).join('');
     } else if (state.scope === 'orphans') {
       host.innerHTML = rows.map(renderOrphanCard).join('');
     } else {
@@ -1505,10 +2627,37 @@
         });
         nextOverview = mergeTheoryCatalogIntoOverview(nextOverview, theoryRows);
       }
+      const linkedTheoryRows = await fetchTheoryLibraryEntries().catch((error) => {
+        console.warn('[Theory Center] Failed to load linked theory library', error);
+        return [];
+      });
+      nextOverview = {
+        ...(nextOverview || {}),
+        linked_theories: linkedTheoryRows,
+      };
+      await fetchTheoryPublicationItems().catch((error) => {
+        console.warn('[Theory Center] Failed to load theory publication index', error);
+        rebuildTheoryPublicationIndex([]);
+      });
 
       state.overview = nextOverview;
       clearFlash();
       renderView();
+      if (!state.linkedEntryAutoOpened) {
+        const params = new URLSearchParams(window.location.search || '');
+        const linkedEntryId = String(params.get('linked_entry_id') || '').trim();
+        if (linkedEntryId && linkedTheoryRows.some((row) => row.library_entry_id === linkedEntryId)) {
+          state.linkedEntryAutoOpened = true;
+          const targetRow = linkedTheoryRows.find((row) => row.library_entry_id === linkedEntryId);
+          if (targetRow?.access_state === 'requires_access_code') {
+            openLinkedAccessCodeDialog(linkedEntryId);
+          } else {
+            openLinkedTheoryViewer(linkedEntryId).catch((error) => {
+              console.warn('[Theory Center] Failed to auto-open linked theory', error);
+            });
+          }
+        }
+      }
     } catch (error) {
       console.error('[Theory Center] Failed to load overview', error);
       setFlash('Не удалось загрузить обзор теории. Попробуйте обновить страницу позже.', 'error');
@@ -1544,8 +2693,15 @@
     navigate(url);
   }
 
-  function openTheoryRecord(theoryId, context = '') {
-    const url = buildTheoryEditorUrl(theoryId, {
+  async function openTheoryRecord(theoryId, context = '') {
+    const normalizedTheoryId = String(theoryId || '').trim();
+    if (!normalizedTheoryId) return;
+    const row = findTheoryRowById(normalizedTheoryId);
+    if (row && !canOpenTheoryInEditor(row)) {
+      await openWorkspaceTheoryViewerById(normalizedTheoryId, row);
+      return;
+    }
+    const url = buildTheoryEditorUrl(normalizedTheoryId, {
       context,
       returnUrl: currentReturnUrl(),
     });
@@ -1553,7 +2709,7 @@
   }
 
   function openOrphanTheory(theoryId) {
-    openTheoryRecord(theoryId, 'orphan');
+    return openTheoryRecord(theoryId, 'orphan');
   }
 
   async function syncComplex(complexId, button) {
@@ -1624,15 +2780,73 @@
         return;
       }
       if (action === 'open-theory-record') {
-        openTheoryRecord(button.getAttribute('data-theory-id'), state.scope === 'orphans' ? 'orphan' : '');
+        openTheoryRecord(button.getAttribute('data-theory-id'), state.scope === 'orphans' ? 'orphan' : '').catch((error) => {
+          console.error('[Theory Center] Failed to open theory record', error);
+          setFlash('Не удалось открыть теорию.', 'error');
+        });
+        return;
+      }
+      if (action === 'open-linked-theory') {
+        openLinkedTheoryViewer(button.getAttribute('data-library-entry-id')).catch((error) => {
+          console.error('[Theory Center] Failed to open linked theory', error);
+          setFlash('Не удалось открыть связанную теорию.', 'error');
+        });
+        return;
+      }
+      if (action === 'enter-linked-access-code') {
+        openLinkedAccessCodeDialog(button.getAttribute('data-library-entry-id'));
+        return;
+      }
+      if (action === 'manage-theory-publication') {
+        const theoryId = String(button.getAttribute('data-theory-id') || '').trim();
+        const rows = Array.isArray(state.overview?.theories) ? state.overview.theories : [];
+        const row = rows.find((item) => getTheoryRowId(item) === theoryId) || null;
+        if (!row) {
+          setFlash('Не удалось найти теорию для управления публикацией.', 'error');
+          return;
+        }
+        openTheoryPublicationDialog(row);
         return;
       }
       if (action === 'open-orphan-theory') {
-        openOrphanTheory(button.getAttribute('data-theory-id'));
+        openOrphanTheory(button.getAttribute('data-theory-id')).catch((error) => {
+          console.error('[Theory Center] Failed to open orphan theory', error);
+          setFlash('Не удалось открыть теорию.', 'error');
+        });
         return;
       }
       if (action === 'delete-theory-record') {
         deleteSingleTheory(button.getAttribute('data-theory-id'));
+        return;
+      }
+      if (action === 'delete-linked-theory-record') {
+        theoryCenterConfirm({
+          title: 'Убрать связанную теорию?',
+          message: 'Связанная теория будет удалена только из вашей библиотеки. Публикация автора не изменится.',
+          confirmText: 'Убрать',
+          cancelText: 'Отмена',
+          variant: 'warning',
+        }).then(async (confirmed) => {
+          if (!confirmed) return;
+          const libraryEntryId = button.getAttribute('data-library-entry-id');
+          button.setAttribute('disabled', 'disabled');
+          button.classList.add('opacity-70');
+          try {
+            const result = await deleteLinkedTheoryByLibraryEntryId(libraryEntryId);
+            if (!result?.ok) {
+              throw new Error(String(result?.error || result?.message || 'theory_library_delete_failed'));
+            }
+            await loadOverview({ silent: true });
+            setFlash('Связанная теория убрана из библиотеки.', 'success');
+          } catch (error) {
+            console.error('[Theory Center] Failed to delete linked theory entry', error);
+            await loadOverview({ silent: true });
+            setFlash('Не удалось убрать связанную теорию из библиотеки.', 'error');
+          } finally {
+            button.removeAttribute('disabled');
+            button.classList.remove('opacity-70');
+          }
+        });
         return;
       }
     }
@@ -1786,6 +3000,11 @@
       renderTopicCard,
       renderOrphanCard,
       renderTheoryCatalogCard,
+      rebuildTheoryPublicationIndex,
+      theoryViewerAssetSrc,
+      normalizeTheoryViewerImageRef,
+      renderLinkedTheoryDeltaHtml,
+      openTheoryRecord,
       renderList,
       getVisibleRows,
       setFlash,

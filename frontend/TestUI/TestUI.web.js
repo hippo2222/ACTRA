@@ -8,9 +8,13 @@ const TestUI = (function () {
     if (!answer || typeof answer !== "object") return false;
     const image = answer.image;
     return !!(
+      answer.image_asset_id ||
+      answer.image_asset_url ||
       answer.image_path ||
       answer.image_url ||
-      (image && typeof image === "object" && (image.url || image.path))
+      (image &&
+        typeof image === "object" &&
+        (image.asset_id || image.asset_url || image.url || image.path))
     );
   }
 

@@ -7,6 +7,10 @@
     let legalDocuments = null;
     let consentGateResolver = null;
     let consentGateUserId = null;
+    let hostedAuthFlow = false;
+    let hostedVerificationState = null;
+    let forgotPasswordState = { mode: 'request', resetToken: '', requestBusy: false, resetBusy: false };
+    let initStarted = false;
 
     // --- API Helper ---
     async function apiFetch(url, options = {}) {
@@ -17,6 +21,41 @@
         } catch (e) {
             console.error(`[Welcome] API Error (${url}):`, e);
             return { ok: false, error: e };
+        }
+    }
+
+    function isHostedAuthMode() {
+        return hostedAuthFlow === true;
+    }
+
+    function toggleHidden(elementId, shouldHide) {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        el.classList.toggle('hidden', !!shouldHide);
+    }
+
+    function setText(elementId, value) {
+        const el = document.getElementById(elementId);
+        if (el) el.textContent = value;
+    }
+
+    function getSearchParam(name) {
+        try {
+            return new URL(window.location.href).searchParams.get(name) || '';
+        } catch (_) {
+            return '';
+        }
+    }
+
+    function removeSearchParam(name) {
+        try {
+            const url = new URL(window.location.href);
+            if (!url.searchParams.has(name)) return;
+            url.searchParams.delete(name);
+            const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+            window.history.replaceState({}, document.title, nextUrl);
+        } catch (_) {
+            // Ignore URL cleanup errors.
         }
     }
 
@@ -127,6 +166,29 @@
         return null;
     }
 
+    function validateLogin(login) {
+        const value = String(login || '').trim().toLowerCase();
+        if (!value) return 'Введите логин';
+        if (value.length < 3 || value.length > 32) return 'Логин должен быть длиной 3-32 символа';
+        if (!/^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?$/.test(value)) {
+            return 'Логин может содержать только латиницу, цифры, ".", "-" и "_"';
+        }
+        return null;
+    }
+
+    function validateEmail(email) {
+        const value = String(email || '').trim().toLowerCase();
+        if (!value) return 'Введите email';
+        if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(value)) return 'Введите корректный email';
+        return null;
+    }
+
+    function validatePassword(password) {
+        if (!password) return 'Введите пароль';
+        if (String(password).length < 8) return 'Пароль должен содержать минимум 8 символов';
+        return null;
+    }
+
     function showError(elementId, message) {
         const el = document.getElementById(elementId);
         if (message) {
@@ -143,6 +205,293 @@
         } else {
             el.classList.add('hidden');
         }
+    }
+
+    function describeVerificationProblem(code) {
+        switch (String(code || '').trim()) {
+            case 'already_verified':
+                return 'Почта уже подтверждена. Можно продолжать.';
+            case 'token_already_used':
+                return 'Эта ссылка уже была использована. Если аккаунт подтверждён, просто продолжайте вход.';
+            case 'invalid_or_expired_token':
+                return 'Ссылка подтверждения недействительна или уже истекла. Запросите новое письмо.';
+            case 'email_changed':
+                return 'Для аккаунта уже указан другой email. Запросите новое письмо для актуального адреса.';
+            case 'not_configured':
+            case 'disabled':
+                return 'Письма подтверждения сейчас временно недоступны. Попробуйте позже.';
+            case 'send_failed':
+                return 'Не удалось отправить письмо. Попробуйте ещё раз через несколько секунд.';
+            case 'email_missing':
+                return 'Для аккаунта не указан email для подтверждения.';
+            default:
+                return 'Не удалось завершить подтверждение почты.';
+        }
+    }
+
+    function setHostedVerificationError(message) {
+        const el = document.getElementById('onboardingVerificationError');
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.classList.add('hidden');
+            return;
+        }
+        el.textContent = message;
+        el.classList.remove('hidden');
+    }
+
+    function setForgotPasswordStatus(elementId, message, tone = 'neutral') {
+        const el = document.getElementById(elementId);
+        if (!el) return;
+        if (!message) {
+            el.textContent = '';
+            el.classList.add('hidden');
+            el.classList.remove('border-error/30', 'bg-error/10', 'text-error', 'border-success/30', 'bg-success/10', 'text-success');
+            el.classList.add('border-border-subtle', 'bg-surface-2', 'text-text-main');
+            return;
+        }
+
+        el.textContent = message;
+        el.classList.remove('hidden', 'border-error/30', 'bg-error/10', 'text-error', 'border-success/30', 'bg-success/10', 'text-success', 'border-border-subtle', 'bg-surface-2', 'text-text-main');
+        if (tone === 'error') {
+            el.classList.add('border-error/30', 'bg-error/10', 'text-error');
+        } else if (tone === 'success') {
+            el.classList.add('border-success/30', 'bg-success/10', 'text-success');
+        } else {
+            el.classList.add('border-border-subtle', 'bg-surface-2', 'text-text-main');
+        }
+    }
+
+    function setForgotPasswordButtonBusy(elementId, busy, idleLabel, busyLabel) {
+        const button = document.getElementById(elementId);
+        if (!button) return;
+        button.disabled = !!busy;
+        button.textContent = busy ? busyLabel : idleLabel;
+    }
+
+    function describeForgotPasswordProblem(code) {
+        switch (String(code || '').trim()) {
+            case 'identifier_required':
+                return 'Введите логин или email.';
+            case 'disabled':
+            case 'not_configured':
+                return 'Письма для восстановления пароля сейчас недоступны. Попробуйте позже.';
+            case 'send_failed':
+                return 'Не удалось отправить письмо. Попробуйте ещё раз чуть позже.';
+            case 'email_missing':
+                return 'Для этого аккаунта не указана почта для восстановления.';
+            default:
+                return 'Не удалось запустить восстановление пароля.';
+        }
+    }
+
+    function describeResetPasswordProblem(code) {
+        switch (String(code || '').trim()) {
+            case 'token_required':
+                return 'Ссылка для сброса пароля отсутствует или повреждена.';
+            case 'invalid_password':
+                return 'Новый пароль должен содержать минимум 8 символов.';
+            case 'token_already_used':
+                return 'Эта ссылка уже была использована. Запросите новое письмо.';
+            case 'invalid_or_expired_token':
+                return 'Ссылка для сброса недействительна или уже истекла. Запросите новое письмо.';
+            case 'email_changed':
+                return 'Почта аккаунта уже изменилась. Запросите новое письмо для актуального адреса.';
+            default:
+                return 'Не удалось сохранить новый пароль.';
+        }
+    }
+
+    function renderForgotPasswordModal() {
+        const isResetMode = forgotPasswordState.mode === 'reset';
+        toggleHidden('forgotPasswordRequestPanel', isResetMode);
+        toggleHidden('forgotPasswordResetPanel', !isResetMode);
+        toggleHidden('forgotPasswordRequestBtn', isResetMode);
+        toggleHidden('forgotPasswordResetBtn', !isResetMode);
+
+        setText(
+            'forgotPasswordTitle',
+            isResetMode ? 'Новый пароль' : 'Восстановление пароля'
+        );
+        setText(
+            'forgotPasswordSubtitle',
+            isResetMode
+                ? 'Введите новый пароль для аккаунта, открытого по ссылке из письма.'
+                : 'Укажите логин или email, и мы отправим ссылку для сброса.'
+        );
+
+        setForgotPasswordButtonBusy(
+            'forgotPasswordRequestBtn',
+            forgotPasswordState.requestBusy,
+            'Отправить ссылку',
+            'Отправляем...'
+        );
+        setForgotPasswordButtonBusy(
+            'forgotPasswordResetBtn',
+            forgotPasswordState.resetBusy,
+            'Сохранить новый пароль',
+            'Сохраняем...'
+        );
+    }
+
+    function buildHostedVerificationStatusMessage(state) {
+        if (!state) return '';
+        if (state.statusMessage) return state.statusMessage;
+
+        const user = state.user || {};
+        const sentAt = user.email_verification_sent_at || state.sentAt || '';
+        if (state.status === 'verified') {
+            return user.email_verified_at
+                ? `Почта подтверждена ${user.email_verified_at}.`
+                : 'Почта подтверждена. Аккаунт готов к работе.';
+        }
+        if (state.status === 'error') {
+            return state.verificationEmail?.sent
+                ? 'Новое письмо уже отправлено. Проверьте входящие.'
+                : '';
+        }
+        return sentAt
+            ? `Последнее письмо отправлено ${sentAt}.`
+            : 'Письмо уже отправлено. Откройте ссылку из письма, чтобы завершить регистрацию.';
+    }
+
+    function applyHostedVerificationState() {
+        const isActive = currentMode === 'onboarding' && isHostedAuthMode() && !!hostedVerificationState;
+        toggleHidden('onboardingVerificationPanel', !isActive);
+        toggleHidden('modeOnboardingCard', isActive);
+        toggleHidden('onboardingCreateBtn', isActive);
+        if (isActive) {
+            toggleHidden('onboardingSecondaryAction', true);
+            toggleHidden('onboardingError', true);
+        }
+
+        if (!isActive) {
+            updateWelcomeHeader(currentMode);
+            return;
+        }
+
+        const state = hostedVerificationState;
+        const user = state.user || {};
+        const verificationEmail = state.verificationEmail || {};
+        const email = String(
+            state.email
+            || user.email
+            || (Array.isArray(verificationEmail.to) ? verificationEmail.to[0] : '')
+            || ''
+        ).trim().toLowerCase();
+        const status = state.status || 'pending';
+
+        let eyebrow = 'Email verification';
+        let title = 'Проверьте почту';
+        let body = 'Мы отправили письмо со ссылкой для подтверждения. После этого аккаунт будет считаться подтверждённым.';
+        let hint = 'Если письмо не пришло сразу, подождите немного и проверьте папку spam.';
+        let icon = 'mail';
+        let canResend = state.canResend !== false;
+
+        if (status === 'verified') {
+            eyebrow = 'Email confirmed';
+            title = 'Почта подтверждена';
+            body = 'Подтверждение прошло успешно. Можно возвращаться в ACTRA и продолжать работу.';
+            hint = 'Если это окно открылось из письма, просто вернитесь в приложение или нажмите кнопку ниже.';
+            icon = 'verified';
+            canResend = false;
+        } else if (status === 'error') {
+            eyebrow = 'Verification issue';
+            title = 'Нужно подтвердить почту';
+            body = state.message || describeVerificationProblem(state.reason);
+            hint = 'Можно запросить новое письмо ещё раз. Если адрес был введён с ошибкой, позже его можно будет заменить в настройках.';
+            icon = 'error';
+        }
+
+        setText('onboardingVerificationEyebrow', eyebrow);
+        setText('onboardingVerificationTitle', title);
+        setText('onboardingVerificationBody', body);
+        setText('onboardingVerificationEmail', email || 'Email не указан');
+        setText('onboardingVerificationStatus', buildHostedVerificationStatusMessage(state));
+        setText('onboardingVerificationHint', hint);
+
+        const iconEl = document.getElementById('onboardingVerificationIcon');
+        if (iconEl) iconEl.textContent = icon;
+
+        const resendBtn = document.getElementById('onboardingVerificationResendBtn');
+        if (resendBtn) {
+            resendBtn.disabled = !!state.resendBusy;
+            resendBtn.textContent = state.resendBusy ? 'Отправляем...' : 'Отправить ещё раз';
+            resendBtn.classList.toggle('hidden', !canResend);
+        }
+
+        const continueBtn = document.getElementById('onboardingVerificationContinueBtn');
+        if (continueBtn) {
+            const shouldReturnToAuth = status === 'error' && !user.user_id;
+            continueBtn.textContent = shouldReturnToAuth ? 'К регистрации' : 'Перейти в ACTRA';
+        }
+
+        setHostedVerificationError(state.error || '');
+        updateWelcomeHeader(currentMode);
+    }
+
+    function clearHostedVerificationState() {
+        hostedVerificationState = null;
+        applyHostedVerificationState();
+    }
+
+    function showHostedVerificationState(nextState) {
+        hostedVerificationState = Object.assign({}, hostedVerificationState || {}, nextState || {});
+        applyHostedVerificationState();
+    }
+
+    function buildHostedVerificationStateFromResponse(data, overrides = {}) {
+        const user = data?.user || null;
+        const verificationEmail = data?.verification_email || null;
+        const alreadyVerified = !!(data?.already_verified || user?.email_verified);
+        const delivered = !!verificationEmail?.sent;
+        const reason = verificationEmail?.reason || '';
+        const status = alreadyVerified ? 'verified' : (delivered ? 'pending' : 'error');
+
+        return Object.assign(
+            {
+                status,
+                user,
+                verificationEmail,
+                reason,
+                canResend: !alreadyVerified,
+                error: delivered || alreadyVerified ? '' : describeVerificationProblem(reason),
+            },
+            overrides || {}
+        );
+    }
+
+    async function submitWelcomeEmailVerificationToken(token) {
+        const cleanToken = String(token || '').trim();
+        if (!cleanToken) return false;
+
+        const { ok, data } = await apiFetch(`/api/auth/verify-email?token=${encodeURIComponent(cleanToken)}`);
+        if (ok && data?.verified) {
+            showHostedVerificationState({
+                status: 'verified',
+                user: data.user || null,
+                verificationEmail: null,
+                canResend: false,
+                error: '',
+                statusMessage: data?.verification?.verified_at
+                    ? `Почта подтверждена ${data.verification.verified_at}.`
+                    : 'Почта подтверждена. Аккаунт готов к работе.',
+            });
+            return true;
+        }
+
+        showHostedVerificationState({
+            status: 'error',
+            user: data?.user || null,
+            verificationEmail: null,
+            canResend: false,
+            reason: data?.error || 'invalid_or_expired_token',
+            message: describeVerificationProblem(data?.error || 'invalid_or_expired_token'),
+            error: '',
+            statusMessage: '',
+        });
+        return false;
     }
 
     function showConsentGateError(message) {
@@ -326,6 +675,269 @@
         return openConsentGate(userId, required);
     }
 
+    function setHostedAuthChoiceVisible(visible) {
+        toggleHidden('hostedAuthChoice', !visible);
+        toggleHidden('profilesList', visible);
+        toggleHidden('passwordInline', visible);
+        toggleHidden('createProfileSection', visible);
+    }
+
+    function configureHostedRegistrationMode() {
+        clearHostedVerificationState();
+        setHostedAuthChoiceVisible(false);
+        toggleHidden('hostedRegistrationFields', false);
+        toggleHidden('onboardingSecondaryAction', false);
+
+        const button = document.getElementById('onboardingCreateBtn');
+        if (button) {
+            button.innerHTML = 'Создать аккаунт <span class="material-symbols-outlined">person_add</span>';
+        }
+
+        const nameInput = document.getElementById('onboardingName');
+        if (nameInput) nameInput.placeholder = 'Отображаемое имя';
+
+        loadAvatarGallery('onboardingAvatarGallery', 'onboardingAvatarSeed', 'onboardingAvatarPreview');
+        window.welcomeUpdateConsentState('onboarding');
+    }
+
+    function configureDesktopRegistrationMode() {
+        clearHostedVerificationState();
+        setHostedAuthChoiceVisible(false);
+        toggleHidden('hostedRegistrationFields', true);
+        toggleHidden('onboardingSecondaryAction', true);
+
+        const button = document.getElementById('onboardingCreateBtn');
+        if (button) {
+            button.innerHTML = 'Начать обучение <span class="material-symbols-outlined">arrow_forward</span>';
+        }
+
+        const nameInput = document.getElementById('onboardingName');
+        if (nameInput) nameInput.placeholder = 'Ваше имя';
+    }
+
+    function configureHostedLoginMode() {
+        setHostedAuthChoiceVisible(false);
+        toggleHidden('loginIdentifierWrap', false);
+        toggleHidden('forgotPasswordLink', false);
+        toggleHidden('loginBackBtn', false);
+        toggleHidden('loginAvatar', true);
+        toggleHidden('loginName', true);
+
+        const passwordInput = document.getElementById('loginPassword');
+        if (passwordInput) passwordInput.placeholder = 'Пароль';
+
+        const identifierInput = document.getElementById('loginIdentifier');
+        if (identifierInput) identifierInput.focus();
+
+        const submitButton = document.getElementById('loginSubmitBtn');
+        if (submitButton) {
+            submitButton.innerHTML = 'Войти <span class="material-symbols-outlined">login</span>';
+        }
+    }
+
+    function configureDesktopLoginMode() {
+        setHostedAuthChoiceVisible(false);
+        toggleHidden('loginIdentifierWrap', true);
+        toggleHidden('forgotPasswordLink', true);
+        toggleHidden('loginBackBtn', true);
+        toggleHidden('loginAvatar', false);
+        toggleHidden('loginName', false);
+
+        const submitButton = document.getElementById('loginSubmitBtn');
+        if (submitButton) {
+            submitButton.innerHTML = 'Войти в систему <span class="material-symbols-outlined">login</span>';
+        }
+    }
+
+    window.welcomeShowAuthLogin = function () {
+        showMode('login');
+        configureHostedLoginMode();
+    };
+
+    window.welcomeShowAuthRegister = function () {
+        showMode('onboarding');
+        configureHostedRegistrationMode();
+    };
+
+    window.welcomeBackToAuthChoice = function () {
+        clearHostedVerificationState();
+        showMode('select');
+        setHostedAuthChoiceVisible(true);
+    };
+
+    window.welcomeContinueAfterVerification = function () {
+        if (hostedVerificationState?.status === 'error' && !hostedVerificationState?.user?.user_id) {
+            clearHostedVerificationState();
+            showMode('select');
+            setHostedAuthChoiceVisible(true);
+            return;
+        }
+        goToMain();
+    };
+
+    window.welcomeResendVerificationEmail = async function () {
+        if (!hostedVerificationState) return;
+
+        showHostedVerificationState({
+            resendBusy: true,
+            error: '',
+        });
+
+        const { ok, data } = await apiFetch('/api/auth/resend-verification', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({}),
+        });
+
+        if (!ok) {
+            showHostedVerificationState({
+                resendBusy: false,
+                status: 'error',
+                error: (data && (data.message || describeVerificationProblem(data.error))) || 'Не удалось отправить письмо повторно.',
+            });
+            return;
+        }
+
+        showHostedVerificationState(
+            buildHostedVerificationStateFromResponse(data, {
+                resendBusy: false,
+                error: '',
+                statusMessage: data?.verification_email?.sent
+                    ? 'Новое письмо уже отправлено. Проверьте входящие.'
+                    : buildHostedVerificationStatusMessage(hostedVerificationState),
+            })
+        );
+    };
+
+    window.welcomeOpenForgotPasswordModal = function (options = {}) {
+        const resetToken = typeof options === 'string'
+            ? String(options || '').trim()
+            : String(options?.resetToken || '').trim();
+        forgotPasswordState = {
+            mode: resetToken ? 'reset' : 'request',
+            resetToken,
+            requestBusy: false,
+            resetBusy: false,
+        };
+        renderForgotPasswordModal();
+
+        const identifierInput = document.getElementById('forgotPasswordIdentifierInput');
+        if (identifierInput && !resetToken) {
+            const currentIdentifier = String(document.getElementById('loginIdentifier')?.value || '').trim();
+            identifierInput.value = currentIdentifier;
+        }
+        setForgotPasswordStatus('forgotPasswordRequestStatus');
+        setForgotPasswordStatus('forgotPasswordResetStatus');
+        openBlockModal('forgotPasswordModal');
+
+        if (resetToken) {
+            const passwordInput = document.getElementById('forgotPasswordNewPassword');
+            if (passwordInput) passwordInput.focus();
+        } else if (identifierInput) {
+            identifierInput.focus();
+        }
+    };
+
+    window.welcomeCloseForgotPasswordModal = function () {
+        closeBlockModal('forgotPasswordModal');
+        forgotPasswordState = { mode: 'request', resetToken: '', requestBusy: false, resetBusy: false };
+        renderForgotPasswordModal();
+    };
+
+    window.welcomeOpenForgotPasswordStub = function () {
+        window.welcomeOpenForgotPasswordModal();
+    };
+
+    window.welcomeCloseForgotPasswordStub = function () {
+        window.welcomeCloseForgotPasswordModal();
+    };
+
+    window.welcomeSubmitForgotPassword = async function () {
+        if (forgotPasswordState.requestBusy) return;
+        const identifier = String(document.getElementById('forgotPasswordIdentifierInput')?.value || '').trim();
+        if (!identifier) {
+            setForgotPasswordStatus('forgotPasswordRequestStatus', 'Введите логин или email.', 'error');
+            return;
+        }
+
+        forgotPasswordState.requestBusy = true;
+        renderForgotPasswordModal();
+        setForgotPasswordStatus('forgotPasswordRequestStatus');
+
+        const { ok, data } = await apiFetch('/api/auth/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier }),
+        });
+
+        forgotPasswordState.requestBusy = false;
+        renderForgotPasswordModal();
+
+        if (!ok) {
+            setForgotPasswordStatus(
+                'forgotPasswordRequestStatus',
+                (data && (data.message || describeForgotPasswordProblem(data.error))) || 'Не удалось отправить письмо для восстановления.',
+                'error'
+            );
+            return;
+        }
+
+        setForgotPasswordStatus(
+            'forgotPasswordRequestStatus',
+            data?.message || 'Если аккаунт существует, письмо уже отправлено.',
+            'success'
+        );
+    };
+
+    window.welcomeSubmitPasswordReset = async function () {
+        if (forgotPasswordState.resetBusy) return;
+        const token = String(forgotPasswordState.resetToken || '').trim();
+        const newPassword = String(document.getElementById('forgotPasswordNewPassword')?.value || '');
+        const confirmPassword = String(document.getElementById('forgotPasswordConfirmPassword')?.value || '');
+
+        if (!token) {
+            setForgotPasswordStatus('forgotPasswordResetStatus', 'Ссылка для сброса пароля отсутствует.', 'error');
+            return;
+        }
+        const passwordError = validatePassword(newPassword);
+        if (passwordError) {
+            setForgotPasswordStatus('forgotPasswordResetStatus', passwordError, 'error');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setForgotPasswordStatus('forgotPasswordResetStatus', 'Пароли не совпадают.', 'error');
+            return;
+        }
+
+        forgotPasswordState.resetBusy = true;
+        renderForgotPasswordModal();
+        setForgotPasswordStatus('forgotPasswordResetStatus');
+
+        const { ok, data } = await apiFetch('/api/auth/reset-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                token,
+                new_password: newPassword,
+            }),
+        });
+
+        forgotPasswordState.resetBusy = false;
+        renderForgotPasswordModal();
+
+        if (!ok) {
+            setForgotPasswordStatus(
+                'forgotPasswordResetStatus',
+                (data && (data.message || describeResetPasswordProblem(data.error))) || 'Не удалось сохранить новый пароль.',
+                'error'
+            );
+            return;
+        }
+
+        closeBlockModal('forgotPasswordModal');
+        goToMain();
+    };
+
     // --- Mode switching ---
     function showMode(mode) {
         currentMode = mode;
@@ -356,52 +968,83 @@
         subtitle.textContent = 'Выберите профиль, чтобы продолжить обучение.';
     };
 
-    function ensureWelcomeHeaderHint() {
-        const subtitle = document.getElementById('welcomeHeaderSubtitle');
-        if (!subtitle || !subtitle.parentElement) return null;
-
-        let hint = document.getElementById('welcomeHeaderHint');
-        if (hint) return hint;
-
-        hint = document.createElement('p');
-        hint.id = 'welcomeHeaderHint';
-        hint.className = 'welcome-header-hint mt-4 mx-auto max-w-xl rounded-2xl px-4 py-3 text-sm font-medium';
-        subtitle.insertAdjacentElement('afterend', hint);
-        return hint;
-    }
-
     function updateWelcomeHeader(mode) {
         const title = document.getElementById('welcomeHeaderTitle');
         const subtitle = document.getElementById('welcomeHeaderSubtitle');
+        const kicker = document.getElementById('welcomeHeaderKicker');
+        const hint = document.getElementById('welcomeHeaderHint');
         if (!title || !subtitle) return;
-        const hint = ensureWelcomeHeaderHint();
+        if (hint) hint.classList.add('hidden');
+
+        if (kicker) {
+            kicker.textContent = '';
+            kicker.classList.add('hidden');
+        }
+
+        if (isHostedAuthMode()) {
+            if (mode === 'onboarding') {
+                if (hostedVerificationState) {
+                    const status = hostedVerificationState.status || 'pending';
+                    if (kicker) {
+                        kicker.textContent = status === 'verified' ? 'Email confirmed' : 'Подтверждение почты';
+                        kicker.classList.remove('hidden');
+                    }
+                    if (status === 'verified') {
+                        title.textContent = 'Почта подтверждена';
+                        subtitle.textContent = 'Аккаунт активирован. Можно переходить в ACTRA и продолжать работу.';
+                        return;
+                    }
+                    if (status === 'error') {
+                        title.textContent = 'Подтвердите email';
+                        subtitle.textContent = 'Ссылка не сработала или письмо не дошло. Отсюда можно отправить новое письмо и завершить регистрацию.';
+                        return;
+                    }
+                    title.textContent = 'Подтвердите email';
+                    subtitle.textContent = 'Мы уже отправили письмо с ссылкой. Откройте его, чтобы завершить первичную регистрацию аккаунта.';
+                    return;
+                }
+                if (kicker) {
+                    kicker.textContent = 'Новый аккаунт';
+                    kicker.classList.remove('hidden');
+                }
+                title.textContent = 'Создайте аккаунт';
+                subtitle.textContent = 'Укажите отображаемое имя, логин, email и пароль, чтобы сразу войти в ACTRA Web.';
+                return;
+            }
+
+            if (mode === 'login') {
+                if (kicker) {
+                    kicker.textContent = 'Вход';
+                    kicker.classList.remove('hidden');
+                }
+                title.textContent = 'Войти в аккаунт';
+                subtitle.textContent = 'Введите логин или email и пароль, чтобы продолжить обучение и открыть библиотеку.';
+                return;
+            }
+
+            if (kicker) {
+                kicker.textContent = 'ACTRA Web';
+                kicker.classList.remove('hidden');
+            }
+            title.textContent = 'Вход или регистрация';
+            subtitle.textContent = 'Используйте существующий аккаунт или создайте новый, чтобы открыть библиотеку, прогресс и публикации.';
+            return;
+        }
 
         if (mode === 'onboarding') {
             title.textContent = 'Добро пожаловать!';
             subtitle.textContent = 'Похоже, вы здесь впервые. Создайте профиль, чтобы начать обучение.';
-            if (hint) {
-                hint.textContent = 'Профиль сохранит ваш прогресс, календарь, статистику и личные сессии. Комплексы, теория и колоды могут быть частью общей библиотеки этого устройства.';
-                hint.classList.remove('hidden');
-            }
             return;
         }
 
         if (mode === 'login') {
             title.textContent = 'С возвращением';
             subtitle.textContent = 'Введите пароль, чтобы продолжить обучение.';
-            if (hint) {
-                hint.textContent = 'После входа вы вернётесь к своему прогрессу, календарю и последним действиям. Общая библиотека контента останется доступной.';
-                hint.classList.remove('hidden');
-            }
             return;
         }
 
         title.textContent = 'Добро пожаловать';
         subtitle.textContent = 'Выберите профиль, чтобы продолжить обучение.';
-        if (hint) {
-            hint.textContent = 'Профиль хранит личный прогресс и настройки. Комплексы, теория и микрокарточки могут быть частью общей локальной библиотеки.';
-            hint.classList.remove('hidden');
-        }
     }
 
     function showStartupLoadError(message) {
@@ -499,6 +1142,75 @@
 
     // --- Public: Onboarding create profile ---
     window.welcomeCreateProfile = async function () {
+        if (isHostedAuthMode()) {
+            const name = document.getElementById('onboardingName').value;
+            const login = document.getElementById('onboardingLogin').value;
+            const email = document.getElementById('onboardingEmail').value;
+            const password = document.getElementById('onboardingPassword').value;
+            const passwordConfirm = document.getElementById('onboardingPasswordConfirm').value;
+            const avatar = document.getElementById('onboardingAvatarSeed').value;
+
+            const nameError = validateName(name);
+            if (nameError) {
+                showError('onboardingError', nameError);
+                return;
+            }
+            const loginError = validateLogin(login);
+            if (loginError) {
+                showError('onboardingError', loginError);
+                return;
+            }
+            const emailError = validateEmail(email);
+            if (emailError) {
+                showError('onboardingError', emailError);
+                return;
+            }
+            const passwordError = validatePassword(password);
+            if (passwordError) {
+                showError('onboardingError', passwordError);
+                return;
+            }
+            if (password !== passwordConfirm) {
+                showError('onboardingError', 'Пароли не совпадают');
+                return;
+            }
+
+            const loaded = await ensureLegalDocumentsLoaded();
+            if (!loaded) {
+                showError('onboardingError', 'Не удалось загрузить документы для согласия');
+                return;
+            }
+            const consent = collectConsent('onboardingAcceptTerms', 'onboardingAcceptPrivacy');
+            if (!consent.accepted) {
+                showError('onboardingError', 'Подтвердите согласие с документами');
+                return;
+            }
+
+            showError('onboardingError', null);
+            const { ok, data } = await apiFetch('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name.trim(),
+                    login: String(login || '').trim().toLowerCase(),
+                    email: String(email || '').trim().toLowerCase(),
+                    password,
+                    avatar_seed: avatar || '1.png',
+                    consent,
+                })
+            });
+
+            if (!ok) {
+                showError('onboardingError', (data && (data.message || data.error)) || 'Не удалось создать аккаунт');
+                return;
+            }
+
+            showHostedVerificationState(
+                buildHostedVerificationStateFromResponse(data)
+            );
+            return;
+        }
+
         const name = document.getElementById('onboardingName').value;
         const avatar = document.getElementById('onboardingAvatarSeed').value;
         const ok = await createAndSelect(name, avatar, 'onboardingError', {
@@ -684,6 +1396,43 @@
 
     // --- Public: Login mode submit ---
     window.welcomeLoginSubmit = async function () {
+        if (isHostedAuthMode()) {
+            const identifier = document.getElementById('loginIdentifier').value;
+            const password = document.getElementById('loginPassword').value;
+            if (!identifier || !String(identifier).trim()) {
+                showError('loginError', 'Введите логин или email');
+                return;
+            }
+            const passwordError = validatePassword(password);
+            if (passwordError) {
+                showError('loginError', passwordError);
+                return;
+            }
+
+            const { ok, data } = await apiFetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    identifier: String(identifier).trim(),
+                    password,
+                })
+            });
+
+            if (ok && data?.user?.user_id) {
+                const consentOk = await ensureUserConsent(data.user.user_id);
+                if (consentOk) goToMain();
+                return;
+            }
+
+            showError('loginError', (data && (data.message || data.error)) || 'Неверный логин, email или пароль');
+            const input = document.getElementById('loginPassword');
+            input.closest('.bg-surface-1').classList.add('shake');
+            setTimeout(() => input.closest('.bg-surface-1').classList.remove('shake'), 400);
+            input.value = '';
+            input.focus();
+            return;
+        }
+
         const password = document.getElementById('loginPassword').value;
         if (!password) {
             showError('loginError', 'Введите пароль');
@@ -775,6 +1524,10 @@
 
     // --- Initialize ---
     async function init() {
+        if (initStarted) return;
+        initStarted = true;
+        const verifyEmailToken = getSearchParam('verify_email_token');
+        const resetPasswordToken = getSearchParam('reset_password_token');
         const overlay = document.getElementById('loadingOverlay');
         setupLoadingOverlayLogo();
         const overlayDelayMs = window.ACTRA_CONFIG?.ui?.loadingRevealDelayMs ?? 280;
@@ -814,7 +1567,38 @@
                 return;
             }
 
+            hostedAuthFlow = data.mode === 'auth' || data.mode === 'authenticated' || !!verifyEmailToken || !!resetPasswordToken;
+
+            if (verifyEmailToken) {
+                removeSearchParam('verify_email_token');
+                showMode('onboarding');
+                configureHostedRegistrationMode();
+                await submitWelcomeEmailVerificationToken(verifyEmailToken);
+                return;
+            }
+
+            if (resetPasswordToken) {
+                removeSearchParam('reset_password_token');
+                showMode('login');
+                configureHostedLoginMode();
+                window.welcomeOpenForgotPasswordModal({ resetToken: resetPasswordToken });
+                return;
+            }
+
             if (!data.show_welcome) {
+                if (hostedAuthFlow) {
+                    const authMe = await apiFetch('/api/auth/me');
+                    const selectedUserId = authMe.ok && authMe.data?.user?.user_id
+                        ? authMe.data.user.user_id
+                        : (data.auto_select_user_id || null);
+                    if (selectedUserId) {
+                        const consentOk = await ensureUserConsent(selectedUserId);
+                        if (!consentOk) return;
+                    }
+                    goToMain();
+                    return;
+                }
+
                 const availableProfiles = Array.isArray(data.profiles) ? data.profiles : [];
                 let selectedUserId = null;
                 if (data.auto_select_user_id) {
@@ -852,19 +1636,27 @@
             }
 
             switch (data.mode) {
+                case 'auth':
+                    showMode('select');
+                    setHostedAuthChoiceVisible(true);
+                    break;
+
                 case 'onboarding':
                     showMode('onboarding');
+                    configureDesktopRegistrationMode();
                     loadAvatarGallery('onboardingAvatarGallery', 'onboardingAvatarSeed', 'onboardingAvatarPreview');
                     setTimeout(() => document.getElementById('onboardingName').focus(), 400);
                     break;
 
                 case 'select':
                     showMode('select');
+                    setHostedAuthChoiceVisible(false);
                     renderProfilesList();
                     break;
 
                 case 'login':
                     showMode('login');
+                    configureDesktopLoginMode();
                     if (profiles.length > 0) {
                         const user = profiles[0];
                         document.getElementById('loginAvatar').src = getAvatarUrl(user.avatar_seed);

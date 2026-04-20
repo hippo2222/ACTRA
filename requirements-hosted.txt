@@ -1,0 +1,10 @@
+flask>=3.0
+waitress>=3.0
+bcrypt>=4.0.0
+Pillow==10.0.0
+packaging>=21.0
+pydantic>=2.0
+python-Levenshtein>=0.21.0
+pymorphy2>=0.9.0
+PyMuPDF>=1.20.0
+psycopg[binary]>=3.2

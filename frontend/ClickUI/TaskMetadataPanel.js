@@ -44,6 +44,41 @@
 
   function _resolveAssetUrl(rawPath) {
     if (!rawPath && rawPath !== 0) return "";
+
+    if (rawPath && typeof rawPath === "object") {
+      const nested = rawPath.image && typeof rawPath.image === "object" ? rawPath.image : null;
+      const directUrl =
+        rawPath.asset_url ||
+        rawPath.image_asset_url ||
+        rawPath.image_url ||
+        rawPath.url ||
+        rawPath.src ||
+        (nested &&
+          (nested.asset_url ||
+            nested.image_asset_url ||
+            nested.url ||
+            nested.image_url ||
+            nested.src)) ||
+        "";
+      if (directUrl) return _resolveAssetUrl(directUrl);
+
+      const assetId =
+        rawPath.asset_id ||
+        rawPath.image_asset_id ||
+        (nested && (nested.asset_id || nested.image_asset_id)) ||
+        "";
+      if (assetId) {
+        return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+      }
+      const legacyPath =
+        rawPath.image_path ||
+        rawPath.path ||
+        (nested && (nested.path || nested.image_path)) ||
+        "";
+      if (legacyPath) return _resolveAssetUrl(legacyPath);
+      return "";
+    }
+
     const raw = String(rawPath).trim();
     if (!raw) return "";
     if (/^(https?:|data:)/i.test(raw)) return raw;
@@ -61,10 +96,9 @@
 
     const imageCandidates = [];
     const pushImage = (value) => {
-      if (!value && value !== 0) return;
-      const str = String(value).trim();
-      if (!str) return;
-      imageCandidates.push(str);
+      const resolved = _resolveAssetUrl(value);
+      if (!resolved) return;
+      imageCandidates.push(resolved);
     };
 
     if (Array.isArray(raw.images)) raw.images.forEach(pushImage);

@@ -1487,20 +1487,36 @@
   function _getImagePath(taskDto) {
     const td = (taskDto && taskDto.task_data) || {};
     const content = td.content || {};
-    return td.image_url || content.image_url || td.image || content.image || "";
+    const directUrl =
+      td.image_asset_url ||
+      content.image_asset_url ||
+      td.image_url ||
+      content.image_url ||
+      "";
+    if (directUrl) return directUrl;
+
+    const directAssetId =
+      td.image_asset_id ||
+      content.image_asset_id ||
+      td.asset_id ||
+      content.asset_id ||
+      "";
+    if (directAssetId) {
+      return { asset_id: directAssetId };
+    }
+
+    return (
+      td.image_path ||
+      content.image_path ||
+      td.image ||
+      content.image ||
+      ""
+    );
   }
 
   function _resolveImageUrl(taskDto) {
     const raw = _getImagePath(taskDto);
-    if (!raw) return "";
-
-    if (typeof raw === "string") {
-      if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
-      if (raw.startsWith("/")) return raw;
-      return `/api/local-image?path=${encodeURIComponent(raw)}`;
-    }
-
-    return "";
+    return _resolveAssetUrl(raw);
   }
 
   const Metadata = (function () {
@@ -1522,6 +1538,39 @@
       ? Metadata.resolveAssetUrl
       : function (rawPath) {
         if (!rawPath && rawPath !== 0) return "";
+        if (rawPath && typeof rawPath === "object") {
+          const nested = rawPath.image && typeof rawPath.image === "object" ? rawPath.image : null;
+          const directUrl =
+            rawPath.asset_url ||
+            rawPath.image_asset_url ||
+            rawPath.image_url ||
+            rawPath.url ||
+            rawPath.src ||
+            (nested &&
+              (nested.asset_url ||
+                nested.image_asset_url ||
+                nested.url ||
+                nested.image_url ||
+                nested.src)) ||
+            "";
+          if (directUrl) return _resolveAssetUrl(directUrl);
+
+          const assetId =
+            rawPath.asset_id ||
+            rawPath.image_asset_id ||
+            (nested && (nested.asset_id || nested.image_asset_id)) ||
+            "";
+          if (assetId) {
+            return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+          }
+          const legacyPath =
+            rawPath.image_path ||
+            rawPath.path ||
+            (nested && (nested.path || nested.image_path)) ||
+            "";
+          if (legacyPath) return _resolveAssetUrl(legacyPath);
+          return "";
+        }
         const raw = String(rawPath).trim();
         if (!raw) return "";
         if (/^(https?:|data:)/i.test(raw)) return raw;

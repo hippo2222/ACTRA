@@ -26,6 +26,7 @@ from unittest.mock import MagicMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "desktop-app"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from persistence.runtime import PersistenceRuntimeSettings
 from services.user_progress_manager import UserProgressManager
 
 
@@ -35,6 +36,36 @@ from services.user_progress_manager import UserProgressManager
 @pytest.fixture
 def upm(tmp_path):
     return UserProgressManager(data_dir=str(tmp_path), user_id="test_user")
+
+
+def _build_hosted_settings(tmp_path: Path) -> PersistenceRuntimeSettings:
+    return PersistenceRuntimeSettings(
+        runtime_mode="hosted_web",
+        data_root=tmp_path,
+        state_root=tmp_path / "runtime_state",
+        postgres_dsn="",
+        s3_endpoint="",
+        s3_bucket="",
+        s3_access_key="",
+        s3_secret_key="",
+        hosted_contract_errors=["missing_env:ACTRA_POSTGRES_DSN"],
+    )
+
+
+class _FakeHostedProgressRepository:
+    def __init__(self):
+        self.payloads = {}
+        self.ensure_schema_calls = 0
+
+    def ensure_schema(self):
+        self.ensure_schema_calls += 1
+
+    def get_progress(self, user_id: str):
+        payload = self.payloads.get(user_id)
+        return dict(payload) if isinstance(payload, dict) else payload
+
+    def write_progress(self, user_id: str, payload, *, updated_at: str):
+        self.payloads[user_id] = dict(payload)
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -75,6 +106,121 @@ class TestInit:
         upm = UserProgressManager(data_dir=str(tmp_path), user_id="u1")
         assert upm.progress_data["version"] == "3.0"
         assert upm.progress_data["task_history"] == {}
+
+    def test_hosted_init_ignores_progress_shadow_until_repository_ready(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        user_dir = tmp_path / "users" / "u1"
+        user_dir.mkdir(parents=True)
+        shadow_payload = {
+            "version": "3.0",
+            "updated_at": datetime.now().isoformat(),
+            "user_id": "u1",
+            "global_stats": {"total_attempts": 99, "total_time_seconds": 999},
+            "task_history": {
+                "mod/topic/task": {
+                    "attempts": [{"success": True, "time_spent": 10, "timestamp": datetime.now().isoformat()}],
+                    "meta": {"total_attempts": 1, "last_attempt_at": datetime.now().isoformat(), "success_rate": 1.0},
+                    "current_difficulty": 1,
+                    "mastery_level": "good",
+                }
+            },
+            "mistake_bank": [],
+            "complex_completions": [],
+        }
+        (user_dir / "progress.json").write_text(json.dumps(shadow_payload), encoding="utf-8")
+
+        upm = UserProgressManager(
+            data_dir=str(tmp_path),
+            user_id="u1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        fake_repo = _FakeHostedProgressRepository()
+        upm._progress_repository = fake_repo
+
+        upm.ensure_hosted_persistence_ready()
+
+        assert upm.progress_data["global_stats"]["total_attempts"] == 0
+        assert upm.progress_data["task_history"] == {}
+        assert fake_repo.ensure_schema_calls == 1
+        assert fake_repo.payloads["u1"]["global_stats"]["total_attempts"] == 0
+
+    def test_hosted_save_does_not_create_progress_shadow_after_repository_write(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        upm = UserProgressManager(
+            data_dir=str(tmp_path),
+            user_id="u1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        fake_repo = _FakeHostedProgressRepository()
+        upm._progress_repository = fake_repo
+        upm.ensure_hosted_persistence_ready()
+        upm.progress_file.unlink(missing_ok=True)
+
+        upm._save_progress()
+
+        assert fake_repo.payloads["u1"]["user_id"] == "u1"
+        assert not upm.progress_file.exists()
+
+    def test_hosted_save_attempt_lazily_enables_repository_before_first_write(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        upm = UserProgressManager(
+            data_dir=str(tmp_path),
+            user_id="u1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        fake_repo = _FakeHostedProgressRepository()
+        upm._progress_repository = fake_repo
+
+        result = upm.save_attempt("mod", "topic", "task1", difficulty=1, success=True, time_spent=30)
+
+        assert result is True
+        assert upm.hosted_storage_ready is True
+        assert fake_repo.ensure_schema_calls == 1
+        assert fake_repo.payloads["u1"]["task_history"]["mod/topic/task1"]["attempts"][0]["success"] is True
+        assert not upm.progress_file.exists()
+
+    def test_hosted_lazy_first_write_preserves_following_attempts_in_memory(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        upm = UserProgressManager(
+            data_dir=str(tmp_path),
+            user_id="u1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        fake_repo = _FakeHostedProgressRepository()
+        upm._progress_repository = fake_repo
+
+        upm.save_attempt("mod", "topic", "task1", difficulty=1, success=True, time_spent=30)
+        upm.save_attempt("mod", "topic", "task2", difficulty=1, success=False, time_spent=15)
+
+        payload = fake_repo.payloads["u1"]
+        assert sorted(payload["task_history"].keys()) == ["mod/topic/task1", "mod/topic/task2"]
+        assert upm.progress_data["task_history"]["mod/topic/task1"]["attempts"][0]["success"] is True
+        assert upm.progress_data["task_history"]["mod/topic/task2"]["attempts"][0]["success"] is False
+
+    def test_hosted_fresh_manager_loads_existing_progress_before_new_save(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        fake_repo = _FakeHostedProgressRepository()
+
+        first = UserProgressManager(
+            data_dir=str(tmp_path),
+            user_id="u1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        first._progress_repository = fake_repo
+        first.save_attempt("mod", "topic", "task1", difficulty=1, success=True, time_spent=30)
+
+        second = UserProgressManager(
+            data_dir=str(tmp_path),
+            user_id="u1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        second._progress_repository = fake_repo
+        second.save_attempt("mod", "topic", "task2", difficulty=1, success=False, time_spent=15)
+
+        payload = fake_repo.payloads["u1"]
+        assert sorted(payload["task_history"].keys()) == ["mod/topic/task1", "mod/topic/task2"]
+        assert second.progress_data["task_history"]["mod/topic/task1"]["attempts"][0]["success"] is True
+        assert second.progress_data["task_history"]["mod/topic/task2"]["attempts"][0]["success"] is False
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -227,6 +373,8 @@ class TestCalculateNewDifficulty:
     def test_with_difficulty_manager(self, tmp_path):
         dm = MagicMock()
         dm.get_available_levels.return_value = [1, 2]
+        dm.normalize_requested_level.side_effect = lambda level, available_levels: level
+        dm.get_next_allowed_level.return_value = 2
         upm = UserProgressManager(data_dir=str(tmp_path), user_id="u1", difficulty_manager=dm)
         entry = {"attempts": []}
         assert upm._calculate_new_difficulty(entry, 2, True, task_type="click") == 2  # max is 2

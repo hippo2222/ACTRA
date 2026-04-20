@@ -8,6 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from server import app, _headless_app_ctx  # type: ignore
+from persistence.runtime import resolve_persistence_runtime_settings  # type: ignore
 from services.storage_service import StorageService  # type: ignore
 from task_system.core.io.task_io import TaskIO  # type: ignore
 
@@ -19,25 +20,46 @@ def client():
         yield c
 
 
+@pytest.fixture(autouse=True)
+def enable_ai_mode(monkeypatch):
+    monkeypatch.setenv("RP_EDITOR_FF_AI_MODE", "1")
+    yield
+
+
 @pytest.fixture
 def temp_ai_runs_root(monkeypatch, tmp_path: Path):
     original_data_dir = _headless_app_ctx.data_dir
+    original_persistence_runtime = _headless_app_ctx.persistence_runtime
     original_user_id = _headless_app_ctx.user_id
+    test_runtime = resolve_persistence_runtime_settings(
+        data_root=tmp_path,
+        project_root=Path(__file__).resolve().parents[3],
+    )
+    test_runtime.ensure_runtime_dirs()
     monkeypatch.setattr(_headless_app_ctx, "data_dir", tmp_path)
+    monkeypatch.setattr(_headless_app_ctx, "persistence_runtime", test_runtime)
     monkeypatch.setattr(_headless_app_ctx, "user_id", "test_user")
     try:
         yield tmp_path / "ai_runs"
     finally:
         monkeypatch.setattr(_headless_app_ctx, "data_dir", original_data_dir)
+        monkeypatch.setattr(_headless_app_ctx, "persistence_runtime", original_persistence_runtime)
         monkeypatch.setattr(_headless_app_ctx, "user_id", original_user_id)
 
 
 @pytest.fixture
 def temp_ai_runs_with_storage(monkeypatch, tmp_path: Path):
     original_data_dir = _headless_app_ctx.data_dir
+    original_persistence_runtime = _headless_app_ctx.persistence_runtime
     original_user_id = _headless_app_ctx.user_id
     original_storage = _headless_app_ctx.storage_service
+    test_runtime = resolve_persistence_runtime_settings(
+        data_root=tmp_path,
+        project_root=Path(__file__).resolve().parents[3],
+    )
+    test_runtime.ensure_runtime_dirs()
     monkeypatch.setattr(_headless_app_ctx, "data_dir", tmp_path)
+    monkeypatch.setattr(_headless_app_ctx, "persistence_runtime", test_runtime)
     monkeypatch.setattr(_headless_app_ctx, "user_id", "test_user")
     monkeypatch.setattr(_headless_app_ctx, "storage_service", StorageService(tmp_path))
     try:
@@ -45,6 +67,7 @@ def temp_ai_runs_with_storage(monkeypatch, tmp_path: Path):
     finally:
         monkeypatch.setattr(_headless_app_ctx, "storage_service", original_storage)
         monkeypatch.setattr(_headless_app_ctx, "data_dir", original_data_dir)
+        monkeypatch.setattr(_headless_app_ctx, "persistence_runtime", original_persistence_runtime)
         monkeypatch.setattr(_headless_app_ctx, "user_id", original_user_id)
 
 

@@ -63,4 +63,21 @@ describe("DrawEditor semantic warnings", () => {
         expect(warnings).toContain("техническое имя");
         expect(warnings).toContain("слишком маленькими");
     });
+    it("prefers hosted asset refs for preview even when a legacy path is still present", () => {
+        const editor = createEditorInstance();
+
+        const normalized = editor.normalizeImageReference({
+            image: {
+                asset_url: "/api/assets/draw_asset_1/content",
+                path: "legacy/draw-image.png"
+            }
+        });
+
+        expect(normalized).toEqual({
+            path: "legacy/draw-image.png",
+            asset_id: null,
+            asset_url: "/api/assets/draw_asset_1/content",
+        });
+        expect(editor.resolveEditorImagePreviewSrc(normalized)).toBe("/api/assets/draw_asset_1/content");
+    });
 });

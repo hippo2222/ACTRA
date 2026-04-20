@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light-a">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Каталог — Макет состояний</title>
+
+  <link href="/assets/fonts.css" rel="stylesheet" />
+  <link href="/assets/lightB-variables.css" rel="stylesheet" />
+  <link href="/assets/lightB-components.css" rel="stylesheet" />
+  <link href="/assets/animations.css" rel="stylesheet" />
+
+  <style>
+    /* ================================================================
+       CATALOG MOCKUP — Page-level tokens & layout
+       ================================================================ */
+    :root {
+      --cat-grid-gap: 1.25rem;
+      --cat-card-radius: 1rem;
+      --cat-section-gap: 3.5rem;
+      --cat-max-width: 1280px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      min-height: 100vh;
+      font-family: var(--font-family-base, inherit);
+      background:
+        radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 32%),
+        radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-info) 12%, transparent), transparent 28%),
+        var(--color-bg-main);
+      color: var(--color-text-main);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+    }
+
+    /* — Page shell — */
+    .cat-page {
+      max-width: var(--cat-max-width);
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+
+    /* — Section dividers — */
+    .cat-section {
+      margin-bottom: var(--cat-section-gap);
+      animation: a-slide-up 0.45s ease-out both;
+    }
+    .cat-section:nth-child(2) { animation-delay: 0.05s; }
+    .cat-section:nth-child(3) { animation-delay: 0.10s; }
+
+    .cat-section-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.75rem;
+      margin-bottom: 1.25rem;
+      border-radius: 999px;
+      background: var(--color-component-pill-info-bg);
+      border: 1px solid var(--color-component-pill-info-border);
+      color: var(--color-component-pill-info-fg);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    /* — Header — */
+    .cat-header {
+      margin-bottom: 2rem;
+    }
+    .cat-header h1 {
+      font-size: clamp(1.75rem, 2.5vw, 2.25rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--color-text-main);
+    }
+    .cat-header p {
+      margin-top: 0.4rem;
+      font-size: 0.95rem;
+      color: var(--color-text-secondary);
+      max-width: 52ch;
+    }
+
+    /* — Search bar — */
+    .cat-search {
+      position: relative;
+      margin-bottom: 1.25rem;
+    }
+    .cat-search__icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--color-text-secondary);
+      font-size: 20px;
+      pointer-events: none;
+    }
+    .cat-search__input {
+      width: 100%;
+      padding: 0.7rem 1rem 0.7rem 2.75rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--color-border-subtle);
+      background: var(--color-surface-1);
+      color: var(--color-text-main);
+      font-family: inherit;
+      font-size: 0.9rem;
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }
+    .cat-search__input::placeholder { color: var(--color-text-disabled); }
+    .cat-search__input:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);
+    }
+
+    /* — Filter bar — */
+    .cat-filters {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .cat-filters__sep {
+      width: 1px;
+      height: 1.5rem;
+      background: var(--color-border-subtle);
+      opacity: 0.5;
+    }
+
+    /* Filter pill (clickable) */
+    .cat-filter-pill {
+      cursor: pointer;
+      user-select: none;
+      transition: background var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+    }
+    .cat-filter-pill:hover {
+      background: var(--color-component-button-muted-hover-bg);
+      border-color: var(--color-component-button-muted-hover-border);
+    }
+    .cat-filter-pill.is-active {
+      background: var(--color-component-pill-info-bg);
+      border-color: var(--color-component-pill-info-border);
+      color: var(--color-component-pill-info-fg);
+    }
+
+    /* — Card grid — */
+    .cat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: var(--cat-grid-gap);
+    }
+
+    /* — Catalog card — */
+    .cat-card {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+      padding: 1.15rem 1.25rem;
+      border-radius: var(--cat-card-radius);
+      background: var(--color-component-card-elevated-bg);
+      border: 1px solid var(--color-component-card-elevated-border);
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-normal),
+                  box-shadow var(--transition-normal),
+                  border-color var(--transition-normal);
+      cursor: pointer;
+      position: relative;
+    }
+    .cat-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--color-component-card-elevated-border-hover);
+      box-shadow: var(--shadow-md);
+    }
+    .cat-card:active {
+      transform: translateY(0) scale(0.99);
+    }
+    /* Forced hover demo */
+    .cat-card--hover-demo {
+      transform: translateY(-2px);
+      border-color: var(--color-component-card-elevated-border-hover);
+      box-shadow: var(--shadow-md);
+    }
+
+    .cat-card__top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+    .cat-card__badges {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      flex-wrap: wrap;
+    }
+
+    .cat-card__title {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.3;
+      color: var(--color-text-main);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .cat-card__title--long {
+      -webkit-line-clamp: 3;
+    }
+
+    .cat-card__author {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-size: 0.8rem;
+      color: var(--color-text-secondary);
+    }
+    .cat-card__author .material-symbols-outlined { font-size: 15px; }
+
+    .cat-card__description {
+      font-size: 0.82rem;
+      color: var(--color-text-secondary);
+      line-height: 1.45;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .cat-card__meta {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.35rem 0.75rem;
+      font-size: 0.75rem;
+      color: var(--color-text-secondary);
+    }
+    .cat-card__meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+    .cat-card__meta-item .material-symbols-outlined { font-size: 14px; }
+
+    .cat-card__footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      margin-top: auto;
+      padding-top: 0.35rem;
+    }
+
+    /* Card CTA variants */
+    .cat-cta {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      padding: 0.4rem 0.75rem;
+      border-radius: 0.5rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all var(--transition-fast);
+    }
+    .cat-cta .material-symbols-outlined { font-size: 16px; }
+
+    .cat-cta--add {
+      background: var(--color-primary);
+      color: var(--color-primary-fg);
+      border-color: var(--color-primary);
+    }
+    .cat-cta--add:hover {
+      background: var(--color-primary-hover);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .cat-cta--in-library {
+      background: var(--color-component-pill-success-bg);
+      color: var(--color-component-pill-success-fg);
+      border-color: var(--color-component-pill-success-border);
+      cursor: default;
+    }
+
+    .cat-cta--open-copy {
+      background: var(--color-component-button-muted-bg);
+      color: var(--color-component-button-muted-fg);
+      border-color: var(--color-component-button-muted-border);
+    }
+    .cat-cta--open-copy:hover {
+      background: var(--color-component-button-muted-hover-bg);
+      border-color: var(--color-component-button-muted-hover-border);
+    }
+
+    .cat-cta--mine {
+      background: var(--color-component-pill-info-bg);
+      color: var(--color-component-pill-info-fg);
+      border-color: var(--color-component-pill-info-border);
+      cursor: default;
+    }
+
+    /* — Section heading in the demo — */
+    .demo-heading {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--color-text-main);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .demo-heading .material-symbols-outlined {
+      font-size: 20px;
+      color: var(--color-primary);
+    }
+
+    /* — Detail panel (Section 3) — */
+    .cat-detail-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 400px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+    @media (max-width: 900px) {
+      .cat-detail-wrapper { grid-template-columns: 1fr; }
+    }
+
+    .cat-detail {
+      background: var(--color-surface-1);
+      border: 1px solid var(--color-component-card-elevated-border);
+      border-radius: 1rem;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+    .cat-detail__header {
+      padding: 1.25rem 1.5rem 1rem;
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+    .cat-detail__header h2 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      line-height: 1.25;
+    }
+    .cat-detail__body {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .cat-detail__description {
+      font-size: 0.88rem;
+      color: var(--color-text-secondary);
+      line-height: 1.6;
+    }
+    .cat-detail__row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.55rem 0;
+      border-bottom: 1px solid color-mix(in srgb, var(--color-border-subtle) 40%, transparent);
+      font-size: 0.85rem;
+    }
+    .cat-detail__row:last-child { border-bottom: none; }
+    .cat-detail__row-label { color: var(--color-text-secondary); font-weight: 500; }
+    .cat-detail__row-value { font-weight: 700; }
+    .cat-detail__actions {
+      display: flex;
+      gap: 0.65rem;
+      padding-top: 0.5rem;
+    }
+
+    /* — Modal overlay — */
+    .cat-modal-overlay {
+      position: relative;
+      background: var(--color-scrim);
+      border-radius: 1rem;
+      padding: 2.5rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 420px;
+    }
+    .cat-modal {
+      background: var(--color-surface-1);
+      border: 1px solid var(--color-component-card-elevated-border);
+      border-radius: 1rem;
+      box-shadow: var(--shadow-xl);
+      width: 100%;
+      max-width: 520px;
+      overflow: hidden;
+    }
+    .cat-modal__header {
+      padding: 1.25rem 1.5rem 1rem;
+      border-bottom: 1px solid var(--color-border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .cat-modal__header h3 {
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+    .cat-modal__body {
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .cat-modal__footer {
+      padding: 1rem 1.5rem;
+      border-top: 1px solid var(--color-border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      background: var(--color-bg-secondary);
+    }
+
+    /* Preview summary table */
+    .cat-preview-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      font-size: 0.85rem;
+    }
+    .cat-preview-table th,
+    .cat-preview-table td {
+      padding: 0.55rem 0.75rem;
+      text-align: left;
+    }
+    .cat-preview-table thead th {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--color-text-secondary);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+    .cat-preview-table tbody td {
+      border-bottom: 1px solid color-mix(in srgb, var(--color-border-subtle) 30%, transparent);
+    }
+    .cat-preview-table tbody tr:last-child td { border-bottom: none; }
+
+    .preview-badge-new {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: var(--color-component-pill-success-bg);
+      color: var(--color-component-pill-success-fg);
+      border: 1px solid var(--color-component-pill-success-border);
+    }
+    .preview-badge-reuse {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2rem;
+      padding: 0.15rem 0.45rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      background: var(--color-component-pill-neutral-bg);
+      color: var(--color-component-pill-neutral-fg);
+      border: 1px solid var(--color-component-pill-neutral-border);
+    }
+
+    /* — Success state — */
+    .cat-success-modal-body {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+    }
+    .cat-success-icon {
+      width: 64px;
+      height: 64px;
+    }
+    .cat-success-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+    }
+    .cat-success-copy {
+      font-size: 0.88rem;
+      color: var(--color-text-secondary);
+      max-width: 36ch;
+    }
+
+    /* — Toast demo — */
+    .cat-toast-demo {
+      position: relative;
+      display: flex;
+      justify-content: flex-end;
+      padding: 1rem;
+    }
+    .cat-toast {
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      padding: 0.7rem 1rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--color-component-pill-success-border);
+      background: var(--color-component-pill-success-bg);
+      color: var(--color-component-pill-success-fg);
+      box-shadow: var(--shadow-lg);
+      font-size: 0.85rem;
+      font-weight: 600;
+      max-width: 340px;
+      animation: a-slide-in-right 0.35s ease-out both;
+    }
+    .cat-toast .material-symbols-outlined { font-size: 20px; }
+
+    /* — Empty state — */
+
+    /* — Quick nav — */
+    .cat-nav {
+      position: fixed;
+      top: 1.25rem;
+      right: 1.25rem;
+      z-index: 999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      padding: 0.5rem;
+      border-radius: 0.75rem;
+      background: var(--color-surface-1);
+      border: 1px solid var(--color-component-card-elevated-border);
+      box-shadow: var(--shadow-md);
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .cat-nav a {
+      padding: 0.3rem 0.55rem;
+      border-radius: 0.4rem;
+      color: var(--color-text-secondary);
+      text-decoration: none;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    .cat-nav a:hover {
+      background: var(--color-component-button-muted-hover-bg);
+      color: var(--color-text-main);
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Quick section nav -->
+  <nav class="cat-nav" id="section-nav">
+    <a href="#s-catalog">① Каталог</a>
+    <a href="#s-detail">② Детали</a>
+    <a href="#s-preview-complex">③ Превью: Комплекс</a>
+    <a href="#s-preview-theory">④ Превью: Теория</a>
+    <a href="#s-success">⑤ Успех</a>
+    <a href="#s-already">⑥ В библиотеке</a>
+    <a href="#s-empty">⑦ Пусто</a>
+  </nav>
+
+  <div class="cat-page">
+
+    <!-- ================================================================
+         SECTION 1 — DEFAULT CATALOG STATE
+         ================================================================ -->
+    <section class="cat-section" id="s-catalog">
+      <div class="cat-section-label">
+        <span class="material-symbols-outlined" style="font-size:14px">looks_one</span>
+        Состояние: Каталог по умолчанию
+      </div>
+
+      <div class="cat-header">
+        <h1>Каталог</h1>
+        <p>Находите опубликованные комплексы и теории других авторов, смотрите описание и добавляйте связанные публикации в свою библиотеку</p>
+      </div>
+
+      <!-- Search -->
+      <div class="cat-search">
+        <span class="material-symbols-outlined cat-search__icon">search</span>
+        <input type="text" class="cat-search__input" placeholder="Поиск по названию, автору или ключевым словам…" />
+      </div>
+
+      <!-- Filters -->
+      <div class="cat-filters">
+        <!-- Type filter: segmented control -->
+        <div class="segmented-control">
+          <button class="segmented-control__button is-active" type="button">Все</button>
+          <button class="segmented-control__button" type="button">Комплексы</button>
+          <button class="segmented-control__button" type="button">Теории</button>
+        </div>
+
+        <div class="cat-filters__sep"></div>
+
+        <!-- Status filters: pills -->
+        <span class="pill-neutral pill-sm cat-filter-pill">Не добавлено</span>
+        <span class="pill-neutral pill-sm cat-filter-pill is-active">Все статусы</span>
+        <span class="pill-neutral pill-sm cat-filter-pill">В библиотеке</span>
+      </div>
+
+      <!-- Card grid -->
+      <div class="cat-grid">
+
+        <!-- Card 1: Комплекс — можно добавить -->
+        <div class="cat-card anim-slide-up anim-delay-1">
+          <div class="cat-card__top">
+            <div class="cat-card__badges">
+              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+            </div>
+            <span class="cat-card__meta-item" title="12 заданий" style="font-size:0.75rem; color: var(--color-text-secondary);">
+              <span class="material-symbols-outlined" style="font-size:14px">assignment</span> 12
+            </span>
+          </div>
+          <h3 class="cat-card__title">Основы радиофизики: электромагнитные волны</h3>
+          <div class="cat-card__author">
+            <span class="material-symbols-outlined">person</span>
+            Иванов А.П.
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">schedule</span> 2 дня назад
+            </span>
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">auto_stories</span> 4 теории
+            </span>
+          </div>
+          <p class="cat-card__description">Практический комплекс по базовым свойствам электромагнитных волн, граничным условиям и расчёту параметров распространения.</p>
+          <div class="cat-card__footer">
+            <button class="cat-cta cat-cta--add" type="button">
+              <span class="material-symbols-outlined">add</span> Добавить
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 2: Теория — можно добавить -->
+        <div class="cat-card anim-slide-up anim-delay-2">
+          <div class="cat-card__top">
+            <div class="cat-card__badges">
+              <span class="pill-info pill-sm pill-kicker">Теория</span>
+            </div>
+          </div>
+          <h3 class="cat-card__title">Принцип суперпозиции волн</h3>
+          <div class="cat-card__author">
+            <span class="material-symbols-outlined">person</span>
+            Смирнова Е.В.
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">schedule</span> 5 дней назад
+            </span>
+          </div>
+          <div class="cat-card__footer">
+            <button class="cat-cta cat-cta--add" type="button">
+              <span class="material-symbols-outlined">add</span> Добавить
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 3: Комплекс — уже в библиотеке -->
+        <div class="cat-card anim-slide-up anim-delay-3">
+          <div class="cat-card__top">
+            <div class="cat-card__badges">
+              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-success pill-sm">
+                <span class="material-symbols-outlined" style="font-size:13px">check_circle</span>
+                В библиотеке
+              </span>
+            </div>
+            <span class="cat-card__meta-item" title="8 заданий" style="font-size:0.75rem; color: var(--color-text-secondary);">
+              <span class="material-symbols-outlined" style="font-size:14px">assignment</span> 8
+            </span>
+          </div>
+          <h3 class="cat-card__title">Цифровая модуляция сигналов</h3>
+          <div class="cat-card__author">
+            <span class="material-symbols-outlined">person</span>
+            Петров К.Д.
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">schedule</span> 1 неделю назад
+            </span>
+          </div>
+          <p class="cat-card__description">Комплекс с практикой по видам цифровой модуляции, чтению сигналов и разбору типовых ошибок при передаче.</p>
+          <div class="cat-card__footer">
+            <span class="cat-cta cat-cta--in-library">
+              <span class="material-symbols-outlined" style="font-size:15px">check</span> В библиотеке
+            </span>
+            <button class="cat-cta cat-cta--open-copy" type="button">
+              <span class="material-symbols-outlined">open_in_new</span> Открыть копию
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 4: Теория — моя публикация -->
+        <div class="cat-card anim-slide-up anim-delay-4">
+          <div class="cat-card__top">
+            <div class="cat-card__badges">
+              <span class="pill-info pill-sm pill-kicker">Теория</span>
+              <span class="pill-info pill-sm">
+                <span class="material-symbols-outlined" style="font-size:13px">edit</span>
+                Моя публикация
+              </span>
+            </div>
+          </div>
+          <h3 class="cat-card__title">Дифракция Фраунгофера</h3>
+          <div class="cat-card__author">
+            <span class="material-symbols-outlined">person</span>
+            Вы (Автор)
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">schedule</span> Опубликовано сегодня
+            </span>
+          </div>
+          <div class="cat-card__footer">
+            <span class="cat-cta cat-cta--mine">
+              <span class="material-symbols-outlined" style="font-size:15px">star</span> Моя публикация
+            </span>
+          </div>
+        </div>
+
+        <!-- Card 5: Комплекс — длинное название, плотные данные -->
+        <div class="cat-card anim-slide-up anim-delay-5">
+          <div class="cat-card__top">
+            <div class="cat-card__badges">
+              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+            </div>
+            <span class="cat-card__meta-item" title="24 задания" style="font-size:0.75rem; color: var(--color-text-secondary);">
+              <span class="material-symbols-outlined" style="font-size:14px">assignment</span> 24
+            </span>
+          </div>
+          <h3 class="cat-card__title cat-card__title--long">Расширенный курс по антенно-фидерным устройствам: от дипольных антенн до фазированных решёток</h3>
+          <div class="cat-card__author">
+            <span class="material-symbols-outlined">person</span>
+            Козлова М.И.
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">schedule</span> 3 нед. назад
+            </span>
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">auto_stories</span> 4 теории
+            </span>
+          </div>
+          <p class="cat-card__description">Большой практический курс по антеннам и решёткам с задачами на разбор режимов, расчёт параметров и применение теории в инженерных сценариях.</p>
+          <div class="cat-card__footer">
+            <button class="cat-cta cat-cta--add" type="button">
+              <span class="material-symbols-outlined">add</span> Добавить
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 6: Теория — уже в библиотеке -->
+        <div class="cat-card anim-slide-up anim-delay-6">
+          <div class="cat-card__top">
+            <div class="cat-card__badges">
+              <span class="pill-info pill-sm pill-kicker">Теория</span>
+              <span class="pill-success pill-sm">
+                <span class="material-symbols-outlined" style="font-size:13px">check_circle</span>
+                В библиотеке
+              </span>
+            </div>
+          </div>
+          <h3 class="cat-card__title">Интерференция в тонких плёнках</h3>
+          <div class="cat-card__author">
+            <span class="material-symbols-outlined">person</span>
+            Белов Р.Н.
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">schedule</span> 2 нед. назад
+            </span>
+          </div>
+          <div class="cat-card__footer">
+            <span class="cat-cta cat-cta--in-library">
+              <span class="material-symbols-outlined" style="font-size:15px">check</span> В библиотеке
+            </span>
+            <button class="cat-cta cat-cta--open-copy" type="button">
+              <span class="material-symbols-outlined">open_in_new</span> Открыть копию
+            </button>
+          </div>
+        </div>
+
+        <!-- Card 7: Комплекс — hover-demo (forced) -->
+        <div class="cat-card cat-card--hover-demo anim-slide-up anim-delay-6">
+          <div class="cat-card__top">
+            <div class="cat-card__badges">
+              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-warning pill-sm" style="font-size:10px">hover</span>
+            </div>
+            <span class="cat-card__meta-item" title="16 заданий" style="font-size:0.75rem; color: var(--color-text-secondary);">
+              <span class="material-symbols-outlined" style="font-size:14px">assignment</span> 16
+            </span>
+          </div>
+          <h3 class="cat-card__title">Распространение радиоволн в ионосфере</h3>
+          <div class="cat-card__author">
+            <span class="material-symbols-outlined">person</span>
+            Тарасов Д.Л.
+          </div>
+          <div class="cat-card__meta">
+            <span class="cat-card__meta-item">
+              <span class="material-symbols-outlined">schedule</span> Вчера
+            </span>
+          </div>
+          <p class="cat-card__description">Комплекс о распространении радиоволн в ионосфере с задачами на оценку траекторий, частот и условий устойчивой связи.</p>
+          <div class="cat-card__footer">
+            <button class="cat-cta cat-cta--add" type="button">
+              <span class="material-symbols-outlined">add</span> Добавить
+            </button>
+          </div>
+        </div>
+
+      </div><!-- /cat-grid -->
+    </section>
+
+
+    <!-- ================================================================
+         SECTION 2 — DETAIL PANEL
+         ================================================================ -->
+    <section class="cat-section" id="s-detail">
+      <div class="cat-section-label">
+        <span class="material-symbols-outlined" style="font-size:14px">looks_two</span>
+        Состояние: Детальный просмотр объекта
+      </div>
+
+      <div class="cat-detail-wrapper">
+        <!-- Mini card grid (2 cards dimmed to show context) -->
+        <div style="opacity: 0.45; pointer-events: none;">
+          <div class="cat-grid" style="grid-template-columns: 1fr;">
+            <div class="cat-card">
+              <div class="cat-card__top"><span class="pill-neutral pill-sm pill-kicker">Комплекс</span></div>
+              <h3 class="cat-card__title">Основы радиофизики: электромагнитные волны</h3>
+              <div class="cat-card__author"><span class="material-symbols-outlined">person</span> Иванов А.П.</div>
+            </div>
+            <div class="cat-card">
+              <div class="cat-card__top"><span class="pill-info pill-sm pill-kicker">Теория</span></div>
+              <h3 class="cat-card__title">Принцип суперпозиции волн</h3>
+              <div class="cat-card__author"><span class="material-symbols-outlined">person</span> Смирнова Е.В.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail panel -->
+        <div class="cat-detail">
+          <div class="cat-detail__header">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
+              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span class="pill-success pill-sm"><span class="material-symbols-outlined" style="font-size:13px">add_circle</span> Можно добавить</span>
+            </div>
+            <h2>Основы радиофизики: электромагнитные волны</h2>
+            <div style="display:flex; align-items:center; gap:0.35rem; margin-top:0.45rem; font-size:0.82rem; color: var(--color-text-secondary);">
+              <span class="material-symbols-outlined" style="font-size:15px">person</span>
+              Иванов А.П. · 2 дня назад
+            </div>
+          </div>
+          <div class="cat-detail__body">
+            <p class="cat-detail__description">
+              Комплекс охватывает основы теории электромагнитных волн, включая уравнения Максвелла, граничные условия и практические задания по расчёту параметров волн в различных средах.
+            </p>
+            <div>
+              <div class="demo-heading" style="font-size:0.85rem; margin-bottom:0.5rem;">
+                <span class="material-symbols-outlined">inventory_2</span> Кратко о комплексе
+              </div>
+              <div class="cat-detail__row">
+                <span class="cat-detail__row-label">Задания</span>
+                <span class="cat-detail__row-value">12</span>
+              </div>
+              <div class="cat-detail__row">
+                <span class="cat-detail__row-label">Связанные теории</span>
+                <span class="cat-detail__row-value">4</span>
+              </div>
+            </div>
+            <div class="cat-detail__actions">
+              <button class="btn-primary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+                <span style="display:inline-flex; align-items:center; gap:0.3rem;">
+                  <span class="material-symbols-outlined" style="font-size:18px">preview</span>
+                  Посмотреть превью
+                </span>
+              </button>
+              <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================================================================
+         SECTION 3 — PREVIEW MODAL (Complex)
+         ================================================================ -->
+    <section class="cat-section" id="s-preview-complex">
+      <div class="cat-section-label">
+        <span class="material-symbols-outlined" style="font-size:14px">looks_3</span>
+        Состояние: Превью перед Add to Library (Комплекс)
+      </div>
+
+      <div class="cat-modal-overlay">
+        <div class="cat-modal">
+          <div class="cat-modal__header">
+            <h3>Добавить в библиотеку</h3>
+            <button class="icon-button-muted icon-button-muted--sm" type="button">
+              <span class="material-symbols-outlined" style="font-size:18px">close</span>
+            </button>
+          </div>
+          <div class="cat-modal__body">
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+              <span class="pill-neutral pill-sm pill-kicker">Комплекс</span>
+              <span style="font-size:0.95rem; font-weight:700;">Основы радиофизики</span>
+            </div>
+            <p style="font-size:0.82rem; color: var(--color-text-secondary);">
+              При подтверждении публикация будет добавлена в вашу библиотеку как связанный материал. Вот что произойдёт:
+            </p>
+            <table class="cat-preview-table">
+              <thead>
+                <tr>
+                  <th>Сущность</th>
+                  <th>Кол-во</th>
+                  <th>Действие</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Комплекс</td>
+                  <td style="font-weight:700;">1</td>
+                  <td><span class="preview-badge-new">Создать</span></td>
+                </tr>
+                <tr>
+                  <td>Модули</td>
+                  <td style="font-weight:700;">3</td>
+                  <td><span class="preview-badge-new">Создать</span></td>
+                </tr>
+                <tr>
+                  <td>Темы</td>
+                  <td style="font-weight:700;">7</td>
+                  <td>
+                    <span class="preview-badge-new">5 новых</span>
+                    <span class="preview-badge-reuse">2 повтор.</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>Задания</td>
+                  <td style="font-weight:700;">12</td>
+                  <td><span class="preview-badge-new">Создать</span></td>
+                </tr>
+                <tr>
+                  <td>Теории</td>
+                  <td style="font-weight:700;">4</td>
+                  <td>
+                    <span class="preview-badge-new">3 новых</span>
+                    <span class="preview-badge-reuse">1 повтор.</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div class="panel-row" style="gap:0.5rem; padding:0.55rem 0.75rem;">
+              <span class="material-symbols-outlined" style="font-size:18px; color: var(--color-info);">info</span>
+              <span style="font-size:0.78rem; color: var(--color-text-secondary);">
+                Переиспользование возможно только для уже существующей копии этой же версии и зависимостей с тем же source lineage. Одноимённые темы и модули не сливаются автоматически.
+              </span>
+            </div>
+          </div>
+          <div class="cat-modal__footer">
+            <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
+              Отмена
+            </button>
+            <button class="btn-primary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
+              <span style="display:inline-flex; align-items:center; gap:0.3rem;">
+                <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                Добавить
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================================================================
+         SECTION 4 — PREVIEW MODAL (Theory — simplified)
+         ================================================================ -->
+    <section class="cat-section" id="s-preview-theory">
+      <div class="cat-section-label">
+        <span class="material-symbols-outlined" style="font-size:14px">looks_4</span>
+        Состояние: Превью перед Add to Library (Теория)
+      </div>
+
+      <div class="cat-modal-overlay">
+        <div class="cat-modal" style="max-width:440px">
+          <div class="cat-modal__header">
+            <h3>Добавить теорию</h3>
+            <button class="icon-button-muted icon-button-muted--sm" type="button">
+              <span class="material-symbols-outlined" style="font-size:18px">close</span>
+            </button>
+          </div>
+          <div class="cat-modal__body">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <span class="pill-info pill-sm pill-kicker">Теория</span>
+              <span style="font-size:0.95rem; font-weight:700;">Принцип суперпозиции волн</span>
+            </div>
+            <div class="cat-detail__row" style="padding:0.65rem 0;">
+              <span class="cat-detail__row-label">Автор</span>
+              <span class="cat-detail__row-value" style="font-size:0.85rem;">Смирнова Е.В.</span>
+            </div>
+            <div class="panel-row" style="gap:0.5rem; padding:0.55rem 0.75rem;">
+              <span class="material-symbols-outlined" style="font-size:18px; color: var(--color-success);">note_add</span>
+              <span style="font-size:0.82rem;">
+                Теория будет добавлена <strong>как связанная публикация</strong>. Её можно сохранить отдельно от комплекса.
+              </span>
+            </div>
+          </div>
+          <div class="cat-modal__footer">
+            <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
+              Отмена
+            </button>
+            <button class="btn-primary" type="button" style="font-size:0.82rem; padding:0.5rem 1rem; border-radius:0.5rem;">
+              <span style="display:inline-flex; align-items:center; gap:0.3rem;">
+                <span class="material-symbols-outlined" style="font-size:16px">add</span>
+                Добавить теорию
+              </span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================================================================
+         SECTION 5 — SUCCESS STATE
+         ================================================================ -->
+    <section class="cat-section" id="s-success">
+      <div class="cat-section-label">
+        <span class="material-symbols-outlined" style="font-size:14px">looks_5</span>
+        Состояние: Успешное добавление
+      </div>
+
+      <!-- Toast demo -->
+      <div class="cat-toast-demo" style="margin-bottom:1.5rem;">
+        <div class="cat-toast">
+          <span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+          <span>Комплекс добавлен в библиотеку как связанная публикация</span>
+        </div>
+      </div>
+
+      <!-- Success modal -->
+      <div class="cat-modal-overlay">
+        <div class="cat-modal" style="max-width:440px">
+          <div class="cat-success-modal-body">
+            <!-- Animated SVG checkmark -->
+            <svg class="cat-success-icon success-checkmark-svg" viewBox="0 0 52 52">
+              <circle class="success-checkmark-circle" cx="26" cy="26" r="25"
+                fill="none" stroke="var(--color-success)" stroke-width="2" />
+              <path class="success-checkmark-check" d="M14.1 27.2l7.1 7.2 16.7-16.8"
+                fill="none" stroke="var(--color-success)" stroke-width="3"
+                stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+            <h3 class="cat-success-title">Публикация добавлена</h3>
+            <p class="cat-success-copy">
+              Комплекс «Основы радиофизики» добавлен в вашу библиотеку как связанная публикация. Теперь его можно открыть и просматривать без отдельной версии в workspace.
+            </p>
+            <div style="display:flex; gap:0.6rem; flex-wrap:wrap; justify-content:center;">
+              <button class="btn-primary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+                <span style="display:inline-flex; align-items:center; gap:0.3rem;">
+                  <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>
+                  Открыть копию
+                </span>
+              </button>
+              <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+                Вернуться в каталог
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================================================================
+         SECTION 6 — ALREADY IN LIBRARY STATE
+         ================================================================ -->
+    <section class="cat-section" id="s-already">
+      <div class="cat-section-label">
+        <span class="material-symbols-outlined" style="font-size:14px">looks_6</span>
+        Состояние: Уже в библиотеке (detail view)
+      </div>
+
+      <div class="cat-modal-overlay" style="min-height:320px;">
+        <div class="cat-modal" style="max-width:440px">
+          <div class="cat-modal__header">
+            <h3>Эта версия уже в библиотеке</h3>
+            <button class="icon-button-muted icon-button-muted--sm" type="button">
+              <span class="material-symbols-outlined" style="font-size:18px">close</span>
+            </button>
+          </div>
+          <div class="cat-modal__body" style="align-items:center; text-align:center;">
+            <div style="width:48px; height:48px; border-radius:999px; background: var(--color-component-pill-success-bg); border: 1px solid var(--color-component-pill-success-border); display:flex; align-items:center; justify-content:center;">
+              <span class="material-symbols-outlined" style="font-size:24px; color: var(--color-component-pill-success-fg); font-variation-settings: 'FILL' 1;">check_circle</span>
+            </div>
+            <p style="font-size:0.92rem; font-weight:700;">Эта опубликованная версия уже добавлена</p>
+            <p style="font-size:0.82rem; color: var(--color-text-secondary); max-width:32ch;">
+              Эта версия уже добавлена в библиотеку. Повторное добавление не создаст новый объект и просто откроет существующую запись.
+            </p>
+          </div>
+          <div class="cat-modal__footer" style="justify-content:center;">
+            <button class="btn-primary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+              <span style="display:inline-flex; align-items:center; gap:0.3rem;">
+                <span class="material-symbols-outlined" style="font-size:18px">open_in_new</span>
+                Открыть копию
+              </span>
+            </button>
+            <button class="btn-secondary" type="button" style="font-size:0.85rem; padding:0.55rem 1.1rem; border-radius:0.6rem;">
+              Закрыть
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ================================================================
+         SECTION 7 — EMPTY STATE
+         ================================================================ -->
+    <section class="cat-section" id="s-empty">
+      <div class="cat-section-label">
+        <span class="material-symbols-outlined" style="font-size:14px">filter_7</span>
+        Состояние: Пустой результат поиска / фильтрации
+      </div>
+
+      <!-- Simulated search bar + active filter -->
+      <div class="cat-search" style="margin-bottom:0.75rem;">
+        <span class="material-symbols-outlined cat-search__icon">search</span>
+        <input type="text" class="cat-search__input" value="квантовая хромодинамика" readonly style="border-color: var(--color-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 15%, transparent);" />
+      </div>
+      <div class="cat-filters" style="margin-bottom:1.5rem;">
+        <div class="segmented-control">
+          <button class="segmented-control__button" type="button">Все</button>
+          <button class="segmented-control__button is-active" type="button">Теории</button>
+          <button class="segmented-control__button" type="button">Комплексы</button>
+        </div>
+      </div>
+
+      <div class="empty-state-card" style="max-width:480px; margin:0 auto;">
+        <div class="empty-state-card__icon">
+          <span class="material-symbols-outlined" style="font-size:28px">search_off</span>
+        </div>
+        <h3 class="empty-state-card__title">Ничего не найдено</h3>
+        <p class="empty-state-card__copy">
+          По запросу «квантовая хромодинамика» среди теорий ничего не нашлось. Попробуйте изменить запрос или сбросить фильтры.
+        </p>
+        <div class="empty-state-card__actions">
+          <button class="btn-secondary" type="button" style="font-size:0.82rem; padding:0.45rem 0.9rem; border-radius:0.5rem;">
+            <span style="display:inline-flex; align-items:center; gap:0.3rem;">
+              <span class="material-symbols-outlined" style="font-size:16px">filter_alt_off</span>
+              Сбросить фильтры
+            </span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+  </div><!-- /cat-page -->
+
+
+  <!-- ================================================================
+       MINIMAL JS — Filter interactivity
+       ================================================================ -->
+  <script>
+    // Segmented control interactivity
+    document.querySelectorAll('.segmented-control').forEach(sc => {
+      sc.querySelectorAll('.segmented-control__button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          sc.querySelectorAll('.segmented-control__button').forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+        });
+      });
+    });
+
+    // Filter pill interactivity
+    document.querySelectorAll('.cat-filter-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const parent = pill.parentElement;
+        parent.querySelectorAll('.cat-filter-pill').forEach(p => p.classList.remove('is-active'));
+        pill.classList.add('is-active');
+      });
+    });
+  </script>
+
+</body>
+</html>

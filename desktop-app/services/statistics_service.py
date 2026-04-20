@@ -13,17 +13,33 @@ Statistics Service - агрегация статистики пользоват�
 
 import json
 import logging
+import os
 import time
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, TYPE_CHECKING
 from collections import defaultdict
 from datetime import datetime, date
 
+from persistence.hosted_calendar_repository import HostedCalendarRepository
+from persistence.hosted_complex_statistics_repository import HostedComplexStatisticsRepository
+from persistence.postgres import PostgresUnavailableError
+from services.hosted_shadow_fallback import (
+    HostedShadowFallbackMixin,
+    HostedShadowReadFallbackDisabledError,
+    HostedShadowWriteFallbackDisabledError,
+)
 from services.progress_service import ProgressService
 from task_system.core.models.complex_models import (
     ExtendedSessionResultSummary,
     RecentSessionSummary
 )
+
+if TYPE_CHECKING:
+    from persistence.runtime import PersistenceRuntimeSettings
+
+
+def _is_hosted_runtime() -> bool:
+    return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
 
 
 def _safe_int(value: Any, *, minimum: int = 0) -> int:
@@ -55,7 +71,7 @@ def _safe_rate(numerator: int, denominator: int) -> float:
     return round(float(numerator) / float(denominator), 3)
 
 
-class StatisticsService:
+class StatisticsService(HostedShadowFallbackMixin):
     """
     Сервис для агрегации статистики пользователя.
     
@@ -77,8 +93,16 @@ class StatisticsService:
     # Стандартный порог для определения слабых областей (success_rate < 0.70)
     DEFAULT_WEAK_AREA_THRESHOLD = 0.70
     
-    def __init__(self, progress_service: ProgressService, module_repository: Optional[Any] = None, 
-                 data_dir: Optional[str] = None, event_bus: Optional[Any] = None):
+    _hosted_schema_ready = False
+
+    def __init__(
+        self,
+        progress_service: ProgressService,
+        module_repository: Optional[Any] = None,
+        data_dir: Optional[str] = None,
+        event_bus: Optional[Any] = None,
+        persistence_settings: Optional['PersistenceRuntimeSettings'] = None,
+    ):
         """
         Инициализация StatisticsService.
         
@@ -98,6 +122,12 @@ class StatisticsService:
             data_dir = config.get("data_root", "data")
         self.data_dir = Path(data_dir)
         self.users_dir = self.data_dir / "users"
+        self.persistence_settings = persistence_settings
+        self._calendar_repository: Optional[HostedCalendarRepository] = None
+        self._complex_statistics_repository: Optional[HostedComplexStatisticsRepository] = None
+        self._storage_ready = not _is_hosted_runtime()
+        self._last_hosted_persistence_error: Optional[Exception] = None
+        self._init_hosted_shadow_fallback_state()
         
         # Кэш статистики: {user_id: (data, timestamp)}
         self._cache: Dict[str, tuple] = {}
@@ -114,6 +144,55 @@ class StatisticsService:
         if event_bus:
             event_bus.subscribe('progress_updated', self._on_progress_updated)
             self.logger.debug("Subscribed to progress_updated events")
+
+    @property
+    def hosted_storage_ready(self) -> bool:
+        return bool(self._storage_ready)
+
+    def ensure_hosted_persistence_ready(self) -> None:
+        if not _is_hosted_runtime():
+            self._storage_ready = True
+            self._last_hosted_persistence_error = None
+            return
+        if self._storage_ready:
+            return
+        try:
+            if not self.__class__._hosted_schema_ready:
+                self._get_complex_statistics_repository().ensure_schema()
+                self.__class__._hosted_schema_ready = True
+            self._storage_ready = True
+            self._last_hosted_persistence_error = None
+        except PostgresUnavailableError as exc:
+            self._last_hosted_persistence_error = exc
+            self._storage_ready = False
+            if not self.hosted_shadow_fallback_active:
+                self._log_shadow_read_fallback("statistics.ensure_hosted_persistence_ready", exc)
+            else:
+                self._shadow_fallback_active = True
+
+    def _note_hosted_shadow_read_fallback(self, operation: str, exc: Exception) -> None:
+        self._last_hosted_persistence_error = exc
+        self._storage_ready = False
+        if not self.hosted_shadow_fallback_active:
+            self._log_shadow_read_fallback(operation, exc)
+        else:
+            self._shadow_fallback_active = True
+
+    def _get_complex_statistics_repository(self) -> HostedComplexStatisticsRepository:
+        if self._complex_statistics_repository is None:
+            if self.persistence_settings is None:
+                raise RuntimeError("hosted_complex_statistics_repository_requires_persistence_settings")
+            self._complex_statistics_repository = HostedComplexStatisticsRepository(
+                self.persistence_settings.postgres_dsn
+            )
+        return self._complex_statistics_repository
+
+    def _get_calendar_repository(self) -> HostedCalendarRepository:
+        if self._calendar_repository is None:
+            if self.persistence_settings is None:
+                raise RuntimeError("hosted_calendar_repository_requires_persistence_settings")
+            self._calendar_repository = HostedCalendarRepository(self.persistence_settings.postgres_dsn)
+        return self._calendar_repository
     
     def set_module_repository(self, module_repository: Any):
         """
@@ -145,6 +224,37 @@ class StatisticsService:
             self.logger.warning("Failed to initialize MicrocardsAnalyticsService bridge: %s", exc)
             self._microcards_analytics_service = False
             return None
+
+    def _get_progress_manager_for_user(self, user_id: str) -> Any:
+        """Return a progress manager bound to the requested user without global switching."""
+        current_user_id = str(getattr(self.progress_service, "user_id", "") or "").strip()
+        if current_user_id == user_id:
+            return self.progress_service.progress_manager
+
+        difficulty_manager = getattr(self.progress_service.progress_manager, "difficulty_manager", None)
+        scoped_progress_service = ProgressService(
+            data_dir=str(self.data_dir),
+            user_id=user_id,
+            difficulty_manager=difficulty_manager,
+            event_bus=None,
+            persistence_settings=self.persistence_settings,
+        )
+        return scoped_progress_service.progress_manager
+
+    def _load_progress_data(self, user_id: str) -> Dict[str, Any]:
+        progress_manager = self._get_progress_manager_for_user(user_id)
+        if _is_hosted_runtime():
+            ensure = getattr(progress_manager, "ensure_hosted_persistence_ready", None)
+            try:
+                if callable(ensure):
+                    ensure()
+            except PostgresUnavailableError as exc:
+                self._note_hosted_shadow_read_fallback("statistics._load_progress_data", exc)
+                self._guard_shadow_read_fallback("statistics._load_progress_data", exc)
+            if not bool(getattr(progress_manager, "hosted_storage_ready", True)):
+                fallback_reason = self._last_hosted_persistence_error or RuntimeError("postgres_unavailable")
+                self._guard_shadow_read_fallback("statistics._load_progress_data", fallback_reason)
+        return progress_manager.get_progress_data()
 
     def _read_json_file(self, path: Path, default: Any) -> Any:
         if not path.exists():
@@ -203,6 +313,15 @@ class StatisticsService:
             return self._empty_microcards_overall_payload()
 
     def _load_calendar_activity(self, user_id: str) -> Dict[str, Any]:
+        if _is_hosted_runtime():
+            try:
+                payload = self._get_calendar_repository().get_document(user_id, "activity")
+            except PostgresUnavailableError as exc:
+                self._note_hosted_shadow_read_fallback("statistics._load_calendar_activity", exc)
+                self._guard_shadow_read_fallback("statistics._load_calendar_activity", exc)
+            if isinstance(payload, dict):
+                return payload
+            return {}
         payload = self._read_json_file(
             self.data_dir / "user_calendar" / user_id / "activity.json",
             {},
@@ -331,14 +450,9 @@ class StatisticsService:
                 self.logger.debug(f"Returning cached statistics for user {user_id} (days={days})")
                 return cached_data
         
-        # Убеждаемся, что ProgressService работает с правильным пользователем
-        if self.progress_service.user_id != user_id:
-            self.logger.debug(f"Switching ProgressService from {self.progress_service.user_id} to {user_id}")
-            self.progress_service.switch_user(user_id)
-        
         # Получаем данные из ProgressService
         try:
-            progress_data = self.progress_service.progress_manager.get_progress_data()
+            progress_data = self._load_progress_data(user_id)
             task_history = progress_data.get("task_history", {})
             complex_completions = progress_data.get("complex_completions", []) or []
 
@@ -628,7 +742,9 @@ class StatisticsService:
             )
             
             return result
-            
+
+        except (HostedShadowReadFallbackDisabledError, HostedShadowWriteFallbackDisabledError):
+            raise
         except Exception as e:
             self.logger.error(f"Failed to aggregate statistics for user {user_id}: {e}")
             # Возвращаем пустую статистику при ошибке
@@ -675,12 +791,8 @@ class StatisticsService:
         if threshold is None:
             threshold = self.DEFAULT_WEAK_AREA_THRESHOLD
             
-        # Убеждаемся, что ProgressService работает с правильным пользователем
-        if self.progress_service.user_id != user_id:
-            self.progress_service.switch_user(user_id)
-        
         try:
-            progress_data = self.progress_service.progress_manager.get_progress_data()
+            progress_data = self._load_progress_data(user_id)
             task_history = progress_data.get("task_history", {})
             
             # Группируем попытки по темам
@@ -732,7 +844,9 @@ class StatisticsService:
             )
             
             return weak_areas
-            
+
+        except (HostedShadowReadFallbackDisabledError, HostedShadowWriteFallbackDisabledError):
+            raise
         except Exception as e:
             self.logger.error(f"Failed to get weak areas for user {user_id}: {e}")
             return []
@@ -811,12 +925,8 @@ class StatisticsService:
                 if cached_data:
                     return cached_data
         
-        # Убеждаемся, что ProgressService работает с правильным пользователем
-        if self.progress_service.user_id != user_id:
-            self.progress_service.switch_user(user_id)
-        
         try:
-            progress_data = self.progress_service.progress_manager.get_progress_data()
+            progress_data = self._load_progress_data(user_id)
             task_history = progress_data.get("task_history", {})
             activity_map = self._load_calendar_activity(user_id)
             completion_count_map: Dict[str, int] = defaultdict(int)
@@ -1105,7 +1215,9 @@ class StatisticsService:
             
             self._time_dynamics_cache[cache_key] = (result, time.time())
             return result
-            
+
+        except (HostedShadowReadFallbackDisabledError, HostedShadowWriteFallbackDisabledError):
+            raise
         except Exception as e:
             self.logger.exception(f"Failed to get time dynamics for user {user_id}: {e}")
             return []
@@ -1245,17 +1357,20 @@ class StatisticsService:
         Returns:
             Dict: Структура статистики комплексов
         """
-        stats_file = self._get_complex_statistics_file_path(user_id)
-        
-        if not stats_file.exists():
-            return {}
-        
-        try:
-            with open(stats_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception as e:
-            self.logger.error(f"Error loading complex statistics for user {user_id}: {e}")
-            return {}
+        if _is_hosted_runtime():
+            self.ensure_hosted_persistence_ready()
+            if not self.hosted_storage_ready:
+                fallback_reason = self._last_hosted_persistence_error or RuntimeError("postgres_unavailable")
+                self._guard_shadow_read_fallback("statistics._load_complex_statistics", fallback_reason)
+            try:
+                payload = self._get_complex_statistics_repository().get_statistics(user_id)
+                if isinstance(payload, dict):
+                    return payload
+                return {}
+            except PostgresUnavailableError as exc:
+                self._note_hosted_shadow_read_fallback("statistics._load_complex_statistics", exc)
+                self._guard_shadow_read_fallback("statistics._load_complex_statistics", exc)
+        return self._load_complex_statistics_shadow(user_id)
     
     def _save_complex_statistics(self, user_id: str, statistics: Dict[str, Any]) -> bool:
         """
@@ -1268,8 +1383,38 @@ class StatisticsService:
         Returns:
             bool: True если сохранение успешно
         """
+        if _is_hosted_runtime():
+            try:
+                self.ensure_hosted_persistence_ready()
+                if self.hosted_storage_ready:
+                    self._get_complex_statistics_repository().write_statistics(
+                        user_id,
+                        statistics,
+                        updated_at=datetime.utcnow().isoformat() + "Z",
+                    )
+                    return True
+                fallback_reason = self._last_hosted_persistence_error or RuntimeError("postgres_unavailable")
+                self._guard_shadow_write_fallback("statistics._save_complex_statistics", fallback_reason)
+            except PostgresUnavailableError as exc:
+                self._guard_shadow_write_fallback("statistics._save_complex_statistics", exc)
+        return self._save_complex_statistics_shadow(user_id, statistics)
+
+    def _load_complex_statistics_shadow(self, user_id: str) -> Dict[str, Any]:
         stats_file = self._get_complex_statistics_file_path(user_id)
-        
+
+        if not stats_file.exists():
+            return {}
+
+        try:
+            with open(stats_file, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            self.logger.error(f"Error loading complex statistics for user {user_id}: {e}")
+            return {}
+
+    def _save_complex_statistics_shadow(self, user_id: str, statistics: Dict[str, Any]) -> bool:
+        stats_file = self._get_complex_statistics_file_path(user_id)
+
         try:
             with open(stats_file, 'w', encoding='utf-8') as f:
                 json.dump(statistics, f, ensure_ascii=False, indent=2, default=str)
@@ -1430,6 +1575,8 @@ class StatisticsService:
             # Сохраняем обновленную статистику
             return self._save_complex_statistics(user_id, statistics)
             
+        except (HostedShadowWriteFallbackDisabledError, HostedShadowReadFallbackDisabledError):
+            raise
         except Exception as e:
             self.logger.error(f"Error updating complex statistics: {e}", exc_info=True)
             return False
@@ -1445,6 +1592,31 @@ class StatisticsService:
             Dict: Статистика комплексов с агрегированными данными и последними сессиями
         """
         return self._load_complex_statistics(user_id)
+
+    def filter_complex_statistics(
+        self,
+        complex_statistics: Dict[str, Any],
+        valid_complex_ids: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Keep only statistics rows that belong to currently available complexes."""
+        if not isinstance(complex_statistics, dict):
+            return {}
+        if valid_complex_ids is None:
+            return dict(complex_statistics)
+
+        allowed_ids = {
+            str(complex_id or "").strip()
+            for complex_id in valid_complex_ids
+            if str(complex_id or "").strip()
+        }
+        if not allowed_ids:
+            return {}
+
+        return {
+            complex_id: payload
+            for complex_id, payload in complex_statistics.items()
+            if str(complex_id or "").strip() in allowed_ids
+        }
     
     def get_recent_sessions(self, user_id: str, limit: int = 10) -> List[Dict[str, Any]]:
         """

@@ -108,9 +108,10 @@ def test_list_theories(client):
 
 def test_ai_status(client):
     resp = client.get("/api/editor/ai/status")
-    assert resp.status_code == 200
+    assert resp.status_code == 404
     data = resp.get_json()
-    assert data["ok"] is True
+    assert data["ok"] is False
+    assert data["error"] == "ai_mode_in_progress"
 
 
 # ---------------------------------------------------------------------------

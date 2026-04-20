@@ -860,3 +860,163 @@ def test_save_task_ui_state_rejects_stale_task_snapshot() -> None:
     assert result["active_task_ref"] == active_task_ref
     assert result["active_task_index"] == 1
     controller.save_ui_state.assert_not_called()
+
+
+def test_enrich_task_data_uses_canonical_asset_content_url() -> None:
+    task_data_full = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {
+                        "id": "q_asset",
+                        "text": "Pick the image",
+                        "image_asset_id": "asset_question_1",
+                        "answers": [
+                            {"text": "", "image_asset_id": "asset_answer_1", "correct": True},
+                        ],
+                    }
+                ],
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    api = _make_api(task_data_full)
+    task_data = task_data_full["task_data"]
+    api._enrich_task_data_for_web(task_data, None)
+
+    question = task_data["content"]["questions"][0]
+    answer = question["answers"][0]
+
+    assert question["image_url"] == "/api/assets/asset_question_1/content"
+    assert answer["image_url"] == "/api/assets/asset_answer_1/content"
+
+
+def test_enrich_task_data_prefers_asset_refs_over_legacy_image_path() -> None:
+    task_data_full = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {
+                        "id": "q_asset_and_path",
+                        "text": "Pick the image",
+                        "image_asset_id": "asset_question_2",
+                        "image_path": "legacy/question.png",
+                        "answers": [
+                            {
+                                "text": "",
+                                "image_asset_id": "asset_answer_2",
+                                "image_path": "legacy/answer.png",
+                                "correct": True,
+                            },
+                        ],
+                    }
+                ],
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    api = _make_api(task_data_full)
+    task_data = task_data_full["task_data"]
+    api._enrich_task_data_for_web(task_data, None)
+
+    question = task_data["content"]["questions"][0]
+    answer = question["answers"][0]
+
+    assert question["image_url"] == "/api/assets/asset_question_2/content"
+    assert answer["image_url"] == "/api/assets/asset_answer_2/content"
+
+
+def test_enrich_click_task_promotes_canonical_image_url_into_content_image() -> None:
+    task_data_full = {
+        "task_data": {
+            "type": "click",
+            "content": {
+                "prompt": "Click the image",
+                "image_asset_id": "asset_click_1",
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    api = _make_api(task_data_full)
+    task_data = task_data_full["task_data"]
+    api._enrich_task_data_for_web(task_data, None)
+
+    assert task_data["image_url"] == "/api/assets/asset_click_1/content"
+    assert task_data["image"] == "/api/assets/asset_click_1/content"
+    assert task_data["content"]["image_url"] == "/api/assets/asset_click_1/content"
+    assert task_data["content"]["image"] == "/api/assets/asset_click_1/content"
+
+
+def test_enrich_click_task_converts_local_image_asset_bridge_into_canonical_asset_url(
+    monkeypatch,
+) -> None:
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+
+    task_data_full = {
+        "task_data": {
+            "type": "click",
+            "content": {
+                "prompt": "Click the image",
+                "image": "/api/local-image?asset_id=asset_click_bridge",
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    api = _make_api(task_data_full)
+    task_data = task_data_full["task_data"]
+    api._enrich_task_data_for_web(task_data, None)
+
+    assert task_data["image_url"] == "/api/assets/asset_click_bridge/content"
+    assert task_data["image"] == "/api/assets/asset_click_bridge/content"
+    assert task_data["content"]["image_url"] == "/api/assets/asset_click_bridge/content"
+    assert task_data["content"]["image"] == "/api/assets/asset_click_bridge/content"
+
+
+def test_enrich_task_data_hosted_strips_path_only_media_refs(monkeypatch, tmp_path: Path) -> None:
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+
+    task_data_full = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {
+                        "id": "q_path_only",
+                        "text": "Hosted question",
+                        "image_path": "legacy/question.png",
+                        "answers": [
+                            {
+                                "text": "",
+                                "image_path": "legacy/answer.png",
+                                "correct": True,
+                            },
+                        ],
+                    }
+                ],
+            },
+        },
+        "answer_key": {},
+        "task_dir": str(tmp_path),
+    }
+
+    api = _make_api(task_data_full)
+    task_data = task_data_full["task_data"]
+    api._enrich_task_data_for_web(task_data, str(tmp_path))
+
+    question = task_data["content"]["questions"][0]
+    answer = question["answers"][0]
+
+    assert "image_url" not in question
+    assert "image_path" not in question
+    assert "image_url" not in answer
+    assert "image_path" not in answer

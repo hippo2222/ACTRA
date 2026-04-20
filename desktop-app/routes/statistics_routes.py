@@ -14,11 +14,52 @@ from typing import Any
 from flask import Blueprint, jsonify, request
 
 from routes._context import get_ctx
-from routes._helpers import _resolve_effective_user_id
+from routes._helpers import _maybe_hosted_shadow_write_error_response, _resolve_effective_user_id
+from services.linked_complex_runtime import build_linked_runtime_complex_id
 
 logger = logging.getLogger(__name__)
 
 statistics_bp = Blueprint("statistics", __name__)
+
+
+def _get_library_complex_ids(ctx: Any) -> list[str]:
+    """Return complex ids from the user's current library."""
+    complex_service = getattr(ctx, "complex_service", None)
+    if complex_service is None:
+        return []
+
+    try:
+        complexes = complex_service.get_all_complexes() or []
+    except Exception as exc:
+        logger.warning("[HTTP] Failed to load complex library for statistics filtering: %s", exc)
+        return []
+
+    result: list[str] = []
+    for complex_obj in complexes:
+        if isinstance(complex_obj, dict):
+            complex_id = complex_obj.get("id") or complex_obj.get("complex_id")
+        else:
+            complex_id = getattr(complex_obj, "id", None) or getattr(complex_obj, "complex_id", None)
+        normalized = str(complex_id or "").strip()
+        if normalized:
+            result.append(normalized)
+
+    catalog_service = getattr(ctx, "catalog_service", None)
+    user_id = str(getattr(ctx, "user_id", "") or "").strip()
+    if catalog_service is not None and user_id:
+        try:
+            library_payload = catalog_service.list_complex_library_entries(requested_by_user_id=user_id)
+            for entry in library_payload.get("entries") or []:
+                library_entry = entry.get("library_entry") if isinstance(entry, dict) else {}
+                library_entry_id = str((library_entry or {}).get("library_entry_id") or "").strip()
+                if not library_entry_id:
+                    continue
+                runtime_complex_id = build_linked_runtime_complex_id(library_entry_id)
+                if runtime_complex_id:
+                    result.append(runtime_complex_id)
+        except Exception as exc:
+            logger.warning("[HTTP] Failed to load linked complex library ids for statistics filtering: %s", exc)
+    return result
 
 
 @statistics_bp.route("/api/statistics/overall", methods=["GET"])
@@ -35,6 +76,9 @@ def get_overall_stats() -> Any:
         stats = ctx.statistics_service.aggregate_statistics(user_id, days=days)
         return jsonify({"ok": True, "stats": stats})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to get overall stats: %s", exc)
         return jsonify({"ok": False, "error": "stats_load_failed"}), 500
 
@@ -53,6 +97,9 @@ def get_time_dynamics() -> Any:
         )
         return jsonify({"ok": True, "dynamics": dynamics})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to get time dynamics: %s", exc)
         return jsonify({"ok": False, "error": "dynamics_load_failed"}), 500
 
@@ -64,8 +111,15 @@ def get_complex_statistics() -> Any:
     user_id = _resolve_effective_user_id(request.args.get("user_id"))
     try:
         stats = ctx.statistics_service.get_complex_statistics(user_id)
+        stats = ctx.statistics_service.filter_complex_statistics(
+            stats,
+            valid_complex_ids=_get_library_complex_ids(ctx),
+        )
         return jsonify({"ok": True, "complexes": stats})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to get complex statistics: %s", exc)
         return jsonify({"ok": False, "error": "complex_stats_load_failed"}), 500
 
@@ -77,9 +131,21 @@ def get_recent_sessions() -> Any:
     user_id = _resolve_effective_user_id(request.args.get("user_id"))
     limit = int(request.args.get("limit", 10))
     try:
-        sessions = ctx.statistics_service.get_recent_sessions(user_id, limit=limit)
+        valid_complex_ids = set(_get_library_complex_ids(ctx))
+        sessions = ctx.statistics_service.get_recent_sessions(user_id, limit=limit * 3)
+        if valid_complex_ids:
+            sessions = [
+                session for session in sessions
+                if str(session.get("complex_id") or "").strip() in valid_complex_ids
+            ]
+        else:
+            sessions = []
+        sessions = sessions[:limit]
         return jsonify({"ok": True, "sessions": sessions})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to get recent sessions: %s", exc)
         return jsonify({"ok": False, "error": "sessions_load_failed"}), 500
 

@@ -156,11 +156,28 @@
             min-width: 0;
         }
 
+        #welcomeHeaderKicker,
         #welcomeHeaderTitle,
         #welcomeHeaderSubtitle,
         #welcomeHeaderHint {
             overflow-wrap: anywhere;
             word-break: break-word;
+        }
+
+        .welcome-header-kicker {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1rem;
+            padding: 0.45rem 0.9rem;
+            border: 1px solid color-mix(in srgb, var(--color-primary) 20%, var(--color-border-subtle));
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--color-primary) 7%, var(--color-surface-1));
+            color: var(--color-primary-dark);
+            font-size: 0.76rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
         }
 
         #welcomeHeaderSubtitle {
@@ -180,6 +197,147 @@
 
         .welcome-profile-card {
             justify-content: flex-start;
+        }
+
+        #hostedAuthChoice {
+            max-width: min(100%, 64rem);
+        }
+
+        #hostedAuthChoice .auth-choice-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 1.5rem;
+        }
+
+        #hostedAuthChoice .auth-choice-card {
+            position: relative;
+            display: flex;
+            min-height: clamp(19rem, 36vh, 22rem);
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: space-between;
+            overflow: hidden;
+            border: 1px solid color-mix(in srgb, var(--color-primary) 10%, var(--color-border-subtle));
+            border-radius: 2rem;
+            background:
+                radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary) 12%, transparent) 0%, transparent 42%),
+                linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 92%, white) 0%, var(--color-surface-1) 100%);
+            box-shadow: var(--shadow-lg);
+            padding: 2rem;
+            text-align: left;
+            transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+        }
+
+        #hostedAuthChoice .auth-choice-card:hover,
+        #hostedAuthChoice .auth-choice-card:focus-visible {
+            transform: translateY(-6px);
+            border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border-strong));
+            box-shadow: var(--shadow-xl);
+        }
+
+        #hostedAuthChoice .auth-choice-card::after {
+            content: "";
+            position: absolute;
+            inset: auto -12% -28% auto;
+            width: 13rem;
+            height: 13rem;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--color-primary) 9%, transparent);
+            filter: blur(8px);
+            pointer-events: none;
+        }
+
+        #hostedAuthChoice .auth-choice-card__top,
+        #hostedAuthChoice .auth-choice-card__bottom {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+        }
+
+        #hostedAuthChoice .auth-choice-card__icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 5.5rem;
+            height: 5.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: 999px;
+            background: color-mix(in srgb, var(--color-primary) 10%, var(--color-surface-2));
+            color: var(--color-primary-dark);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+        }
+
+        #hostedAuthChoice .auth-choice-card__eyebrow {
+            margin: 0 0 0.65rem 0;
+            color: var(--color-text-secondary);
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+        }
+
+        #hostedAuthChoice .auth-choice-card__title {
+            margin: 0;
+            color: var(--color-text-main);
+            font-size: clamp(2rem, 2.6vw, 2.5rem);
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            line-height: 0.96;
+        }
+
+        #hostedAuthChoice .auth-choice-card__copy {
+            max-width: 24rem;
+            margin: 0.95rem 0 0 0;
+            color: var(--color-text-secondary);
+            font-size: 1rem;
+            line-height: 1.55;
+        }
+
+        #hostedAuthChoice .auth-choice-card__footer {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            color: var(--color-primary-dark);
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        #hostedAuthChoice .auth-choice-card__footer .material-symbols-outlined {
+            font-size: 1.15rem;
+        }
+
+        #hostedAuthChoice .auth-choice-card__footer-note {
+            margin: 0 0 0.45rem 0;
+            color: var(--color-text-secondary);
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        #modeOnboarding[data-hosted-auth="1"] {
+            max-width: 38rem;
+        }
+
+        #modeLogin[data-hosted-auth="1"] {
+            max-width: 36rem;
+        }
+
+        #modeLogin[data-hosted-auth="1"] > div,
+        #modeOnboarding[data-hosted-auth="1"] #modeOnboardingCard {
+            box-shadow: var(--shadow-xl);
+        }
+
+        #modeSelect[data-hosted-auth="1"] {
+            gap: 2rem;
+        }
+
+        @media (min-width: 768px) {
+            .welcome-main {
+                max-width: 72rem;
+            }
+
+            .welcome-header {
+                max-width: 48rem;
+            }
         }
 
         .welcome-profile-name {
@@ -299,6 +457,15 @@
             .profile-card-v3 {
                 width: min(100%, 320px);
                 min-height: auto;
+            }
+
+            #hostedAuthChoice .auth-choice-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #hostedAuthChoice .auth-choice-card {
+                min-height: 18rem;
+                padding: 1.5rem;
             }
         }
 
@@ -547,15 +714,16 @@
 
             <!-- Main Content Area - Centered -->
             <main
-                class="welcome-main flex-grow flex flex-col items-center justify-center p-4 md:p-6 lg:p-8 content-enter w-full max-w-5xl mx-auto">
+                class="welcome-main flex-grow flex flex-col items-center justify-center p-4 md:p-6 lg:p-8 content-enter w-full max-w-6xl mx-auto">
 
                 <!-- Header Typography -->
-                <header class="welcome-header text-center mb-10 md:mb-12 w-full max-w-2xl">
+                <header class="welcome-header text-center mb-10 md:mb-12 w-full max-w-3xl">
                     <h2 id="welcomeHeaderTitle"
                         class="text-4xl md:text-6xl font-black text-text-main mb-4 tracking-tighter leading-tight"
                         style="color: var(--color-primary-dark);">
                         Добро пожаловать
                     </h2>
+                    <p id="welcomeHeaderKicker" class="welcome-header-kicker hidden"></p>
                     <p id="welcomeHeaderSubtitle" class="text-lg md:text-xl font-medium">
                         Выберите профиль, чтобы продолжить обучение
                     </p>
@@ -587,6 +755,34 @@
                                 class="flex justify-center flex-wrap gap-3 p-2 overflow-visible">
                             </div>
                             <input type="hidden" id="onboardingAvatarSeed" value="1.png">
+
+                            <div id="hostedRegistrationFields" class="hidden space-y-4 mt-4">
+                                <div class="relative">
+                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">alternate_email</span>
+                                    <input type="text" id="onboardingLogin" placeholder="Логин"
+                                        class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
+                                        maxlength="32"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
+                                </div>
+                                <div class="relative">
+                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">mail</span>
+                                    <input type="email" id="onboardingEmail" placeholder="Email"
+                                        class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
+                                </div>
+                                <div class="relative">
+                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
+                                    <input type="password" id="onboardingPassword" placeholder="Пароль"
+                                        class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
+                                </div>
+                                <div class="relative">
+                                    <span class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">verified_user</span>
+                                    <input type="password" id="onboardingPasswordConfirm" placeholder="Повторите пароль"
+                                        class="w-full pl-12 pr-4 py-3.5 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary transition-all font-medium text-base placeholder:text-text-secondary"
+                                        onkeydown="if(event.key==='Enter'){event.preventDefault();window.welcomeCreateProfile()}">
+                                </div>
+                            </div>
 
                             <div id="onboardingConsentBox"
                                 class="mt-4 rounded-2xl border border-border-subtle bg-surface-2 p-3">
@@ -620,6 +816,56 @@
                             </div>
                         </div>
 
+                        <div id="onboardingVerificationPanel"
+                            class="hidden rounded-[2rem] border border-primary/20 bg-surface-1 p-6 md:p-7 shadow-xl">
+                            <div class="flex items-start gap-4">
+                                <div
+                                    class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                                    <span id="onboardingVerificationIcon" class="material-symbols-outlined text-[26px]">mail</span>
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <p id="onboardingVerificationEyebrow"
+                                        class="text-xs font-black uppercase tracking-[0.24em] text-primary/80">Email verification</p>
+                                    <h3 id="onboardingVerificationTitle"
+                                        class="mt-2 text-2xl font-black tracking-tight text-text-main">Проверьте почту</h3>
+                                    <p id="onboardingVerificationBody"
+                                        class="mt-3 text-sm leading-relaxed text-text-secondary">
+                                        Мы отправили письмо со ссылкой для подтверждения.
+                                    </p>
+                                    <div
+                                        class="mt-4 rounded-2xl border border-border-subtle bg-surface-2 px-4 py-3">
+                                        <p class="text-[11px] font-bold uppercase tracking-[0.22em] text-text-secondary">
+                                            Адрес
+                                        </p>
+                                        <p id="onboardingVerificationEmail"
+                                            class="mt-1 break-all text-base font-bold text-text-main"></p>
+                                    </div>
+                                    <p id="onboardingVerificationStatus"
+                                        class="mt-4 text-sm font-semibold text-text-main"></p>
+                                    <p id="onboardingVerificationError"
+                                        class="hidden mt-3 rounded-xl border border-error/20 bg-error/10 px-3 py-2 text-sm font-semibold text-error"></p>
+                                </div>
+                            </div>
+
+                            <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                                <button type="button" id="onboardingVerificationResendBtn"
+                                    onclick="window.welcomeResendVerificationEmail()"
+                                    class="rounded-2xl border border-border-strong px-4 py-3 font-semibold text-text-main hover:bg-surface-2 transition-colors">
+                                    Отправить ещё раз
+                                </button>
+                                <button type="button" id="onboardingVerificationContinueBtn"
+                                    onclick="window.welcomeContinueAfterVerification()"
+                                    class="rounded-2xl bg-primary px-4 py-3 font-bold text-primary-fg hover:bg-primary-hover transition-colors">
+                                    Перейти в ACTRA
+                                </button>
+                            </div>
+
+                            <p id="onboardingVerificationHint"
+                                class="mt-4 text-xs leading-relaxed text-text-secondary">
+                                Если письмо не пришло сразу, подождите немного и проверьте папку spam.
+                            </p>
+                        </div>
+
                         <p id="onboardingError"
                             class="text-sm text-error font-bold text-center hidden flex items-center justify-center gap-2 bg-error/10 p-3 rounded-xl border border-error/20">
                             <span class="material-symbols-outlined">error</span> <span id="onboardingErrorMsg"></span>
@@ -631,10 +877,48 @@
                             Начать обучение
                             <span class="material-symbols-outlined">arrow_forward</span>
                         </button>
+                        <button type="button" id="onboardingSecondaryAction" onclick="window.welcomeBackToAuthChoice()"
+                            class="hidden w-full border border-border-strong text-text-main font-semibold py-3 rounded-2xl hover:bg-surface-1 transition-colors">
+                            Назад
+                        </button>
                     </div>
 
                     <!-- MODE: SELECT PROFILE (≥2 profiles) -->
                     <div id="modeSelect" class="hidden w-full flex flex-col items-center gap-10">
+                        <div id="hostedAuthChoice" class="hidden w-full max-w-5xl">
+                            <div class="auth-choice-grid w-full">
+                                <button type="button" onclick="window.welcomeShowAuthLogin()"
+                                    class="auth-choice-card outline-none focus:ring-4 focus:ring-primary/20">
+                                    <div class="auth-choice-card__top">
+                                        <div class="auth-choice-card__icon">
+                                            <span class="material-symbols-outlined text-[2.4rem]">login</span>
+                                        </div>
+                                        <p class="auth-choice-card__eyebrow">Для существующего аккаунта</p>
+                                        <p class="auth-choice-card__title">Войти</p>
+                                        <p class="auth-choice-card__copy">Откройте библиотеку, вернитесь к своему прогрессу и продолжите работу с публикациями.</p>
+                                    </div>
+                                    <div class="auth-choice-card__bottom">
+                                        <p class="auth-choice-card__footer-note">Логин или email и пароль</p>
+                                        <span class="auth-choice-card__footer">Продолжить <span class="material-symbols-outlined">arrow_forward</span></span>
+                                    </div>
+                                </button>
+                                <button type="button" onclick="window.welcomeShowAuthRegister()"
+                                    class="auth-choice-card outline-none focus:ring-4 focus:ring-primary/20">
+                                    <div class="auth-choice-card__top">
+                                        <div class="auth-choice-card__icon">
+                                            <span class="material-symbols-outlined text-[2.4rem]">person_add</span>
+                                        </div>
+                                        <p class="auth-choice-card__eyebrow">Для нового доступа</p>
+                                        <p class="auth-choice-card__title">Создать аккаунт</p>
+                                        <p class="auth-choice-card__copy">Создайте отдельный аккаунт для библиотеки, прогресса, календаря и собственных публикаций.</p>
+                                    </div>
+                                    <div class="auth-choice-card__bottom">
+                                        <p class="auth-choice-card__footer-note">Имя, логин, email и пароль</p>
+                                        <span class="auth-choice-card__footer">Создать и войти <span class="material-symbols-outlined">arrow_forward</span></span>
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
 
                         <!-- Grid Layout for Cards -->
                         <div id="profilesList" class="welcome-profiles-grid flex w-full max-w-6xl flex-wrap justify-center gap-8 px-4 py-6">
@@ -684,19 +968,33 @@
 
                             <form class="w-full space-y-5"
                                 onsubmit="event.preventDefault();window.welcomeLoginSubmit()">
+                                <div id="loginIdentifierWrap" class="hidden relative">
+                                    <span
+                                        class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">alternate_email</span>
+                                    <input type="text" id="loginIdentifier" placeholder="Логин или email"
+                                        class="w-full pl-12 pr-4 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
+                                </div>
                                 <div class="relative">
                                     <span
                                         class="absolute left-4 top-3.5 text-text-secondary material-symbols-outlined">lock</span>
                                     <input type="password" id="loginPassword" placeholder="Пароль" autofocus
                                         class="w-full pl-12 pr-12 py-4 bg-surface-2 border border-border-strong rounded-xl outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-lg placeholder:text-text-secondary">
                                 </div>
+                                <button type="button" id="forgotPasswordLink" onclick="window.welcomeOpenForgotPasswordModal()"
+                                    class="hidden -mt-1 text-sm font-semibold text-primary hover:underline">
+                                    Забыли пароль?
+                                </button>
                                 <p id="loginError"
                                     class="text-sm text-error font-bold text-center hidden bg-error/10 p-2 rounded-lg">
                                 </p>
-                                <button type="submit"
+                                <button type="submit" id="loginSubmitBtn"
                                     class="w-full py-4 bg-primary text-primary-fg font-bold rounded-xl shadow-lg hover:shadow-primary/30 transform hover:-translate-y-0.5 transition-all text-base flex items-center justify-center gap-3">
                                     Войти в систему
                                     <span class="material-symbols-outlined">login</span>
+                                </button>
+                                <button type="button" id="loginBackBtn" onclick="window.welcomeBackToAuthChoice()"
+                                    class="hidden w-full py-3 rounded-xl font-semibold border border-border-strong text-text-main hover:bg-surface-2 transition-colors">
+                                    Назад
                                 </button>
                             </form>
                         </div>
@@ -789,6 +1087,96 @@
                     disabled>
                     Подтвердить и продолжить
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="forgotPasswordStubModal"
+        class="fixed inset-0 z-[96] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
+        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-text-main">Восстановление пароля</h3>
+                    <p class="text-sm text-text-secondary mt-1">Этот web-flow запланирован следующим этапом.</p>
+                </div>
+                <button type="button" onclick="window.welcomeCloseForgotPasswordStub()"
+                    class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
+                    <span class="material-symbols-outlined text-text-secondary">close</span>
+                </button>
+            </div>
+            <div class="p-5">
+                <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed">
+                    Пока восстановление пароля по email ещё не подключено. Если доступ нужен срочно, используйте другой тестовый аккаунт или выдайте новый временный пароль через локальный dev-инструмент.
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end">
+                <button type="button" onclick="window.welcomeCloseForgotPasswordStub()"
+                    class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                    Понятно
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="forgotPasswordModal"
+        class="fixed inset-0 z-[97] hidden items-center justify-center bg-scrim-strong backdrop-blur-md p-4">
+        <div class="w-full max-w-lg rounded-2xl bg-surface-1 border border-border-subtle shadow-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
+                <div>
+                    <h3 id="forgotPasswordTitle" class="text-lg font-bold text-text-main">Восстановление пароля</h3>
+                    <p id="forgotPasswordSubtitle" class="text-sm text-text-secondary mt-1">Укажите логин или email, и мы отправим ссылку для сброса.</p>
+                </div>
+                <button type="button" onclick="window.welcomeCloseForgotPasswordModal()"
+                    class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
+                    <span class="material-symbols-outlined text-text-secondary">close</span>
+                </button>
+            </div>
+            <div class="p-5">
+                <div id="forgotPasswordRequestPanel" class="space-y-4">
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-text-main">Логин или email</span>
+                        <input type="text" id="forgotPasswordIdentifierInput" placeholder="reader@example.com"
+                            class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
+                    </label>
+                    <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed">
+                        Мы отправим письмо со ссылкой для сброса. Если аккаунт с такими данными существует, письмо придёт на привязанную почту.
+                    </div>
+                    <p id="forgotPasswordRequestStatus"
+                        class="hidden rounded-xl border px-3 py-2 text-sm font-semibold"></p>
+                </div>
+                <div id="forgotPasswordResetPanel" class="hidden space-y-4">
+                    <div class="rounded-2xl border border-border-subtle bg-surface-2 p-4 text-sm text-text-main leading-relaxed">
+                        Придумайте новый пароль для этого аккаунта. Ссылка из письма действует ограниченное время.
+                    </div>
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-text-main">Новый пароль</span>
+                        <input type="password" id="forgotPasswordNewPassword" placeholder="Минимум 8 символов"
+                            class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
+                    </label>
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-text-main">Повторите пароль</span>
+                        <input type="password" id="forgotPasswordConfirmPassword" placeholder="Ещё раз новый пароль"
+                            class="w-full rounded-xl border border-border-strong bg-surface-2 px-4 py-3 outline-none focus:ring-2 focus:ring-primary focus:border-border-normal transition-all font-medium text-base placeholder:text-text-secondary">
+                    </label>
+                    <p id="forgotPasswordResetStatus"
+                        class="hidden rounded-xl border px-3 py-2 text-sm font-semibold"></p>
+                </div>
+            </div>
+            <div class="px-5 py-4 border-t border-border-subtle bg-surface-2 flex justify-end">
+                <div class="flex w-full justify-end gap-2">
+                    <button type="button" onclick="window.welcomeCloseForgotPasswordModal()"
+                        class="px-4 py-2 rounded-lg border border-border-strong text-text-main hover:bg-surface-1 transition-colors text-sm font-semibold">
+                        Закрыть
+                    </button>
+                    <button type="button" id="forgotPasswordRequestBtn" onclick="window.welcomeSubmitForgotPassword()"
+                        class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                        Отправить ссылку
+                    </button>
+                    <button type="button" id="forgotPasswordResetBtn" onclick="window.welcomeSubmitPasswordReset()"
+                        class="hidden px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
+                        Сохранить новый пароль
+                    </button>
+                </div>
             </div>
         </div>
     </div>

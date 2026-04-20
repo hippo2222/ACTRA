@@ -723,6 +723,128 @@ def test_theory_center_overview_returns_user_friendly_states(client):
         complex_service.load_complexes()
 
 
+def test_theory_center_overview_hides_theories_that_hosted_guest_cannot_open(client, monkeypatch):
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+
+    theory = _headless_app_ctx.theory_service.create_theory(
+        {
+            "title": "Hosted Hidden Theory",
+            "delta": {"ops": [{"insert": "Hosted hidden body\n"}]},
+            "created_by_user_id": "user_hidden_owner",
+            "updated_by_user_id": "user_hidden_owner",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+        }
+    )
+    theory_id = theory["id"]
+
+    try:
+        with client.session_transaction() as session:
+            session.pop("auth_user_id", None)
+
+        detail_resp = client.get(f"/api/theories/{theory_id}")
+        assert detail_resp.status_code == 404
+        assert detail_resp.get_json()["error"] == "theory_not_found"
+
+        overview_resp = client.get("/api/theory-center/overview")
+        assert overview_resp.status_code == 200
+        overview = overview_resp.get_json()
+        assert overview["ok"] is True
+
+        theory_ids = {row["id"] for row in overview["theories"]}
+        orphan_ids = {row["id"] for row in overview["orphans"]}
+
+        assert theory_id not in theory_ids
+        assert theory_id not in orphan_ids
+    finally:
+        shutil.rmtree(Path(_headless_app_ctx.theory_service.theories_dir) / theory_id, ignore_errors=True)
+
+
+def test_hosted_owned_complex_marks_foreign_theory_as_missing(client, monkeypatch):
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+
+    module_id = f"mod_hosted_missing_{uuid.uuid4().hex[:8]}"
+    topic_id = f"topic_hosted_missing_{uuid.uuid4().hex[:8]}"
+    task_id = f"task_{uuid.uuid4().hex[:6]}"
+    owner_user = _headless_app_ctx.user_service.create_user(
+        f"Hosted Missing Owner {uuid.uuid4().hex[:6]}"
+    )
+    owner_user_id = owner_user.user_id
+    module_dir = _ensure_module_topic_task(
+        module_id,
+        topic_id,
+        task_id,
+        task_name="Hosted Missing Theory Task",
+    )
+    theory = _headless_app_ctx.theory_service.create_theory(
+        {
+            "title": "Foreign theory",
+            "delta": {"ops": [{"insert": "Foreign body\n"}]},
+            "created_by_user_id": "user_foreign_owner",
+            "updated_by_user_id": "user_foreign_owner",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+        }
+    )
+    complex_id = f"cx_hosted_missing_{uuid.uuid4().hex[:8]}"
+    complex_service = _headless_app_ctx.complex_service
+    history_root = Path(complex_service.complexes_dir) / "history"
+
+    try:
+        complex_service.create_complex(
+            {
+                "id": complex_id,
+                "name": "Owned complex with foreign theory",
+                "tasks": [f"{module_id}/{topic_id}/{task_id}"],
+                "chains": [],
+                "settings": {},
+                "theory_mode": "override",
+                "theory_link": {"theory_id": theory["id"], "relation": "link"},
+                "created_by_user_id": owner_user_id,
+                "updated_by_user_id": owner_user_id,
+                "created_via": "complex_builder",
+                "content_scope": "shared_local",
+            }
+        )
+
+        with client.session_transaction() as session:
+            session["auth_user_id"] = owner_user_id
+
+        complexes_resp = client.get("/api/complexes")
+        assert complexes_resp.status_code == 200
+        complexes_data = complexes_resp.get_json()
+        assert complexes_data["ok"] is True
+
+        complex_item = next(
+            item for item in complexes_data["items"] if item["id"] == complex_id
+        )
+        assert complex_item["has_theory"] is False
+        assert complex_item["theory_link"]["missing"] is True
+
+        overview_resp = client.get("/api/theory-center/overview")
+        assert overview_resp.status_code == 200
+        overview = overview_resp.get_json()
+        assert overview["ok"] is True
+
+        complex_row = next(
+            row for row in overview["complexes"] if row["complex_id"] == complex_id
+        )
+        assert complex_row["has_theory"] is False
+        assert complex_row["theory_state"] == "none"
+        assert complex_row["open_theory_id"] is None
+    finally:
+        try:
+            complex_service.delete_complex(complex_id)
+        except Exception:
+            pass
+        shutil.rmtree(history_root / complex_id, ignore_errors=True)
+        shutil.rmtree(module_dir, ignore_errors=True)
+        shutil.rmtree(Path(_headless_app_ctx.theory_service.theories_dir) / theory["id"], ignore_errors=True)
+        _headless_app_ctx.user_service.delete_user(owner_user_id)
+        _headless_app_ctx.storage_service.reload_modules()
+        complex_service.load_complexes()
+
+
 def test_bulk_delete_theories_skips_linked_records(client):
     module_id = f"mod_theory_bulk_delete_{uuid.uuid4().hex[:8]}"
     topic_id = f"topic_theory_bulk_delete_{uuid.uuid4().hex[:8]}"

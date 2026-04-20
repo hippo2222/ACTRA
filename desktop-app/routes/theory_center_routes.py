@@ -6,17 +6,94 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 
 from flask import Blueprint, jsonify
 
-from routes._context import get_ctx
+from routes._context import get_ctx, is_hosted_web_runtime
 from routes._helpers import (
     _build_theory_link_snapshot,
     _compute_inherited_theory_for_topics,
+    _maybe_hosted_shadow_write_error_response,
     _serialize_complex_payload,
+    _serialize_theory_payload,
     compute_theory_usage_stats,
 )
 
 logger = logging.getLogger(__name__)
 
 theory_center_bp = Blueprint("theory_center", __name__)
+
+
+def _normalize_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _is_imported_library_theory_payload(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    created_via = str(
+        item.get("created_via")
+        or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
+        or ""
+    ).strip().lower()
+    if created_via in {"workspace_import", "archive_import"}:
+        return True
+    return bool(
+        _normalize_optional_text(item.get("source_catalog_item_id"))
+        or _normalize_optional_text(
+            (item.get("source_lineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("source_lineage"), dict)
+            else None
+        )
+        or _normalize_optional_text(
+            (item.get("sourceLineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("sourceLineage"), dict)
+            else None
+        )
+    )
+
+
+def _is_visible_library_theory_for_current_user(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    if ownership.get("is_owned_by_current_user") is True:
+        return True
+    return _is_imported_library_theory_payload(item)
+
+
+def _is_imported_library_complex_payload(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    created_via = str(
+        item.get("created_via")
+        or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
+        or ""
+    ).strip().lower()
+    if created_via in {"workspace_import", "archive_import"}:
+        return True
+    return bool(
+        _normalize_optional_text(item.get("source_catalog_item_id"))
+        or _normalize_optional_text(
+            (item.get("source_lineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("source_lineage"), dict)
+            else None
+        )
+        or _normalize_optional_text(
+            (item.get("sourceLineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("sourceLineage"), dict)
+            else None
+        )
+    )
+
+
+def _is_visible_library_complex_for_current_user(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    if ownership.get("is_owned_by_current_user") is True:
+        return True
+    return _is_imported_library_complex_payload(item)
 
 
 def _parse_task_ref(task_ref: Any) -> Optional[Tuple[str, str, str]]:
@@ -48,7 +125,7 @@ def _normalize_complex_theory_mode(payload: Dict[str, Any]) -> str:
     raw = str(payload.get("theory_mode") or "").strip().lower()
     if raw in {"inherit", "override"}:
         return raw
-    if isinstance(payload.get("theory_link"), dict):
+    if _extract_stored_theory_item(payload.get("theory_link")):
         return "override"
     return "inherit"
 
@@ -69,13 +146,7 @@ def _normalize_complex_sync_status(payload: Dict[str, Any]) -> str:
     if len(normalized_theory_ids) > 1:
         return "composite"
 
-    theory_link = payload.get("theory_link")
-    theory_id = (
-        str(theory_link.get("theory_id") or "").strip()
-        if isinstance(theory_link, dict)
-        else ""
-    )
-    return "ok" if theory_id else "none"
+    return "ok" if _extract_stored_theory_item(payload.get("theory_link")) else "none"
 
 
 def _dedupe_theory_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -85,8 +156,10 @@ def _dedupe_theory_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     ordered_fallback: List[Dict[str, Any]] = []
     for item in items:
         theory_id = str(item.get("theory_id") or "").strip()
-        if theory_id:
-            deduped[theory_id] = item
+        library_entry_id = str(item.get("library_entry_id") or "").strip()
+        item_key = theory_id or (f"linked:{library_entry_id}" if library_entry_id else "")
+        if item_key:
+            deduped[item_key] = item
         else:
             ordered_fallback.append(item)
     if deduped:
@@ -103,10 +176,25 @@ def _extract_stored_theory_item(theory_link: Any) -> Optional[Dict[str, Any]]:
     """
     if not isinstance(theory_link, dict):
         return None
-    theory_id = str(theory_link.get("theory_id") or "").strip()
-    if not theory_id:
+    live_snapshot = _build_theory_link_snapshot(theory_link)
+    if isinstance(live_snapshot, dict) and live_snapshot.get("missing"):
         return None
-    item: Dict[str, Any] = {"theory_id": theory_id}
+    source_kind = str(theory_link.get("source_kind") or "").strip().lower() or "workspace"
+    item: Dict[str, Any] = {"source_kind": source_kind}
+    if source_kind == "linked_library" or str(theory_link.get("library_entry_id") or "").strip():
+        library_entry_id = str(theory_link.get("library_entry_id") or "").strip()
+        if not library_entry_id:
+            return None
+        item["library_entry_id"] = library_entry_id
+        for key in ("catalog_item_id", "source_theory_id", "access_state", "access_reason"):
+            value = str(theory_link.get(key) or "").strip()
+            if value:
+                item[key] = value
+    else:
+        theory_id = str(theory_link.get("theory_id") or "").strip()
+        if not theory_id:
+            return None
+        item["theory_id"] = theory_id
     relation = str(theory_link.get("relation") or "link").strip()
     if relation:
         item["relation"] = relation
@@ -299,6 +387,8 @@ def get_theory_center_overview() -> Any:
 
         for complex_obj in ctx.complex_service.get_all_complexes():
             payload = _serialize_complex_payload(complex_obj, current_user_id=ctx.user_id)
+            if is_hosted_web_runtime() and not _is_visible_library_complex_for_current_user(payload):
+                continue
             serialized_complexes.append(payload)
             complex_id = str(payload.get("id") or "").strip()
             if not complex_id:
@@ -312,7 +402,16 @@ def get_theory_center_overview() -> Any:
         )
 
         try:
-            theory_catalog = ctx.theory_service.list_theories()
+            theory_catalog = [
+                _serialize_theory_payload(item, current_user_id=ctx.user_id)
+                for item in ctx.theory_service.list_theories()
+            ]
+            if is_hosted_web_runtime():
+                theory_catalog = [
+                    item
+                    for item in theory_catalog
+                    if _is_visible_library_theory_for_current_user(item)
+                ]
         except Exception:
             theory_catalog = []
         theory_meta_by_id: Dict[str, Dict[str, Any]] = {}
@@ -336,8 +435,9 @@ def get_theory_center_overview() -> Any:
                 theory_link = _build_theory_link_snapshot(
                     storage.get_topic_theory_link(module_id, topic_id)
                 )
+                has_visible_theory = isinstance(theory_link, dict) and not bool(theory_link.get("missing"))
                 linked_complex_ids = sorted(topic_to_complex_ids.get((module_id, topic_id), set()))
-                theory_topic_id = theory_link.get("theory_id") if isinstance(theory_link, dict) else None
+                theory_topic_id = theory_link.get("theory_id") if has_visible_theory else None
                 meta = theory_meta_by_id.get(theory_topic_id)
                 topic_rows.append(
                     {
@@ -345,11 +445,11 @@ def get_theory_center_overview() -> Any:
                         "module_name": module_name,
                         "topic_id": topic_id,
                         "topic_name": topic_name,
-                        "has_theory": isinstance(theory_link, dict),
-                        "theory_state": "assigned" if isinstance(theory_link, dict) else "missing",
-                        "theory_state_label": "Теория задана" if isinstance(theory_link, dict) else "Теория не задана",
-                        "theory_id": theory_link.get("theory_id") if isinstance(theory_link, dict) else None,
-                        "theory_title": theory_link.get("title_cache") if isinstance(theory_link, dict) else None,
+                        "has_theory": has_visible_theory,
+                        "theory_state": "assigned" if has_visible_theory else "missing",
+                        "theory_state_label": "\u0422\u0435\u043e\u0440\u0438\u044f \u0437\u0430\u0434\u0430\u043d\u0430" if has_visible_theory else "\u0422\u0435\u043e\u0440\u0438\u044f \u043d\u0435 \u0437\u0430\u0434\u0430\u043d\u0430",
+                        "theory_id": theory_link.get("theory_id") if has_visible_theory else None,
+                        "theory_title": theory_link.get("title_cache") if has_visible_theory else None,
                         "theory_link": theory_link,
                         "linked_complexes_count": len(linked_complex_ids),
                         "linked_complex_ids": linked_complex_ids,
@@ -498,5 +598,8 @@ def get_theory_center_overview() -> Any:
             }
         )
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to build theory center overview: %s", exc)
         return jsonify({"ok": False, "error": "theory_center_overview_failed"}), 500

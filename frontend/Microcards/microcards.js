@@ -376,7 +376,7 @@
     // ── State ─────────────────────────────────────────────────────────────
     const state = {
         // Feature flags
-        featureFlags: { microcards_mode: true, microcards_pair_match: true },
+        featureFlags: { microcards_mode: false, microcards_pair_match: false },
         // M14: Microcards productization rollout flags
         prodFlags: {
             microcards_runtime_ui: true,
@@ -562,6 +562,27 @@
         if (badge) {
             badge.classList.remove('mc-streak-warm', 'mc-streak-hot', 'mc-streak-epic');
         }
+    }
+
+    function showModeInProgress() {
+        const subtitle = $('mcHeaderSubtitle');
+        if (subtitle) subtitle.textContent = 'Функционал в разработке';
+        const grid = $('mcDeckGrid');
+        const loading = $('mcDeckLoading');
+        const error = $('mcDeckError');
+        const empty = $('mcDeckEmpty');
+        hide(grid);
+        hide(loading);
+        hide(error);
+        if (empty) {
+            const textBlocks = empty.querySelectorAll('p');
+            const editorLink = empty.querySelector('a[href="/ui/editor"]');
+            if (textBlocks[0]) textBlocks[0].textContent = 'Функционал в разработке';
+            if (textBlocks[1]) textBlocks[1].textContent = 'Микрокарточки временно скрыты из продукта. Вернём этот режим после следующего этапа доработки.';
+            if (editorLink) editorLink.classList.add('hidden');
+            show(empty);
+        }
+        resetSummaryStrip();
     }
 
     async function loadDecks() {
@@ -1308,6 +1329,11 @@
 
         switchView('decks');
         await loadFeatureFlags();
+
+        if (!state.featureFlags.microcards_mode) {
+            showModeInProgress();
+            return;
+        }
 
         // M14: emit runtime opened telemetry
         emitProdTelemetry('microcards_runtime_opened', {});

@@ -727,6 +727,43 @@ class TestStatisticsService(unittest.TestCase):
         self.assertEqual(len(recent_sessions), 1)
         self.assertEqual(recent_sessions[0]["session_id"], "session_repeat_guard")
 
+    def test_filter_complex_statistics_hides_orphaned_complexes(self):
+        """Сиротские комплексы не должны оставаться в статистике страницы."""
+        complex_statistics = {
+            "known_complex": {
+                "aggregated": {"attempts": 4, "wins": 3, "success_rate": 0.75},
+                "recent_sessions": [{"session_id": "s1"}],
+            },
+            "orphan_complex": {
+                "aggregated": {"attempts": 2, "wins": 1, "success_rate": 0.5},
+                "recent_sessions": [{"session_id": "s2"}],
+            },
+        }
+
+        filtered = self.statistics_service.filter_complex_statistics(
+            complex_statistics,
+            valid_complex_ids=["known_complex"],
+        )
+
+        self.assertEqual(list(filtered.keys()), ["known_complex"])
+        self.assertNotIn("orphan_complex", filtered)
+
+    def test_filter_complex_statistics_returns_empty_when_library_is_empty(self):
+        """Если в библиотеке нет комплексов, complex stats должны схлопываться в пустое состояние."""
+        complex_statistics = {
+            "orphan_complex": {
+                "aggregated": {"attempts": 2, "wins": 1, "success_rate": 0.5},
+                "recent_sessions": [{"session_id": "s2"}],
+            },
+        }
+
+        filtered = self.statistics_service.filter_complex_statistics(
+            complex_statistics,
+            valid_complex_ids=[],
+        )
+
+        self.assertEqual(filtered, {})
+
 
 if __name__ == '__main__':
     unittest.main()

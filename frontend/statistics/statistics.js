@@ -9,6 +9,7 @@ const createInitialState = () => ({
     previousDynamics: [],
     complexStats: {},
     complexList: [],
+    complexNames: {},
     theoryCatalog: [],
     theoryInsights: [],
     currentUser: null,
@@ -83,6 +84,75 @@ const StatisticsApp = {
         const head = Math.max(18, Math.floor(maxLength * 0.62));
         const tail = Math.max(10, maxLength - head - 1);
         return `${text.slice(0, head)}…${text.slice(-tail)}`;
+    },
+
+    filterComplexStatsToLibrary(complexStats = {}, complexItems = this.state.complexList) {
+        if (!complexStats || typeof complexStats !== 'object') {
+            return {};
+        }
+
+        const allowedIds = new Set(
+            (Array.isArray(complexItems) ? complexItems : [])
+                .map((item) => String(item?.id || item?.complex_id || '').trim())
+                .filter(Boolean)
+        );
+
+        if (allowedIds.size === 0) {
+            return {};
+        }
+
+        return Object.fromEntries(
+            Object.entries(complexStats).filter(([complexId]) => allowedIds.has(String(complexId || '').trim()))
+        );
+    },
+
+    renderComplexesEmptyState(message = 'Статистика по комплексам появится, когда в библиотеке будут живые комплексы с сессиями.') {
+        const container = document.getElementById('complexes-grid');
+        if (!container) {
+            return;
+        }
+        const nav = document.getElementById('complexes-nav');
+
+        if (this._carouselCleanup) {
+            this._carouselCleanup();
+            this._carouselCleanup = null;
+        }
+
+        if (nav) {
+            nav.style.display = 'none';
+        }
+
+        container.innerHTML = `
+            <div class="stats-complexes-empty">
+                <span class="material-symbols-outlined stats-complexes-empty__icon" aria-hidden="true">history_toggle_off</span>
+                <div class="stats-complexes-empty__copy">
+                    <p class="stats-complexes-empty__title">Пока без данных по комплексам</p>
+                    <p class="stats-complexes-empty__text">${this.escapeHtml(message)}</p>
+                </div>
+            </div>
+        `;
+    },
+
+    renderSidebarEmptyState(container, {
+        icon = 'analytics',
+        title = 'Пока без данных',
+        text = 'Данные появятся после первых сессий.',
+        className = ''
+    } = {}) {
+        if (!container) {
+            return;
+        }
+
+        const safeClassName = String(className || '').trim();
+        container.innerHTML = `
+            <div class="stats-side-empty${safeClassName ? ` ${safeClassName}` : ''}">
+                <span class="material-symbols-outlined stats-side-empty__icon" aria-hidden="true">${this.escapeHtml(icon)}</span>
+                <div class="stats-side-empty__copy">
+                    <p class="stats-side-empty__title">${this.escapeHtml(title)}</p>
+                    <p class="stats-side-empty__text">${this.escapeHtml(text)}</p>
+                </div>
+            </div>
+        `;
     },
 
     showToast(message, type = 'error', duration = 2200) {
@@ -705,10 +775,10 @@ const StatisticsApp = {
                 hadPartialLoadError = true;
             }
 
-            if (complexesData.ok && complexesData.complexes) {
-                this.state.complexStats = complexesData.complexes;
-            } else {
-                this.state.complexStats = {};
+            const rawComplexStats = (complexesData.ok && complexesData.complexes && typeof complexesData.complexes === 'object')
+                ? complexesData.complexes
+                : null;
+            if (!rawComplexStats) {
                 hadPartialLoadError = true;
             }
 
@@ -723,6 +793,10 @@ const StatisticsApp = {
             } else {
                 hadPartialLoadError = true;
             }
+            this.state.complexStats = this.filterComplexStatsToLibrary(
+                rawComplexStats || {},
+                this.state.complexList
+            );
             if (theoriesRes.ok && theoriesData.ok && Array.isArray(theoriesData.items)) {
                 this.state.theoryCatalog = theoriesData.items;
             } else {
@@ -899,6 +973,15 @@ const StatisticsApp = {
     renderTheoryInsights() {
         const container = document.getElementById('theory-analytics-list');
         if (!container) return;
+        const hasLiveComplexStats = Object.keys(this.state.complexStats || {}).length > 0;
+        if (!hasLiveComplexStats) {
+            this.renderSidebarEmptyState(container, {
+                icon: 'account_tree',
+                title: 'Пока без аналитики теории',
+                text: 'Когда появятся сессии по актуальным комплексам с теоретическими связями, здесь соберётся понятная сводка.'
+            });
+            return;
+        }
 
         let insights = Array.isArray(this.state.theoryInsights) ? this.state.theoryInsights.slice(0, 3) : [];
 
@@ -926,7 +1009,11 @@ const StatisticsApp = {
         }
 
         if (!insights.length) {
-            container.innerHTML = '<p class="stats-empty-copy text-sm">Теоретические связи появятся после первых сессий.</p>';
+            this.renderSidebarEmptyState(container, {
+                icon: 'account_tree',
+                title: 'Пока без аналитики теории',
+                text: 'Теоретические связи появятся после первых живых сессий по актуальным комплексам.'
+            });
             return;
         }
 
@@ -966,7 +1053,6 @@ const StatisticsApp = {
         this.updateChartInsight(this.state.dynamics);
         this.renderChart();
         this.renderPerformance();
-        this.renderTheoryInsights();
         this.renderComplexes();
         this.updateEmptyState();
     },
@@ -1621,6 +1707,8 @@ const StatisticsApp = {
         const stats = this.state.stats || {};
         const byType = this.normalizePerformanceTypes(stats.by_task_type);
         const hasAnyAttempts = Object.values(byType || {}).some(v => (v?.attempts || 0) > 0);
+        const hasLiveComplexStats = Object.keys(this.state.complexStats || {}).length > 0;
+        const hasMicrocardsData = (this.state.stats?.microcards?.reviews_total || 0) > 0;
 
         const typeConfig = {
             click: { name: 'Клик', color: 'indigo', order: 1 },
@@ -1653,6 +1741,18 @@ const StatisticsApp = {
 
         // M8: Also render microcards performance section
         this.renderMicrocardsPerformance();
+
+        if (!hasLiveComplexStats) {
+            this.renderSidebarEmptyState(container, {
+                icon: 'pie_chart',
+                title: 'Пока без производительности',
+                className: 'stats-side-empty--fill',
+                text: hasMicrocardsData
+                    ? 'Статистика по типам задач появится, когда будут живые сессии по актуальным комплексам из библиотеки.'
+                    : 'Когда появятся живые сессии по актуальным комплексам из библиотеки, здесь покажется распределение по типам задач.'
+            });
+            return;
+        }
 
         if (!hasAnyAttempts) {
             container.innerHTML = '<p class="stats-empty-copy text-sm text-center py-3">Пока нет данных по типам задач. Пройдите несколько заданий, чтобы увидеть статистику.</p>';
@@ -1743,12 +1843,7 @@ const StatisticsApp = {
         const complexIds = Object.keys(complexStats);
 
         if (complexIds.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-2 stats-complex-card bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col items-center justify-center text-center hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="Карточки комплексов появятся после первых сессий">
-                    <span class="material-symbols-outlined text-text-secondary text-2xl mb-2">folder_open</span>
-                    <p class="stats-empty-copy text-xs">Нет данных о комплексах</p>
-                </div>
-            `;
+            this.renderComplexesEmptyState();
             return;
         }
 
@@ -1775,12 +1870,7 @@ const StatisticsApp = {
             .slice(0, 12);
 
         if (recentComplexes.length === 0) {
-            container.innerHTML = `
-                <div class="col-span-2 stats-complex-card bg-surface-1 rounded-xl p-4 shadow-sm border border-border-subtle flex flex-col items-center justify-center text-center hover:shadow-lg hover:-translate-y-0.5 transition-all tooltip-parent" data-tooltip="Карточки комплексов появятся после первых сессий">
-                    <span class="material-symbols-outlined text-text-secondary text-2xl mb-2">folder_open</span>
-                    <p class="stats-empty-copy text-xs">Нет данных о комплексах</p>
-                </div>
-            `;
+            this.renderComplexesEmptyState('Когда начнутся сессии по актуальным комплексам из вашей библиотеки, здесь появятся последние результаты.');
             return;
         }
 
@@ -1888,9 +1978,11 @@ const StatisticsApp = {
         const mcStats = this.state.stats?.microcards || {};
         const byCardType = mcStats.by_card_type || {};
         const hasMcData = (mcStats.reviews_total || 0) > 0;
+        const hasLiveComplexStats = Object.keys(this.state.complexStats || {}).length > 0;
 
-        if (!hasMcData) {
+        if (!hasMcData || !hasLiveComplexStats) {
             section.classList.add('hidden');
+            container.innerHTML = '';
             return;
         }
 

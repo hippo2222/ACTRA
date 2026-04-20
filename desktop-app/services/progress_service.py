@@ -9,6 +9,7 @@ Progress Service - Wrapper над UserProgressManager для упрощённо�
 
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
 import logging
+import os
 
 # Импортируем новый UserProgressManager
 from services.user_progress_manager import UserProgressManager
@@ -17,7 +18,21 @@ from services.user_progress_manager import UserProgressManager
 from services.task_evaluator_service import EvaluationResult
 
 if TYPE_CHECKING:
+    from persistence.runtime import PersistenceRuntimeSettings
     from services.difficulty_manager import DifficultyManager
+
+
+def _is_hosted_runtime() -> bool:
+    return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
+
+
+def _resolve_progress_user_id(user_id: Optional[str], legacy_default: str = "default_user") -> str:
+    normalized = str(user_id or "").strip()
+    if normalized:
+        return normalized
+    if _is_hosted_runtime():
+        raise ValueError("user_id_required_in_hosted_runtime")
+    return legacy_default
 
 
 class ProgressService:
@@ -39,15 +54,27 @@ class ProgressService:
             task_id="task_liver_click",
             result=evaluation_result
         )
+        if hasattr(self.progress_manager, "set_persistence_settings"):
+            self.progress_manager.set_persistence_settings(persistence_settings)
+
+    @property
+    def hosted_storage_ready(self) -> bool:
+        return bool(getattr(self.progress_manager, "hosted_storage_ready", True))
+
+    def ensure_hosted_persistence_ready(self) -> None:
+        ensure = getattr(self.progress_manager, "ensure_hosted_persistence_ready", None)
+        if callable(ensure):
+            ensure()
         
         # Получение прогресса
         progress = service.get_task_progress(module_id, topic_id, task_id)
         stats = service.get_overall_statistics()
     """
     
-    def __init__(self, data_dir: str, user_id: str = "default_user", 
+    def __init__(self, data_dir: str, user_id: Optional[str] = None,
                  difficulty_manager: Optional['DifficultyManager'] = None,
-                 event_bus: Optional[Any] = None):
+                 event_bus: Optional[Any] = None,
+                 persistence_settings: Optional['PersistenceRuntimeSettings'] = None):
         """
         Инициализация ProgressService.
         
@@ -57,18 +84,29 @@ class ProgressService:
             difficulty_manager: DifficultyManager для эскалации уровней (опционально, Шаг 2.7)
         """
         self.data_dir = data_dir
-        self.user_id = user_id
+        self.user_id = _resolve_progress_user_id(user_id)
         self.logger = logging.getLogger(self.__class__.__name__)
         
         # Инициализируем UserProgressManager с DifficultyManager и EventBus
         self.progress_manager = UserProgressManager(
             data_dir=data_dir,
-            user_id=user_id,
+            user_id=self.user_id,
             difficulty_manager=difficulty_manager,
             event_bus=event_bus  # ← NEW: EventBus for progress events
         )
-    
-    def switch_user(self, user_id: str):
+        if hasattr(self.progress_manager, "set_persistence_settings"):
+            self.progress_manager.set_persistence_settings(persistence_settings)
+
+    @property
+    def hosted_storage_ready(self) -> bool:
+        return bool(getattr(self.progress_manager, "hosted_storage_ready", True))
+
+    def ensure_hosted_persistence_ready(self) -> None:
+        ensure = getattr(self.progress_manager, "ensure_hosted_persistence_ready", None)
+        if callable(ensure):
+            ensure()
+
+    def switch_user(self, user_id: Optional[str]):
         """
         Переключает сервис на другого пользователя.
         
@@ -77,8 +115,9 @@ class ProgressService:
         Args:
             user_id: ID нового пользователя
         """
-        self.user_id = user_id
-        self.progress_manager.switch_user(user_id)
+        resolved_user_id = _resolve_progress_user_id(user_id)
+        self.user_id = resolved_user_id
+        self.progress_manager.switch_user(resolved_user_id)
     
     # =========================================================================
     # СОХРАНЕНИЕ РЕЗУЛЬТАТОВ
@@ -666,4 +705,3 @@ class ProgressService:
 
 # Экспортируемые классы
 __all__ = ['ProgressService']
-

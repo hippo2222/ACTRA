@@ -170,4 +170,29 @@ describe("S3 final results visibility", () => {
     expect(reviewButton?.hidden).toBe(false);
     expect(problemList?.children.length).toBe(1);
   });
+
+  it("normalizes asset-backed review media to canonical hosted asset URLs", async () => {
+    const dom = await setupDom();
+
+    const hooks = dom.window.__S3_TEST_HOOKS;
+    const items = hooks.normalizeReviewItems([
+      {
+        type: "choice_option",
+        text: "Вариант с asset",
+        image_asset_id: "asset_s3_1",
+      },
+      {
+        type: "choice_option",
+        image: {
+          asset_id: "asset_s3_nested",
+        },
+      },
+    ]);
+
+    expect(hooks.resolveReviewImageUrl({ asset_id: "asset_s3_direct" })).toBe(
+      "/api/assets/asset_s3_direct/content",
+    );
+    expect(items[0]?.imageUrl).toBe("/api/assets/asset_s3_1/content");
+    expect(items[1]?.imageUrl).toBe("/api/assets/asset_s3_nested/content");
+  });
 });

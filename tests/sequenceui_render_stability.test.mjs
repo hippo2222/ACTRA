@@ -115,4 +115,45 @@ describe("SequenceUI render stability", () => {
     expect(style?.textContent).not.toContain("@keyframes seqScaleIn");
     expect(style?.textContent).toContain(".seq-level-entry[data-reordering='true']");
   });
+
+  it("normalizes asset-backed sequence elements to canonical hosted asset URLs", () => {
+    const normalized = SequenceUI.__testHooks.normalizeTaskData({
+      task_data: {
+        content: {
+          elements: [
+            { id: "element_asset", text: "Asset element", image_asset_id: "asset_sequence_1" },
+          ],
+          levels: [
+            { level_id: "level_1", label: "Level 1", blocks: ["slot_1"] },
+          ],
+        },
+      },
+    });
+
+    expect(normalized.elements).toHaveLength(1);
+    expect(normalized.elements[0].image).toBe("/api/assets/asset_sequence_1/content");
+  });
+
+  it("prefers canonical asset refs over legacy image_path sequence refs", () => {
+    const normalized = SequenceUI.__testHooks.normalizeTaskData({
+      task_data: {
+        content: {
+          elements: [
+            {
+              id: "element_asset_and_path",
+              text: "Asset element",
+              image_asset_id: "asset_sequence_2",
+              image_path: "legacy/sequence.png",
+            },
+          ],
+          levels: [
+            { level_id: "level_1", label: "Level 1", blocks: ["slot_1"] },
+          ],
+        },
+      },
+    });
+
+    expect(normalized.elements).toHaveLength(1);
+    expect(normalized.elements[0].image).toBe("/api/assets/asset_sequence_2/content");
+  });
 });

@@ -229,6 +229,19 @@ class TestSanitizeImageRef:
     def test_api_local_image_no_path(self, svc):
         assert svc._sanitize_image_ref("/api/local-image?other=val") is None
 
+    def test_api_local_image_asset_id_is_canonicalized(self, svc):
+        result = svc._sanitize_image_ref("/api/local-image?asset_id=asset_theory_1")
+        assert result == "/api/assets/asset_theory_1/content"
+
+    def test_api_assets_ref_is_preserved(self, svc):
+        result = svc._sanitize_image_ref("/api/assets/asset_theory_1/content")
+        assert result == "/api/assets/asset_theory_1/content"
+
+
+class TestImageRefExists:
+    def test_hosted_asset_ref_is_treated_as_existing(self, svc):
+        assert svc._image_ref_exists("/api/assets/asset_theory_1/content") is True
+
 
 # ═══════════════════════════════════════════════════════════════════
 # _sanitize_images_list

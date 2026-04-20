@@ -177,6 +177,44 @@ def test_network_status_endpoint_returns_expected_shape(client):
     assert isinstance(payload.get("updates"), dict)
 
 
+def test_feedback_submit_marks_ticket_delivered_when_email_send_succeeds(client, tmp_path, _mock_misc_helpers):
+    user_id = _get_current_user_id(client)
+    feedback_dir_ref = _mock_misc_helpers["_feedback_dir_ref"]
+    feedback_dir_ref[0] = tmp_path
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
+    _mock_misc_helpers["notify_feedback_via_email"] = lambda *_args, **_kwargs: {"sent": True}
+
+    resp = client.post(
+        "/api/feedback",
+        json={
+            "user_id": user_id,
+            "type": "idea",
+            "severity": "medium",
+            "title": "Online success path",
+            "description": "Feedback should be delivered immediately when SMTP works.",
+            "include_technical_data": True,
+            "technical": {"runtime_mode": "hosted_web"},
+            "include_logs": False,
+        },
+    )
+    assert resp.status_code == 201
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is True
+    assert payload.get("email_notification", {}).get("sent") is True
+
+    ticket_id = payload.get("ticket_id")
+    assert isinstance(ticket_id, str) and ticket_id
+    ticket_path = tmp_path / f"{ticket_id}.json"
+    assert ticket_path.exists()
+
+    ticket = json.loads(ticket_path.read_text(encoding="utf-8"))
+    assert ticket.get("user_id") == user_id
+    assert ticket.get("status") == "delivered"
+    delivery = ticket.get("delivery") or {}
+    assert delivery.get("email_sent") is True
+    assert delivery.get("email_reason") in ("", "ok")
+
+
 def test_feedback_submit_marks_ticket_queued_when_email_send_fails(client, monkeypatch, tmp_path, _mock_misc_helpers):
     user_id = _get_current_user_id(client)
     # After refactoring, update misc_helpers in context
@@ -285,3 +323,63 @@ def test_feedback_submit_short_circuits_when_offline(client, monkeypatch, tmp_pa
     assert payload and payload.get("ok") is True
     assert payload.get("email_notification", {}).get("reason") == "offline"
     assert called["value"] is False
+
+
+def test_feedback_submit_requires_hosted_authentication_in_hosted_runtime(
+    client, monkeypatch, _mock_misc_helpers
+):
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+
+    resp = client.post(
+        "/api/feedback",
+        json={
+            "user_id": "body_user_should_not_matter",
+            "type": "bug",
+            "severity": "low",
+            "title": "Hosted auth required",
+            "description": "Feedback must require an authenticated hosted session.",
+        },
+    )
+
+    assert resp.status_code == 401
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is False
+    assert payload.get("error") == "authentication_required"
+
+
+def test_feedback_submit_uses_hosted_session_user_over_payload_user_id(
+    client, monkeypatch, tmp_path, _mock_misc_helpers
+):
+    session_user_id = _get_current_user_id(client)
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+    feedback_dir_ref = _mock_misc_helpers["_feedback_dir_ref"]
+    feedback_dir_ref[0] = tmp_path
+    _mock_misc_helpers["get_cached_internet_connectivity"] = lambda **_kwargs: True
+    _mock_misc_helpers["notify_feedback_via_email"] = lambda *_args, **_kwargs: {"sent": True}
+
+    body_user_id = "body_user_should_be_ignored"
+
+    with client.session_transaction() as session:
+        session["auth_user_id"] = session_user_id
+
+    resp = client.post(
+        "/api/feedback",
+        json={
+            "user_id": body_user_id,
+            "type": "question",
+            "severity": "medium",
+            "title": "Hosted identity binding",
+            "description": "The server should trust the hosted auth session over payload user_id.",
+        },
+    )
+
+    assert resp.status_code == 201
+    payload = resp.get_json()
+    assert payload and payload.get("ok") is True
+
+    ticket_id = payload.get("ticket_id")
+    assert isinstance(ticket_id, str) and ticket_id
+    ticket_path = tmp_path / f"{ticket_id}.json"
+    saved_ticket = json.loads(ticket_path.read_text(encoding="utf-8"))
+    assert saved_ticket.get("user_id") == session_user_id
+    assert saved_ticket.get("user_id") != body_user_id

@@ -22,6 +22,8 @@ import os
 import inspect
 from datetime import datetime, timedelta
 
+from routes._helpers import _maybe_hosted_shadow_write_error_response
+
 logger = logging.getLogger(__name__)
 
 # Простое кеширование для /api/calendar/activity
@@ -36,6 +38,20 @@ def _invalidate_activity_cache():
     """Сбросить кеш активности после мутирующих операций."""
     _activity_cache["data"] = None
     _activity_cache["timestamp"] = None
+
+
+def _calendar_error_response(exc: Exception):
+    hosted_response = _maybe_hosted_shadow_write_error_response(
+        exc,
+        extra_payload={
+            "success": False,
+            "route_contract": "public_calendar",
+        },
+        status=503,
+    )
+    if hosted_response is not None:
+        return hosted_response
+    return {"success": False, "error": str(exc)}, 500
 
 
 def create_calendar_routes(app, calendar_service, complex_service=None, session_api=None):
@@ -152,7 +168,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.exception("Error in get_today_plan")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/settings
@@ -186,7 +202,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in update_settings: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # GET /api/calendar/schedule
@@ -221,7 +237,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in get_schedule: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/session/start
@@ -362,7 +378,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in start_session: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/session/<id>/complete
@@ -393,7 +409,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in complete_session: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/complex/<id>/freeze
@@ -418,7 +434,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in freeze_complex: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/complex/<id>/unfreeze
@@ -432,7 +448,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in unfreeze_complex: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/complex/<id>/mastered
@@ -446,7 +462,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in mark_mastered: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # GET /api/calendar/health
@@ -481,7 +497,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in get_health: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # GET /api/calendar/activity
@@ -526,7 +542,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in get_activity: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/notification/<id>/dismiss
@@ -540,7 +556,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
         
         except Exception as e:
             logger.error(f"Error in dismiss_notification: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/attempt
@@ -578,7 +594,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             return {"success": False, "error": f"Missing field: {e}"}, 400
         except Exception as e:
             logger.error(f"Error in record_attempt: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # GET /api/calendar/rest-days
@@ -591,7 +607,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             return {"success": True, "rest_days": rest_days}
         except Exception as e:
             logger.error(f"Error in get_rest_days: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # POST /api/calendar/rest-days/<date_str>
@@ -616,7 +632,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             return {"success": False, "error": "Failed to mark rest day"}, 500
         except Exception as e:
             logger.error(f"Error in mark_rest_day: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     # =========================================================================
     # DELETE /api/calendar/rest-days/<date_str>
@@ -633,7 +649,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             return {"success": False, "error": "Failed to unmark rest day"}, 500
         except Exception as e:
             logger.error(f"Error in unmark_rest_day: {e}")
-            return {"success": False, "error": str(e)}, 500
+            return _calendar_error_response(e)
     
     logger.info("Calendar API routes registered")
     return app
@@ -643,7 +659,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
 # STANDALONE REGISTRATION (for server.py integration)
 # =============================================================================
 
-def register_calendar_api(app, data_dir: str, user_id: str = "default_user"):
+def register_calendar_api(app, data_dir: str, user_id: Optional[str] = None):
     """
     Зарегистрировать Calendar API в приложении.
     
@@ -656,7 +672,7 @@ def register_calendar_api(app, data_dir: str, user_id: str = "default_user"):
     
     calendar_service = CalendarService(
         data_dir=data_dir,
-        user_id=user_id,
+        user_id=user_id or "default_user",
     )
     
     # Пытаемся получить complex_service если доступен

@@ -27,12 +27,115 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "desktop-app"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from services.session_repository import SessionRepository
+from persistence.postgres import PostgresUnavailableError
+from persistence.runtime import PersistenceRuntimeSettings
+from services.hosted_shadow_fallback import HostedShadowWriteFallbackDisabledError
+from services.session_repository import HostedSessionRepository, SessionRepository
+from task_system.core.models.complex_models import ComplexSession, QueuedTask
 
 
 @pytest.fixture
 def repo(tmp_path):
     return SessionRepository(data_dir=str(tmp_path))
+
+
+def _build_hosted_settings(tmp_path: Path) -> PersistenceRuntimeSettings:
+    return PersistenceRuntimeSettings(
+        runtime_mode="hosted_web",
+        data_root=tmp_path,
+        state_root=tmp_path / "runtime_state",
+        postgres_dsn="",
+        s3_endpoint="",
+        s3_bucket="",
+        s3_access_key="",
+        s3_secret_key="",
+        hosted_contract_errors=["missing_env:ACTRA_POSTGRES_DSN"],
+    )
+
+
+def _build_real_session(session_id: str = "sess_hosted", user_id: str = "user1") -> ComplexSession:
+    return ComplexSession(
+        id=session_id,
+        complex_id="complex_alpha",
+        user_id=user_id,
+        start_time=datetime(2026, 4, 17, 12, 0, 0),
+        iteration=1,
+        current_task_index=1,
+        queue=[
+            QueuedTask(
+                task_ref="module/topic/task_001",
+                difficulty=2,
+                is_retry=False,
+                origin_iteration=1,
+            )
+        ],
+        is_active=True,
+        paused=True,
+        ui_state={
+            "screen_type": "task_results",
+            "task_ref": "module/topic/task_001",
+            "task_index": 0,
+            "last_updated": "2026-04-17T12:00:05",
+        },
+        paused_resume_target={
+            "screen_type": "task_results",
+            "url": "/session/sess_hosted/task_001",
+            "task_ref": "module/topic/task_001",
+            "task_index": 0,
+        },
+    )
+
+
+class _FakeHostedDocumentRepository:
+    def __init__(self):
+        self.rows = {}
+        self.ensure_schema_calls = 0
+
+    def ensure_schema(self):
+        self.ensure_schema_calls += 1
+
+    def upsert_session(self, **kwargs):
+        self.rows[(kwargs["user_id"], kwargs["session_id"])] = dict(kwargs)
+
+    def get_session_by_session_id(self, *, user_id, session_id):
+        row = self.rows.get((user_id, session_id))
+        if row is None:
+            return None
+        return {
+            "session_id": session_id,
+            "user_id": user_id,
+            "complex_id": row["complex_id"],
+            "is_active": row["is_active"],
+            "paused": row["paused"],
+            "updated_at": row["updated_at"],
+            "payload": row["payload"],
+        }
+
+    def list_sessions_for_user(self, *, user_id):
+        items = []
+        for (row_user_id, session_id), row in self.rows.items():
+            if row_user_id != user_id:
+                continue
+            items.append(
+                {
+                    "session_id": session_id,
+                    "user_id": row_user_id,
+                    "complex_id": row["complex_id"],
+                    "is_active": row["is_active"],
+                    "paused": row["paused"],
+                    "updated_at": row["updated_at"],
+                    "payload": row["payload"],
+                }
+            )
+        return items
+
+    def delete_session_by_session_id(self, *, user_id, session_id):
+        self.rows.pop((user_id, session_id), None)
+
+
+class _UnavailableHostedDocumentRepository:
+    def ensure_schema(self):
+        raise PostgresUnavailableError("postgres_dsn_missing")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -348,3 +451,67 @@ class TestLoadBySessionId:
         loaded = repo.load_session_by_session_id("user1", "sess_legacy")
         assert loaded is not None
         assert loaded.id == "sess_legacy"
+
+
+class TestHostedSessionRepository:
+    def test_hosted_round_trip_uses_postgres_source_of_truth(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        hosted_repo = HostedSessionRepository(
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        hosted_repo._hosted_repository = _FakeHostedDocumentRepository()
+        session = _build_real_session()
+
+        assert hosted_repo.save_session(session, "user1") is True
+
+        loaded = hosted_repo.load_session_by_session_id("user1", session.id)
+
+        assert loaded is not None
+        assert loaded.id == session.id
+        assert loaded.ui_state["screen_type"] == "task_results"
+        assert loaded.paused_resume_target["screen_type"] == "task_results"
+        assert hosted_repo.hosted_storage_ready is True
+        assert not hosted_repo._get_session_file_path(session.id, "user1").exists()
+
+    def test_hosted_save_blocks_shadow_write_by_default(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        hosted_repo = HostedSessionRepository(
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        hosted_repo._hosted_repository = _UnavailableHostedDocumentRepository()
+        session = _build_real_session()
+
+        with pytest.raises(HostedShadowWriteFallbackDisabledError) as exc_info:
+            hosted_repo.save_session(session, "user1")
+
+        assert exc_info.value.operation == "save_session"
+        assert hosted_repo.hosted_shadow_fallback_active is True
+        assert hosted_repo.hosted_shadow_write_fallback_blocked is True
+        assert not hosted_repo._get_session_file_path(session.id, "user1").exists()
+
+    def test_hosted_load_reads_shadow_when_postgres_is_unavailable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        shadow_repo = SessionRepository(data_dir=str(tmp_path))
+        session = _build_real_session(session_id="sess_shadow")
+        assert shadow_repo.save_session(session, "user1") is True
+
+        hosted_repo = HostedSessionRepository(
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        hosted_repo._hosted_repository = _UnavailableHostedDocumentRepository()
+
+        loaded = hosted_repo.load_session_by_session_id("user1", "sess_shadow")
+
+        assert loaded is not None
+        assert loaded.id == "sess_shadow"
+        assert hosted_repo.hosted_shadow_fallback_active is True
+        assert hosted_repo.hosted_shadow_read_fallback_blocked is False

@@ -22,11 +22,16 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from flask import Blueprint, jsonify, request
 
 from api.complexes_api import validate_and_normalize_create_payload
+from services.linked_complex_runtime import build_linked_runtime_complex_id
 from services.complex_service import ConflictError  # type: ignore
 from services.theory_service import TheoryNotFoundError  # type: ignore
 
 from routes._context import get_ctx
-from routes._helpers import _compute_inherited_theory_for_topics, _serialize_complex_payload
+from routes._helpers import (
+    _compute_inherited_theory_for_topics,
+    _maybe_hosted_shadow_write_error_response,
+    _serialize_complex_payload,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +111,7 @@ def _build_inherited_theory_context(task_refs: Any, *, source: str) -> Dict[str,
             "updated_at": datetime.utcnow().isoformat(),
             "topic_count": len(topic_refs),
             "theory_ids": inherited.get("theory_ids") or [],
+            "topic_rows": inherited.get("topic_rows") or [],
         },
     }
 
@@ -127,14 +133,15 @@ def _build_inherited_theory_context(task_refs: Any, *, source: str) -> Dict[str,
 
 def _build_override_theory_context(task_refs: Any, theory_link: Any, *, source: str) -> Dict[str, Any]:
     topic_refs = _collect_topic_refs_from_tasks(task_refs)
-    theory_id = (
-        str(theory_link.get("theory_id") or "").strip()
-        if isinstance(theory_link, dict)
-        else ""
-    )
+    theory_id = ""
+    has_target = False
+    if isinstance(theory_link, dict):
+        theory_id = str(theory_link.get("theory_id") or "").strip()
+        library_entry_id = str(theory_link.get("library_entry_id") or "").strip()
+        has_target = bool(theory_id or library_entry_id)
     theory_ids = [theory_id] if theory_id else []
     return {
-        "theory_sync_status": "ok" if theory_ids else "none",
+        "theory_sync_status": "ok" if has_target else "none",
         "theory_sync_meta": {
             "source": source,
             "updated_at": datetime.utcnow().isoformat(),
@@ -142,6 +149,166 @@ def _build_override_theory_context(task_refs: Any, theory_link: Any, *, source: 
             "theory_ids": theory_ids,
         },
     }
+
+
+def _resolve_complex_theory_link(theory_link: Any) -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    if not isinstance(theory_link, dict):
+        return None, None
+
+    ctx = get_ctx()
+
+    def _resolve_workspace_source_fallback() -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+        source_theory_id = str(
+            theory_link.get("source_theory_id")
+            or theory_link.get("theory_id")
+            or ""
+        ).strip()
+        if not source_theory_id:
+            return None, None
+        try:
+            theory_item = ctx.theory_service.get_theory(
+                source_theory_id,
+                include_delta=False,
+            )
+        except TheoryNotFoundError:
+            return None, None
+        except Exception as exc:
+            logger.warning("[HTTP] Theory fallback lookup failed for %s: %s", source_theory_id, exc)
+            return None, {
+                "field": "theory_link",
+                "reason": "theory_lookup_failed",
+                "value": source_theory_id,
+            }
+
+        resolved = {
+            "source_kind": "workspace",
+            "theory_id": source_theory_id,
+            "relation": "link",
+            "title_cache": str(
+                theory_item.get("title") or theory_link.get("title_cache") or ""
+            ).strip(),
+            "updated_at": str(
+                theory_item.get("updated_at") or theory_item.get("version") or theory_link.get("updated_at") or ""
+            ).strip(),
+            "catalog_item_id": str(theory_link.get("catalog_item_id") or "").strip(),
+            "source_theory_id": source_theory_id,
+        }
+        return resolved, None
+
+    source_kind = str(theory_link.get("source_kind") or "workspace").strip().lower() or "workspace"
+    if source_kind == "linked_library":
+        library_entry_id = str(theory_link.get("library_entry_id") or "").strip()
+        if not library_entry_id:
+            fallback_resolved, fallback_error = _resolve_workspace_source_fallback()
+            if fallback_resolved is not None or fallback_error is not None:
+                return fallback_resolved, fallback_error
+            return None, {
+                "field": "theory_link",
+                "reason": "library_entry_id_required",
+            }
+        try:
+            detail = ctx.catalog_service.get_theory_library_entry(
+                library_entry_id,
+                requested_by_user_id=ctx.user_id,
+            )
+        except ValueError as exc:
+            fallback_resolved, fallback_error = _resolve_workspace_source_fallback()
+            if fallback_resolved is not None or fallback_error is not None:
+                return fallback_resolved, fallback_error
+            return None, {
+                "field": "theory_link",
+                "reason": str(exc) or "theory_library_entry_not_accessible",
+                "value": library_entry_id,
+            }
+        except Exception as exc:
+            logger.warning(
+                "[HTTP] Linked theory lookup failed for %s: %s", library_entry_id, exc
+            )
+            fallback_resolved, fallback_error = _resolve_workspace_source_fallback()
+            if fallback_resolved is not None or fallback_error is not None:
+                return fallback_resolved, fallback_error
+            return None, {
+                "field": "theory_link",
+                "reason": "theory_library_lookup_failed",
+                "value": library_entry_id,
+            }
+
+        entry = detail.get("library_entry") if isinstance(detail.get("library_entry"), dict) else {}
+        item = detail.get("item") if isinstance(detail.get("item"), dict) else {}
+        snapshot = detail.get("snapshot") if isinstance(detail.get("snapshot"), dict) else {}
+        access_state = str(entry.get("access_state") or "").strip().lower()
+        if access_state != "active" or not snapshot:
+            fallback_resolved, fallback_error = _resolve_workspace_source_fallback()
+            if fallback_resolved is not None or fallback_error is not None:
+                return fallback_resolved, fallback_error
+            return None, {
+                "field": "theory_link",
+                "reason": "theory_library_entry_not_accessible",
+                "value": library_entry_id,
+            }
+
+        source_theory_id = str(
+            snapshot.get("workspace_entity_id")
+            or snapshot.get("id")
+            or item.get("source_workspace_id")
+            or ""
+        ).strip()
+        resolved = {
+            "source_kind": "linked_library",
+            "library_entry_id": library_entry_id,
+            "relation": "link",
+            "title_cache": str(
+                snapshot.get("title") or item.get("title") or theory_link.get("title_cache") or ""
+            ).strip(),
+            "updated_at": str(
+                snapshot.get("updated_at")
+                or snapshot.get("version")
+                or theory_link.get("updated_at")
+                or entry.get("updated_at")
+                or ""
+            ).strip(),
+            "catalog_item_id": str(item.get("item_id") or theory_link.get("catalog_item_id") or "").strip(),
+            "source_theory_id": source_theory_id,
+            "access_state": access_state or "active",
+            "access_reason": str(entry.get("access_reason") or theory_link.get("access_reason") or "").strip(),
+        }
+        return resolved, None
+
+    theory_id = str(theory_link.get("theory_id") or "").strip()
+    if not theory_id:
+        return None, {
+            "field": "theory_link",
+            "reason": "theory_id_required",
+        }
+    try:
+        theory_item = ctx.theory_service.get_theory(
+            theory_id,
+            include_delta=False,
+        )
+    except TheoryNotFoundError:
+        return None, {
+            "field": "theory_link",
+            "reason": "theory_not_found",
+            "value": theory_id,
+        }
+    except Exception as exc:
+        logger.warning("[HTTP] Theory lookup failed for %s: %s", theory_id, exc)
+        return None, {
+            "field": "theory_link",
+            "reason": "theory_lookup_failed",
+            "value": theory_id,
+        }
+
+    resolved = dict(theory_link)
+    resolved["source_kind"] = "workspace"
+    resolved["theory_id"] = theory_id
+    resolved["title_cache"] = str(
+        theory_item.get("title") or theory_link.get("title_cache") or ""
+    ).strip()
+    resolved["updated_at"] = str(
+        theory_item.get("updated_at") or theory_link.get("updated_at") or ""
+    ).strip()
+    return resolved, None
 
 
 def _resolve_complex_theory_mode(payload: Dict[str, Any]) -> str:
@@ -162,6 +329,123 @@ def _json_like_equal(left: Any, right: Any) -> bool:
         except Exception:
             return left == right
     return left == right
+
+
+@complexes_bp.route("/api/complex-library", methods=["GET"])
+def list_complex_library() -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_read_library_status"}), 403
+    try:
+        payload = ctx.catalog_service.list_complex_library_entries(requested_by_user_id=ctx.user_id)
+        return jsonify(payload)
+    except ValueError as exc:
+        error = str(exc)
+        status = 404 if error.endswith("_not_found") else 403 if "forbidden" in error else 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to list complex library: %s", exc)
+        return jsonify({"ok": False, "error": "complex_library_load_failed"}), 500
+
+
+@complexes_bp.route("/api/complex-library/<string:library_entry_id>", methods=["GET"])
+def get_complex_library_entry(library_entry_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_read_library_status"}), 403
+    try:
+        payload = ctx.catalog_service.get_complex_library_entry(
+            library_entry_id,
+            requested_by_user_id=ctx.user_id,
+            access_code=request.args.get("access_code"),
+        )
+        return jsonify(payload)
+    except ValueError as exc:
+        error = str(exc)
+        if error.endswith("_not_found"):
+            status = 404
+        elif "forbidden" in error or error in {"catalog_access_code_required", "complex_library_entry_not_accessible"}:
+            status = 403
+        else:
+            status = 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to get complex library entry %s: %s", library_entry_id, exc)
+        return jsonify({"ok": False, "error": "complex_library_detail_failed"}), 500
+
+
+@complexes_bp.route("/api/complex-library/<string:library_entry_id>/access-code", methods=["POST"])
+def submit_complex_library_access_code(library_entry_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_read_library_status"}), 403
+    payload = request.get_json(silent=True) or {}
+    try:
+        result = ctx.catalog_service.submit_complex_library_access_code(
+            library_entry_id,
+            requested_by_user_id=ctx.user_id,
+            access_code=payload.get("access_code"),
+        )
+        return jsonify(result)
+    except ValueError as exc:
+        error = str(exc)
+        if error.endswith("_not_found"):
+            status = 404
+        elif "forbidden" in error or error in {"catalog_access_code_required", "complex_library_entry_not_accessible"}:
+            status = 403
+        else:
+            status = 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to submit complex library access code %s: %s", library_entry_id, exc)
+        return jsonify({"ok": False, "error": "complex_library_access_code_failed"}), 500
+
+
+@complexes_bp.route("/api/complex-library/<string:library_entry_id>", methods=["DELETE"])
+def delete_complex_library_entry(library_entry_id: str) -> Any:
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
+    try:
+        result = ctx.catalog_service.remove_complex_library_entry(
+            library_entry_id,
+            requested_by_user_id=ctx.user_id,
+        )
+
+        runtime_complex_id = build_linked_runtime_complex_id(library_entry_id)
+        session_api = getattr(ctx, "session_api", None)
+        session_manager = getattr(session_api, "_session_manager", None) if session_api is not None else None
+        active_sessions = getattr(session_manager, "_active_sessions", None) if session_manager is not None else None
+        if isinstance(active_sessions, dict):
+            for session_id, loaded in list(active_sessions.items()):
+                if str(getattr(loaded, "complex_id", "") or "").strip() != runtime_complex_id:
+                    continue
+                if str(getattr(loaded, "user_id", "") or "").strip() != ctx.user_id:
+                    continue
+                active_sessions.pop(session_id, None)
+
+        session_repo = getattr(session_manager, "session_repository", None) if session_manager is not None else None
+        if session_repo is not None and runtime_complex_id:
+            try:
+                session_repo.delete_session(runtime_complex_id, ctx.user_id)
+            except Exception:
+                logger.warning(
+                    "[HTTP] Failed to clear linked runtime sessions for removed library entry %s",
+                    library_entry_id,
+                    exc_info=True,
+                )
+
+        return jsonify(result)
+    except ValueError as exc:
+        error = str(exc)
+        status = 404 if error.endswith("_not_found") else 403 if "forbidden" in error else 400
+        return jsonify({"ok": False, "error": error}), status
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to delete complex library entry %s: %s", library_entry_id, exc)
+        return jsonify({"ok": False, "error": "complex_library_delete_failed"}), 500
 
 
 @complexes_bp.route("/api/complexes", methods=["POST"])
@@ -210,30 +494,11 @@ def create_complex() -> Any:
                 errors.append({"field": "tasks", "reason": "task_not_found", "value": tr})
 
         theory_link = normalized.get("theory_link")
+        resolved_theory_link = None
         if isinstance(theory_link, dict):
-            theory_id = theory_link.get("theory_id")
-            if isinstance(theory_id, str) and theory_id.strip():
-                try:
-                    ctx.theory_service.get_theory(
-                        theory_id.strip(), include_delta=False
-                    )
-                except TheoryNotFoundError:
-                    errors.append(
-                        {
-                            "field": "theory_link",
-                            "reason": "theory_not_found",
-                            "value": theory_id,
-                        }
-                    )
-                except Exception as exc:
-                    logger.warning("[HTTP] Theory lookup failed for %s: %s", theory_id, exc)
-                    errors.append(
-                        {
-                            "field": "theory_link",
-                            "reason": "theory_lookup_failed",
-                            "value": theory_id,
-                        }
-                    )
+            resolved_theory_link, theory_error = _resolve_complex_theory_link(theory_link)
+            if theory_error is not None:
+                errors.append(theory_error)
 
         if errors:
             return (
@@ -248,7 +513,7 @@ def create_complex() -> Any:
             "tasks": normalized["tasks"],
             "chains": normalized["chains"],
             "settings": normalized["settings"],
-            "theory_link": normalized.get("theory_link"),
+            "theory_link": resolved_theory_link,
             "theory_mode": normalized.get("theory_mode"),
             "created_by_user_id": ctx.user_id,
             "updated_by_user_id": ctx.user_id,
@@ -266,7 +531,7 @@ def create_complex() -> Any:
             complex_data.update(
                 _build_override_theory_context(
                     normalized["tasks"],
-                    normalized.get("theory_link"),
+                    resolved_theory_link,
                     source="complex_create",
                 )
             )
@@ -275,6 +540,9 @@ def create_complex() -> Any:
         created = ctx.complex_service.create_complex(complex_data)
         return jsonify({"ok": True, "item": _serialize_complex_response_item(created)}), 200
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to create complex: %s", exc)
         return jsonify({"ok": False, "error": "complex_create_failed"}), 500
 
@@ -302,35 +570,24 @@ def update_complex(complex_id: str) -> Any:
             return jsonify({"ok": False, "error": "complex_not_found"}), 404
 
         theory_link = normalized.get("theory_link")
+        resolved_theory_link = None
         if isinstance(theory_link, dict):
-            theory_id = theory_link.get("theory_id")
-            if isinstance(theory_id, str) and theory_id.strip():
-                try:
-                    ctx.theory_service.get_theory(
-                        theory_id.strip(), include_delta=False
-                    )
-                except TheoryNotFoundError:
-                    return (
-                        jsonify(
-                            {
-                                "ok": False,
-                                "error": "validation_error",
-                                "details": {
-                                    "errors": [
-                                        {
-                                            "field": "theory_link",
-                                            "reason": "theory_not_found",
-                                            "value": theory_id,
-                                        }
-                                    ]
-                                },
-                            }
-                        ),
-                        400,
-                    )
+            resolved_theory_link, theory_error = _resolve_complex_theory_link(theory_link)
+            if theory_error is not None:
+                return (
+                    jsonify(
+                        {
+                            "ok": False,
+                            "error": "validation_error",
+                            "details": {"errors": [theory_error]},
+                        }
+                    ),
+                    400,
+                )
 
         update_payload = {
             **normalized,
+            "theory_link": resolved_theory_link,
             "updated_by_user_id": ctx.user_id,
         }
         effective_mode = _resolve_complex_theory_mode(update_payload)
@@ -343,7 +600,7 @@ def update_complex(complex_id: str) -> Any:
             update_payload.update(
                 _build_override_theory_context(
                     normalized["tasks"],
-                    normalized.get("theory_link"),
+                    resolved_theory_link,
                     source="complex_update",
                 )
             )
@@ -377,6 +634,9 @@ def update_complex(complex_id: str) -> Any:
         )
 
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to update complex %s: %s", complex_id, exc)
         return jsonify({"ok": False, "error": "complex_update_failed"}), 500
 
@@ -516,6 +776,9 @@ def sync_complex_theory_from_topics(complex_id: str) -> Any:
             }
         )
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to sync complex theory from topics %s: %s", complex_id, exc)
         return jsonify({"ok": False, "error": "complex_theory_sync_failed"}), 500
 
@@ -545,6 +808,9 @@ def delete_complex_endpoint(complex_id: str) -> Any:
 
         return jsonify({"ok": True})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to delete complex %s: %s", complex_id, exc)
         return jsonify({"ok": False, "error": "complex_delete_failed"}), 500
 
@@ -552,19 +818,15 @@ def delete_complex_endpoint(complex_id: str) -> Any:
 @complexes_bp.route("/api/complexes/<string:complex_id>/autosave", methods=["GET"])
 def get_complex_autosave(complex_id: str) -> Any:
     try:
-        autosave_path = (
-            get_ctx().complex_service.complexes_dir / f"{complex_id}.autosave.json"
-        )
-        if not autosave_path.exists():
+        autosave_snapshot = get_ctx().complex_service.get_latest_autosave_snapshot(complex_id)
+        if not autosave_snapshot:
             return jsonify({"ok": False, "error": "autosave_not_found"}), 404
-
-        with open(autosave_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        saved_at = datetime.fromtimestamp(
-            autosave_path.stat().st_mtime, tz=timezone.utc
-        ).isoformat()
-        return jsonify({"ok": True, "item": data, "saved_at": saved_at})
+        saved_at = autosave_snapshot.get("_history_saved_at") or autosave_snapshot.get("updated_at")
+        return jsonify({"ok": True, "item": autosave_snapshot, "saved_at": saved_at})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to get autosave for %s: %s", complex_id, exc)
         return jsonify({"ok": False, "error": "autosave_load_failed"}), 500
 
@@ -576,23 +838,21 @@ def save_complex_autosave(complex_id: str) -> Any:
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     payload = request.get_json(silent=True) or {}
     try:
-        # Check if complex exists
-        if not ctx.complex_service.get_complex(complex_id):
-            return jsonify({"ok": False, "error": "complex_not_found"}), 404
-
-        # We don't strictly validate autosave payload to allow saving partial/invalid drafts
-        autosave_path = (
-            ctx.complex_service.complexes_dir / f"{complex_id}.autosave.json"
+        snapshot = ctx.complex_service.save_autosave_snapshot(complex_id, payload)
+        return jsonify(
+            {
+                "ok": True,
+                "item": snapshot,
+                "saved_at": datetime.utcnow().replace(tzinfo=timezone.utc).isoformat(),
+                "history_kind": "autosave",
+            }
         )
-
-        # Add id to payload if not present
-        if "id" not in payload:
-            payload["id"] = complex_id
-
-        with open(autosave_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, indent=2, ensure_ascii=False)
-        return jsonify({"ok": True})
+    except ValueError:
+        return jsonify({"ok": False, "error": "complex_not_found"}), 404
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to save autosave for %s: %s", complex_id, exc)
         return jsonify({"ok": False, "error": "autosave_save_failed"}), 500
 
@@ -602,13 +862,12 @@ def delete_complex_autosave(complex_id: str) -> Any:
     if get_ctx().user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     try:
-        autosave_path = (
-            get_ctx().complex_service.complexes_dir / f"{complex_id}.autosave.json"
-        )
-        if autosave_path.exists():
-            os.remove(autosave_path)
-        return jsonify({"ok": True})
+        deleted_count = get_ctx().complex_service.delete_autosave_snapshots(complex_id)
+        return jsonify({"ok": True, "deleted_count": deleted_count})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to delete autosave for %s: %s", complex_id, exc)
         return jsonify({"ok": False, "error": "autosave_delete_failed"}), 500
 
@@ -620,6 +879,9 @@ def get_complex_history(complex_id: str) -> Any:
         history = get_ctx().complex_service.get_complex_history(complex_id)
         return jsonify({"ok": True, "history": history})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception(f"Failed to get history for complex {complex_id}: {exc}")
         return jsonify({"ok": False, "error": "history_fetch_failed"}), 500
 
@@ -647,5 +909,8 @@ def restore_complex_from_history(complex_id: str, snapshot_timestamp: str) -> An
     except ValueError as exc:
         return jsonify({"ok": False, "error": str(exc)}), 404
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception(f"Failed to restore complex {complex_id}: {exc}")
         return jsonify({"ok": False, "error": "restore_failed"}), 500

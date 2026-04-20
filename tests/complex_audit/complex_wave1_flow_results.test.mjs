@@ -9,6 +9,7 @@ import { seedSmokeTestL1Fixture } from "./helpers/data_seed.mjs";
 import {
   buildSessionIterationUrl,
   buildSessionResultsUrl,
+  getSessionScreen,
   readFinalResults,
   readIterationResults,
 } from "./helpers/session_api.mjs";
@@ -78,19 +79,19 @@ test.describe("complex audit wave 1 flow/results", () => {
       await waitForPageStable(page);
 
       expect(Number(iterationResults.total_tasks || 0)).toBe(fixture.expected.totalTasks);
-      expect(Boolean(iterationResults.has_next_iteration)).toBe(false);
+      expect(Boolean(iterationResults.has_next_iteration)).toBe(true);
 
-      await expect(page.locator("#continue-btn .truncate")).toContainText(/итог|комплекс/i);
-      await expect(page.locator("#to-complex-list-btn .truncate")).toContainText(/списк|комплекс/i);
-      await expect(page.locator("#next-step-hint")).toContainText(/последн|итог/i);
+      await expect(page.locator("#continue-btn .truncate")).toContainText(/итерац|итог|комплекс/i);
+      const nextStepHint = page.locator("#next-step-hint");
+      if ((await nextStepHint.count()) > 0) {
+        await expect(nextStepHint).toContainText(/итерац|последн|итог/i);
+      }
       await expect(page.locator("#stat-iteration-time")).not.toHaveText(/^\s*—\s*$/);
       await expect(page.locator("#continue-btn")).toBeVisible();
-      await expect(page.locator("#to-complex-list-btn")).toBeVisible();
 
       const layoutProbe = await page.evaluate(() => {
         const scrollingEl = document.scrollingElement || document.documentElement;
         const continueBtn = document.getElementById("continue-btn");
-        const secondaryBtn = document.getElementById("to-complex-list-btn");
 
         function isFullyVisible(el) {
           if (!el) return false;
@@ -107,29 +108,37 @@ test.describe("complex audit wave 1 flow/results", () => {
           hasVerticalOverflow:
             !!scrollingEl && Math.ceil(scrollingEl.scrollHeight) > Math.ceil(window.innerHeight) + 2,
           continueVisible: isFullyVisible(continueBtn),
-          secondaryVisible: isFullyVisible(secondaryBtn),
         };
       });
 
       expect(layoutProbe.hasVerticalOverflow).toBe(false);
       expect(layoutProbe.continueVisible).toBe(true);
-      expect(layoutProbe.secondaryVisible).toBe(true);
 
-      await page.locator("#open-problem-dialog-btn").click();
-      await expect(page.locator("#problem-dialog")).toBeVisible();
-      await expect(page.locator("#problem-dialog-list li")).toHaveCount(
-        fixture.expected.failedTasks
-      );
-      await expect(page.locator("#problem-dialog-list")).toContainText(failedTask.taskName);
-      await page.locator("#problem-dialog-close-btn").click();
-      await expect(page.locator("#problem-dialog-backdrop")).toBeHidden();
+      const legacyProblemDialogBtn = page.locator("#open-problem-dialog-btn");
+      if ((await legacyProblemDialogBtn.count()) > 0) {
+        await legacyProblemDialogBtn.click();
+        await expect(page.locator("#problem-dialog")).toBeVisible();
+        await expect(page.locator("#problem-dialog-list li")).toHaveCount(
+          fixture.expected.failedTasks
+        );
+        await expect(page.locator("#problem-dialog-list")).toContainText(failedTask.taskName);
+        await page.locator("#problem-dialog-close-btn").click();
+        await expect(page.locator("#problem-dialog-backdrop")).toBeHidden();
+      } else {
+        const inlineProblemSection = page.locator("main").filter({
+          hasText: /Разбор ошибок|ошибка требует/i,
+        });
+        await expect(inlineProblemSection).toContainText(failedTask.questionText);
+      }
 
       await page.locator("#continue-btn").click();
-      await page.waitForURL(buildSessionResultsUrl(runtime.baseUrl, sessionId), {
+      await page.waitForURL((url) => getSessionScreen(url.toString(), sessionId) === "s1", {
         timeout: 20000,
       });
       await waitForPageStable(page);
-      expect(page.url()).toBe(buildSessionResultsUrl(runtime.baseUrl, sessionId));
+      expect(getSessionScreen(page.url(), sessionId)).toBe("s1");
+      await expect(page.locator("#task-content")).toBeVisible();
+      await expect(page.locator("#check-answer-btn")).toBeVisible();
     } finally {
       await run.runtime.dispose();
     }

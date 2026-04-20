@@ -1,4 +1,5 @@
 import json
+import io
 import logging
 import os
 import shutil
@@ -10,12 +11,26 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
 from api.complexes_api import validate_and_normalize_create_payload
+from persistence.runtime import HOSTED_SHADOW_WRITE_FALLBACK_ENV
+from werkzeug.datastructures import FileStorage
 
+from .hosted_shadow_fallback import (
+    HostedShadowReadFallbackDisabledError,
+    HostedShadowWriteFallbackDisabledError,
+)
 from .package_io import PackageIO
 from .theory_service import TheoryNotFoundError
 
 
 ComplexImportReport = Dict[str, Any]
+
+_WORKSPACE_IMPORT_MARKER_KEYS = (
+    "source_complex_id",
+    "source_catalog_item_id",
+    "source_catalog_version_id",
+    "prefer_existing_by_lineage",
+    "requested_by_user_id",
+)
 
 
 class ComplexImportExportService:
@@ -23,6 +38,12 @@ class ComplexImportExportService:
 
     SPEC = "actra.package/2"
     ALLOWED_EXTENSIONS = {".json", ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"}
+    SERVICE_CONTRACT = {
+        "namespace": "public_editor_import_export",
+        "import_family": "complex_archive_import",
+        "workspace_import": False,
+        "public_api": True,
+    }
 
     def __init__(self, storage_service, complex_service, theory_service, task_import_export_service=None):
         self.storage = storage_service
@@ -47,6 +68,23 @@ class ComplexImportExportService:
         except Exception:
             pass
         return "0.0.0"
+
+    @classmethod
+    def _with_service_contract(cls, payload: Any) -> Any:
+        if not isinstance(payload, dict):
+            return payload
+        normalized = dict(payload)
+        normalized["service_contract"] = dict(cls.SERVICE_CONTRACT)
+        return normalized
+
+    def _reject_workspace_import_params(self, params: Any, *, context: str) -> None:
+        if not isinstance(params, dict):
+            return
+        markers = [key for key in _WORKSPACE_IMPORT_MARKER_KEYS if key in params]
+        if markers:
+            raise ValueError(
+                f"workspace_import_params_not_supported:{context}:{','.join(markers)}"
+            )
 
     # -------------------------------------------------------------------------
     # Export
@@ -105,37 +143,25 @@ class ComplexImportExportService:
                             missing_tasks.append(task_ref)
                             continue
                         module_id, topic_id, task_id = parsed
-                        task_dir = self.storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
-                        if not task_dir.exists():
+                        if not self._write_task_payload_to_archive(
+                            zf,
+                            module_id,
+                            topic_id,
+                            task_id,
+                            checksums=checksums,
+                        ):
                             missing_tasks.append(task_ref)
                             continue
-                        for root, dirs, files in os.walk(task_dir):
-                            dirs.sort()
-                            files.sort()
-                            for filename in files:
-                                file_path = Path(root) / filename
-                                rel = file_path.relative_to(task_dir).as_posix()
-                                arc_name = f"modules/{module_id}/topics/{topic_id}/tasks/{task_id}/{rel}"
-                                zf.write(file_path, arc_name)
-                                checksums[arc_name] = self.package_io.sha256_file(file_path)
 
                 if include_theories:
                     for theory_id in sorted(exported_theory_ids):
-                        source_dir = self.theory_service.theories_dir / theory_id
-                        if not source_dir.exists():
+                        if not self._write_theory_payload_to_archive(
+                            zf,
+                            theory_id,
+                            checksums=checksums,
+                        ):
                             missing_theories.append(theory_id)
                             continue
-                        for root, dirs, files in os.walk(source_dir):
-                            dirs.sort()
-                            files.sort()
-                            for filename in files:
-                                file_path = Path(root) / filename
-                                rel = file_path.relative_to(source_dir).as_posix()
-                                if rel.startswith("history/"):
-                                    continue
-                                arc_name = f"theories/{theory_id}/{rel}"
-                                zf.write(file_path, arc_name)
-                                checksums[arc_name] = self.package_io.sha256_file(file_path)
 
                 manifest = {
                     "spec": self.SPEC,
@@ -173,6 +199,136 @@ class ComplexImportExportService:
             if os.path.exists(temp_zip_path):
                 os.remove(temp_zip_path)
             raise
+
+    def _write_task_payload_to_archive(
+        self,
+        zf: zipfile.ZipFile,
+        module_id: str,
+        topic_id: str,
+        task_id: str,
+        *,
+        checksums: Dict[str, str],
+    ) -> bool:
+        arc_root = f"modules/{module_id}/topics/{topic_id}/tasks/{task_id}"
+        loaded_task = None
+        if hasattr(self.storage, "load_task"):
+            loaded_task = self.storage.load_task(module_id, topic_id, task_id)
+
+        if isinstance(loaded_task, dict) and isinstance(loaded_task.get("task_data"), dict):
+            task_payload = json.loads(json.dumps(loaded_task.get("task_data"), ensure_ascii=False))
+            task_dir_value = loaded_task.get("task_dir")
+            if isinstance(task_dir_value, str) and task_dir_value.strip():
+                task_dir = Path(task_dir_value)
+            else:
+                task_dir = self.storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+
+            staged_assets: Dict[str, Path] = {}
+            rewrite_helper = getattr(self.task_import_export_service, "_rewrite_task_payload_image_refs", None)
+            if callable(rewrite_helper):
+                task_payload, _ = rewrite_helper(
+                    task_payload,
+                    task_dir,
+                    staged_assets=staged_assets,
+                    allow_stage_external=True,
+                    allow_asset_resolution=True,
+                )
+
+            task_bytes = json.dumps(task_payload, indent=2, ensure_ascii=False).encode("utf-8")
+            task_arc_name = f"{arc_root}/task.json"
+            zf.writestr(task_arc_name, task_bytes)
+            checksums[task_arc_name] = self.package_io.sha256_bytes(task_bytes)
+            for portable_rel_path, source_path in staged_assets.items():
+                arc_name = f"{arc_root}/{portable_rel_path}".replace("\\", "/")
+                zf.write(source_path, arc_name)
+                checksums[arc_name] = self.package_io.sha256_file(source_path)
+            return True
+
+        task_dir = self.storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+        if not task_dir.exists():
+            return False
+
+        for root, dirs, files in os.walk(task_dir):
+            dirs.sort()
+            files.sort()
+            for filename in files:
+                file_path = Path(root) / filename
+                rel = file_path.relative_to(task_dir).as_posix()
+                arc_name = f"{arc_root}/{rel}"
+                zf.write(file_path, arc_name)
+                checksums[arc_name] = self.package_io.sha256_file(file_path)
+        return True
+
+    def _write_theory_payload_to_archive(
+        self,
+        zf: zipfile.ZipFile,
+        theory_id: str,
+        *,
+        checksums: Dict[str, str],
+    ) -> bool:
+        try:
+            theory_payload = self.theory_service.get_theory(theory_id, include_delta=True)
+        except TheoryNotFoundError:
+            theory_payload = None
+
+        wrote_anything = False
+        if isinstance(theory_payload, dict) and theory_payload:
+            theory_meta = {
+                "id": theory_payload.get("id", theory_id),
+                "title": theory_payload.get("title") or "",
+                "created_at": theory_payload.get("created_at"),
+                "updated_at": theory_payload.get("updated_at"),
+                "version": theory_payload.get("version"),
+                "images": theory_payload.get("images") or [],
+                "delta_path": "body.delta.json",
+                "workspace_entity_kind": theory_payload.get("workspace_entity_kind"),
+                "workspace_entity_id": theory_payload.get("workspace_entity_id"),
+                "workspace_entity_ref": theory_payload.get("workspace_entity_ref"),
+                "workspace_entity": theory_payload.get("workspace_entity"),
+                "workspace_copy_kind": theory_payload.get("workspace_copy_kind"),
+                "workspace_copy": theory_payload.get("workspace_copy"),
+                "created_by_user_id": theory_payload.get("created_by_user_id"),
+                "updated_by_user_id": theory_payload.get("updated_by_user_id"),
+                "created_via": theory_payload.get("created_via"),
+                "content_scope": theory_payload.get("content_scope"),
+                "source_catalog_item_id": theory_payload.get("source_catalog_item_id"),
+                "source_catalog_version_id": theory_payload.get("source_catalog_version_id"),
+                "source_entity_kind": theory_payload.get("source_entity_kind"),
+                "source_entity_id": theory_payload.get("source_entity_id"),
+                "has_source_lineage": bool(theory_payload.get("has_source_lineage")),
+                "source_lineage": theory_payload.get("source_lineage"),
+                "source_lineage_key": theory_payload.get("source_lineage_key"),
+            }
+            theory_meta_bytes = json.dumps(theory_meta, indent=2, ensure_ascii=False).encode("utf-8")
+            theory_meta_arc = f"theories/{theory_id}/theory.json"
+            zf.writestr(theory_meta_arc, theory_meta_bytes)
+            checksums[theory_meta_arc] = self.package_io.sha256_bytes(theory_meta_bytes)
+
+            delta_bytes = json.dumps(
+                theory_payload.get("delta") or {"ops": [{"insert": "\n"}]},
+                indent=2,
+                ensure_ascii=False,
+            ).encode("utf-8")
+            delta_arc = f"theories/{theory_id}/body.delta.json"
+            zf.writestr(delta_arc, delta_bytes)
+            checksums[delta_arc] = self.package_io.sha256_bytes(delta_bytes)
+            wrote_anything = True
+
+        source_dir = self.theory_service.theories_dir / theory_id
+        if source_dir.exists():
+            for root, dirs, files in os.walk(source_dir):
+                dirs.sort()
+                files.sort()
+                for filename in files:
+                    file_path = Path(root) / filename
+                    rel = file_path.relative_to(source_dir).as_posix()
+                    if rel.startswith("history/") or rel in {"theory.json", "body.delta.json"}:
+                        continue
+                    arc_name = f"theories/{theory_id}/{rel}"
+                    zf.write(file_path, arc_name)
+                    checksums[arc_name] = self.package_io.sha256_file(file_path)
+                    wrote_anything = True
+
+        return wrote_anything
 
     # -------------------------------------------------------------------------
     # Validation
@@ -247,11 +403,11 @@ class ComplexImportExportService:
                         report["summary"]["valid"] += 1
 
             report["ok"] = True
-            return report
+            return self._with_service_contract(report)
         except Exception as exc:
             self.logger.error("Complex archive validation failed: %s", exc)
             report["critical_error"] = str(exc)
-            return report
+            return self._with_service_contract(report)
 
     def _read_manifest(self, zf: zipfile.ZipFile, report: ComplexImportReport) -> Optional[Dict[str, Any]]:
         try:
@@ -367,8 +523,8 @@ class ComplexImportExportService:
         params: Dict[str, Any],
         progress_callback: Optional[Any] = None,
     ) -> ComplexImportReport:
+        self._reject_workspace_import_params(params, context="import_complexes_atomic")
         temp_extract_dir = Path(tempfile.mkdtemp(prefix="complex_import_extract_"))
-        backup_dir: Optional[Path] = None
 
         skip_errors = bool(params.get("skip_errors", False))
         atomic_mode = str(params.get("atomic_mode", "bundle") or "bundle").strip().lower()
@@ -400,6 +556,11 @@ class ComplexImportExportService:
             "id_remap": {"complexes": {}, "theories": {}},
             "errors": [],
         }
+        task_rollback_plan: Optional[Dict[str, Any]] = None
+        created_theories: List[str] = []
+        overwritten_theories: List[Tuple[str, str]] = []
+        created_complexes: List[str] = []
+        overwritten_complexes: List[Tuple[str, str]] = []
 
         try:
             if progress_callback:
@@ -409,7 +570,10 @@ class ComplexImportExportService:
             self.package_io.extract_filtered(archive_path, temp_extract_dir, allowed_extensions=self.ALLOWED_EXTENSIONS)
 
             if atomic_mode == "bundle":
-                backup_dir = self._create_state_backup()
+                task_rollback_plan = self._plan_task_import_rollback(
+                    temp_extract_dir,
+                    task_conflict_resolution=task_conflict,
+                )
 
             if self.task_import_export_service is not None:
                 if progress_callback:
@@ -449,8 +613,13 @@ class ComplexImportExportService:
                     result["theories"]["reused"] += 1
                 elif status == "overwritten":
                     result["theories"]["overwritten"] += 1
+                    snapshot_timestamp = theory_status.get("snapshot_timestamp")
+                    if isinstance(final_id, str) and isinstance(snapshot_timestamp, str):
+                        overwritten_theories.append((final_id, snapshot_timestamp))
                 else:
                     result["theories"]["imported"] += 1
+                    if isinstance(final_id, str):
+                        created_theories.append(final_id)
 
             complex_root = temp_extract_dir / "complexes"
             complex_files = sorted(
@@ -488,6 +657,13 @@ class ComplexImportExportService:
                 status = import_status.get("status")
                 if status == "imported":
                     result["imported_complexes"] += 1
+                    action = str(import_status.get("action") or "").strip().lower()
+                    if action == "overwrite":
+                        snapshot_timestamp = import_status.get("snapshot_timestamp")
+                        if isinstance(final_id, str) and isinstance(snapshot_timestamp, str):
+                            overwritten_complexes.append((final_id, snapshot_timestamp))
+                    elif isinstance(final_id, str):
+                        created_complexes.append(final_id)
                 elif status == "skipped":
                     result["skipped_complexes"] += 1
                 else:
@@ -502,31 +678,46 @@ class ComplexImportExportService:
             result["ok"] = result["complex_errors"] == 0 and result["theories"]["errors"] == 0
             if skip_errors and result["complex_errors"] > 0:
                 result["ok"] = True
-            return result
+            return self._with_service_contract(result)
 
         except Exception as exc:
             self.logger.error("Complex import failed: %s", exc)
-            if backup_dir is not None and atomic_mode == "bundle":
+            if atomic_mode == "bundle":
                 try:
-                    self._restore_state_backup(backup_dir)
+                    self._rollback_complex_import_changes(
+                        task_plan=task_rollback_plan,
+                        created_theories=created_theories,
+                        overwritten_theories=overwritten_theories,
+                        created_complexes=created_complexes,
+                        overwritten_complexes=overwritten_complexes,
+                    )
                     result["rollback"] = True
                 except Exception as rb_exc:
                     self.logger.error("Complex import rollback failed: %s", rb_exc)
                     result["errors"].append({"scope": "rollback", "error": str(rb_exc)})
+            hosted_shadow_payload = self._hosted_shadow_error_payload(exc)
+            if hosted_shadow_payload is not None:
+                hosted_shadow_payload["rollback"] = bool(result.get("rollback"))
+                hosted_shadow_payload["imported_complexes"] = result["imported_complexes"]
+                hosted_shadow_payload["skipped_complexes"] = result["skipped_complexes"]
+                hosted_shadow_payload["complex_errors"] = result["complex_errors"]
+                hosted_shadow_payload["theories"] = dict(result["theories"])
+                hosted_shadow_payload["tasks"] = dict(result["tasks"])
+                hosted_shadow_payload["id_remap"] = {
+                    "complexes": dict(result["id_remap"]["complexes"]),
+                    "theories": dict(result["id_remap"]["theories"]),
+                }
+                hosted_shadow_payload["errors"] = list(result["errors"])
+                return hosted_shadow_payload
             result["ok"] = False
             result["error_message"] = str(exc)
-            return result
+            return self._with_service_contract(result)
         finally:
             try:
                 if temp_extract_dir.exists():
                     shutil.rmtree(temp_extract_dir)
             except Exception:
                 pass
-            if backup_dir is not None and backup_dir.exists():
-                try:
-                    shutil.rmtree(backup_dir)
-                except Exception:
-                    pass
 
     def _import_theory_dir(self, source_dir: Path, policy: str) -> Dict[str, Any]:
         incoming_meta, incoming_delta = self._load_theory_payload_from_dir(source_dir)
@@ -548,73 +739,231 @@ class ComplexImportExportService:
         except Exception:
             existing = None
 
+        final_id = incoming_id
+        overwrite = False
         if existing is None:
-            self._materialize_theory(source_dir, incoming_id, incoming_id, overwrite=False)
-            return {"status": "imported", "incoming_id": incoming_id, "final_id": incoming_id}
+            final_id = incoming_id
+        else:
+            existing_hash = self._compute_theory_hash(
+                title=str(existing.get("title") or ""),
+                images=list(existing.get("images") or []),
+                delta=existing.get("delta") or {"ops": [{"insert": "\n"}]},
+            )
+            if existing_hash == incoming_hash:
+                return {"status": "reused", "incoming_id": incoming_id, "final_id": incoming_id}
+            if policy == "overwrite":
+                final_id = incoming_id
+                overwrite = True
+            elif policy in {"reuse_if_same_hash", "new_id_if_diff"}:
+                final_id = self._generate_unique_theory_id()
+            else:
+                return {"status": "error", "incoming_id": incoming_id, "error": "unsupported_theory_policy"}
 
-        existing_hash = self._compute_theory_hash(
-            title=str(existing.get("title") or ""),
-            images=list(existing.get("images") or []),
-            delta=existing.get("delta") or {"ops": [{"insert": "\n"}]},
-        )
-        if existing_hash == incoming_hash:
-            return {"status": "reused", "incoming_id": incoming_id, "final_id": incoming_id}
+        snapshot_timestamp: Optional[str] = None
+        created_target = False
+        try:
+            if overwrite:
+                snapshot_timestamp = self._capture_theory_snapshot(final_id)
+            else:
+                create_payload = {
+                    "id": final_id,
+                    "title": str(incoming_meta.get("title") or ""),
+                    "delta": {"ops": [{"insert": "\n"}]},
+                    "images": [],
+                    "created_by_user_id": incoming_meta.get("created_by_user_id"),
+                    "updated_by_user_id": incoming_meta.get("updated_by_user_id"),
+                    "created_via": "archive_import",
+                    "content_scope": "shared_local",
+                }
+                self.theory_service.create_theory(create_payload)
+                created_target = True
 
-        if policy == "overwrite":
-            self._materialize_theory(source_dir, incoming_id, incoming_id, overwrite=True)
-            return {"status": "overwritten", "incoming_id": incoming_id, "final_id": incoming_id}
+            image_map = self._upload_theory_archive_images(
+                source_dir,
+                source_theory_id=incoming_id,
+                target_theory_id=final_id,
+                meta=incoming_meta,
+                delta=incoming_delta,
+            )
+            final_meta, final_delta = self._rewrite_theory_payload_with_uploaded_images(
+                incoming_meta,
+                incoming_delta,
+                image_map,
+            )
+            update_payload = {
+                "title": str(final_meta.get("title") or ""),
+                "images": list(final_meta.get("images") or []),
+                "delta": final_delta,
+                "created_by_user_id": incoming_meta.get("created_by_user_id"),
+                "updated_by_user_id": incoming_meta.get("updated_by_user_id"),
+                "created_via": "archive_import",
+                "content_scope": "shared_local",
+            }
+            self.theory_service.update_theory(final_id, update_payload, expected_version=None)
+        except Exception as exc:
+            try:
+                if created_target:
+                    self.theory_service.delete_theory(final_id)
+                elif overwrite and snapshot_timestamp:
+                    self.theory_service.restore_from_history(final_id, snapshot_timestamp)
+            except Exception as cleanup_exc:
+                self.logger.warning(
+                    "Theory import cleanup failed for %s -> %s: %s",
+                    incoming_id,
+                    final_id,
+                    cleanup_exc,
+                )
+            return {
+                "status": "error",
+                "incoming_id": incoming_id,
+                "final_id": final_id,
+                "error": str(exc),
+            }
 
-        if policy in {"reuse_if_same_hash", "new_id_if_diff"}:
-            new_id = self._generate_unique_theory_id()
-            self._materialize_theory(source_dir, incoming_id, new_id, overwrite=False)
-            return {"status": "imported", "incoming_id": incoming_id, "final_id": new_id}
+        if overwrite:
+            return {
+                "status": "overwritten",
+                "incoming_id": incoming_id,
+                "final_id": final_id,
+                "snapshot_timestamp": snapshot_timestamp,
+            }
+        return {"status": "imported", "incoming_id": incoming_id, "final_id": final_id}
 
-        return {"status": "error", "incoming_id": incoming_id, "error": "unsupported_theory_policy"}
+    def _capture_theory_snapshot(self, theory_id: str) -> str:
+        current_payload = self.theory_service.get_theory(theory_id, include_delta=True)
+        meta = {
+            key: value
+            for key, value in current_payload.items()
+            if key != "delta"
+        }
+        meta["delta_path"] = "body.delta.json"
+        delta = current_payload.get("delta") or {"ops": [{"insert": "\n"}]}
+        save_snapshot = getattr(self.theory_service, "_save_history_snapshot", None)
+        if not callable(save_snapshot):
+            raise RuntimeError("theory_history_snapshot_not_supported")
+        save_snapshot(theory_id, meta, delta)
+        history = self.theory_service.get_history(theory_id)
+        if not history or not isinstance(history[0].get("_snapshot_timestamp"), str):
+            raise RuntimeError("theory_history_snapshot_missing")
+        return str(history[0]["_snapshot_timestamp"])
 
-    def _materialize_theory(
+    def _upload_theory_archive_images(
         self,
         source_dir: Path,
+        *,
         source_theory_id: str,
         target_theory_id: str,
-        overwrite: bool,
-    ) -> None:
-        target_dir = self.theory_service.theories_dir / target_theory_id
-        if target_dir.exists():
-            if not overwrite:
-                raise ValueError(f"Theory already exists: {target_theory_id}")
-            shutil.rmtree(target_dir)
-
-        shutil.copytree(source_dir, target_dir)
-        history_dir = target_dir / "history"
-        if history_dir.exists():
-            shutil.rmtree(history_dir)
-        (target_dir / "history").mkdir(parents=True, exist_ok=True)
-        (target_dir / "images").mkdir(parents=True, exist_ok=True)
-
-        meta_path = target_dir / "theory.json"
-        delta_path = target_dir / "body.delta.json"
-        meta = json.loads(meta_path.read_text(encoding="utf-8")) if meta_path.exists() else {}
-        delta = json.loads(delta_path.read_text(encoding="utf-8")) if delta_path.exists() else {"ops": [{"insert": "\n"}]}
-
-        meta = self._rewrite_theory_meta_image_refs(meta, source_theory_id, target_theory_id)
-        delta = self._rewrite_theory_delta_image_refs(delta, source_theory_id, target_theory_id)
-
-        now = datetime.utcnow().isoformat()
-        meta["id"] = target_theory_id
-        meta["delta_path"] = "body.delta.json"
-        meta["updated_at"] = now
-        meta["version"] = now
-        if not meta.get("created_at"):
-            meta["created_at"] = now
-
+        meta: Dict[str, Any],
+        delta: Dict[str, Any],
+    ) -> Dict[str, str]:
+        image_map: Dict[str, str] = {}
         image_refs = list(meta.get("images") or [])
         for image_ref in self._collect_delta_image_refs(delta):
             if image_ref not in image_refs:
                 image_refs.append(image_ref)
-        meta["images"] = image_refs
 
-        meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
-        delta_path.write_text(json.dumps(delta, indent=2, ensure_ascii=False), encoding="utf-8")
+        for raw_ref in image_refs:
+            normalized_ref = self._normalize_theory_archive_image_ref(raw_ref)
+            if not normalized_ref or normalized_ref in image_map:
+                continue
+            image_source = self._resolve_theory_archive_image_source(
+                source_dir,
+                normalized_ref,
+                source_theory_id=source_theory_id,
+            )
+            if image_source is None:
+                raise ValueError(f"missing_theory_image:{normalized_ref}")
+            with image_source.open("rb") as image_file:
+                upload = FileStorage(
+                    stream=io.BytesIO(image_file.read()),
+                    filename=image_source.name,
+                    content_type=None,
+                )
+            image_result = self.theory_service.add_image(target_theory_id, upload)
+            uploaded_path = str(image_result.get("path") or "").strip()
+            if not uploaded_path:
+                raise ValueError(f"theory_image_upload_missing_path:{normalized_ref}")
+            image_map[normalized_ref] = uploaded_path.replace("\\", "/").lstrip("/")
+        return image_map
+
+    def _normalize_theory_archive_image_ref(self, raw_ref: Any) -> str:
+        if not isinstance(raw_ref, str):
+            return ""
+        return raw_ref.replace("\\", "/").lstrip("/")
+
+    def _resolve_theory_archive_image_source(
+        self,
+        source_dir: Path,
+        raw_ref: str,
+        *,
+        source_theory_id: str,
+    ) -> Optional[Path]:
+        normalized = self._normalize_theory_archive_image_ref(raw_ref)
+        if not normalized:
+            return None
+
+        candidates: List[Path] = [source_dir / normalized, source_dir / Path(normalized).name]
+        prefix = f"complexes/theories/{source_theory_id}/images/"
+        if normalized.startswith(prefix):
+            suffix = normalized[len(prefix):]
+            candidates.append(source_dir / "images" / suffix)
+        elif normalized.startswith("images/"):
+            candidates.append(source_dir / normalized)
+        elif "/images/" in normalized:
+            suffix = normalized.split("/images/", 1)[-1]
+            candidates.append(source_dir / "images" / suffix)
+        else:
+            candidates.append(source_dir / "images" / normalized)
+
+        seen: Set[str] = set()
+        for candidate in candidates:
+            try:
+                resolved = candidate.resolve()
+            except FileNotFoundError:
+                resolved = candidate
+            key = resolved.as_posix().lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            if resolved.exists() and resolved.is_file():
+                return resolved
+        return None
+
+    def _rewrite_theory_payload_with_uploaded_images(
+        self,
+        meta: Dict[str, Any],
+        delta: Dict[str, Any],
+        image_map: Dict[str, str],
+    ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        rewritten_meta = dict(meta or {})
+        rewritten_delta = {"ops": []}
+        rewritten_images: List[str] = []
+
+        for raw_ref in list(rewritten_meta.get("images") or []):
+            normalized_ref = self._normalize_theory_archive_image_ref(raw_ref)
+            if normalized_ref in image_map:
+                uploaded_ref = image_map[normalized_ref]
+                if uploaded_ref not in rewritten_images:
+                    rewritten_images.append(uploaded_ref)
+        rewritten_meta["images"] = rewritten_images
+
+        for op in list((delta or {}).get("ops") or []):
+            if not isinstance(op, dict):
+                continue
+            cloned_op = dict(op)
+            insert = cloned_op.get("insert")
+            if isinstance(insert, dict) and isinstance(insert.get("image"), str):
+                normalized_ref = self._normalize_theory_archive_image_ref(insert["image"])
+                if normalized_ref in image_map:
+                    cloned_insert = dict(insert)
+                    cloned_insert["image"] = image_map[normalized_ref]
+                    cloned_op["insert"] = cloned_insert
+                    if cloned_insert["image"] not in rewritten_images:
+                        rewritten_images.append(cloned_insert["image"])
+            rewritten_delta["ops"].append(cloned_op)
+
+        rewritten_meta["images"] = rewritten_images
+        return rewritten_meta, {"ops": rewritten_delta["ops"] or [{"insert": "\n"}]}
 
     def _load_theory_payload_from_dir(self, theory_dir: Path) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         meta_path = theory_dir / "theory.json"
@@ -813,7 +1162,14 @@ class ComplexImportExportService:
 
             if complex_conflict_policy == "overwrite":
                 self.complex_service.update_complex(incoming_id, import_data, expected_version=None)
-                return {"status": "imported", "incoming_id": incoming_id, "final_id": incoming_id, "action": "overwrite"}
+                snapshot_timestamp = self._latest_complex_snapshot_timestamp(incoming_id)
+                return {
+                    "status": "imported",
+                    "incoming_id": incoming_id,
+                    "final_id": incoming_id,
+                    "action": "overwrite",
+                    "snapshot_timestamp": snapshot_timestamp,
+                }
 
             if complex_conflict_policy == "new_id":
                 new_id = str(uuid.uuid4())
@@ -825,52 +1181,149 @@ class ComplexImportExportService:
 
         create_payload = {"id": incoming_id, **import_data}
         self.complex_service.create_complex(create_payload)
-        return {"status": "imported", "incoming_id": incoming_id, "final_id": incoming_id}
+        return {
+            "status": "imported",
+            "incoming_id": incoming_id,
+            "final_id": incoming_id,
+            "action": "create",
+        }
 
     # -------------------------------------------------------------------------
     # Helpers
     # -------------------------------------------------------------------------
 
-    def _create_state_backup(self) -> Path:
-        backup_root = Path(tempfile.mkdtemp(prefix="complex_import_backup_"))
-        modules_backup = backup_root / "modules"
-        theories_backup = backup_root / "theories"
-        complexes_backup = backup_root / "complexes.json"
+    def _plan_task_import_rollback(
+        self,
+        temp_extract_dir: Path,
+        *,
+        task_conflict_resolution: str,
+    ) -> Dict[str, Any]:
+        plan: Dict[str, Any] = {
+            "new_tasks": [],
+            "overwritten_tasks": [],
+            "created_targets": [],
+        }
+        created_target_keys: Set[Tuple[str, str, Optional[str]]] = set()
 
-        if self.storage.modules_dir.exists():
-            shutil.copytree(self.storage.modules_dir, modules_backup)
+        for task_file in sorted(temp_extract_dir.rglob("task.json")):
+            rel_parts = task_file.relative_to(temp_extract_dir).parts
+            if len(rel_parts) < 6 or rel_parts[0] != "modules" or rel_parts[2] != "topics" or rel_parts[4] != "tasks":
+                continue
 
-        if self.theory_service.theories_dir.exists():
-            shutil.copytree(self.theory_service.theories_dir, theories_backup)
-        else:
-            theories_backup.mkdir(parents=True, exist_ok=True)
+            module_id = str(rel_parts[1]).strip()
+            topic_id = str(rel_parts[3]).strip()
+            if not module_id or not topic_id:
+                continue
 
-        if self.complex_service.complexes_file.exists():
-            shutil.copy2(self.complex_service.complexes_file, complexes_backup)
-        else:
-            complexes_backup.write_text("[]", encoding="utf-8")
+            task_data = json.loads(task_file.read_text(encoding="utf-8"))
+            task_id = str(task_data.get("id") or "").strip() or str(rel_parts[5]).strip()
+            if not task_id:
+                continue
 
-        return backup_root
+            existing_payload = self.storage.load_task(module_id, topic_id, task_id)
+            if isinstance(existing_payload, dict) and isinstance(existing_payload.get("task_data"), dict):
+                if task_conflict_resolution == "overwrite":
+                    plan["overwritten_tasks"].append(
+                        (
+                            module_id,
+                            topic_id,
+                            task_id,
+                            json.loads(json.dumps(existing_payload["task_data"], ensure_ascii=False)),
+                        )
+                    )
+            else:
+                plan["new_tasks"].append((module_id, topic_id, task_id))
 
-    def _restore_state_backup(self, backup_root: Path) -> None:
-        modules_backup = backup_root / "modules"
-        theories_backup = backup_root / "theories"
-        complexes_backup = backup_root / "complexes.json"
+            if not self.storage.get_module(module_id):
+                key = ("module", module_id, None)
+                if key not in created_target_keys:
+                    created_target_keys.add(key)
+                    plan["created_targets"].append(key)
+            if not self.storage.get_topic(module_id, topic_id):
+                key = ("topic", module_id, topic_id)
+                if key not in created_target_keys:
+                    created_target_keys.add(key)
+                    plan["created_targets"].append(key)
 
-        if self.storage.modules_dir.exists():
-            shutil.rmtree(self.storage.modules_dir)
-        if modules_backup.exists():
-            shutil.copytree(modules_backup, self.storage.modules_dir)
+        return plan
 
-        if self.theory_service.theories_dir.exists():
-            shutil.rmtree(self.theory_service.theories_dir)
-        shutil.copytree(theories_backup, self.theory_service.theories_dir)
+    def _rollback_task_import_plan(self, task_plan: Optional[Dict[str, Any]]) -> None:
+        if not isinstance(task_plan, dict):
+            return
 
-        self.complex_service.complexes_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(complexes_backup, self.complex_service.complexes_file)
+        for module_id, topic_id, task_id in reversed(list(task_plan.get("new_tasks") or [])):
+            self.storage.delete_task(module_id, topic_id, task_id)
+        for module_id, topic_id, task_id, backup_payload in reversed(list(task_plan.get("overwritten_tasks") or [])):
+            self.storage.save_task(
+                module_id,
+                topic_id,
+                task_id,
+                json.loads(json.dumps(backup_payload, ensure_ascii=False)),
+                validate=False,
+            )
+        for kind, module_id, topic_id in reversed(list(task_plan.get("created_targets") or [])):
+            if kind == "topic" and topic_id:
+                self.storage.delete_topic(module_id, topic_id)
+            elif kind == "module":
+                self.storage.delete_module(module_id)
 
+    def _rollback_complex_import_changes(
+        self,
+        *,
+        task_plan: Optional[Dict[str, Any]],
+        created_theories: List[str],
+        overwritten_theories: List[Tuple[str, str]],
+        created_complexes: List[str],
+        overwritten_complexes: List[Tuple[str, str]],
+    ) -> None:
+        for complex_id in reversed(created_complexes):
+            self.complex_service.delete_complex(complex_id)
+        for complex_id, snapshot_timestamp in reversed(overwritten_complexes):
+            self.complex_service.restore_from_history(complex_id, snapshot_timestamp)
+        for theory_id in reversed(created_theories):
+            self.theory_service.delete_theory(theory_id)
+        for theory_id, snapshot_timestamp in reversed(overwritten_theories):
+            self.theory_service.restore_from_history(theory_id, snapshot_timestamp)
+        self._rollback_task_import_plan(task_plan)
         self.storage.reload_modules()
         self.complex_service.load_complexes()
+
+    def _latest_complex_snapshot_timestamp(self, complex_id: str) -> str:
+        history = self.complex_service.get_complex_history(complex_id)
+        if not history or not isinstance(history[0].get("_snapshot_timestamp"), str):
+            raise RuntimeError(f"complex_history_snapshot_missing:{complex_id}")
+        return str(history[0]["_snapshot_timestamp"])
+
+    def _hosted_shadow_error_payload(self, exc: Exception) -> Optional[Dict[str, Any]]:
+        if isinstance(exc, HostedShadowReadFallbackDisabledError):
+            return self._with_service_contract(
+                {
+                    "ok": False,
+                    "error": "hosted_shadow_read_blocked",
+                    "degraded": True,
+                    "details": {
+                        "operation": str(exc.operation or "").strip() or None,
+                        "reason": str(exc.reason or "").strip() or None,
+                        "runtime_mode": "hosted_web",
+                        "source_of_truth": "postgres",
+                    },
+                }
+            )
+        if isinstance(exc, HostedShadowWriteFallbackDisabledError):
+            return self._with_service_contract(
+                {
+                    "ok": False,
+                    "error": "hosted_shadow_write_blocked",
+                    "degraded": True,
+                    "details": {
+                        "operation": str(exc.operation or "").strip() or None,
+                        "reason": str(exc.reason or "").strip() or None,
+                        "runtime_mode": "hosted_web",
+                        "env_opt_in": HOSTED_SHADOW_WRITE_FALLBACK_ENV,
+                    },
+                }
+            )
+        return None
 
     def _generate_unique_theory_id(self) -> str:
         while True:

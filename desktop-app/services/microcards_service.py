@@ -5,6 +5,7 @@ Review state and events are stored per user under ``data/users/{user_id}/microca
 """
 
 import json
+import os
 import random
 import uuid
 from datetime import datetime, timedelta
@@ -53,6 +54,19 @@ def _write_json(path: Path, payload: Any) -> None:
 
 def _s(value: Any, default: str = "") -> str:
     return str(value if value is not None else default).strip()
+
+
+def _is_hosted_runtime() -> bool:
+    return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
+
+
+def _resolve_microcards_user_id(user_id: Optional[str], *, legacy_default: str = "default_user") -> str:
+    resolved = _s(user_id)
+    if resolved:
+        return resolved
+    if _is_hosted_runtime():
+        raise ValueError("user_id_required_in_hosted_runtime")
+    return _s(legacy_default, "default_user") or "default_user"
 
 
 def _int_list(values: Any, limit: int = 64) -> List[int]:
@@ -230,12 +244,14 @@ def apply_sm2_mvp_rating(prev_state: Optional[Dict[str, Any]], rating: str, *, n
 
 
 class MicrocardsService:
-    def __init__(self, data_dir: str, user_id: str = "default_user") -> None:
+    def __init__(self, data_dir: str, user_id: Optional[str] = None) -> None:
         self.data_dir = Path(data_dir)
-        self.user_id = _s(user_id, "default_user") or "default_user"
+        self.user_id = _resolve_microcards_user_id(user_id)
 
-    def switch_user(self, user_id: str) -> None:
-        self.user_id = _s(user_id, "default_user") or "default_user"
+    def switch_user(self, user_id: Optional[str]) -> None:
+        # Legacy desktop/test compatibility remains here, but hosted runtime
+        # must pass an explicit user id instead of silently falling back.
+        self.user_id = _resolve_microcards_user_id(user_id)
 
     @property
     def _global_root(self) -> Path:
@@ -842,7 +858,7 @@ class MicrocardsService:
                 "content_scope": "shared_local",
             },
         }
-        _write_json(self._deck_path(deck_id), deck)
+        self._write_deck(deck)
         return deck
 
     def append_cards_from_analysis_to_deck(
@@ -863,7 +879,7 @@ class MicrocardsService:
             selector=selector or {},
             deck_name=None,
         )
-        temp_path = self._deck_path(_s(temp_deck.get("id")))
+        temp_deck_id = _s(temp_deck.get("id"))
         try:
             existing_cards = target.get("cards") if isinstance(target.get("cards"), list) else []
             new_cards = temp_deck.get("cards") if isinstance(temp_deck.get("cards"), list) else []
@@ -909,8 +925,8 @@ class MicrocardsService:
             }
         finally:
             try:
-                if temp_path.exists():
-                    temp_path.unlink()
+                if temp_deck_id:
+                    self.delete_deck(temp_deck_id)
             except Exception:
                 pass
 
@@ -1109,7 +1125,7 @@ class MicrocardsService:
                 "source": "manual_editor",
             },
         }
-        _write_json(self._deck_path(deck_id), deck)
+        self._write_deck(deck)
         return deck
 
     def rename_deck(self, deck_id: str, new_name: str) -> Dict[str, Any]:

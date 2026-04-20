@@ -33,6 +33,17 @@ def _ah() -> Dict[str, Any]:
     return get_extra("ai_helpers")
 
 
+def _ai_mode_placeholder_response() -> Any:
+    return _ah()["feature_disabled_json"]("ai_mode_in_progress", status_code=404)
+
+
+@ai_bp.before_request
+def _block_ai_routes_when_placeholder_enabled() -> Any:
+    if _ah()["is_editor_feature_enabled"]("ai_mode"):
+        return None
+    return _ai_mode_placeholder_response()
+
+
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
@@ -43,6 +54,7 @@ def ai_status() -> Any:
     """Check AI provider availability and daily limits."""
     svc = get_ai_service()
     h = _ah()
+    ctx = get_ctx()
     if svc is None or not svc.is_configured:
         return jsonify(h["attach_editor_feature_flags"]({
             "ok": True,
@@ -56,7 +68,9 @@ def ai_status() -> Any:
             },
         }))
     try:
-        user_id = get_ctx().user_id or "default_user"
+        user_id = getattr(ctx, "user_id", None)
+        if not user_id or user_id == "guest":
+            return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
         result = svc.get_status(user_id)
         return jsonify(h["attach_editor_feature_flags"](result if isinstance(result, dict) else {"ok": True}))
     except Exception as exc:
@@ -440,7 +454,9 @@ def ai_upload() -> Any:
     if fp is None:
         return jsonify({"ok": False, "error": "file_processor_unavailable"}), 500
 
-    user_id = ctx.user_id or "default_user"
+    user_id = str(ctx.user_id or "").strip()
+    if not user_id:
+        return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
 
     # Check daily limit
     allowed, remaining, max_files = svc.check_daily_limit(user_id)
@@ -543,7 +559,7 @@ def ai_generate() -> Any:
     _ai_run_write_artifact = h["ai_run_write_artifact"]
     _utc_now_iso = h["utc_now_iso"]
 
-    if _headless_app_ctx.user_id == "guest":
+    if get_ctx().user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_use_ai"}), 403
     if _ai_service is None or not _ai_service.is_configured:
         return jsonify({

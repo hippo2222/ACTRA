@@ -124,6 +124,57 @@ class ComplexSessionController:
 
         return filtered_payload
 
+    @staticmethod
+    def _resolve_test_failed_question_positions(
+        session: Optional[ComplexSession],
+        task_ref: str,
+        failed_indices: list[int],
+    ) -> list[int]:
+        if not failed_indices or session is None:
+            return failed_indices
+
+        normalized_failed = []
+        for raw_index in failed_indices:
+            try:
+                normalized_failed.append(int(raw_index))
+            except Exception:
+                continue
+
+        if not normalized_failed:
+            return []
+
+        test_shuffle = getattr(session, "test_shuffle", None)
+        iteration = getattr(session, "iteration", None)
+        if not isinstance(test_shuffle, dict) or iteration is None:
+            return normalized_failed
+
+        shuffle_key = f"{task_ref}@{iteration}"
+        shuffle_entry = test_shuffle.get(shuffle_key)
+        if not isinstance(shuffle_entry, dict):
+            return normalized_failed
+
+        question_order = shuffle_entry.get("question_order")
+        if not isinstance(question_order, list) or not question_order:
+            return normalized_failed
+
+        if all(0 <= idx < len(question_order) for idx in normalized_failed):
+            return normalized_failed
+
+        original_to_shuffled: Dict[int, int] = {}
+        for shuffled_idx, original_idx in enumerate(question_order):
+            try:
+                original_idx_int = int(original_idx)
+            except Exception:
+                continue
+            if original_idx_int in original_to_shuffled:
+                continue
+            original_to_shuffled[original_idx_int] = shuffled_idx
+
+        if not original_to_shuffled:
+            return normalized_failed
+
+        return [original_to_shuffled.get(idx, idx) for idx in normalized_failed]
+
     def _apply_test_partial_retry_filter(
         self,
         *,
@@ -141,9 +192,14 @@ class ComplexSessionController:
             failed_subtests = getattr(session, "test_failed_subtests", None) or {}
             failed_indices = failed_subtests.get(task_ref) or []
             if failed_indices:
+                failed_positions = self._resolve_test_failed_question_positions(
+                    session,
+                    task_ref,
+                    failed_indices,
+                )
                 return self._filter_test_questions_for_partial_retry(
                     task_data_full,
-                    failed_indices,
+                    failed_positions,
                 )
         except Exception as e:
             logger.warning(

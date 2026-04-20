@@ -16,16 +16,30 @@ def validate_task_ref(task_ref: Any) -> Optional[str]:
 
 
 def validate_and_normalize_theory_link(
-    value: Any, *, required: bool = False
+    value: Any, *, required: bool = False, allow_linked_library: bool = False
 ) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     """Validate optional theory link payload for a complex.
 
     Accepted shape:
       {
+        "source_kind": "workspace",
         "theory_id": "th_xxx",
         "relation": "link" | "copy",
         "title_cache": "...",
         "updated_at": "..."
+      }
+
+    When allow_linked_library=True this shape is also accepted:
+      {
+        "source_kind": "linked_library",
+        "library_entry_id": "thlib_xxx",
+        "relation": "link",
+        "title_cache": "...",
+        "updated_at": "...",
+        "catalog_item_id": "...",
+        "source_theory_id": "...",
+        "access_state": "...",
+        "access_reason": "..."
       }
     """
     if value is None:
@@ -35,15 +49,40 @@ def validate_and_normalize_theory_link(
     if not isinstance(value, dict):
         return None, "theory_link_must_be_object"
 
+    source_kind_raw = value.get("source_kind")
+    if source_kind_raw is not None and not isinstance(source_kind_raw, str):
+        return None, "theory_source_kind_must_be_string"
+    source_kind_norm = str(source_kind_raw or "").strip().lower()
+    if source_kind_norm and source_kind_norm not in {"workspace", "linked_library"}:
+        return None, "theory_source_kind_invalid"
+
     theory_id = value.get("theory_id")
-    if not isinstance(theory_id, str) or not theory_id.strip():
-        return None, "theory_id_required"
+    theory_id_norm = theory_id.strip() if isinstance(theory_id, str) and theory_id.strip() else None
+
+    library_entry_id = value.get("library_entry_id")
+    library_entry_id_norm = (
+        library_entry_id.strip()
+        if isinstance(library_entry_id, str) and library_entry_id.strip()
+        else None
+    )
+
+    if source_kind_norm == "linked_library" or (allow_linked_library and library_entry_id_norm):
+        if not allow_linked_library:
+            return None, "linked_theory_link_not_supported"
+        source_kind = "linked_library"
+        if not library_entry_id_norm:
+            return None, "library_entry_id_required"
+    else:
+        source_kind = "workspace"
+        if theory_id_norm is None:
+            return None, "theory_id_required"
 
     relation = value.get("relation", "link")
     if not isinstance(relation, str):
         return None, "theory_relation_must_be_string"
     relation_norm = relation.strip().lower() or "link"
-    if relation_norm not in {"link", "copy"}:
+    allowed_relations = {"link"} if source_kind == "linked_library" else {"link", "copy"}
+    if relation_norm not in allowed_relations:
         return None, "theory_relation_invalid"
 
     title_cache = value.get("title_cache")
@@ -54,14 +93,30 @@ def validate_and_normalize_theory_link(
     if updated_at is not None and not isinstance(updated_at, str):
         return None, "theory_updated_at_must_be_string"
 
-    normalized: Dict[str, Any] = {
-        "theory_id": theory_id.strip(),
-        "relation": relation_norm,
-    }
+    normalized: Dict[str, Any] = {"source_kind": source_kind, "relation": relation_norm}
+    if source_kind == "linked_library":
+        normalized["library_entry_id"] = library_entry_id_norm
+    else:
+        normalized["theory_id"] = theory_id_norm
+
     if isinstance(title_cache, str):
         normalized["title_cache"] = title_cache.strip()
     if isinstance(updated_at, str):
         normalized["updated_at"] = updated_at.strip()
+
+    for key, error_code in (
+        ("catalog_item_id", "theory_catalog_item_id_must_be_string"),
+        ("source_theory_id", "theory_source_theory_id_must_be_string"),
+        ("access_state", "theory_access_state_must_be_string"),
+        ("access_reason", "theory_access_reason_must_be_string"),
+    ):
+        raw_value = value.get(key)
+        if raw_value is None:
+            continue
+        if not isinstance(raw_value, str):
+            return None, error_code
+        normalized[key] = raw_value.strip()
+
     return normalized, None
 
 
@@ -116,7 +171,7 @@ def validate_and_normalize_create_payload(
         settings_dict = settings
 
     normalized_theory_link, theory_link_error = validate_and_normalize_theory_link(
-        theory_link, required=require_theory_link
+        theory_link, required=require_theory_link, allow_linked_library=True
     )
     if theory_link_error is not None:
         errors.append({"field": "theory_link", "reason": theory_link_error})

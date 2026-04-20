@@ -60,7 +60,7 @@ describe("OpenAnswerUI restoreInput", () => {
     const preview = container.querySelector(".group.relative");
     expect(preview).toBeTruthy();
     expect(preview.className).toContain("max-w-3xl");
-    expect(container.textContent).not.toContain("Inspect image");
+    expect(container.textContent).toContain("Inspect image");
     expect(container.textContent).not.toContain("Пустой ответ отправить нельзя");
 
     const openViewerButton = container.querySelector(
@@ -130,5 +130,42 @@ describe("OpenAnswerUI restoreInput", () => {
     expect(textarea.readOnly).toBe(true);
     expect(textarea.disabled).toBe(true);
     expect(document.getElementById("check-answer-btn").disabled).toBe(true);
+  });
+
+  it("resolves asset-backed images to the canonical hosted asset URL", () => {
+    const container = document.getElementById("open-answer-root");
+
+    OpenAnswerUI.render(container, {
+      task_data: {
+        content: {
+          title: "Question",
+          question: "Inspect hosted image",
+          image_asset_id: "asset_open_answer_42",
+        },
+      },
+    });
+
+    const image = container.querySelector(".group.relative img");
+    expect(image).toBeTruthy();
+    expect(image.getAttribute("src")).toBe("/api/assets/asset_open_answer_42/content");
+  });
+
+  it("prefers canonical asset refs over legacy image_path for open-answer media", () => {
+    const container = document.getElementById("open-answer-root");
+
+    OpenAnswerUI.render(container, {
+      task_data: {
+        content: {
+          title: "Question",
+          question: "Prefer hosted image",
+          image_asset_id: "asset_open_answer_43",
+          image_path: "legacy/open-answer.png",
+        },
+      },
+    });
+
+    const image = container.querySelector(".group.relative img");
+    expect(image).toBeTruthy();
+    expect(image.getAttribute("src")).toBe("/api/assets/asset_open_answer_43/content");
   });
 });

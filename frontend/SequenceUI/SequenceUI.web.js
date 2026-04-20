@@ -212,6 +212,57 @@ const SequenceUI = (function () {
   }
 
   function normalizeTaskData(task) {
+    function resolveSequenceImageUrl(rawValue) {
+      if (!rawValue && rawValue !== 0) return null;
+
+      if (Array.isArray(rawValue)) {
+        for (const item of rawValue) {
+          const resolved = resolveSequenceImageUrl(item);
+          if (resolved) return resolved;
+        }
+        return null;
+      }
+
+      if (rawValue && typeof rawValue === "object") {
+        const nested = rawValue.image && typeof rawValue.image === "object" ? rawValue.image : null;
+        const directUrl =
+          rawValue.asset_url ||
+          rawValue.image_asset_url ||
+          rawValue.image_url ||
+          rawValue.url ||
+          rawValue.src ||
+          (nested &&
+            (nested.asset_url ||
+              nested.image_asset_url ||
+              nested.image_url ||
+              nested.url ||
+              nested.src)) ||
+          "";
+        if (directUrl) return resolveSequenceImageUrl(directUrl);
+
+        const assetId =
+          rawValue.asset_id ||
+          rawValue.image_asset_id ||
+          (nested && (nested.asset_id || nested.image_asset_id)) ||
+          "";
+        if (assetId) {
+          return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+        }
+        const legacyPath =
+          rawValue.image_path ||
+          rawValue.path ||
+          (nested && (nested.image_path || nested.path)) ||
+          "";
+        if (legacyPath) return resolveSequenceImageUrl(legacyPath);
+        return null;
+      }
+
+      const raw = String(rawValue).trim();
+      if (!raw) return null;
+      if (/^(https?:|data:)/i.test(raw) || raw.startsWith("/")) return raw;
+      return `/api/local-image?path=${encodeURIComponent(raw)}`;
+    }
+
     const td = (task && task.task_data) || {};
     const src = td.content && typeof td.content === "object" ? td.content : td;
 
@@ -230,7 +281,7 @@ const SequenceUI = (function () {
       .map((e, idx) => {
         const id = e && e.id != null ? String(e.id) : `elem_${idx + 1}`;
         const text = safeText(e && (e.text || e.label || e.title)) || id;
-        const image = e && e.image != null ? String(e.image) : null;
+        const image = resolveSequenceImageUrl(e);
         return { id, text, image };
       })
       .filter((e) => !!e.id);
@@ -2350,6 +2401,7 @@ const SequenceUI = (function () {
 
   return {
     __testHooks: {
+      normalizeTaskData,
       resolveCheckedCorrectBlocksByLevel,
     },
     render(containerElement, task) {

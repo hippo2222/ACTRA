@@ -1439,6 +1439,7 @@
         } finally {
             setButtonBusy("next-task-btn", false);
             setLoading(false);
+            refreshCheckButtonState();
         }
     }
 
@@ -1562,6 +1563,72 @@
         return JSON.stringify(buildPausePayload(userInput, viewState));
     }
 
+    const PENDING_UNLOAD_PAUSE_KEY_PREFIX = "s1_pending_unload_pause_v1:";
+    const PENDING_UNLOAD_PAUSE_MAX_AGE_MS = 15000;
+
+    function getPendingUnloadPauseKey(sessionId) {
+        return `${PENDING_UNLOAD_PAUSE_KEY_PREFIX}${String(sessionId || "").trim()}`;
+    }
+
+    function rememberPendingUnloadPause(sessionId) {
+        if (
+            typeof window === "undefined" ||
+            typeof sessionStorage === "undefined" ||
+            !sessionId
+        ) {
+            return;
+        }
+
+        try {
+            sessionStorage.setItem(
+                getPendingUnloadPauseKey(sessionId),
+                JSON.stringify({
+                    timestamp: Date.now(),
+                    path: String(window.location.pathname || ""),
+                })
+            );
+        } catch (err) {
+            // best-effort
+        }
+    }
+
+    function consumePendingUnloadPauseMarker(sessionId) {
+        if (
+            typeof window === "undefined" ||
+            typeof sessionStorage === "undefined" ||
+            !sessionId
+        ) {
+            return false;
+        }
+
+        const key = getPendingUnloadPauseKey(sessionId);
+        let raw = null;
+        try {
+            raw = sessionStorage.getItem(key);
+            sessionStorage.removeItem(key);
+        } catch (err) {
+            return false;
+        }
+
+        if (!raw) return false;
+
+        try {
+            const parsed = JSON.parse(raw);
+            const timestamp = Number(parsed && parsed.timestamp);
+            const path = String((parsed && parsed.path) || "").trim();
+            const ageMs = Date.now() - timestamp;
+            if (!Number.isFinite(timestamp) || ageMs < 0 || ageMs > PENDING_UNLOAD_PAUSE_MAX_AGE_MS) {
+                return false;
+            }
+            if (path && path !== String(window.location.pathname || "").trim()) {
+                return false;
+            }
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+
     function tryPauseSessionOnUnload(userInput, viewState) {
         if (!SessionState || !SessionState.sessionId || SessionState.paused) return false;
         const pauseUrl =
@@ -1603,6 +1670,7 @@
         }
 
         if (requested) {
+            rememberPendingUnloadPause(SessionState.sessionId);
             SessionState.paused = true;
         }
         return requested;
@@ -1662,6 +1730,7 @@
         refreshCheckButtonState,
         initBeforeUnloadGuard,
         resetUiStateAutosaveTracking,
+        consumePendingUnloadPauseMarker,
         allowNavigationWithoutPrompt,
         navigateWithoutPrompt
     };

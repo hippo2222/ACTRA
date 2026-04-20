@@ -9,7 +9,6 @@
     <style>
         :root {
             --main-header-height: 64px;
-            --main-update-height: 0px;
             --connection-banner-height: 0px;
             --main-gap: clamp(0.45rem, 0.9vh, 0.75rem);
             --main-card-radius: 18px;
@@ -29,14 +28,6 @@
             overflow: hidden;
         }
 
-        body.main-update-visible {
-            --main-update-height: 40px;
-        }
-
-        body.main-update-visible .main-stats-row {
-            padding: 0.3rem 0.5rem;
-        }
-
         #app-content {
             height: calc(100vh - var(--connection-banner-height, 0px));
             min-height: calc(100vh - var(--connection-banner-height, 0px));
@@ -45,10 +36,6 @@
         .main-topbar {
             height: var(--main-header-height);
             min-height: var(--main-header-height);
-        }
-
-        #appUpdateNotice {
-            height: var(--main-update-height);
         }
         ::-webkit-scrollbar {
             width: 8px;
@@ -392,28 +379,6 @@
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
         }
 
-        #quick-access-show-all {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.38rem;
-            height: 2.15rem;
-            padding: 0 0.85rem;
-            border-radius: 999px;
-            border: 1px solid var(--color-main-quick-access-show-all-border);
-            background: var(--color-main-quick-access-show-all-bg);
-            color: var(--color-text-main);
-            font-size: 0.82rem;
-            font-weight: 700;
-            transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
-        }
-
-        #quick-access-show-all:hover {
-            transform: translateY(-1px);
-            border-color: var(--color-main-quick-access-show-all-border-hover);
-            background: var(--color-main-quick-access-show-all-bg-hover);
-            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
-        }
-
         #quick-access-list {
             flex: 0 0 auto;
             width: 100%;
@@ -429,6 +394,85 @@
             box-shadow:
                 inset 0 1px 0 rgba(255, 255, 255, 0.3),
                 0 14px 30px rgba(15, 23, 42, 0.08);
+        }
+
+        #quick-access-list[hidden] {
+            display: none !important;
+        }
+
+        .main-quick-access-empty {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1.15rem 1.2rem;
+            border-radius: 1.15rem;
+            border: 1px dashed var(--color-main-quick-access-list-border);
+            background:
+                radial-gradient(circle at top right, var(--color-main-quick-access-list-glow) 0%, transparent 42%),
+                linear-gradient(180deg, var(--color-main-quick-access-list-bg-start) 0%, var(--color-surface-1) 100%);
+            box-shadow:
+                inset 0 1px 0 rgba(255, 255, 255, 0.35),
+                0 14px 30px rgba(15, 23, 42, 0.06);
+        }
+
+        .main-quick-access-empty-icon {
+            width: 3.25rem;
+            height: 3.25rem;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 1rem;
+            background: var(--color-main-quick-access-heading-icon-bg);
+            color: var(--color-main-quick-access-heading-icon-fg);
+            border: 1px solid var(--color-main-quick-access-heading-icon-border);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+        }
+
+        .main-quick-access-empty-icon .material-symbols-outlined {
+            font-size: 1.55rem;
+        }
+
+        .main-quick-access-empty-copy {
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+        }
+
+        .main-quick-access-empty-kicker {
+            margin: 0;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--color-main-quick-access-kicker);
+        }
+
+        .main-quick-access-empty-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            line-height: 1.25;
+            color: var(--color-text-main);
+        }
+
+        .main-quick-access-empty-description {
+            margin: 0;
+            max-width: 34rem;
+            font-size: 0.82rem;
+            line-height: 1.55;
+            color: var(--color-main-quick-access-description);
+        }
+
+        .main-quick-access-empty-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.65rem;
+            margin-top: 0.45rem;
         }
 
         .main-quick-access-grid {
@@ -917,14 +961,34 @@
         #statsCard {
             min-height: 0;
             overflow: hidden;
+            transition: box-shadow 180ms var(--main-ease), border-color 180ms var(--main-ease);
+        }
+
+        #statsCard.interactive-card:hover,
+        #statsCard.interactive-card:active {
+            transform: none;
+        }
+
+        #statsCard.stats-card--busy {
+            box-shadow: var(--main-shadow-soft) !important;
         }
 
         #statsContent {
-            min-height: 0;
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            flex: 1 1 auto;
             gap: 0.375rem;
+            min-height: 12rem;
+        }
+
+        #statsSkeleton {
+            min-height: 12rem;
+        }
+
+        #statsContent.stats-content--empty,
+        #statsContent.stats-content--error {
+            justify-content: center;
         }
 
         #statsContent.stats-content--empty .main-stats-row,
@@ -934,50 +998,45 @@
         }
 
         .main-stats-empty-state {
-            display: grid;
-            grid-template-columns: auto minmax(0, 1fr);
-            align-items: start;
-            gap: 0.65rem;
-            min-height: 4.6rem;
-            padding: 0.65rem 0.75rem;
-            border: 1px dashed color-mix(in srgb, var(--color-primary-light) 55%, var(--color-border-subtle));
-            border-radius: 0.8rem;
-            background: var(--color-surface-2);
-            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            gap: 0.7rem;
+            flex: 1 1 auto;
+            min-height: 9.5rem;
+            padding: 1rem 0.85rem;
         }
 
         .main-stats-empty-state__icon {
-            width: 1.75rem;
-            height: 1.75rem;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 999px;
-            background: color-mix(in srgb, var(--color-primary-lighter) 65%, white);
-            font-size: 0.95rem;
-            color: var(--color-primary);
+            display: block;
+            font-size: 2rem;
+            line-height: 1;
+            color: var(--color-border-strong);
         }
 
         .main-stats-empty-state__copy {
             min-width: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.18rem;
-            justify-content: center;
+            gap: 0.3rem;
+            align-items: center;
         }
 
         .main-stats-empty-state__title {
             display: block;
             color: var(--color-text-main);
-            font-size: 0.77rem;
-            font-weight: 700;
-            line-height: 1.2;
+            font-size: 0.92rem;
+            font-weight: 800;
+            line-height: 1.25;
         }
 
         .main-stats-empty-state__text {
-            color: var(--color-text-secondary);
-            font-size: 0.7rem;
-            line-height: 1.3;
+            color: var(--color-component-empty-state-copy);
+            font-size: 0.78rem;
+            line-height: 1.5;
+            max-width: 18rem;
         }
 
         .main-stats-error-state {
@@ -1067,6 +1126,12 @@
             background: var(--color-main-period-toggle-button-hover-bg) !important;
         }
 
+        .main-period-toggle__button:disabled {
+            cursor: wait;
+            opacity: 0.72;
+            transform: none !important;
+        }
+
         .main-period-toggle__button.is-active {
             background: var(--color-main-period-toggle-button-active-bg) !important;
             color: var(--color-main-period-toggle-button-active-fg) !important;
@@ -1126,6 +1191,10 @@
                 gap: 0.55rem;
             }
 
+            .main-quick-access-empty {
+                padding: 1rem;
+            }
+
             .main-quick-access-grid {
                 gap: 0.64rem;
                 padding: 0.66rem;
@@ -1141,6 +1210,11 @@
                 width: 2.45rem;
                 height: 2.45rem;
             }
+
+            .main-stats-empty-state {
+                min-height: 8rem;
+                padding: 0.85rem 0.75rem;
+            }
         }
 
         @media (max-width: 640px) {
@@ -1152,6 +1226,21 @@
                 width: 2.3rem;
                 height: 2.3rem;
                 border-radius: 0.85rem;
+            }
+
+            .main-quick-access-empty {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 1rem;
+            }
+
+            .main-stats-empty-state {
+                min-height: 7.5rem;
+                padding: 0.8rem 0.7rem;
+            }
+
+            .main-stats-empty-state__icon {
+                font-size: 1.7rem;
             }
 
             .main-quick-access-grid {
@@ -1395,11 +1484,13 @@
                 grid-template-rows: auto minmax(0, 1fr);
             }
 
-            .main-hero-card h3 {
+            .main-hero-card h3,
+            #main-theory-center-card h3 {
                 font-size: 1rem;
             }
 
-            .main-hero-card p {
+            .main-hero-card p,
+            #main-theory-center-card p {
                 font-size: 0.8rem;
             }
 
@@ -1422,6 +1513,7 @@
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
     <link href="/assets/lightB-components.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
+    <link href="/assets/main-polish.css" rel="stylesheet" />
 </head>
 
 <body
@@ -1447,22 +1539,55 @@
                     <span class="material-symbols-outlined text-[20px]">design_services</span>
                     Редактор комплексов
                 </a>
+                <button type="button" onclick="showReferencePlaceholder()"
+                    class="hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    <span class="material-symbols-outlined text-[20px]">menu_book</span>
+                    Справочник
+                </button>
             </div>
             <div class="flex items-center gap-3">
                 <div class="hidden md:flex items-center gap-2 text-sm text-text-secondary" id="datetime-display">
                     <span class="material-symbols-outlined text-lg">schedule</span>
                     <span id="datetime-text">Загрузка...</span>
                 </div>
-                <button id="checkUpdatesButton" type="button" onclick="checkForAppUpdates(true)"
-                    class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95 disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100"
-                    title="Проверить обновления">
-                    <span class="material-symbols-outlined text-[20px]">system_update</span>
-                    <span class="hidden lg:inline">Обновления</span>
-                </button>
+                <div class="relative">
+                    <button id="projectLinksButton" type="button" onclick="toggleProjectLinksMenu(event)"
+                        aria-haspopup="menu" aria-expanded="false"
+                        class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95"
+                        title="&#1057;&#1089;&#1099;&#1083;&#1082;&#1080; &#1087;&#1088;&#1086;&#1077;&#1082;&#1090;&#1072;">
+                        <span class="material-symbols-outlined text-[20px]">public</span>
+                        <span class="hidden lg:inline">&#1057;&#1089;&#1099;&#1083;&#1082;&#1080;</span>
+                    </button>
+                    <div id="projectLinksMenu"
+                        class="hidden absolute right-0 top-full z-40 mt-2 w-64 overflow-hidden rounded-2xl border border-border-strong bg-surface-1 p-2 shadow-lg">
+                        <button type="button" onclick="openProjectCommunityLink('github')"
+                            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-2">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-lighter text-primary">
+                                <span class="material-symbols-outlined text-[20px]">code</span>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-sm font-semibold text-text-main">GitHub</span>
+                                <span class="block text-xs text-text-secondary">&#1056;&#1077;&#1087;&#1086;&#1079;&#1080;&#1090;&#1086;&#1088;&#1080;&#1081; &#1087;&#1088;&#1086;&#1077;&#1082;&#1090;&#1072;</span>
+                            </span>
+                            <span class="material-symbols-outlined text-[18px] text-text-muted">open_in_new</span>
+                        </button>
+                        <button type="button" onclick="openProjectCommunityLink('telegram')"
+                            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-2">
+                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info">
+                                <span class="material-symbols-outlined text-[20px]">send</span>
+                            </span>
+                            <span class="min-w-0 flex-1">
+                                <span class="block text-sm font-semibold text-text-main">Telegram</span>
+                                <span class="block text-xs text-text-secondary">&#1050;&#1072;&#1085;&#1072;&#1083; &#1087;&#1088;&#1086;&#1077;&#1082;&#1090;&#1072;</span>
+                            </span>
+                            <span class="material-symbols-outlined text-[18px] text-text-muted">open_in_new</span>
+                        </button>
+                    </div>
+                </div>
                 <button onclick="openFeedbackModal()"
                     class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">feedback</span>
-                    <span class="hidden lg:inline">Обратная связь</span>
+                    <span class="hidden lg:inline">&#1054;&#1073;&#1088;&#1072;&#1090;&#1085;&#1072;&#1103; &#1089;&#1074;&#1103;&#1079;&#1100;</span>
                 </button>
                 <button type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false"
                     class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
@@ -1474,13 +1599,6 @@
                 </button>
             </div>
         </header>
-        <div id="appUpdateNotice" class="hidden border-b border-border-strong bg-surface-2 px-4 py-2 md:px-6">
-            <div class="mx-auto flex w-full max-w-[1280px] items-center justify-between gap-3">
-                <p id="appUpdateNoticeText" class="text-sm text-text-main"></p>
-                <a id="appUpdateNoticeLink" class="hidden text-sm font-semibold text-primary hover:underline"
-                    target="_blank" rel="noopener">Скачать</a>
-            </div>
-        </div>
 
         <main class="main-dashboard-content flex flex-1 justify-center">
             <div class="main-dashboard-shell main-page-enter"
@@ -1497,14 +1615,14 @@
                                     <div class="absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 mix-blend-screen transition-transform duration-700 group-hover:scale-110" style="background-color: var(--color-primary); opacity: 0.25;"></div>
                                     <div class="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 mix-blend-screen" style="background-color: var(--color-accent, var(--color-primary)); opacity: 0.25;"></div>
 
-                                    <div class="p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
+                                    <div class="main-hero-content p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
                                         <div class="flex items-start justify-between w-full">
                                             <span class="inline-flex items-center rounded-md backdrop-blur-md px-2.5 py-1 text-xs font-bold tracking-wider uppercase border shadow-sm" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
                                                 Основной режим
                                             </span>
                                         </div>
-                                        <div class="flex items-end justify-between gap-4 mt-auto">
-                                            <div class="flex flex-col">
+                                        <div class="main-hero-body flex items-end justify-between gap-4 mt-auto">
+                                            <div class="main-hero-copy flex flex-col">
                                                 <h3 class="text-2xl md:text-3xl font-extrabold mb-1 leading-tight tracking-tight drop-shadow-md" style="color: #ffffff;">Проходить комплексы</h3>
                                                 <p class="text-sm leading-relaxed max-w-[260px] drop-shadow-sm" style="color: #cbd5e1;">Анализируйте данные и принимайте решения в реальном времени.</p>
                                             </div>
@@ -1526,14 +1644,14 @@
                                     <div class="absolute top-0 right-0 w-40 h-40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/3 mix-blend-screen transition-transform duration-700 group-hover:scale-110" style="background-color: var(--color-info); opacity: 0.22;"></div>
                                     <div class="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/2 mix-blend-screen" style="background-color: var(--color-primary); opacity: 0.18;"></div>
 
-                                    <div class="p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
+                                    <div class="main-hero-content p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
                                         <div>
                                             <span class="inline-flex items-center rounded-md backdrop-blur-md px-2.5 py-1 text-xs font-bold tracking-wider uppercase border shadow-sm" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
                                                 Редактор
                                             </span>
                                         </div>
-                                        <div class="mt-auto">
-                                            <span class="material-symbols-outlined text-[32px] mb-2 block drop-shadow-sm" style="color: rgba(165,213,255,0.92);">hub</span>
+                                        <div class="main-hero-body main-hero-body--stack mt-auto">
+                                            <span class="main-hero-support-icon material-symbols-outlined text-[32px] mb-2 block drop-shadow-sm" style="color: rgba(165,213,255,0.92);">hub</span>
                                             <h3 class="text-xl md:text-2xl font-extrabold leading-tight tracking-tight drop-shadow-md" style="color: #ffffff;">Центр теории</h3>
                                             <p class="text-xs mt-1 drop-shadow-sm" style="color: #94a3b8;">Управление теоретическими материалами</p>
                                         </div>
@@ -1541,8 +1659,8 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="main-widget-card main-primary-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all"
-                            id="microcardsCard" role="link" tabindex="0" data-nav="/ui/microcards">
+                        <div class="main-widget-card main-primary-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col transition-all"
+                            id="microcardsCard">
                             <div class="flex items-center justify-between mb-2">
                                 <h3 class="text-base font-bold text-text-main flex items-center gap-1.5">
                                     <span class="material-symbols-outlined text-primary text-[18px]">style</span>Микрокарточки
@@ -1568,6 +1686,13 @@
                                 <p class="text-sm font-medium text-text-main">Нет колод</p>
                                 <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Создайте колоду в редакторе
                                     или из анализа</p>
+                            </div>
+                            <div id="microcardsDisabledState"
+                                class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
+                                <span
+                                    class="material-symbols-outlined text-border-strong text-[32px]">construction</span>
+                                <p class="text-sm font-medium text-text-main">Функционал в разработке</p>
+                                <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Микрокарточки временно скрыты из сайта. Вернём этот режим после следующего этапа доработки.</p>
                             </div>
                             <div id="microcardsContentState" class="hidden flex-col gap-2">
                                 <div class="grid grid-cols-3 gap-1.5">
@@ -1606,16 +1731,15 @@
                             <div class="mt-2 pt-1.5 border-t border-border-subtle grid grid-cols-2 gap-2">
                                 <button
                                     class="w-full inline-flex items-center justify-center gap-2 main-primary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
-                                    id="microcardsCTA"
-                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/microcards');"><span
+                                    id="microcardsCTA" disabled><span
                                         class="material-symbols-outlined text-[16px]"
-                                        id="microcardsCTAIcon">play_arrow</span><span
+                                        id="microcardsCTAIcon">construction</span><span
                                         id="microcardsCTAText">Открыть микрокарточки</span>
                                 </button>
                                 <button
                                     class="w-full inline-flex items-center justify-center gap-2 main-secondary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
-                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/editor?microcards_manual=1');">
-                                    <span class="material-symbols-outlined text-[14px]">add_circle</span>
+                                    disabled>
+                                    <span class="material-symbols-outlined text-[14px]">schedule</span>
                                     <span>Создать вручную</span>
                                 </button>
                             </div>
@@ -1624,13 +1748,21 @@
                             <div class="main-quick-access-header">
                                 <h3 class="text-base font-bold text-text-main flex items-center gap-2">
                                     <span class="material-symbols-outlined text-text-secondary text-[20px]">history</span>Быстрый доступ
-                                </h3><button
-                                    class="text-sm font-medium text-text-main hover:text-primary-hover hover:underline transition-colors"
-                                    onclick="window.navigateWithTransition('/ui/complexes')" id="quick-access-show-all">Показать
-                                    все</button>
+                                </h3>
                             </div>
                             <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden"
-                                id="quick-access-list"></div>
+                                id="quick-access-list" hidden></div>
+                            <div class="main-quick-access-empty" id="quick-access-empty" hidden>
+                                <div class="main-quick-access-empty-icon" aria-hidden="true">
+                                    <span class="material-symbols-outlined">history_toggle_off</span>
+                                </div>
+                                <div class="main-quick-access-empty-copy">
+                                    <p class="main-quick-access-empty-kicker">Пока пусто</p>
+                                    <p class="main-quick-access-empty-title">Быстрый доступ появится после первых выбранных комплексов</p>
+                                    <p class="main-quick-access-empty-description qa-empty-text">Закрепите комплекс в библиотеке или начните сессию, и он появится здесь для быстрого возврата с главного экрана.</p>
+                                    <div class="main-quick-access-empty-actions" id="quick-access-empty-actions"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="main-secondary-column">
@@ -1958,8 +2090,8 @@
             class="w-full max-w-xl transform rounded-3xl bg-surface-1 p-0 shadow-2xl border border-border-subtle overflow-hidden">
             <div class="p-6 border-b border-border-subtle flex items-center justify-between bg-surface-2">
                 <div>
-                    <h3 class="text-xl font-black text-text-main">Обратная связь</h3>
-                    <p class="text-xs text-text-secondary mt-1">Сообщение разработчику: баг, идея или предложение.</p>
+                    <h3 class="text-xl font-black text-text-main">&#1054;&#1073;&#1088;&#1072;&#1090;&#1085;&#1072;&#1103; &#1089;&#1074;&#1103;&#1079;&#1100;</h3>
+                    <p class="text-xs text-text-secondary mt-1">&#1057;&#1086;&#1086;&#1073;&#1097;&#1077;&#1085;&#1080;&#1077; &#1088;&#1072;&#1079;&#1088;&#1072;&#1073;&#1086;&#1090;&#1095;&#1080;&#1082;&#1091;: &#1073;&#1072;&#1075;, &#1080;&#1076;&#1077;&#1103; &#1080;&#1083;&#1080; &#1087;&#1088;&#1077;&#1076;&#1083;&#1086;&#1078;&#1077;&#1085;&#1080;&#1077;.</p>
                 </div>
                 <button onclick="closeFeedbackModal()"
                     class="size-8 flex items-center justify-center rounded-full hover:bg-surface-1 transition-colors">
@@ -1969,47 +2101,47 @@
             <div class="p-6 space-y-4">
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <label class="flex flex-col gap-1.5">
-                        <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Тип</span>
+                        <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1058;&#1080;&#1087;</span>
                         <select id="feedbackType"
                             class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
-                            <option value="bug">Баг</option>
-                            <option value="idea">Идея</option>
-                            <option value="improvement">Улучшение</option>
-                            <option value="question">Вопрос</option>
+                            <option value="bug">&#1041;&#1072;&#1075;</option>
+                            <option value="idea">&#1048;&#1076;&#1077;&#1103;</option>
+                            <option value="improvement">&#1059;&#1083;&#1091;&#1095;&#1096;&#1077;&#1085;&#1080;&#1077;</option>
+                            <option value="question">&#1042;&#1086;&#1087;&#1088;&#1086;&#1089;</option>
                         </select>
                     </label>
                     <label class="flex flex-col gap-1.5">
                         <span
-                            class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Критичность</span>
+                            class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1050;&#1088;&#1080;&#1090;&#1080;&#1095;&#1085;&#1086;&#1089;&#1090;&#1100;</span>
                         <select id="feedbackSeverity"
                             class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
-                            <option value="medium">Средняя</option>
-                            <option value="low">Низкая</option>
-                            <option value="high">Высокая</option>
-                            <option value="critical">Критичная</option>
+                            <option value="medium">&#1057;&#1088;&#1077;&#1076;&#1085;&#1103;&#1103;</option>
+                            <option value="low">&#1053;&#1080;&#1079;&#1082;&#1072;&#1103;</option>
+                            <option value="high">&#1042;&#1099;&#1089;&#1086;&#1082;&#1072;&#1103;</option>
+                            <option value="critical">&#1050;&#1088;&#1080;&#1090;&#1080;&#1095;&#1085;&#1072;&#1103;</option>
                         </select>
                     </label>
                 </div>
                 <label class="flex flex-col gap-1.5">
-                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Тема</span>
-                    <input id="feedbackTitle" type="text" maxlength="180" placeholder="Кратко опишите суть"
+                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1058;&#1077;&#1084;&#1072;</span>
+                    <input id="feedbackTitle" type="text" maxlength="180" placeholder="&#1050;&#1088;&#1072;&#1090;&#1082;&#1086; &#1086;&#1087;&#1080;&#1096;&#1080;&#1090;&#1077; &#1089;&#1091;&#1090;&#1100;"
                         class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none placeholder:text-text-secondary">
                 </label>
                 <label class="flex flex-col gap-1.5">
-                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">Описание</span>
+                    <span class="text-[11px] font-bold text-text-secondary uppercase tracking-wider">&#1054;&#1087;&#1080;&#1089;&#1072;&#1085;&#1080;&#1077;</span>
                     <textarea id="feedbackDescription" rows="6" maxlength="10000"
-                        placeholder="Что произошло, как воспроизвести, что ожидали получить..."
+                        placeholder="&#1063;&#1090;&#1086; &#1087;&#1088;&#1086;&#1080;&#1079;&#1086;&#1096;&#1083;&#1086;, &#1082;&#1072;&#1082; &#1074;&#1086;&#1089;&#1087;&#1088;&#1086;&#1080;&#1079;&#1074;&#1077;&#1089;&#1090;&#1080;, &#1095;&#1090;&#1086; &#1086;&#1078;&#1080;&#1076;&#1072;&#1083;&#1080; &#1087;&#1086;&#1083;&#1091;&#1095;&#1080;&#1090;&#1100;..."
                         class="bg-surface-2 border border-border-strong rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary outline-none resize-y placeholder:text-text-secondary"></textarea>
                 </label>
                 <label class="flex items-start gap-2 text-sm text-text-main cursor-pointer">
                     <input type="checkbox" id="feedbackIncludeTechnical"
                         class="mt-0.5 rounded text-primary focus:ring-primary">
-                    <span>Приложить технические данные (версия, платформа, user agent)</span>
+                    <span>&#1055;&#1088;&#1080;&#1083;&#1086;&#1078;&#1080;&#1090;&#1100; &#1090;&#1077;&#1093;&#1085;&#1080;&#1095;&#1077;&#1089;&#1082;&#1080;&#1077; &#1076;&#1072;&#1085;&#1085;&#1099;&#1077; (&#1074;&#1077;&#1088;&#1089;&#1080;&#1103;, &#1087;&#1083;&#1072;&#1090;&#1092;&#1086;&#1088;&#1084;&#1072;, user agent)</span>
                 </label>
                 <label class="flex items-start gap-2 text-sm text-text-main cursor-pointer">
                     <input type="checkbox" id="feedbackIncludeLogs"
                         class="mt-0.5 rounded text-primary focus:ring-primary">
-                    <span>Приложить фрагменты логов из папки <code>logs</code> (для разбора бага)</span>
+                    <span>&#1055;&#1088;&#1080;&#1083;&#1086;&#1078;&#1080;&#1090;&#1100; &#1092;&#1088;&#1072;&#1075;&#1084;&#1077;&#1085;&#1090;&#1099; &#1083;&#1086;&#1075;&#1086;&#1074; &#1080;&#1079; &#1087;&#1072;&#1087;&#1082;&#1080; <code>logs</code> (&#1076;&#1083;&#1103; &#1088;&#1072;&#1079;&#1073;&#1086;&#1088;&#1072; &#1073;&#1072;&#1075;&#1072;)</span>
                 </label>
                 <p id="feedbackNetworkStatus"
                     class="hidden text-xs rounded-lg px-3 py-2 border border-border-strong bg-surface-2 text-text-secondary">
@@ -2020,11 +2152,11 @@
             <div class="p-6 border-t border-border-subtle bg-surface-2 flex justify-end gap-2">
                 <button onclick="closeFeedbackModal()"
                     class="px-4 py-2 rounded-lg border border-border-strong text-text-secondary hover:bg-surface-1 transition-colors text-sm font-semibold">
-                    Отмена
+                    &#1054;&#1090;&#1084;&#1077;&#1085;&#1072;
                 </button>
                 <button id="feedbackSubmitBtn" onclick="submitFeedback()"
                     class="px-4 py-2 rounded-lg bg-primary text-primary-fg hover:bg-primary-hover transition-colors text-sm font-semibold">
-                    Отправить
+                    &#1054;&#1090;&#1087;&#1088;&#1072;&#1074;&#1080;&#1090;&#1100;
                 </button>
             </div>
         </div>

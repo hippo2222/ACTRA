@@ -77,6 +77,9 @@ function setupTheoryEditorDom(url = "http://localhost/ui/editor/Theory_Editor.ht
     dom.window.eval(`${theoryEditorSource}
 window.__theoryEditorTestExports = {
     theoryEditorState,
+    cleanTheoryWordHtml,
+    editorHtmlToTheoryDelta,
+    renderTheoryDeltaToEditor,
     normalizeTheoryWorkspaceUrl,
     resolveTheoryCenterUrl,
     resolveTheoryComplexesUrl,
@@ -208,5 +211,94 @@ describe("Theory editor regressions", () => {
         expect(item.textContent).toContain("2 фото");
         expect(item.textContent).not.toContain("th_hidden_42");
         expect(item.innerHTML).toContain("grid w-full");
+    });
+
+    it("keeps Word list paragraphs as semantic lists through save and reload conversion", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            cleanTheoryWordHtml,
+            editorHtmlToTheoryDelta,
+            renderTheoryDeltaToEditor,
+        } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        editor.innerHTML = cleanTheoryWordHtml(`
+            <p class="MsoNormal">Intro</p>
+            <p class="MsoListParagraphCxSpFirst" style="margin-left:36pt;text-indent:-18pt;mso-list:l0 level1 lfo1">
+                <span style="mso-list:Ignore;font-family:Symbol">·<span>&nbsp;&nbsp;&nbsp;</span></span>
+                First bullet
+            </p>
+            <p class="MsoListParagraphCxSpLast" style="margin-left:36pt;text-indent:-18pt;mso-list:l0 level1 lfo1">
+                <span style="mso-list:Ignore;font-family:Symbol">·<span>&nbsp;&nbsp;&nbsp;</span></span>
+                Second bullet
+            </p>
+            <p class="MsoNormal">Tail</p>
+        `);
+
+        expect(editor.innerHTML).toContain("<ul>");
+        expect(editor.innerHTML).toContain("<li>");
+
+        const delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual(expect.arrayContaining([
+            { insert: "First bullet" },
+            { insert: "\n", attributes: { list: "bullet" } },
+            { insert: "Second bullet" },
+            { insert: "\n", attributes: { list: "bullet" } },
+        ]));
+
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.innerHTML).toContain("<ul>");
+        expect(editor.innerHTML).toContain("<li>First bullet</li>");
+        expect(editor.innerHTML).toContain("<li>Second bullet</li>");
+        expect(editor.textContent).not.toContain("?");
+    });
+
+    it("ignores whitespace-only nodes between block elements when serializing editor content", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            editorHtmlToTheoryDelta,
+            renderTheoryDeltaToEditor,
+        } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        editor.innerHTML = "<p>Paragraph 1</p>\n    <p>Paragraph 2</p>\n    <p>Paragraph 3</p>";
+
+        const delta = editorHtmlToTheoryDelta();
+        expect(delta.ops).toEqual([
+            { insert: "Paragraph 1" },
+            { insert: "\n" },
+            { insert: "Paragraph 2" },
+            { insert: "\n" },
+            { insert: "Paragraph 3" },
+            { insert: "\n" },
+        ]);
+
+        renderTheoryDeltaToEditor(delta);
+        expect(editor.innerHTML).toBe("<p>Paragraph 1</p><p>Paragraph 2</p><p>Paragraph 3</p>");
+    });
+
+    it("preserves hosted asset image refs through render and delta serialization", () => {
+        const dom = setupTheoryEditorDom();
+        const {
+            editorHtmlToTheoryDelta,
+            renderTheoryDeltaToEditor,
+        } = dom.window.__theoryEditorTestExports;
+        const editor = dom.window.document.getElementById("theory-editor");
+
+        renderTheoryDeltaToEditor({
+            ops: [
+                { insert: { image: "/api/assets/asset_theory_42/content" } },
+                { insert: "\n" },
+            ],
+        });
+
+        const image = editor.querySelector("img");
+        expect(image).not.toBeNull();
+        expect(image.getAttribute("src")).toBe("/api/assets/asset_theory_42/content");
+        expect(image.getAttribute("data-asset-url")).toBe("/api/assets/asset_theory_42/content");
+        expect(image.hasAttribute("data-path")).toBe(false);
+
+        const delta = editorHtmlToTheoryDelta();
+        expect(delta.ops[0].insert.image).toBe("/api/assets/asset_theory_42/content");
     });
 });

@@ -16,6 +16,7 @@ import {
   buildSessionResultsUrl,
   extractSessionIdFromUrl,
   getSessionScreen,
+  pauseSession,
   readActiveSessions,
   readCurrentTask,
   readFinalResults,
@@ -261,10 +262,9 @@ test.describe("complex audit wave 1 queue / pause / difficulty", () => {
         await readCurrentTask(runtime.baseUrl, sessionId)
       );
 
-      const pauseResult = await fetch(new URL(`/api/session/${encodeURIComponent(sessionId)}/pause`, runtime.baseUrl), {
-        method: "POST",
-      });
-      expect(pauseResult.ok).toBe(true);
+      const pauseResult = await pauseSession(runtime.baseUrl, sessionId);
+      expect(pauseResult.response.ok).toBe(true);
+      expect(pauseResult.data?.ok).toBe(true);
 
       const restoredPage = await context.newPage();
       try {

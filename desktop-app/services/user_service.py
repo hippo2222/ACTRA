@@ -23,6 +23,11 @@ from datetime import datetime
 from services.schemas.user_schemas import ProfileSchema, ProgressSchema, StatisticsSchema
 from task_system.core.exceptions import TaskValidationError
 
+USER_ROLE_USER = "user"
+USER_ROLE_ADMIN = "admin"
+USER_PLAN_FREE = "free"
+USER_PLAN_PREMIUM = "premium"
+
 
 @dataclass
 class User:
@@ -39,7 +44,15 @@ class User:
     name: str
     created_at: str
     avatar_seed: Optional[str] = None
+    login: Optional[str] = None
+    email: Optional[str] = None
+    pending_email: Optional[str] = None
+    email_verified_at: Optional[str] = None
+    email_verification_sent_at: Optional[str] = None
+    pending_email_verification_sent_at: Optional[str] = None
     password_hash: Optional[str] = None
+    role: str = USER_ROLE_USER
+    plan: str = USER_PLAN_FREE
     security_settings: Dict[str, Any] = field(default_factory=lambda: {
         "require_password_on_login": False,
         "require_password_on_edit": False
@@ -54,7 +67,15 @@ class User:
                 "name": self.name,
                 "created_at": self.created_at,
                 "avatar_seed": self.avatar_seed,
+                "login": self.login,
+                "email": self.email,
+                "pending_email": self.pending_email,
+                "email_verified_at": self.email_verified_at,
+                "email_verification_sent_at": self.email_verification_sent_at,
+                "pending_email_verification_sent_at": self.pending_email_verification_sent_at,
                 "password_hash": self.password_hash,
+                "role": self.role or USER_ROLE_USER,
+                "plan": self.plan or USER_PLAN_FREE,
                 "security_settings": self.security_settings,
                 "settings": self.settings
             }
@@ -66,8 +87,18 @@ class User:
             "user_id": self.user_id,
             "name": self.name,
             "created_at": self.created_at,
+            "login": self.login,
+            "email": self.email,
+            "pending_email": self.pending_email,
+            "pending_email_change_pending": bool(self.pending_email),
+            "email_verified": bool(self.email and self.email_verified_at),
+            "email_verified_at": self.email_verified_at,
+            "email_verification_sent_at": self.email_verification_sent_at,
+            "pending_email_verification_sent_at": self.pending_email_verification_sent_at,
             "avatar_seed": self.avatar_seed or "1.png",  # Дефолтный аватар вместо user_id
             "has_password": bool(self.password_hash),
+            "role": self.role or USER_ROLE_USER,
+            "plan": self.plan or USER_PLAN_FREE,
             "security_settings": {
                 "require_password_on_login": self.security_settings.get("require_password_on_login", False),
                 "require_password_on_edit": self.security_settings.get("require_password_on_edit", False),
@@ -84,7 +115,15 @@ class User:
             name=profile.get("name", ""),
             created_at=profile.get("created_at", ""),
             avatar_seed=profile.get("avatar_seed"),
+            login=profile.get("login"),
+            email=profile.get("email"),
+            pending_email=profile.get("pending_email"),
+            email_verified_at=profile.get("email_verified_at"),
+            email_verification_sent_at=profile.get("email_verification_sent_at"),
+            pending_email_verification_sent_at=profile.get("pending_email_verification_sent_at"),
             password_hash=profile.get("password_hash"),
+            role=str(profile.get("role") or USER_ROLE_USER).strip() or USER_ROLE_USER,
+            plan=str(profile.get("plan") or USER_PLAN_FREE).strip() or USER_PLAN_FREE,
             security_settings=profile.get("security_settings", {
                 "require_password_on_login": False,
                 "require_password_on_edit": False
@@ -550,5 +589,3 @@ class UserService:
                 except Exception:
                     pass
             return False
-
-

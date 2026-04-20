@@ -75,7 +75,7 @@ function setupTheoryCenterDom(url = "http://localhost/ui/editor/Theory_Center.ht
     bindDomGlobals(dom);
     dom.window.fetch = vi.fn().mockResolvedValue({
         ok: true,
-        json: async () => ({ ok: true, summary: {}, filters: { modules: [], topic_states: [], complex_states: [] }, topics: [], complexes: [], orphans: [], theories: [] }),
+        json: async () => ({ ok: true, summary: {}, filters: { modules: [], topic_states: [], complex_states: [] }, topics: [], complexes: [], orphans: [], theories: [], linked_theories: [], entries: [], authenticated: false }),
     });
     dom.window.confirm = vi.fn(() => true);
     dom.window.NotificationUI = {
@@ -163,7 +163,7 @@ describe("Theory center regressions", () => {
 
         state.moduleId = "m1";
         renderSummaryCards();
-        expect(dom.window.document.getElementById("theory-center-summary").textContent).toContain("в модуле «Модуль 1»");
+        expect(dom.window.document.getElementById("theory-center-summary").textContent).toContain("Модуль 1");
     });
 
     it("persists summary collapse state in localStorage", () => {
@@ -242,6 +242,122 @@ describe("Theory center regressions", () => {
         expect(dom.window.document.getElementById("theory-center-result-summary").textContent).toBe("Показано 1 из 1");
         expect(dom.window.document.getElementById("theory-center-list").textContent).toContain("Теория 1");
     });
+
+    it("renders linked theory publications as a separate non-editable section in all scope", () => {
+        const dom = setupTheoryCenterDom();
+        const { state, renderList, rebuildTheoryPublicationIndex } = dom.window.__theoryCenterTestExports;
+
+        state.scope = "all";
+        rebuildTheoryPublicationIndex([{
+            item_id: "catalog_theory_th_local",
+            source_workspace_id: "th_local",
+            owner_user_id: "user_author",
+            owner_display_name: "Автор теории",
+            catalog_visibility: "public",
+        }]);
+        state.overview = {
+            theories: [{
+                id: "th_local",
+                title: "Локальная теория",
+                usage_topics: 0,
+                usage_complexes: 0,
+                is_orphan: true,
+                has_content: true,
+                image_count: 0,
+                ownership: {
+                    created_by_user_id: "user_author",
+                    created_by_user_name: "Автор теории",
+                    is_owned_by_current_user: false,
+                },
+            }],
+            complexes: [{
+                complex_id: "cx_1",
+                complex_name: "Мой комплекс",
+                theory_ids: ["th_local"],
+            }],
+            linked_theories: [{
+                id: "lib_1",
+                library_entry_id: "lib_1",
+                title: "Связанная теория",
+                access_state: "active",
+                access_reason: "Публикация доступна.",
+                updated_at: "2026-04-13T10:00:00.000Z",
+                image_count: 1,
+                is_linked_publication: true,
+                owner_user_id: "user_catalog",
+                owner_display_name: "Каталожный автор",
+                catalog_visibility: "access_code",
+            }],
+        };
+
+        renderList();
+
+        const html = dom.window.document.getElementById("theory-center-list").innerHTML;
+        expect(html).toContain("Связанные публикации");
+        expect(html).toContain("Рабочие теории");
+        expect(html).toContain('data-action="open-linked-theory"');
+        expect(html).toContain('data-selectable="0"');
+        expect(html).toContain("Автор теории");
+        expect(html).toContain("Каталожный автор");
+        expect(html).toContain("Родная");
+        expect(html).toContain("Из каталога");
+        expect(html).toContain("Общий доступ");
+        expect(html).toContain("По коду");
+        expect(html).toContain("Открыть");
+        expect(html).toContain("Комплекс:");
+    });
+
+    it("opens foreign workspace theories in a read-only viewer instead of navigating to the editor", async () => {
+        const dom = setupTheoryCenterDom();
+        const { state, openTheoryRecord } = dom.window.__theoryCenterTestExports;
+
+        state.overview = {
+            theories: [{
+                id: "th_foreign",
+                title: "Чужая теория",
+                updated_at: "2026-04-13T10:00:00.000Z",
+                usage_topics: 0,
+                usage_complexes: 1,
+                ownership: {
+                    created_by_user_id: "user_author",
+                    created_by_user_name: "Автор теории",
+                    is_owned_by_current_user: false,
+                },
+            }],
+            complexes: [{
+                complex_id: "cx_1",
+                complex_name: "Мой комплекс",
+                theory_ids: ["th_foreign"],
+            }],
+        };
+
+        dom.window.navigateWithTransition = vi.fn();
+        dom.window.fetch = vi.fn(async (url) => {
+            if (url === "/api/theories/th_foreign") {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        item: {
+                            id: "th_foreign",
+                            title: "Чужая теория",
+                            updated_at: "2026-04-13T10:00:00.000Z",
+                            delta: { ops: [{ insert: "Текст для просмотра\n" }] },
+                        },
+                    }),
+                };
+            }
+            throw new Error(`Unexpected fetch: ${url}`);
+        });
+
+        await openTheoryRecord("th_foreign");
+
+        expect(dom.window.navigateWithTransition).not.toHaveBeenCalled();
+        expect(dom.window.document.body.textContent).toContain("Просмотр без редактирования");
+        expect(dom.window.document.body.textContent).toContain("Мой комплекс");
+        expect(dom.window.document.body.textContent).toContain("Текст для просмотра");
+    });
+
     it("enables selection mode only for orphan theories in the all scope", () => {
         const dom = setupTheoryCenterDom();
         const {
@@ -404,6 +520,34 @@ describe("Theory center regressions", () => {
                     }),
                 };
             }
+            if (url === "/api/theory-library") {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        entries: [],
+                    }),
+                };
+            }
+            if (url === "/api/auth/me") {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        authenticated: true,
+                        user: { user_id: "user_author" },
+                    }),
+                };
+            }
+            if (url === "/api/catalog/items?content_type=theory&owner_user_id=user_author&include_owned_non_public=true") {
+                return {
+                    ok: true,
+                    json: async () => ({
+                        ok: true,
+                        items: [],
+                    }),
+                };
+            }
             throw new Error(`Unexpected fetch: ${url}`);
         });
 
@@ -420,7 +564,8 @@ describe("Theory center regressions", () => {
 
         await vi.advanceTimersByTimeAsync(5000);
 
-        const [deleteCall, overviewReloadCall] = dom.window.fetch.mock.calls;
+        const deleteCall = dom.window.fetch.mock.calls.find(([url]) => url === "/api/theories/th_orphan");
+        const overviewReloadCall = dom.window.fetch.mock.calls.find(([url]) => url === "/api/theory-center/overview");
         expect(deleteCall[0]).toBe("/api/theories/th_orphan");
         expect(deleteCall[1]).toMatchObject({ method: "DELETE" });
         expect(overviewReloadCall[0]).toBe("/api/theory-center/overview");
@@ -470,5 +615,53 @@ describe("Theory center regressions", () => {
         expect(dom.window.document.getElementById("theory-center-flash").textContent).toBe("");
         expect(state.selectionMode).toBe(false);
         expect(Array.from(state.selectedTheoryIds)).toEqual([]);
+    });
+
+    it("renders a remove action for linked theory library rows", () => {
+        const dom = setupTheoryCenterDom();
+        const { renderTheoryCatalogCard } = dom.window.__theoryCenterTestExports;
+
+        const markup = renderTheoryCatalogCard({
+            id: "theory_library::catalog_theory_demo::123",
+            library_entry_id: "theory_library::catalog_theory_demo::123",
+            title: "РЎРІСЏР·Р°РЅРЅР°СЏ С‚РµРѕСЂРёСЏ",
+            owner_user_id: "user_author",
+            owner_display_name: "Author",
+            catalog_visibility: "public",
+            updated_at: "2026-04-16T10:00:00Z",
+            access_state: "active",
+            access_reason: "",
+            is_linked_publication: true,
+            image_count: 0,
+        });
+
+        expect(markup).toContain('data-action="delete-linked-theory-record"');
+        expect(markup).toContain('data-library-entry-id="theory_library::catalog_theory_demo::123"');
+        expect(markup).toContain("Убрать");
+    });
+    it("normalizes hosted asset-backed viewer images to canonical asset URLs", () => {
+        const dom = setupTheoryCenterDom();
+        const {
+            theoryViewerAssetSrc,
+            normalizeTheoryViewerImageRef,
+            renderLinkedTheoryDeltaHtml,
+        } = dom.window.__theoryCenterTestExports;
+
+        expect(theoryViewerAssetSrc("asset_tc_1", "")).toBe("/api/assets/asset_tc_1/content");
+        expect(
+            normalizeTheoryViewerImageRef("/api/local-image?asset_id=asset_tc_2"),
+        ).toBe("/api/assets/asset_tc_2/content");
+
+        const html = renderLinkedTheoryDeltaHtml({
+            ops: [
+                {
+                    insert: { image: "/api/local-image?asset_id=asset_tc_3" },
+                    attributes: { align: "center", width: "420px" },
+                },
+            ],
+        });
+
+        expect(html).toContain("/api/assets/asset_tc_3/content");
+        expect(html).not.toContain("/api/local-image?asset_id=asset_tc_3");
     });
 });

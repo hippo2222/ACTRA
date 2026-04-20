@@ -240,6 +240,19 @@ describe("ClickUI runtime targets panel", () => {
     expect(listSection?.className).toContain("py-3");
   });
 
+  it("prefers canonical asset refs over legacy image_path in runtime viewport media", () => {
+    const task = createClickTaskFixture();
+    const container = document.getElementById("app");
+    task.task_data.content.image_asset_id = "asset_click_1";
+    task.task_data.content.image_path = "legacy/click.png";
+
+    dom.window.ClickUI.render(container, task, { runtimeMode: true });
+
+    const image = container.querySelector("img");
+    expect(image).toBeTruthy();
+    expect(image.getAttribute("src")).toBe("/api/assets/asset_click_1/content");
+  });
+
   it("renders click-oriented guidance for polygon targets", () => {
     const task = createClickTaskFixture();
     const container = document.getElementById("app");

@@ -309,6 +309,57 @@ describe("S2 review media", () => {
     expect(dom.window.document.getElementById("image-preview-backdrop")).toBeNull();
   });
 
+  it("renders asset-backed review media through canonical hosted asset URLs", async () => {
+    const dom = await bootDom({
+      payload: createIterationPayload({
+        results: {
+          iteration: 1,
+          complex_name: "Hosted Review Media",
+          total_tasks: 1,
+          successful_tasks: 0,
+          failed_tasks: 1,
+          duration_seconds: 12,
+          success_rate: 0,
+          has_next_iteration: true,
+          iteration_results: [
+            createIterationTask(1, {
+              review: {
+                title: "Hosted Review Media",
+                prompt: "Выберите вариант",
+                user_items: [
+                  {
+                    type: "choice_option",
+                    option_index: 0,
+                    fallback_label: "Вариант 1",
+                    image_asset_id: "asset_s2_user_1",
+                  },
+                ],
+                reference_items: [
+                  {
+                    type: "choice_option",
+                    option_index: 1,
+                    fallback_label: "Вариант 2",
+                    image: {
+                      asset_id: "asset_s2_reference_1",
+                    },
+                  },
+                ],
+              },
+            }),
+          ],
+        },
+      }),
+    });
+
+    dom.window.document.getElementById("review-btn").click();
+    await flushDom();
+
+    const images = dom.window.document.querySelectorAll(".s2-review-media-image");
+    expect(images).toHaveLength(2);
+    expect(images[0].getAttribute("src")).toBe("/api/assets/asset_s2_user_1/content");
+    expect(images[1].getAttribute("src")).toBe("/api/assets/asset_s2_reference_1/content");
+  });
+
   it("renders all failed test subquestions from review entries", async () => {
     const dom = await bootDom({
       payload: createIterationPayload({

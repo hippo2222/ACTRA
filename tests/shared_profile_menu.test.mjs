@@ -35,13 +35,15 @@ function setupDom() {
   defineGlobal('Node', dom.window.Node);
   defineGlobal('CustomEvent', dom.window.CustomEvent);
   defineGlobal('navigator', dom.window.navigator);
+  defineGlobal('localStorage', dom.window.localStorage);
   return dom;
 }
 
-async function flushPromises(rounds = 8) {
+async function flushPromises(rounds = 20) {
   for (let index = 0; index < rounds; index += 1) {
     await Promise.resolve();
   }
+  await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
 describe('shared profile menu', () => {
@@ -54,12 +56,24 @@ describe('shared profile menu', () => {
     selectProfileSpy = vi.fn(async () => {});
     dom.window.selectProfile = selectProfileSpy;
     defineGlobal('selectProfile', selectProfileSpy);
+    dom.window.NotificationUI = {
+      toast: vi.fn(),
+    };
+    defineGlobal('NotificationUI', dom.window.NotificationUI);
     vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
-  it('opens as a dropdown and delegates switching to the page handler', async () => {
+  it('keeps legacy profile switching flow for non-hosted runtime', async () => {
     const fetchMock = vi.fn(async (input) => {
       const url = typeof input === 'string' ? input : String(input?.url || '');
+
+      if (url === '/api/auth/me') {
+        return {
+          ok: false,
+          status: 404,
+          json: async () => ({ ok: false, error: 'not_found' }),
+        };
+      }
 
       if (url === '/api/users/current') {
         return {
@@ -99,11 +113,217 @@ describe('shared profile menu', () => {
     expect(overlay).toBeTruthy();
     expect(overlay.classList.contains('hidden')).toBe(false);
     expect(buttons.length).toBe(2);
+    expect(dom.window.document.body.textContent).toContain('Быстрое переключение');
 
     buttons[1].click();
     await flushPromises();
 
     expect(selectProfileSpy).toHaveBeenCalledWith('u2');
     expect(overlay.classList.contains('hidden')).toBe(true);
+  });
+
+  it('renders hosted account menu with spoiler theme picker and logout flow', async () => {
+    let currentTheme = 'light-a';
+    const setThemeSpy = vi.fn((themeId) => {
+      currentTheme = themeId;
+      dom.window.document.documentElement.setAttribute('data-theme', themeId);
+      dom.window.dispatchEvent(new dom.window.CustomEvent('themechanged', { detail: { themeId } }));
+    });
+    const navigateSpy = vi.fn();
+
+    dom.window.ThemeManager = {
+      getThemes: () => ([
+        { id: 'light-a', name: 'Контраст', swatch: '#f6f6f8', border: '#1349ec', isDark: false },
+        { id: 'dark-a', name: 'Ночь', swatch: '#141204', border: '#e8985e', isDark: true },
+      ]),
+      getTheme: () => currentTheme,
+      setTheme: setThemeSpy,
+    };
+    dom.window.PageTransition = { navigate: navigateSpy };
+
+    defineGlobal('ThemeManager', dom.window.ThemeManager);
+    defineGlobal('PageTransition', dom.window.PageTransition);
+
+    const fetchMock = vi.fn(async (input, init = {}) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+      const method = String(init?.method || 'GET').toUpperCase();
+
+      if (url === '/api/auth/me' && method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ok: true,
+            authenticated: true,
+            user: {
+              user_id: 'u-hosted',
+              name: 'Hosted User',
+              email: 'hosted@example.com',
+              login: 'hosted-login',
+              avatar_seed: '2.png',
+            },
+          }),
+        };
+      }
+
+      if (url === '/api/ui/settings' && method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, settings: { theme: 'dark-a' } }),
+        };
+      }
+
+      if (url === '/api/ui/settings' && method === 'POST') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+        };
+      }
+
+      if (url === '/api/auth/logout' && method === 'POST') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    dom.window.fetch = fetchMock;
+    defineGlobal('fetch', fetchMock);
+
+    dom.window.eval(loadScript('frontend/assets/SharedProfileModal.js'));
+    dom.window.openProfileMenu({ currentTarget: dom.window.document.getElementById('profile-anchor') });
+    await flushPromises();
+
+    expect(dom.window.document.body.textContent).toContain('Hosted User');
+    expect(dom.window.document.body.textContent).toContain('Личный кабинет ACTRA');
+    expect(dom.window.document.body.textContent).toContain('Настройки аккаунта');
+    expect(dom.window.document.body.textContent).toContain('Оформление');
+    expect(dom.window.document.body.textContent).toContain('Выйти');
+    expect(dom.window.document.body.textContent).not.toContain('hosted@example.com');
+    expect(dom.window.document.body.textContent).not.toContain('hosted-login');
+
+    const settingsLink = dom.window.document.getElementById('sharedProfileSettings');
+    expect(settingsLink?.getAttribute('href')).toBe('/ui/settings');
+
+    expect(dom.window.document.querySelector('[data-theme-chip="dark-a"]')).toBeNull();
+
+    const toggleButton = dom.window.document.querySelector('[data-profile-theme-toggle="true"]');
+    expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
+    toggleButton.click();
+    await flushPromises();
+
+    const darkChip = dom.window.document.querySelector('[data-theme-chip="dark-a"]');
+    expect(darkChip).toBeTruthy();
+    expect(dom.window.document.querySelector('[data-profile-theme-toggle="true"]')?.getAttribute('aria-expanded')).toBe('true');
+
+    const lightChip = dom.window.document.querySelector('[data-theme-chip="light-a"]');
+    lightChip.click();
+    await flushPromises();
+
+    expect(setThemeSpy).toHaveBeenCalledWith('dark-a');
+    expect(setThemeSpy).toHaveBeenCalledWith('light-a');
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/ui/settings',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+
+    const logoutButton = dom.window.document.getElementById('sharedProfileLogout');
+    logoutButton.click();
+    await flushPromises();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/logout',
+      expect.objectContaining({
+        method: 'POST',
+      }),
+    );
+    expect(navigateSpy).toHaveBeenCalledWith('/ui/welcome');
+  });
+
+  it('reverts hosted theme on save failure and keeps the menu open', async () => {
+    let currentTheme = 'light-a';
+    const setThemeSpy = vi.fn((themeId) => {
+      currentTheme = themeId;
+      dom.window.document.documentElement.setAttribute('data-theme', themeId);
+      dom.window.dispatchEvent(new dom.window.CustomEvent('themechanged', { detail: { themeId } }));
+    });
+
+    dom.window.ThemeManager = {
+      getThemes: () => ([
+        { id: 'light-a', name: 'Контраст', swatch: '#f6f6f8', border: '#1349ec', isDark: false },
+        { id: 'dark-a', name: 'Ночь', swatch: '#141204', border: '#e8985e', isDark: true },
+      ]),
+      getTheme: () => currentTheme,
+      setTheme: setThemeSpy,
+    };
+    defineGlobal('ThemeManager', dom.window.ThemeManager);
+
+    const fetchMock = vi.fn(async (input, init = {}) => {
+      const url = typeof input === 'string' ? input : String(input?.url || '');
+      const method = String(init?.method || 'GET').toUpperCase();
+
+      if (url === '/api/auth/me' && method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            ok: true,
+            authenticated: true,
+            user: {
+              user_id: 'u-hosted',
+              name: 'Hosted User',
+              email: 'hosted@example.com',
+              avatar_seed: '2.png',
+            },
+          }),
+        };
+      }
+
+      if (url === '/api/ui/settings' && method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+        };
+      }
+
+      if (url === '/api/ui/settings' && method === 'POST') {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({ ok: false, error: 'theme_save_failed' }),
+        };
+      }
+
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+
+    dom.window.fetch = fetchMock;
+    defineGlobal('fetch', fetchMock);
+
+    dom.window.eval(loadScript('frontend/assets/SharedProfileModal.js'));
+    dom.window.openProfileMenu({ currentTarget: dom.window.document.getElementById('profile-anchor') });
+    await flushPromises();
+
+    const toggleButton = dom.window.document.querySelector('[data-profile-theme-toggle="true"]');
+    toggleButton.click();
+    await flushPromises();
+
+    const darkChip = dom.window.document.querySelector('[data-theme-chip="dark-a"]');
+    darkChip.click();
+    await flushPromises();
+
+    expect(setThemeSpy).toHaveBeenCalledWith('dark-a');
+    expect(setThemeSpy).toHaveBeenCalledWith('light-a');
+    expect(dom.window.NotificationUI.toast).toHaveBeenCalledWith('Не удалось сохранить тему', 'error', 2000);
+    expect(dom.window.document.getElementById('sharedProfileMenuOverlay').classList.contains('hidden')).toBe(false);
   });
 });

@@ -11,6 +11,7 @@ if str(DESKTOP_APP_PATH) not in sys.path:
     sys.path.insert(0, str(DESKTOP_APP_PATH))
 
 import routes.quick_access_routes as quick_access_routes
+from services.hosted_shadow_fallback import HostedShadowWriteFallbackDisabledError
 
 
 def test_start_complex_session_force_clears_paused_session_before_restart(monkeypatch):
@@ -128,6 +129,45 @@ def test_start_complex_session_blocks_repository_restored_active_session(monkeyp
         "error": "paused_session_exists",
         "session_id": "session_orphan",
         "paused_at": now.isoformat(),
+    }
+
+
+def test_start_complex_session_returns_explicit_degraded_response_for_blocked_hosted_write(monkeypatch):
+    app = Flask(__name__)
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+    fake_session_api = SimpleNamespace(
+        _session_manager=SimpleNamespace(cancel_session=lambda session_id, user_id=None: True),
+        start_session=lambda **kwargs: (_ for _ in ()).throw(
+            HostedShadowWriteFallbackDisabledError("save_session", reason="postgres_dsn_missing")
+        ),
+    )
+    fake_ctx = SimpleNamespace(session_api=fake_session_api)
+
+    monkeypatch.setattr(quick_access_routes, "get_ctx", lambda: fake_ctx)
+    monkeypatch.setattr(
+        quick_access_routes,
+        "_find_paused_session",
+        lambda session_api, complex_id, user_id: None,
+    )
+
+    with app.test_request_context(
+        "/api/session/complex_alpha/start",
+        method="POST",
+        json={"user_id": "audit_user", "start_iteration": 1},
+    ):
+        response, status = quick_access_routes.start_complex_session("complex_alpha")
+
+    assert status == 503
+    assert response.get_json() == {
+        "ok": False,
+        "error": "hosted_shadow_write_blocked",
+        "degraded": True,
+        "details": {
+            "operation": "save_session",
+            "reason": "postgres_dsn_missing",
+            "runtime_mode": "hosted_web",
+            "env_opt_in": "ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK",
+        },
     }
 
 

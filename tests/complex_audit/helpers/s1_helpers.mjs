@@ -2,6 +2,7 @@ import { expect } from "@playwright/test";
 
 import { waitForPageStable } from "./base.mjs";
 import { assertApiOk, fetchJson } from "./data_seed.mjs";
+import { ensureHostedBrowserAuth } from "./runtime_context.mjs";
 import {
   escapeRegExp,
   extractSessionIdFromUrl,
@@ -13,6 +14,7 @@ import {
 } from "./session_api.mjs";
 
 export async function startComplexFromList(page, { baseUrl, complexId, complexName }) {
+  await ensureHostedBrowserAuth(page, baseUrl);
   await page.goto(new URL("/ui/complexes", baseUrl).toString());
   await waitForPageStable(page);
 

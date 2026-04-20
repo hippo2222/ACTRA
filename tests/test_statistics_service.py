@@ -25,6 +25,12 @@ from unittest.mock import MagicMock, patch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "desktop-app"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from persistence.postgres import PostgresUnavailableError
+from persistence.runtime import PersistenceRuntimeSettings
+from services.hosted_shadow_fallback import (
+    HostedShadowReadFallbackDisabledError,
+    HostedShadowWriteFallbackDisabledError,
+)
 from services.statistics_service import StatisticsService, _safe_int, _safe_float, _safe_rate
 from task_system.core.models.complex_models import ExtendedSessionResultSummary, RecentSessionSummary
 
@@ -51,6 +57,59 @@ def _make_svc(tmp_path, user_id="test_user", task_history=None, complex_completi
     # Prevent lazy microcards init from importing real modules
     svc._microcards_analytics_service = False
     return svc
+
+
+def _build_hosted_settings(tmp_path: Path) -> PersistenceRuntimeSettings:
+    return PersistenceRuntimeSettings(
+        runtime_mode="hosted_web",
+        data_root=tmp_path,
+        state_root=tmp_path / "runtime_state",
+        postgres_dsn="",
+        s3_endpoint="",
+        s3_bucket="",
+        s3_access_key="",
+        s3_secret_key="",
+        hosted_contract_errors=["missing_env:ACTRA_POSTGRES_DSN"],
+    )
+
+
+class _FakeHostedComplexStatisticsRepository:
+    def __init__(self):
+        self.payloads = {}
+        self.ensure_schema_calls = 0
+
+    def ensure_schema(self):
+        self.ensure_schema_calls += 1
+
+    def get_statistics(self, user_id: str):
+        return self.payloads.get(user_id)
+
+    def write_statistics(self, user_id: str, payload, *, updated_at: str):
+        self.payloads[user_id] = dict(payload)
+
+
+class _UnavailableHostedComplexStatisticsRepository:
+    def ensure_schema(self):
+        raise PostgresUnavailableError("postgres_dsn_missing")
+
+    def get_statistics(self, user_id: str):
+        raise PostgresUnavailableError("postgres_dsn_missing")
+
+    def write_statistics(self, user_id: str, payload, *, updated_at: str):
+        raise PostgresUnavailableError("postgres_dsn_missing")
+
+
+class _FakeHostedCalendarRepository:
+    def __init__(self):
+        self.payloads = {}
+
+    def get_document(self, user_id: str, doc_kind: str):
+        return self.payloads.get((user_id, doc_kind))
+
+
+class _UnavailableHostedCalendarRepository:
+    def get_document(self, user_id: str, doc_kind: str):
+        raise PostgresUnavailableError("postgres_dsn_missing")
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -251,6 +310,95 @@ class TestComplexStatisticsIO:
         (user_dir / "complex_statistics.json").write_text("{bad", encoding="utf-8")
         assert svc._load_complex_statistics("user1") == {}
 
+    def test_hosted_round_trip_uses_repository_source_of_truth(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        svc = StatisticsService(
+            _make_progress_service(),
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+        svc._complex_statistics_repository = _FakeHostedComplexStatisticsRepository()
+
+        data = {"complex_1": {"aggregated": {"attempts": 5, "wins": 3, "success_rate": 0.6}, "recent_sessions": []}}
+        assert svc._save_complex_statistics("user1", data) is True
+
+        loaded = svc._load_complex_statistics("user1")
+
+        assert loaded == data
+        assert svc.hosted_storage_ready is True
+        assert not (tmp_path / "users" / "user1" / "complex_statistics.json").exists()
+
+    def test_hosted_write_blocks_shadow_fallback_by_default(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        svc = StatisticsService(
+            _make_progress_service(),
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+        svc._complex_statistics_repository = _UnavailableHostedComplexStatisticsRepository()
+
+        with pytest.raises(HostedShadowWriteFallbackDisabledError) as exc_info:
+            svc._save_complex_statistics("user1", {"complex_1": {"aggregated": {}, "recent_sessions": []}})
+
+        assert exc_info.value.operation == "statistics._save_complex_statistics"
+        assert svc.hosted_shadow_fallback_active is True
+        assert svc.hosted_shadow_write_fallback_blocked is True
+
+    def test_hosted_read_blocks_shadow_when_postgres_unavailable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        svc = StatisticsService(
+            _make_progress_service(),
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+        svc._complex_statistics_repository = _UnavailableHostedComplexStatisticsRepository()
+
+        user_dir = tmp_path / "users" / "user1"
+        user_dir.mkdir(parents=True)
+        (user_dir / "complex_statistics.json").write_text(
+            json.dumps({"complex_shadow": {"aggregated": {}, "recent_sessions": []}}, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(HostedShadowReadFallbackDisabledError) as exc_info:
+            svc._load_complex_statistics("user1")
+
+        assert exc_info.value.operation == "statistics._load_complex_statistics"
+        assert svc.hosted_shadow_fallback_active is True
+        assert svc.hosted_shadow_read_fallback_blocked is True
+
+    def test_hosted_load_returns_empty_when_repository_is_empty(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+
+        svc = StatisticsService(
+            _make_progress_service(),
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+        fake_repo = _FakeHostedComplexStatisticsRepository()
+        svc._complex_statistics_repository = fake_repo
+
+        user_dir = tmp_path / "users" / "user1"
+        user_dir.mkdir(parents=True)
+        shadow_payload = {"complex_shadow": {"aggregated": {"attempts": 2}, "recent_sessions": []}}
+        (user_dir / "complex_statistics.json").write_text(
+            json.dumps(shadow_payload, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        loaded = svc._load_complex_statistics("user1")
+
+        assert loaded == {}
+        assert fake_repo.get_statistics("user1") is None
+
 
 # ═══════════════════════════════════════════════════════════════════
 # update_complex_stats
@@ -317,6 +465,23 @@ class TestUpdateComplexStats:
         assert svc.update_complex_stats(ext, "user1") is True
         stats = svc._load_complex_statistics("user1")
         assert stats["c1"]["aggregated"]["wins"] == 7
+
+    def test_hosted_update_raises_when_shadow_read_is_blocked(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        svc = StatisticsService(
+            _make_progress_service(),
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+        svc._complex_statistics_repository = _UnavailableHostedComplexStatisticsRepository()
+
+        with pytest.raises(HostedShadowReadFallbackDisabledError) as exc_info:
+            svc.update_complex_stats(self._make_recent_summary(), "user1", complex_id="c1")
+
+        assert exc_info.value.operation == "statistics._load_complex_statistics"
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -575,6 +740,112 @@ class TestAggregateStatistics:
         assert "tasks" in result["learning_sources"]
         assert "microcards" in result["learning_sources"]
         assert "combined" in result["learning_sources"]
+
+    def test_hosted_overall_stats_raise_degraded_when_progress_storage_is_unavailable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+
+        progress_service = _make_progress_service()
+        progress_service.progress_manager.hosted_storage_ready = False
+        progress_service.progress_manager.ensure_hosted_persistence_ready.side_effect = PostgresUnavailableError(
+            "postgres_dsn_missing"
+        )
+
+        svc = StatisticsService(
+            progress_service,
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+
+        with pytest.raises(HostedShadowReadFallbackDisabledError) as exc_info:
+            svc.aggregate_statistics("test_user")
+
+        assert exc_info.value.operation == "statistics._load_progress_data"
+
+
+class TestHostedTimeDynamics:
+    def test_hosted_time_dynamics_use_calendar_repository_source_of_truth(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        today_iso = date.today().isoformat()
+        task_history = {
+            "mod/topic/task1": {
+                "attempts": [
+                    {"success": True, "time_spent": 120, "timestamp": f"{today_iso}T10:00:00"},
+                ]
+            }
+        }
+        progress_service = _make_progress_service(user_id="test_user", task_history=task_history)
+        progress_service.progress_manager.hosted_storage_ready = True
+
+        svc = StatisticsService(
+            progress_service,
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+        fake_calendar_repo = _FakeHostedCalendarRepository()
+        fake_calendar_repo.payloads[("test_user", "activity")] = {
+            today_iso: {
+                "microcards_reviews": 5,
+                "microcards_correct": 4,
+                "microcards_seconds_spent": 300,
+            }
+        }
+        svc._calendar_repository = fake_calendar_repo
+
+        shadow_dir = tmp_path / "user_calendar" / "test_user"
+        shadow_dir.mkdir(parents=True)
+        (shadow_dir / "activity.json").write_text(
+            json.dumps(
+                {
+                    today_iso: {
+                        "microcards_reviews": 99,
+                        "microcards_correct": 99,
+                        "microcards_seconds_spent": 999,
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = svc.get_time_dynamics("test_user", days=1, force_refresh=True)
+
+        assert result[-1]["date"] == today_iso
+        assert result[-1]["microcards_reviews"] == 5
+        assert result[-1]["microcards_study_minutes"] == 5
+
+    def test_hosted_time_dynamics_raise_degraded_when_calendar_storage_is_unavailable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        today_iso = date.today().isoformat()
+        task_history = {
+            "mod/topic/task1": {
+                "attempts": [
+                    {"success": True, "time_spent": 60, "timestamp": f"{today_iso}T09:00:00"},
+                ]
+            }
+        }
+        progress_service = _make_progress_service(user_id="test_user", task_history=task_history)
+        progress_service.progress_manager.hosted_storage_ready = True
+
+        svc = StatisticsService(
+            progress_service,
+            data_dir=str(tmp_path),
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        svc._microcards_analytics_service = False
+        svc._calendar_repository = _UnavailableHostedCalendarRepository()
+
+        shadow_dir = tmp_path / "user_calendar" / "test_user"
+        shadow_dir.mkdir(parents=True)
+        (shadow_dir / "activity.json").write_text(
+            json.dumps({today_iso: {"microcards_reviews": 42}}),
+            encoding="utf-8",
+        )
+
+        with pytest.raises(HostedShadowReadFallbackDisabledError) as exc_info:
+            svc.get_time_dynamics("test_user", days=1, force_refresh=True)
+
+        assert exc_info.value.operation == "statistics._load_calendar_activity"
 
 
 # ═══════════════════════════════════════════════════════════════════

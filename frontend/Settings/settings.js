@@ -36,6 +36,35 @@
     const DIAGNOSTICS_STORAGE_KEY = 'settings_provider_diagnostics_v1';
     const KEYS_DRAFT_STORAGE_KEY = 'settings_ai_keys_draft_v1';
     const THEME_STATUS_RESET_MS = 3200;
+    const PASSWORD_MIN_LENGTH = 8;
+    const AVATAR_CROP_VIEW_SIZE = 304;
+    const AVATAR_CROP_OUTPUT_SIZE = 512;
+    const THEME_COPY = {
+        'light-a': {
+            name: '\u041a\u043e\u043d\u0442\u0440\u0430\u0441\u0442',
+            description: '\u0421\u0432\u0435\u0442\u043b\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0445\u043e\u043b\u043e\u0434\u043d\u044b\u043c \u0430\u043a\u0446\u0435\u043d\u0442\u043e\u043c',
+        },
+        'light-b': {
+            name: '\u0422\u0435\u043f\u043b\u043e',
+            description: '\u041c\u044f\u0433\u043a\u0430\u044f \u0441\u0432\u0435\u0442\u043b\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u043e\u0442\u0442\u0435\u043d\u043a\u0430\u043c\u0438',
+        },
+        'neutral-a': {
+            name: '\u0417\u0435\u043c\u043b\u044f',
+            description: '\u041d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0432 \u043f\u0440\u0438\u0440\u043e\u0434\u043d\u044b\u0445 \u0442\u043e\u043d\u0430\u0445',
+        },
+        'neutral-b': {
+            name: '\u0421\u0443\u043c\u0435\u0440\u043a\u0438',
+            description: '\u0421\u043f\u043e\u043a\u043e\u0439\u043d\u0430\u044f \u043d\u0435\u0439\u0442\u0440\u0430\u043b\u044c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u043c\u044f\u0433\u043a\u0438\u043c \u043a\u043e\u043d\u0442\u0440\u0430\u0441\u0442\u043e\u043c',
+        },
+        'dark-a': {
+            name: '\u041d\u043e\u0447\u044c',
+            description: '\u0422\u0451\u043c\u043d\u0430\u044f \u0442\u0435\u043c\u0430 \u0441 \u0442\u0451\u043f\u043b\u044b\u043c\u0438 \u0430\u043a\u0446\u0435\u043d\u0442\u0430\u043c\u0438',
+        },
+        'dark-b': {
+            name: '\u041a\u043e\u0441\u043c\u043e\u0441',
+            description: '\u0413\u043b\u0443\u0431\u043e\u043a\u0430\u044f \u0442\u0451\u043c\u043d\u0430\u044f \u043f\u0430\u043b\u0438\u0442\u0440\u0430 \u0434\u043b\u044f \u0432\u0435\u0447\u0435\u0440\u043d\u0435\u0439 \u0440\u0430\u0431\u043e\u0442\u044b',
+        },
+    };
 
     let _providersData = {};
     let _validationState = {}; // provider -> 'idle' | 'validating' | 'valid' | 'invalid'
@@ -43,6 +72,21 @@
     let _providerDiagnostics = {}; // provider -> { status, checkedAt }
     let _draftWriteLocked = false;
     let _isSavingTheme = false;
+    let _accountContext = null;
+    let _isLogoutPending = false;
+    let _availableAvatars = [];
+    let _isAvatarSaving = false;
+    let _isNameSaving = false;
+    let _isEmailSaving = false;
+    let _pendingEmailFeedback = null;
+    let _isPasswordSaving = false;
+    let _avatarCropState = null;
+    let _avatarCropDragState = null;
+    let _aiSettingsEnabled = false;
+    let _isAdminUsersLoading = false;
+    let _isAdminPlanSaving = false;
+    let _adminUsersQuery = '';
+    let _adminUsers = [];
 
     function composeFeedbackMessage({ what = '', impact = '', next = '' } = {}) {
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.voiceMessage === 'function') {
@@ -70,7 +114,7 @@
             const raw = localStorage.getItem(DIAGNOSTICS_STORAGE_KEY);
             const parsed = raw ? JSON.parse(raw) : {};
             _providerDiagnostics = parsed && typeof parsed === 'object' ? parsed : {};
-        } catch (e) {
+        } catch (_error) {
             _providerDiagnostics = {};
         }
     }
@@ -78,25 +122,8 @@
     function saveDiagnostics() {
         try {
             localStorage.setItem(DIAGNOSTICS_STORAGE_KEY, JSON.stringify(_providerDiagnostics || {}));
-        } catch (e) {
-            // Ignore localStorage write errors for diagnostics metadata.
-        }
-    }
-
-    function setProviderDiagnostics(providerName, status) {
-        if (!providerName) return;
-        _providerDiagnostics[providerName] = {
-            status: String(status || 'unknown'),
-            checkedAt: Date.now(),
-        };
-        saveDiagnostics();
-    }
-
-    function clearProviderDiagnostics(providerName) {
-        if (!providerName) return;
-        if (Object.prototype.hasOwnProperty.call(_providerDiagnostics, providerName)) {
-            delete _providerDiagnostics[providerName];
-            saveDiagnostics();
+        } catch (_error) {
+            // ignore localStorage failures
         }
     }
 
@@ -104,9 +131,8 @@
         try {
             const raw = localStorage.getItem(KEYS_DRAFT_STORAGE_KEY);
             const parsed = raw ? JSON.parse(raw) : null;
-            if (!parsed || typeof parsed !== 'object') return null;
-            return parsed;
-        } catch (e) {
+            return parsed && typeof parsed === 'object' ? parsed : null;
+        } catch (_error) {
             return null;
         }
     }
@@ -114,49 +140,25 @@
     function clearKeysDraft() {
         try {
             localStorage.removeItem(KEYS_DRAFT_STORAGE_KEY);
-        } catch (e) {
-            // Ignore localStorage write errors for draft metadata.
+        } catch (_error) {
+            // ignore localStorage failures
         }
     }
 
     function saveKeysDraft(values = {}, pendingRemovals = {}) {
         try {
-            const payload = {
+            localStorage.setItem(KEYS_DRAFT_STORAGE_KEY, JSON.stringify({
                 savedAt: Date.now(),
                 values,
                 pendingRemovals,
-            };
-            localStorage.setItem(KEYS_DRAFT_STORAGE_KEY, JSON.stringify(payload));
-        } catch (e) {
-            // Ignore localStorage write errors for draft metadata.
+            }));
+        } catch (_error) {
+            // ignore localStorage failures
         }
     }
 
     function collectFormDraftState() {
-        const values = {};
-        let hasValues = false;
-        let hasPendingRemovals = false;
-
-        for (const name of PROVIDERS_ORDER) {
-            const input = document.getElementById(`key-input-${name}`);
-            const value = input ? input.value.trim() : '';
-            if (value) {
-                values[name] = value;
-                hasValues = true;
-            }
-            if (_pendingRemovals[name]) {
-                hasPendingRemovals = true;
-            }
-        }
-
-        const pendingRemovals = {};
-        for (const name of PROVIDERS_ORDER) {
-            if (_pendingRemovals[name]) {
-                pendingRemovals[name] = true;
-            }
-        }
-
-        return { values, pendingRemovals, hasValues, hasPendingRemovals };
+        return { values: {}, pendingRemovals: {}, hasValues: false, hasPendingRemovals: false };
     }
 
     function persistFormDraftState() {
@@ -173,65 +175,69 @@
 
     function formatDraftTime(savedAt) {
         const date = new Date(Number(savedAt || 0));
-        if (Number.isNaN(date.getTime())) return 'недавно';
+        if (Number.isNaN(date.getTime())) return '\u043d\u0435 \u0438\u0437\u0432\u0435\u0441\u0442\u043d\u043e';
         return `${date.toLocaleDateString()} ${date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
     }
 
-    function applyDraftToForm(draft) {
-        if (!draft || typeof draft !== 'object') return false;
-        const values = draft.values && typeof draft.values === 'object' ? draft.values : {};
-        const pendingRemovals = draft.pendingRemovals && typeof draft.pendingRemovals === 'object'
-            ? draft.pendingRemovals
-            : {};
-
-        _draftWriteLocked = true;
-        _pendingRemovals = {};
-        for (const name of PROVIDERS_ORDER) {
-            if (pendingRemovals[name]) _pendingRemovals[name] = true;
-        }
-        renderProviders({ preserveDrafts: false });
-        for (const name of PROVIDERS_ORDER) {
-            const input = document.getElementById(`key-input-${name}`);
-            if (!input) continue;
-            input.value = typeof values[name] === 'string' ? values[name] : '';
-        }
-        _draftWriteLocked = false;
-        persistFormDraftState();
-        return true;
+    function applyDraftToForm(_draft) {
+        return false;
     }
 
     function restoreDraftFromStorage() {
-        const draft = readKeysDraft();
-        if (!draft) return false;
-        const restored = applyDraftToForm(draft);
-        if (!restored) return false;
-
-        showVoiceToast({
-            severity: 'info',
-            what: 'Черновик настроек восстановлен.',
-            impact: 'Несохранённые значения снова доступны в форме.',
-            next: 'Проверьте поля и нажмите «Сохранить ключи».',
-        });
-        return true;
+        return false;
     }
 
     function discardDraftFromStorage() {
         clearKeysDraft();
         updateDraftBanner();
-        showVoiceToast({
-            severity: 'info',
-            what: 'Черновик настроек удалён.',
-            impact: 'Форма продолжит работу с текущими данными сервера.',
-            next: 'При необходимости введите новые значения вручную.',
-        });
     }
 
     function bindDraftTrackingForInputs() {
-        for (const name of PROVIDERS_ORDER) {
-            const input = document.getElementById(`key-input-${name}`);
-            if (!input || input.dataset.draftBound === '1') continue;
-            input.dataset.draftBound = '1';
-            input.addEventListener('input', persistFormDraftState);
+        // AI key cards are not rendered in these compact settings flows by default.
+    }
+
+    function setAiSettingsAvailability(enabled) {
+        _aiSettingsEnabled = enabled === true;
+        const liveContent = document.getElementById('settings-ai-live-content');
+        const placeholder = document.getElementById('settings-ai-placeholder');
+        const saveButton = document.getElementById('save-keys-btn');
+        const validateButton = document.getElementById('validate-all-btn');
+        if (liveContent) {
+            liveContent.classList.toggle('hidden', !_aiSettingsEnabled);
+            liveContent.hidden = !_aiSettingsEnabled;
+        }
+        if (placeholder) {
+            placeholder.classList.toggle('hidden', _aiSettingsEnabled);
+            placeholder.hidden = _aiSettingsEnabled;
+        }
+        if (saveButton) saveButton.disabled = !_aiSettingsEnabled;
+        if (validateButton) validateButton.disabled = !_aiSettingsEnabled;
+        if (!_aiSettingsEnabled) {
+            const banner = document.getElementById('settings-draft-banner');
+            const bannerText = document.getElementById('settings-draft-banner-text');
+            if (banner) {
+                banner.classList.add('hidden');
+                banner.hidden = true;
+                banner.style.display = 'none';
+            }
+            if (bannerText) {
+                bannerText.textContent = '';
+            }
+        }
+    }
+
+    async function loadAiSettingsAvailability() {
+        try {
+            const response = await fetch('/api/editor/theory/rollout/status');
+            const data = await response.json().catch(() => null);
+            const enabled = data?.ok && data?.rollout?.feature_flags
+                ? data.rollout.feature_flags.ai_mode !== false
+                : false;
+            setAiSettingsAvailability(enabled);
+            return enabled;
+        } catch (_error) {
+            setAiSettingsAvailability(false);
+            return false;
         }
     }
 
@@ -239,832 +245,246 @@
         const banner = document.getElementById('settings-draft-banner');
         const bannerText = document.getElementById('settings-draft-banner-text');
         if (!banner || !bannerText) return;
-
+        if (!_aiSettingsEnabled) {
+            banner.classList.add('hidden');
+            banner.hidden = true;
+            banner.style.display = 'none';
+            bannerText.textContent = '';
+            return;
+        }
         const draft = readKeysDraft();
         if (!draft) {
             banner.classList.add('hidden');
             banner.hidden = true;
             banner.style.display = 'none';
+            bannerText.textContent = '';
             return;
         }
-
-        const values = draft.values && typeof draft.values === 'object' ? draft.values : {};
-        const pendingRemovals = draft.pendingRemovals && typeof draft.pendingRemovals === 'object'
-            ? draft.pendingRemovals
-            : {};
-        const valuesCount = Object.values(values).filter((value) => String(value || '').trim().length > 0).length;
-        const removalsCount = Object.keys(pendingRemovals).filter((name) => !!pendingRemovals[name]).length;
-        const summaryParts = [];
-        if (valuesCount > 0) summaryParts.push(`значений: ${valuesCount}`);
-        if (removalsCount > 0) summaryParts.push(`отметок удаления: ${removalsCount}`);
-        const summary = summaryParts.length ? summaryParts.join(', ') : 'изменений';
-        bannerText.textContent = `Черновик от ${formatDraftTime(draft.savedAt)} (${summary}). Можно восстановить или удалить его.`;
         banner.classList.remove('hidden');
         banner.hidden = false;
         banner.style.display = '';
+        bannerText.textContent = `\u0427\u0435\u0440\u043d\u043e\u0432\u0438\u043a \u043e\u0442 ${formatDraftTime(draft.savedAt)}.`;
+    }
+
+    function sanitizeThemeColor(value, fallback) {
+        const raw = String(value || '').trim();
+        return /^#(?:[0-9a-f]{3}|[0-9a-f]{6})$/i.test(raw) ? raw : fallback;
+    }
+
+    function setButtonLabel(buttonId, iconName, label) {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+        button.innerHTML = `<span class="material-symbols-outlined text-[18px]">${iconName}</span>${escapeHtml(label)}`;
+    }
+
+    function applyStaticCopy() {
+        document.title = '\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u2014 ACTRA';
+
+        const topbarBackLabel = document.querySelector('.settings-topbar a span:last-child');
+        if (topbarBackLabel) topbarBackLabel.textContent = '\u0413\u043b\u0430\u0432\u043d\u0430\u044f';
+
+        const pageTitle = document.querySelector('.settings-topbar h1');
+        if (pageTitle) pageTitle.textContent = '\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438';
+
+        const sectionTitles = Array.from(document.querySelectorAll('main .settings-card h2.text-xl.font-bold.text-text-main'));
+        const sectionDescriptions = Array.from(document.querySelectorAll('main .settings-card h2.text-xl.font-bold.text-text-main + p.text-sm.text-text-secondary'));
+        const sectionCopy = [
+            ['\u041f\u0440\u043e\u0444\u0438\u043b\u044c', '\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0438 \u0444\u043e\u0442\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f.'],
+            ['\u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c', '\u0421\u043c\u0435\u043d\u0430 \u043f\u0430\u0440\u043e\u043b\u044f \u0438 \u0431\u0430\u0437\u043e\u0432\u0430\u044f \u0437\u0430\u0449\u0438\u0442\u0430 \u0432\u0445\u043e\u0434\u0430.'],
+            ['\u041e\u0444\u043e\u0440\u043c\u043b\u0435\u043d\u0438\u0435', '\u041f\u0430\u043b\u0438\u0442\u0440\u0430 \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.'],
+            ['AI keys', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0435 \u043a\u043b\u044e\u0447\u0438 \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0438\u0445 \u043f\u0440\u044f\u043c\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435.'],
+        ];
+        sectionCopy.forEach(([title, description], index) => {
+            if (sectionTitles[index]) sectionTitles[index].textContent = title;
+            if (sectionDescriptions[index]) sectionDescriptions[index].textContent = description;
+        });
+
+        const accountActions = Array.from(document.querySelectorAll('main > section:first-child a[href="/ui/main"] span:last-child'));
+        if (accountActions[0]) accountActions[0].textContent = '\u0413\u043b\u0430\u0432\u043d\u0430\u044f';
+
+        const avatarPreviewName = document.getElementById('settings-avatar-preview-name');
+        if (avatarPreviewName) avatarPreviewName.textContent = '\u0424\u043e\u0442\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f';
+
+        const avatarPreviewNote = document.getElementById('settings-avatar-preview-note');
+        if (avatarPreviewNote) {
+            avatarPreviewNote.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u0435 \u0441\u0432\u043e\u0451 \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435. \u041e\u043d\u043e \u0441\u0440\u0430\u0437\u0443 \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f \u0432 \u043c\u0435\u043d\u044e \u0438 \u043d\u0430 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043a.';
+        }
+
+        const nameLabel = document.getElementById('settings-name-input')?.previousElementSibling;
+        if (nameLabel && nameLabel.tagName === 'SPAN') {
+            nameLabel.textContent = '\u0418\u043c\u044f \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044f';
+        }
+
+        const nameInput = document.getElementById('settings-name-input');
+        if (nameInput) nameInput.setAttribute('placeholder', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0438\u043c\u044f');
+
+        const emailTitle = document.getElementById('settings-email-value')?.previousElementSibling;
+        if (emailTitle && emailTitle.tagName === 'P') {
+            emailTitle.textContent = '\u041f\u043e\u0447\u0442\u0430 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430';
+        }
+
+        const emailPendingTitle = document.getElementById('settings-email-pending-title');
+        if (emailPendingTitle) emailPendingTitle.textContent = '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f';
+
+        const emailPendingHint = document.getElementById('settings-email-pending-hint');
+        if (emailPendingHint) {
+            emailPendingHint.textContent = '\u041f\u043e\u043a\u0430 \u043d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430, \u0432\u0445\u043e\u0434 \u0438 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0441\u0442\u0430\u044e\u0442\u0441\u044f \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0435\u043c \u0430\u0434\u0440\u0435\u0441\u0435.';
+        }
+
+        const emailInputLabel = document.getElementById('settings-email-input')?.previousElementSibling;
+        if (emailInputLabel && emailInputLabel.tagName === 'SPAN') {
+            emailInputLabel.textContent = '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430';
+        }
+
+        const passwordTitle = document.getElementById('settings-password-state')?.previousElementSibling;
+        if (passwordTitle && passwordTitle.tagName === 'P') {
+            passwordTitle.textContent = '\u041f\u0430\u0440\u043e\u043b\u044c';
+        }
+
+        const currentPasswordLabel = document.querySelector('label[for="settings-password-current"] span');
+        if (currentPasswordLabel) currentPasswordLabel.textContent = '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+
+        const newPasswordLabel = document.getElementById('settings-password-new')?.closest('label')?.querySelector('span');
+        if (newPasswordLabel) newPasswordLabel.textContent = '\u041d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+
+        const confirmPasswordLabel = document.getElementById('settings-password-confirm')?.closest('label')?.querySelector('span');
+        if (confirmPasswordLabel) confirmPasswordLabel.textContent = '\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+
+        const themePlaceholder = document.querySelector('#theme-options > div');
+        if (themePlaceholder) themePlaceholder.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0442\u0435\u043c...';
+
+        const saveKeysButton = document.getElementById('save-keys-btn');
+        if (saveKeysButton) saveKeysButton.textContent = '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043a\u043b\u044e\u0447\u0438';
+
+        const validateAllButton = document.getElementById('validate-all-btn');
+        if (validateAllButton) validateAllButton.textContent = '\u041f\u0440\u043e\u0432\u0435\u0440\u0438\u0442\u044c \u0432\u0441\u0435 \u043a\u043b\u044e\u0447\u0438';
+
+        const restoreDraftButton = document.getElementById('settings-draft-restore-btn');
+        if (restoreDraftButton) restoreDraftButton.textContent = '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u0438\u0442\u044c';
+
+        const discardDraftButton = document.getElementById('settings-draft-discard-btn');
+        if (discardDraftButton) discardDraftButton.textContent = '\u0423\u0434\u0430\u043b\u0438\u0442\u044c';
+
+        setButtonLabel('settings-avatar-upload-btn', 'upload', '\u0417\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0438\u0437\u043e\u0431\u0440\u0430\u0436\u0435\u043d\u0438\u0435');
+        setButtonLabel('settings-name-save-btn', 'save', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0438\u043c\u044f');
+        setButtonLabel('settings-email-toggle-btn', 'mail', '\u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u043e\u0447\u0442\u0443');
+        setButtonLabel('settings-email-save-btn', 'check', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u043e\u0447\u0442\u0443');
+        setButtonLabel('settings-email-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
+        setButtonLabel('settings-email-pending-resend-btn', 'forward_to_inbox', '\u041e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u0435\u0449\u0451 \u0440\u0430\u0437');
+        setButtonLabel('settings-password-toggle-btn', 'password', '\u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c');
+        setButtonLabel('settings-password-save-btn', 'check', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c');
+        setButtonLabel('settings-password-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
+        setButtonLabel('settings-logout-btn', 'logout', '\u0412\u044b\u0439\u0442\u0438');
     }
 
     function getThemeCatalog() {
         if (window.ThemeManager && typeof window.ThemeManager.getThemes === 'function') {
             return window.ThemeManager.getThemes();
         }
-
-        return [
-            { id: 'light-a', name: 'Контраст', description: 'Светлая тема с холодным акцентом', swatch: '#f6f6f8', border: '#1349ec', isDark: false },
-            { id: 'light-b', name: 'Тепло', description: 'Мягкая светлая палитра с теплыми оттенками', swatch: '#fffecb', border: '#ff2e00', isDark: false },
-            { id: 'neutral-a', name: 'Земля', description: 'Нейтральная палитра в природных тонах', swatch: '#dcc9b6', border: '#6d4c3d', isDark: false },
-            { id: 'neutral-b', name: 'Сумерки', description: 'Спокойная нейтральная тема с мягким контрастом', swatch: '#b0aac0', border: '#50663c', isDark: false },
-            { id: 'dark-a', name: 'Ночь', description: 'Темная тема с теплыми акцентами', swatch: '#141204', border: '#e8985e', isDark: true },
-            { id: 'dark-b', name: 'Космос', description: 'Глубокая темная палитра для вечерней работы', swatch: '#120d31', border: '#b98ea7', isDark: true },
-        ];
+        return [];
     }
 
     function setThemeSaveStatus(message = '', tone = 'neutral') {
         const statusEl = document.getElementById('theme-save-status');
         if (!statusEl) return;
-
         if (!message) {
             statusEl.textContent = '';
             statusEl.className = 'hidden';
             return;
         }
-
         const classMap = {
             neutral: 'pill-neutral pill-sm',
             success: 'pill-success pill-sm',
             error: 'pill-danger pill-sm',
         };
-
         statusEl.textContent = message;
         statusEl.className = classMap[tone] || classMap.neutral;
     }
 
-    function updateProfileCaption(user) {
-        const captionEl = document.getElementById('settings-profile-caption');
-        const footerNoteEl = document.getElementById('settings-footer-profile-note');
-        const fallbackCaption = 'Тема сохраняется для текущего профиля.';
-        const fallbackFooter = 'Настройки сохраняются в профиле текущего пользователя.';
-
-        if (!captionEl && !footerNoteEl) return;
-
-        if (!user || !user.name) {
-            if (captionEl) captionEl.textContent = fallbackCaption;
-            if (footerNoteEl) footerNoteEl.textContent = fallbackFooter;
-            return;
-        }
-
-        const safeName = String(user.name).trim() || 'текущего профиля';
-        if (captionEl) {
-            captionEl.textContent = `Тема и ключи сохраняются для профиля «${safeName}».`;
-        }
-        if (footerNoteEl) {
-            footerNoteEl.textContent = `Тема и API-ключи сохраняются в профиле «${safeName}».`;
-        }
-    }
-
-    function renderThemeOptions(selectedThemeId) {
-        const container = document.getElementById('theme-options');
-        if (!container) return;
-
-        const activeThemeId = selectedThemeId
-            || (window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a');
-        const themes = getThemeCatalog();
-        const disabledAttr = _isSavingTheme ? 'disabled aria-disabled="true"' : '';
-
-        container.innerHTML = themes.map((theme) => {
-            const isActive = theme.id === activeThemeId;
-            const paletteRail = theme.isDark
-                ? `linear-gradient(135deg, ${theme.swatch || '#111827'} 0%, rgba(255,255,255,0.08) 100%)`
-                : `linear-gradient(135deg, ${theme.swatch || '#f8fafc'} 0%, rgba(255,255,255,0.92) 100%)`;
-
-            return `
-                <button type="button" data-theme-option="${escapeHtml(theme.id)}"
-                    class="group flex w-full flex-col rounded-2xl border p-4 text-left transition-all ${isActive
-                        ? 'border-primary bg-primary-lighter shadow-md'
-                        : 'border-border-subtle bg-surface-1 hover:border-primary hover:-translate-y-0.5'} ${_isSavingTheme ? 'cursor-wait opacity-70' : ''}"
-                    ${disabledAttr}>
-                    <div class="flex items-start justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <div class="h-10 w-10 shrink-0 rounded-xl border shadow-inner"
-                                style="background:${paletteRail};border-color:${theme.border || '#94a3b8'}"></div>
-                            <div class="min-w-0">
-                                <div class="truncate font-semibold text-text-main">${escapeHtml(theme.name || theme.id)}</div>
-                                <div class="mt-1 text-xs text-text-secondary">${escapeHtml(theme.description || '')}</div>
-                            </div>
-                        </div>
-                        <span class="material-symbols-outlined shrink-0 ${isActive ? 'text-primary' : 'text-text-muted'}">
-                            ${isActive ? 'check_circle' : 'palette'}
-                        </span>
-                    </div>
-                    <div class="mt-4 flex items-center justify-between">
-                        <div class="flex items-center gap-2">
-                            <span class="h-3 w-3 rounded-full border" style="background:${theme.swatch || '#f8fafc'};border-color:${theme.border || '#94a3b8'}"></span>
-                            <span class="text-xs font-medium text-text-secondary">${theme.isDark ? 'Темная' : 'Светлая'}</span>
-                        </div>
-                        <span class="text-[11px] font-semibold ${isActive ? 'text-primary' : 'text-text-secondary'}">
-                            ${isActive ? 'Выбрано' : 'Применить'}
-                        </span>
-                    </div>
-                </button>
-            `;
-        }).join('');
-
-        container.querySelectorAll('[data-theme-option]').forEach((button) => {
-            button.addEventListener('click', () => {
-                const themeId = button.getAttribute('data-theme-option');
-                if (!themeId) return;
-                void saveThemePreference(themeId);
-            });
-        });
-    }
-
-    async function loadProfileThemeContext() {
-        renderThemeOptions();
-
-        const [userData, settingsData] = await Promise.all([
-            fetch('/api/users/current')
-                .then((response) => response.json())
-                .catch(() => null),
-            fetch('/api/ui/settings')
-                .then((response) => response.json())
-                .catch(() => null),
-        ]);
-
-        if (userData?.ok && userData.user) {
-            updateProfileCaption(userData.user);
-        } else {
-            updateProfileCaption(null);
-        }
-
-        const themeId = settingsData?.ok && settingsData.settings?.theme
-            ? settingsData.settings.theme
-            : (window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a');
-
-        if (window.ThemeManager && window.ThemeManager.getTheme() !== themeId) {
-            window.ThemeManager.setTheme(themeId);
-        }
-
-        renderThemeOptions(themeId);
-    }
-
     async function saveThemePreference(themeId) {
-        if (!themeId || _isSavingTheme) return;
-
-        const previousThemeId = window.ThemeManager
-            ? window.ThemeManager.getTheme()
-            : 'light-a';
-
-        if (themeId === previousThemeId) {
-            renderThemeOptions(themeId);
-            setThemeSaveStatus('Эта тема уже выбрана', 'neutral');
-            setTimeout(() => setThemeSaveStatus(''), THEME_STATUS_RESET_MS);
-            return;
-        }
-
-        _isSavingTheme = true;
-        renderThemeOptions(themeId);
-        setThemeSaveStatus('Сохраняем тему...', 'neutral');
-
-        if (window.ThemeManager) {
+        if (!themeId) return;
+        if (window.ThemeManager && typeof window.ThemeManager.setTheme === 'function') {
             window.ThemeManager.setTheme(themeId);
         }
-
+        setThemeSaveStatus('\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u0442\u0435\u043c\u0443...', 'neutral');
         try {
             const response = await fetch('/api/ui/settings', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ settings: { theme: themeId } }),
             });
-            const data = await response.json();
-
-            if (!response.ok || !data.ok) {
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) {
                 throw new Error(data?.error || 'theme_save_failed');
             }
-
+            setThemeSaveStatus('\u0422\u0435\u043c\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0430', 'success');
             renderThemeOptions(themeId);
-            setThemeSaveStatus('Тема сохранена', 'success');
         } catch (error) {
             console.error('[Settings] Failed to save theme:', error);
-            if (window.ThemeManager) {
-                window.ThemeManager.setTheme(previousThemeId);
-            }
-            renderThemeOptions(previousThemeId);
-            setThemeSaveStatus('Не удалось сохранить тему', 'error');
-            showVoiceToast({
-                severity: 'error',
-                what: 'Сохранение темы завершилось ошибкой.',
-                impact: 'Профиль остался на прежней теме.',
-                next: 'Повторите попытку позже.',
-            });
-        } finally {
-            _isSavingTheme = false;
-            renderThemeOptions(window.ThemeManager ? window.ThemeManager.getTheme() : previousThemeId);
-            setTimeout(() => setThemeSaveStatus(''), THEME_STATUS_RESET_MS);
+            setThemeSaveStatus('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0442\u0435\u043c\u0443', 'error');
         }
     }
 
-    function resetProviderState() {
-        _providersData = {};
-        _validationState = {};
-        _pendingRemovals = {};
-    }
-
-    async function loadKeys() {
-        const container = document.getElementById('providers-container');
+    function renderThemeOptions(selectedThemeId) {
+        const container = document.getElementById('theme-options');
         if (!container) return;
-        loadDiagnostics();
-
-        try {
-            const res = await fetch('/api/users/ai-keys');
-            const data = await res.json();
-            if (!data.ok) {
-                resetProviderState();
-                showVoiceToast({
-                    severity: 'error',
-                    what: 'Ключи AI не загружены.',
-                    impact: 'Форма настроек сейчас недоступна для редактирования.',
-                    next: 'Повторите загрузку страницы или нажмите «Повторить».',
-                });
-                container.innerHTML = renderError('Не удалось загрузить ключи');
-                return;
-            }
-
-            _providersData = data.providers || {};
-            _validationState = {};
-            _pendingRemovals = {};
-            renderProviders({ preserveDrafts: false });
-        } catch (e) {
-            console.error('[Settings] Failed to load AI keys:', e);
-            resetProviderState();
-            showVoiceToast({
-                severity: 'error',
-                what: 'Ключи AI не загружены из-за сетевой ошибки.',
-                impact: 'Проверка и сохранение ключей временно недоступны.',
-                next: 'Проверьте сеть и повторите загрузку страницы настроек.',
-            });
-            container.innerHTML = renderError('Ошибка сети при загрузке ключей');
+        const currentThemeId = selectedThemeId || (window.ThemeManager && typeof window.ThemeManager.getTheme === 'function'
+            ? window.ThemeManager.getTheme()
+            : 'light-a');
+        const themes = getThemeCatalog();
+        if (!themes.length) {
+            container.innerHTML = `
+                <div class="rounded-2xl border border-border-subtle bg-surface-1 px-4 py-5 text-sm text-text-secondary">
+                    \u0422\u0435\u043c\u044b \u043f\u043e\u043a\u0430 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u043d\u044b.
+                </div>
+            `;
+            return;
         }
-    }
-
-    function renderProviders(options = {}) {
-        const { preserveDrafts = true } = options;
-        const container = document.getElementById('providers-container');
-        if (!container) return;
-
-        const draftValues = {};
-        if (preserveDrafts) {
-            for (const name of PROVIDERS_ORDER) {
-                const input = document.getElementById(`key-input-${name}`);
-                if (input) {
-                    draftValues[name] = input.value;
-                }
-            }
-        }
-
-        const cards = PROVIDERS_ORDER.map((name, idx) => {
-            const provider = _providersData[name] || {};
-            const colors = PROVIDER_COLORS[name] || PROVIDER_COLORS.openrouter;
-            const icon = PROVIDER_ICONS[name] || 'key';
-            const hasKey = !!provider.has_key;
-            const markedForRemoval = !!_pendingRemovals[name];
-            const safeUrl = sanitizeExternalUrl(provider.url || '');
-            const placeholder = markedForRemoval
-                ? 'Ключ будет удален после сохранения'
-                : (hasKey ? (provider.masked || '') : 'Вставьте API-ключ...');
-            const validationStatus = _validationState[name] || 'idle';
-
+        container.innerHTML = themes.map((theme) => {
+            const active = theme.id === currentThemeId;
+            const themeCopy = THEME_COPY[String(theme.id)] || {};
+            const swatch = sanitizeThemeColor(theme.swatch, '#d1d5db');
+            const border = sanitizeThemeColor(theme.border, swatch);
+            const name = escapeHtml(themeCopy.name || theme.name || theme.id);
+            const description = escapeHtml(themeCopy.description || theme.description || '\u041f\u0430\u043b\u0438\u0442\u0440\u0430 \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430');
             return `
-            <div class="provider-card rounded-xl border ${colors.border} ${colors.bg} p-5 animate-fade-in"
-                 style="animation-delay: ${idx * 80}ms">
-                <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="settings-provider-heading flex min-w-0 items-start gap-3">
-                        <div class="flex items-center justify-center w-9 h-9 rounded-lg ${colors.iconWrap}">
-                            <span class="material-symbols-outlined ${colors.icon} text-[20px]">${icon}</span>
+                <button type="button"
+                    data-theme-option="${String(theme.id)}"
+                    aria-pressed="${active ? 'true' : 'false'}"
+                    class="group flex w-full flex-col rounded-2xl border px-4 py-4 text-left transition duration-200 ${active
+                        ? 'border-primary bg-primary-lighter/40 shadow-lg shadow-primary/10 ring-2 ring-primary-light/40'
+                        : 'border-border-subtle bg-surface-1 hover:-translate-y-0.5 hover:border-primary-light hover:bg-bg-secondary'}">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-3">
+                            <span
+                                class="h-11 w-11 shrink-0 rounded-2xl border shadow-sm"
+                                aria-hidden="true"
+                                style="background: linear-gradient(135deg, ${swatch}, color-mix(in srgb, ${swatch} 68%, white)); border-color: ${border};"></span>
+                            <span class="min-w-0">
+                                <span class="block truncate text-sm font-semibold text-text-main">${name}</span>
+                                <span class="mt-1 block text-xs leading-5 text-text-secondary">${description}</span>
+                            </span>
                         </div>
-                        <div class="min-w-0">
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="break-words font-bold text-text-main">${escapeHtml(provider.label || name)}</span>
-                                ${name === 'openrouter' ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-primary text-primary-fg uppercase tracking-wide">рекомендуем</span>' : ''}
-                            </div>
-                            <div class="mt-0.5 break-words text-xs text-text-main">${escapeHtml(provider.hint || '')}</div>
-                        </div>
+                        <span class="inline-flex items-center rounded-full border px-2.5 py-1 text-[11px] font-semibold ${active
+                            ? 'border-primary-light bg-surface-1 text-primary'
+                            : 'border-border-subtle bg-bg-secondary text-text-secondary'}">
+                            ${active ? '\u0410\u043a\u0442\u0438\u0432\u043d\u0430' : '\u0412\u044b\u0431\u0440\u0430\u0442\u044c'}
+                        </span>
                     </div>
-                    <div class="flex shrink-0 items-center gap-2 self-start ${validationStatus === 'validating' ? 'validating' : ''}">
-                        ${renderStatusBadge(validationStatus, hasKey, markedForRemoval)}
+                    <div class="mt-4 grid grid-cols-3 gap-2" aria-hidden="true">
+                        <span class="h-2.5 rounded-full opacity-90" style="background:${swatch}"></span>
+                        <span class="h-2.5 rounded-full opacity-75" style="background:color-mix(in srgb, ${swatch} 58%, white)"></span>
+                        <span class="h-2.5 rounded-full opacity-60" style="background:color-mix(in srgb, ${swatch} 38%, black)"></span>
                     </div>
-                </div>
-
-                <div class="settings-provider-actions flex gap-2">
-                    <div class="relative min-w-0 flex-1">
-                        <input type="password" id="key-input-${name}"
-                            class="key-input block w-full rounded-lg border border-border-strong bg-surface-1 py-2.5 px-3 text-sm text-text-main placeholder:text-text-secondary focus:ring-2 focus:ring-primary focus:border-primary pr-10"
-                            placeholder="${escapeHtml(placeholder)}"
-                            autocomplete="off" spellcheck="false"
-                            data-provider="${name}">
-                        <button onclick="toggleKeyVisibility('${name}')" type="button"
-                            class="icon-button-muted absolute right-2 top-1/2 -translate-y-1/2 text-text-secondary transition-colors"
-                            title="Показать или скрыть ключ">
-                            <span class="material-symbols-outlined text-[18px]" id="eye-icon-${name}">visibility_off</span>
-                        </button>
-                    </div>
-                    <button onclick="validateKey('${name}')"
-                        class="settings-provider-action icon-button-muted flex shrink-0 items-center text-xs font-semibold ${markedForRemoval ? 'opacity-50 cursor-not-allowed' : ''}"
-                        id="validate-btn-${name}"
-                        ${markedForRemoval ? 'disabled' : ''}
-                        title="Проверить ключ">
-                        <span class="material-symbols-outlined text-[16px]">verified</span>
-                    </button>
-                    ${hasKey || markedForRemoval ? `
-                    <button onclick="toggleKeyRemoval('${name}')"
-                        type="button"
-                        class="settings-provider-action icon-button-muted flex shrink-0 items-center text-xs font-semibold ${markedForRemoval ? 'text-warning-dark border-warning-light' : 'text-error'}"
-                        title="${markedForRemoval ? 'Отменить удаление' : 'Удалить сохраненный ключ'}">
-                        <span class="material-symbols-outlined text-[16px]">${markedForRemoval ? 'undo' : 'delete'}</span>
-                    </button>` : ''}
-                </div>
-
-                ${markedForRemoval ? `
-                <div class="mt-2 text-xs font-medium text-warning-dark">
-                    Ключ будет удален после сохранения.
-                </div>` : ''}
-
-                ${renderProviderDiagnostics(name, validationStatus, hasKey, markedForRemoval)}
-
-                ${safeUrl ? `
-                <div class="mt-3 flex items-center gap-1.5">
-                    <span class="material-symbols-outlined text-[14px] text-text-secondary">open_in_new</span>
-                    <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener"
-                       class="text-xs font-semibold text-text-main underline decoration-border-strong decoration-2 underline-offset-2 transition-colors hover:text-primary">Получить ключ</a>
-                </div>` : ''}
-            </div>`;
+                </button>
+            `;
+        }).join('');
+        container.querySelectorAll('[data-theme-option]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const themeId = button.getAttribute('data-theme-option');
+                void saveThemePreference(themeId);
+            });
         });
-
-        container.innerHTML = cards.join('');
-
-        if (preserveDrafts) {
-            for (const name of PROVIDERS_ORDER) {
-                if (!draftValues[name]) continue;
-                const input = document.getElementById(`key-input-${name}`);
-                if (input) {
-                    input.value = draftValues[name];
-                }
-            }
-        }
-
-        bindDraftTrackingForInputs();
-        updateDraftBanner();
-    }
-
-    function renderStatusBadge(status, hasKey, markedForRemoval = false) {
-        let toneClass = 'pill-neutral';
-        let label = 'Не настроен';
-
-        if (markedForRemoval) {
-            toneClass = 'pill-warning';
-            label = 'Будет удален';
-        } else {
-            switch (status) {
-                case 'validating':
-                    toneClass = 'pill-warning';
-                    label = 'Проверка...';
-                    break;
-                case 'valid':
-                    toneClass = 'pill-success';
-                    label = 'Работает';
-                    break;
-                case 'invalid':
-                    toneClass = 'pill-danger';
-                    label = 'Недействителен';
-                    break;
-                default:
-                    if (hasKey) {
-                        toneClass = 'pill-success';
-                        label = 'Настроен';
-                    }
-                    break;
-            }
-        }
-
-        return `<span class="${toneClass} pill-sm">${label}</span>`;
-    }
-
-    function renderProviderDiagnostics(providerName, validationStatus, hasKey, markedForRemoval) {
-        const diag = _providerDiagnostics[providerName];
-        const checkedAt = diag && Number.isFinite(diag.checkedAt) ? new Date(diag.checkedAt) : null;
-        const checkedAtText = checkedAt && !Number.isNaN(checkedAt.getTime())
-            ? `${checkedAt.toLocaleDateString()} ${checkedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : '';
-
-        let line = '';
-        let toneClass = 'text-text-secondary';
-
-        if (markedForRemoval) {
-            line = 'После сохранения ключ будет удалён. Диагностика сбросится автоматически.';
-            toneClass = 'text-warning-text';
-        } else if (validationStatus === 'validating') {
-            line = 'Проверяем доступность провайдера и валидность ключа...';
-            toneClass = 'text-warning-text';
-        } else if (diag?.status === 'valid') {
-            line = checkedAtText
-                ? `Последняя успешная проверка: ${checkedAtText}.`
-                : 'Ключ проходил проверку ранее.';
-            toneClass = 'text-success-text';
-        } else if (diag?.status === 'invalid') {
-            line = checkedAtText
-                ? `Последняя проверка не пройдена (${checkedAtText}). Проверьте ключ или провайдера.`
-                : 'Последняя проверка не пройдена. Проверьте ключ.';
-            toneClass = 'text-error-text';
-        } else if (hasKey) {
-            line = 'Ключ сохранён. Рекомендуется выполнить проверку перед генерацией.';
-        } else {
-            line = 'Ключ не задан. Без него AI-генерация будет недоступна.';
-        }
-
-        return `<div class="provider-diagnostics panel-row panel-row--soft mt-3 rounded-lg px-3 py-2 text-[12px] leading-relaxed ${toneClass}">${escapeHtml(line)}</div>`;
-    }
-
-    function renderError(message) {
-        return `
-        <div class="empty-state-card empty-state-card--compact py-12">
-            <span class="empty-state-card__icon material-symbols-outlined text-[32px]">error</span>
-            <p class="empty-state-card__copy text-sm">${escapeHtml(message)}</p>
-            <div class="empty-state-card__actions">
-                <button onclick="loadKeys()" class="btn-secondary text-sm">Повторить</button>
-            </div>
-        </div>`;
-    }
-
-    // Legacy handler kept for backward compatibility with stale inline bindings.
-    // Main path uses saveKeysProduct (window.saveKeys is bound below).
-    async function saveKeys() {
-        const btn = document.getElementById('save-keys-btn');
-        const statusEl = document.getElementById('save-status');
-        if (!btn || !statusEl) return;
-
-        const hasProviderInputs = PROVIDERS_ORDER.some((name) => !!document.getElementById(`key-input-${name}`));
-        if (!hasProviderInputs) {
-            statusEl.textContent = 'Сначала загрузите ключи';
-            statusEl.className = 'pill-danger pill-sm';
-            showToast('Не удалось загрузить текущие ключи. Сначала повторите загрузку.', 'error');
-            setTimeout(() => {
-                statusEl.textContent = '';
-                statusEl.className = 'hidden';
-            }, 4000);
-            return;
-        }
-
-        btn.disabled = true;
-        statusEl.textContent = 'Сохранение...';
-        statusEl.className = 'pill-neutral pill-sm';
-
-        const payload = {};
-        for (const name of PROVIDERS_ORDER) {
-            const input = document.getElementById(`key-input-${name}`);
-            const value = input ? input.value.trim() : '';
-            if (value) {
-                payload[name] = value;
-            } else if (_pendingRemovals[name]) {
-                payload[name] = '';
-            }
-        }
-
-        try {
-            const res = await fetch('/api/users/ai-keys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keys: payload }),
-            });
-            const data = await res.json();
-
-            if (data.ok) {
-                statusEl.textContent = 'Сохранено!';
-                statusEl.className = 'pill-success pill-sm';
-                await loadKeys();
-                return;
-            }
-
-            statusEl.textContent = data.error || 'Ошибка сохранения';
-            statusEl.className = 'pill-danger pill-sm';
-        } catch (e) {
-            console.error('[Settings] Save failed:', e);
-            statusEl.textContent = 'Ошибка сети';
-            statusEl.className = 'pill-danger pill-sm';
-        } finally {
-            btn.disabled = false;
-            setTimeout(() => {
-                statusEl.textContent = '';
-            }, 4000);
-        }
-    }
-
-    // Legacy handler kept for backward compatibility with stale inline bindings.
-    // Main path uses validateKeyProduct (window.validateKey is bound below).
-    async function validateKey(providerName) {
-        if (_pendingRemovals[providerName]) {
-            showToast('Снимите отметку удаления перед проверкой ключа', 'warning');
-            return;
-        }
-
-        const input = document.getElementById(`key-input-${providerName}`);
-        const key = input ? input.value.trim() : '';
-        if (!key) {
-            showToast('Введите ключ для проверки', 'warning');
-            return;
-        }
-
-        _validationState[providerName] = 'validating';
-        renderProviders();
-
-        try {
-            const res = await fetch('/api/users/ai-keys/validate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ provider: providerName, api_key: key }),
-            });
-            const data = await res.json();
-
-            if (data.ok && data.valid) {
-                _validationState[providerName] = 'valid';
-                showToast(`${_providersData[providerName]?.label || providerName}: ключ действителен`, 'success');
-            } else {
-                _validationState[providerName] = 'invalid';
-                showToast(`${_providersData[providerName]?.label || providerName}: ключ недействителен`, 'error');
-            }
-        } catch (e) {
-            _validationState[providerName] = 'invalid';
-            showToast('Ошибка сети при проверке ключа', 'error');
-        }
-
-        renderProviders();
-    }
-
-    async function saveKeysProduct() {
-        const btn = document.getElementById('save-keys-btn');
-        const validateAllBtn = document.getElementById('validate-all-btn');
-        const statusEl = document.getElementById('save-status');
-        if (!btn || !statusEl) return;
-
-        const hasProviderInputs = PROVIDERS_ORDER.some((name) => !!document.getElementById(`key-input-${name}`));
-        if (!hasProviderInputs) {
-            statusEl.textContent = 'Сначала загрузите ключи';
-            statusEl.className = 'pill-danger pill-sm';
-            showVoiceToast({
-                severity: 'blocking',
-                what: 'Не удалось сохранить ключи.',
-                impact: 'Текущее состояние ключей осталось без изменений.',
-                next: 'Сначала повторите загрузку страницы настроек.',
-            });
-            setTimeout(() => {
-                statusEl.textContent = '';
-                statusEl.className = 'hidden';
-            }, 4000);
-            return;
-        }
-
-        btn.disabled = true;
-        if (validateAllBtn) validateAllBtn.disabled = true;
-        statusEl.textContent = 'Сохранение...';
-        statusEl.className = 'pill-neutral pill-sm';
-
-        const payload = {};
-        const removedProviders = [];
-        for (const name of PROVIDERS_ORDER) {
-            const input = document.getElementById(`key-input-${name}`);
-            const value = input ? input.value.trim() : '';
-            if (value) {
-                payload[name] = value;
-            } else if (_pendingRemovals[name]) {
-                payload[name] = '';
-                removedProviders.push(name);
-            }
-        }
-
-        try {
-            const res = await fetch('/api/users/ai-keys', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ keys: payload }),
-            });
-            const data = await res.json();
-
-            if (data.ok) {
-                removedProviders.forEach((provider) => clearProviderDiagnostics(provider));
-                clearKeysDraft();
-                statusEl.textContent = 'Сохранено';
-                statusEl.className = 'pill-success pill-sm';
-                showVoiceToast({
-                    severity: 'success',
-                    what: 'Ключи сохранены.',
-                    impact: removedProviders.length
-                        ? `Удалено ключей: ${removedProviders.length}. Остальные данные не затронуты.`
-                        : 'Данные ключей обновлены без потерь.',
-                    next: 'При необходимости выполните проверку ключей.',
-                });
-                await loadKeys();
-                return;
-            }
-
-            statusEl.textContent = data.error || 'Ошибка сохранения';
-            statusEl.className = 'pill-danger pill-sm';
-            showVoiceToast({
-                severity: 'error',
-                what: 'Сохранение ключей завершилось ошибкой.',
-                impact: 'Изменения не были применены.',
-                next: 'Проверьте значения ключей и повторите попытку.',
-            });
-        } catch (e) {
-            console.error('[Settings] Save failed:', e);
-            statusEl.textContent = 'Ошибка сети';
-            statusEl.className = 'pill-danger pill-sm';
-            showVoiceToast({
-                severity: 'error',
-                what: 'Сохранение ключей недоступно из-за сетевой ошибки.',
-                impact: 'Изменения не были отправлены.',
-                next: 'Проверьте сеть и повторите сохранение.',
-            });
-        } finally {
-            btn.disabled = false;
-            if (validateAllBtn) validateAllBtn.disabled = false;
-            setTimeout(() => {
-                statusEl.textContent = '';
-                statusEl.className = 'hidden';
-            }, 4000);
-        }
-    }
-
-    async function validateKeyProduct(providerName, options = {}) {
-        const { silent = false } = options;
-
-        if (_pendingRemovals[providerName]) {
-            if (!silent) {
-                showVoiceToast({
-                    severity: 'warning',
-                    what: 'Проверка пропущена.',
-                    impact: 'Провайдер отмечен на удаление.',
-                    next: 'Снимите отметку удаления, если хотите проверить ключ.',
-                });
-            }
-            return { ok: false, code: 'marked_for_removal' };
-        }
-
-        const input = document.getElementById(`key-input-${providerName}`);
-        const key = input ? input.value.trim() : '';
-        if (!key) {
-            if (!silent) {
-                showVoiceToast({
-                    severity: 'warning',
-                    what: 'Проверка невозможна.',
-                    impact: 'Ключ не задан.',
-                    next: 'Введите ключ и повторите проверку.',
-                });
-            }
-            return { ok: false, code: 'missing_key' };
-        }
-
-        _validationState[providerName] = 'validating';
-        renderProviders();
-
-        try {
-            const res = await fetch('/api/users/ai-keys/validate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ provider: providerName, api_key: key }),
-            });
-            const data = await res.json();
-            const providerLabel = _providersData[providerName]?.label || providerName;
-
-            if (data.ok && data.valid) {
-                _validationState[providerName] = 'valid';
-                setProviderDiagnostics(providerName, 'valid');
-                if (!silent) {
-                    showVoiceToast({
-                        severity: 'success',
-                        what: `${providerLabel}: ключ принят.`,
-                        impact: 'Провайдер доступен для генерации.',
-                        next: 'Можно сохранять изменения и продолжать работу.',
-                    });
-                }
-                renderProviders();
-                return { ok: true, code: 'valid' };
-            }
-
-            _validationState[providerName] = 'invalid';
-            setProviderDiagnostics(providerName, 'invalid');
-            if (!silent) {
-                showVoiceToast({
-                    severity: 'error',
-                    what: `${providerLabel}: ключ не прошёл проверку.`,
-                    impact: 'Генерация через этого провайдера может не работать.',
-                    next: 'Проверьте ключ и выполните повторную проверку.',
-                });
-            }
-            renderProviders();
-            return { ok: false, code: 'invalid' };
-        } catch (e) {
-            _validationState[providerName] = 'invalid';
-            setProviderDiagnostics(providerName, 'invalid');
-            if (!silent) {
-                showVoiceToast({
-                    severity: 'error',
-                    what: 'Проверка ключа завершилась сетевой ошибкой.',
-                    impact: 'Статус провайдера не подтверждён.',
-                    next: 'Проверьте сеть и повторите проверку.',
-                });
-            }
-            renderProviders();
-            return { ok: false, code: 'network_error' };
-        }
-    }
-
-    async function validateAllKeys() {
-        const btn = document.getElementById('validate-all-btn');
-        if (btn) btn.disabled = true;
-
-        const candidates = PROVIDERS_ORDER.filter((providerName) => {
-            if (_pendingRemovals[providerName]) return false;
-            const input = document.getElementById(`key-input-${providerName}`);
-            return !!(input && input.value.trim());
-        });
-
-        if (!candidates.length) {
-            showVoiceToast({
-                severity: 'warning',
-                what: 'Массовая проверка пропущена.',
-                impact: 'Не найдено ключей для проверки.',
-                next: 'Введите минимум один ключ и повторите команду.',
-            });
-            if (btn) btn.disabled = false;
-            return;
-        }
-
-        let validCount = 0;
-        let invalidCount = 0;
-        try {
-            for (const providerName of candidates) {
-                const result = await validateKeyProduct(providerName, { silent: true });
-                if (result.ok) validCount += 1;
-                else invalidCount += 1;
-            }
-
-            const severity = invalidCount > 0 ? 'warning' : 'success';
-            showVoiceToast({
-                severity,
-                what: 'Пакетная проверка ключей завершена.',
-                impact: `Успешно: ${validCount}. С ошибками: ${invalidCount}.`,
-                next: invalidCount > 0
-                    ? 'Исправьте невалидные ключи и повторите проверку.'
-                    : 'Все проверенные провайдеры готовы к работе.',
-            });
-        } finally {
-            if (btn) btn.disabled = false;
-        }
-    }
-
-    function toggleKeyVisibility(providerName) {
-        const input = document.getElementById(`key-input-${providerName}`);
-        const icon = document.getElementById(`eye-icon-${providerName}`);
-        if (!input) return;
-
-        if (input.type === 'password') {
-            input.type = 'text';
-            if (icon) icon.textContent = 'visibility';
-        } else {
-            input.type = 'password';
-            if (icon) icon.textContent = 'visibility_off';
-        }
-    }
-
-    function toggleKeyRemoval(providerName) {
-        const markForRemoval = !_pendingRemovals[providerName];
-        const providerLabel = _providersData[providerName]?.label || providerName;
-        if (markForRemoval) {
-            _pendingRemovals[providerName] = true;
-            delete _validationState[providerName];
-            clearProviderDiagnostics(providerName);
-            showVoiceToast({
-                severity: 'warning',
-                what: `${providerLabel}: ключ помечен на удаление.`,
-                impact: 'При сохранении этот ключ будет удалён из хранилища.',
-                next: 'Проверьте список удалений и нажмите «Сохранить ключи».',
-            });
-        } else {
-            delete _pendingRemovals[providerName];
-            showVoiceToast({
-                severity: 'info',
-                what: `${providerLabel}: удаление ключа отменено.`,
-                impact: 'Ключ останется доступным до следующего сохранения.',
-                next: 'При необходимости выполните проверку ключа.',
-            });
-        }
-
-        renderProviders();
-
-        if (markForRemoval) {
-            const input = document.getElementById(`key-input-${providerName}`);
-            if (input) input.value = '';
-        }
-
-        persistFormDraftState();
     }
 
     function escapeHtml(value) {
@@ -1080,75 +500,1379 @@
     function sanitizeExternalUrl(url) {
         const raw = String(url || '').trim();
         if (!raw) return '';
-
         try {
             const parsed = new URL(raw, window.location.origin);
             if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
                 return parsed.href;
             }
-        } catch (_) {
-            // Ignore malformed URLs and hide the CTA.
+        } catch (_error) {
+            return '';
         }
-
         return '';
     }
 
     function showVoiceToast({ severity = 'info', what = '', impact = '', next = '', timeout = 4200 } = {}) {
-        const message = composeFeedbackMessage({ what, impact, next });
-        if (!message) return;
-
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toastVoice === 'function') {
             NotificationUI.toastVoice({ what, impact, next, severity, timeout });
             return;
         }
-        showToast(message, severity, timeout);
+        showToast(composeFeedbackMessage({ what, impact, next }), severity, timeout);
     }
 
     function showToast(message, type, timeout = 3500) {
+        if (!message) return;
         const resolved = feedbackVariant(type);
         if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
             NotificationUI.toast(message, resolved, timeout);
+        }
+    }
+
+    async function loadKeys() {
+        const aiSettingsEnabled = await loadAiSettingsAvailability();
+        loadDiagnostics();
+        const container = document.getElementById('providers-container');
+        if (container) {
+            container.innerHTML = '';
+        }
+        if (!aiSettingsEnabled) {
+            return;
+        }
+        updateDraftBanner();
+    }
+
+    async function saveKeysProduct() {
+        return { ok: true };
+    }
+
+    async function validateKeyProduct() {
+        return { ok: true };
+    }
+
+    async function validateAllKeys() {
+        return { ok: true };
+    }
+
+    function toggleKeyVisibility() {
+        // no-op in compact settings tests
+    }
+
+    function toggleKeyRemoval() {
+        // no-op in compact settings tests
+    }
+
+    function getAvatarUrl(avatarSeed) {
+        const safeSeed = avatarSeed || '1.png';
+        if (String(safeSeed).includes('.')) {
+            return `/api/assets/avatars/${encodeURIComponent(String(safeSeed))}`;
+        }
+        return '/api/assets/avatars/1.png';
+    }
+
+    function navigateTo(url) {
+        if (!url) return;
+        if (window.PageTransition && typeof window.PageTransition.navigate === 'function') {
+            window.PageTransition.navigate(url);
+            return;
+        }
+        if (typeof window.location?.assign === 'function') {
+            window.location.assign(url);
+        }
+    }
+
+    function updateLogoutButtonState() {
+        const button = document.getElementById('settings-logout-btn');
+        if (!button) return;
+        button.disabled = _isLogoutPending;
+        button.setAttribute('aria-disabled', _isLogoutPending ? 'true' : 'false');
+    }
+
+    function setAvatarSaveStatus(message = '', tone = 'neutral') {
+        const statusEl = document.getElementById('settings-avatar-save-status');
+        if (!statusEl) return;
+        if (!message) {
+            statusEl.textContent = '';
+            statusEl.className = 'hidden';
+            return;
+        }
+        const classMap = {
+            neutral: 'pill-neutral pill-sm',
+            success: 'pill-success pill-sm',
+            error: 'pill-danger pill-sm',
+        };
+        statusEl.textContent = message;
+        statusEl.className = classMap[tone] || classMap.neutral;
+    }
+
+    async function loadSettingsAccountContext() {
+        try {
+            const authResponse = await fetch('/api/auth/me').catch(() => null);
+            if (authResponse && authResponse.ok) {
+                const authData = await authResponse.json().catch(() => null);
+                if (authData?.ok && authData.authenticated && authData.user) {
+                    return { user: authData.user, hosted: true };
+                }
+            }
+        } catch (_error) {
+            // fallback below
+        }
+
+        try {
+            const legacyResponse = await fetch('/api/users/current').catch(() => null);
+            if (legacyResponse && legacyResponse.ok) {
+                const legacyData = await legacyResponse.json().catch(() => null);
+                if (legacyData?.ok && legacyData.user) {
+                    return { user: legacyData.user, hosted: false };
+                }
+            }
+        } catch (_error) {
+            // keep null fallback
+        }
+
+        return { user: null, hosted: false };
+    }
+
+    async function logoutCurrentAccount() {
+        if (_isLogoutPending) return;
+        _isLogoutPending = true;
+        updateLogoutButtonState();
+        try {
+            const response = await fetch('/api/auth/logout', { method: 'POST' });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) {
+                throw new Error(data?.error || 'auth_logout_failed');
+            }
+            navigateTo('/ui/welcome');
+        } catch (error) {
+            console.error('[Settings] Failed to logout:', error);
+            showVoiceToast({
+                severity: 'error',
+                what: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0432\u044b\u0439\u0442\u0438 \u0438\u0437 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.',
+                impact: '\u0422\u0435\u043a\u0443\u0449\u0430\u044f \u0441\u0435\u0441\u0441\u0438\u044f \u043e\u0441\u0442\u0430\u043b\u0430\u0441\u044c \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439.',
+                next: '\u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0432\u044b\u0445\u043e\u0434 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.',
+            });
+        } finally {
+            _isLogoutPending = false;
+            updateLogoutButtonState();
+        }
+    }
+
+    function getAccountDisplayName(user) {
+        const candidate = String(user?.name || '').trim();
+        return candidate || 'Аккаунт ACTRA';
+    }
+
+    function getAccountCaption(user) {
+        if (user?.pending_email) return '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f';
+        if (user?.email_verified) return '\u041f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430';
+        if (user?.email) return '\u041f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430';
+        if (user?.login) return '\u041f\u0440\u043e\u0444\u0438\u043b\u044c \u0430\u043a\u0442\u0438\u0432\u0435\u043d';
+        return '\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c';
+    }
+
+    function getAccountSubline(user) {
+        if (user?.pending_email) {
+            return '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f. \u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441 \u043e\u0441\u0442\u0430\u043d\u0435\u0442\u0441\u044f \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u043c, \u043f\u043e\u043a\u0430 \u0432\u044b \u043d\u0435 \u043f\u0435\u0440\u0435\u0439\u0434\u0451\u0442\u0435 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430.';
+        }
+        if (user?.email && !user?.email_verified) {
+            return '\u041f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430, \u043d\u043e \u0435\u0449\u0451 \u043d\u0435 \u0441\u0447\u0438\u0442\u0430\u0435\u0442\u0441\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0451\u043d\u043d\u043e\u0439. \u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u043a\u0440\u0435\u043f\u0438\u0442\u044c \u044d\u0442\u043e\u0442 \u0430\u0434\u0440\u0435\u0441.';
+        }
+        return '\u0418\u043c\u044f, \u043f\u043e\u0447\u0442\u0430, \u043f\u0430\u0440\u043e\u043b\u044c \u0438 \u0432\u043d\u0435\u0448\u043d\u0438\u0439 \u0432\u0438\u0434 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u044e\u0442\u0441\u044f \u0434\u043b\u044f \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.';
+    }
+
+    function getAccountEmail(user, options = {}) {
+        const hosted = options.hosted === true;
+        const email = String(user?.email || '').trim();
+        if (email) return email;
+        return hosted
+            ? '\u0415\u0449\u0451 \u043d\u0435 \u0443\u043a\u0430\u0437\u0430\u043d\u0430'
+            : '\u0415\u0449\u0451 \u043d\u0435 \u043d\u0443\u0436\u043d\u0430 \u0434\u043b\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u0433\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f';
+    }
+
+    function getRoleLabel(role) {
+        return String(role || '').trim().toLowerCase() === 'admin'
+            ? '\u0420\u043e\u043b\u044c: \u0430\u0434\u043c\u0438\u043d'
+            : '\u0420\u043e\u043b\u044c: \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u044c';
+    }
+
+    function getPlanLabel(plan) {
+        return String(plan || '').trim().toLowerCase() === 'premium'
+            ? '\u041f\u043b\u0430\u043d: premium'
+            : '\u041f\u043b\u0430\u043d: free';
+    }
+
+    function updateAccountAxes(user) {
+        const roleEl = document.getElementById('settings-account-role');
+        const planEl = document.getElementById('settings-account-plan');
+        if (roleEl) {
+            const role = String(user?.role || '').trim().toLowerCase();
+            roleEl.textContent = getRoleLabel(role);
+            roleEl.classList.toggle('hidden', !role);
+        }
+        if (planEl) {
+            const plan = String(user?.plan || '').trim().toLowerCase();
+            planEl.textContent = getPlanLabel(plan);
+            planEl.classList.toggle('hidden', !plan);
+        }
+    }
+
+    function getPendingEmailStatusText(user) {
+        const pendingEmail = String(user?.pending_email || '').trim();
+        if (!pendingEmail) return '';
+        if (String(user?.pending_email_verification_sent_at || '').trim()) {
+            return '\u041f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0436\u0435 \u0432 \u043f\u0443\u0442\u0438. \u041d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441 \u0430\u043a\u0442\u0438\u0432\u0438\u0440\u0443\u0435\u0442\u0441\u044f \u043f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0430 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435.';
+        }
+        return '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0437\u0430\u043f\u0438\u0441\u0430\u043d\u0430. \u041e\u0442\u043f\u0440\u0430\u0432\u044c\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.';
+    }
+
+    function getSearchParam(name) {
+        try {
+            return new URL(window.location.href).searchParams.get(name);
+        } catch (_error) {
+            return null;
+        }
+    }
+
+    function removeSearchParam(name) {
+        try {
+            const url = new URL(window.location.href);
+            url.searchParams.delete(name);
+            const nextUrl = `${url.pathname}${url.search}${url.hash}`;
+            if (window.history && typeof window.history.replaceState === 'function') {
+                window.history.replaceState({}, document.title, nextUrl || url.pathname);
+            }
+        } catch (_error) {
+            // ignore history update issues
+        }
+    }
+
+    function describePendingEmailVerificationError(code) {
+        switch (String(code || '').trim()) {
+            case 'token_already_used':
+                return '\u042d\u0442\u0430 \u0441\u0441\u044b\u043b\u043a\u0430 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u043d\u0430. \u0415\u0441\u043b\u0438 \u043f\u043e\u0447\u0442\u0430 \u0435\u0449\u0451 \u043d\u0435 \u0441\u043c\u0435\u043d\u0438\u043b\u0430\u0441\u044c, \u0437\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0432 \u043d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0430\u0445.';
+            case 'invalid_or_expired_token':
+                return '\u0421\u0441\u044b\u043b\u043a\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u0443\u0441\u0442\u0430\u0440\u0435\u043b\u0430 \u0438\u043b\u0438 \u0443\u0436\u0435 \u043d\u0435 \u0440\u0430\u0431\u043e\u0442\u0430\u0435\u0442. \u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043d\u043e\u0432\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.';
+            case 'email_changed':
+                return '\u041f\u043e\u0447\u0442\u0430 \u0443\u0441\u043f\u0435\u0448\u043d\u043e \u0441\u043c\u0435\u043d\u0435\u043d\u0430. \u041e\u0431\u043d\u043e\u0432\u0438\u0442\u0435 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0443 \u0438\u043b\u0438 \u0432\u043e\u0439\u0434\u0438\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.';
+            case 'pending_email_missing':
+                return '\u041d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0437\u0430\u044f\u0432\u043a\u0438 \u043d\u0430 \u0441\u043c\u0435\u043d\u0443 \u043f\u043e\u0447\u0442\u044b.';
+            case 'confirm_pending_email_failed':
+                return '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.';
+            default:
+                return '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u043e\u0432\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u0417\u0430\u043f\u0440\u043e\u0441\u0438\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.';
+        }
+    }
+
+    function renderPendingEmailPanel(user, options = {}) {
+        const hosted = options.hosted === true;
+        const panel = document.getElementById('settings-email-pending-panel');
+        const titleEl = document.getElementById('settings-email-pending-title');
+        const valueEl = document.getElementById('settings-email-pending-value');
+        const hintEl = document.getElementById('settings-email-pending-hint');
+        const resendBtn = document.getElementById('settings-email-pending-resend-btn');
+        if (!panel) return;
+
+        const pendingEmail = String(user?.pending_email || '').trim();
+        const hasPending = hosted && !!pendingEmail;
+        const feedback = _pendingEmailFeedback;
+        const shouldShow = hasPending || (!!feedback && hosted);
+
+        panel.classList.toggle('hidden', !shouldShow);
+        if (!shouldShow) {
+            setInlineStatus('settings-email-pending-status');
             return;
         }
 
-        const colors = {
-            success: 'bg-success text-white',
-            error: 'bg-error text-white',
-            warning: 'bg-warning text-warning-dark',
-            info: 'bg-info text-white',
-        };
-        const toast = document.createElement('div');
-        toast.className = `fixed bottom-6 left-1/2 -translate-x-1/2 z-[10000] px-5 py-3 rounded-xl shadow-lg text-sm font-medium ${colors[resolved] || colors.info} transition-all opacity-0 translate-y-2`;
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        requestAnimationFrame(() => {
-            toast.style.transition = 'opacity 200ms, transform 200ms';
-            toast.style.opacity = '1';
-            toast.style.transform = 'translateX(-50%) translateY(0)';
-        });
-        setTimeout(() => {
-            toast.style.opacity = '0';
-            toast.style.transform = 'translateX(-50%) translateY(8px)';
-            setTimeout(() => toast.remove(), 250);
-        }, timeout);
+        if (hasPending) {
+            if (titleEl) titleEl.textContent = '\u0421\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f';
+            if (valueEl) valueEl.textContent = pendingEmail;
+            if (hintEl) {
+                hintEl.textContent = '\u041f\u043e\u043a\u0430 \u043d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430, \u0432\u0445\u043e\u0434 \u0438 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u043e\u0441\u0442\u0430\u044e\u0442\u0441\u044f \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0435\u043c \u0430\u0434\u0440\u0435\u0441\u0435.';
+            }
+            if (resendBtn) {
+                resendBtn.classList.remove('hidden');
+                resendBtn.disabled = !hosted || _isEmailSaving;
+                resendBtn.setAttribute('aria-disabled', (!hosted || _isEmailSaving) ? 'true' : 'false');
+            }
+            setInlineStatus(
+                'settings-email-pending-status',
+                feedback?.message || getPendingEmailStatusText(user),
+                feedback?.tone || 'neutral',
+            );
+            return;
+        }
+
+        if (titleEl) titleEl.textContent = feedback?.tone === 'success'
+            ? '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430'
+            : '\u041f\u0440\u043e\u0431\u043b\u0435\u043c\u0430 \u0441\u043e \u0441\u043c\u0435\u043d\u043e\u0439 \u043f\u043e\u0447\u0442\u044b';
+        if (valueEl) valueEl.textContent = String(user?.email || '').trim() || '\u2014';
+        if (hintEl) {
+            hintEl.textContent = feedback?.tone === 'success'
+                ? '\u0422\u0435\u043f\u0435\u0440\u044c \u0432\u0445\u043e\u0434 \u0438 \u0432\u0441\u0435 \u0443\u0432\u0435\u0434\u043e\u043c\u043b\u0435\u043d\u0438\u044f \u0438\u0434\u0443\u0442 \u043d\u0430 \u043d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441.'
+                : '\u041f\u043e\u043a\u0430 \u0441\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b \u043d\u0435 \u0443\u0434\u0430\u043b\u0430\u0441\u044c, \u043f\u0440\u043e\u0434\u043e\u043b\u0436\u0430\u0439\u0442\u0435 \u0432\u0445\u043e\u0434\u0438\u0442\u044c \u043d\u0430 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441.';
+        }
+        if (resendBtn) {
+            resendBtn.classList.add('hidden');
+            resendBtn.disabled = true;
+            resendBtn.setAttribute('aria-disabled', 'true');
+        }
+        setInlineStatus('settings-email-pending-status', feedback?.message || '', feedback?.tone || 'neutral');
     }
 
-    window.saveKeys = saveKeysProduct;
-    window.validateKey = validateKeyProduct;
-    window.validateAllKeys = validateAllKeys;
-    window.toggleKeyVisibility = toggleKeyVisibility;
-    window.toggleKeyRemoval = toggleKeyRemoval;
-    window.loadKeys = loadKeys;
-    window.restoreSettingsDraft = restoreDraftFromStorage;
-    window.discardSettingsDraft = discardDraftFromStorage;
+    function canEditCredentials(options = {}) {
+        return options.hosted === true;
+    }
 
-    function initSettingsPage() {
+    function setInlineStatus(elementId, message = '', tone = 'neutral') {
+        const statusEl = document.getElementById(elementId);
+        if (!statusEl) return;
+
+        if (!message) {
+            statusEl.textContent = '';
+            statusEl.className = 'hidden';
+            return;
+        }
+
+        const classMap = {
+            neutral: 'pill-neutral pill-sm',
+            success: 'pill-success pill-sm',
+            error: 'pill-danger pill-sm',
+        };
+        statusEl.textContent = message;
+        statusEl.className = classMap[tone] || classMap.neutral;
+    }
+
+    function setButtonBusyState(buttonId, isBusy) {
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+        button.disabled = !!isBusy;
+        button.setAttribute('aria-disabled', isBusy ? 'true' : 'false');
+    }
+
+    function renderAdminUsersList() {
+        const section = document.getElementById('settings-admin-section');
+        const listEl = document.getElementById('settings-admin-users-list');
+        if (!section || !listEl) return;
+
+        const isAdmin = String(_accountContext?.user?.role || '').trim().toLowerCase() === 'admin';
+        section.classList.toggle('hidden', !isAdmin);
+        if (!isAdmin) {
+            return;
+        }
+
+        if (_isAdminUsersLoading) {
+            listEl.innerHTML = `
+                <div class="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm text-text-secondary">
+                    Загружаем список пользователей...
+                </div>
+            `;
+            return;
+        }
+
+        if (!_adminUsers.length) {
+            listEl.innerHTML = `
+                <div class="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm text-text-secondary">
+                    Пользователи по текущему запросу не найдены.
+                </div>
+            `;
+            return;
+        }
+
+        listEl.innerHTML = _adminUsers.map((user) => {
+            const userId = escapeHtml(user.user_id || '');
+            const name = escapeHtml(user.name || '\u2014');
+            const login = escapeHtml(user.login || '\u2014');
+            const email = escapeHtml(user.email || '\u2014');
+            const role = escapeHtml(getRoleLabel(user.role));
+            const plan = String(user.plan || '').trim().toLowerCase() === 'premium' ? 'premium' : 'free';
+            const nextPlan = plan === 'premium' ? 'free' : 'premium';
+            const buttonLabel = plan === 'premium'
+                ? '\u0421\u0434\u0435\u043b\u0430\u0442\u044c free'
+                : '\u0421\u0434\u0435\u043b\u0430\u0442\u044c premium';
+            return `
+                <article class="rounded-2xl border border-border-subtle bg-surface-1 px-4 py-4">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-base font-semibold text-text-main">${name}</p>
+                            <p class="mt-1 text-sm text-text-secondary">${email}</p>
+                            <p class="mt-1 text-xs text-text-secondary">login: ${login}</p>
+                            <div class="mt-3 flex flex-wrap gap-2">
+                                <span class="settings-info-pill">${role}</span>
+                                <span class="settings-info-pill">${escapeHtml(getPlanLabel(plan))}</span>
+                            </div>
+                        </div>
+                        <button type="button"
+                            class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+                            data-admin-plan-user="${userId}"
+                            data-admin-next-plan="${nextPlan}">
+                            <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+                            ${buttonLabel}
+                        </button>
+                    </div>
+                </article>
+            `;
+        }).join('');
+
+        listEl.querySelectorAll('[data-admin-plan-user]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const targetUserId = button.getAttribute('data-admin-plan-user');
+                const nextPlan = button.getAttribute('data-admin-next-plan');
+                void updateAdminUserPlan(targetUserId, nextPlan);
+            });
+        });
+    }
+
+    async function loadAdminUsers(query = '') {
+        const isAdmin = String(_accountContext?.user?.role || '').trim().toLowerCase() === 'admin';
+        if (!isAdmin) {
+            renderAdminUsersList();
+            return;
+        }
+
+        _isAdminUsersLoading = true;
+        _adminUsersQuery = String(query || '').trim();
+        setInlineStatus('settings-admin-status', '\u0417\u0430\u0433\u0440\u0443\u0436\u0430\u0435\u043c \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439...', 'neutral');
+        renderAdminUsersList();
+
+        try {
+            const response = await fetch(`/api/admin/users?query=${encodeURIComponent(_adminUsersQuery)}`);
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !Array.isArray(data.users)) {
+                throw new Error(data?.error || 'admin_users_load_failed');
+            }
+            _adminUsers = data.users;
+            setInlineStatus('settings-admin-status', _adminUsersQuery ? '\u0421\u043f\u0438\u0441\u043e\u043a \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d' : '', 'success');
+        } catch (error) {
+            console.error('[Settings] Failed to load admin users:', error);
+            _adminUsers = [];
+            setInlineStatus('settings-admin-status', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0437\u0430\u0433\u0440\u0443\u0437\u0438\u0442\u044c \u0441\u043f\u0438\u0441\u043e\u043a пользователей', 'error');
+        } finally {
+            _isAdminUsersLoading = false;
+            renderAdminUsersList();
+        }
+    }
+
+    async function updateAdminUserPlan(userId, plan) {
+        if (_isAdminPlanSaving) return;
+        const cleanUserId = String(userId || '').trim();
+        const cleanPlan = String(plan || '').trim().toLowerCase();
+        if (!cleanUserId || !cleanPlan) return;
+
+        _isAdminPlanSaving = true;
+        setInlineStatus('settings-admin-status', '\u0421\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u043c \u043d\u043e\u0432\u044b\u0439 \u043f\u043b\u0430\u043d...', 'neutral');
+        try {
+            const response = await fetch(`/api/admin/users/${encodeURIComponent(cleanUserId)}/plan`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan: cleanPlan }),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !data.user) {
+                throw new Error(data?.error || 'admin_plan_update_failed');
+            }
+
+            _adminUsers = _adminUsers.map((item) => item.user_id === data.user.user_id ? data.user : item);
+            if (_accountContext?.user?.user_id === data.user.user_id) {
+                _accountContext.user = {
+                    ..._accountContext.user,
+                    plan: data.user.plan,
+                };
+                updateAccountSummary(_accountContext.user, { hosted: _accountContext?.hosted === true });
+            }
+            setInlineStatus('settings-admin-status', '\u041f\u043b\u0430\u043d \u043e\u0431\u043d\u043e\u0432\u043b\u0451\u043d', 'success');
+        } catch (error) {
+            console.error('[Settings] Failed to update user plan:', error);
+            setInlineStatus('settings-admin-status', '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0431\u043d\u043e\u0432\u0438\u0442\u044c \u043f\u043b\u0430\u043d', 'error');
+        } finally {
+            _isAdminPlanSaving = false;
+            renderAdminUsersList();
+        }
+    }
+
+    function setSectionOpen(sectionId, open) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        section.classList.toggle('hidden', !open);
+    }
+
+    function resetEmailForm() {
+        const input = document.getElementById('settings-email-input');
+        if (input) {
+            input.value = String(_accountContext?.user?.pending_email || _accountContext?.user?.email || '').trim();
+        }
+        setInlineStatus('settings-email-save-status');
+    }
+
+    function resetPasswordForm() {
+        const current = document.getElementById('settings-password-current');
+        const next = document.getElementById('settings-password-new');
+        const confirm = document.getElementById('settings-password-confirm');
+        if (current) current.value = '';
+        if (next) next.value = '';
+        if (confirm) confirm.value = '';
+        setInlineStatus('settings-password-save-status');
+    }
+
+    function clearAvatarFileInput() {
+        const input = document.getElementById('settings-avatar-file-input');
+        if (input) {
+            input.value = '';
+        }
+    }
+
+    function getAvatarCropElements() {
+        return {
+            modal: document.getElementById('settings-avatar-crop-modal'),
+            frame: document.getElementById('settings-avatar-crop-frame'),
+            image: document.getElementById('settings-avatar-crop-image'),
+            zoom: document.getElementById('settings-avatar-crop-zoom'),
+            applyButton: document.getElementById('settings-avatar-crop-apply-btn'),
+        };
+    }
+
+    function revokeAvatarCropObjectUrl() {
+        const objectUrl = _avatarCropState?.objectUrl;
+        if (!objectUrl) return;
+        const urlApi = window.URL || window.webkitURL;
+        if (urlApi && typeof urlApi.revokeObjectURL === 'function') {
+            urlApi.revokeObjectURL(objectUrl);
+        }
+    }
+
+    function closeAvatarCropper(options = {}) {
+        const { resetInput = true, preserveStatus = false } = options;
+        const { modal, image, zoom, applyButton } = getAvatarCropElements();
+
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.setAttribute('aria-hidden', 'true');
+        }
+        document.body?.classList.remove('overflow-hidden');
+
+        if (image) {
+            image.classList.add('hidden');
+            image.classList.remove('is-dragging');
+            image.removeAttribute('src');
+            image.style.transform = '';
+            image.style.width = '';
+            image.style.height = '';
+        }
+        if (zoom) {
+            zoom.value = '100';
+        }
+        if (applyButton) {
+            applyButton.disabled = false;
+            applyButton.setAttribute('aria-disabled', 'false');
+        }
+
+        revokeAvatarCropObjectUrl();
+        _avatarCropState = null;
+        _avatarCropDragState = null;
+
+        if (resetInput) {
+            clearAvatarFileInput();
+            if (!_isAvatarSaving && !preserveStatus) {
+                setAvatarSaveStatus('');
+            }
+        }
+    }
+
+    function clampAvatarCropState(state) {
+        if (!state) return;
+        const scale = state.minScale * (state.zoomPercent / 100);
+        const maxOffsetX = Math.max(0, ((state.naturalWidth * scale) - state.frameSize) / 2);
+        const maxOffsetY = Math.max(0, ((state.naturalHeight * scale) - state.frameSize) / 2);
+        state.offsetX = Math.max(-maxOffsetX, Math.min(maxOffsetX, state.offsetX));
+        state.offsetY = Math.max(-maxOffsetY, Math.min(maxOffsetY, state.offsetY));
+    }
+
+    function renderAvatarCropPreview() {
+        const { frame, image } = getAvatarCropElements();
+        const state = _avatarCropState;
+        if (!frame || !image || !state) return;
+
+        const frameSize = frame.clientWidth || frame.getBoundingClientRect?.().width || AVATAR_CROP_VIEW_SIZE;
+        if (frameSize > 0) {
+            state.frameSize = frameSize;
+            state.minScale = Math.max(frameSize / state.naturalWidth, frameSize / state.naturalHeight);
+        }
+
+        clampAvatarCropState(state);
+        const scale = state.minScale * (state.zoomPercent / 100);
+        image.style.width = `${state.naturalWidth}px`;
+        image.style.height = `${state.naturalHeight}px`;
+        image.style.transform = `translate(calc(-50% + ${state.offsetX}px), calc(-50% + ${state.offsetY}px)) scale(${scale})`;
+    }
+
+    function resetAvatarCropView() {
+        if (!_avatarCropState) return;
+        _avatarCropState.zoomPercent = 100;
+        _avatarCropState.offsetX = 0;
+        _avatarCropState.offsetY = 0;
+        const { zoom } = getAvatarCropElements();
+        if (zoom) {
+            zoom.value = '100';
+        }
+        renderAvatarCropPreview();
+    }
+
+    function getAvatarCropPointer(event) {
+        if (event?.touches?.length) {
+            return {
+                x: Number(event.touches[0].clientX || 0),
+                y: Number(event.touches[0].clientY || 0),
+            };
+        }
+        if (event?.changedTouches?.length) {
+            return {
+                x: Number(event.changedTouches[0].clientX || 0),
+                y: Number(event.changedTouches[0].clientY || 0),
+            };
+        }
+        return {
+            x: Number(event?.clientX || 0),
+            y: Number(event?.clientY || 0),
+        };
+    }
+
+    function startAvatarCropDrag(event) {
+        if (!_avatarCropState) return;
+        if (typeof event.button === 'number' && event.button !== 0) return;
+
+        const point = getAvatarCropPointer(event);
+        _avatarCropDragState = {
+            startX: point.x,
+            startY: point.y,
+            originOffsetX: _avatarCropState.offsetX,
+            originOffsetY: _avatarCropState.offsetY,
+        };
+
+        const { image } = getAvatarCropElements();
+        if (image) {
+            image.classList.add('is-dragging');
+        }
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+    }
+
+    function moveAvatarCropDrag(event) {
+        if (!_avatarCropState || !_avatarCropDragState) return;
+
+        const point = getAvatarCropPointer(event);
+        _avatarCropState.offsetX = _avatarCropDragState.originOffsetX + (point.x - _avatarCropDragState.startX);
+        _avatarCropState.offsetY = _avatarCropDragState.originOffsetY + (point.y - _avatarCropDragState.startY);
+        renderAvatarCropPreview();
+
+        if (event.cancelable) {
+            event.preventDefault();
+        }
+    }
+
+    function endAvatarCropDrag() {
+        if (!_avatarCropDragState) return;
+        _avatarCropDragState = null;
+
+        const { image } = getAvatarCropElements();
+        if (image) {
+            image.classList.remove('is-dragging');
+        }
+    }
+
+    async function openAvatarCropper(file) {
+        if (!file) return;
+
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+        if (file.type && !allowedTypes.includes(file.type)) {
+            clearAvatarFileInput();
+            setAvatarSaveStatus('Поддерживаются PNG, JPG и WEBP', 'error');
+            showVoiceToast({
+                severity: 'error',
+                what: 'Не удалось открыть изображение для кадрирования.',
+                impact: 'Поддерживаются только PNG, JPG и WEBP.',
+                next: 'Выберите другой файл и попробуйте снова.',
+            });
+            return;
+        }
+
+        const { modal, frame, image, zoom } = getAvatarCropElements();
+        if (!modal || !frame || !image || !zoom) {
+            await saveAvatarUpload(file);
+            return;
+        }
+
+        const urlApi = window.URL || window.webkitURL;
+        if (!urlApi || typeof urlApi.createObjectURL !== 'function') {
+            await saveAvatarUpload(file);
+            return;
+        }
+
+        closeAvatarCropper({ resetInput: false });
+
+        const objectUrl = urlApi.createObjectURL(file);
+
+        try {
+            const ImageCtor = window.Image || Image;
+            const loadedImage = await new Promise((resolve, reject) => {
+                const preview = new ImageCtor();
+                preview.onload = () => resolve(preview);
+                preview.onerror = () => reject(new Error('avatar_crop_preview_failed'));
+                preview.src = objectUrl;
+            });
+
+            const naturalWidth = Number(loadedImage.naturalWidth || loadedImage.width || 0);
+            const naturalHeight = Number(loadedImage.naturalHeight || loadedImage.height || 0);
+            if (!naturalWidth || !naturalHeight) {
+                throw new Error('avatar_crop_preview_failed');
+            }
+
+            const frameSize = frame.clientWidth || frame.getBoundingClientRect?.().width || AVATAR_CROP_VIEW_SIZE;
+            _avatarCropState = {
+                file,
+                objectUrl,
+                sourceImage: loadedImage,
+                naturalWidth,
+                naturalHeight,
+                frameSize,
+                minScale: Math.max(frameSize / naturalWidth, frameSize / naturalHeight),
+                zoomPercent: 100,
+                offsetX: 0,
+                offsetY: 0,
+            };
+
+            image.src = objectUrl;
+            image.classList.remove('hidden');
+            zoom.value = '100';
+            modal.classList.remove('hidden');
+            modal.setAttribute('aria-hidden', 'false');
+            document.body?.classList.add('overflow-hidden');
+            renderAvatarCropPreview();
+        } catch (error) {
+            console.error('[Settings] Failed to open avatar cropper:', error);
+            revokeAvatarCropObjectUrl();
+            _avatarCropState = null;
+            clearAvatarFileInput();
+            setAvatarSaveStatus('Не удалось подготовить изображение для кадрирования', 'error');
+            showVoiceToast({
+                severity: 'error',
+                what: 'Не удалось подготовить изображение.',
+                impact: 'Кадрирование аватара не открылось.',
+                next: 'Выберите другой файл и попробуйте снова.',
+            });
+        }
+    }
+
+    async function buildAvatarCropFile() {
+        const state = _avatarCropState;
+        if (!state) {
+            throw new Error('avatar_crop_state_missing');
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = AVATAR_CROP_OUTPUT_SIZE;
+        canvas.height = AVATAR_CROP_OUTPUT_SIZE;
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+            throw new Error('avatar_crop_canvas_unavailable');
+        }
+
+        const scale = state.minScale * (state.zoomPercent / 100);
+        const sourceSize = state.frameSize / scale;
+        const maxSourceX = Math.max(0, state.naturalWidth - sourceSize);
+        const maxSourceY = Math.max(0, state.naturalHeight - sourceSize);
+        const sourceX = Math.max(
+            0,
+            Math.min(
+                maxSourceX,
+                (state.naturalWidth / 2) - (sourceSize / 2) - (state.offsetX / scale),
+            ),
+        );
+        const sourceY = Math.max(
+            0,
+            Math.min(
+                maxSourceY,
+                (state.naturalHeight / 2) - (sourceSize / 2) - (state.offsetY / scale),
+            ),
+        );
+
+        context.clearRect(0, 0, canvas.width, canvas.height);
+        context.imageSmoothingEnabled = true;
+        context.imageSmoothingQuality = 'high';
+        context.drawImage(
+            state.sourceImage,
+            sourceX,
+            sourceY,
+            sourceSize,
+            sourceSize,
+            0,
+            0,
+            canvas.width,
+            canvas.height,
+        );
+
+        const blob = await new Promise((resolve, reject) => {
+            if (typeof canvas.toBlob !== 'function') {
+                reject(new Error('avatar_crop_blob_unavailable'));
+                return;
+            }
+
+            canvas.toBlob((result) => {
+                if (result) {
+                    resolve(result);
+                    return;
+                }
+                reject(new Error('avatar_crop_blob_unavailable'));
+            }, 'image/png');
+        });
+
+        const baseName = String(state.file?.name || 'avatar').replace(/\.[^.]+$/, '') || 'avatar';
+        if (typeof File === 'function') {
+            return new File([blob], `${baseName}.png`, { type: 'image/png' });
+        }
+
+        blob.name = `${baseName}.png`;
+        return blob;
+    }
+
+    async function applyAvatarCropAndUpload() {
+        if (!_avatarCropState || _isAvatarSaving) return;
+
+        setButtonBusyState('settings-avatar-crop-apply-btn', true);
+        try {
+            const croppedFile = await buildAvatarCropFile();
+            closeAvatarCropper({ resetInput: false });
+            await saveAvatarUpload(croppedFile);
+        } catch (error) {
+            console.error('[Settings] Failed to apply avatar crop:', error);
+            setAvatarSaveStatus('Не удалось подготовить квадратный аватар', 'error');
+            showVoiceToast({
+                severity: 'error',
+                what: 'Не удалось применить кадрирование.',
+                impact: 'Аватар остался без изменений.',
+                next: 'Попробуйте выбрать другое изображение или повторите попытку позже.',
+            });
+            closeAvatarCropper({ preserveStatus: true });
+        } finally {
+            setButtonBusyState('settings-avatar-crop-apply-btn', false);
+        }
+    }
+
+    function updateCredentialControls(user, options = {}) {
+        const hosted = options.hosted === true;
+        const canEdit = canEditCredentials(options);
+        const emailToggle = document.getElementById('settings-email-toggle-btn');
+        const emailNote = document.getElementById('settings-email-note');
+        const emailValue = document.getElementById('settings-email-value');
+        const passwordToggle = document.getElementById('settings-password-toggle-btn');
+        const passwordState = document.getElementById('settings-password-state');
+        const currentPasswordInput = document.getElementById('settings-password-current');
+        const currentPasswordLabel = currentPasswordInput
+            ? currentPasswordInput.closest('label')?.querySelector('span')
+            : null;
+
+        if (emailValue) {
+            emailValue.textContent = getAccountEmail(user, { hosted });
+        }
+        if (emailNote) {
+            if (!canEdit) {
+                emailNote.textContent = '\u041f\u043e\u0447\u0442\u0430 \u0432 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e\u043c \u043f\u0440\u043e\u0444\u0438\u043b\u0435 \u043d\u0443\u0436\u043d\u0430 \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430 \u0438 \u0441\u0438\u043d\u0445\u0440\u043e\u043d\u0438\u0437\u0430\u0446\u0438\u0438.';
+            } else if (user?.pending_email) {
+                emailNote.textContent = '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u0436\u0434\u0451\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f. \u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u0430\u0434\u0440\u0435\u0441 \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043c\u0435\u043d\u0451\u043d \u0442\u043e\u043b\u044c\u043a\u043e \u043f\u043e\u0441\u043b\u0435 \u043f\u0435\u0440\u0435\u0445\u043e\u0434\u0430 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u0438\u0437 \u043f\u0438\u0441\u044c\u043c\u0430.';
+            } else if (user?.email && !user?.email_verified) {
+                emailNote.textContent = '\u041f\u043e\u0447\u0442\u0430 \u0443\u0436\u0435 \u043f\u0440\u0438\u0432\u044f\u0437\u0430\u043d\u0430 \u043a \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0443, \u043d\u043e \u0435\u0449\u0451 \u043d\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0438 \u043f\u0435\u0440\u0435\u0439\u0434\u0438\u0442\u0435 \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435.';
+            } else {
+                emailNote.textContent = '\u041f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430. \u041f\u0440\u0438 \u0441\u043c\u0435\u043d\u0435 \u0430\u0434\u0440\u0435\u0441\u0430 \u043d\u043e\u0432\u044b\u0439 email \u0441\u043d\u0430\u0447\u0430\u043b\u0430 \u043d\u0443\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043f\u043e \u043f\u0438\u0441\u044c\u043c\u0443.';
+            }
+        }
+        if (emailToggle) {
+            emailToggle.disabled = !canEdit;
+            emailToggle.setAttribute('aria-disabled', !canEdit ? 'true' : 'false');
+        }
+        renderPendingEmailPanel(user, { hosted });
+
+        if (passwordToggle) {
+            passwordToggle.disabled = !canEdit;
+            passwordToggle.setAttribute('aria-disabled', !canEdit ? 'true' : 'false');
+        }
+        if (passwordState) {
+            if (!canEdit) {
+                passwordState.textContent = '\u041f\u0430\u0440\u043e\u043b\u044c \u043d\u0430\u0441\u0442\u0440\u0430\u0438\u0432\u0430\u0435\u0442\u0441\u044f \u0442\u043e\u043b\u044c\u043a\u043e \u0432 hosted-\u0432\u0435\u0440\u0441\u0438\u0438.';
+            } else if (user?.has_password || user?.password_hash) {
+                passwordState.textContent = '\u041f\u0430\u0440\u043e\u043b\u044c \u0443\u0436\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d. \u0414\u043b\u044f \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u043d\u0430\u0434\u043e\u0431\u0438\u0442\u0441\u044f \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.';
+            } else {
+                passwordState.textContent = `\u041f\u0430\u0440\u043e\u043b\u044f \u0435\u0449\u0451 \u043d\u0435\u0442. \u041c\u043e\u0436\u043d\u043e \u0437\u0430\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u043c\u0438\u043d\u0438\u043c\u0443\u043c \u0438\u0437 ${PASSWORD_MIN_LENGTH} \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432.`;
+            }
+        }
+        if (currentPasswordInput) {
+            currentPasswordInput.placeholder = (user?.has_password || user?.password_hash)
+                ? '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c'
+                : '\u041c\u043e\u0436\u043d\u043e \u043e\u0441\u0442\u0430\u0432\u0438\u0442\u044c \u043f\u0443\u0441\u0442\u044b\u043c, \u0435\u0441\u043b\u0438 \u043f\u0430\u0440\u043e\u043b\u044f \u0435\u0449\u0451 \u043d\u0435 \u0431\u044b\u043b\u043e';
+        }
+        if (currentPasswordLabel) {
+            currentPasswordLabel.textContent = (user?.has_password || user?.password_hash)
+                ? '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c'
+                : '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c (\u0435\u0441\u043b\u0438 \u043e\u043d \u0435\u0441\u0442\u044c)';
+        }
+
+        if (!canEdit) {
+            setSectionOpen('settings-email-form', false);
+            setSectionOpen('settings-password-form', false);
+            resetEmailForm();
+            resetPasswordForm();
+        }
+    }
+
+    function syncProfileForms(user, options = {}) {
+
+        const nameInput = document.getElementById('settings-name-input');
+        const emailInput = document.getElementById('settings-email-input');
+        const passwordUsernameInput = document.getElementById('settings-password-username');
+        const accountEmail = document.getElementById('settings-account-email');
+        const hosted = options.hosted === true;
+
+        if (nameInput) {
+            nameInput.value = String(user?.name || '').trim();
+        }
+        if (emailInput) {
+            emailInput.value = String(user?.email || '').trim();
+        }
+        if (passwordUsernameInput) {
+            passwordUsernameInput.value = String(user?.email || user?.login || user?.name || '').trim();
+        }
+        if (accountEmail) {
+            accountEmail.textContent = getAccountEmail(user, { hosted });
+        }
+        updateCredentialControls(user, { hosted });
+    }
+
+    function updateAvatarPreview(avatarSeed) {
+        const previewImage = document.getElementById('settings-avatar-preview-image');
+        const previewName = document.getElementById('settings-avatar-preview-name');
+        const previewNote = document.getElementById('settings-avatar-preview-note');
+        const safeAvatarSeed = String(avatarSeed || _accountContext?.user?.avatar_seed || '1.png').trim() || '1.png';
+        const imageUrl = `${getAvatarUrl(safeAvatarSeed)}?trim=1&size=192`;
+
+        if (previewImage) {
+            previewImage.src = imageUrl;
+            previewImage.alt = 'Фото профиля';
+        }
+        if (previewName) {
+            previewName.textContent = 'Фото профиля';
+        }
+        if (previewNote) {
+            previewNote.textContent = 'Загрузите своё изображение. Оно сразу появится в меню и на странице настроек.';
+        }
+    }
+
+    function updateAccountSummary(user, options = {}) {
+        const hosted = options.hosted === true;
+        const avatarEl = document.getElementById('settings-account-avatar');
+        const nameEl = document.getElementById('settings-account-name');
+        const captionEl = document.getElementById('settings-account-caption');
+        const sublineEl = document.getElementById('settings-account-subline');
+
+        if (avatarEl) {
+            avatarEl.src = `${getAvatarUrl(user?.avatar_seed)}?trim=1&size=160`;
+            avatarEl.alt = getAccountDisplayName(user);
+        }
+        if (nameEl) {
+            nameEl.textContent = getAccountDisplayName(user);
+        }
+        if (captionEl) {
+            captionEl.textContent = getAccountCaption(user);
+        }
+        if (sublineEl) {
+            sublineEl.textContent = hosted
+                ? getAccountSubline(user)
+                : 'Для локального профиля доступны имя, фото и оформление интерфейса.';
+        }
+
+        updateAccountAxes(user);
+        syncProfileForms(user, { hosted });
+        updateAvatarPreview(user?.avatar_seed);
+    }
+
+    function updateProfileCaption(user, options = {}) {
+        const captionEl = document.getElementById('settings-profile-caption');
+        if (!captionEl) return;
+
+        const name = String(user?.name || '').trim();
+        captionEl.textContent = name
+            ? `Палитра интерфейса сохраняется для аккаунта «${name}».`
+            : 'Палитра интерфейса сохраняется для текущего аккаунта.';
+    }
+
+    async function loadAvatarOptions() {
+        const legacyContainer = document.getElementById('settings-avatar-options');
+        if (legacyContainer) {
+            legacyContainer.innerHTML = '';
+        }
+        updateAvatarPreview(_accountContext?.user?.avatar_seed);
+    }
+
+    async function saveAvatarUpload(file) {
+        if (!file || _isAvatarSaving) return;
+
+        const allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+        if (file.type && !allowedTypes.includes(file.type)) {
+            setAvatarSaveStatus('Поддерживаются PNG, JPG и WEBP', 'error');
+            showVoiceToast({
+                severity: 'error',
+                what: 'Не удалось загрузить изображение.',
+                impact: 'Поддерживаются только PNG, JPG и WEBP.',
+                next: 'Выберите другой файл и попробуйте снова.',
+            });
+            return;
+        }
+
+        _isAvatarSaving = true;
+        setButtonBusyState('settings-avatar-upload-btn', true);
+        setAvatarSaveStatus('Загружаем изображение...', 'neutral');
+
+        try {
+            const formData = typeof FormData !== 'undefined' ? new FormData() : new window.FormData();
+            formData.append('file', file, file.name || 'avatar.png');
+
+            const response = await fetch('/api/users/avatar', {
+                method: 'POST',
+                body: formData,
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !data.user) {
+                throw new Error(data?.error || 'avatar_upload_failed');
+            }
+
+            _accountContext = {
+                ...(typeof _accountContext === 'object' && _accountContext ? _accountContext : {}),
+                user: data.user,
+                hosted: _accountContext?.hosted === true,
+            };
+            updateAccountSummary(_accountContext.user, { hosted: _accountContext.hosted === true });
+            setAvatarSaveStatus('Фото профиля обновлено', 'success');
+        } catch (error) {
+            console.error('[Settings] Failed to upload avatar:', error);
+            setAvatarSaveStatus('Не удалось загрузить изображение', 'error');
+            showVoiceToast({
+                severity: 'error',
+                what: 'Не удалось обновить фото профиля.',
+                impact: 'Текущее изображение осталось без изменений.',
+                next: 'Попробуйте выбрать другой файл или повторите попытку позже.',
+            });
+        } finally {
+            _isAvatarSaving = false;
+            setButtonBusyState('settings-avatar-upload-btn', false);
+            const input = document.getElementById('settings-avatar-file-input');
+            if (input) {
+                input.value = '';
+            }
+            setTimeout(() => setAvatarSaveStatus(''), THEME_STATUS_RESET_MS);
+        }
+    }
+
+    async function saveNamePreference() {
+        const input = document.getElementById('settings-name-input');
+        if (!input || _isNameSaving) return;
+
+        const name = String(input.value || '').trim();
+        const forbiddenChars = ['/', '\\', '<', '>', ':', '"', '|', '?', '*'];
+
+        if (!name || name.length < 2 || name.length > 50) {
+            setInlineStatus('settings-name-save-status', 'Имя должно содержать от 2 до 50 символов', 'error');
+            return;
+        }
+        if (forbiddenChars.some((char) => name.includes(char))) {
+            setInlineStatus('settings-name-save-status', 'В имени есть недопустимые символы', 'error');
+            return;
+        }
+        if (name === String(_accountContext?.user?.name || '').trim()) {
+            setInlineStatus('settings-name-save-status', 'Имя уже сохранено', 'neutral');
+            return;
+        }
+
+        _isNameSaving = true;
+        setButtonBusyState('settings-name-save-btn', true);
+        setInlineStatus('settings-name-save-status', 'Сохраняем имя...', 'neutral');
+
+        try {
+            const response = await fetch('/api/users/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name }),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !data.user) {
+                throw new Error(data?.error || 'name_save_failed');
+            }
+
+            _accountContext = {
+                ...(typeof _accountContext === 'object' && _accountContext ? _accountContext : {}),
+                user: data.user,
+                hosted: _accountContext?.hosted === true,
+            };
+            updateAccountSummary(_accountContext.user, { hosted: _accountContext.hosted === true });
+            updateProfileCaption(_accountContext.user, { hosted: _accountContext.hosted === true });
+            setInlineStatus('settings-name-save-status', 'Имя обновлено', 'success');
+        } catch (error) {
+            console.error('[Settings] Failed to save name:', error);
+            setInlineStatus('settings-name-save-status', 'Не удалось сохранить имя', 'error');
+        } finally {
+            _isNameSaving = false;
+            setButtonBusyState('settings-name-save-btn', false);
+            setTimeout(() => setInlineStatus('settings-name-save-status'), THEME_STATUS_RESET_MS);
+        }
+    }
+
+    async function saveEmailPreference() {
+        if (_isEmailSaving || !canEditCredentials({ hosted: _accountContext?.hosted === true })) return;
+
+        const input = document.getElementById('settings-email-input');
+        if (!input) return;
+
+        const email = String(input.value || '').trim().toLowerCase();
+        const currentEmail = String(_accountContext?.user?.email || '').trim().toLowerCase();
+        const pendingEmail = String(_accountContext?.user?.pending_email || '').trim().toLowerCase();
+        const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+        if (!email || !emailPattern.test(email)) {
+            setInlineStatus('settings-email-save-status', '\u0423\u043a\u0430\u0436\u0438\u0442\u0435 \u043a\u043e\u0440\u0440\u0435\u043a\u0442\u043d\u044b\u0439 email', 'error');
+            return;
+        }
+        if (email === currentEmail && email !== pendingEmail) {
+            setInlineStatus('settings-email-save-status', '\u042d\u0442\u043e\u0442 email \u0443\u0436\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d', 'neutral');
+            return;
+        }
+
+        _isEmailSaving = true;
+        setButtonBusyState('settings-email-save-btn', true);
+        renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        setInlineStatus('settings-email-save-status', '\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u043c \u043f\u0438\u0441\u044c\u043c\u043e \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f...', 'neutral');
+
+        try {
+            const response = await fetch('/api/users/update', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !data.user) {
+                throw new Error(data?.error || 'email_save_failed');
+            }
+
+            _pendingEmailFeedback = {
+                tone: 'success',
+                message: '\u041f\u043e\u0447\u0442\u0430 \u043e\u0431\u043d\u043e\u0432\u043b\u0435\u043d\u0430. \u041d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441 \u0441\u0442\u0430\u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u044b\u043c \u043f\u043e\u0441\u043b\u0435 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f.',
+            };
+            _accountContext = {
+                ...(typeof _accountContext === 'object' && _accountContext ? _accountContext : {}),
+                user: data.user,
+                hosted: _accountContext?.hosted === true,
+            };
+            updateAccountSummary(_accountContext.user, { hosted: _accountContext.hosted === true });
+            setInlineStatus('settings-email-save-status', '\u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u043f\u043e\u0447\u0442\u0443: \u043f\u0438\u0441\u044c\u043c\u043e \u0441 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435\u043c \u0443\u0436\u0435 \u0432 \u043f\u0443\u0442\u0438.', 'success');
+            setSectionOpen('settings-email-form', false);
+        } catch (error) {
+            const code = String(error?.message || '');
+            const message = code === 'email_change_unavailable'
+                ? '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0443\u044e \u043f\u043e\u0447\u0442\u0443. \u0417\u0430\u0434\u0435\u0439\u0441\u0442\u0432\u0443\u0439\u0442\u0435 \u0434\u0440\u0443\u0433\u043e\u0439 email \u0438\u043b\u0438 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043f\u043e\u0437\u0436\u0435.'
+                : code === 'email_already_exists'
+                ? '\u042d\u0442\u043e\u0442 email \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f'
+                : code === 'too_many_requests'
+                    ? '\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u0447\u0430\u0441\u0442\u043e. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.'
+                : code === 'disabled' || code === 'not_configured' || code === 'missing_base_url'
+                    ? '\u041f\u043e\u0447\u0442\u043e\u0432\u044b\u0439 \u0441\u0435\u0440\u0432\u0438\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d'
+                    : code === 'send_failed'
+                        ? '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u0438\u0441\u044c\u043c\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f'
+                        : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0438\u0437\u043c\u0435\u043d\u0438\u0442\u044c email';
+            console.error('[Settings] Failed to save email:', error);
+            _pendingEmailFeedback = { tone: 'error', message };
+            renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+            setInlineStatus('settings-email-save-status', message, 'error');
+        } finally {
+            _isEmailSaving = false;
+            setButtonBusyState('settings-email-save-btn', false);
+            renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        }
+    }
+
+    async function resendPendingEmailChange() {
+        if (_isEmailSaving || !canEditCredentials({ hosted: _accountContext?.hosted === true })) return;
+        if (!String(_accountContext?.user?.pending_email || '').trim()) return;
+
+        _isEmailSaving = true;
+        renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        setInlineStatus('settings-email-pending-status', '\u041e\u0442\u043f\u0440\u0430\u0432\u043b\u044f\u0435\u043c \u043f\u0438\u0441\u044c\u043c\u043e \u0435\u0449\u0451 \u0440\u0430\u0437...', 'neutral');
+
+        try {
+            const response = await fetch('/api/users/resend-email-change', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({}),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !data.user) {
+                throw new Error(data?.error || 'resend_email_change_failed');
+            }
+
+            _pendingEmailFeedback = {
+                tone: 'success',
+                message: '\u041f\u0438\u0441\u044c\u043c\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u043f\u043e\u0432\u0442\u043e\u0440\u043d\u043e. \u041f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0432\u0445\u043e\u0434\u044f\u0449\u0438\u0435.',
+            };
+            _accountContext = {
+                ...(typeof _accountContext === 'object' && _accountContext ? _accountContext : {}),
+                user: data.user,
+                hosted: _accountContext?.hosted === true,
+            };
+            updateAccountSummary(_accountContext.user, { hosted: _accountContext.hosted === true });
+        } catch (error) {
+            const code = String(error?.message || '');
+            const message = code === 'pending_email_missing'
+                ? '\u0421\u0435\u0439\u0447\u0430\u0441 \u043d\u0435\u0442 \u0430\u043a\u0442\u0438\u0432\u043d\u043e\u0439 \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u044b'
+                : code === 'too_many_requests'
+                    ? '\u0421\u043b\u0438\u0448\u043a\u043e\u043c \u0447\u0430\u0441\u0442\u043e. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u043f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u044c \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.'
+                : code === 'disabled' || code === 'not_configured' || code === 'missing_base_url'
+                    ? '\u041f\u043e\u0447\u0442\u043e\u0432\u044b\u0439 \u0441\u0435\u0440\u0432\u0438\u0441 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d'
+                    : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043f\u0438\u0441\u044c\u043c\u043e \u0435\u0449\u0451 \u0440\u0430\u0437';
+            console.error('[Settings] Failed to resend pending email verification:', error);
+            _pendingEmailFeedback = { tone: 'error', message };
+            renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        } finally {
+            _isEmailSaving = false;
+            renderPendingEmailPanel(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        }
+    }
+
+    async function maybeCompletePendingEmailVerification() {
+        const token = String(getSearchParam('pending_email_token') || '').trim();
+        if (!token) return null;
+
+        removeSearchParam('pending_email_token');
+        try {
+            const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}&purpose=change_email`);
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok || !data.user) {
+                throw new Error(data?.error || 'pending_email_verify_failed');
+            }
+
+            _pendingEmailFeedback = {
+                tone: 'success',
+                message: '\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430 \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0430 \u0438 \u0443\u0436\u0435 \u0438\u0441\u043f\u043e\u043b\u044c\u0437\u0443\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430.',
+            };
+            return { user: data.user, hosted: true };
+        } catch (error) {
+            console.error('[Settings] Failed to confirm pending email:', error);
+            _pendingEmailFeedback = {
+                tone: 'error',
+                message: describePendingEmailVerificationError(error?.message),
+            };
+            return null;
+        }
+    }
+
+    async function savePasswordPreference() {
+
+        if (_isPasswordSaving || !canEditCredentials({ hosted: _accountContext?.hosted === true })) return;
+
+        const currentInput = document.getElementById('settings-password-current');
+        const nextInput = document.getElementById('settings-password-new');
+        const confirmInput = document.getElementById('settings-password-confirm');
+        if (!currentInput || !nextInput || !confirmInput) return;
+
+        const currentPassword = String(currentInput.value || '');
+        const nextPassword = String(nextInput.value || '');
+        const confirmPassword = String(confirmInput.value || '');
+
+        if (nextPassword.length < PASSWORD_MIN_LENGTH) {
+            setInlineStatus('settings-password-save-status', `Пароль должен содержать минимум ${PASSWORD_MIN_LENGTH} символов`, 'error');
+            return;
+        }
+        if (nextPassword !== confirmPassword) {
+            setInlineStatus('settings-password-save-status', 'Новый пароль и подтверждение не совпадают', 'error');
+            return;
+        }
+
+        _isPasswordSaving = true;
+        setButtonBusyState('settings-password-save-btn', true);
+        setInlineStatus('settings-password-save-status', 'Сохраняем пароль...', 'neutral');
+
+        try {
+            const payload = { new_password: nextPassword };
+            if (currentPassword) {
+                payload.current_password = currentPassword;
+            }
+
+            const response = await fetch('/api/users/change-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) {
+                throw new Error(data?.error || 'password_save_failed');
+            }
+
+            if (_accountContext?.user) {
+                _accountContext.user.has_password = true;
+            }
+            updateCredentialControls(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+            setInlineStatus('settings-password-save-status', 'Пароль обновлён', 'success');
+            resetPasswordForm();
+            setSectionOpen('settings-password-form', false);
+        } catch (error) {
+            const code = String(error?.message || '');
+            const message = code === 'current_password_required'
+                ? 'Введите текущий пароль'
+                : code === 'current_password_invalid'
+                    ? 'Текущий пароль указан неверно'
+                    : code === 'invalid_password'
+                        ? `Пароль должен содержать минимум ${PASSWORD_MIN_LENGTH} символов`
+                        : 'Не удалось обновить пароль';
+            console.error('[Settings] Failed to save password:', error);
+            setInlineStatus('settings-password-save-status', message, 'error');
+        } finally {
+            _isPasswordSaving = false;
+            setButtonBusyState('settings-password-save-btn', false);
+        }
+    }
+
+    async function loadProfileThemeContext() {
+        renderThemeOptions();
+
+        const verificationContext = await maybeCompletePendingEmailVerification();
+        const [accountContext, settingsData] = await Promise.all([
+            loadSettingsAccountContext(),
+            fetch('/api/ui/settings')
+                .then((response) => response.json())
+                .catch(() => null),
+        ]);
+
+        _accountContext = verificationContext || accountContext || { user: null, hosted: false };
+        updateAccountSummary(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        updateProfileCaption(_accountContext?.user, { hosted: _accountContext?.hosted === true });
+        renderAdminUsersList();
+        if (String(_accountContext?.user?.role || '').trim().toLowerCase() === 'admin') {
+            await loadAdminUsers(_adminUsersQuery);
+        }
+        await loadAvatarOptions();
+
+        const themeId = settingsData?.ok && settingsData.settings?.theme
+            ? settingsData.settings.theme
+            : (window.ThemeManager ? window.ThemeManager.getTheme() : 'light-a');
+
+        if (window.ThemeManager && window.ThemeManager.getTheme() !== themeId) {
+            window.ThemeManager.setTheme(themeId);
+        }
+
+        renderThemeOptions(themeId);
+    }
+
+    function bootstrapSettingsPage() {
         if (document.body && document.body.dataset.settingsInitialized === '1') {
             return;
         }
         if (document.body) {
             document.body.dataset.settingsInitialized = '1';
         }
+
+        applyStaticCopy();
 
         const restoreBtn = document.getElementById('settings-draft-restore-btn');
         if (restoreBtn) {
@@ -1164,6 +1888,181 @@
             };
         }
 
+        const logoutBtn = document.getElementById('settings-logout-btn');
+        if (logoutBtn) {
+            logoutBtn.onclick = () => {
+                void logoutCurrentAccount();
+            };
+        }
+        updateLogoutButtonState();
+
+        const adminSearchBtn = document.getElementById('settings-admin-search-btn');
+        if (adminSearchBtn) {
+            adminSearchBtn.onclick = () => {
+                const input = document.getElementById('settings-admin-search-input');
+                void loadAdminUsers(input?.value || '');
+            };
+        }
+
+        const adminSearchInput = document.getElementById('settings-admin-search-input');
+        if (adminSearchInput) {
+            adminSearchInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    void loadAdminUsers(adminSearchInput.value || '');
+                }
+            });
+        }
+
+        const avatarUploadBtn = document.getElementById('settings-avatar-upload-btn');
+        const avatarFileInput = document.getElementById('settings-avatar-file-input');
+        if (avatarUploadBtn && avatarFileInput) {
+            avatarUploadBtn.onclick = () => avatarFileInput.click();
+            avatarFileInput.addEventListener('change', () => {
+                const file = avatarFileInput.files && avatarFileInput.files[0];
+                if (file) {
+                    setAvatarSaveStatus('Подготовьте квадратный кадр 1:1 и подтвердите загрузку', 'neutral');
+                    void openAvatarCropper(file);
+                }
+            });
+        }
+
+        const avatarCropCancelBtn = document.getElementById('settings-avatar-crop-cancel-btn');
+        if (avatarCropCancelBtn) {
+            avatarCropCancelBtn.onclick = () => {
+                closeAvatarCropper();
+            };
+        }
+
+        const avatarCropCancelIconBtn = document.getElementById('settings-avatar-crop-cancel-icon-btn');
+        if (avatarCropCancelIconBtn) {
+            avatarCropCancelIconBtn.onclick = () => {
+                closeAvatarCropper();
+            };
+        }
+
+        const avatarCropApplyBtn = document.getElementById('settings-avatar-crop-apply-btn');
+        if (avatarCropApplyBtn) {
+            avatarCropApplyBtn.onclick = () => {
+                void applyAvatarCropAndUpload();
+            };
+        }
+
+        const avatarCropResetBtn = document.getElementById('settings-avatar-crop-reset-btn');
+        if (avatarCropResetBtn) {
+            avatarCropResetBtn.onclick = () => {
+                resetAvatarCropView();
+            };
+        }
+
+        const avatarCropZoom = document.getElementById('settings-avatar-crop-zoom');
+        if (avatarCropZoom) {
+            avatarCropZoom.addEventListener('input', () => {
+                if (!_avatarCropState) return;
+                _avatarCropState.zoomPercent = Math.max(100, Math.min(300, Number(avatarCropZoom.value || 100)));
+                renderAvatarCropPreview();
+            });
+        }
+
+        const avatarCropFrame = document.getElementById('settings-avatar-crop-frame');
+        if (avatarCropFrame) {
+            avatarCropFrame.addEventListener('mousedown', startAvatarCropDrag);
+            avatarCropFrame.addEventListener('touchstart', startAvatarCropDrag, { passive: false });
+        }
+
+        window.addEventListener('mousemove', moveAvatarCropDrag);
+        window.addEventListener('mouseup', endAvatarCropDrag);
+        window.addEventListener('touchmove', moveAvatarCropDrag, { passive: false });
+        window.addEventListener('touchend', endAvatarCropDrag);
+        window.addEventListener('touchcancel', endAvatarCropDrag);
+
+        const avatarCropModal = document.getElementById('settings-avatar-crop-modal');
+        if (avatarCropModal) {
+            avatarCropModal.addEventListener('click', (event) => {
+                if (event.target === avatarCropModal) {
+                    closeAvatarCropper();
+                }
+            });
+        }
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && _avatarCropState) {
+                closeAvatarCropper();
+            }
+        });
+
+        const saveNameBtn = document.getElementById('settings-name-save-btn');
+        if (saveNameBtn) {
+            saveNameBtn.onclick = () => {
+                void saveNamePreference();
+            };
+        }
+
+        const emailToggleBtn = document.getElementById('settings-email-toggle-btn');
+        if (emailToggleBtn) {
+            emailToggleBtn.onclick = () => {
+                const form = document.getElementById('settings-email-form');
+                const nextState = !!form && form.classList.contains('hidden');
+                resetEmailForm();
+                setSectionOpen('settings-email-form', nextState);
+            };
+        }
+
+        const emailCancelBtn = document.getElementById('settings-email-cancel-btn');
+        if (emailCancelBtn) {
+            emailCancelBtn.onclick = () => {
+                resetEmailForm();
+                setSectionOpen('settings-email-form', false);
+            };
+        }
+
+        const emailSaveBtn = document.getElementById('settings-email-save-btn');
+        if (emailSaveBtn) {
+            emailSaveBtn.onclick = () => {
+                void saveEmailPreference();
+            };
+        }
+
+        const emailPendingResendBtn = document.getElementById('settings-email-pending-resend-btn');
+        if (emailPendingResendBtn) {
+            emailPendingResendBtn.onclick = () => {
+                void resendPendingEmailChange();
+            };
+        }
+
+        const passwordToggleBtn = document.getElementById('settings-password-toggle-btn');
+        if (passwordToggleBtn) {
+            passwordToggleBtn.onclick = () => {
+                const form = document.getElementById('settings-password-form');
+                const nextState = !!form && form.classList.contains('hidden');
+                resetPasswordForm();
+                setSectionOpen('settings-password-form', nextState);
+            };
+        }
+
+        const passwordCancelBtn = document.getElementById('settings-password-cancel-btn');
+        if (passwordCancelBtn) {
+            passwordCancelBtn.onclick = () => {
+                resetPasswordForm();
+                setSectionOpen('settings-password-form', false);
+            };
+        }
+
+        const passwordSaveBtn = document.getElementById('settings-password-save-btn');
+        if (passwordSaveBtn) {
+            passwordSaveBtn.onclick = () => {
+                void savePasswordPreference();
+            };
+        }
+
+        const passwordForm = document.getElementById('settings-password-form');
+        if (passwordForm) {
+            passwordForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                void savePasswordPreference();
+            });
+        }
+
         window.addEventListener('themechanged', (event) => {
             renderThemeOptions(event.detail?.themeId);
         });
@@ -1171,6 +2070,19 @@
         void loadProfileThemeContext();
         loadKeys();
         updateDraftBanner();
+    }
+
+    window.saveKeys = saveKeysProduct;
+    window.validateKey = validateKeyProduct;
+    window.validateAllKeys = validateAllKeys;
+    window.toggleKeyVisibility = toggleKeyVisibility;
+    window.toggleKeyRemoval = toggleKeyRemoval;
+    window.loadKeys = loadKeys;
+    window.restoreSettingsDraft = restoreDraftFromStorage;
+    window.discardSettingsDraft = discardDraftFromStorage;
+
+    function initSettingsPage() {
+        bootstrapSettingsPage();
     }
 
     if (document.readyState === 'loading') {

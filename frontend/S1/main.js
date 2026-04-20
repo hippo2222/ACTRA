@@ -58,6 +58,7 @@
         refreshCheckButtonState,
         initBeforeUnloadGuard,
         resetUiStateAutosaveTracking,
+        consumePendingUnloadPauseMarker,
         navigateWithoutPrompt
     } = SessionControls;
 
@@ -216,7 +217,11 @@
             setLoading(true);
             showStatus('Загружаем текущее задание...');
             const hadRenderedTask = !!state.currentTask;
-            const { status, data } = await api.getCurrentTask(sessionId);
+            const pendingUnloadPauseRestore =
+                typeof consumePendingUnloadPauseMarker === 'function'
+                    ? consumePendingUnloadPauseMarker(sessionId)
+                    : false;
+            let { status, data } = await api.getCurrentTask(sessionId);
 
             if (status === 404) {
                 showStatus('Сессия не найдена', 'error');
@@ -236,6 +241,27 @@
                 renderTask(null);
                 syncCheckButtonState();
                 return;
+            }
+
+            if (
+                pendingUnloadPauseRestore &&
+                status === 200 &&
+                data &&
+                data.ok === true &&
+                data.paused === true
+            ) {
+                try {
+                    const resumeResponse = await api.resumeSession(sessionId, {
+                        source: 's1_reload_restore',
+                    });
+                    if (resumeResponse.status === 200 && resumeResponse.data && resumeResponse.data.ok === true) {
+                        const refreshedTask = await api.getCurrentTask(sessionId);
+                        status = refreshedTask.status;
+                        data = refreshedTask.data;
+                    }
+                } catch (resumeError) {
+                    console.warn('Failed to auto-resume same-tab reload state', resumeError);
+                }
             }
 
             const response = data;
@@ -271,6 +297,12 @@
             if (restoredEvaluationResult) {
                 showStatus(
                     '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u0440\u0435\u0437\u0443\u043b\u044c\u0442\u0430\u0442 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438',
+                    'info',
+                    { dismissible: true, autoHideMs: 8000 }
+                );
+            } else if (restoredUserInput) {
+                showStatus(
+                    '\u0412\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d \u043d\u0435\u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043d\u044b\u0439 \u043e\u0442\u0432\u0435\u0442',
                     'info',
                     { dismissible: true, autoHideMs: 8000 }
                 );

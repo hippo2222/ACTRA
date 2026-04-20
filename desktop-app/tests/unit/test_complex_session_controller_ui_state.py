@@ -191,6 +191,60 @@ def test_load_current_task_filters_answer_key_for_test_partial_retry():
     assert original_indices == [0, 2]
 
 
+def test_load_current_task_partial_retry_uses_shuffled_positions_when_present():
+    session_manager = MagicMock()
+    task_controller = MagicMock()
+    storage_service = MagicMock()
+    complex_service = MagicMock()
+
+    session = make_session(current_task_index=1)
+    session.test_failed_subtests = {"m/t/task2": [1]}
+    session.test_shuffle = {
+        "m/t/task2@1": {
+            "question_order": [2, 0, 1],
+            "answer_order_by_question": {},
+        }
+    }
+    session.queue[1].is_retry = True
+    session_manager.get_session.return_value = session
+    storage_service.load_task.return_value = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {"id": "q1", "prompt": "one"},
+                    {"id": "q2", "prompt": "two"},
+                    {"id": "q3", "prompt": "three"},
+                ]
+            },
+        },
+        "answer_key": {
+            "questions": [
+                {"id": "q1", "answers": [{"text": "A", "correct": True}]},
+                {"id": "q2", "answers": [{"text": "B", "correct": True}]},
+                {"id": "q3", "answers": [{"text": "C", "correct": True}]},
+            ]
+        },
+    }
+
+    controller = ComplexSessionController(
+        session_manager=session_manager,
+        task_controller=task_controller,
+        storage_service=storage_service,
+        complex_service=complex_service,
+    )
+    controller.current_session_id = session.id
+
+    controller._load_current_task()
+
+    _, kwargs = task_controller.load_task.call_args
+    filtered_task_data = kwargs["task_data"]
+
+    task_question_ids = [item["id"] for item in filtered_task_data["content"]["questions"]]
+
+    assert task_question_ids == ["q2"]
+
+
 def test_load_next_task_filters_answer_key_for_test_partial_retry():
     session_manager = MagicMock()
     task_controller = MagicMock()

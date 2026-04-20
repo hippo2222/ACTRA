@@ -17,6 +17,9 @@ from datetime import datetime, date
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 
+from persistence.hosted_session_repository import HostedSessionRepository as HostedSessionDocumentRepository
+from persistence.postgres import PostgresUnavailableError
+from services.hosted_shadow_fallback import HostedShadowFallbackMixin
 from task_system.core.models.complex_models import (
     ComplexSession,
     COMPLEX_SESSION_VERSION
@@ -521,4 +524,242 @@ class SessionRepository:
                 )
                 continue
         return [entry[0] for entry in loaded_by_session_id.values()]
+
+
+class HostedSessionRepository(HostedShadowFallbackMixin, SessionRepository):
+    """Hosted session repository with Postgres source of truth and optional shadow fallback."""
+
+    def __init__(self, data_dir: str, persistence_settings: Any):
+        super().__init__(data_dir=data_dir)
+        self.persistence_settings = persistence_settings
+        self._hosted_repository: Optional[HostedSessionDocumentRepository] = None
+        self._storage_ready = False
+        self._init_hosted_shadow_fallback_state()
+
+    @property
+    def hosted_storage_ready(self) -> bool:
+        return bool(self._storage_ready)
+
+    def ensure_persistence_ready(self) -> None:
+        if self._storage_ready:
+            return
+        self._get_hosted_repository().ensure_schema()
+        self._storage_ready = True
+
+    def _get_hosted_repository(self) -> HostedSessionDocumentRepository:
+        if self._hosted_repository is None:
+            if self.persistence_settings is None:
+                raise RuntimeError("hosted_session_repository_requires_persistence_settings")
+            self._hosted_repository = HostedSessionDocumentRepository(
+                getattr(self.persistence_settings, "postgres_dsn", "")
+            )
+        return self._hosted_repository
+
+    def _normalize_session_payload(self, session: ComplexSession) -> Dict[str, Any]:
+        if hasattr(session, "model_dump"):
+            payload = session.model_dump(mode="python")
+        else:
+            payload = json.loads(session.json())
+        return self._json_safe(payload)
+
+    def _deserialize_session_payload(self, payload: Any) -> Optional[ComplexSession]:
+        if not isinstance(payload, dict):
+            return None
+
+        version = payload.get("version", 0)
+        if version < COMPLEX_SESSION_VERSION:
+            return None
+
+        if hasattr(ComplexSession, "model_validate"):
+            return ComplexSession.model_validate(payload)
+        return ComplexSession.parse_obj(payload)
+
+    def _session_updated_at(self, session: ComplexSession) -> str:
+        ui_state = getattr(session, "ui_state", None) or {}
+        if isinstance(ui_state, dict):
+            last_updated = ui_state.get("last_updated") or ui_state.get("updated_at")
+            if isinstance(last_updated, str) and last_updated.strip():
+                return last_updated.strip()
+
+        for value in (
+            getattr(session, "paused_at", None),
+            getattr(session, "end_time", None),
+            getattr(session, "start_time", None),
+        ):
+            if isinstance(value, datetime):
+                return value.isoformat()
+
+        return datetime.utcnow().isoformat()
+
+    def _promote_shadow_sessions(self, sessions: List[ComplexSession], user_id: str) -> None:
+        if not sessions:
+            return
+        try:
+            self.ensure_persistence_ready()
+        except PostgresUnavailableError:
+            return
+
+        repo = self._get_hosted_repository()
+        for session in sessions:
+            try:
+                clean_session_user_id = str(getattr(session, "user_id", "") or user_id).strip() or user_id
+                repo.upsert_session(
+                    session_id=str(getattr(session, "id", "") or "").strip(),
+                    user_id=clean_session_user_id,
+                    complex_id=str(getattr(session, "complex_id", "") or "").strip(),
+                    is_active=bool(getattr(session, "is_active", False)),
+                    paused=bool(getattr(session, "paused", False)),
+                    updated_at=self._session_updated_at(session),
+                    payload=self._normalize_session_payload(session),
+                )
+            except Exception:
+                self.logger.debug(
+                    "[HostedSessionRepository] Failed to promote shadow session %s",
+                    getattr(session, "id", None),
+                    exc_info=True,
+                )
+
+    def save_session(self, session: ComplexSession, user_id: str) -> bool:
+        if user_id == "guest":
+            self.logger.info("[HostedSessionRepository] Guest session not persisted")
+            return True
+
+        if session.user_id != user_id:
+            self.logger.warning(
+                "Session user_id mismatch: session.user_id=%s, provided user_id=%s. Using session.user_id.",
+                session.user_id,
+                user_id,
+            )
+            user_id = session.user_id
+
+        try:
+            self.ensure_persistence_ready()
+            self._get_hosted_repository().upsert_session(
+                session_id=str(session.id),
+                user_id=str(user_id),
+                complex_id=str(session.complex_id),
+                is_active=bool(session.is_active),
+                paused=bool(session.paused),
+                updated_at=self._session_updated_at(session),
+                payload=self._normalize_session_payload(session),
+            )
+            try:
+                super().delete_session_by_session_id(str(session.id), str(user_id))
+            except Exception:
+                self.logger.debug(
+                    "[HostedSessionRepository] Failed to delete shadow session after hosted save: %s",
+                    session.id,
+                    exc_info=True,
+                )
+            return True
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("save_session", exc)
+            return super().save_session(session, user_id)
+
+    def load_all_sessions(self, user_id: str) -> List[ComplexSession]:
+        clean_user_id = str(user_id or "").strip()
+        if not clean_user_id:
+            return []
+
+        try:
+            self.ensure_persistence_ready()
+            rows = self._get_hosted_repository().list_sessions_for_user(user_id=clean_user_id)
+            loaded: List[ComplexSession] = []
+            invalid_session_ids: List[str] = []
+            for row in rows:
+                try:
+                    session = self._deserialize_session_payload(row.get("payload"))
+                except ValidationError:
+                    session = None
+                except Exception:
+                    self.logger.exception(
+                        "[HostedSessionRepository] Failed to deserialize hosted session %s",
+                        row.get("session_id"),
+                    )
+                    session = None
+
+                if session is None:
+                    session_id = str(row.get("session_id") or "").strip()
+                    if session_id:
+                        invalid_session_ids.append(session_id)
+                    continue
+
+                loaded.append(session)
+
+            for session_id in invalid_session_ids:
+                try:
+                    self._get_hosted_repository().delete_session_by_session_id(
+                        user_id=clean_user_id,
+                        session_id=session_id,
+                    )
+                except Exception:
+                    self.logger.debug(
+                        "[HostedSessionRepository] Failed to delete invalid hosted session %s",
+                        session_id,
+                        exc_info=True,
+                    )
+
+            if loaded:
+                return loaded
+
+            shadow_sessions = super().load_all_sessions(clean_user_id)
+            self._promote_shadow_sessions(shadow_sessions, clean_user_id)
+            return shadow_sessions
+        except PostgresUnavailableError as exc:
+            self._log_shadow_read_fallback("load_all_sessions", exc)
+            return super().load_all_sessions(clean_user_id)
+
+    def load_session_by_session_id(self, user_id: str, session_id: str) -> Optional[ComplexSession]:
+        clean_user_id = str(user_id or "").strip()
+        clean_session_id = str(session_id or "").strip()
+        if not clean_user_id or not clean_session_id:
+            return None
+
+        try:
+            self.ensure_persistence_ready()
+            row = self._get_hosted_repository().get_session_by_session_id(
+                user_id=clean_user_id,
+                session_id=clean_session_id,
+            )
+            if row is not None:
+                session = self._deserialize_session_payload(row.get("payload"))
+                if session is not None:
+                    return session
+                self._get_hosted_repository().delete_session_by_session_id(
+                    user_id=clean_user_id,
+                    session_id=clean_session_id,
+                )
+
+            shadow_session = super().load_session_by_session_id(clean_user_id, clean_session_id)
+            if shadow_session is not None:
+                self._promote_shadow_sessions([shadow_session], clean_user_id)
+            return shadow_session
+        except PostgresUnavailableError as exc:
+            self._log_shadow_read_fallback("load_session_by_session_id", exc)
+            return super().load_session_by_session_id(clean_user_id, clean_session_id)
+
+    def delete_session_by_session_id(self, session_id: str, user_id: str) -> bool:
+        clean_user_id = str(user_id or "").strip()
+        clean_session_id = str(session_id or "").strip()
+        if not clean_user_id or not clean_session_id:
+            return True
+
+        try:
+            self.ensure_persistence_ready()
+            self._get_hosted_repository().delete_session_by_session_id(
+                user_id=clean_user_id,
+                session_id=clean_session_id,
+            )
+            try:
+                super().delete_session_by_session_id(clean_session_id, clean_user_id)
+            except Exception:
+                self.logger.debug(
+                    "[HostedSessionRepository] Failed to delete shadow session during hosted delete: %s",
+                    clean_session_id,
+                    exc_info=True,
+                )
+            return True
+        except PostgresUnavailableError as exc:
+            self._guard_shadow_write_fallback("delete_session_by_session_id", exc)
+            return super().delete_session_by_session_id(clean_session_id, clean_user_id)
 

@@ -46,6 +46,87 @@
         return null;
     }
 
+    function resolveTaskImageUrl(rawValue) {
+        if (!rawValue && rawValue !== 0) return "";
+
+        if (Array.isArray(rawValue)) {
+            for (const item of rawValue) {
+                const resolved = resolveTaskImageUrl(item);
+                if (resolved) return resolved;
+            }
+            return "";
+        }
+
+        if (rawValue && typeof rawValue === "object") {
+            const nested = rawValue.image && typeof rawValue.image === "object" ? rawValue.image : null;
+            const directUrl =
+                rawValue.asset_url ||
+                rawValue.image_asset_url ||
+                rawValue.image_url ||
+                rawValue.url ||
+                rawValue.src ||
+                (nested &&
+                    (nested.asset_url ||
+                        nested.image_asset_url ||
+                        nested.image_url ||
+                        nested.url ||
+                        nested.src)) ||
+                "";
+            if (directUrl) return resolveTaskImageUrl(directUrl);
+
+            const assetId =
+                rawValue.asset_id ||
+                rawValue.image_asset_id ||
+                (nested && (nested.asset_id || nested.image_asset_id)) ||
+                "";
+            if (assetId) {
+                return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+            }
+            const legacyPath =
+                rawValue.image_path ||
+                rawValue.path ||
+                (nested && (nested.image_path || nested.path)) ||
+                "";
+            if (legacyPath) return resolveTaskImageUrl(legacyPath);
+            return "";
+        }
+
+        const raw = String(rawValue).trim();
+        if (!raw) return "";
+        if (/^(https?:|data:)/i.test(raw) || raw.startsWith("/")) return raw;
+        return `/api/local-image?path=${encodeURIComponent(raw)}`;
+    }
+
+    function getTaskImageUrl(task) {
+        if (!task || !task.task_data) return "";
+        const td = task.task_data || {};
+        const content = td.content || {};
+        const directUrl =
+            td.image_asset_url ||
+            content.image_asset_url ||
+            td.image_url ||
+            content.image_url ||
+            "";
+        if (directUrl) return resolveTaskImageUrl(directUrl);
+
+        const directAssetId =
+            td.image_asset_id ||
+            content.image_asset_id ||
+            td.asset_id ||
+            content.asset_id ||
+            "";
+        if (directAssetId) return resolveTaskImageUrl({ asset_id: directAssetId });
+
+        return resolveTaskImageUrl(
+            td.image_path ||
+            content.image_path ||
+            td.image ||
+            content.image ||
+            content.images ||
+            ""
+        );
+    }
+
     function getTaskSubtype(task) {
         if (!task) return null;
         const td = task.task_data || task.taskData || {};
@@ -1065,10 +1146,7 @@
                     task.task_data.content?.prompt ||
                     "")) || "";
 
-        const imageUrlFromData =
-            (task.task_data &&
-                (task.task_data.image_url || task.task_data.content?.image_url)) ||
-            "";
+        const imageUrlFromData = getTaskImageUrl(task);
 
         const currentTaskType = pickEffectiveTaskType(task);
         const rawTaskType = getRawTaskType(task);

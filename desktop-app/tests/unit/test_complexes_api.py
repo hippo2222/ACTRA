@@ -1,6 +1,9 @@
 import pytest
 
-from api.complexes_api import validate_and_normalize_create_payload
+from api.complexes_api import (
+    validate_and_normalize_create_payload,
+    validate_and_normalize_theory_link,
+)
 
 
 def test_validate_and_normalize_ok():
@@ -30,7 +33,11 @@ def test_validate_and_normalize_ok():
         "module_01/topic_01/task_001",
         "module_01/topic_01/task_002",
     ]]
-    assert normalized["theory_link"] == {"theory_id": "th_abc123", "relation": "link"}
+    assert normalized["theory_link"] == {
+        "source_kind": "workspace",
+        "theory_id": "th_abc123",
+        "relation": "link",
+    }
     assert normalized["theory_mode"] == "override"
 
 
@@ -44,8 +51,53 @@ def test_validate_and_normalize_theory_link_copy_relation():
     normalized, errors = validate_and_normalize_create_payload(payload)
     assert errors == []
     assert normalized is not None
-    assert normalized["theory_link"] == {"theory_id": "th_copy_01", "relation": "copy"}
+    assert normalized["theory_link"] == {
+        "source_kind": "workspace",
+        "theory_id": "th_copy_01",
+        "relation": "copy",
+    }
     assert normalized["theory_mode"] == "override"
+
+
+def test_validate_and_normalize_linked_library_theory_link_for_complexes():
+    payload = {
+        "name": "Linked theory complex",
+        "tasks": ["module_01/topic_01/task_001"],
+        "theory_link": {
+            "source_kind": "linked_library",
+            "library_entry_id": "thlib_123",
+            "relation": "link",
+            "title_cache": "Catalog theory",
+            "catalog_item_id": "item_123",
+            "source_theory_id": "th_remote",
+        },
+    }
+
+    normalized, errors = validate_and_normalize_create_payload(payload)
+    assert errors == []
+    assert normalized is not None
+    assert normalized["theory_link"] == {
+        "source_kind": "linked_library",
+        "library_entry_id": "thlib_123",
+        "relation": "link",
+        "title_cache": "Catalog theory",
+        "catalog_item_id": "item_123",
+        "source_theory_id": "th_remote",
+    }
+    assert normalized["theory_mode"] == "override"
+
+
+def test_validate_and_normalize_theory_link_rejects_linked_library_when_not_allowed():
+    normalized, error = validate_and_normalize_theory_link(
+        {
+            "source_kind": "linked_library",
+            "library_entry_id": "thlib_123",
+            "relation": "link",
+        },
+        allow_linked_library=False,
+    )
+    assert normalized is None
+    assert error == "linked_theory_link_not_supported"
 
 
 def test_validate_and_normalize_default_theory_mode_inherit_without_theory_link():

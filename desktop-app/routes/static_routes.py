@@ -112,6 +112,45 @@ def serve_complexes_create_ui() -> Any:
 
 
 # ---------------------------------------------------------------------------
+# Catalog UI
+# ---------------------------------------------------------------------------
+
+@static_bp.route("/ui/catalog", methods=["GET"])
+@static_bp.route("/ui/catalog/", methods=["GET"])
+def serve_catalog_ui() -> Any:
+    """Serve the public catalog UI."""
+    dirs = _get_ui_dirs()
+    CATALOG_UI_DIR = dirs.get("CATALOG_UI_DIR")
+    if not CATALOG_UI_DIR or not CATALOG_UI_DIR.exists():
+        logger.error("[HTTP] CATALOG_UI_DIR does not exist: %s", CATALOG_UI_DIR)
+        return jsonify({"ok": False, "error": "catalog_ui_not_found"}), 500
+
+    resp = send_from_directory(CATALOG_UI_DIR, "index.html")
+    try:
+        resp.headers["Cache-Control"] = "no-store"
+    except Exception:
+        pass
+    return resp
+
+
+@static_bp.route("/catalog", methods=["GET"])
+@static_bp.route("/catalog/", methods=["GET"])
+def serve_catalog_ui_alias() -> Any:
+    """Legacy-friendly alias for the public catalog UI."""
+    return redirect("/ui/catalog")
+
+
+@static_bp.route("/ui/catalog/<path:filename>", methods=["GET"])
+def serve_catalog_file(filename: str) -> Any:
+    """Serve Catalog static files (HTML, JS)."""
+    dirs = _get_ui_dirs()
+    CATALOG_UI_DIR = dirs.get("CATALOG_UI_DIR")
+    if not CATALOG_UI_DIR or not CATALOG_UI_DIR.exists():
+        return jsonify({"ok": False, "error": "catalog_ui_not_found"}), 500
+    return send_from_directory(CATALOG_UI_DIR, filename)
+
+
+# ---------------------------------------------------------------------------
 # Welcome UI
 # ---------------------------------------------------------------------------
 

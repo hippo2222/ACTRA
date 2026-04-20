@@ -17,6 +17,85 @@ class DrawEditor extends BaseEditor {
         this.init();
     }
 
+    normalizeImageReference(raw) {
+        if (!raw && raw !== 0) return null;
+
+        if (typeof raw === 'string') {
+            const value = raw.trim();
+            if (!value) return null;
+            if (value.startsWith('/api/assets/') || /^(https?:|data:)/i.test(value)) {
+                return { path: null, asset_id: null, asset_url: value };
+            }
+            return { path: value, asset_id: null, asset_url: null };
+        }
+
+        if (typeof raw !== 'object') return null;
+
+        const nested = raw.image && typeof raw.image === 'object' ? raw.image : null;
+        const path = String(
+            raw.path ??
+            raw.image_path ??
+            (typeof raw.image === 'string' ? raw.image : null) ??
+            raw.src ??
+            nested?.path ??
+            nested?.image_path ??
+            nested?.src ??
+            ''
+        ).trim();
+        const asset_id = String(
+            raw.asset_id ??
+            raw.image_asset_id ??
+            nested?.asset_id ??
+            nested?.image_asset_id ??
+            ''
+        ).trim();
+        const asset_url = String(
+            raw.asset_url ??
+            raw.image_asset_url ??
+            raw.image_url ??
+            raw.url ??
+            nested?.asset_url ??
+            nested?.image_asset_url ??
+            nested?.image_url ??
+            nested?.url ??
+            ''
+        ).trim();
+
+        if (!path && !asset_id && !asset_url) return null;
+        return {
+            path: path || null,
+            asset_id: asset_id || null,
+            asset_url: asset_url || null,
+        };
+    }
+
+    serializeImageReference(raw) {
+        const normalized = this.normalizeImageReference(raw);
+        if (!normalized) return null;
+        if (normalized.asset_id || normalized.asset_url) {
+            const payload = {};
+            if (normalized.path) payload.path = normalized.path;
+            if (normalized.asset_id) payload.asset_id = normalized.asset_id;
+            if (normalized.asset_url) payload.asset_url = normalized.asset_url;
+            return payload;
+        }
+        return normalized.path || null;
+    }
+
+    resolveEditorImagePreviewSrc(raw) {
+        const normalized = this.normalizeImageReference(raw);
+        if (!normalized) return '';
+        if (normalized.asset_url) return normalized.asset_url;
+        if (normalized.asset_id) {
+            return `/api/editor/image?asset_id=${encodeURIComponent(normalized.asset_id)}`;
+        }
+        const path = normalized.path || '';
+        if (!path) return '';
+        if (/^(https?:|data:)/i.test(path) || path.startsWith('/api/')) return path;
+        if (path.startsWith('/')) return path;
+        return `/api/editor/image?path=${encodeURIComponent(path)}`;
+    }
+
     getDifficultyAuthoringMountPoint() {
         return document.querySelector('aside .p-5.flex.flex-col.gap-4')
             || document.querySelector('aside .p-6.flex.flex-col.gap-8');
@@ -61,12 +140,12 @@ class DrawEditor extends BaseEditor {
         const placeholder = document.querySelector('#image-placeholder');
         const svg = document.querySelector('#annotation-svg');
 
-        if (img && this.task.task_data.content.image) {
+        const imageSrc = this.resolveEditorImagePreviewSrc(this.task.task_data.content.image);
+        if (img && imageSrc) {
             if (placeholder) placeholder.classList.add('hidden');
             img.classList.remove('hidden');
             if (svg) svg.classList.remove('hidden');
-            const imgPath = this.task.task_data.content.image;
-            img.src = `/api/editor/image?path=${encodeURIComponent(imgPath)}`;
+            img.src = imageSrc;
             img.onload = () => {
                 this.renderRegions();
             };
@@ -358,9 +437,13 @@ class DrawEditor extends BaseEditor {
             });
 
             const data = await response.json();
-            if (data.ok) {
+            if (data.ok && (data.path || data.asset_id || data.asset_url)) {
                 console.log("Main image uploaded:", data.path);
-                this.task.task_data.content.image = data.path;
+                this.task.task_data.content.image = this.serializeImageReference({
+                    path: data.path,
+                    asset_id: data.asset_id,
+                    asset_url: data.asset_url,
+                }) || data.path;
                 this.renderUI();
                 this.markUnsaved();
             } else {

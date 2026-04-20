@@ -392,7 +392,7 @@ describe("EditorDashboard workspace import history", () => {
     });
 
     expect(window.navigateWithTransition).toHaveBeenCalledWith(
-      "Point_Annotation.html?module=m1&topic=t1&task=task_1"
+      "/ui/editor/Point_Annotation.html?module=m1&topic=t1&task=task_1"
     );
   });
 
@@ -464,6 +464,22 @@ describe("EditorDashboard workspace import history", () => {
 
     importModal.classList.remove("hidden");
     window.dashboard.closeModals();
+
+    expect(importModal.classList.contains("hidden")).toBe(true);
+  });
+
+  it("does not reopen workspace-import preview modal from hosted surfaces", () => {
+    const dashboard = window.dashboard;
+    expect(dashboard).toBeDefined();
+
+    const importModal = document.getElementById("import-modal");
+    expect(importModal).toBeTruthy();
+
+    dashboard.showWorkspaceImportPreviewModal({
+      sourceComplexId: "complex-1",
+      sourceCatalogItemId: "catalog-item-1",
+      sourceCatalogVersionId: "version-1",
+    });
 
     expect(importModal.classList.contains("hidden")).toBe(true);
   });

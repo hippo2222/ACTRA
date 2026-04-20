@@ -18,6 +18,7 @@ import {
   readIterationResults,
   tryReadResponseJson,
 } from "./helpers/session_api.mjs";
+import { ensureHostedBrowserAuth } from "./helpers/runtime_context.mjs";
 import { performTaskHappyPath } from "./helpers/task_type_actions.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +50,7 @@ async function startComplexAtIteration(page, { baseUrl, complexId, startIteratio
     throw new Error("start_complex_session_missing_session_id");
   }
 
+  await ensureHostedBrowserAuth(page, baseUrl);
   await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
   await waitForPageStable(page);
   return sessionId;

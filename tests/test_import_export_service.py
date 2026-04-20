@@ -29,9 +29,39 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "desktop-app"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from services.import_export_service import ImportExportService
+from services.hosted_shadow_fallback import HostedShadowWriteFallbackDisabledError
 
 
 # ─── Helpers ───────────────────────────────────────────────────────
+
+
+def _scan_modules_tree(modules_dir):
+    modules = []
+    if not modules_dir.exists():
+        return modules
+
+    for module_dir in sorted((path for path in modules_dir.iterdir() if path.is_dir()), key=lambda path: path.name):
+        module = {"id": module_dir.name, "topics": []}
+        topics_dir = module_dir / "topics"
+        if topics_dir.exists():
+            for topic_dir in sorted((path for path in topics_dir.iterdir() if path.is_dir()), key=lambda path: path.name):
+                topic = {"id": topic_dir.name, "tasks": []}
+                tasks_dir = topic_dir / "tasks"
+                if tasks_dir.exists():
+                    for task_dir in sorted((path for path in tasks_dir.iterdir() if path.is_dir()), key=lambda path: path.name):
+                        topic["tasks"].append({"id": task_dir.name})
+                module["topics"].append(topic)
+        modules.append(module)
+    return modules
+
+
+def _write_task_dir(modules_dir, module_id, topic_id, task_id, task_data=None):
+    task_dir = modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+    task_dir.mkdir(parents=True, exist_ok=True)
+    payload = dict(task_data or {"id": task_id})
+    payload.setdefault("id", task_id)
+    (task_dir / "task.json").write_text(json.dumps(payload), encoding="utf-8")
+    return task_dir
 
 
 def _make_svc(tmp_path):
@@ -39,7 +69,102 @@ def _make_svc(tmp_path):
     storage.modules_dir = tmp_path / "modules"
     storage.modules_dir.mkdir(parents=True, exist_ok=True)
     storage.data_dir = tmp_path
-    storage.load_modules.return_value = []
+
+    def load_modules():
+        return _scan_modules_tree(storage.modules_dir)
+
+    def get_module(module_id):
+        return next((module for module in load_modules() if module["id"] == module_id), None)
+
+    def get_topic(module_id, topic_id):
+        module = get_module(module_id)
+        if not module:
+            return None
+        return next((topic for topic in module.get("topics", []) if topic["id"] == topic_id), None)
+
+    def create_module(module_id, name, workspace_meta=None):
+        module_dir = storage.modules_dir / module_id
+        if module_dir.exists():
+            return False
+        module_dir.mkdir(parents=True, exist_ok=False)
+        (module_dir / "module.json").write_text(
+            json.dumps({"id": module_id, "name": name, "workspace_meta": workspace_meta or {}}),
+            encoding="utf-8",
+        )
+        return True
+
+    def create_topic(module_id, topic_id, name, theory_link=None, workspace_meta=None):
+        module_dir = storage.modules_dir / module_id
+        if not module_dir.exists():
+            return False
+        topic_dir = module_dir / "topics" / topic_id
+        if topic_dir.exists():
+            return False
+        (topic_dir / "tasks").mkdir(parents=True, exist_ok=False)
+        (topic_dir / "topic.json").write_text(
+            json.dumps(
+                {
+                    "id": topic_id,
+                    "name": name,
+                    "theory_link": theory_link,
+                    "workspace_meta": workspace_meta or {},
+                }
+            ),
+            encoding="utf-8",
+        )
+        return True
+
+    def load_task(module_id, topic_id, task_id):
+        task_json = storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id / "task.json"
+        if not task_json.exists():
+            return None
+        return {
+            "task_data": json.loads(task_json.read_text(encoding="utf-8")),
+            "task_dir": str(task_json.parent),
+        }
+
+    def save_task(module_id, topic_id, task_id, task_data, validate=True):
+        task_dir = storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+        task_dir.mkdir(parents=True, exist_ok=True)
+        payload = json.loads(json.dumps(task_data, ensure_ascii=False))
+        payload["id"] = task_id
+        (task_dir / "task.json").write_text(
+            json.dumps(payload, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        return True
+
+    def delete_task(module_id, topic_id, task_id):
+        task_dir = storage.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+        if not task_dir.exists():
+            return False
+        shutil.rmtree(task_dir)
+        return True
+
+    def delete_topic(module_id, topic_id):
+        topic_dir = storage.modules_dir / module_id / "topics" / topic_id
+        if not topic_dir.exists():
+            return False
+        shutil.rmtree(topic_dir)
+        return True
+
+    def delete_module(module_id):
+        module_dir = storage.modules_dir / module_id
+        if not module_dir.exists():
+            return False
+        shutil.rmtree(module_dir)
+        return True
+
+    storage.load_modules = MagicMock(side_effect=load_modules)
+    storage.get_module = MagicMock(side_effect=get_module)
+    storage.get_topic = MagicMock(side_effect=get_topic)
+    storage.create_module = MagicMock(side_effect=create_module)
+    storage.create_topic = MagicMock(side_effect=create_topic)
+    storage.load_task = MagicMock(side_effect=load_task)
+    storage.save_task = MagicMock(side_effect=save_task)
+    storage.delete_task = MagicMock(side_effect=delete_task)
+    storage.delete_topic = MagicMock(side_effect=delete_topic)
+    storage.delete_module = MagicMock(side_effect=delete_module)
     storage.reload_modules = MagicMock()
     with patch.object(ImportExportService, "_read_app_version", return_value="1.0.0"):
         svc = ImportExportService(storage)
@@ -206,16 +331,11 @@ class TestAnalyzeTaskInArchive:
 class TestFindTask:
     def test_not_found(self, tmp_path):
         svc = _make_svc(tmp_path)
-        svc.storage.load_modules.return_value = []
         assert svc._find_task_in_storage("nonexistent") is None
 
     def test_found(self, tmp_path):
         svc = _make_svc(tmp_path)
-        svc.storage.load_modules.return_value = [
-            {"id": "mod1", "topics": [
-                {"id": "top1", "tasks": [{"id": "task1"}]}
-            ]}
-        ]
+        _write_task_dir(svc.storage.modules_dir, "mod1", "top1", "task1")
         result = svc._find_task_in_storage("task1")
         assert result is not None
         assert "task1" in str(result)
@@ -228,11 +348,8 @@ class TestFindTask:
 
     def test_build_task_index(self, tmp_path):
         svc = _make_svc(tmp_path)
-        svc.storage.load_modules.return_value = [
-            {"id": "m1", "topics": [
-                {"id": "t1", "tasks": [{"id": "tk1"}, {"id": "tk2"}]}
-            ]}
-        ]
+        _write_task_dir(svc.storage.modules_dir, "m1", "t1", "tk1")
+        _write_task_dir(svc.storage.modules_dir, "m1", "t1", "tk2")
         index = svc._build_task_index()
         assert "tk1" in index
         assert "tk2" in index
@@ -303,6 +420,7 @@ class TestValidateArchive:
         assert report["ok"] is True
         assert report["summary"]["total"] == 1
         assert report["summary"]["valid"] == 1
+        assert report["service_contract"] == ImportExportService.SERVICE_CONTRACT
 
     def test_archive_no_manifest(self, tmp_path):
         svc = _make_svc(tmp_path)
@@ -376,6 +494,49 @@ class TestExportArchive:
             assert len(task_files) == 0
         os.remove(zip_path)
 
+    def test_export_creates_zip_from_hosted_load_task_without_task_dir(self, tmp_path):
+        storage = MagicMock()
+        storage.modules_dir = tmp_path / "modules"
+        storage.modules_dir.mkdir(parents=True, exist_ok=True)
+        storage.data_dir = tmp_path
+        storage.load_modules.return_value = []
+        storage.reload_modules = MagicMock()
+        storage.load_task.return_value = {
+            "task_data": {
+                "id": "tk1",
+                "name": "Hosted Task",
+                "type": "open_answer",
+                "content": {
+                    "question": "Prompt",
+                    "reference_answer": "Reference",
+                    "image_asset_id": "asset_1",
+                },
+            },
+            "task_dir": str(tmp_path / "virtual_task_dir"),
+        }
+        asset_service = MagicMock()
+        asset_file = tmp_path / "asset.png"
+        asset_file.write_bytes(b"PNG")
+        asset_service.resolve_asset_file.return_value = asset_file
+
+        with patch.object(ImportExportService, "_read_app_version", return_value="1.0.0"):
+            svc = ImportExportService(storage, asset_service=asset_service)
+
+        zip_path = svc.create_export_archive(
+            [{"module_id": "m1", "topic_id": "t1", "task_id": "tk1"}]
+        )
+        assert os.path.exists(zip_path)
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            names = zf.namelist()
+            assert "modules/m1/topics/t1/tasks/tk1/task.json" in names
+            assert any(name.startswith("modules/m1/topics/t1/tasks/tk1/images/_archive_assets/") for name in names)
+            exported_task = json.loads(
+                zf.read("modules/m1/topics/t1/tasks/tk1/task.json").decode("utf-8")
+            )
+            assert exported_task["content"]["image_path"].startswith("images/_archive_assets/")
+            assert "image_asset_id" not in exported_task["content"]
+        os.remove(zip_path)
+
 
 # ═══════════════════════════════════════════════════════════════════
 # import_tasks_atomic
@@ -392,16 +553,11 @@ class TestImportAtomic:
         result = svc.import_tasks_atomic(zip_path, {"conflict_resolution": "skip"})
         assert result["ok"] is True
         assert result["imported"] == 1
+        assert result["service_contract"] == ImportExportService.SERVICE_CONTRACT
 
     def test_import_skip_conflict(self, tmp_path):
         svc = _make_svc(tmp_path)
-        # Create existing task
-        existing_dir = svc.storage.modules_dir / "m1" / "topics" / "t1" / "tasks" / "tk1"
-        existing_dir.mkdir(parents=True)
-        (existing_dir / "task.json").write_text(json.dumps({"id": "tk1"}), encoding="utf-8")
-        svc.storage.load_modules.return_value = [
-            {"id": "m1", "topics": [{"id": "t1", "tasks": [{"id": "tk1"}]}]}
-        ]
+        _write_task_dir(svc.storage.modules_dir, "m1", "t1", "tk1")
 
         task_data = {"id": "tk1", "name": "Updated", "type": "click"}
         zip_path = _create_zip(tmp_path, {
@@ -414,12 +570,7 @@ class TestImportAtomic:
 
     def test_import_new_id_conflict(self, tmp_path):
         svc = _make_svc(tmp_path)
-        existing_dir = svc.storage.modules_dir / "m1" / "topics" / "t1" / "tasks" / "tk1"
-        existing_dir.mkdir(parents=True)
-        (existing_dir / "task.json").write_text(json.dumps({"id": "tk1"}), encoding="utf-8")
-        svc.storage.load_modules.return_value = [
-            {"id": "m1", "topics": [{"id": "t1", "tasks": [{"id": "tk1"}]}]}
-        ]
+        _write_task_dir(svc.storage.modules_dir, "m1", "t1", "tk1")
 
         task_data = {"id": "tk1", "name": "Task", "type": "click"}
         zip_path = _create_zip(tmp_path, {
@@ -428,3 +579,50 @@ class TestImportAtomic:
         result = svc.import_tasks_atomic(zip_path, {"conflict_resolution": "new_id"})
         assert result["ok"] is True
         assert result["imported"] == 1
+
+    def test_import_overwrite_uses_existing_location_without_creating_archive_target(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        existing_task_dir = _write_task_dir(
+            svc.storage.modules_dir,
+            "existing_mod",
+            "existing_topic",
+            "tk1",
+            {"id": "tk1", "name": "Original", "type": "click"},
+        )
+
+        task_data = {"id": "tk1", "name": "Updated", "type": "click"}
+        zip_path = _create_zip(tmp_path, {
+            "modules/new_mod/topics/new_topic/tasks/tk1/task.json": json.dumps(task_data),
+        })
+
+        result = svc.import_tasks_atomic(zip_path, {"conflict_resolution": "overwrite"})
+
+        assert result["ok"] is True
+        assert result["imported"] == 1
+        saved_task = json.loads((existing_task_dir / "task.json").read_text(encoding="utf-8"))
+        assert saved_task["name"] == "Updated"
+        assert not (svc.storage.modules_dir / "new_mod").exists()
+
+    def test_import_returns_explicit_degraded_payload_when_hosted_write_is_blocked(self, tmp_path):
+        svc = _make_svc(tmp_path)
+        svc.storage.save_task.side_effect = HostedShadowWriteFallbackDisabledError(
+            "import_export.import_tasks_atomic",
+            reason="test_shadow_write_blocked",
+        )
+
+        task_data = {"id": "tk1", "name": "Task 1", "type": "click"}
+        zip_path = _create_zip(tmp_path, {
+            "modules/m1/topics/t1/tasks/tk1/task.json": json.dumps(task_data),
+        })
+
+        result = svc.import_tasks_atomic(
+            zip_path,
+            {"conflict_resolution": "skip", "skip_errors": False},
+        )
+
+        assert result["ok"] is False
+        assert result["degraded"] is True
+        assert result["error"] == "hosted_shadow_write_blocked"
+        assert result["details"]["reason"] == "test_shadow_write_blocked"
+        assert result["rollback"] is True
+        assert result["service_contract"] == ImportExportService.SERVICE_CONTRACT

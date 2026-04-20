@@ -2327,6 +2327,10 @@ body.calendar-layout #health-percent {
     min-height: 0;
 }
 
+.memory-health-shell--empty {
+    justify-content: center;
+}
+
 .memory-health-shell--compact {
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr);
@@ -2521,6 +2525,10 @@ body.calendar-layout #health-percent {
     flex-wrap: wrap;
     column-gap: 0.48rem;
     row-gap: 0.42rem;
+}
+
+.memory-health-stats.is-hidden {
+    display: none;
 }
 
 .memory-health-shell--compact .memory-health-stats {
@@ -2859,6 +2867,15 @@ body.calendar-layout #health-percent {
     border-radius: 0.95rem;
     background: rgba(255, 255, 255, 0.72);
     text-align: center;
+}
+
+.memory-health-shell--empty .memory-health-empty {
+    min-height: 5.25rem;
+    padding: 0.65rem 0.8rem;
+}
+
+.memory-health-shell--empty .memory-health-actions {
+    display: none;
 }
 
 .memory-health-empty--dashed {

@@ -19,6 +19,7 @@ class ImportManager {
         this.archiveCacheId = null;
         this.perTaskConflictRes = new Map(); // index -> 'skip'|'overwrite'|'new_id'
         this.aiTemplateType = 'material_analysis';
+        this.workspaceImportState = this.createWorkspaceImportState();
 
         // AI generation mode state
         this.materialText = '';
@@ -96,13 +97,14 @@ class ImportManager {
 
         // P12 quality gates: server-provided theory feature flags (defaults keep legacy behavior unchanged)
         this.theoryFeatureFlags = {
+            ai_mode: false,
             analysis_v2_schema: true,
             analysis_report_blocks_v1: true,
             analysis_report_renderer_v1: true,
             editor_analysis_report_link: true,
             analysis_coverage_in_editor: true,
-            microcards_mode: true,
-            microcards_pair_match: true,
+            microcards_mode: false,
+            microcards_pair_match: false,
         };
     }
 
@@ -117,6 +119,15 @@ class ImportManager {
                 next[key] = !!src[key];
             }
         });
+        if (next.ai_mode === false) {
+            next.analysis_v2_schema = false;
+            next.analysis_report_blocks_v1 = false;
+            next.analysis_report_renderer_v1 = false;
+            next.editor_analysis_report_link = false;
+            next.analysis_coverage_in_editor = false;
+            next.microcards_mode = false;
+            next.microcards_pair_match = false;
+        }
         if (next.analysis_v2_schema === false) {
             next.analysis_report_blocks_v1 = false;
             next.analysis_report_renderer_v1 = false;
@@ -143,6 +154,537 @@ class ImportManager {
         if (this.isTheoryFeatureEnabled(flagName, true)) return true;
         if (message) this.showToast(message, level);
         return false;
+    }
+
+    openTheoryAiInProgressPlaceholder() {
+        this.setModalPurpose('theory_analysis');
+        this.theorySubMode = 'analysis';
+        this.renderTheoryAnalysisMode();
+        return { ok: false, error: 'ai_mode_in_progress' };
+    }
+
+    createWorkspaceImportState() {
+        return {
+            request: null,
+            preview: null,
+            executeResult: null,
+            loadingPreview: false,
+            executing: false,
+            error: '',
+        };
+    }
+
+    resetWorkspaceImportState() {
+        this.workspaceImportState = this.createWorkspaceImportState();
+    }
+
+    hasActiveWorkspaceImportFlow() {
+        return !!(
+            this.workspaceImportState?.request
+            || this.workspaceImportState?.preview
+            || this.workspaceImportState?.loadingPreview
+            || this.workspaceImportState?.executing
+        );
+    }
+
+    normalizeWorkspaceImportRequest(payload = {}) {
+        const sourceComplexId = String(
+            payload.sourceComplexId
+            || payload.source_complex_id
+            || ''
+        ).trim();
+        const sourceCatalogItemId = String(
+            payload.sourceCatalogItemId
+            || payload.source_catalog_item_id
+            || ''
+        ).trim();
+        const sourceCatalogVersionId = String(
+            payload.sourceCatalogVersionId
+            || payload.source_catalog_version_id
+            || ''
+        ).trim();
+        const preferExistingByLineage = payload.preferExistingByLineage !== false
+            && payload.prefer_existing_by_lineage !== false;
+        return {
+            sourceComplexId,
+            sourceCatalogItemId,
+            sourceCatalogVersionId,
+            preferExistingByLineage,
+        };
+    }
+
+    getWorkspaceImportPreviewPayload() {
+        if (this.workspaceImportState?.preview) return this.workspaceImportState.preview;
+        if (this.isWorkspaceImportContractPayload(this.parsedResult)) {
+            return this.normalizeWorkspaceImportResponse(this.parsedResult);
+        }
+        return null;
+    }
+
+    getWorkspaceImportExecutePayload() {
+        if (this.workspaceImportState?.executeResult) return this.workspaceImportState.executeResult;
+        if (this.isWorkspaceImportContractPayload(this.checkResult)) {
+            return this.normalizeWorkspaceImportResponse(this.checkResult);
+        }
+        return null;
+    }
+
+    async openWorkspaceImportPreviewFlow(payload = {}) {
+        void payload;
+        this.resetWorkspaceImportState();
+        this.showVoiceToast({
+            severity: 'info',
+            what: 'Legacy import is internal-only.',
+            impact: 'Hosted editor surfaces no longer create workspace copies from linked content.',
+            next: 'Open the linked publication directly or create a new workspace complex from scratch.',
+        });
+        if (this.dashboard && typeof this.dashboard.closeImportModal === 'function') {
+            this.dashboard.closeImportModal();
+        }
+        return { ok: false, error: 'workspace_import_legacy_only' };
+    }
+
+    async retryWorkspaceImportPreview() {
+        if (!this.workspaceImportState?.request) return;
+        await this.openWorkspaceImportPreviewFlow(this.workspaceImportState.request);
+    }
+
+    isWorkspaceImportContractPayload(payload) {
+        const routeNamespace = String(payload?.route_contract?.namespace || '').trim();
+        const serviceNamespace = String(payload?.service_contract?.namespace || '').trim();
+        return routeNamespace === 'internal_workspace_import' || serviceNamespace === 'internal_workspace_import';
+    }
+
+    normalizeWorkspaceImportNode(node = {}) {
+        const payload = (node && typeof node === 'object') ? node : {};
+        const ownership = this.dashboard && typeof this.dashboard.normalizeComplexOwnership === 'function'
+            ? this.dashboard.normalizeComplexOwnership(payload)
+            : {
+                createdByUserId: String(payload?.ownership?.created_by_user_id || payload?.created_by_user_id || '').trim(),
+                updatedByUserId: String(payload?.ownership?.updated_by_user_id || payload?.updated_by_user_id || '').trim(),
+                createdVia: String(payload?.ownership?.created_via || payload?.created_via || '').trim() || 'legacy_unknown',
+                contentScope: String(payload?.ownership?.content_scope || payload?.content_scope || '').trim() || 'shared_local',
+                hasOwner: payload?.ownership?.has_owner === true || !!payload?.ownership?.created_by_user_id || !!payload?.created_by_user_id,
+                isOwnedByCurrentUser: payload?.ownership?.is_owned_by_current_user === true,
+                isSharedLibrary: payload?.ownership?.is_shared_library !== false,
+            };
+        const workspaceCopy = (payload.workspace_copy && typeof payload.workspace_copy === 'object')
+            ? payload.workspace_copy
+            : {};
+        const sourceLineage = (payload.source_lineage && typeof payload.source_lineage === 'object')
+            ? payload.source_lineage
+            : {};
+        return {
+            ...payload,
+            ownership,
+            workspaceCopy: {
+                kind: String(workspaceCopy.kind || '').trim() || 'local_draft',
+                hasSourceLineage: workspaceCopy.has_source_lineage === true || workspaceCopy.hasSourceLineage === true,
+                sourceLineageKey: String(
+                    workspaceCopy.source_lineage_key
+                    || workspaceCopy.sourceLineageKey
+                    || ''
+                ).trim() || null,
+            },
+            sourceLineage: {
+                sourceCatalogItemId: String(
+                    sourceLineage.source_catalog_item_id
+                    || sourceLineage.sourceCatalogItemId
+                    || ''
+                ).trim() || null,
+                sourceCatalogVersionId: String(
+                    sourceLineage.source_catalog_version_id
+                    || sourceLineage.sourceCatalogVersionId
+                    || ''
+                ).trim() || null,
+                sourceEntityKind: String(
+                    sourceLineage.source_entity_kind
+                    || sourceLineage.sourceEntityKind
+                    || ''
+                ).trim() || null,
+                sourceEntityId: String(
+                    sourceLineage.source_entity_id
+                    || sourceLineage.sourceEntityId
+                    || ''
+                ).trim() || null,
+            },
+        };
+    }
+
+    normalizeWorkspaceImportResponse(payload = {}) {
+        const response = (payload && typeof payload === 'object') ? payload : {};
+        const result = (response.result && typeof response.result === 'object') ? response.result : {};
+        const normalizeNodeList = (items) => Array.isArray(items)
+            ? items.map((item) => this.normalizeWorkspaceImportNode(item))
+            : [];
+        return {
+            ok: response.ok !== false,
+            importKind: String(response.import_kind || response.importKind || '').trim() || null,
+            routeContract: (response.route_contract && typeof response.route_contract === 'object')
+                ? response.route_contract
+                : null,
+            serviceContract: (response.service_contract && typeof response.service_contract === 'object')
+                ? response.service_contract
+                : null,
+            source: (response.source && typeof response.source === 'object') ? response.source : null,
+            summary: (response.summary && typeof response.summary === 'object') ? response.summary : null,
+            workspace: (response.workspace && typeof response.workspace === 'object') ? response.workspace : null,
+            result: {
+                complex: this.normalizeWorkspaceImportNode(result.complex || {}),
+                modules: normalizeNodeList(result.modules),
+                topics: normalizeNodeList(result.topics),
+                tasks: normalizeNodeList(result.tasks),
+                theories: normalizeNodeList(result.theories),
+                createdCounts: (result.created_counts && typeof result.created_counts === 'object') ? result.created_counts : {},
+                reusedCounts: (result.reused_counts && typeof result.reused_counts === 'object') ? result.reused_counts : {},
+                taskRefMap: (result.task_ref_map && typeof result.task_ref_map === 'object') ? result.task_ref_map : {},
+            },
+        };
+    }
+
+    renderWorkspaceImportSummaryStat(label, value, tone = 'neutral') {
+        const toneMap = {
+            neutral: 'border-border-subtle bg-surface-2 text-text-main',
+            success: 'border-success-light bg-success-lighter text-success-darker',
+            warning: 'border-warning-light bg-warning-lighter text-warning-darker',
+            info: 'border-primary-light bg-primary-lighter text-primary-darker',
+        };
+        return `
+            <div class="rounded-xl border px-4 py-3 ${toneMap[tone] || toneMap.neutral}">
+                <div class="text-[11px] uppercase tracking-wide opacity-80">${this.escapeHtml(label)}</div>
+                <div class="mt-1 text-2xl font-bold">${this.escapeHtml(String(value ?? 0))}</div>
+            </div>
+        `;
+    }
+
+    renderWorkspaceImportNodePreview(title, nodes = [], emptyText = 'Нет элементов.') {
+        const normalizedNodes = Array.isArray(nodes) ? nodes : [];
+        if (!normalizedNodes.length) {
+            return `
+                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
+                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(title)}</div>
+                    <div class="mt-2 text-sm text-text-secondary">${this.escapeHtml(emptyText)}</div>
+                </div>
+            `;
+        }
+        const listHtml = normalizedNodes.slice(0, 5).map((node) => {
+            const item = this.normalizeWorkspaceImportNode(node);
+            const entityRef = String(
+                item.workspace_entity_ref
+                || item.target_task_ref
+                || item.workspace_entity_id
+                || item.id
+                || ''
+            ).trim();
+            const sourceEntityId = item.sourceLineage?.sourceEntityId || '';
+            const badges = [];
+            if (item.workspaceCopy?.kind) {
+                badges.push(`<span class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(item.workspaceCopy.kind)}</span>`);
+            }
+            if (item.sourceLineage?.sourceEntityKind) {
+                badges.push(`<span class="inline-flex items-center rounded-full border border-border-subtle bg-surface-1 px-2 py-0.5 text-[10px] font-semibold text-text-secondary">${this.escapeHtml(item.sourceLineage.sourceEntityKind)}</span>`);
+            }
+            const ownershipBadges = this.dashboard && typeof this.dashboard.renderComplexOwnershipBadges === 'function'
+                ? this.dashboard.renderComplexOwnershipBadges(item.ownership)
+                : '';
+            return `
+                <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
+                    <div class="flex flex-wrap items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <div class="text-sm font-semibold text-text-main break-words">${this.escapeHtml(String(item.name || entityRef || title))}</div>
+                            ${entityRef ? `<div class="mt-0.5 text-[11px] font-mono text-text-secondary break-all">${this.escapeHtml(entityRef)}</div>` : ''}
+                            ${sourceEntityId ? `<div class="mt-1 text-[11px] text-text-secondary break-all">source: ${this.escapeHtml(sourceEntityId)}</div>` : ''}
+                        </div>
+                        <div class="flex flex-wrap gap-1">
+                            ${badges.join('')}
+                        </div>
+                    </div>
+                    ${ownershipBadges ? `<div class="mt-2 flex flex-wrap gap-1">${ownershipBadges}</div>` : ''}
+                </div>
+            `;
+        }).join('');
+        const hiddenCount = normalizedNodes.length > 5 ? normalizedNodes.length - 5 : 0;
+        return `
+            <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
+                <div class="flex items-center justify-between gap-2">
+                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(title)}</div>
+                    <div class="text-xs text-text-secondary">${this.escapeHtml(String(normalizedNodes.length))}</div>
+                </div>
+                <div class="mt-3 space-y-2">${listHtml}</div>
+                ${hiddenCount > 0 ? `<div class="mt-2 text-xs text-text-secondary">И ещё ${hiddenCount} элементов.</div>` : ''}
+            </div>
+        `;
+    }
+
+    renderWorkspaceImportPreviewStep() {
+        const state = this.workspaceImportState || {};
+        const preview = this.getWorkspaceImportPreviewPayload();
+        const request = state.request || {};
+        if (state.loadingPreview) {
+            return `
+                <div class="flex flex-col items-center justify-center py-12 animate-slide-up-fade">
+                    <img src="/assets/logo_animated.svg" alt="Loading" class="w-16 h-16 mb-4 drop-shadow-md" />
+                    <h3 class="text-lg font-bold text-text-main">Подготовка workspace-копии...</h3>
+                    <p class="text-text-secondary text-sm mt-2">Проверяем source lineage, reuse и целевую структуру graph.</p>
+                </div>
+            `;
+        }
+        if (!preview) {
+            return `
+                <div class="max-w-3xl mx-auto animate-slide-up-fade">
+                    <div class="rounded-2xl border border-error-light bg-error-lighter px-5 py-4">
+                        <div class="text-base font-bold text-error-text">Не удалось получить preview workspace-импорта</div>
+                        <div class="mt-2 text-sm text-error-text break-words">${this.escapeHtml(state.error || 'workspace_import_preview_failed')}</div>
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            <button type="button" onclick="dashboard.importManager.retryWorkspaceImportPreview()"
+                                class="px-4 py-2 rounded-lg bg-primary text-primary-fg text-sm font-semibold hover:bg-primary-hover transition-colors">
+                                Повторить preview
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        const result = preview.result || {};
+        const summary = preview.summary || {};
+        const totalNodes = summary.total_nodes || {};
+        const source = preview.source || {};
+        const workspace = preview.workspace || {};
+        const complexNode = result.complex || {};
+        const plannedAction = String(complexNode.planned_action || 'workspace_import_preview').trim();
+        return `
+            <div class="max-w-5xl mx-auto animate-slide-up-fade space-y-5">
+                <div>
+                    <h3 class="text-lg font-bold text-text-main">Предпросмотр workspace-импорта</h3>
+                    <p class="text-sm text-text-secondary mt-1">Этот internal flow ещё не является public catalog API. Здесь мы проверяем, какая рабочая версия будет создана или переиспользована, с учётом lineage и ownership imported graph.</p>
+                </div>
+
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3">
+                    ${this.renderWorkspaceImportSummaryStat('Комплекс', totalNodes.complexes || 0, 'info')}
+                    ${this.renderWorkspaceImportSummaryStat('Модули', totalNodes.modules || 0, 'neutral')}
+                    ${this.renderWorkspaceImportSummaryStat('Темы', totalNodes.topics || 0, 'neutral')}
+                    ${this.renderWorkspaceImportSummaryStat('Задания', totalNodes.tasks || 0, 'success')}
+                    ${this.renderWorkspaceImportSummaryStat('Теории', totalNodes.theories || 0, 'neutral')}
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
+                        <div class="text-sm font-semibold text-text-main">Источник</div>
+                        <div class="mt-3 space-y-2 text-sm">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <span class="text-text-secondary">source_complex_id</span>
+                                <span class="font-mono text-text-main break-all">${this.escapeHtml(request.sourceComplexId || '')}</span>
+                            </div>
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <span class="text-text-secondary">catalog_item_id</span>
+                                <span class="font-mono text-text-main break-all">${this.escapeHtml(source.catalog_item_id || request.sourceCatalogItemId || '')}</span>
+                            </div>
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <span class="text-text-secondary">catalog_version_id</span>
+                                <span class="font-mono text-text-main break-all">${this.escapeHtml(source.catalog_version_id || request.sourceCatalogVersionId || '')}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
+                        <div class="text-sm font-semibold text-text-main">Целевая версия в workspace</div>
+                        <div class="mt-3 space-y-2 text-sm">
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <span class="text-text-secondary">complex_id</span>
+                                <span class="font-mono text-text-main break-all">${this.escapeHtml(workspace.complex_id || '')}</span>
+                            </div>
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <span class="text-text-secondary">complex_ref</span>
+                                <span class="font-mono text-text-main break-all">${this.escapeHtml(workspace.complex_ref || '')}</span>
+                            </div>
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <span class="text-text-secondary">planned_action</span>
+                                <span class="font-semibold text-text-main">${this.escapeHtml(plannedAction)}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    ${this.renderWorkspaceImportNodePreview('Комплекс', result.complex ? [result.complex] : [], 'Комплекс не найден.')}
+                    ${this.renderWorkspaceImportNodePreview('Модули', result.modules, 'Модулей нет.')}
+                    ${this.renderWorkspaceImportNodePreview('Темы', result.topics, 'Тем нет.')}
+                    ${this.renderWorkspaceImportNodePreview('Задания', result.tasks, 'Заданий нет.')}
+                    ${this.renderWorkspaceImportNodePreview('Теории', result.theories, 'Теорий нет.')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderWorkspaceImportConfirmStep() {
+        const state = this.workspaceImportState || {};
+        const preview = this.getWorkspaceImportPreviewPayload();
+        if (!preview) {
+            return `
+                <div class="max-w-3xl mx-auto text-center py-10 animate-slide-up-fade">
+                    <div class="rounded-2xl border border-error-light bg-error-lighter px-5 py-4 text-left">
+                        <div class="text-base font-bold text-error-text">Подтверждение недоступно</div>
+                        <div class="mt-2 text-sm text-error-text">Сначала нужно получить корректный preview workspace-импорта.</div>
+                    </div>
+                </div>
+            `;
+        }
+        const summary = preview.summary || {};
+        const workspace = preview.workspace || {};
+        const executeResult = this.getWorkspaceImportExecutePayload();
+        const totalNodes = summary.total_nodes || {};
+        const createdCounts = summary.created_counts || {};
+        const reusedCounts = summary.reused_counts || {};
+        const runtimeError = String(state.error || '').trim();
+        const importedComplexId = String(
+            executeResult?.workspace?.complex_id
+            || executeResult?.result?.complex?.complex_id
+            || executeResult?.result?.complex?.workspace_entity_id
+            || workspace.complex_id
+            || ''
+        ).trim();
+        return `
+            <div class="max-w-3xl mx-auto text-center py-8 animate-slide-up-fade space-y-5">
+                <div class="w-20 h-20 bg-primary-lighter rounded-full flex items-center justify-center mx-auto">
+                    <span class="material-symbols-outlined text-primary text-[48px]">inventory_2</span>
+                </div>
+
+                <div>
+                    <h3 class="text-xl font-bold text-text-main mb-2">Готово к добавлению в workspace</h3>
+                    <p class="text-text-secondary">Будет создана или переиспользована рабочая версия комплекса со всеми зависимостями, без merge по имени.</p>
+                </div>
+
+                ${runtimeError ? `
+                    <div class="rounded-xl border border-error-light bg-error-lighter px-4 py-3 text-left text-sm text-error-text">
+                        <div class="font-semibold">Последняя ошибка выполнения</div>
+                        <div class="mt-1 break-words">${this.escapeHtml(runtimeError)}</div>
+                    </div>
+                ` : ''}
+
+                <div class="bg-surface-2 rounded-lg p-6 text-left">
+                    <div class="space-y-2 text-sm">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Complex ID</span>
+                            <span class="font-mono text-text-main break-all">${this.escapeHtml(workspace.complex_id || '')}</span>
+                        </div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Tasks</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(String(totalNodes.tasks || 0))}</span>
+                        </div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Modules / Topics / Theories</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(`${totalNodes.modules || 0} / ${totalNodes.topics || 0} / ${totalNodes.theories || 0}`)}</span>
+                        </div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Создаст новых</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(`${createdCounts.modules || 0} модулей, ${createdCounts.topics || 0} тем, ${createdCounts.tasks || 0} заданий, ${createdCounts.theories || 0} теорий`)}</span>
+                        </div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Переиспользует</span>
+                            <span class="font-medium text-text-main">${this.escapeHtml(`${reusedCounts.modules || 0} модулей, ${reusedCounts.topics || 0} тем, ${reusedCounts.tasks || 0} заданий, ${reusedCounts.theories || 0} теорий`)}</span>
+                        </div>
+                    </div>
+                </div>
+
+                ${executeResult?.ok ? `
+                    <div class="rounded-xl border border-success-light bg-success-lighter px-4 py-3 text-left text-sm text-success-darker">
+                        <div class="font-semibold">Последний execute-ответ уже нормализован</div>
+                        <div class="mt-1 break-words">service_contract: ${this.escapeHtml(executeResult.serviceContract?.namespace || '')}</div>
+                        ${importedComplexId ? `<div class="mt-1 break-words">workspace_complex_id: ${this.escapeHtml(importedComplexId)}</div>` : ''}
+                    </div>
+                    <div class="flex flex-wrap items-center justify-center gap-3">
+                        <button
+                            type="button"
+                            onclick="dashboard.importManager.openWorkspaceImportResultComplex()"
+                            class="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-primary-fg shadow-sm transition hover:opacity-95"
+                        >
+                            <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                            Открыть copy
+                        </button>
+                        <button
+                            type="button"
+                            onclick="dashboard.closeImportModal()"
+                            class="inline-flex items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-5 py-3 text-sm font-medium text-text-main transition hover:bg-surface-2"
+                        >
+                            <span class="material-symbols-outlined text-[18px]">close</span>
+                            Закрыть
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    async executeWorkspaceImportFlow() {
+        const request = this.workspaceImportState?.request;
+        if (!request) {
+            this.showToast('Нет запроса для workspace-импорта.', 'error');
+            return { ok: false, error: 'workspace_import_request_missing' };
+        }
+
+        this.workspaceImportState.executing = true;
+        this.workspaceImportState.error = '';
+        this.updateNavigationButtons();
+        try {
+            const response = await fetch('/api/internal/workspace/import/complex-copy', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    source_complex_id: request.sourceComplexId,
+                    source_catalog_item_id: request.sourceCatalogItemId,
+                    source_catalog_version_id: request.sourceCatalogVersionId,
+                    prefer_existing_by_lineage: request.preferExistingByLineage,
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok || data?.ok === false) {
+                throw new Error(data?.error || `workspace_import_execute_failed:${response.status}`);
+            }
+            const normalized = this.normalizeWorkspaceImportResponse(data);
+            this.workspaceImportState.executeResult = normalized;
+            this.checkResult = data;
+            return normalized;
+        } catch (error) {
+            const message = String(error?.message || 'workspace_import_execute_failed');
+            this.workspaceImportState.error = message;
+            return { ok: false, error: message };
+        } finally {
+            this.workspaceImportState.executing = false;
+            this.renderCurrentStep();
+            this.updateNavigationButtons();
+        }
+    }
+
+    async openWorkspaceImportResultComplex() {
+        const executeResult = this.getWorkspaceImportExecutePayload();
+        const complexId = String(
+            executeResult?.workspace?.complex_id
+            || executeResult?.result?.complex?.complex_id
+            || executeResult?.result?.complex?.workspace_entity_id
+            || ''
+        ).trim();
+        if (!complexId) {
+            this.showToast('Не удалось определить созданную workspace-копию.', 'error');
+            return;
+        }
+
+        try {
+            if (this.dashboard && typeof this.dashboard.loadCatalog === 'function') {
+                await this.dashboard.loadCatalog();
+            }
+        } catch (error) {
+            console.warn('[ImportManager] Failed to refresh catalog before opening imported copy:', error);
+        }
+
+        if (this.dashboard && typeof this.dashboard.closeImportModal === 'function') {
+            this.dashboard.closeImportModal();
+        }
+        if (this.dashboard && typeof this.dashboard.openComplexBuilder === 'function') {
+            this.dashboard.openComplexBuilder(complexId);
+            return;
+        }
+        this.showToast('Рабочая версия создана, но переход к комплексу недоступен.', 'warning');
     }
 
     setModalPurpose(purpose) {
@@ -190,6 +732,9 @@ class ImportManager {
         this.aiAnalyzing = false;
         this.theoryOpeningRunId = null;
         this.renderTheoryAnalysisMode();
+        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
+            return { ok: false, error: 'ai_mode_in_progress' };
+        }
         this.aiCheckStatus().then(() => this.renderTheoryAnalysisMode()).catch(() => {});
         this.loadTheoryAnalysisRuns().catch(() => {});
     }
@@ -260,6 +805,16 @@ class ImportManager {
 
     prevStep() {
         if (this.modalPurpose === 'theory_analysis') return;
+        if (this.hasActiveWorkspaceImportFlow()) {
+            if (this.currentStep > 3) {
+                this.goToStep(this.currentStep - 1);
+                return;
+            }
+            if (this.dashboard && typeof this.dashboard.closeImportModal === 'function') {
+                this.dashboard.closeImportModal();
+            }
+            return;
+        }
         if (this.currentStep > 1) {
             this.goToStep(this.currentStep - 1);
         }
@@ -272,6 +827,25 @@ class ImportManager {
             const stepNum = parseInt(stepEl.dataset.step);
             const circle = stepEl.querySelector('div:first-child');
             const label = stepEl.querySelector('span');
+            if (label && !stepEl.dataset.defaultLabel) {
+                stepEl.dataset.defaultLabel = label.textContent || '';
+            }
+
+            if (this.hasActiveWorkspaceImportFlow()) {
+                if (stepNum < 3) {
+                    stepEl.classList.add('hidden');
+                    return;
+                }
+                stepEl.classList.remove('hidden');
+                if (label) {
+                    label.textContent = stepNum === 3 ? 'Legacy import' : 'Confirm';
+                }
+            } else {
+                stepEl.classList.remove('hidden');
+                if (label && stepEl.dataset.defaultLabel) {
+                    label.textContent = stepEl.dataset.defaultLabel;
+                }
+            }
 
             if (stepNum === this.currentStep) {
                 // Current step - primary color with number
@@ -307,8 +881,34 @@ class ImportManager {
             return;
         }
 
+        if (this.hasActiveWorkspaceImportFlow()) {
+            prevBtn.disabled = false;
+            const executeReady = !!this.getWorkspaceImportExecutePayload()?.ok;
+            prevBtn.textContent = this.currentStep > 3 && !executeReady ? 'Назад' : 'Закрыть';
+            const preview = this.getWorkspaceImportPreviewPayload();
+            const previewReady = !!preview;
+            const loadingPreview = this.workspaceImportState?.loadingPreview === true;
+            const executing = this.workspaceImportState?.executing === true || this.importInProgress;
+            if (this.currentStep >= 4) {
+                if (executeReady) {
+                    nextBtn.textContent = 'Открыть copy';
+                    nextBtn.disabled = false;
+                } else {
+                    nextBtn.textContent = executing ? 'Добавление...' : 'Добавить в workspace';
+                    nextBtn.disabled = !previewReady || loadingPreview || executing;
+                }
+            } else {
+                nextBtn.textContent = 'К подтверждению';
+                nextBtn.disabled = !previewReady || loadingPreview;
+            }
+            return;
+        }
+
         // Prev button
         prevBtn.disabled = this.currentStep === 1;
+        prevBtn.textContent = 'Назад';
+
+        const nothingToImport = this.currentStep === 4 && this.getPreviewImportableTasks().length === 0;
 
         // Next button label
         if (this.currentStep === 4) {
@@ -322,8 +922,12 @@ class ImportManager {
             nextBtn.textContent = 'Далее';
         }
 
+        if (this.currentStep === 4 && nothingToImport && !this.importInProgress) {
+            nextBtn.textContent = 'Нечего импортировать';
+        }
+
         // Disable next during AI processing
-        nextBtn.disabled = this.aiAnalyzing || this.aiGenerating || this.importInProgress;
+        nextBtn.disabled = this.aiAnalyzing || this.aiGenerating || this.importInProgress || nothingToImport;
     }
 
     // =========================================================================
@@ -770,6 +1374,9 @@ class ImportManager {
     }
 
     renderStep3() {
+        if (this.hasActiveWorkspaceImportFlow()) {
+            return this.renderWorkspaceImportPreviewStep();
+        }
         if (this.importMode === 'ai') {
             return this.renderStep3AI();
         }
@@ -893,8 +1500,22 @@ class ImportManager {
         `;
     }
 
+    getArchiveTaskPreviewStatus(task = {}) {
+        return String(task?.status || 'valid').trim().toLowerCase();
+    }
+
+    getPreviewImportableTasks() {
+        const tasks = Array.isArray(this.parsedResult?.tasks) ? this.parsedResult.tasks : [];
+        return tasks.filter((task, index) => this.getArchiveTaskPreviewStatus(task) !== 'error' && !this.excludedTasks.has(index));
+    }
+
+    getPreviewBlockedTaskCount() {
+        const tasks = Array.isArray(this.parsedResult?.tasks) ? this.parsedResult.tasks : [];
+        return tasks.filter((task) => this.getArchiveTaskPreviewStatus(task) === 'error').length;
+    }
+
     getArchiveTaskPreviewStatusMeta(task = {}) {
-        const status = String(task.status || 'valid').trim().toLowerCase();
+        const status = this.getArchiveTaskPreviewStatus(task);
         if (status === 'error') {
             return {
                 label: 'Ошибка',
@@ -1094,6 +1715,8 @@ class ImportManager {
             ? `${this.selectedModuleName || this.selectedModule || 'Модуль не задан'} / ${this.selectedTopicName || this.selectedTopic || 'Тема из архива'}`
             : 'Структура архива будет использована как источник модулей и тем.';
         const archiveVersion = String(this.parsedResult.archive_version || '').trim();
+        const blockedTasksCount = this.getPreviewBlockedTaskCount();
+        const importableTasksCount = this.getPreviewImportableTasks().length;
 
         return `
             <div data-role="archive-import-preview" class="animate-slide-up-fade space-y-5">
@@ -1168,6 +1791,14 @@ class ImportManager {
                                 <input type="checkbox" id="skip-errors-checkbox" checked class="rounded text-primary focus:ring-primary w-4 h-4">
                                 <span class="text-sm text-text-secondary">Пропускать задания с ошибками</span>
                             </label>
+                        </div>
+                    </div>
+                    <div class="mt-4 rounded-xl border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-text">
+                        <div class="font-semibold">Импорт битых заданий заблокирован</div>
+                        <div class="mt-1">
+                            ${blockedTasksCount > 0
+                                ? `Задания со статусом «Ошибка» не будут добавлены. Сейчас заблокировано: ${blockedTasksCount}. К импорту доступно: ${importableTasksCount}.`
+                                : 'Если при проверке находятся задания со статусом «Ошибка», они не добавляются и остаются только в списке предпросмотра.'}
                         </div>
                     </div>
                 </div>
@@ -1257,16 +1888,22 @@ class ImportManager {
     }
 
     renderStep4() {
-        const validTasks = (this.parsedResult?.tasks || []).filter((task, index) => task.status !== 'error' && !this.excludedTasks.has(index));
+        if (this.hasActiveWorkspaceImportFlow()) {
+            return this.renderWorkspaceImportConfirmStep();
+        }
+        const validTasks = this.getPreviewImportableTasks();
+        const blockedTasksCount = this.getPreviewBlockedTaskCount();
+        const excludedTasksCount = this.excludedTasks.size;
+        const nothingToImport = validTasks.length === 0;
 
         return `
             <div class="max-w-3xl mx-auto text-center py-8 animate-slide-up-fade">
-                <div class="w-20 h-20 bg-success-light rounded-full flex items-center justify-center mx-auto mb-6">
-                    <span class="material-symbols-outlined text-success-text text-[48px]">check_circle</span>
+                <div class="w-20 h-20 ${nothingToImport ? 'bg-error-light' : 'bg-success-light'} rounded-full flex items-center justify-center mx-auto mb-6">
+                    <span class="material-symbols-outlined ${nothingToImport ? 'text-error-text' : 'text-success-text'} text-[48px]">${nothingToImport ? 'block' : 'check_circle'}</span>
                 </div>
                 
-                <h3 class="text-xl font-bold text-text-main mb-2">Готово к импорту</h3>
-                <p class="text-text-secondary mb-6">Будет импортировано ${validTasks.length} заданий</p>
+                <h3 class="text-xl font-bold text-text-main mb-2">${nothingToImport ? 'Импорт недоступен' : 'Готово к импорту'}</h3>
+                <p class="text-text-secondary mb-6">${nothingToImport ? 'После проверки и фильтрации не осталось заданий, которые можно импортировать.' : `Будет импортировано ${validTasks.length} заданий`}</p>
                 
                 <div class="bg-surface-2 rounded-lg p-6 text-left">
                     <div class="space-y-2 text-sm">
@@ -1279,15 +1916,30 @@ class ImportManager {
                             <span class="editor-flow-wrap font-medium text-text-main text-right">${this.escapeHtml(this.selectedTopicName || this.selectedTopic)}</span>
                         </div>
                         <div class="flex flex-wrap items-start justify-between gap-3">
-                            <span class="text-text-secondary">Заданий:</span>
+                            <span class="text-text-secondary">Будет импортировано:</span>
                             <span class="font-medium text-text-main">${validTasks.length}</span>
                         </div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Заблокировано по ошибкам:</span>
+                            <span class="font-medium ${blockedTasksCount > 0 ? 'text-error-text' : 'text-text-main'}">${blockedTasksCount}</span>
+                        </div>
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <span class="text-text-secondary">Исключено вручную:</span>
+                            <span class="font-medium text-text-main">${excludedTasksCount}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-4 rounded-lg ${nothingToImport ? 'border border-error-light bg-error-lighter text-error-text' : 'border border-warning-light bg-warning-lighter text-warning-text'} px-4 py-3 text-left text-sm">
+                    <div class="font-semibold">${nothingToImport ? 'Импорт отключён' : 'Что будет при импорте'}</div>
+                    <div class="mt-1">
+                        ${nothingToImport
+                            ? 'Кнопка импорта отключена, потому что все задания либо битые, либо исключены вручную.'
+                            : `Задания со статусом «Ошибка» не будут добавлены. Импорт продолжится только для оставшихся ${validTasks.length} заданий.`}
                     </div>
                 </div>
             </div>
         `;
     }
-
     renderTaskCard(task, index) {
         const statusColors = {
             valid: 'border-success-light bg-success-light',
@@ -2588,6 +3240,20 @@ text: Сердце человека состоит из [трёх] камер. �
     // =========================================================================
 
     async handleNext() {
+        if (this.hasActiveWorkspaceImportFlow()) {
+            if (this.currentStep === 3) {
+                this.nextStep();
+                return;
+            }
+            if (this.currentStep === 4) {
+                if (this.getWorkspaceImportExecutePayload()?.ok) {
+                    await this.openWorkspaceImportResultComplex();
+                    return;
+                }
+                await this.handleImport();
+                return;
+            }
+        }
         if (this.currentStep === 1) {
             if (this.importMode === 'ai') {
                 // Validate AI step 1: need material + module/topic
@@ -2759,8 +3425,55 @@ text: Сердце человека состоит из [трёх] камер. �
         this.importInProgress = true;
         this.updateNavigationButtons();
         try {
+            if (this.hasActiveWorkspaceImportFlow()) {
+                const result = await this.executeWorkspaceImportFlow();
+                if (result?.ok) {
+                    const taskCount = Number(result?.summary?.total_nodes?.tasks || result?.result?.tasks?.length || 0);
+                    this.recordImportHistory({
+                        status: 'ok',
+                        imported: taskCount,
+                        skipped: 0,
+                        errors: 0,
+                        message: 'workspace_import',
+                    });
+                    this.showVoiceToast({
+                        severity: 'success',
+                        what: 'Рабочая версия добавлена.',
+                        impact: `Заданий в рабочей версии: ${taskCount}.`,
+                        next: 'Каталог будет обновлён, после чего можно открыть импортированную версию в рабочем пространстве.',
+                    });
+                    try {
+                        if (this.dashboard && typeof this.dashboard.loadCatalog === 'function') {
+                            await this.dashboard.loadCatalog();
+                        }
+                    } catch (error) {
+                        console.warn('[ImportManager] Failed to refresh catalog after workspace import:', error);
+                    }
+                    this.renderCurrentStep();
+                    this.updateNavigationButtons();
+                } else {
+                    this.recordImportHistory({
+                        status: 'error',
+                        imported: 0,
+                        skipped: 0,
+                        errors: 1,
+                        message: result?.error || 'workspace_import_failed',
+                    });
+                    this.showVoiceToast({
+                        severity: 'error',
+                        what: 'Workspace-импорт завершился ошибкой.',
+                        impact: 'Рабочая версия не была создана полностью.',
+                        next: `Проверьте source lineage и повторите добавление. Детали: ${result?.error || 'workspace_import_failed'}`,
+                    });
+                }
+                return;
+            }
             if (this.importMode === 'text' || this.importMode === 'ai') {
-                const validTasks = this.parsedResult.tasks.filter((t, i) => t.status !== 'error' && !this.excludedTasks.has(i));
+                const validTasks = this.getPreviewImportableTasks();
+                if (validTasks.length === 0) {
+                    this.showToast('После проверки не осталось заданий, которые можно импортировать.', 'warning');
+                    return;
+                }
                 if (!this.importRequestKey) {
                     this.importRequestKey = this._makeIdempotencyKey();
                 }
@@ -2813,6 +3526,10 @@ text: Сердце человека состоит из [трёх] камер. �
                 // Archive Import
                 const conflictRes = document.getElementById('conflict-resolution-select')?.value || 'skip';
                 const skipErrors = document.getElementById('skip-errors-checkbox')?.checked || false;
+                if (this.getPreviewImportableTasks().length === 0) {
+                    this.showToast('В архиве не осталось заданий, которые можно импортировать.', 'warning');
+                    return;
+                }
                 if (!this.importRequestKey) {
                     this.importRequestKey = this._makeIdempotencyKey();
                 }
@@ -3162,6 +3879,9 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     renderTheoryAnalysisLayout() {
+        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
+            return this.renderTheoryAiInProgressPlaceholder();
+        }
         const isMicrocardsMode = this.theorySubMode === 'microcards';
         const isManualEditor = this.theorySubMode === 'manual_editor';
         const isTextImport = this.theorySubMode === 'text_import';
@@ -3251,9 +3971,33 @@ text: Сердце человека состоит из [трёх] камер. �
         `;
     }
 
+    renderTheoryAiInProgressPlaceholder() {
+        return `
+            <div class="w-full animate-slide-up-fade">
+                <div class="rounded-2xl border border-border-strong bg-surface-1 p-6 lg:p-8 shadow-sm">
+                    <div class="max-w-2xl">
+                        <div class="inline-flex items-center gap-2 rounded-full border border-warning-light bg-warning-lighter px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-warning-text">
+                            In progress
+                        </div>
+                        <h3 class="mt-4 text-xl font-bold text-text-main">Функционал в разработке</h3>
+                        <p class="mt-3 text-sm leading-6 text-text-secondary">
+                            AI-анализ и связанные сценарии временно прикрыты единым placeholder-состоянием.
+                            Как только контур вернётся в продуктовый scope, здесь снова появятся запуск анализа,
+                            история прогонов и связанные AI-потоки.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     enterTheorySubMode(mode) {
         const validModes = ['microcards', 'manual_editor', 'text_import', 'analysis'];
         const nextMode = validModes.includes(mode) ? mode : 'analysis';
+        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
+            this.openTheoryAiInProgressPlaceholder();
+            return;
+        }
         if ((nextMode === 'microcards' || nextMode === 'manual_editor' || nextMode === 'text_import') && !this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
             return;
         }
@@ -3262,6 +4006,9 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async openTheoryMicrocardsMode(initialDeckId = null) {
+        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
+            return this.openTheoryAiInProgressPlaceholder();
+        }
         if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
             return { ok: false, error: 'microcards_mode_disabled' };
         }
@@ -3950,6 +4697,9 @@ text: Сердце человека состоит из [трёх] камер. �
     // ── M11: Manual Microcards Editor ────────────────────────────────
 
     async openManualMicrocardsEditor() {
+        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
+            return this.openTheoryAiInProgressPlaceholder();
+        }
         if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
             return;
         }
@@ -4360,6 +5110,9 @@ text: Сердце человека состоит из [трёх] камер. �
     // ── M12: Microcards Text Import ────────────────────────────────
 
     async openMicrocardsTextImport() {
+        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
+            return this.openTheoryAiInProgressPlaceholder();
+        }
         if (!this.ensureTheoryFeatureEnabled('microcards_mode', 'Режим микрокарточек отключён (feature flag).')) {
             return;
         }

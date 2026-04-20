@@ -191,6 +191,105 @@ class ClickEditor extends BaseEditor {
         return this.palette[index % this.palette.length];
     }
 
+    normalizeImageReference(raw) {
+        if (!raw && raw !== 0) return null;
+
+        if (typeof raw === "string") {
+            const value = raw.trim();
+            if (!value) return null;
+            if (value.startsWith("/api/assets/") || /^(https?:|data:)/i.test(value)) {
+                return { path: null, asset_id: null, asset_url: value };
+            }
+            return { path: value, asset_id: null, asset_url: null };
+        }
+
+        if (typeof raw !== "object") return null;
+
+        const nested = raw.image && typeof raw.image === "object" ? raw.image : null;
+        const path = String(
+            raw.path ??
+            raw.image_path ??
+            (typeof raw.image === "string" ? raw.image : null) ??
+            raw.src ??
+            nested?.path ??
+            nested?.image_path ??
+            nested?.src ??
+            ""
+        ).trim();
+        const asset_id = String(
+            raw.asset_id ??
+            raw.image_asset_id ??
+            nested?.asset_id ??
+            nested?.image_asset_id ??
+            ""
+        ).trim();
+        const asset_url = String(
+            raw.asset_url ??
+            raw.image_asset_url ??
+            raw.image_url ??
+            raw.url ??
+            nested?.asset_url ??
+            nested?.image_asset_url ??
+            nested?.image_url ??
+            nested?.url ??
+            ""
+        ).trim();
+
+        if (!path && !asset_id && !asset_url) return null;
+        return {
+            path: path || null,
+            asset_id: asset_id || null,
+            asset_url: asset_url || null,
+        };
+    }
+
+    serializeImageReference(raw) {
+        const normalized = this.normalizeImageReference(raw);
+        if (!normalized) return null;
+
+        if (normalized.asset_id || normalized.asset_url) {
+            const payload = {};
+            if (normalized.path) payload.path = normalized.path;
+            if (normalized.asset_id) payload.asset_id = normalized.asset_id;
+            if (normalized.asset_url) payload.asset_url = normalized.asset_url;
+            return payload;
+        }
+
+        return normalized.path || null;
+    }
+
+    resolveLocalImagePreviewSrc(raw) {
+        const normalized = this.normalizeImageReference(raw);
+        if (!normalized) return "";
+        if (normalized.asset_url) return normalized.asset_url;
+        if (normalized.asset_id) {
+            return `/api/assets/${encodeURIComponent(normalized.asset_id)}/content`;
+        }
+        const path = normalized.path || "";
+        if (!path) return "";
+        if (/^(https?:|data:)/i.test(path) || path.startsWith("/")) return path;
+        return `/api/local-image?path=${encodeURIComponent(path)}`;
+    }
+
+    resolveEditorImagePreviewSrc(raw) {
+        const normalized = this.normalizeImageReference(raw);
+        if (!normalized) return "";
+        if (normalized.asset_url) return normalized.asset_url;
+        if (normalized.asset_id) {
+            return `/api/editor/image?asset_id=${encodeURIComponent(normalized.asset_id)}`;
+        }
+        const path = normalized.path || "";
+        if (!path) return "";
+        if (/^(https?:|data:)/i.test(path) || path.startsWith("/api/")) return path;
+        if (path.startsWith("/")) return path;
+        const params = new URLSearchParams();
+        params.set("path", path);
+        if (this.moduleId) params.set("module", this.moduleId);
+        if (this.topicId) params.set("topic", this.topicId);
+        if (this.taskId) params.set("task", this.taskId);
+        return `/api/editor/image?${params.toString()}`;
+    }
+
     // ---------------------------------------------------------------------
     // Additional info helpers
     // ---------------------------------------------------------------------
@@ -211,13 +310,12 @@ class ClickEditor extends BaseEditor {
 
         const imageCandidates = [];
         const pushImage = (value) => {
-            if (!value && value !== 0) return;
-            const s = String(value).trim();
-            if (!s) return;
-            imageCandidates.push(s);
+            const serialized = this.serializeImageReference(value);
+            if (!serialized) return;
+            imageCandidates.push(serialized);
         };
         if (Array.isArray(raw.images)) raw.images.forEach(pushImage);
-        if (typeof raw.image === "string") pushImage(raw.image);
+        if (raw.image) pushImage(raw.image);
         if (
             typeof raw.content === "string" &&
             (!raw.type || raw.type === "image" || raw.type === "combined")
@@ -227,8 +325,12 @@ class ClickEditor extends BaseEditor {
         const uniqueImages = [];
         const seen = new Set();
         imageCandidates.forEach((img) => {
-            if (seen.has(img)) return;
-            seen.add(img);
+            const ref = this.normalizeImageReference(img);
+            const key = ref
+                ? `${ref.asset_url || ""}::${ref.asset_id || ""}::${ref.path || ""}`
+                : String(img);
+            if (seen.has(key)) return;
+            seen.add(key);
             uniqueImages.push(img);
         });
         const images = uniqueImages.slice(0, this.maxAdditionalImages || 3);
@@ -352,7 +454,9 @@ class ClickEditor extends BaseEditor {
         if (this.additionalImagesGrid) {
             this.additionalImagesGrid.innerHTML = "";
             const images = Array.isArray(normalized.images) ? normalized.images : [];
-            images.forEach((imagePath, idx) => {
+            images.forEach((imageRef, idx) => {
+                const previewSrc = this.resolveLocalImagePreviewSrc(imageRef);
+                if (!previewSrc) return;
                 const card = document.createElement("div");
                 card.className = "group relative h-20 rounded-lg border border-border-subtle bg-surface-2 overflow-hidden";
 
@@ -360,7 +464,7 @@ class ClickEditor extends BaseEditor {
                 previewBtn.type = "button";
                 previewBtn.className = "h-full w-full";
                 const img = document.createElement("img");
-                img.src = `/api/local-image?path=${encodeURIComponent(imagePath)}`;
+                img.src = previewSrc;
                 img.alt = `additional-${idx + 1}`;
                 img.className = "h-full w-full object-cover";
                 previewBtn.appendChild(img);
@@ -449,12 +553,21 @@ class ClickEditor extends BaseEditor {
                 body: formData
             });
             const data = await response.json();
-            if (!response.ok || !data?.ok || !data?.path) {
+            if (!response.ok || !data?.ok || (!data?.path && !data?.asset_id && !data?.asset_url)) {
                 this.showToast(`Ошибка загрузки дополнительного изображения: ${data?.error || "upload_failed"}`, "error");
                 return;
             }
 
-            this.additionalInfo.images = [...currentImages, data.path].slice(0, this.maxAdditionalImages || 3);
+            const nextImageRef = this.serializeImageReference({
+                path: data.path,
+                asset_id: data.asset_id,
+                asset_url: data.asset_url,
+            });
+            if (!nextImageRef) {
+                this.showToast("Не удалось подготовить ссылку на изображение.", "error");
+                return;
+            }
+            this.additionalInfo.images = [...currentImages, nextImageRef].slice(0, this.maxAdditionalImages || 3);
             if (this.additionalInfo.type === "none") {
                 this.additionalInfo.type = "image";
             } else if (this.additionalInfo.type === "text") {
@@ -620,7 +733,7 @@ class ClickEditor extends BaseEditor {
         try {
             const response = await fetch(`/api/editor/task/${moduleId}/${topicId}/${taskId}`);
             const data = await response.json();
-            if (!data.ok) {
+            if (!data.ok || (!data.path && !data.asset_id && !data.asset_url)) {
                 console.error("Failed to load task:", data.error);
                 this.showFatalError(data.error || "Не удалось загрузить задание");
                 return;
@@ -2526,8 +2639,9 @@ class ClickEditor extends BaseEditor {
         this.initAdditionalInfoToggle();
         this.renderAdditionalInfo();
 
-        const imagePath = this.task.task_data?.content?.image;
-        if (imagePath && this.img) {
+        const imageRef = this.task.task_data?.content?.image;
+        const imageSrc = this.resolveEditorImagePreviewSrc(imageRef);
+        if (imageSrc && this.img) {
             this.imagePlaceholder?.classList.add("hidden");
             this.img.classList.remove("hidden");
             this.img.onload = () => {
@@ -2536,18 +2650,7 @@ class ClickEditor extends BaseEditor {
                 this.renderAnnotations();
             };
             this.img.onerror = () => this.handleImageError();
-            const imageParams = new URLSearchParams();
-            imageParams.set("path", imagePath);
-            if (this.moduleId) {
-                imageParams.set("module", this.moduleId);
-            }
-            if (this.topicId) {
-                imageParams.set("topic", this.topicId);
-            }
-            if (this.taskId) {
-                imageParams.set("task", this.taskId);
-            }
-            this.img.src = `/api/editor/image?${imageParams.toString()}`;
+            this.img.src = imageSrc;
         } else if (this.img) {
             this.img.classList.add("hidden");
             this.imagePlaceholder?.classList.remove("hidden");
@@ -4822,7 +4925,11 @@ class ClickEditor extends BaseEditor {
             this.task.task_data.content = {
                 ...(this.task.task_data.content || {}),
                 ...snapshot,
-                image: data.path
+                image: this.serializeImageReference({
+                    path: data.path,
+                    asset_id: data.asset_id,
+                    asset_url: data.asset_url,
+                }) || data.path
             };
             
             this.renderUI();
@@ -5108,7 +5215,7 @@ class ClickEditor extends BaseEditor {
         const prompt = this.promptArea ? this.promptArea.value.trim() : "";
         const choicePrompt = this.choicePromptTextarea ? this.choicePromptTextarea.value.trim() : "";
         const required = this.requiredCorrectInput ? String(this.requiredCorrectInput.value).trim() : "";
-        const image = this.task.task_data?.content?.image || "";
+        const image = JSON.stringify(this.serializeImageReference(this.task.task_data?.content?.image) || null);
         const annotationsHash = JSON.stringify(this.annotations);
         const additionalHash = JSON.stringify(this.serializeAdditionalInfo());
         return `${prompt}|${choicePrompt}|${required}|${image}|${annotationsHash}|${additionalHash}`;

@@ -25,7 +25,59 @@ from urllib.parse import parse_qs, urlparse, unquote
 from werkzeug.datastructures import FileStorage
 from werkzeug.utils import secure_filename
 
+from services.workspace_lineage import (
+    build_source_lineage_key,
+    clear_source_lineage_fields,
+    find_first_by_source_lineage,
+    normalize_workspace_lineage_fields,
+)
+
 logger = logging.getLogger(__name__)
+
+
+def _normalize_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _normalize_theory_ownership_fields(
+    payload: Dict[str, Any],
+    *,
+    fallback_source: str = "legacy_unknown",
+    fallback_scope: str = "shared_local",
+    existing: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    existing_payload = existing if isinstance(existing, dict) else {}
+
+    created_by_user_id = _normalize_optional_text(payload.get("created_by_user_id"))
+    if created_by_user_id is None:
+        created_by_user_id = _normalize_optional_text(existing_payload.get("created_by_user_id"))
+
+    updated_by_user_id = _normalize_optional_text(payload.get("updated_by_user_id"))
+    if updated_by_user_id is None:
+        updated_by_user_id = _normalize_optional_text(existing_payload.get("updated_by_user_id"))
+    if updated_by_user_id is None:
+        updated_by_user_id = created_by_user_id
+
+    created_via = _normalize_optional_text(payload.get("created_via"))
+    if created_via is None:
+        created_via = _normalize_optional_text(existing_payload.get("created_via"))
+    if created_via is None:
+        created_via = fallback_source
+
+    content_scope = _normalize_optional_text(payload.get("content_scope"))
+    if content_scope is None:
+        content_scope = _normalize_optional_text(existing_payload.get("content_scope"))
+    if content_scope is None:
+        content_scope = fallback_scope
+
+    payload["created_by_user_id"] = created_by_user_id
+    payload["updated_by_user_id"] = updated_by_user_id
+    payload["created_via"] = created_via
+    payload["content_scope"] = content_scope
+    return payload
 
 
 class TheoryConflictError(Exception):
@@ -77,6 +129,36 @@ class TheoryService:
         self.complexes_dir = self.data_dir / "complexes"
         self.theories_dir = self.complexes_dir / "theories"
         self.theories_dir.mkdir(parents=True, exist_ok=True)
+
+    def _normalize_theory_meta(
+        self,
+        payload: Dict[str, Any],
+        *,
+        theory_id: Optional[str] = None,
+        existing: Optional[Dict[str, Any]] = None,
+        fallback_source: str = "legacy_unknown",
+        fallback_scope: str = "shared_local",
+    ) -> Dict[str, Any]:
+        clean_payload = dict(payload or {})
+        resolved_theory_id = str(
+            theory_id
+            or clean_payload.get("id")
+            or (existing or {}).get("id")
+            or ""
+        ).strip()
+        clean_payload = _normalize_theory_ownership_fields(
+            clean_payload,
+            fallback_source=fallback_source,
+            fallback_scope=fallback_scope,
+            existing=existing,
+        )
+        return normalize_workspace_lineage_fields(
+            clean_payload,
+            entity_kind="theory",
+            entity_id=resolved_theory_id or None,
+            entity_ref=resolved_theory_id or None,
+            existing=existing,
+        )
 
     # ------------------------------------------------------------------
     # Public API
@@ -133,7 +215,12 @@ class TheoryService:
             if not meta_path.exists():
                 continue
             try:
-                meta = self._read_json(meta_path)
+                meta = self._normalize_theory_meta(
+                    self._read_json(meta_path),
+                    theory_id=theory_dir.name,
+                    fallback_source="legacy_unknown",
+                    fallback_scope="shared_local",
+                )
             except Exception as exc:  # pragma: no cover - defensive path
                 logger.warning("Failed to read theory metadata %s: %s", meta_path, exc)
                 continue
@@ -151,6 +238,23 @@ class TheoryService:
                     "created_at": meta.get("created_at"),
                     "updated_at": meta.get("updated_at"),
                     "version": meta.get("version"),
+                    "workspace_entity_kind": meta.get("workspace_entity_kind"),
+                    "workspace_entity_id": meta.get("workspace_entity_id"),
+                    "workspace_entity_ref": meta.get("workspace_entity_ref"),
+                    "workspace_entity": meta.get("workspace_entity"),
+                    "workspace_copy_kind": meta.get("workspace_copy_kind"),
+                    "workspace_copy": meta.get("workspace_copy"),
+                    "created_by_user_id": meta.get("created_by_user_id"),
+                    "updated_by_user_id": meta.get("updated_by_user_id"),
+                    "created_via": meta.get("created_via"),
+                    "content_scope": meta.get("content_scope"),
+                    "source_catalog_item_id": meta.get("source_catalog_item_id"),
+                    "source_catalog_version_id": meta.get("source_catalog_version_id"),
+                    "source_entity_kind": meta.get("source_entity_kind"),
+                    "source_entity_id": meta.get("source_entity_id"),
+                    "has_source_lineage": bool(meta.get("has_source_lineage")),
+                    "source_lineage": meta.get("source_lineage"),
+                    "source_lineage_key": meta.get("source_lineage_key"),
                     "image_count": delta_summary.get("image_count", 0),
                     "has_text": bool(delta_summary.get("has_text")),
                     "has_content": bool(
@@ -192,10 +296,105 @@ class TheoryService:
             "delta_path": "body.delta.json",
             "images": images,
         }
+        for field_name in (
+            "source_catalog_item_id",
+            "source_catalog_version_id",
+            "source_entity_kind",
+            "source_entity_id",
+        ):
+            if payload.get(field_name) is not None:
+                meta[field_name] = payload.get(field_name)
+        for field_name in (
+            "created_by_user_id",
+            "updated_by_user_id",
+            "created_via",
+            "content_scope",
+        ):
+            if payload.get(field_name) is not None:
+                meta[field_name] = payload.get(field_name)
+        meta = self._normalize_theory_meta(
+            meta,
+            theory_id=theory_id,
+            fallback_source="manual_editor",
+            fallback_scope="shared_local",
+        )
 
         self._write_json_atomic(theory_dir / "theory.json", meta)
         self._write_json_atomic(theory_dir / "body.delta.json", delta)
         return self.get_theory(theory_id)
+
+    def _reserve_theory_id(
+        self,
+        preferred_theory_id: Any = None,
+        *,
+        title: Any = None,
+    ) -> str:
+        preferred = self._normalize_theory_id(preferred_theory_id)
+        if preferred:
+            base_id = preferred
+        else:
+            title_seed = secure_filename(str(title or "").strip().lower().replace(" ", "_"))
+            if title_seed:
+                base_id = f"th_{title_seed}"
+            else:
+                base_id = self._generate_theory_id()
+
+        candidate = base_id
+        suffix = 1
+        while (self.theories_dir / candidate).exists():
+            candidate = f"{base_id}_{suffix:02d}"
+            suffix += 1
+        return candidate
+
+    def ensure_workspace_theory_copy(
+        self,
+        payload: Dict[str, Any],
+        *,
+        prefer_existing_by_lineage: bool = True,
+    ) -> Dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise TheoryValidationError("payload_must_be_object")
+
+        normalized_payload = self._normalize_theory_meta(
+            dict(payload),
+            fallback_source="workspace_import",
+            fallback_scope="workspace_private",
+        )
+        if prefer_existing_by_lineage and build_source_lineage_key(normalized_payload):
+            existing = self.find_theory_by_source_lineage(
+                source_catalog_item_id=normalized_payload.get("source_catalog_item_id"),
+                source_catalog_version_id=normalized_payload.get("source_catalog_version_id"),
+                source_entity_kind=normalized_payload.get("source_entity_kind") or "theory",
+                source_entity_id=normalized_payload.get("source_entity_id"),
+            )
+            if isinstance(existing, dict):
+                return {
+                    "created": False,
+                    "reused": True,
+                    "theory_id": existing.get("id"),
+                    "item": existing,
+                }
+
+        preferred_theory_id = normalized_payload.get("id")
+        if not self._normalize_theory_id(preferred_theory_id) or (self.theories_dir / str(preferred_theory_id)).exists():
+            normalized_payload["id"] = self._reserve_theory_id(
+                preferred_theory_id,
+                title=normalized_payload.get("title"),
+            )
+            normalized_payload = self._normalize_theory_meta(
+                normalized_payload,
+                theory_id=normalized_payload["id"],
+                fallback_source="workspace_import",
+                fallback_scope="workspace_private",
+            )
+
+        created = self.create_theory(normalized_payload)
+        return {
+            "created": True,
+            "reused": False,
+            "theory_id": created.get("id"),
+            "item": created,
+        }
 
     def get_theory(self, theory_id: str, include_delta: bool = True) -> Dict[str, Any]:
         theory_dir = self._resolve_theory_dir(theory_id)
@@ -203,7 +402,12 @@ class TheoryService:
         if not meta_path.exists():
             raise TheoryNotFoundError("theory_not_found")
 
-        meta = self._read_json(meta_path)
+        meta = self._normalize_theory_meta(
+            self._read_json(meta_path),
+            theory_id=theory_id,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
         item = {
             "id": meta.get("id", theory_id),
             "title": meta.get("title") or "",
@@ -211,6 +415,23 @@ class TheoryService:
             "updated_at": meta.get("updated_at"),
             "version": meta.get("version"),
             "images": meta.get("images") or [],
+            "workspace_entity_kind": meta.get("workspace_entity_kind"),
+            "workspace_entity_id": meta.get("workspace_entity_id"),
+            "workspace_entity_ref": meta.get("workspace_entity_ref"),
+            "workspace_entity": meta.get("workspace_entity"),
+            "workspace_copy_kind": meta.get("workspace_copy_kind"),
+            "workspace_copy": meta.get("workspace_copy"),
+            "created_by_user_id": meta.get("created_by_user_id"),
+            "updated_by_user_id": meta.get("updated_by_user_id"),
+            "created_via": meta.get("created_via"),
+            "content_scope": meta.get("content_scope"),
+            "source_catalog_item_id": meta.get("source_catalog_item_id"),
+            "source_catalog_version_id": meta.get("source_catalog_version_id"),
+            "source_entity_kind": meta.get("source_entity_kind"),
+            "source_entity_id": meta.get("source_entity_id"),
+            "has_source_lineage": bool(meta.get("has_source_lineage")),
+            "source_lineage": meta.get("source_lineage"),
+            "source_lineage_key": meta.get("source_lineage_key"),
         }
         if include_delta:
             delta_path = theory_dir / str(meta.get("delta_path") or "body.delta.json")
@@ -235,7 +456,12 @@ class TheoryService:
         if not meta_path.exists():
             raise TheoryNotFoundError("theory_not_found")
 
-        meta = self._read_json(meta_path)
+        meta = self._normalize_theory_meta(
+            self._read_json(meta_path),
+            theory_id=theory_id,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
         current_delta = (
             self._read_json(delta_path) if delta_path.exists() else {"ops": [{"insert": "\n"}]}
         )
@@ -256,25 +482,51 @@ class TheoryService:
             meta["images"] = self._sanitize_images_list(updates.get("images"))
         if "delta" in updates:
             current_delta = self._sanitize_delta(updates.get("delta"))
+        if updates.get("created_by_user_id") is not None:
+            meta["created_by_user_id"] = updates.get("created_by_user_id")
+        if updates.get("updated_by_user_id") is not None:
+            meta["updated_by_user_id"] = updates.get("updated_by_user_id")
+        if updates.get("created_via") is not None:
+            meta["created_via"] = updates.get("created_via")
+        if updates.get("content_scope") is not None:
+            meta["content_scope"] = updates.get("content_scope")
 
         now = datetime.utcnow().isoformat()
         meta["updated_at"] = now
         meta["version"] = now
         meta["id"] = meta.get("id") or theory_id
         meta["delta_path"] = "body.delta.json"
+        meta = self._normalize_theory_meta(
+            meta,
+            theory_id=theory_id,
+            existing=meta,
+            fallback_source="manual_editor",
+            fallback_scope="shared_local",
+        )
 
         self._write_json_atomic(meta_path, meta)
         self._write_json_atomic(delta_path, current_delta)
         return self.get_theory(theory_id)
 
-    def clone_theory(self, source_theory_id: str, title: Optional[str] = None) -> Dict[str, Any]:
+    def clone_theory(
+        self,
+        source_theory_id: str,
+        title: Optional[str] = None,
+        *,
+        created_by_user_id: Any = None,
+    ) -> Dict[str, Any]:
         source_dir = self._resolve_theory_dir(source_theory_id)
         source_meta_path = source_dir / "theory.json"
         source_delta_path = source_dir / "body.delta.json"
         if not source_meta_path.exists():
             raise TheoryNotFoundError("theory_not_found")
 
-        source_meta = self._read_json(source_meta_path)
+        source_meta = self._normalize_theory_meta(
+            self._read_json(source_meta_path),
+            theory_id=source_theory_id,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
         source_delta_raw = (
             self._read_json(source_delta_path)
             if source_delta_path.exists()
@@ -326,10 +578,37 @@ class TheoryService:
             "delta_path": "body.delta.json",
             "images": cloned_images,
         }
+        normalized_owner_user_id = _normalize_optional_text(created_by_user_id)
+        if normalized_owner_user_id is not None:
+            cloned_meta["created_by_user_id"] = normalized_owner_user_id
+            cloned_meta["updated_by_user_id"] = normalized_owner_user_id
+        cloned_meta = clear_source_lineage_fields(cloned_meta)
+        cloned_meta = self._normalize_theory_meta(
+            cloned_meta,
+            theory_id=theory_id,
+            fallback_source="manual_copy",
+            fallback_scope="shared_local",
+        )
 
         self._write_json_atomic(theory_dir / "theory.json", cloned_meta)
         self._write_json_atomic(theory_dir / "body.delta.json", cloned_delta)
         return self.get_theory(theory_id)
+
+    def find_theory_by_source_lineage(
+        self,
+        *,
+        source_catalog_item_id: Any = None,
+        source_catalog_version_id: Any = None,
+        source_entity_kind: Any = "theory",
+        source_entity_id: Any = None,
+    ) -> Optional[Dict[str, Any]]:
+        return find_first_by_source_lineage(
+            self.list_theories(),
+            source_catalog_item_id=source_catalog_item_id,
+            source_catalog_version_id=source_catalog_version_id,
+            source_entity_kind=source_entity_kind,
+            source_entity_id=source_entity_id,
+        )
 
     def delete_theory(self, theory_id: str) -> Dict[str, Any]:
         theory_dir = self._resolve_theory_dir(theory_id)
@@ -379,7 +658,12 @@ class TheoryService:
         upload.save(str(target))
         rel_path = target.relative_to(self.data_dir).as_posix()
 
-        meta = self._read_json(meta_path)
+        meta = self._normalize_theory_meta(
+            self._read_json(meta_path),
+            theory_id=theory_id,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
         images = list(meta.get("images") or [])
         if rel_path not in images:
             images.append(rel_path)
@@ -387,6 +671,13 @@ class TheoryService:
         meta["images"] = images
         meta["updated_at"] = now
         meta["version"] = now
+        meta = self._normalize_theory_meta(
+            meta,
+            theory_id=theory_id,
+            existing=meta,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
         self._write_json_atomic(meta_path, meta)
 
         return {"path": rel_path, "version": now}
@@ -417,7 +708,13 @@ class TheoryService:
             )
         return snapshots
 
-    def restore_from_history(self, theory_id: str, snapshot_timestamp: str) -> Dict[str, Any]:
+    def restore_from_history(
+        self,
+        theory_id: str,
+        snapshot_timestamp: str,
+        *,
+        restored_by_user_id: Any = None,
+    ) -> Dict[str, Any]:
         theory_dir = self._resolve_theory_dir(theory_id)
         history_file = theory_dir / "history" / f"{snapshot_timestamp}.json"
         if not history_file.exists():
@@ -428,7 +725,12 @@ class TheoryService:
         if not meta_path.exists():
             raise TheoryNotFoundError("theory_not_found")
 
-        current_meta = self._read_json(meta_path)
+        current_meta = self._normalize_theory_meta(
+            self._read_json(meta_path),
+            theory_id=theory_id,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
         current_delta = (
             self._read_json(delta_path) if delta_path.exists() else {"ops": [{"insert": "\n"}]}
         )
@@ -446,6 +748,16 @@ class TheoryService:
         now = datetime.utcnow().isoformat()
         restored_meta["updated_at"] = now
         restored_meta["version"] = now
+        normalized_restored_by_user_id = _normalize_optional_text(restored_by_user_id)
+        if normalized_restored_by_user_id is not None:
+            restored_meta["updated_by_user_id"] = normalized_restored_by_user_id
+        restored_meta = self._normalize_theory_meta(
+            restored_meta,
+            theory_id=theory_id,
+            existing=current_meta,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
 
         restored_delta = self._sanitize_delta(snapshot_delta)
         self._write_json_atomic(meta_path, restored_meta)
@@ -465,7 +777,12 @@ class TheoryService:
         if not meta_path.exists():
             raise TheoryNotFoundError("theory_not_found")
 
-        meta = self._read_json(meta_path)
+        meta = self._normalize_theory_meta(
+            self._read_json(meta_path),
+            theory_id=theory_id,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
         current_delta = (
             self._read_json(delta_path) if delta_path.exists() else {"ops": [{"insert": "\n"}]}
         )
@@ -504,6 +821,13 @@ class TheoryService:
         meta["images"] = normalized_images
         meta["updated_at"] = now
         meta["version"] = now
+        meta = self._normalize_theory_meta(
+            meta,
+            theory_id=theory_id,
+            existing=meta,
+            fallback_source="legacy_unknown",
+            fallback_scope="shared_local",
+        )
 
         self._write_json_atomic(meta_path, meta)
         self._write_json_atomic(delta_path, normalized_delta)
@@ -673,10 +997,21 @@ class TheoryService:
         if lower.startswith("javascript:") or lower.startswith("data:"):
             return None
 
-        # Quill image URLs can arrive as /api/local-image?path=<relative>; convert to relative.
+        if value.startswith("/api/assets/"):
+            return value
+
+        # Quill image URLs can arrive as /api/local-image?path=<relative>
+        # or /api/local-image?asset_id=<id>; normalize hosted refs to the
+        # canonical asset content route.
         if value.startswith("/api/local-image?"):
             parsed = urlparse(value)
             params = parse_qs(parsed.query)
+            asset_values = params.get("asset_id") or []
+            if asset_values:
+                asset_id = unquote(asset_values[0]).strip()
+                if not asset_id or ".." in asset_id.split("/"):
+                    return None
+                return f"/api/assets/{asset_id}/content"
             path_values = params.get("path") or []
             if not path_values:
                 return None
@@ -710,6 +1045,8 @@ class TheoryService:
         sanitized = self._sanitize_image_ref(raw_value)
         if not sanitized:
             return False
+        if sanitized.startswith("/api/assets/"):
+            return True
         try:
             target = (self.data_dir / sanitized).resolve()
             target.relative_to(self.data_dir.resolve())

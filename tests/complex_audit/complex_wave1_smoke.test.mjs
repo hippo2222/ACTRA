@@ -196,6 +196,14 @@ test.describe("complex audit wave 1 smoke", () => {
       });
 
       await test.step("File layer: verify complex statistics and calendar activity snapshots", async () => {
+        if (runtime.supportsShadowFileAssertions === false) {
+          testInfo.annotations.push({
+            type: "shadow-file-skip",
+            description: "strict hosted infra contour does not guarantee legacy shadow files",
+          });
+          return;
+        }
+
         const complexStatsPath = path.join(
           runtime.dataDir,
           "users",

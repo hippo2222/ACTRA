@@ -1,4 +1,4 @@
-"""Minimal HTTP server over SessionAPI.
+﻿"""Minimal HTTP server over SessionAPI.
 
 This module runs a small Flask application that exposes a JSON API
 for working with complex sessions via SessionAPI.
@@ -27,9 +27,10 @@ import time
 import traceback
 import uuid
 from collections import deque
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from email.message import EmailMessage
 from email.utils import formatdate
+from html import escape
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -38,13 +39,15 @@ from flask import (
     jsonify,
     request,
     has_request_context,
+    g,
+    redirect,
     send_file,
     send_from_directory,
     after_this_request,
     Response,
     stream_with_context,
 )
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
@@ -129,6 +132,664 @@ if FLASK_DEBUG_ENABLED:
         logger.handlers,
     )
 
+
+def _runtime_mode() -> str:
+    raw = str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower()
+    if raw in {"hosted_web", "legacy_local"}:
+        return raw
+    return "legacy_local"
+
+
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: int, minimum: int = 1, maximum: int = 365) -> int:
+    raw = os.environ.get(name)
+    try:
+        value = int(str(raw).strip()) if raw is not None else int(default)
+    except Exception:
+        value = int(default)
+    return max(minimum, min(maximum, value))
+
+
+def _runtime_subsystem_status(
+    required_signals: Dict[str, bool],
+    degraded_signals: Optional[Dict[str, bool]] = None,
+) -> Tuple[str, bool]:
+    required_values = [bool(value) for value in required_signals.values()]
+    degraded_values = [bool(value) for value in (degraded_signals or {}).values()]
+    runtime_ready = bool(required_values) and all(required_values) and not any(degraded_values)
+    if runtime_ready:
+        return "green", True
+    if any(required_values) or any(degraded_values):
+        return "transitional", False
+    return "blocked", False
+
+
+def _is_hosted_storage_mode(storage_mode: Any) -> bool:
+    resolved = str(storage_mode or "").strip().lower()
+    return resolved in {"postgres", "hosted_split"}
+
+
+def _configured_secret_key_contract() -> Dict[str, Any]:
+    configured_value = str(os.environ.get("ACTRA_SECRET_KEY") or "").strip()
+    uses_default_placeholder = configured_value == "change-me-before-production"
+    stable_secret_key = bool(configured_value) and not uses_default_placeholder
+    return {
+        "configured": bool(configured_value),
+        "uses_default_placeholder": uses_default_placeholder,
+        "stable_secret_key": stable_secret_key,
+    }
+
+
+def _build_hosted_launch_contract(
+    *,
+    checks: Dict[str, bool],
+    degraded: Dict[str, Any],
+    persistence: Dict[str, Any],
+    auth_email_settings: Dict[str, Any],
+    auth_email_missing: List[str],
+) -> Dict[str, Any]:
+    auth_public_base_url_configured = bool(auth_email_settings.get("public_base_url"))
+    auth_email_enabled = bool(auth_email_settings.get("enabled"))
+    auth_email_configured = auth_email_enabled and not auth_email_missing and auth_public_base_url_configured
+    secret_key_contract = _configured_secret_key_contract()
+    session_cookie_secure = _env_bool("ACTRA_SESSION_COOKIE_SECURE", _runtime_mode() == "hosted_web")
+    session_cookie_samesite = (
+        str(os.environ.get("ACTRA_SESSION_COOKIE_SAMESITE") or app.config.get("SESSION_COOKIE_SAMESITE") or "").strip()
+        or "Lax"
+    )
+    required_runtime_signals = {
+        "runtime_mode_hosted": _runtime_mode() == "hosted_web",
+        "hosted_storage_mode": _is_hosted_storage_mode(persistence.get("storage_mode")),
+        "hosted_persistence_contract_ready": bool(persistence.get("hosted_contract_ready")),
+        "stable_secret_key": bool(secret_key_contract.get("stable_secret_key")),
+        "auth_public_base_url_configured": auth_public_base_url_configured,
+        "auth_email_enabled": auth_email_enabled,
+        "auth_email_configured": auth_email_configured,
+        "session_cookie_secure": session_cookie_secure,
+        "session_cookie_samesite_configured": bool(session_cookie_samesite),
+        "hosted_dev_auth_bridge_disabled": not _env_bool("ACTRA_HOSTED_DEV_AUTH_BRIDGE", False),
+        "hosted_shadow_write_fallback_disabled": not bool(
+            persistence.get("hosted_shadow_write_fallback_enabled")
+        ),
+        "health_endpoint_exposed": True,
+        "ready_endpoint_exposed": True,
+        "logs_directory_available": (PROJECT_ROOT / "logs").exists(),
+    }
+    degraded_signals = {
+        "shadow_fallback_active": bool(degraded.get("shadow_fallback_active")),
+    }
+    runtime_status, runtime_ready = _runtime_subsystem_status(
+        required_runtime_signals,
+        degraded_signals,
+    )
+    return {
+        "status": runtime_status,
+        "runtime_ready": runtime_ready,
+        "official_gate": "npm run smoke:launch-contract:hosted",
+        "companion_infra_gate": "npm run smoke:complex-passage:hosted:infra",
+        "runtime_signals": {
+            **required_runtime_signals,
+            "secret_key_configured": bool(secret_key_contract.get("configured")),
+            "secret_key_uses_default_placeholder": bool(
+                secret_key_contract.get("uses_default_placeholder")
+            ),
+            "auth_email_missing": list(auth_email_missing),
+            "session_cookie_samesite": session_cookie_samesite,
+            "auth_public_base_url": str(auth_email_settings.get("public_base_url") or "").strip(),
+        },
+        "required_runtime_signals": required_runtime_signals,
+        "degraded_signals": degraded_signals,
+        "notes": [
+            "This contract verifies production env/cookie/storage baseline before a real Docker/domain/SMTP acceptance run.",
+            "Reverse proxy / HTTPS termination and backup-restore remain explicit operational checks outside the code-only gate.",
+        ],
+    }
+
+
+def _build_finish_line_subsystems(
+    *,
+    checks: Dict[str, bool],
+    degraded: Dict[str, Any],
+    persistence: Dict[str, Any],
+    auth_email_settings: Dict[str, Any],
+    auth_email_missing: List[str],
+    feature_flags: Dict[str, bool],
+    launch_contract: Dict[str, Any],
+) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+    degraded_services = dict(degraded.get("services") or {})
+    auth_email_enabled = bool(auth_email_settings.get("enabled"))
+    auth_public_base_url_configured = bool(auth_email_settings.get("public_base_url"))
+    auth_email_configured = auth_email_enabled and not auth_email_missing and auth_public_base_url_configured
+    runtime_mode_hosted = _runtime_mode() == "hosted_web"
+    storage_mode = str(persistence.get("storage_mode") or "").strip().lower()
+    hosted_storage_mode = _is_hosted_storage_mode(storage_mode)
+
+    raw_specs = {
+        "auth_email_lifecycle": {
+            "finish_line_status": "transitional",
+            "official_gate": None,
+            "source_of_truth": "HostedUserService + HostedIdentityRepository + request-scoped auth session",
+            "required_signals": {
+                "user_service_storage_ready": bool(checks.get("user_service_storage_ready")),
+                "auth_email_enabled": auth_email_enabled,
+                "auth_email_configured": auth_email_configured,
+            },
+            "degraded_signals": {},
+            "notes": [
+                "Production ACTRA_AUTH_* env and a dedicated hosted auth gate are still required for green.",
+            ],
+            "extra_runtime_signals": {
+                "auth_public_base_url_configured": auth_public_base_url_configured,
+                "auth_email_missing": list(auth_email_missing),
+            },
+        },
+        "main_quick_access": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:main-quick-access:hosted",
+            "source_of_truth": 'hosted auth session + user.settings["web_ui_state"] + HostedSessionRepository',
+            "required_signals": {
+                "user_service_storage_ready": bool(checks.get("user_service_storage_ready")),
+                "session_repository_storage_ready": bool(checks.get("session_repository_storage_ready")),
+                "statistics_service_storage_ready": bool(checks.get("statistics_service_storage_ready")),
+                "calendar_service_storage_ready": bool(checks.get("calendar_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "user_service_shadow_fallback_active": bool(degraded_services.get("user_service", {}).get("shadow_fallback_active")),
+                "session_repository_shadow_fallback_active": bool(degraded_services.get("session_repository", {}).get("shadow_fallback_active")),
+            },
+            "notes": [],
+        },
+        "statistics_progress": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:statistics:hosted",
+            "source_of_truth": "HostedComplexStatisticsRepository + HostedProgressRepository",
+            "required_signals": {
+                "progress_service_storage_ready": bool(checks.get("progress_service_storage_ready")),
+                "statistics_service_storage_ready": bool(checks.get("statistics_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "statistics_service_shadow_fallback_active": bool(degraded_services.get("statistics_service", {}).get("shadow_fallback_active")),
+            },
+            "notes": [],
+        },
+        "calendar_memory_health": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:calendar:hosted",
+            "source_of_truth": "HostedCalendarRepository + hosted progress data",
+            "required_signals": {
+                "calendar_service_storage_ready": bool(checks.get("calendar_service_storage_ready")),
+                "progress_service_storage_ready": bool(checks.get("progress_service_storage_ready")),
+            },
+            "degraded_signals": {},
+            "notes": [],
+        },
+        "catalog_library_publication": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:catalog-library:hosted",
+            "source_of_truth": "HostedCatalogService + HostedCatalogRepository",
+            "required_signals": {
+                "catalog_service_storage_ready": bool(checks.get("catalog_service_storage_ready")),
+                "complex_service_storage_ready": bool(checks.get("complex_service_storage_ready")),
+                "theory_service_storage_ready": bool(checks.get("theory_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "catalog_service_shadow_fallback_active": bool(degraded_services.get("catalog_service", {}).get("shadow_fallback_active")),
+            },
+            "notes": [],
+        },
+        "complex_passage": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:complex-passage:hosted",
+            "source_of_truth": "HostedSessionRepository + hosted complex/statistics runtime contract",
+            "required_signals": {
+                "session_api_ready": bool(checks.get("session_api_ready")),
+                "session_repository_storage_ready": bool(checks.get("session_repository_storage_ready")),
+                "statistics_service_storage_ready": bool(checks.get("statistics_service_storage_ready")),
+                "complex_service_storage_ready": bool(checks.get("complex_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "session_repository_shadow_fallback_active": bool(degraded_services.get("session_repository", {}).get("shadow_fallback_active")),
+            },
+            "notes": [],
+        },
+        "linked_theory_open": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:linked-theory-open:hosted",
+            "source_of_truth": "hosted catalog/library binding + HostedTheoryService",
+            "required_signals": {
+                "catalog_service_storage_ready": bool(checks.get("catalog_service_storage_ready")),
+                "theory_service_storage_ready": bool(checks.get("theory_service_storage_ready")),
+                "complex_service_storage_ready": bool(checks.get("complex_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "catalog_service_shadow_read_fallback_blocked": bool(degraded_services.get("catalog_service", {}).get("shadow_read_fallback_blocked")),
+                "theory_service_shadow_read_fallback_blocked": bool(degraded_services.get("theory_service", {}).get("shadow_read_fallback_blocked")),
+            },
+            "notes": [],
+        },
+        "task_editor_crud": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:task-editor:hosted",
+            "source_of_truth": "HostedStorageService task/module/topic data",
+            "required_signals": {
+                "storage_service_storage_ready": bool(checks.get("storage_service_storage_ready")),
+                "asset_service_storage_ready": bool(checks.get("asset_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "storage_service_shadow_fallback_active": bool(degraded_services.get("storage_service", {}).get("shadow_fallback_active")),
+            },
+            "notes": [],
+        },
+        "complex_editor_crud": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:complex-editor:hosted",
+            "source_of_truth": "HostedComplexService + hosted autosave/history persistence",
+            "required_signals": {
+                "complex_service_storage_ready": bool(checks.get("complex_service_storage_ready")),
+                "storage_service_storage_ready": bool(checks.get("storage_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "complex_service_shadow_fallback_active": bool(degraded_services.get("complex_service", {}).get("shadow_fallback_active")),
+            },
+            "notes": [],
+        },
+        "theory_editor_center": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:theory-editor:hosted",
+            "source_of_truth": "HostedTheoryService + hosted theory repositories",
+            "required_signals": {
+                "theory_service_storage_ready": bool(checks.get("theory_service_storage_ready")),
+                "asset_service_storage_ready": bool(checks.get("asset_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "theory_service_shadow_fallback_active": bool(degraded_services.get("theory_service", {}).get("shadow_fallback_active")),
+            },
+            "notes": [],
+        },
+        "assets_media_payloads": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:assets-media:hosted",
+            "source_of_truth": "HostedAssetService + canonical asset_id/asset_url contract",
+            "required_signals": {
+                "asset_service_storage_ready": bool(checks.get("asset_service_storage_ready")),
+            },
+            "degraded_signals": {},
+            "notes": [],
+        },
+        "ai_editor_extras": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:ai-placeholder:hosted",
+            "source_of_truth": "explicit in-progress placeholder contract",
+            "required_signals": {
+                "ai_mode_placeholder_active": bool(feature_flags.get("ai_mode") is False),
+            },
+            "degraded_signals": {},
+            "notes": [],
+        },
+        "import_export": {
+            "finish_line_status": "transitional",
+            "official_gate": "npm run smoke:import-export:hosted",
+            "source_of_truth": "Hosted-backed ImportExportService / ComplexImportExportService flows",
+            "required_signals": {
+                "storage_service_storage_ready": bool(checks.get("storage_service_storage_ready")),
+                "complex_service_storage_ready": bool(checks.get("complex_service_storage_ready")),
+                "theory_service_storage_ready": bool(checks.get("theory_service_storage_ready")),
+                "asset_service_storage_ready": bool(checks.get("asset_service_storage_ready")),
+            },
+            "degraded_signals": {
+                "storage_service_shadow_write_fallback_blocked": bool(degraded_services.get("storage_service", {}).get("shadow_write_fallback_blocked")),
+            },
+            "notes": [
+                "Compatibility archive/path bridges still keep this contour transitional in the finish-line matrix.",
+            ],
+        },
+        "microcards": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:microcards:hosted",
+            "source_of_truth": "HostedMicrocardsRepository + HostedMicrocardsReviewRepository",
+            "required_signals": {
+                "user_service_storage_ready": bool(checks.get("user_service_storage_ready")),
+                "storage_service_storage_ready": bool(checks.get("storage_service_storage_ready")),
+                "runtime_mode_hosted": runtime_mode_hosted,
+            },
+            "degraded_signals": {},
+            "notes": [
+                "AI-driven deck generation remains outside this contour under the separate AI placeholder contract.",
+            ],
+        },
+        "readiness_degraded_signaling": {
+            "finish_line_status": "green",
+            "official_gate": "npm run smoke:readiness:hosted",
+            "source_of_truth": "/api/ready subsystem matrix + explicit degraded policy export",
+            "required_signals": {
+                "route_context_initialized": bool(checks.get("route_context_initialized")),
+                "hosted_persistence_contract_ready": bool(checks.get("hosted_persistence_contract_ready")),
+            },
+            "degraded_signals": {},
+            "notes": [],
+        },
+        "hosted_infra_launch": {
+            "finish_line_status": "transitional",
+            "official_gate": launch_contract.get("official_gate"),
+            "source_of_truth": "docker-compose.hosted.yml + hosted entrypoint + production env contract",
+            "required_signals": dict(launch_contract.get("required_runtime_signals") or {}),
+            "degraded_signals": dict(launch_contract.get("degraded_signals") or {}),
+            "notes": list(launch_contract.get("notes") or []),
+            "extra_runtime_signals": {
+                "companion_infra_gate": launch_contract.get("companion_infra_gate"),
+            },
+        },
+    }
+
+    subsystems: Dict[str, Dict[str, Any]] = {}
+    counts = {"green": 0, "transitional": 0, "blocked": 0}
+    release_blockers: List[str] = []
+    runtime_not_ready: List[str] = []
+
+    for key, spec in raw_specs.items():
+        required_signals = dict(spec.get("required_signals") or {})
+        degraded_signals = dict(spec.get("degraded_signals") or {})
+        runtime_status, runtime_ready = _runtime_subsystem_status(required_signals, degraded_signals)
+        finish_line_status = str(spec.get("finish_line_status") or "transitional")
+        counts[finish_line_status] = counts.get(finish_line_status, 0) + 1
+        if finish_line_status != "green":
+            release_blockers.append(key)
+        if not runtime_ready:
+            runtime_not_ready.append(key)
+        entry = {
+            "finish_line_status": finish_line_status,
+            "runtime_status": runtime_status,
+            "runtime_ready": runtime_ready,
+            "official_gate": spec.get("official_gate"),
+            "source_of_truth": spec.get("source_of_truth"),
+            "runtime_signals": {
+                **required_signals,
+                **dict(spec.get("extra_runtime_signals") or {}),
+            },
+            "degraded_signals": degraded_signals,
+            "notes": list(spec.get("notes") or []),
+        }
+        subsystems[key] = entry
+
+    summary = {
+        "counts_by_finish_line_status": counts,
+        "release_blockers": release_blockers,
+        "runtime_not_ready": runtime_not_ready,
+    }
+    return subsystems, summary
+
+
+def _build_runtime_health_payload() -> Dict[str, Any]:
+    from routes._context import get_base_ctx
+
+    data_dir_exists = bool(getattr(_headless_app_ctx, "data_dir", None) and _headless_app_ctx.data_dir.exists())
+    frontend_root_exists = FRONTEND_ROOT.exists()
+    route_ctx_ready = get_base_ctx() is _headless_app_ctx
+    storage_ready = bool(getattr(_headless_app_ctx, "storage_service", None) is not None)
+    storage_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "storage_service", None), "hosted_storage_ready", True)
+    )
+    asset_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "asset_service", None), "hosted_storage_ready", True)
+    )
+    session_api_ready = bool(getattr(_headless_app_ctx, "session_api", None) is not None)
+    session_repository = getattr(_headless_app_ctx, "session_repository", None)
+    if session_repository is None:
+        adaptive_session_manager = getattr(_headless_app_ctx, "adaptive_session_manager", None)
+        session_repository = getattr(adaptive_session_manager, "session_repository", None)
+    session_repository_storage_ready = bool(
+        getattr(session_repository, "hosted_storage_ready", True)
+    )
+    persistence_runtime = getattr(_headless_app_ctx, "persistence_runtime", None)
+    runtime_state_root_exists = bool(
+        persistence_runtime is not None and getattr(persistence_runtime, "state_root", None) and persistence_runtime.state_root.exists()
+    )
+    hosted_persistence_contract_ready = bool(
+        persistence_runtime is None or getattr(persistence_runtime, "hosted_contract_ready", True)
+    )
+    user_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "user_service", None), "hosted_storage_ready", True)
+    )
+    progress_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "progress_service", None), "hosted_storage_ready", True)
+    )
+    statistics_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "statistics_service", None), "hosted_storage_ready", True)
+    )
+    calendar_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "calendar_service", None), "hosted_storage_ready", True)
+    )
+    complex_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "complex_service", None), "hosted_storage_ready", True)
+    )
+    theory_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "theory_service", None), "hosted_storage_ready", True)
+    )
+    catalog_service_storage_ready = bool(
+        getattr(getattr(_headless_app_ctx, "catalog_service", None), "hosted_storage_ready", True)
+    )
+    storage_service_shadow_fallback_active = bool(
+        getattr(getattr(_headless_app_ctx, "storage_service", None), "hosted_shadow_fallback_active", False)
+    )
+    user_service_shadow_fallback_active = bool(
+        getattr(getattr(_headless_app_ctx, "user_service", None), "hosted_shadow_fallback_active", False)
+    )
+    statistics_service_shadow_fallback_active = bool(
+        getattr(getattr(_headless_app_ctx, "statistics_service", None), "hosted_shadow_fallback_active", False)
+    )
+    complex_service_shadow_fallback_active = bool(
+        getattr(getattr(_headless_app_ctx, "complex_service", None), "hosted_shadow_fallback_active", False)
+    )
+    theory_service_shadow_fallback_active = bool(
+        getattr(getattr(_headless_app_ctx, "theory_service", None), "hosted_shadow_fallback_active", False)
+    )
+    catalog_service_shadow_fallback_active = bool(
+        getattr(getattr(_headless_app_ctx, "catalog_service", None), "hosted_shadow_fallback_active", False)
+    )
+    session_repository_shadow_fallback_active = bool(
+        getattr(session_repository, "hosted_shadow_fallback_active", False)
+    )
+    storage_service_shadow_read_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "storage_service", None), "hosted_shadow_read_fallback_blocked", False)
+    )
+    user_service_shadow_read_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "user_service", None), "hosted_shadow_read_fallback_blocked", False)
+    )
+    statistics_service_shadow_read_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "statistics_service", None), "hosted_shadow_read_fallback_blocked", False)
+    )
+    complex_service_shadow_read_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "complex_service", None), "hosted_shadow_read_fallback_blocked", False)
+    )
+    theory_service_shadow_read_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "theory_service", None), "hosted_shadow_read_fallback_blocked", False)
+    )
+    catalog_service_shadow_read_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "catalog_service", None), "hosted_shadow_read_fallback_blocked", False)
+    )
+    session_repository_shadow_read_fallback_blocked = bool(
+        getattr(session_repository, "hosted_shadow_read_fallback_blocked", False)
+    )
+    storage_service_shadow_write_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "storage_service", None), "hosted_shadow_write_fallback_blocked", False)
+    )
+    user_service_shadow_write_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "user_service", None), "hosted_shadow_write_fallback_blocked", False)
+    )
+    statistics_service_shadow_write_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "statistics_service", None), "hosted_shadow_write_fallback_blocked", False)
+    )
+    complex_service_shadow_write_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "complex_service", None), "hosted_shadow_write_fallback_blocked", False)
+    )
+    theory_service_shadow_write_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "theory_service", None), "hosted_shadow_write_fallback_blocked", False)
+    )
+    catalog_service_shadow_write_fallback_blocked = bool(
+        getattr(getattr(_headless_app_ctx, "catalog_service", None), "hosted_shadow_write_fallback_blocked", False)
+    )
+    session_repository_shadow_write_fallback_blocked = bool(
+        getattr(session_repository, "hosted_shadow_write_fallback_blocked", False)
+    )
+    hosted_shadow_fallback_active = any(
+        (
+            storage_service_shadow_fallback_active,
+            user_service_shadow_fallback_active,
+            statistics_service_shadow_fallback_active,
+            complex_service_shadow_fallback_active,
+            theory_service_shadow_fallback_active,
+            catalog_service_shadow_fallback_active,
+            session_repository_shadow_fallback_active,
+        )
+    )
+    hosted_shadow_write_fallback_blocked = any(
+        (
+            storage_service_shadow_write_fallback_blocked,
+            user_service_shadow_write_fallback_blocked,
+            statistics_service_shadow_write_fallback_blocked,
+            complex_service_shadow_write_fallback_blocked,
+            theory_service_shadow_write_fallback_blocked,
+            catalog_service_shadow_write_fallback_blocked,
+            session_repository_shadow_write_fallback_blocked,
+        )
+    )
+    hosted_shadow_read_fallback_blocked = any(
+        (
+            storage_service_shadow_read_fallback_blocked,
+            user_service_shadow_read_fallback_blocked,
+            statistics_service_shadow_read_fallback_blocked,
+            complex_service_shadow_read_fallback_blocked,
+            theory_service_shadow_read_fallback_blocked,
+            catalog_service_shadow_read_fallback_blocked,
+            session_repository_shadow_read_fallback_blocked,
+        )
+    )
+
+    checks = {
+        "data_dir_exists": data_dir_exists,
+        "frontend_root_exists": frontend_root_exists,
+        "route_context_initialized": route_ctx_ready,
+        "storage_service_ready": storage_ready,
+        "storage_service_storage_ready": storage_service_storage_ready,
+        "asset_service_storage_ready": asset_service_storage_ready,
+        "session_api_ready": session_api_ready,
+        "session_repository_storage_ready": session_repository_storage_ready,
+        "runtime_state_root_exists": runtime_state_root_exists,
+        "hosted_persistence_contract_ready": hosted_persistence_contract_ready,
+        "user_service_storage_ready": user_service_storage_ready,
+        "progress_service_storage_ready": progress_service_storage_ready,
+        "statistics_service_storage_ready": statistics_service_storage_ready,
+        "calendar_service_storage_ready": calendar_service_storage_ready,
+        "complex_service_storage_ready": complex_service_storage_ready,
+        "theory_service_storage_ready": theory_service_storage_ready,
+        "catalog_service_storage_ready": catalog_service_storage_ready,
+    }
+    auth_email_settings = _auth_email_settings()
+    auth_email_missing = _validate_auth_email_settings(auth_email_settings) if auth_email_settings.get("enabled") else [
+        "ACTRA_AUTH_EMAIL_ENABLED"
+    ]
+    feature_flags = _get_editor_feature_flags()
+    persistence_payload = {
+        "storage_mode": getattr(persistence_runtime, "storage_mode", "unknown"),
+        "storage_service_storage_ready": storage_service_storage_ready,
+        "asset_service_storage_ready": asset_service_storage_ready,
+        "session_repository_storage_ready": session_repository_storage_ready,
+        "hosted_contract_ready": hosted_persistence_contract_ready,
+        "hosted_contract_errors": list(getattr(persistence_runtime, "hosted_contract_errors", []) or []),
+        "hosted_shadow_write_fallback_enabled": bool(
+            getattr(persistence_runtime, "hosted_shadow_write_fallback_enabled", True)
+        ),
+        "user_service_storage_ready": user_service_storage_ready,
+        "progress_service_storage_ready": progress_service_storage_ready,
+        "statistics_service_storage_ready": statistics_service_storage_ready,
+        "calendar_service_storage_ready": calendar_service_storage_ready,
+        "complex_service_storage_ready": complex_service_storage_ready,
+        "theory_service_storage_ready": theory_service_storage_ready,
+        "catalog_service_storage_ready": catalog_service_storage_ready,
+    }
+    degraded_payload = {
+        "shadow_fallback_active": hosted_shadow_fallback_active,
+        "shadow_read_fallback_blocked": hosted_shadow_read_fallback_blocked,
+        "shadow_write_fallback_blocked": hosted_shadow_write_fallback_blocked,
+        "services": {
+            "storage_service": {
+                "shadow_fallback_active": storage_service_shadow_fallback_active,
+                "shadow_read_fallback_blocked": storage_service_shadow_read_fallback_blocked,
+                "shadow_write_fallback_blocked": storage_service_shadow_write_fallback_blocked,
+            },
+            "user_service": {
+                "shadow_fallback_active": user_service_shadow_fallback_active,
+                "shadow_read_fallback_blocked": user_service_shadow_read_fallback_blocked,
+                "shadow_write_fallback_blocked": user_service_shadow_write_fallback_blocked,
+            },
+            "statistics_service": {
+                "shadow_fallback_active": statistics_service_shadow_fallback_active,
+                "shadow_read_fallback_blocked": statistics_service_shadow_read_fallback_blocked,
+                "shadow_write_fallback_blocked": statistics_service_shadow_write_fallback_blocked,
+            },
+            "complex_service": {
+                "shadow_fallback_active": complex_service_shadow_fallback_active,
+                "shadow_read_fallback_blocked": complex_service_shadow_read_fallback_blocked,
+                "shadow_write_fallback_blocked": complex_service_shadow_write_fallback_blocked,
+            },
+            "theory_service": {
+                "shadow_fallback_active": theory_service_shadow_fallback_active,
+                "shadow_read_fallback_blocked": theory_service_shadow_read_fallback_blocked,
+                "shadow_write_fallback_blocked": theory_service_shadow_write_fallback_blocked,
+            },
+            "catalog_service": {
+                "shadow_fallback_active": catalog_service_shadow_fallback_active,
+                "shadow_read_fallback_blocked": catalog_service_shadow_read_fallback_blocked,
+                "shadow_write_fallback_blocked": catalog_service_shadow_write_fallback_blocked,
+            },
+            "session_repository": {
+                "shadow_fallback_active": session_repository_shadow_fallback_active,
+                "shadow_read_fallback_blocked": session_repository_shadow_read_fallback_blocked,
+                "shadow_write_fallback_blocked": session_repository_shadow_write_fallback_blocked,
+            },
+        },
+    }
+    launch_contract = _build_hosted_launch_contract(
+        checks=checks,
+        degraded=degraded_payload,
+        persistence=persistence_payload,
+        auth_email_settings=auth_email_settings,
+        auth_email_missing=auth_email_missing,
+    )
+    finish_line_subsystems, finish_line_summary = _build_finish_line_subsystems(
+        checks=checks,
+        degraded=degraded_payload,
+        persistence=persistence_payload,
+        auth_email_settings=auth_email_settings,
+        auth_email_missing=auth_email_missing,
+        feature_flags=feature_flags,
+        launch_contract=launch_contract,
+    )
+
+    return {
+        "ok": all(checks.values()),
+        "runtime_mode": _runtime_mode(),
+        "checks": checks,
+        "paths": {
+            "data_dir": str(getattr(_headless_app_ctx, "data_dir", "")),
+            "frontend_root": str(FRONTEND_ROOT),
+            "runtime_state_root": str(getattr(persistence_runtime, "state_root", "")),
+        },
+        "persistence": persistence_payload,
+        "degraded": degraded_payload,
+        "finish_line": {
+            "subsystems": finish_line_subsystems,
+            "summary": finish_line_summary,
+        },
+        "launch_contract": launch_contract,
+    }
+
 # Editor imports
 from task_system.core.io.task_io import TaskIO
 from task_system.core.models.task_data import TaskData
@@ -149,39 +810,39 @@ def _make_safe_id(name: str) -> str:
     Falls back to a short UUID prefix when transliteration yields nothing.
     """
     _CYRILLIC_MAP = {
-        "а": "a",
-        "б": "b",
-        "в": "v",
-        "г": "g",
-        "д": "d",
-        "е": "e",
-        "ё": "yo",
-        "ж": "zh",
-        "з": "z",
-        "и": "i",
-        "й": "j",
-        "к": "k",
-        "л": "l",
-        "м": "m",
-        "н": "n",
-        "о": "o",
-        "п": "p",
-        "р": "r",
-        "с": "s",
-        "т": "t",
-        "у": "u",
-        "ф": "f",
-        "х": "kh",
-        "ц": "ts",
-        "ч": "ch",
-        "ш": "sh",
-        "щ": "sch",
-        "ъ": "",
-        "ы": "y",
-        "ь": "",
-        "э": "e",
-        "ю": "yu",
-        "я": "ya",
+        "Р°": "a",
+        "Р±": "b",
+        "РІ": "v",
+        "Рі": "g",
+        "Рґ": "d",
+        "Рµ": "e",
+        "С‘": "yo",
+        "Р¶": "zh",
+        "Р·": "z",
+        "Рё": "i",
+        "Р№": "j",
+        "Рє": "k",
+        "Р»": "l",
+        "Рј": "m",
+        "РЅ": "n",
+        "Рѕ": "o",
+        "Рї": "p",
+        "СЂ": "r",
+        "СЃ": "s",
+        "С‚": "t",
+        "Сѓ": "u",
+        "С„": "f",
+        "С…": "kh",
+        "С†": "ts",
+        "С‡": "ch",
+        "С€": "sh",
+        "С‰": "sch",
+        "СЉ": "",
+        "С‹": "y",
+        "СЊ": "",
+        "СЌ": "e",
+        "СЋ": "yu",
+        "СЏ": "ya",
     }
     lowered = name.strip().lower()
     chars = []
@@ -205,6 +866,10 @@ def _make_safe_id(name: str) -> str:
 
 from common.config_loader import load_config  # type: ignore
 from common.extension_points_config import load_extension_points_config  # type: ignore
+from persistence.runtime import (
+    resolve_persistence_runtime_settings,
+    validate_hosted_persistence_contract,
+)
 
 from services import (  # type: ignore
     TaskEvaluatorService,
@@ -223,8 +888,19 @@ from services.theory_service import (  # type: ignore
 from services.statistics_service import StatisticsService  # type: ignore
 from services.difficulty_manager import DifficultyManager  # type: ignore
 from services.adaptive_session_manager import AdaptiveSessionManager  # type: ignore
+from services.session_repository import HostedSessionRepository, SessionRepository  # type: ignore
+from services.hosted_asset_service import HostedAssetService  # type: ignore
+from services.hosted_user_service import HostedUserService  # type: ignore
+from services.hosted_complex_service import HostedComplexService  # type: ignore
+from services.hosted_storage_service import HostedStorageService  # type: ignore
+from services.hosted_theory_service import HostedTheoryService  # type: ignore
+from services.catalog_service import CatalogService  # type: ignore
+from services.hosted_catalog_service import HostedCatalogService  # type: ignore
+from services.workspace_import_service import WorkspaceImportService  # type: ignore
 from services.microcards_service import MicrocardsService  # type: ignore
+from services.hosted_microcards_service import HostedMicrocardsService  # type: ignore
 from services.microcards_analytics_service import MicrocardsAnalyticsService  # type: ignore
+from services.hosted_microcards_analytics_service import HostedMicrocardsAnalyticsService  # type: ignore
 from common.watchdog import WatchdogService  # type: ignore
 
 from logic import (  # type: ignore
@@ -339,7 +1015,7 @@ class AppContextHeadless:
     without any Tkinter UI.
     """
 
-    def __init__(self, data_dir: Optional[str] = None, user_id: str = "default_user") -> None:
+    def __init__(self, data_dir: Optional[str] = None, user_id: Optional[str] = None) -> None:
         # Resolve data_dir via config if not provided
         if data_dir is None:
             config = load_config()
@@ -350,7 +1026,13 @@ class AppContextHeadless:
             self.data_dir = PROJECT_ROOT / data_dir
         else:
             self.data_dir = Path(data_dir)
-        self.user_id = _resolve_bootstrap_user_id(user_id)
+        self.persistence_runtime = resolve_persistence_runtime_settings(
+            data_root=self.data_dir,
+            project_root=PROJECT_ROOT,
+        )
+        self.persistence_runtime.ensure_runtime_dirs()
+        validate_hosted_persistence_contract(self.persistence_runtime, strict=False)
+        self.user_id = _resolve_bootstrap_user_id(user_id) or "default_user"
         initial_user_id = self.user_id
 
         # Init services
@@ -360,8 +1042,9 @@ class AppContextHeadless:
         self.user_id = self._resolve_startup_user_id(self.user_id)
 
         logger.info(
-            "[HTTP] Initializing headless app context, data_dir=%s, user_id=%s",
+            "[HTTP] Initializing headless app context, data_dir=%s, runtime_state_root=%s, user_id=%s",
             self.data_dir,
+            self.persistence_runtime.state_root,
             self.user_id,
         )
 
@@ -377,6 +1060,11 @@ class AppContextHeadless:
         candidate = (requested_user_id or "").strip()
         if candidate == "guest":
             candidate = ""
+
+        if _runtime_mode() == "hosted_web":
+            if candidate == "default_user":
+                return ""
+            return candidate
 
         if candidate and candidate != "default_user":
             if self.user_service.get_user(candidate):
@@ -400,6 +1088,9 @@ class AppContextHeadless:
 
     def switch_user(self, user_id: str) -> bool:
         """Switch current user across all services."""
+        if _runtime_mode() == "hosted_web":
+            logger.warning("[HTTP] switch_user is legacy-only and disabled in hosted_web")
+            return False
         user = self.user_service.get_user(user_id)
         if not user:
             logger.error("[HTTP] Cannot switch to non-existent user: %s", user_id)
@@ -472,8 +1163,24 @@ class AppContextHeadless:
             evaluator_cfg = {"evaluators": {}, "ui_components": {}}
 
         # StorageService
-        self.storage_service = StorageService(self.data_dir)
-        logger.info("[HTTP] StorageService initialized")
+        if _runtime_mode() == "hosted_web":
+            self.storage_service = HostedStorageService(
+                data_dir=str(self.data_dir),
+                persistence_settings=self.persistence_runtime,
+            )
+            logger.info("[HTTP] HostedStorageService initialized")
+        else:
+            self.storage_service = StorageService(self.data_dir)
+            logger.info("[HTTP] StorageService initialized")
+
+        if _runtime_mode() == "hosted_web":
+            self.asset_service = HostedAssetService(
+                data_dir=str(self.data_dir),
+                persistence_settings=self.persistence_runtime,
+            )
+            logger.info("[HTTP] HostedAssetService initialized")
+        else:
+            self.asset_service = None
 
         # DifficultyManager
         self.difficulty_manager = DifficultyManager(
@@ -488,10 +1195,21 @@ class AppContextHeadless:
             user_id=self.user_id,
             difficulty_manager=self.difficulty_manager,
             event_bus=self.event_bus,  # -> NEW: EventBus for progress events
+            persistence_settings=self.persistence_runtime,
         )
         logger.info("[HTTP] ProgressService initialized")
 
-        # ModuleRepository (нужен для статистики по типам задач)
+        if _runtime_mode() == "hosted_web":
+            self.session_repository = HostedSessionRepository(
+                data_dir=str(self.data_dir),
+                persistence_settings=self.persistence_runtime,
+            )
+            logger.info("[HTTP] HostedSessionRepository initialized")
+        else:
+            self.session_repository = SessionRepository(data_dir=str(self.data_dir))
+            logger.info("[HTTP] SessionRepository initialized")
+
+        # ModuleRepository (РЅСѓР¶РµРЅ РґР»СЏ СЃС‚Р°С‚РёСЃС‚РёРєРё РїРѕ С‚РёРїР°Рј Р·Р°РґР°С‡)
         self.module_repository = ModuleRepository(self.storage_service)
         logger.info("[HTTP] ModuleRepository initialized")
 
@@ -499,18 +1217,60 @@ class AppContextHeadless:
         self.import_export_service = None
         if IMPORT_EXPORT_AVAILABLE:
             try:
-                self.import_export_service = ImportExportService(self.storage_service)
+                self.import_export_service = ImportExportService(
+                    self.storage_service,
+                    asset_service=self.asset_service,
+                )
                 logger.info("[HTTP] ImportExportService initialized")
             except Exception as e:
                 logger.error("[HTTP] Failed to initialize ImportExportService: %s", e)
 
         # ComplexService
-        self.complex_service = ComplexService(data_dir=str(self.data_dir))
-        logger.info("[HTTP] ComplexService initialized")
+        if _runtime_mode() == "hosted_web":
+            self.complex_service = HostedComplexService(
+                data_dir=str(self.data_dir),
+                persistence_settings=self.persistence_runtime,
+            )
+            logger.info("[HTTP] HostedComplexService initialized")
+        else:
+            self.complex_service = ComplexService(data_dir=str(self.data_dir))
+            logger.info("[HTTP] ComplexService initialized")
 
         # TheoryService (shared rich-text notes in Delta format)
-        self.theory_service = TheoryService(data_dir=str(self.data_dir))
-        logger.info("[HTTP] TheoryService initialized")
+        if _runtime_mode() == "hosted_web":
+            self.theory_service = HostedTheoryService(
+                data_dir=str(self.data_dir),
+                persistence_settings=self.persistence_runtime,
+            )
+            logger.info("[HTTP] HostedTheoryService initialized")
+        else:
+            self.theory_service = TheoryService(data_dir=str(self.data_dir))
+            logger.info("[HTTP] TheoryService initialized")
+
+        if _runtime_mode() == "hosted_web":
+            self.catalog_service = HostedCatalogService(
+                data_dir=str(self.data_dir),
+                complex_service=self.complex_service,
+                theory_service=self.theory_service,
+                storage_service=self.storage_service,
+                persistence_settings=self.persistence_runtime,
+            )
+            logger.info("[HTTP] HostedCatalogService initialized")
+        else:
+            self.catalog_service = CatalogService(
+                data_dir=str(self.data_dir),
+                complex_service=self.complex_service,
+                theory_service=self.theory_service,
+                storage_service=self.storage_service,
+            )
+            logger.info("[HTTP] CatalogService initialized")
+
+        self.workspace_import_service = WorkspaceImportService(
+            complex_service=self.complex_service,
+            storage_service=self.storage_service,
+            theory_service=self.theory_service,
+        )
+        logger.info("[HTTP] WorkspaceImportService initialized as internal bridge only")
 
         # ComplexImportExportService
         self.complex_import_export_service = None
@@ -536,18 +1296,27 @@ class AppContextHeadless:
             complex_service=self.complex_service,
             user_progress_manager=self.progress_service.progress_manager,
             difficulty_manager=self.difficulty_manager,
+            session_repository=self.session_repository,
         )
         logger.info("[HTTP] AdaptiveSessionManager initialized")
 
         # User Service
-        self.user_service = UserService(data_dir=str(self.data_dir))
-        logger.info("[HTTP] UserService initialized")
+        if _runtime_mode() == "hosted_web":
+            self.user_service = HostedUserService(
+                data_dir=str(self.data_dir),
+                persistence_settings=self.persistence_runtime,
+            )
+            logger.info("[HTTP] HostedUserService initialized")
+        else:
+            self.user_service = UserService(data_dir=str(self.data_dir))
+            logger.info("[HTTP] UserService initialized")
 
         # Statistics Service (with EventBus for cache invalidation)
         self.statistics_service = StatisticsService(
             progress_service=self.progress_service,
             data_dir=str(self.data_dir),
             event_bus=self.event_bus,  # -> NEW: EventBus for automatic cache invalidation
+            persistence_settings=self.persistence_runtime,
         )
         logger.info("[HTTP] StatisticsService initialized")
         try:
@@ -563,6 +1332,7 @@ class AppContextHeadless:
                 self.calendar_service = CalendarService(
                     data_dir=str(self.data_dir),
                     user_id=self.user_id,
+                    persistence_settings=self.persistence_runtime,
                 )
                 logger.info("[HTTP] CalendarService initialized")
             except Exception as e:
@@ -602,6 +1372,40 @@ class AppContextHeadless:
             default_user_id=self.user_id,
         )
         logger.info("[HTTP] SessionAPI initialized")
+
+    def ensure_hosted_persistence_ready(self) -> None:
+        if _runtime_mode() != "hosted_web":
+            return
+        user_service = getattr(self, "user_service", None)
+        if user_service is not None and hasattr(user_service, "ensure_persistence_ready"):
+            user_service.ensure_persistence_ready()
+        storage_service = getattr(self, "storage_service", None)
+        if storage_service is not None and hasattr(storage_service, "ensure_persistence_ready"):
+            storage_service.ensure_persistence_ready()
+        asset_service = getattr(self, "asset_service", None)
+        if asset_service is not None and hasattr(asset_service, "ensure_persistence_ready"):
+            asset_service.ensure_persistence_ready()
+        session_repository = getattr(self, "session_repository", None)
+        if session_repository is not None and hasattr(session_repository, "ensure_persistence_ready"):
+            session_repository.ensure_persistence_ready()
+        progress_service = getattr(self, "progress_service", None)
+        if progress_service is not None and hasattr(progress_service, "ensure_hosted_persistence_ready"):
+            progress_service.ensure_hosted_persistence_ready()
+        statistics_service = getattr(self, "statistics_service", None)
+        if statistics_service is not None and hasattr(statistics_service, "ensure_hosted_persistence_ready"):
+            statistics_service.ensure_hosted_persistence_ready()
+        calendar_service = getattr(self, "calendar_service", None)
+        if calendar_service is not None and hasattr(calendar_service, "ensure_hosted_persistence_ready"):
+            calendar_service.ensure_hosted_persistence_ready()
+        complex_service = getattr(self, "complex_service", None)
+        if complex_service is not None and hasattr(complex_service, "ensure_persistence_ready"):
+            complex_service.ensure_persistence_ready()
+        theory_service = getattr(self, "theory_service", None)
+        if theory_service is not None and hasattr(theory_service, "ensure_persistence_ready"):
+            theory_service.ensure_persistence_ready()
+        catalog_service = getattr(self, "catalog_service", None)
+        if catalog_service is not None and hasattr(catalog_service, "ensure_persistence_ready"):
+            catalog_service.ensure_persistence_ready()
 
 
 # Single global headless context & API
@@ -656,6 +1460,7 @@ S3_UI_DIR = FRONTEND_ROOT / "S3"
 MAINSCREEN_UI_DIR = FRONTEND_ROOT / "MainScreen"
 WELCOME_UI_DIR = FRONTEND_ROOT / "Welcome"
 COMPLEXES_UI_DIR = FRONTEND_ROOT / "Complexes"
+CATALOG_UI_DIR = FRONTEND_ROOT / "Catalog"
 TESTUI_DIR = FRONTEND_ROOT / "TestUI"
 SEQUENCEUI_DIR = FRONTEND_ROOT / "SequenceUI"
 CLICKUI_DIR = FRONTEND_ROOT / "ClickUI"
@@ -678,10 +1483,37 @@ ASSETS_DIR = FRONTEND_ROOT / "assets"
 watchdog = WatchdogService(check_interval=2.0, hang_threshold=10.0, heartbeat_interval=60.0)
 
 app = Flask(__name__, static_folder=str(EDITOR_UI_DIR), static_url_path="/ui/editor")
-app.secret_key = secrets.token_hex(32)
+_configured_secret_key = str(os.environ.get("ACTRA_SECRET_KEY") or "").strip()
+if _configured_secret_key:
+    app.secret_key = _configured_secret_key
+else:
+    app.secret_key = secrets.token_hex(32)
+    logger.warning(
+        "[HTTP] ACTRA_SECRET_KEY is not set; using ephemeral Flask secret key. "
+        "Hosted sessions will be invalidated on restart."
+    )
+app.config["SESSION_COOKIE_NAME"] = (
+    str(os.environ.get("ACTRA_SESSION_COOKIE_NAME") or "actra_session").strip()
+    or "actra_session"
+)
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = (
+    str(os.environ.get("ACTRA_SESSION_COOKIE_SAMESITE") or "Lax").strip() or "Lax"
+)
+app.config["SESSION_COOKIE_SECURE"] = _env_bool(
+    "ACTRA_SESSION_COOKIE_SECURE",
+    _runtime_mode() == "hosted_web",
+)
+app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(
+    days=_env_int("ACTRA_AUTH_SESSION_TTL_DAYS", 30, minimum=1, maximum=365)
+)
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 # Initialize shared route context and register Blueprints
-from routes._context import init_context
+from routes._context import RequestBoundCtxServiceProxy, get_ctx, init_context
+from routes.auth_routes import auth_bp
+from routes.admin_routes import admin_bp
+from routes.assets_routes import assets_bp
 from routes.static_routes import static_bp
 from routes.users_routes import users_bp
 from routes.statistics_routes import statistics_bp
@@ -695,6 +1527,8 @@ from routes.ai_routes import ai_bp
 from routes.import_routes import import_bp
 from routes.misc_routes import misc_bp
 from routes.theory_center_routes import theory_center_bp
+from routes.workspace_import_routes import workspace_import_bp
+from routes.catalog_routes import catalog_bp
 
 init_context(
     _headless_app_ctx,
@@ -712,6 +1546,7 @@ init_context(
         "MAINSCREEN_UI_DIR": MAINSCREEN_UI_DIR,
         "WELCOME_UI_DIR": WELCOME_UI_DIR,
         "COMPLEXES_UI_DIR": COMPLEXES_UI_DIR,
+        "CATALOG_UI_DIR": CATALOG_UI_DIR,
         "TESTUI_DIR": TESTUI_DIR,
         "SEQUENCEUI_DIR": SEQUENCEUI_DIR,
         "CLICKUI_DIR": CLICKUI_DIR,
@@ -725,8 +1560,12 @@ init_context(
         "SETTINGS_UI_DIR": SETTINGS_UI_DIR,
         "ASSETS_DIR": ASSETS_DIR,
     },
+    utc_now_iso=lambda: datetime.utcnow().isoformat(timespec="seconds") + "Z",
 )
 app.register_blueprint(static_bp)
+app.register_blueprint(auth_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(assets_bp)
 app.register_blueprint(users_bp)
 app.register_blueprint(statistics_bp)
 app.register_blueprint(theories_bp)
@@ -739,13 +1578,15 @@ app.register_blueprint(ai_bp)
 app.register_blueprint(import_bp)
 app.register_blueprint(misc_bp)
 app.register_blueprint(theory_center_bp)
+app.register_blueprint(workspace_import_bp)
+app.register_blueprint(catalog_bp)
 
 # Register Calendar routes if available
 if calendar_service:
     try:
         create_calendar_routes(
             app,
-            calendar_service,
+            RequestBoundCtxServiceProxy("calendar_service"),
             complex_service=_headless_app_ctx.complex_service,
             session_api=_headless_app_ctx.session_api,
         )
@@ -755,7 +1596,9 @@ if calendar_service:
 
 # Make calendar_service available to session routes via context
 from routes._context import set_extra as _set_extra_cal
-_set_extra_cal("calendar_service", calendar_service)
+_set_extra_cal("calendar_service", RequestBoundCtxServiceProxy("calendar_service"))
+
+_hosted_ai_user_lock = threading.RLock()
 
 
 # --- Watchdog Hooks ---
@@ -770,6 +1613,84 @@ def watchdog_start():
 def watchdog_end(exception=None):
     req_id = id(request)
     watchdog.end_request(req_id)
+
+
+@app.before_request
+def _redirect_unauthenticated_hosted_pages():
+    if _runtime_mode() != "hosted_web":
+        return None
+
+    if request.method not in {"GET", "HEAD"}:
+        return None
+
+    path = str(request.path or "")
+    if not path or path == "/ui/welcome" or path.startswith("/Welcome/"):
+        return None
+    if not (path == "/catalog" or path.startswith("/catalog/") or path == "/ui" or path.startswith("/ui/")):
+        return None
+
+    last_segment = path.rsplit("/", 1)[-1]
+    if "." in last_segment and not last_segment.lower().endswith(".html"):
+        return None
+
+    from routes._context import get_authenticated_user_id, logout_authenticated_user
+
+    user_id = get_authenticated_user_id()
+    if not user_id:
+        return redirect("/ui/welcome")
+
+    user = _headless_app_ctx.user_service.get_user(user_id)
+    if user is None:
+        logout_authenticated_user()
+        return redirect("/ui/welcome")
+
+    return None
+
+
+@app.before_request
+def _sync_hosted_request_ai_context():
+    if _runtime_mode() != "hosted_web":
+        return None
+
+    from routes._context import get_authenticated_user_id, logout_authenticated_user
+
+    user_id = get_authenticated_user_id()
+    if not user_id:
+        return None
+
+    user = _headless_app_ctx.user_service.get_user(user_id)
+    if user is None:
+        logout_authenticated_user()
+        return jsonify({"ok": False, "error": "auth_user_not_found"}), 401
+
+    path = str(request.path or "")
+    needs_ai_sync = (
+        path.startswith("/api/editor/ai")
+        or path.startswith("/api/users/ai-keys")
+    )
+    if not needs_ai_sync:
+        return None
+
+    _hosted_ai_user_lock.acquire()
+    g._actra_hosted_ai_lock = True
+    try:
+        _headless_app_ctx._apply_user_ai_keys(user)
+    except Exception:
+        logout_authenticated_user()
+        g._actra_hosted_ai_lock = False
+        _hosted_ai_user_lock.release()
+        logger.exception("[HTTP] Failed to sync hosted AI context for user %s", user_id)
+        return jsonify({"ok": False, "error": "auth_ai_context_failed"}), 500
+
+    return None
+
+
+@app.teardown_request
+def _release_hosted_request_ai_context(exception=None):
+    _ = exception
+    if getattr(g, "_actra_hosted_ai_lock", False):
+        g._actra_hosted_ai_lock = False
+        _hosted_ai_user_lock.release()
 
 
 def _log_route_map():
@@ -833,7 +1754,14 @@ def handle_unhandled_exception(e):
 @app.route("/api/health", methods=["GET"])
 def health_check():
     """Lightweight health endpoint for ConnectionMonitor."""
-    return jsonify({"ok": True}), 200
+    return jsonify({"ok": True, "runtime_mode": _runtime_mode()}), 200
+
+
+@app.route("/api/ready", methods=["GET"])
+def readiness_check():
+    """Readiness endpoint for hosted runtime checks."""
+    payload = _build_runtime_health_payload()
+    return jsonify(payload), (200 if payload["ok"] else 503)
 
 
 if FLASK_DEBUG_ENABLED:
@@ -950,14 +1878,14 @@ def _get_user_dir(user_id: str) -> Path:
 
 LEGAL_DEFAULT_MANIFEST: Dict[str, Dict[str, str]] = {
     "terms": {
-        "title": "Условия пользования",
+        "title": "РЈСЃР»РѕРІРёСЏ РїРѕР»СЊР·РѕРІР°РЅРёСЏ",
         "version": "2026-02-15.1",
         "effective_at": "2026-02-15T00:00:00Z",
         "filename": "terms.md",
         "format": "markdown",
     },
     "privacy": {
-        "title": "Политика приватности",
+        "title": "РџРѕР»РёС‚РёРєР° РїСЂРёРІР°С‚РЅРѕСЃС‚Рё",
         "version": "2026-02-15.1",
         "effective_at": "2026-02-15T00:00:00Z",
         "filename": "privacy.md",
@@ -1117,6 +2045,13 @@ def _consent_path(user_id: str) -> Path:
 def _read_user_consent(user_id: str) -> Optional[Dict[str, Any]]:
     if not user_id:
         return None
+    hosted_user_service = getattr(_headless_app_ctx, "user_service", None)
+    if _runtime_mode() == "hosted_web" and hosted_user_service is not None and hasattr(hosted_user_service, "read_consent"):
+        try:
+            return hosted_user_service.read_consent(user_id)
+        except Exception as exc:
+            logger.warning("[HTTP] Hosted consent read failed for user %s: %s", user_id, exc)
+            return None
     path = _consent_path(user_id)
     if not path.exists():
         return None
@@ -1138,6 +2073,15 @@ def _write_user_consent(
     *,
     source: str = "unknown",
 ) -> Dict[str, Any]:
+    hosted_user_service = getattr(_headless_app_ctx, "user_service", None)
+    if _runtime_mode() == "hosted_web" and hosted_user_service is not None and hasattr(hosted_user_service, "write_consent"):
+        return hosted_user_service.write_consent(
+            user_id,
+            terms_version,
+            privacy_version,
+            source=source,
+        )
+
     user_dir = _get_user_dir(user_id)
     user_dir.mkdir(parents=True, exist_ok=True)
     path = _consent_path(user_id)
@@ -2082,7 +3026,736 @@ def _send_feedback_test_email(
     }
 
 
-# ── Register misc helpers for routes/misc_routes.py ───────────────────
+def _auth_email_settings() -> Dict[str, Any]:
+    """Load SMTP settings for hosted auth emails without leaking feedback sender fallbacks."""
+    smtp_user = str(os.environ.get("ACTRA_AUTH_SMTP_USER") or "").strip()
+    from_email = str(os.environ.get("ACTRA_AUTH_SMTP_FROM") or "").strip() or smtp_user
+
+    return {
+        "enabled": _env_bool(
+            "ACTRA_AUTH_EMAIL_ENABLED",
+            _env_bool("ACTRA_FEEDBACK_EMAIL_ENABLED", True),
+        ),
+        "host": str(os.environ.get("ACTRA_AUTH_SMTP_HOST") or "").strip(),
+        "port": _env_int("ACTRA_AUTH_SMTP_PORT", 587),
+        "username": smtp_user,
+        "password": str(os.environ.get("ACTRA_AUTH_SMTP_PASSWORD") or ""),
+        "from_email": from_email,
+        "use_tls": _env_bool("ACTRA_AUTH_SMTP_USE_TLS", True),
+        "use_ssl": _env_bool("ACTRA_AUTH_SMTP_USE_SSL", False),
+        "timeout_sec": _env_float("ACTRA_AUTH_SMTP_TIMEOUT_SEC", 15.0),
+        "public_base_url": str(
+            os.environ.get("ACTRA_AUTH_PUBLIC_BASE_URL")
+            or os.environ.get("ACTRA_PUBLIC_BASE_URL")
+            or ""
+        ).strip(),
+    }
+
+
+def _validate_auth_email_settings(settings: Dict[str, Any]) -> List[str]:
+    missing: List[str] = []
+    if not settings.get("host"):
+        missing.append("ACTRA_AUTH_SMTP_HOST")
+    if not settings.get("from_email"):
+        missing.append("ACTRA_AUTH_SMTP_FROM or ACTRA_AUTH_SMTP_USER")
+    return missing
+
+
+def _resolve_auth_public_base_url(*, request_base_url: Optional[str] = None) -> str:
+    settings = _auth_email_settings()
+    base_url = str(settings.get("public_base_url") or request_base_url or "").strip()
+    if not base_url and has_request_context():
+        base_url = str(request.host_url or "").strip()
+    return base_url.rstrip("/")
+
+
+def _build_auth_verify_email_url(token: str, *, request_base_url: Optional[str] = None) -> str:
+    base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
+    if not base_url:
+        raise ValueError("missing_base_url")
+    return f"{base_url}/ui/welcome?verify_email_token={quote(str(token or '').strip())}"
+
+
+def _auth_email_display_name(user: Optional[Any]) -> str:
+    return str(getattr(user, "name", "") or "").strip()
+
+
+def _auth_email_display_email(user: Optional[Any]) -> str:
+    return str(getattr(user, "email", "") or "").strip()
+
+
+def _build_auth_email_greeting(user: Optional[Any]) -> str:
+    user_name = _auth_email_display_name(user)
+    if user_name:
+        return f"\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435, {user_name}!"
+    return "\u0417\u0434\u0440\u0430\u0432\u0441\u0442\u0432\u0443\u0439\u0442\u0435!"
+
+
+AUTH_EMAIL_LOGO_CID = "actra-logo"
+
+
+def _load_auth_email_logo_bytes() -> bytes:
+    logo_path = ASSETS_DIR / "logo-email.png"
+    try:
+        return logo_path.read_bytes()
+    except Exception:
+        return b""
+
+
+def _attach_auth_email_logo(msg: EmailMessage) -> bool:
+    logo_bytes = _load_auth_email_logo_bytes()
+    if not logo_bytes:
+        return False
+    try:
+        html_part = msg.get_payload()[-1]
+        html_part.add_related(
+            logo_bytes,
+            maintype="image",
+            subtype="png",
+            cid=f"<{AUTH_EMAIL_LOGO_CID}>",
+            filename="actra-logo.png",
+            disposition="inline",
+        )
+        return True
+    except Exception:
+        logger.exception("[HTTP] Failed to attach auth email logo")
+        return False
+
+
+def _build_auth_email_plain_body(
+    *,
+    user: Optional[Any],
+    intro_lines: List[str],
+    action_label: str,
+    action_url: str,
+    meta_rows: List[Tuple[str, str]],
+    closing_note: str,
+) -> str:
+    lines: List[str] = [_build_auth_email_greeting(user), ""]
+    lines.extend([line for line in intro_lines if str(line or "").strip()])
+    lines.extend(["", f"{action_label}:", action_url])
+
+    if meta_rows:
+        lines.append("")
+        for label, value in meta_rows:
+            lines.append(f"{label}: {value or '-'}")
+
+    lines.extend(
+        [
+            "",
+            closing_note,
+            "",
+            "\u042d\u0442\u043e \u043f\u0438\u0441\u044c\u043c\u043e \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0438 \u0441\u0435\u0440\u0432\u0438\u0441\u043e\u043c ACTRA.",
+        ]
+    )
+    return "\n".join(lines)
+
+
+def _build_auth_email_html_body(
+    *,
+    user: Optional[Any],
+    preview_text: str,
+    badge: str,
+    title: str,
+    intro_lines: List[str],
+    action_label: str,
+    action_url: str,
+    meta_rows: List[Tuple[str, str]],
+    closing_note: str,
+) -> str:
+    greeting = escape(_build_auth_email_greeting(user))
+    preview_html = escape(preview_text)
+    badge_html = escape(badge)
+    title_html = escape(title)
+    action_label_html = escape(action_label)
+    action_url_html = escape(action_url, quote=True)
+    closing_note_html = escape(closing_note)
+
+    logo_markup = (
+        f'<img src="cid:{AUTH_EMAIL_LOGO_CID}" alt="ACTRA" width="150" '
+        'style="display:block;width:150px;max-width:100%;height:auto;margin:0 auto;border:0;">'
+    )
+    if not _load_auth_email_logo_bytes():
+        logo_markup = (
+            '<div style="font-size:30px;line-height:1;font-weight:900;letter-spacing:0.08em;'
+            'color:#2f241d;">ACTRA</div>'
+        )
+
+    intro_blocks = "".join(
+        (
+            f'<p style="margin:0 0 14px 0;font-size:16px;line-height:1.65;'
+            f'color:#4e4035;">{escape(line)}</p>'
+        )
+        for line in intro_lines
+        if str(line or "").strip()
+    )
+
+    meta_blocks = "".join(
+        (
+            '<tr>'
+            f'<td style="padding:0 12px 8px 0;font-size:12px;line-height:1.5;color:#8b6f5c;'
+            f'font-weight:700;vertical-align:top;">{escape(label)}</td>'
+            f'<td style="padding:0 0 8px 0;font-size:13px;line-height:1.5;color:#2f241d;'
+            f'vertical-align:top;">{escape(value or "-")}</td>'
+            '</tr>'
+        )
+        for label, value in meta_rows
+    )
+
+    meta_section = ""
+    if meta_blocks:
+        meta_section = (
+            '<div style="margin-top:18px;padding-top:14px;border-top:1px solid #f0e3d8;">'
+            '<table role="presentation" cellpadding="0" cellspacing="0" border="0">'
+            f"{meta_blocks}"
+            '</table>'
+            '</div>'
+        )
+
+    return (
+        "<!DOCTYPE html>"
+        '<html lang="ru">'
+        '<head>'
+        '<meta http-equiv="Content-Type" content="text/html; charset=utf-8">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+        f"<title>{title_html}</title>"
+        "</head>"
+        '<body style="margin:0;padding:0;background:#f4ede6;">'
+        f'<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">{preview_html}</div>'
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+        'style="background:#f4ede6;border-collapse:collapse;">'
+        '<tr>'
+        '<td align="center" style="padding:28px 16px;">'
+        '<table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" '
+        'style="max-width:680px;border-collapse:collapse;">'
+        '<tr>'
+        '<td style="padding:0 0 16px 0;text-align:center;">'
+        '<div style="display:inline-flex;align-items:center;justify-content:center;'
+        'padding:10px 18px;border-radius:999px;background:#fff7f1;border:1px solid #edd9cb;'
+        'font-size:12px;line-height:1.2;font-weight:800;letter-spacing:0.12em;'
+        'text-transform:uppercase;color:#a45728;">'
+        f"{badge_html}"
+        "</div>"
+        "</td>"
+        "</tr>"
+        '<tr>'
+        '<td style="background:#ffffff;border:1px solid #ead9cc;border-radius:28px;'
+        'padding:34px 32px 30px 32px;box-shadow:0 18px 44px rgba(84,52,28,0.08);">'
+        f'<div style="margin:0 0 22px 0;text-align:center;">{logo_markup}</div>'
+        f'<div style="margin:0 0 10px 0;font-size:15px;line-height:1.6;color:#4e4035;">{greeting}</div>'
+        f'<h1 style="margin:0 0 18px 0;font-size:30px;line-height:1.15;font-weight:900;color:#2f241d;">{title_html}</h1>'
+        f"{intro_blocks}"
+        '<div style="margin:28px 0 22px 0;text-align:center;">'
+        f'<a href="{action_url_html}" '
+        'style="display:inline-block;padding:16px 24px;border-radius:16px;background:#a94f1d;'
+        'color:#ffffff;text-decoration:none;font-size:16px;line-height:1.2;font-weight:800;">'
+        f"{action_label_html}"
+        "</a>"
+        "</div>"
+        '<div style="padding:18px 20px;border-radius:18px;background:#fcf8f4;border:1px solid #ead9cc;">'
+        '<div style="margin:0 0 8px 0;font-size:12px;line-height:1.4;font-weight:800;'
+        'letter-spacing:0.12em;text-transform:uppercase;color:#a46b48;">'
+        '\u0415\u0441\u043b\u0438 \u043a\u043d\u043e\u043f\u043a\u0430 \u043d\u0435 \u0441\u0440\u0430\u0431\u043e\u0442\u0430\u043b\u0430'
+        "</div>"
+        '<div style="margin:0;font-size:14px;line-height:1.7;color:#4e4035;word-break:break-word;">'
+        f'<a href="{action_url_html}" style="color:#a94f1d;text-decoration:underline;">{escape(action_url)}</a>'
+        "</div>"
+        "</div>"
+        f"{meta_section}"
+        '<div style="margin-top:28px;padding-top:18px;border-top:1px solid #f0e3d8;'
+        'font-size:13px;line-height:1.7;color:#76665b;">'
+        f"{closing_note_html}"
+        '<br><br>'
+        '\u042d\u0442\u043e \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u043e\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0441\u0435\u0440\u0432\u0438\u0441\u0430 ACTRA.'
+        "</div>"
+        "</td>"
+        "</tr>"
+        '<tr>'
+        '<td style="padding:16px 18px 0 18px;text-align:center;font-size:12px;line-height:1.6;color:#8c7d72;">'
+        "ACTRA"
+        "</td>"
+        "</tr>"
+        "</table>"
+        "</td>"
+        "</tr>"
+        "</table>"
+        "</body>"
+        "</html>"
+    )
+
+
+def _build_auth_verification_email_subject(user: Optional[Any]) -> str:
+    user_name = _auth_email_display_name(user)
+    if user_name:
+        return f"ACTRA: \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043f\u043e\u0447\u0442\u0443 \u0434\u043b\u044f {user_name}"
+    return "ACTRA: \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u0432\u0430\u0448 email"
+
+
+def _build_auth_verification_email_body(user: Optional[Any], verify_url: str) -> str:
+    email = _auth_email_display_email(user)
+    return _build_auth_email_plain_body(
+        user=user,
+        intro_lines=[
+            "\u0427\u0442\u043e\u0431\u044b \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u044e \u0432 ACTRA, \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u0432\u0430\u0448 email \u043f\u043e \u0441\u0441\u044b\u043b\u043a\u0435 \u043d\u0438\u0436\u0435.",
+        ],
+        action_label="\u0421\u0441\u044b\u043b\u043a\u0430 \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f",
+        action_url=verify_url,
+        meta_rows=[
+            ("\u0410\u0434\u0440\u0435\u0441", email or "-"),
+            ("\u0421\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", "24 \u0447\u0430\u0441\u0430"),
+        ],
+        closing_note="\u0415\u0441\u043b\u0438 \u0432\u044b \u043d\u0435 \u0441\u043e\u0437\u0434\u0430\u0432\u0430\u043b\u0438 \u0430\u043a\u043a\u0430\u0443\u043d\u0442 \u0432 ACTRA, \u043f\u0440\u043e\u0441\u0442\u043e \u043f\u0440\u043e\u0438\u0433\u043d\u043e\u0440\u0438\u0440\u0443\u0439\u0442\u0435 \u044d\u0442\u043e \u043f\u0438\u0441\u044c\u043c\u043e.",
+    )
+
+
+def _build_auth_verification_email_html(user: Optional[Any], verify_url: str) -> str:
+    email = _auth_email_display_email(user)
+    return _build_auth_email_html_body(
+        user=user,
+        preview_text="\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 email, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u044c \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u044e \u0432 ACTRA.",
+        badge="\u041d\u043e\u0432\u044b\u0439 \u0430\u043a\u043a\u0430\u0443\u043d\u0442",
+        title="\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 email",
+        intro_lines=[
+            "\u041c\u044b \u043f\u043e\u0447\u0442\u0438 \u0433\u043e\u0442\u043e\u0432\u044b \u0432\u043f\u0443\u0441\u0442\u0438\u0442\u044c \u0432\u0430\u0441 \u0432 ACTRA.",
+            "\u0414\u043b\u044f \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043d\u0438\u044f \u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0430\u0446\u0438\u0438 \u043d\u0443\u0436\u043d\u043e \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0430\u0434\u0440\u0435\u0441 \u044d\u043b\u0435\u043a\u0442\u0440\u043e\u043d\u043d\u043e\u0439 \u043f\u043e\u0447\u0442\u044b.",
+        ],
+        action_label="\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c email",
+        action_url=verify_url,
+        meta_rows=[
+            ("\u0410\u0434\u0440\u0435\u0441", email or "-"),
+            ("\u0421\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", "24 \u0447\u0430\u0441\u0430"),
+        ],
+        closing_note="\u0415\u0441\u043b\u0438 \u044d\u0442\u043e \u043d\u0435 \u0432\u044b, \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0430\u0436\u0438\u043c\u0430\u0442\u044c \u043d\u0435 \u043d\u0443\u0436\u043d\u043e.",
+    )
+
+
+def _send_auth_verification_email(
+    *, to_email: str, verify_url: str, user: Optional[Any] = None
+) -> Dict[str, Any]:
+    settings = _auth_email_settings()
+    if not bool(settings.get("enabled")):
+        return {"sent": False, "reason": "disabled"}
+
+    missing = _validate_auth_email_settings(settings)
+    if missing:
+        return {"sent": False, "reason": "not_configured", "missing": missing}
+
+    msg = EmailMessage()
+    msg["Subject"] = _build_auth_verification_email_subject(user)
+    msg["From"] = settings["from_email"]
+    msg["To"] = str(to_email or "").strip()
+    msg["Date"] = formatdate(localtime=False)
+    msg["X-ACTRA-Auth-Email"] = "verify-email"
+    msg.set_content(_build_auth_verification_email_body(user, verify_url), subtype="plain", charset="utf-8")
+    msg.add_alternative(_build_auth_verification_email_html(user, verify_url), subtype="html", charset="utf-8")
+    _attach_auth_email_logo(msg)
+
+    try:
+        _smtp_send_email(settings, msg)
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to send auth verification email: %s", exc)
+        return {"sent": False, "reason": "send_failed"}
+
+    return {
+        "sent": True,
+        "to": [str(to_email or "").strip()],
+        "from": settings["from_email"],
+        "host": settings["host"],
+        "port": int(settings["port"]),
+        "use_tls": bool(settings.get("use_tls")) and not bool(settings.get("use_ssl")),
+        "use_ssl": bool(settings.get("use_ssl")),
+        "verify_url": verify_url,
+    }
+
+
+def _issue_auth_verification_email(
+    user: Any, *, request_base_url: Optional[str] = None
+) -> Dict[str, Any]:
+    user_email = str(getattr(user, "email", "") or "").strip()
+    if not user_email:
+        return {"sent": False, "reason": "email_missing"}
+    if bool(getattr(user, "email_verified_at", None)):
+        return {"sent": False, "reason": "already_verified"}
+
+    settings = _auth_email_settings()
+    if not bool(settings.get("enabled")):
+        return {"sent": False, "reason": "disabled"}
+
+    missing = _validate_auth_email_settings(settings)
+    if missing:
+        return {"sent": False, "reason": "not_configured", "missing": missing}
+
+    try:
+        user_service = get_ctx().user_service
+        token_payload = user_service.create_email_verification_token(
+            user.user_id,
+            meta={"channel": "email"},
+        )
+        raw_token = str(token_payload.get("token") or "").strip()
+        verify_url = _build_auth_verify_email_url(
+            raw_token,
+            request_base_url=request_base_url,
+        )
+    except ValueError as exc:
+        reason = str(exc or "issue_failed").strip() or "issue_failed"
+        if reason == "missing_base_url":
+            return {"sent": False, "reason": reason}
+        logger.warning("[HTTP] Cannot issue auth verification email: %s", reason)
+        return {"sent": False, "reason": reason}
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to issue auth verification email: %s", exc)
+        return {"sent": False, "reason": "issue_failed"}
+
+    status = _send_auth_verification_email(
+        to_email=user_email,
+        verify_url=verify_url,
+        user=user,
+    )
+    if not bool(status.get("sent")):
+        return status
+
+    if not user_service.mark_email_verification_sent(user.user_id):
+        logger.warning(
+            "[HTTP] Verification email sent but failed to persist sent timestamp for user %s",
+            getattr(user, "user_id", ""),
+        )
+
+    merged = dict(status)
+    merged["token_id"] = token_payload.get("token_id")
+    merged["expires_at"] = token_payload.get("expires_at")
+    return merged
+
+
+def _build_auth_pending_email_verify_url(token: str, *, request_base_url: Optional[str] = None) -> str:
+    base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
+    if not base_url:
+        raise ValueError("missing_base_url")
+    return f"{base_url}/ui/settings?pending_email_token={quote(str(token or '').strip())}"
+
+
+def _build_auth_pending_email_verification_subject(user: Optional[Any]) -> str:
+    user_name = _auth_email_display_name(user)
+    if user_name:
+        return f"ACTRA: \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u044b \u0434\u043b\u044f {user_name}"
+    return "ACTRA: \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u0435 \u0441\u043c\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u044b"
+
+
+def _build_auth_pending_email_verification_body(user: Optional[Any], verify_url: str, pending_email: str) -> str:
+    current_email = _auth_email_display_email(user)
+    return _build_auth_email_plain_body(
+        user=user,
+        intro_lines=[
+            "\u0427\u0442\u043e\u0431\u044b \u0441\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u043e\u0447\u0442\u0443 \u0432 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0435 ACTRA, \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441.",
+        ],
+        action_label="\u0421\u0441\u044b\u043b\u043a\u0430 \u0434\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f",
+        action_url=verify_url,
+        meta_rows=[
+            ("\u0422\u0435\u043a\u0443\u0449\u0430\u044f \u043f\u043e\u0447\u0442\u0430", current_email or "-"),
+            ("\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430", pending_email or "-"),
+            ("\u0421\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", "24 \u0447\u0430\u0441\u0430"),
+        ],
+        closing_note="\u0415\u0441\u043b\u0438 \u0432\u044b \u043d\u0435 \u0437\u0430\u043f\u0440\u0430\u0448\u0438\u0432\u0430\u043b\u0438 \u0441\u043c\u0435\u043d\u0443 \u043f\u043e\u0447\u0442\u044b, \u0432 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0435 \u043e\u0441\u0442\u0430\u043d\u0435\u0442\u0441\u044f \u0442\u0435\u043a\u0443\u0449\u0438\u0439 email.",
+    )
+
+
+def _build_auth_pending_email_verification_html(
+    user: Optional[Any], verify_url: str, pending_email: str
+) -> str:
+    current_email = _auth_email_display_email(user)
+    return _build_auth_email_html_body(
+        user=user,
+        preview_text="\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 email \u0434\u043b\u044f \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 ACTRA.",
+        badge="\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430",
+        title="\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 email",
+        intro_lines=[
+            "\u0412 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0435 ACTRA \u0437\u0430\u043f\u0440\u043e\u0448\u0435\u043d\u0430 \u0441\u043c\u0435\u043d\u0430 \u043f\u043e\u0447\u0442\u044b.",
+            "\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u0430\u0434\u0440\u0435\u0441, \u0447\u0442\u043e\u0431\u044b \u0438\u0437\u043c\u0435\u043d\u0435\u043d\u0438\u0435 \u0432\u0441\u0442\u0443\u043f\u0438\u043b\u043e \u0432 \u0441\u0438\u043b\u0443.",
+        ],
+        action_label="\u041f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u043d\u043e\u0432\u044b\u0439 email",
+        action_url=verify_url,
+        meta_rows=[
+            ("\u0422\u0435\u043a\u0443\u0449\u0430\u044f \u043f\u043e\u0447\u0442\u0430", current_email or "-"),
+            ("\u041d\u043e\u0432\u0430\u044f \u043f\u043e\u0447\u0442\u0430", pending_email or "-"),
+            ("\u0421\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", "24 \u0447\u0430\u0441\u0430"),
+        ],
+        closing_note="\u0415\u0441\u043b\u0438 \u044d\u0442\u043e \u043d\u0435 \u0432\u044b, \u043d\u0438\u0447\u0435\u0433\u043e \u043d\u0430\u0436\u0438\u043c\u0430\u0442\u044c \u043d\u0435 \u043d\u0443\u0436\u043d\u043e, \u0438 \u043c\u044b \u043e\u0441\u0442\u0430\u0432\u0438\u043c \u0441\u0442\u0430\u0440\u044b\u0439 \u0430\u0434\u0440\u0435\u0441.",
+    )
+
+
+def _send_auth_pending_email_verification_email(
+    *, to_email: str, verify_url: str, user: Optional[Any] = None
+) -> Dict[str, Any]:
+    settings = _auth_email_settings()
+    if not bool(settings.get("enabled")):
+        return {"sent": False, "reason": "disabled"}
+
+    missing = _validate_auth_email_settings(settings)
+    if missing:
+        return {"sent": False, "reason": "not_configured", "missing": missing}
+
+    msg = EmailMessage()
+    msg["Subject"] = _build_auth_pending_email_verification_subject(user)
+    msg["From"] = settings["from_email"]
+    msg["To"] = str(to_email or "").strip()
+    msg["Date"] = formatdate(localtime=False)
+    msg["X-ACTRA-Auth-Email"] = "change-email"
+    msg.set_content(
+        _build_auth_pending_email_verification_body(user, verify_url, str(to_email or "").strip()),
+        subtype="plain",
+        charset="utf-8",
+    )
+    msg.add_alternative(
+        _build_auth_pending_email_verification_html(user, verify_url, str(to_email or "").strip()),
+        subtype="html",
+        charset="utf-8",
+    )
+    _attach_auth_email_logo(msg)
+
+    try:
+        _smtp_send_email(settings, msg)
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to send pending email verification email: %s", exc)
+        return {"sent": False, "reason": "send_failed"}
+
+    return {
+        "sent": True,
+        "to": [str(to_email or "").strip()],
+        "from": settings["from_email"],
+        "host": settings["host"],
+        "port": int(settings["port"]),
+        "use_tls": bool(settings.get("use_tls")) and not bool(settings.get("use_ssl")),
+        "use_ssl": bool(settings.get("use_ssl")),
+        "verify_url": verify_url,
+    }
+
+
+def _issue_auth_pending_email_verification_email(
+    user: Any, *, request_base_url: Optional[str] = None
+) -> Dict[str, Any]:
+    pending_email = str(getattr(user, "pending_email", "") or "").strip()
+    if not pending_email:
+        return {"sent": False, "reason": "pending_email_missing"}
+
+    settings = _auth_email_settings()
+    if not bool(settings.get("enabled")):
+        return {"sent": False, "reason": "disabled"}
+
+    missing = _validate_auth_email_settings(settings)
+    if missing:
+        return {"sent": False, "reason": "not_configured", "missing": missing}
+
+    try:
+        user_service = get_ctx().user_service
+        token_payload = user_service.create_email_verification_token(
+            user.user_id,
+            purpose="change_email",
+            meta={"channel": "email", "source": "pending_email_change"},
+            email_override=pending_email,
+        )
+        raw_token = str(token_payload.get("token") or "").strip()
+        verify_url = _build_auth_pending_email_verify_url(
+            raw_token,
+            request_base_url=request_base_url,
+        )
+    except ValueError as exc:
+        reason = str(exc or "issue_failed").strip() or "issue_failed"
+        if reason == "missing_base_url":
+            return {"sent": False, "reason": reason}
+        logger.warning("[HTTP] Cannot issue pending email verification: %s", reason)
+        return {"sent": False, "reason": reason}
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to issue pending email verification: %s", exc)
+        return {"sent": False, "reason": "issue_failed"}
+
+    status = _send_auth_pending_email_verification_email(
+        to_email=pending_email,
+        verify_url=verify_url,
+        user=user,
+    )
+    if not bool(status.get("sent")):
+        return status
+
+    if not user_service.mark_pending_email_verification_sent(user.user_id):
+        logger.warning(
+            "[HTTP] Pending email verification sent but failed to persist sent timestamp for user %s",
+            getattr(user, "user_id", ""),
+        )
+
+    merged = dict(status)
+    merged["token_id"] = token_payload.get("token_id")
+    merged["expires_at"] = token_payload.get("expires_at")
+    return merged
+
+
+def _build_auth_password_reset_url(token: str, *, request_base_url: Optional[str] = None) -> str:
+    base_url = _resolve_auth_public_base_url(request_base_url=request_base_url)
+    if not base_url:
+        raise ValueError("missing_base_url")
+    return f"{base_url}/ui/welcome?reset_password_token={quote(str(token or '').strip())}"
+
+
+def _build_auth_password_reset_subject(user: Optional[Any]) -> str:
+    user_name = _auth_email_display_name(user)
+    if user_name:
+        return f"ACTRA: \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u0430\u0440\u043e\u043b\u044f \u0434\u043b\u044f {user_name}"
+    return "ACTRA: \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u043f\u0430\u0440\u043e\u043b\u044f"
+
+
+def _build_auth_password_reset_body(user: Optional[Any], reset_url: str) -> str:
+    email = _auth_email_display_email(user)
+    return _build_auth_email_plain_body(
+        user=user,
+        intro_lines=[
+            "\u0427\u0442\u043e\u0431\u044b \u0437\u0430\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0434\u043b\u044f \u0432\u0445\u043e\u0434\u0430 \u0432 ACTRA, \u043e\u0442\u043a\u0440\u043e\u0439\u0442\u0435 \u0441\u0441\u044b\u043b\u043a\u0443 \u043d\u0438\u0436\u0435.",
+        ],
+        action_label="\u0421\u0441\u044b\u043b\u043a\u0430 \u0434\u043b\u044f \u0441\u0431\u0440\u043e\u0441\u0430 \u043f\u0430\u0440\u043e\u043b\u044f",
+        action_url=reset_url,
+        meta_rows=[
+            ("\u0410\u043a\u043a\u0430\u0443\u043d\u0442", email or "-"),
+            ("\u0421\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", "1 \u0447\u0430\u0441"),
+        ],
+        closing_note="\u0415\u0441\u043b\u0438 \u0432\u044b \u043d\u0435 \u0437\u0430\u043f\u0440\u0430\u0448\u0438\u0432\u0430\u043b\u0438 \u0441\u0431\u0440\u043e\u0441 \u043f\u0430\u0440\u043e\u043b\u044f, \u043f\u0440\u043e\u0441\u0442\u043e \u043f\u0440\u043e\u0438\u0433\u043d\u043e\u0440\u0438\u0440\u0443\u0439\u0442\u0435 \u044d\u0442\u043e \u043f\u0438\u0441\u044c\u043c\u043e.",
+    )
+
+
+def _build_auth_password_reset_html(user: Optional[Any], reset_url: str) -> str:
+    email = _auth_email_display_email(user)
+    return _build_auth_email_html_body(
+        user=user,
+        preview_text="\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0435 \u0441\u0431\u0440\u043e\u0441 \u043f\u0430\u0440\u043e\u043b\u044f \u0434\u043b\u044f \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 ACTRA.",
+        badge="\u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c",
+        title="\u0421\u0431\u0440\u043e\u0441\u044c\u0442\u0435 \u043f\u0430\u0440\u043e\u043b\u044c",
+        intro_lines=[
+            "\u041c\u044b \u043f\u043e\u043b\u0443\u0447\u0438\u043b\u0438 \u0437\u0430\u043f\u0440\u043e\u0441 \u043d\u0430 \u0432\u043e\u0441\u0441\u0442\u0430\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435 \u0434\u043e\u0441\u0442\u0443\u043f\u0430 \u043a ACTRA.",
+            "\u041d\u0430\u0436\u043c\u0438\u0442\u0435 \u043d\u0430 \u043a\u043d\u043e\u043f\u043a\u0443 \u043d\u0438\u0436\u0435, \u0447\u0442\u043e\u0431\u044b \u0437\u0430\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.",
+        ],
+        action_label="\u0417\u0430\u0434\u0430\u0442\u044c \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c",
+        action_url=reset_url,
+        meta_rows=[
+            ("\u0410\u043a\u043a\u0430\u0443\u043d\u0442", email or "-"),
+            ("\u0421\u0440\u043e\u043a \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u044f", "1 \u0447\u0430\u0441"),
+        ],
+        closing_note="\u0415\u0441\u043b\u0438 \u044d\u0442\u043e \u043d\u0435 \u0432\u044b, \u043f\u0440\u043e\u0441\u0442\u043e \u043f\u0440\u043e\u0438\u0433\u043d\u043e\u0440\u0438\u0440\u0443\u0439\u0442\u0435 \u043f\u0438\u0441\u044c\u043c\u043e \u0438 \u043e\u0441\u0442\u0430\u0432\u044c\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.",
+    )
+
+
+def _send_auth_password_reset_email(
+    *, to_email: str, reset_url: str, user: Optional[Any] = None
+) -> Dict[str, Any]:
+    settings = _auth_email_settings()
+    if not bool(settings.get("enabled")):
+        return {"sent": False, "reason": "disabled"}
+
+    missing = _validate_auth_email_settings(settings)
+    if missing:
+        return {"sent": False, "reason": "not_configured", "missing": missing}
+
+    msg = EmailMessage()
+    msg["Subject"] = _build_auth_password_reset_subject(user)
+    msg["From"] = settings["from_email"]
+    msg["To"] = str(to_email or "").strip()
+    msg["Date"] = formatdate(localtime=False)
+    msg["X-ACTRA-Auth-Email"] = "reset-password"
+    msg.set_content(_build_auth_password_reset_body(user, reset_url), subtype="plain", charset="utf-8")
+    msg.add_alternative(_build_auth_password_reset_html(user, reset_url), subtype="html", charset="utf-8")
+    _attach_auth_email_logo(msg)
+
+    try:
+        _smtp_send_email(settings, msg)
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to send password reset email: %s", exc)
+        return {"sent": False, "reason": "send_failed"}
+
+    return {
+        "sent": True,
+        "to": [str(to_email or "").strip()],
+        "from": settings["from_email"],
+        "host": settings["host"],
+        "port": int(settings["port"]),
+        "use_tls": bool(settings.get("use_tls")) and not bool(settings.get("use_ssl")),
+        "use_ssl": bool(settings.get("use_ssl")),
+        "reset_url": reset_url,
+    }
+
+
+def _issue_auth_password_reset_email(
+    user: Any, *, request_base_url: Optional[str] = None
+) -> Dict[str, Any]:
+    user_email = str(getattr(user, "email", "") or "").strip()
+    if not user_email:
+        return {"sent": False, "reason": "email_missing"}
+
+    settings = _auth_email_settings()
+    if not bool(settings.get("enabled")):
+        return {"sent": False, "reason": "disabled"}
+
+    missing = _validate_auth_email_settings(settings)
+    if missing:
+        return {"sent": False, "reason": "not_configured", "missing": missing}
+
+    try:
+        user_service = get_ctx().user_service
+        ttl_seconds = int(
+            getattr(user_service, "PASSWORD_RESET_TOKEN_TTL_SECONDS", 60 * 60) or 60 * 60
+        )
+        token_payload = user_service.create_email_verification_token(
+            user.user_id,
+            purpose="reset_password",
+            ttl_seconds=ttl_seconds,
+            meta={"channel": "email", "source": "forgot_password"},
+        )
+        raw_token = str(token_payload.get("token") or "").strip()
+        reset_url = _build_auth_password_reset_url(
+            raw_token,
+            request_base_url=request_base_url,
+        )
+    except ValueError as exc:
+        reason = str(exc or "issue_failed").strip() or "issue_failed"
+        if reason == "missing_base_url":
+            return {"sent": False, "reason": reason}
+        logger.warning("[HTTP] Cannot issue password reset email: %s", reason)
+        return {"sent": False, "reason": reason}
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to issue password reset email: %s", exc)
+        return {"sent": False, "reason": "issue_failed"}
+
+    status = _send_auth_password_reset_email(
+        to_email=user_email,
+        reset_url=reset_url,
+        user=user,
+    )
+    if not bool(status.get("sent")):
+        return status
+
+    merged = dict(status)
+    merged["token_id"] = token_payload.get("token_id")
+    merged["expires_at"] = token_payload.get("expires_at")
+    return merged
+
+
+from routes._context import get_extra as _get_extra_server_helpers  # noqa: E402
+from routes._context import set_extra as _set_extra_server_helpers  # noqa: E402
+
+_server_helpers = dict(_get_extra_server_helpers("server_helpers", {}))
+_server_helpers.update(
+    {
+        "auth_email_settings": _auth_email_settings,
+        "validate_auth_email_settings": _validate_auth_email_settings,
+        "build_auth_verify_email_url": _build_auth_verify_email_url,
+        "build_auth_pending_email_verify_url": _build_auth_pending_email_verify_url,
+        "build_auth_password_reset_url": _build_auth_password_reset_url,
+        "send_auth_verification_email": _send_auth_verification_email,
+        "send_auth_pending_email_verification_email": _send_auth_pending_email_verification_email,
+        "send_auth_password_reset_email": _send_auth_password_reset_email,
+        "issue_auth_verification_email": _issue_auth_verification_email,
+        "issue_auth_pending_email_verification_email": _issue_auth_pending_email_verification_email,
+        "issue_auth_password_reset_email": _issue_auth_password_reset_email,
+    }
+)
+_set_extra_server_helpers("server_helpers", _server_helpers)
+
+
+# в”Ђв”Ђ Register misc helpers for routes/misc_routes.py в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 from routes._context import set_extra as _set_extra_misc  # noqa: E402
 _set_extra_misc("misc_helpers", {
     "user_service": user_service,
@@ -2164,8 +3837,8 @@ def _json_safe(obj: Any) -> Any:
 def _log_request() -> None:
     """Log incoming HTTP request (method + path).
 
-    Тела запросов намеренно не логируем целиком, чтобы не зашумлять логи,
-    кроме отдельных точек (submit/next), которые логируются отдельно.
+    РўРµР»Р° Р·Р°РїСЂРѕСЃРѕРІ РЅР°РјРµСЂРµРЅРЅРѕ РЅРµ Р»РѕРіРёСЂСѓРµРј С†РµР»РёРєРѕРј, С‡С‚РѕР±С‹ РЅРµ Р·Р°С€СѓРјР»СЏС‚СЊ Р»РѕРіРё,
+    РєСЂРѕРјРµ РѕС‚РґРµР»СЊРЅС‹С… С‚РѕС‡РµРє (submit/next), РєРѕС‚РѕСЂС‹Рµ Р»РѕРіРёСЂСѓСЋС‚СЃСЏ РѕС‚РґРµР»СЊРЅРѕ.
     """
 
     if not FLASK_DEBUG_ENABLED:
@@ -2174,7 +3847,7 @@ def _log_request() -> None:
     try:
         logger.debug("[HTTP] %s %s", request.method, request.path)
     except Exception:
-        # Логирование не должно ломать обработку запроса
+        # Р›РѕРіРёСЂРѕРІР°РЅРёРµ РЅРµ РґРѕР»Р¶РЅРѕ Р»РѕРјР°С‚СЊ РѕР±СЂР°Р±РѕС‚РєСѓ Р·Р°РїСЂРѕСЃР°
         pass
 
 
@@ -2194,7 +3867,14 @@ def _log_response(response):  # type: ignore[override]
 
 @app.route("/health", methods=["GET"])
 def health() -> Any:
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "runtime_mode": _runtime_mode()})
+
+
+@app.route("/ready", methods=["GET"])
+def ready() -> Any:
+    payload = _build_runtime_health_payload()
+    status = "ok" if payload["ok"] else "not_ready"
+    return jsonify({"status": status, **payload}), (200 if payload["ok"] else 503)
 
 
 
@@ -2351,7 +4031,7 @@ def _is_valid_ai_run_id(value: Optional[str]) -> bool:
 
 
 def _ai_runs_root() -> Path:
-    root = _headless_app_ctx.data_dir / "ai_runs"
+    root = _headless_app_ctx.persistence_runtime.ai_runs_root()
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -2383,13 +4063,14 @@ def _write_json_file(path: Path, payload: Dict[str, Any]) -> None:
 
 
 _EDITOR_FEATURE_FLAG_DEFAULTS: Dict[str, bool] = {
+    "ai_mode": False,
     "analysis_v2_schema": True,
     "analysis_report_blocks_v1": True,
     "analysis_report_renderer_v1": True,
     "editor_analysis_report_link": True,
     "analysis_coverage_in_editor": True,
-    "microcards_mode": True,
-    "microcards_pair_match": True,
+    "microcards_mode": False,
+    "microcards_pair_match": False,
 }
 _ENV_BOOL_TRUE = {"1", "true", "yes", "on", "enable", "enabled"}
 _ENV_BOOL_FALSE = {"0", "false", "no", "off", "disable", "disabled"}
@@ -2424,6 +4105,7 @@ _THEORY_ROLLOUT_STAGE_ALIASES = {
 }
 _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
     "legacy": {
+        "ai_mode": False,
         "analysis_v2_schema": False,
         "analysis_report_blocks_v1": False,
         "analysis_report_renderer_v1": False,
@@ -2433,6 +4115,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": False,
     },
     "analysis_v2": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": False,
         "analysis_report_renderer_v1": False,
@@ -2442,6 +4125,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": False,
     },
     "report_blocks": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": True,
         "analysis_report_renderer_v1": False,
@@ -2451,6 +4135,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": False,
     },
     "report_renderer": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": True,
         "analysis_report_renderer_v1": True,
@@ -2460,6 +4145,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": False,
     },
     "editor_link": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": True,
         "analysis_report_renderer_v1": True,
@@ -2469,6 +4155,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": False,
     },
     "coverage": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": True,
         "analysis_report_renderer_v1": True,
@@ -2478,6 +4165,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": False,
     },
     "microcards": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": True,
         "analysis_report_renderer_v1": True,
@@ -2487,6 +4175,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": False,
     },
     "pair_match": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": True,
         "analysis_report_renderer_v1": True,
@@ -2496,6 +4185,7 @@ _THEORY_ROLLOUT_STAGE_FLAG_CAPS: Dict[str, Dict[str, bool]] = {
         "microcards_pair_match": True,
     },
     "full": {
+        "ai_mode": True,
         "analysis_v2_schema": True,
         "analysis_report_blocks_v1": True,
         "analysis_report_renderer_v1": True,
@@ -2578,6 +4268,14 @@ def _get_editor_feature_flags() -> Dict[str, bool]:
         for name, default in _EDITOR_FEATURE_FLAG_DEFAULTS.items()
     }
     flags = _apply_theory_rollout_stage_caps(flags)
+    if not flags.get("ai_mode", False):
+        flags["analysis_v2_schema"] = False
+        flags["analysis_report_blocks_v1"] = False
+        flags["analysis_report_renderer_v1"] = False
+        flags["editor_analysis_report_link"] = False
+        flags["analysis_coverage_in_editor"] = False
+        flags["microcards_mode"] = False
+        flags["microcards_pair_match"] = False
     if not flags.get("analysis_v2_schema", True):
         flags["analysis_report_blocks_v1"] = False
         flags["analysis_report_renderer_v1"] = False
@@ -2612,7 +4310,7 @@ _THEORY_ROLLOUT_TELEMETRY_SCHEMA_VERSION = "1.0"
 
 
 def _theory_rollout_telemetry_root() -> Path:
-    root = Path(_headless_app_ctx.data_dir) / "telemetry"
+    root = _headless_app_ctx.persistence_runtime.telemetry_root()
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -2655,6 +4353,8 @@ def _emit_theory_rollout_telemetry(event_name: str, **fields: Any) -> None:
     if not name:
         return
     try:
+        from routes._context import get_current_user_id
+
         feature_flags = _get_editor_feature_flags()
         stage = _get_theory_rollout_stage()
         payload = {
@@ -2663,7 +4363,7 @@ def _emit_theory_rollout_telemetry(event_name: str, **fields: Any) -> None:
             "event": name,
             "created_at": _utc_now_iso(),
             "rollout_stage": stage,
-            "user_id": _headless_app_ctx.user_id or "guest",
+            "user_id": get_current_user_id() or "guest",
             "feature_flags": feature_flags,
             "request_path": (request.path if has_request_context() else None),
             "request_method": (request.method if has_request_context() else None),
@@ -3083,7 +4783,7 @@ def _sanitize_analysis_for_microcards_backend(payload: Dict[str, Any], *, flags:
     return out
 
 
-# ── M14: Microcards Productization Rollout Layer (independent from P13 theory rollout) ──
+# в”Ђв”Ђ M14: Microcards Productization Rollout Layer (independent from P13 theory rollout) в”Ђв”Ђ
 
 _MICROCARDS_PROD_FEATURE_FLAG_DEFAULTS: Dict[str, bool] = {
     "microcards_runtime_ui": True,
@@ -3278,6 +4978,8 @@ def _emit_microcards_prod_telemetry(event_name: str, **fields: Any) -> None:
     if not name:
         return
     try:
+        from routes._context import get_current_user_id
+
         mc_flags = _get_microcards_prod_feature_flags()
         stage = _get_microcards_rollout_stage()
         payload = {
@@ -3286,7 +4988,7 @@ def _emit_microcards_prod_telemetry(event_name: str, **fields: Any) -> None:
             "event": name,
             "created_at": _utc_now_iso(),
             "rollout_stage": stage,
-            "user_id": _headless_app_ctx.user_id or "guest",
+            "user_id": get_current_user_id() or "guest",
             "microcards_feature_flags": mc_flags,
             "request_path": (request.path if has_request_context() else None),
             "request_method": (request.method if has_request_context() else None),
@@ -3509,7 +5211,15 @@ def _ai_run_build_reopen_analysis_response(run_id: str, *, apply_feature_flags: 
 
 
 def _microcards_service() -> MicrocardsService:
-    user_id = _headless_app_ctx.user_id or "default_user"
+    from routes._context import get_current_user_id
+
+    user_id = str(get_current_user_id() or "guest").strip() or "guest"
+    if _runtime_mode() == "hosted_web":
+        return HostedMicrocardsService(
+            data_dir=str(_headless_app_ctx.data_dir),
+            user_id=user_id,
+            persistence_settings=_headless_app_ctx.persistence_runtime,
+        )
     return MicrocardsService(str(_headless_app_ctx.data_dir), user_id=user_id)
 
 
@@ -3518,13 +5228,21 @@ def _microcards_analytics_service() -> MicrocardsAnalyticsService:
     cached = getattr(_headless_app_ctx, "microcards_analytics_service", None)
     if isinstance(cached, MicrocardsAnalyticsService) and str(cached.data_dir) == current_data_dir:
         return cached
-    service = MicrocardsAnalyticsService(current_data_dir)
+    if _runtime_mode() == "hosted_web":
+        service = HostedMicrocardsAnalyticsService(
+            current_data_dir,
+            persistence_settings=_headless_app_ctx.persistence_runtime,
+        )
+    else:
+        service = MicrocardsAnalyticsService(current_data_dir)
     setattr(_headless_app_ctx, "microcards_analytics_service", service)
     return service
 
 
 def _invalidate_microcards_analytics_cache(user_id: Optional[str] = None) -> bool:
-    resolved_user_id = str(user_id or _headless_app_ctx.user_id or "default_user").strip() or "default_user"
+    from routes._context import get_current_user_id
+
+    resolved_user_id = str(user_id or get_current_user_id() or "guest").strip() or "guest"
     try:
         _microcards_analytics_service().clear_cache(resolved_user_id)
         return True
@@ -3539,8 +5257,10 @@ _MICROCARDS_REVIEW_LIVE_INTEGRATION_HISTORY_LIMIT = 5000
 
 
 def _microcards_review_live_integration_state_path(user_id: Optional[str] = None) -> Path:
-    resolved_user_id = str(user_id or _headless_app_ctx.user_id or "default_user").strip() or "default_user"
-    return Path(_headless_app_ctx.data_dir) / "users" / resolved_user_id / "microcards" / "live_integration_state.json"
+    from routes._context import get_current_user_id
+
+    resolved_user_id = str(user_id or get_current_user_id() or "guest").strip() or "guest"
+    return _headless_app_ctx.persistence_runtime.microcards_review_live_integration_state_path(resolved_user_id)
 
 
 def _microcards_review_live_integration_key(review_event: Dict[str, Any]) -> str:
@@ -3584,7 +5304,7 @@ def _load_microcards_review_live_integration_state(user_id: str) -> Dict[str, An
 def _save_microcards_review_live_integration_state(user_id: str, state: Dict[str, Any]) -> None:
     payload = {
         "schema_version": _MICROCARDS_REVIEW_LIVE_INTEGRATION_SCHEMA,
-        "user_id": str(user_id or "default_user"),
+        "user_id": str(user_id or "guest"),
         "calendar_review_event_keys": list(
             (state.get("calendar_review_event_keys") if isinstance(state, dict) else []) or []
         )[-_MICROCARDS_REVIEW_LIVE_INTEGRATION_HISTORY_LIMIT:],
@@ -3608,6 +5328,7 @@ def _apply_microcards_review_calendar_integration(
         calendar_svc = CalendarService(
             data_dir=str(_headless_app_ctx.data_dir),
             user_id=user_id,
+            persistence_settings=getattr(_headless_app_ctx, "persistence_runtime", None),
         )
     except Exception as exc:
         logger.warning("[HTTP] M1 microcards calendar integration init failed: %s", exc)
@@ -3635,7 +5356,9 @@ def _orchestrate_microcards_review_post_submit(
     card_id: str,
     review_result: Dict[str, Any],
 ) -> Dict[str, Any]:
-    user_id = str(_headless_app_ctx.user_id or "default_user").strip() or "default_user"
+    from routes._context import get_current_user_id
+
+    user_id = str(get_current_user_id() or "guest").strip() or "guest"
     review_event = review_result.get("review_event") if isinstance(review_result, dict) else None
     review_event = review_event if isinstance(review_event, dict) else {}
     integration_key = _microcards_review_live_integration_key(review_event) if review_event else ""
@@ -3711,7 +5434,7 @@ def _orchestrate_microcards_review_post_submit(
 
 
 
-# ── Register microcards helpers for routes/microcards_routes.py ────────
+# в”Ђв”Ђ Register microcards helpers for routes/microcards_routes.py в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 from routes._context import set_extra as _set_extra_mc  # noqa: E402
 _set_extra_mc("microcards_helpers", {
     "build_theory_rollout_status_payload": _build_theory_rollout_status_payload,
@@ -4183,7 +5906,7 @@ def _build_ai_analysis_topic_coverage_response(
 def _guess_language_code(text: str) -> str:
     if not isinstance(text, str) or not text.strip():
         return "unknown"
-    cyr = sum(1 for ch in text if "а" <= ch.lower() <= "я" or ch.lower() == "ё")
+    cyr = sum(1 for ch in text if "Р°" <= ch.lower() <= "СЏ" or ch.lower() == "С‘")
     lat = sum(1 for ch in text if "a" <= ch.lower() <= "z")
     if cyr > lat * 1.3:
         return "ru"
@@ -4543,7 +6266,7 @@ def _normalize_grounding_token(token: str) -> str:
     t = str(token or "").strip().lower()
     if not t:
         return ""
-    t = t.replace("ё", "е")
+    t = t.replace("С‘", "Рµ")
     t = t.strip("_-")
     if not t:
         return ""
@@ -4554,10 +6277,10 @@ def _normalize_grounding_token(token: str) -> str:
     # Lightweight suffix trimming for RU/UK-like forms to reduce false negatives.
     if script == "cyr" and len(t) >= 5:
         suffixes = (
-            "иями", "ями", "ами", "еві", "ові", "ого", "ему", "ими", "ыми",
-            "ість", "ости", "ення", "ання", "ями", "ями", "ях", "ах", "ою", "ею",
-            "ий", "ый", "ій", "ая", "яя", "ое", "ее", "ые", "ие", "ой", "ей",
-            "ам", "ям", "ом", "ем", "у", "ю", "а", "я", "ы", "и", "е", "о",
+            "РёСЏРјРё", "СЏРјРё", "Р°РјРё", "РµРІС–", "РѕРІС–", "РѕРіРѕ", "РµРјСѓ", "РёРјРё", "С‹РјРё",
+            "С–СЃС‚СЊ", "РѕСЃС‚Рё", "РµРЅРЅСЏ", "Р°РЅРЅСЏ", "СЏРјРё", "СЏРјРё", "СЏС…", "Р°С…", "РѕСЋ", "РµСЋ",
+            "РёР№", "С‹Р№", "С–Р№", "Р°СЏ", "СЏСЏ", "РѕРµ", "РµРµ", "С‹Рµ", "РёРµ", "РѕР№", "РµР№",
+            "Р°Рј", "СЏРј", "РѕРј", "РµРј", "Сѓ", "СЋ", "Р°", "СЏ", "С‹", "Рё", "Рµ", "Рѕ",
         )
         for suf in suffixes:
             if len(t) - len(suf) >= 4 and t.endswith(suf):
@@ -4804,8 +6527,8 @@ def _normalize_output_language_request(
     translation_warning = None
     if mode == "custom" and raw_lang and material_language in {"ru", "en"} and raw_lang != material_language:
         translation_warning = (
-            "Выбран язык заданий, отличный от языка материала. Перевод может быть посредственным, "
-            "и задания, вероятно, потребуют доработки в редакторе."
+            "Р’С‹Р±СЂР°РЅ СЏР·С‹Рє Р·Р°РґР°РЅРёР№, РѕС‚Р»РёС‡РЅС‹Р№ РѕС‚ СЏР·С‹РєР° РјР°С‚РµСЂРёР°Р»Р°. РџРµСЂРµРІРѕРґ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїРѕСЃСЂРµРґСЃС‚РІРµРЅРЅС‹Рј, "
+            "Рё Р·Р°РґР°РЅРёСЏ, РІРµСЂРѕСЏС‚РЅРѕ, РїРѕС‚СЂРµР±СѓСЋС‚ РґРѕСЂР°Р±РѕС‚РєРё РІ СЂРµРґР°РєС‚РѕСЂРµ."
         )
 
     return {
@@ -4816,7 +6539,7 @@ def _normalize_output_language_request(
     }
 
 
-# ── Register AI helpers for routes/ai_routes.py ───────────────────────
+# в”Ђв”Ђ Register AI helpers for routes/ai_routes.py в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 from routes._context import set_extra as _set_extra_ai  # noqa: E402
 _set_extra_ai("ai_helpers", {
     "attach_editor_feature_flags": _attach_editor_feature_flags,
@@ -4850,25 +6573,25 @@ def _score_unit_for_task_type(task_type: str, unit: Dict[str, Any]) -> int:
     blob = _ai_unit_planning_blob(unit)
     score = 0
     if task_type == "SEQUENCE":
-        if any(k in blob for k in ["order", "sequence", "step", "stage", "chronolog", "rank", "category", "ordered", "поряд", "этап", "послед"]):
+        if any(k in blob for k in ["order", "sequence", "step", "stage", "chronolog", "rank", "category", "ordered", "РїРѕСЂСЏРґ", "СЌС‚Р°Рї", "РїРѕСЃР»РµРґ"]):
             score += 4
-        if any(k in blob for k in ["classification", "категор"]):
+        if any(k in blob for k in ["classification", "РєР°С‚РµРіРѕСЂ"]):
             score += 2
     elif task_type == "CLICK_WORDS":
         if re.search(r"\d|%|p\s*[<=>]\s*0?\.\d+", blob):
             score += 4
-        if any(k in blob for k in ["date", "year", "risk", "odds", "ratio", "report", "guidance", "дата", "риск", "требован", "отчет", "отчёт"]):
+        if any(k in blob for k in ["date", "year", "risk", "odds", "ratio", "report", "guidance", "РґР°С‚Р°", "СЂРёСЃРє", "С‚СЂРµР±РѕРІР°РЅ", "РѕС‚С‡РµС‚", "РѕС‚С‡С‘С‚"]):
             score += 3
     elif task_type == "OPEN_ANSWER":
-        if any(k in blob for k in ["mechan", "why", "how", "effect", "process", "reason", "влия", "механ", "процесс", "почему", "как"]):
+        if any(k in blob for k in ["mechan", "why", "how", "effect", "process", "reason", "РІР»РёСЏ", "РјРµС…Р°РЅ", "РїСЂРѕС†РµСЃСЃ", "РїРѕС‡РµРјСѓ", "РєР°Рє"]):
             score += 3
-        if any(k in blob for k in ["concept", "classification", "conceptual", "концеп"]):
+        if any(k in blob for k in ["concept", "classification", "conceptual", "РєРѕРЅС†РµРї"]):
             score += 1
     elif task_type == "CLICK_TEXT":
-        if any(k in blob for k in ["difference", "distinction", "rule", "criteria", "risk", "accuracy", "чувств", "правил", "различ", "критер"]):
+        if any(k in blob for k in ["difference", "distinction", "rule", "criteria", "risk", "accuracy", "С‡СѓРІСЃС‚РІ", "РїСЂР°РІРёР»", "СЂР°Р·Р»РёС‡", "РєСЂРёС‚РµСЂ"]):
             score += 2
     elif task_type == "TEST":
-        if any(k in blob for k in ["fact", "term", "definition", "classification", "date", "number", "факт", "термин", "определ", "категор", "дата"]):
+        if any(k in blob for k in ["fact", "term", "definition", "classification", "date", "number", "С„Р°РєС‚", "С‚РµСЂРјРёРЅ", "РѕРїСЂРµРґРµР»", "РєР°С‚РµРіРѕСЂ", "РґР°С‚Р°"]):
             score += 2
     if unit.get("assessment_risk") == "high":
         score += 1  # often worth isolating to avoid hallucinated simplifications
@@ -4999,7 +6722,7 @@ def _postprocess_ai_generate_results(
                     task,
                     {
                         "severity": "warning",
-                        "message": "Возможное несоответствие языка задания ожидаемому языку генерации",
+                        "message": "Р’РѕР·РјРѕР¶РЅРѕРµ РЅРµСЃРѕРѕС‚РІРµС‚СЃС‚РІРёРµ СЏР·С‹РєР° Р·Р°РґР°РЅРёСЏ РѕР¶РёРґР°РµРјРѕРјСѓ СЏР·С‹РєСѓ РіРµРЅРµСЂР°С†РёРё",
                         "field": "language_mismatch",
                     },
                 )
@@ -5008,17 +6731,17 @@ def _postprocess_ai_generate_results(
             if task_type == "SEQUENCE":
                 prompt_lower = prompt_text.lower()
                 if any(phrase in prompt_lower for phrase in [
-                    "злокачествен",
-                    "подозрительн",
+                    "Р·Р»РѕРєР°С‡РµСЃС‚РІРµРЅ",
+                    "РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅ",
                     "suspiciousness",
                     "malignan",
-                    "степени подозр",
+                    "СЃС‚РµРїРµРЅРё РїРѕРґРѕР·СЂ",
                 ]):
                     _append_validation_issue(
                         task,
                         {
                             "severity": "warning",
-                            "message": "Проверьте, что порядок в SEQUENCE явно задан в исходном материале (возможен неявный рейтинг).",
+                            "message": "РџСЂРѕРІРµСЂСЊС‚Рµ, С‡С‚Рѕ РїРѕСЂСЏРґРѕРє РІ SEQUENCE СЏРІРЅРѕ Р·Р°РґР°РЅ РІ РёСЃС…РѕРґРЅРѕРј РјР°С‚РµСЂРёР°Р»Рµ (РІРѕР·РјРѕР¶РµРЅ РЅРµСЏРІРЅС‹Р№ СЂРµР№С‚РёРЅРі).",
                             "field": "implicit_sequence_order",
                         },
                     )
@@ -5068,7 +6791,7 @@ def _postprocess_ai_generate_results(
                 task,
                 {
                     "severity": "warning",
-                    "message": "Похоже на дубликат другого сгенерированного задания",
+                    "message": "РџРѕС…РѕР¶Рµ РЅР° РґСѓР±Р»РёРєР°С‚ РґСЂСѓРіРѕРіРѕ СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅРЅРѕРіРѕ Р·Р°РґР°РЅРёСЏ",
                     "field": "duplicate_task",
                 },
             )
@@ -5181,7 +6904,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "Вопрос не может быть пустым",
+                        "message": "Р’РѕРїСЂРѕСЃ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
                         "field": "question",
                     }
                 )
@@ -5192,7 +6915,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "Требуется минимум 2 элемента",
+                        "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 2 СЌР»РµРјРµРЅС‚Р°",
                         "field": "elements",
                     }
                 )
@@ -5200,7 +6923,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "Требуется минимум 1 уровень",
+                        "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 1 СѓСЂРѕРІРµРЅСЊ",
                         "field": "levels",
                     }
                 )
@@ -5213,7 +6936,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "Требуется минимум 2 варианта ответа",
+                            "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 2 РІР°СЂРёР°РЅС‚Р° РѕС‚РІРµС‚Р°",
                             "field": "options",
                         }
                     )
@@ -5224,7 +6947,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "Должен быть хотя бы один правильный вариант",
+                            "message": "Р”РѕР»Р¶РµРЅ Р±С‹С‚СЊ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ РїСЂР°РІРёР»СЊРЅС‹Р№ РІР°СЂРёР°РЅС‚",
                             "field": "options",
                         }
                     )
@@ -5235,7 +6958,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "Текст не может быть пустым",
+                            "message": "РўРµРєСЃС‚ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
                             "field": "text",
                         }
                     )
@@ -5243,7 +6966,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "Требуется минимум 1 ошибка",
+                            "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 1 РѕС€РёР±РєР°",
                             "field": "error_spans",
                         }
                     )
@@ -5286,7 +7009,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                             issues.append(
                                 {
                                     "severity": "error",
-                                    "message": f"Некорректный диапазон ошибки #{idx + 1}",
+                                    "message": f"РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РґРёР°РїР°Р·РѕРЅ РѕС€РёР±РєРё #{idx + 1}",
                                     "field": "error_spans",
                                 }
                             )
@@ -5295,7 +7018,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "Неизвестный режим click-задачи",
+                        "message": "РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЂРµР¶РёРј click-Р·Р°РґР°С‡Рё",
                         "field": "mode",
                     }
                 )
@@ -5305,7 +7028,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "Тест не содержит вопросов",
+                        "message": "РўРµСЃС‚ РЅРµ СЃРѕРґРµСЂР¶РёС‚ РІРѕРїСЂРѕСЃРѕРІ",
                         "field": "questions",
                     }
                 )
@@ -5317,7 +7040,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                         issues.append(
                             {
                                 "severity": "error",
-                                "message": f"Вопрос {qi+1}: пустой текст",
+                                "message": f"Р’РѕРїСЂРѕСЃ {qi+1}: РїСѓСЃС‚РѕР№ С‚РµРєСЃС‚",
                                 "field": "questions",
                             }
                         )
@@ -5326,7 +7049,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                         issues.append(
                             {
                                 "severity": "error",
-                                "message": f"Вопрос {qi+1}: нет вариантов ответов",
+                                "message": f"Р’РѕРїСЂРѕСЃ {qi+1}: РЅРµС‚ РІР°СЂРёР°РЅС‚РѕРІ РѕС‚РІРµС‚РѕРІ",
                                 "field": "questions",
                             }
                         )
@@ -5334,7 +7057,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                         issues.append(
                             {
                                 "severity": "error",
-                                "message": f"Вопрос {qi+1}: нет правильных ответов",
+                                "message": f"Р’РѕРїСЂРѕСЃ {qi+1}: РЅРµС‚ РїСЂР°РІРёР»СЊРЅС‹С… РѕС‚РІРµС‚РѕРІ",
                                 "field": "questions",
                             }
                         )
@@ -5347,7 +7070,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
     return issues
 
 
-# ── Register import helpers for routes/import_routes.py ────────────────
+# в”Ђв”Ђ Register import helpers for routes/import_routes.py в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 from routes._context import set_extra as _set_extra_imp  # noqa: E402
 _set_extra_imp("import_helpers", {
     "validate_with_task_type": _validate_with_task_type,
@@ -5380,7 +7103,7 @@ _set_extra_imp("import_helpers", {
 # routes moved to routes/import_routes.py
 
 
-# ── Register ai_generate helpers for routes/ai_routes.py ───────────────
+# в”Ђв”Ђ Register ai_generate helpers for routes/ai_routes.py в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 from routes._context import set_extra as _set_extra_aigen  # noqa: E402
 _set_extra_aigen("ai_generate_helpers", {
     "ai_service": _ai_service,

@@ -50,6 +50,37 @@ class TestUserDataclass:
         d = user.to_api_dict()
         assert d["has_password"] is True
 
+    def test_to_api_dict_includes_login_and_email(self):
+        user = User(
+            user_id="u1",
+            name="Test",
+            created_at="2024-01-01",
+            login="test.user",
+            email="test@example.com",
+        )
+        d = user.to_api_dict()
+        assert d["login"] == "test.user"
+        assert d["email"] == "test@example.com"
+
+    def test_to_api_dict_includes_email_verification_fields(self):
+        user = User(
+            user_id="u1",
+            name="Test",
+            created_at="2024-01-01",
+            email="test@example.com",
+            pending_email="next@example.com",
+            email_verified_at="2024-01-02T00:00:00Z",
+            email_verification_sent_at="2024-01-01T23:59:00Z",
+            pending_email_verification_sent_at="2024-01-02T01:00:00Z",
+        )
+        d = user.to_api_dict()
+        assert d["email_verified"] is True
+        assert d["pending_email"] == "next@example.com"
+        assert d["pending_email_change_pending"] is True
+        assert d["email_verified_at"] == "2024-01-02T00:00:00Z"
+        assert d["email_verification_sent_at"] == "2024-01-01T23:59:00Z"
+        assert d["pending_email_verification_sent_at"] == "2024-01-02T01:00:00Z"
+
     def test_from_dict(self):
         data = {
             "user_id": "u1",
@@ -57,6 +88,12 @@ class TestUserDataclass:
                 "name": "Test",
                 "created_at": "2024-01-01",
                 "avatar_seed": "3.png",
+                "login": "tester",
+                "email": "tester@example.com",
+                "pending_email": "next@example.com",
+                "email_verified_at": "2024-01-02T00:00:00Z",
+                "email_verification_sent_at": "2024-01-01T23:59:00Z",
+                "pending_email_verification_sent_at": "2024-01-02T01:00:00Z",
                 "settings": {"theme": "dark"},
             },
         }
@@ -64,6 +101,12 @@ class TestUserDataclass:
         assert user.user_id == "u1"
         assert user.name == "Test"
         assert user.avatar_seed == "3.png"
+        assert user.login == "tester"
+        assert user.email == "tester@example.com"
+        assert user.pending_email == "next@example.com"
+        assert user.email_verified_at == "2024-01-02T00:00:00Z"
+        assert user.email_verification_sent_at == "2024-01-01T23:59:00Z"
+        assert user.pending_email_verification_sent_at == "2024-01-02T01:00:00Z"
 
     def test_from_dict_defaults(self):
         user = User.from_dict({})

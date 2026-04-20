@@ -15,14 +15,20 @@ import logging
 import os
 import tempfile
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from datetime import datetime, timedelta
 
+from persistence.hosted_progress_repository import HostedProgressRepository
+from persistence.postgres import PostgresUnavailableError
+from services.hosted_shadow_fallback import HostedShadowFallbackMixin
 from services.schemas.user_schemas import ProgressSchema
 from task_system.core.exceptions import TaskValidationError
 
+if TYPE_CHECKING:
+    from persistence.runtime import PersistenceRuntimeSettings
 
-class UserProgressManager:
+
+class UserProgressManager(HostedShadowFallbackMixin):
     """
     Менеджер прогресса пользователя (новая реализация).
     
@@ -88,9 +94,23 @@ class UserProgressManager:
     }
     """
     
-    def __init__(self, data_dir: str = None, user_id: str = "default_user", 
+    @staticmethod
+    def _is_hosted_runtime() -> bool:
+        return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
+
+    @classmethod
+    def _resolve_runtime_user_id(cls, user_id: Optional[str], legacy_default: str = "default_user") -> str:
+        normalized = str(user_id or "").strip()
+        if normalized:
+            return normalized
+        if cls._is_hosted_runtime():
+            raise ValueError("user_id_required_in_hosted_runtime")
+        return legacy_default
+
+    def __init__(self, data_dir: str = None, user_id: Optional[str] = None, 
                  difficulty_manager: Optional[Any] = None,
-                 event_bus: Optional[Any] = None):
+                 event_bus: Optional[Any] = None,
+                 persistence_settings: Optional['PersistenceRuntimeSettings'] = None):
         """
         Инициализация UserProgressManager.
         
@@ -106,9 +126,13 @@ class UserProgressManager:
             data_dir = config.get("data_root", "data")
         
         self.data_dir = Path(data_dir)
-        self.user_id = user_id
+        self.user_id = self._resolve_runtime_user_id(user_id)
         self.users_dir = self.data_dir / "users"
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.persistence_settings = persistence_settings
+        self._init_hosted_shadow_fallback_state()
+        self._progress_repository: Optional[HostedProgressRepository] = None
+        self._storage_ready = not self._is_hosted_runtime()
         
         # DifficultyManager для эскалации уровней (Шаг 2.7)
         self.difficulty_manager = difficulty_manager
@@ -117,7 +141,7 @@ class UserProgressManager:
         self.event_bus = event_bus
         
         # Путь к файлу progress.json пользователя
-        self.user_dir = self.users_dir / user_id
+        self.user_dir = self.users_dir / self.user_id
         self.progress_file = self.user_dir / "progress.json"
         
         # Создаем директорию пользователя, если её нет
@@ -126,7 +150,35 @@ class UserProgressManager:
         # Загружаем или создаем структуру прогресса
         self.progress_data = self._load_or_create_progress()
         
-        self.logger.info(f"UserProgressManager initialized for user: {user_id}")
+        self.logger.info(f"UserProgressManager initialized for user: {self.user_id}")
+
+    @property
+    def hosted_storage_ready(self) -> bool:
+        return bool(self._storage_ready)
+
+    def set_persistence_settings(self, persistence_settings: Optional['PersistenceRuntimeSettings']) -> None:
+        self.persistence_settings = persistence_settings
+        if self._is_hosted_runtime():
+            self._storage_ready = False
+            self._progress_repository = None
+
+    def ensure_hosted_persistence_ready(self) -> None:
+        if not self._is_hosted_runtime():
+            self._storage_ready = True
+            return
+        if self._storage_ready:
+            return
+        repository = self._get_progress_repository()
+        repository.ensure_schema()
+        self._storage_ready = True
+        self.progress_data = self._load_or_create_progress()
+
+    def _get_progress_repository(self) -> HostedProgressRepository:
+        if self._progress_repository is None:
+            if self.persistence_settings is None:
+                raise RuntimeError("hosted_progress_repository_requires_persistence_settings")
+            self._progress_repository = HostedProgressRepository(self.persistence_settings.postgres_dsn)
+        return self._progress_repository
     
     def _load_or_create_progress(self) -> Dict[str, Any]:
         """
@@ -135,6 +187,35 @@ class UserProgressManager:
         Returns:
             Dict[str, Any]: Данные прогресса
         """
+        hosted_runtime = self._is_hosted_runtime()
+        source_data = None
+        if hosted_runtime:
+            if self._storage_ready:
+                try:
+                    source_data = self._get_progress_repository().get_progress(self.user_id)
+                except PostgresUnavailableError as exc:
+                    self._storage_ready = False
+                    self._guard_shadow_read_fallback("progress._load_or_create_progress", exc)
+        else:
+            source_data = self._read_progress_file()
+
+        data, needs_persist = self._normalize_progress_payload(source_data)
+        if needs_persist and (not hosted_runtime or self._storage_ready):
+            self._save_progress(data)
+        elif not hosted_runtime:
+            self._write_progress_shadow(data)
+
+        task_count = len(data.get("task_history", {}))
+        total_attempts = sum(
+            len(task_data.get("attempts", []))
+            for task_data in data.get("task_history", {}).values()
+        )
+        self.logger.debug(
+            f"Progress loaded for user {self.user_id}: "
+            f"{task_count} tasks, {total_attempts} total attempts"
+        )
+        return data
+
         if self.progress_file.exists():
             try:
                 with open(self.progress_file, 'r', encoding='utf-8') as f:
@@ -191,6 +272,71 @@ class UserProgressManager:
             self._save_progress(data)
             return data
     
+    def _read_progress_file(self) -> Optional[Dict[str, Any]]:
+        if not self.progress_file.exists():
+            return None
+        try:
+            with open(self.progress_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else None
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Failed to parse progress.json for user {self.user_id}: {e}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error loading progress for user {self.user_id}: {e}")
+            return None
+
+    def _normalize_progress_payload(self, data: Optional[Dict[str, Any]]) -> tuple[Dict[str, Any], bool]:
+        if not isinstance(data, dict):
+            return self._get_default_progress_structure(), True
+
+        errors = ProgressSchema.validate(data)
+        if errors:
+            self.logger.error(f"Invalid progress data for user {self.user_id}: {errors}")
+            return self._get_default_progress_structure(), True
+
+        version = data.get("version", "2.0")
+        if version == "2.0":
+            self.logger.info(
+                f"Detected version 2.0 for user {self.user_id}, "
+                "migrating to version 3.0..."
+            )
+            migrated = self._migrate_v2_to_v3(data)
+            self.logger.info(f"Migration completed for user {self.user_id}")
+            return migrated, True
+
+        return data, False
+
+    def _write_progress_shadow(self, data: Dict[str, Any]) -> None:
+        dir_path = str(self.progress_file.parent)
+        progress_file_str = str(self.progress_file)
+
+        self.user_dir.mkdir(parents=True, exist_ok=True)
+        temp_name = None
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                dir=dir_path,
+                delete=False,
+                encoding='utf-8',
+                suffix='.tmp'
+            ) as tf:
+                json.dump(data, tf, ensure_ascii=False, indent=2)
+                temp_name = tf.name
+
+            try:
+                os.replace(temp_name, progress_file_str)
+            except OSError:
+                if os.path.exists(progress_file_str):
+                    os.remove(progress_file_str)
+                os.rename(temp_name, progress_file_str)
+        finally:
+            if temp_name and os.path.exists(temp_name):
+                try:
+                    os.remove(temp_name)
+                except Exception:
+                    pass
+
     def _get_default_progress_structure(self) -> Dict[str, Any]:
         """
         Возвращает базовую структуру данных прогресса (версия 3.0).
@@ -334,6 +480,42 @@ class UserProgressManager:
         if errors:
             self.logger.error(f"Invalid progress data before save: {errors}")
             raise TaskValidationError(f"Invalid progress data: {errors}")
+
+        if self._is_hosted_runtime():
+            if not self._storage_ready:
+                try:
+                    repository = self._get_progress_repository()
+                    repository.ensure_schema()
+                    self._storage_ready = True
+                except PostgresUnavailableError as exc:
+                    self._storage_ready = False
+                    self._guard_shadow_write_fallback("progress._save_progress", exc)
+                    return
+                except Exception as exc:
+                    self._storage_ready = False
+                    self._guard_shadow_write_fallback("progress._save_progress", exc)
+                    return
+                if not self._storage_ready:
+                    self._guard_shadow_write_fallback(
+                        "progress._save_progress",
+                        RuntimeError("postgres_unavailable"),
+                    )
+                    return
+            try:
+                self._get_progress_repository().write_progress(
+                    self.user_id,
+                    data,
+                    updated_at=str(data.get("updated_at") or datetime.utcnow().isoformat()),
+                )
+                self.logger.debug(f"Progress saved to hosted repository for user {self.user_id}")
+                return
+            except PostgresUnavailableError as exc:
+                self._storage_ready = False
+                self._guard_shadow_write_fallback("progress._save_progress", exc)
+                return
+        self._write_progress_shadow(data)
+        self.logger.debug(f"Progress saved atomically for user {self.user_id}")
+        return
         
         # Получаем директорию файла (преобразуем Path в строку)
         dir_path = str(self.progress_file.parent)
@@ -377,6 +559,9 @@ class UserProgressManager:
         """
         Добавляет событие завершения комплекса в progress.json (complex_completions).
         """
+        if self._is_hosted_runtime() and not self._storage_ready:
+            self.ensure_hosted_persistence_ready()
+
         ts = timestamp or datetime.utcnow().isoformat()
         entry = {
             "complex_id": complex_id,
@@ -445,6 +630,9 @@ class UserProgressManager:
         if time_spent < 0:
             raise ValueError("time_spent не может быть отрицательным")
         
+        if self._is_hosted_runtime() and not self._storage_ready:
+            self.ensure_hosted_persistence_ready()
+
         task_ref = self._get_task_ref(module_id, topic_id, task_id)
         
         # Создаем запись попытки
@@ -1056,7 +1244,7 @@ class UserProgressManager:
         """
         return self.progress_data.copy()
     
-    def switch_user(self, user_id: str):
+    def switch_user(self, user_id: Optional[str]):
         """
         Переключает менеджер на другого пользователя.
         
@@ -1065,12 +1253,14 @@ class UserProgressManager:
         Args:
             user_id: ID нового пользователя
         """
-        if self.user_id == user_id:
+        resolved_user_id = self._resolve_runtime_user_id(user_id)
+
+        if self.user_id == resolved_user_id:
             # Уже работаем с этим пользователем
-            self.logger.debug(f"Already working with user {user_id}, skipping switch")
+            self.logger.debug(f"Already working with user {resolved_user_id}, skipping switch")
             return
         
-        self.logger.info(f"Switching UserProgressManager from {self.user_id} to {user_id}")
+        self.logger.info(f"Switching UserProgressManager from {self.user_id} to {resolved_user_id}")
         
         # Сохраняем данные текущего пользователя перед переключением
         try:
@@ -1080,10 +1270,10 @@ class UserProgressManager:
         
         # Обновляем user_id
         old_user_id = self.user_id
-        self.user_id = user_id
+        self.user_id = resolved_user_id
         
         # Обновляем пути к файлам
-        self.user_dir = self.users_dir / user_id
+        self.user_dir = self.users_dir / resolved_user_id
         self.progress_file = self.user_dir / "progress.json"
         
         # Создаем директорию пользователя, если её нет
@@ -1099,7 +1289,7 @@ class UserProgressManager:
             for task_data in self.progress_data.get("task_history", {}).values()
         )
         self.logger.info(
-            f"UserProgressManager switched to user: {user_id}. "
+            f"UserProgressManager switched to user: {resolved_user_id}. "
             f"Loaded {task_count} tasks with {total_attempts} total attempts"
         )
 

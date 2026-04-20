@@ -1,4 +1,4 @@
-﻿const THEORY_EDITOR_ROUTE = "/ui/editor/Theory_Editor.html";
+const THEORY_EDITOR_ROUTE = "/ui/editor/Theory_Editor.html";
 const THEORY_CENTER_ROUTE = "/ui/editor/Theory_Center.html";
 const EMPTY_THEORY_DELTA = { ops: [{ insert: "\n" }] };
 const THEORY_DEFAULT_TEXT_COLOR_FALLBACK = "#1A1A1A";
@@ -7,16 +7,23 @@ const THEORY_DRAFT_STORAGE_PREFIX = "theory-editor-draft:";
 const theoryEditorState = {
     catalog: [],
     activeTheoryId: "",
+    activeItem: null,
     version: null,
     dirty: false,
     loading: false,
     saving: false,
     search: "",
     context: null,
+    publicationItem: null,
 };
 
 let theoryDraftSaveTimer = 0;
 let theoryReloadConfirmPending = false;
+let currentTheoryEditorUserId = "";
+let lastTheoryEditorRange = null;
+const theoryPublicationBySourceId = new Map();
+const theoryPublicationByItemId = new Map();
+let allTheoryPublicationItems = [];
 
 function theoryEditorNavigate(url) {
     if (typeof window.navigateWithTransition === "function") {
@@ -49,7 +56,16 @@ async function theoryEditorConfirm(options) {
             variant: String(options?.variant || "warning"),
         });
     }
-    return window.confirm(fallbackMessage);
+    if (window.WorkspaceImportClient && typeof window.WorkspaceImportClient.confirmAction === "function") {
+        return window.WorkspaceImportClient.confirmAction({
+            title: String(options?.title || "Подтвердите действие"),
+            message: fallbackMessage,
+            confirmText: String(options?.confirmText || "Продолжить"),
+            cancelText: String(options?.cancelText || "Отмена"),
+            variant: String(options?.variant || "warning"),
+        });
+    }
+    return Promise.resolve(false);
 }
 
 function normalizeTheoryWorkspaceUrl(rawUrl, fallbackTheoryId = "") {
@@ -401,9 +417,394 @@ function renderTheoryContextHeader() {
 
 function theoryLocalImageSrc(path) {
     if (!path) return "";
-    // Если путь уже содержит /api/local-image, возвращаем как есть (избегаем двойного кодирования)
-    if (path.startsWith('/api/local-image')) return path;
+    if (path.startsWith('/api/local-image') || path.startsWith('/api/assets/')) return path;
     return `/api/local-image?path=${encodeURIComponent(path)}`;
+}
+
+function isTheoryHostedAssetRef(value) {
+    return String(value || "").trim().startsWith("/api/assets/");
+}
+
+async function theoryReadJsonSafely(response) {
+    try {
+        return await response.json();
+    } catch (error) {
+        return null;
+    }
+}
+
+async function resolveCurrentTheoryEditorUserId(forceRefresh = false) {
+    if (!forceRefresh && currentTheoryEditorUserId) {
+        return currentTheoryEditorUserId;
+    }
+    currentTheoryEditorUserId = "";
+    try {
+        const response = await fetch("/api/auth/me");
+        const data = await theoryReadJsonSafely(response);
+        const userId = String(data?.user?.user_id || "").trim();
+        if (response.ok && data?.ok && data?.authenticated && userId) {
+            currentTheoryEditorUserId = userId;
+        }
+    } catch (error) {
+        console.warn("[Theory Editor] Failed to resolve current user", error);
+    }
+    return currentTheoryEditorUserId;
+}
+
+function getCatalogVisibilityLabel(value) {
+    switch (String(value || "").trim().toLowerCase()) {
+        case "access_code":
+            return "По коду";
+        case "private":
+            return "Приватная";
+        case "public":
+        default:
+            return "Общий доступ";
+    }
+}
+
+function getCatalogVisibilityTone(value) {
+    switch (String(value || "").trim().toLowerCase()) {
+        case "access_code":
+            return "info";
+        case "private":
+            return "muted";
+        case "public":
+        default:
+            return "success";
+    }
+}
+
+function getTheoryCatalogVisibilityDescription(value) {
+    switch (String(value || "").trim().toLowerCase()) {
+        case "access_code":
+            return "Теория не видна в общем каталоге. Добавить её можно только по коду доступа.";
+        case "private":
+            return "Теория доступна только вам. Другие пользователи не увидят её в каталоге и не смогут открыть по коду.";
+        case "public":
+        default:
+            return "Теория видна в общем каталоге и доступна для добавления в библиотеку.";
+    }
+}
+
+function getTheoryVisibilityLock(item) {
+    const lock = item?.visibility_lock && typeof item.visibility_lock === "object" ? item.visibility_lock : null;
+    if (!lock) return null;
+    return String(lock.forced_visibility || "").trim().toLowerCase() === "public" ? lock : null;
+}
+
+function formatTheoryVisibilityLockMessage(lock) {
+    const complexTitles = Array.isArray(lock?.complex_titles)
+        ? lock.complex_titles.filter((value) => String(value || "").trim())
+        : [];
+    if (complexTitles.length === 1) {
+        return `Теория привязана к публичному комплексу «${complexTitles[0]}», поэтому должна оставаться в общем доступе.`;
+    }
+    if (complexTitles.length > 1) {
+        return "Теория привязана к нескольким публичным комплексам, поэтому должна оставаться в общем доступе.";
+    }
+    return "Теория привязана к опубликованному для всех комплексу, поэтому должна оставаться в общем доступе.";
+}
+
+function getTheoryPublicationErrorMessage(error, fallback = "") {
+    const message = String(error?.message || error || "").trim();
+    if (message.includes("theory_catalog_visibility_locked_by_public_complex")) {
+        return "Теория привязана к опубликованному для всех комплексу. Сначала измените публикацию комплекса.";
+    }
+    return message || fallback;
+}
+
+function formatTheoryPublicationTimestamp(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "ещё не публиковалась";
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return raw;
+    return date.toLocaleString("ru-RU", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
+function getTheoryAccessCodeValue(item) {
+    return String(item?.access_code || item?.payload?.access_code || "").trim();
+}
+
+function formatTheoryAccessCodeDisplay(value) {
+    const code = String(value || "").trim().replace(/\s+/g, "").replace(/-/g, "").toUpperCase();
+    if (!code) return "";
+    return code.match(/.{1,4}/g)?.join("-") || code;
+}
+
+function rebuildTheoryPublicationIndex(items) {
+    theoryPublicationBySourceId.clear();
+    theoryPublicationByItemId.clear();
+    const normalizedItems = Array.isArray(items) ? items : [];
+    normalizedItems.forEach((item) => {
+        const itemId = String(item?.item_id || "").trim();
+        const sourceId = String(item?.source_workspace_id || item?.source_workspace_ref || "").trim();
+        if (itemId) theoryPublicationByItemId.set(itemId, item);
+        if (sourceId) theoryPublicationBySourceId.set(sourceId, item);
+    });
+    allTheoryPublicationItems = normalizedItems;
+}
+
+function upsertTheoryPublicationItem(item) {
+    const itemId = String(item?.item_id || "").trim();
+    rebuildTheoryPublicationIndex(
+        allTheoryPublicationItems
+            .filter((entry) => String(entry?.item_id || "").trim() !== itemId)
+            .concat(item ? [item] : [])
+    );
+    theoryEditorState.publicationItem = item || null;
+    updateTheoryPublicationControls();
+}
+
+function resolveTheoryPublication(item = null) {
+    const source = item || theoryEditorState.activeItem || null;
+    const sourceItemId = String(
+        source?.source_catalog_item_id
+        || source?.sourceLineage?.catalog_item_id
+        || source?.source_lineage?.catalog_item_id
+        || ""
+    ).trim();
+    if (sourceItemId && theoryPublicationByItemId.has(sourceItemId)) {
+        return theoryPublicationByItemId.get(sourceItemId) || null;
+    }
+    const theoryId = String(source?.id || theoryEditorState.activeTheoryId || "").trim();
+    if (!theoryId) return null;
+    return theoryPublicationBySourceId.get(theoryId) || null;
+}
+
+function isTheoryOwnedByCurrentUser(item = null) {
+    const source = item || theoryEditorState.activeItem || null;
+    const currentUserId = String(currentTheoryEditorUserId || "").trim();
+    if (!source) return false;
+    if (source?.ownership?.is_owned_by_current_user === true) return true;
+    const ownerId = String(
+        source?.ownership?.owner_user_id
+        || source?.created_by_user_id
+        || ""
+    ).trim();
+    return !!ownerId && !!currentUserId && ownerId === currentUserId;
+}
+
+function parseTheoryPublicationTimestamp(value) {
+    const normalized = String(value || "").trim();
+    if (!normalized) {
+        return 0;
+    }
+    const parsed = Date.parse(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getTheorySavedVersionTimestamp(item = null) {
+    const source = item || theoryEditorState.activeItem || null;
+    return parseTheoryPublicationTimestamp(source?.updated_at || source?.version || "");
+}
+
+function getTheoryLatestPublicationTimestamp(publication = null) {
+    const source = publication || theoryEditorState.publicationItem || null;
+    return parseTheoryPublicationTimestamp(source?.latest_published_at || source?.updated_at || "");
+}
+
+function getTheoryPublicationSyncState(item = null, publication = null) {
+    const resolvedPublication = publication || theoryEditorState.publicationItem || resolveTheoryPublication(item);
+    if (!resolvedPublication) {
+        return "unpublished";
+    }
+
+    const savedTimestamp = getTheorySavedVersionTimestamp(item);
+    const publishedTimestamp = getTheoryLatestPublicationTimestamp(resolvedPublication);
+    if (savedTimestamp && publishedTimestamp && savedTimestamp > publishedTimestamp) {
+        return "stale";
+    }
+    return "current";
+}
+
+function getTheoryPublicationNotice(item = null, publication = null) {
+    const syncState = getTheoryPublicationSyncState(item, publication);
+    if (syncState === "stale") {
+        return {
+            kind: "stale",
+            buttonLabel: "Нужна публикация",
+            tooltip: "Есть сохранённые изменения, которые ещё не попали в публикацию. Опубликуйте новую версию, чтобы их увидели другие пользователи.",
+            saveMessage: "Теория сохранена. Чтобы другие пользователи увидели изменения, обновите публикацию.",
+        };
+    }
+    if (syncState === "unpublished") {
+        return {
+            kind: "unpublished",
+            buttonLabel: "Не опубликована",
+            tooltip: "Теория сохранена только в рабочей версии. Чтобы её увидели другие пользователи, опубликуйте материал.",
+            saveMessage: "Теория сохранена. Чтобы её увидели другие пользователи, опубликуйте материал.",
+        };
+    }
+    return {
+        kind: "current",
+        buttonLabel: "",
+        tooltip: "",
+        saveMessage: "",
+    };
+}
+
+function updateTheoryPublicationControls() {
+    const button = document.getElementById("theory-publish-btn");
+    if (!button) {
+        return;
+    }
+
+    const activeTheoryId = String(theoryEditorState.activeTheoryId || "").trim();
+    const publication = theoryEditorState.publicationItem || resolveTheoryPublication();
+    const canManage = !!activeTheoryId && isTheoryOwnedByCurrentUser();
+    const notice = getTheoryPublicationNotice(theoryEditorState.activeItem, publication);
+
+    button.disabled = !activeTheoryId || !canManage;
+    if (!activeTheoryId) {
+        button.title = "Сначала сохраните теорию";
+    } else if (!canManage) {
+        button.title = "Публикацией можно управлять только для своих теорий";
+    } else if (notice.kind === "stale") {
+        button.title = notice.tooltip;
+    } else if (publication) {
+        button.title = `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`;
+    } else {
+        button.title = "Опубликовать сохранённую теорию";
+    }
+
+    if (!activeTheoryId || !canManage) {
+        button.classList.add("hidden");
+        button.dataset.tone = "muted";
+        button.innerHTML = `
+            <span class="material-symbols-outlined text-[16px]">public</span>
+            Не опубликована
+        `;
+        return;
+    }
+
+    const tone = publication ? getCatalogVisibilityTone(publication.catalog_visibility) : "muted";
+    const label = publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : "Не опубликована";
+    const description = publication
+        ? getTheoryCatalogVisibilityDescription(publication.catalog_visibility)
+        : "Теория пока доступна только вам и ещё не опубликована.";
+
+    button.classList.remove("hidden");
+    button.dataset.tone = tone;
+    button.title = description;
+    button.innerHTML = `
+        <span class="material-symbols-outlined text-[16px]">public</span>
+        ${escapeTheoryHtml(label)}
+    `;
+}
+
+function updateTheoryPublicationControls() {
+    const button = document.getElementById("theory-publish-btn");
+    if (!button) {
+        return;
+    }
+
+    const activeTheoryId = String(theoryEditorState.activeTheoryId || "").trim();
+    const publication = theoryEditorState.publicationItem || resolveTheoryPublication();
+    const canManage = !!activeTheoryId && isTheoryOwnedByCurrentUser();
+    const notice = getTheoryPublicationNotice(theoryEditorState.activeItem, publication);
+
+    button.disabled = !activeTheoryId || !canManage;
+    if (!activeTheoryId) {
+        button.title = "Сначала сохраните теорию";
+    } else if (!canManage) {
+        button.title = "Публикацией можно управлять только для своих теорий";
+    } else if (notice.kind === "stale") {
+        button.title = notice.tooltip;
+    } else if (publication) {
+        button.title = `Управление публикацией: ${getCatalogVisibilityLabel(publication.catalog_visibility)}`;
+    } else {
+        button.title = notice.tooltip;
+    }
+
+    if (!activeTheoryId || !canManage) {
+        button.classList.add("hidden");
+        button.dataset.tone = "muted";
+        button.innerHTML = `
+            <span class="material-symbols-outlined text-[16px]">public</span>
+            Не опубликована
+        `;
+        return;
+    }
+
+    if (notice.kind === "stale") {
+        button.classList.remove("hidden");
+        button.dataset.tone = "warning";
+        button.title = notice.tooltip;
+        button.innerHTML = `
+            <span class="material-symbols-outlined text-[16px]">campaign</span>
+            ${escapeTheoryHtml(notice.buttonLabel)}
+        `;
+        return;
+    }
+
+    const tone = publication ? getCatalogVisibilityTone(publication.catalog_visibility) : "muted";
+    const label = publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : notice.buttonLabel;
+    const description = publication
+        ? getTheoryCatalogVisibilityDescription(publication.catalog_visibility)
+        : notice.tooltip;
+
+    button.classList.remove("hidden");
+    button.dataset.tone = tone;
+    button.title = description;
+    button.innerHTML = `
+        <span class="material-symbols-outlined text-[16px]">public</span>
+        ${escapeTheoryHtml(label)}
+    `;
+}
+
+function syncActiveTheoryPublicationFromIndex() {
+    theoryEditorState.publicationItem = resolveTheoryPublication();
+    updateTheoryPublicationControls();
+}
+
+async function fetchTheoryPublicationItems(forceRefresh = false) {
+    const userId = await resolveCurrentTheoryEditorUserId(forceRefresh);
+    if (!userId) {
+        rebuildTheoryPublicationIndex([]);
+        syncActiveTheoryPublicationFromIndex();
+        return [];
+    }
+    const params = new URLSearchParams({
+        content_type: "theory",
+        owner_user_id: userId,
+        include_owned_non_public: "true",
+    });
+    const response = await fetch(`/api/catalog/items?${params.toString()}`);
+    const data = await theoryReadJsonSafely(response);
+    if (!response.ok || !data?.ok || !Array.isArray(data.items)) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+    }
+    rebuildTheoryPublicationIndex(data.items);
+    syncActiveTheoryPublicationFromIndex();
+    return data.items;
+}
+
+async function copyTheoryAccessCode(value) {
+    const code = String(value || "").trim().replace(/\s+/g, "").replace(/-/g, "").toUpperCase();
+    if (!code || code === "Код будет создан после публикации") return;
+    try {
+        if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+            await navigator.clipboard.writeText(code);
+            theoryEditorToast("Код доступа скопирован.", "success", 2500);
+            return;
+        }
+    } catch (error) {
+        console.warn("[Theory Editor] Failed to copy access code", error);
+    }
+    theoryEditorToast(`Код доступа: ${code}`, "info", 3200);
+}
+
+function theoryAssetSrc(assetId, assetUrl) {
+    if (assetUrl) return assetUrl;
+    if (assetId) return `/api/assets/${encodeURIComponent(assetId)}/content`;
+    return "";
 }
 
 function escapeTheoryHtml(value) {
@@ -417,6 +818,8 @@ function escapeTheoryHtml(value) {
 
 function renderTheoryInline(text, attributes) {
     let html = escapeTheoryHtml(text).replace(/\u00A0/g, "&nbsp;");
+    // Convert soft breaks (\r) back to <br>
+    html = html.replace(/\r/g, "<br>");
     const attrs = attributes || {};
     if (attrs.bold) html = `<strong>${html}</strong>`;
     if (attrs.italic) html = `<em>${html}</em>`;
@@ -533,7 +936,7 @@ function renderTheoryLineContent(segments) {
             continue;
         }
         if (segment.kind === "image" && segment.value) {
-            const safePath = escapeTheoryHtml(segment.value);
+            const safeRef = escapeTheoryHtml(segment.value);
             const attrs = segment.attrs || {};
             const width = attrs.width || "100%";
             const align = attrs.align || "left";
@@ -555,7 +958,11 @@ function renderTheoryLineContent(segments) {
             const rotate = attrs.rotate || "0";
             const flipScale = flip === "horizontal" ? " scaleX(-1)" : "";
             const transformStyle = rotate !== "0" || flip === "horizontal" ? `transform:rotate(${rotate}deg)${flipScale};` : "";
-            html += `<span class="theory-image-wrapper" contenteditable="false" style="${wrapperStyle}"><img data-path="${safePath}" data-width="${width}" data-align="${align}" data-rotate="${rotate}" data-float="${float}" data-flip="${flip}" src="${theoryLocalImageSrc(segment.value)}" alt="" class="theory-image ${alignClass}" style="max-width:${width};width:${width};border-radius:12px;cursor:pointer;${transformStyle}" onmousedown="event.preventDefault()" onclick="theoryImageClick(this,event)" /></span>`;
+            const imageSrc = isTheoryHostedAssetRef(segment.value) ? segment.value : theoryLocalImageSrc(segment.value);
+            const refAttr = isTheoryHostedAssetRef(segment.value)
+                ? ` data-asset-url="${safeRef}"`
+                : ` data-path="${safeRef}"`;
+            html += `<span class="theory-image-wrapper" contenteditable="false" style="${wrapperStyle}"><img${refAttr} data-width="${width}" data-align="${align}" data-rotate="${rotate}" data-float="${float}" data-flip="${flip}" src="${imageSrc}" alt="" class="theory-image ${alignClass}" style="max-width:${width};width:${width};border-radius:12px;cursor:pointer;${transformStyle}" onmousedown="event.preventDefault()" onclick="theoryImageClick(this,event)" /></span>`;
         }
     }
     return html || "<br>";
@@ -620,7 +1027,31 @@ function renderTheoryDeltaToEditor(delta) {
 function collectTheoryInlineOps(node, attrs, out) {
     if (!node) return;
     if (node.nodeType === Node.TEXT_NODE) {
-        const text = node.nodeValue || "";
+        let text = node.nodeValue || "";
+        if (!text) return;
+        const siblingNodes = Array.from(node.parentNode?.childNodes || []);
+        const currentIndex = siblingNodes.indexOf(node);
+        const previousMeaningfulSibling = siblingNodes
+            .slice(0, currentIndex)
+            .reverse()
+            .find((sibling) => String(sibling?.textContent || "").trim());
+        const nextMeaningfulSibling = siblingNodes
+            .slice(currentIndex + 1)
+            .find((sibling) => String(sibling?.textContent || "").trim());
+        if (!text.trim()) {
+            if (!previousMeaningfulSibling || !nextMeaningfulSibling) {
+                return;
+            }
+            text = " ";
+        }
+        // Normalize: internal newlines in text nodes should not trigger block breaks
+        text = text.replace(/[\n\r]+/g, " ");
+        if (!previousMeaningfulSibling) {
+            text = text.replace(/^[\s\u00a0]+/, "");
+        }
+        if (!nextMeaningfulSibling) {
+            text = text.replace(/[\s\u00a0]+$/, "");
+        }
         if (!text) return;
         const op = { insert: text };
         if (attrs && Object.keys(attrs).length) op.attributes = attrs;
@@ -630,8 +1061,10 @@ function collectTheoryInlineOps(node, attrs, out) {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     const tag = node.tagName ? node.tagName.toLowerCase() : "";
     if (tag === "img") {
+        const dataAssetUrl = node.getAttribute("data-asset-url");
+        const dataAssetId = node.getAttribute("data-asset-id");
         const dataPath = node.getAttribute("data-path");
-        const src = dataPath || node.getAttribute("src") || "";
+        const src = dataAssetUrl || theoryAssetSrc(dataAssetId, "") || dataPath || node.getAttribute("src") || "";
         if (src) {
             const imageOp = { insert: { image: src } };
             const width = node.getAttribute("data-width");
@@ -652,7 +1085,7 @@ function collectTheoryInlineOps(node, attrs, out) {
         return;
     }
     if (tag === "br") {
-        out.push({ insert: "\n" });
+        out.push({ insert: "\r" });
         return;
     }
     if (tag === "ul" || tag === "ol") {
@@ -671,6 +1104,281 @@ function collectTheoryInlineOps(node, attrs, out) {
     }
 }
 
+function normalizeTheoryWordMarkerText(value) {
+    return String(value || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function extractTheoryWordListMarker(element) {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+        return "";
+    }
+
+    const childNodes = Array.from(element.childNodes || []);
+    for (const child of childNodes) {
+        if (!child) {
+            continue;
+        }
+        if (child.nodeType === Node.TEXT_NODE) {
+            const rawText = String(child.nodeValue || "");
+            if (!rawText.trim()) {
+                continue;
+            }
+            const normalized = normalizeTheoryWordMarkerText(rawText);
+            const match = normalized.match(/^([^\s]+)/);
+            return match ? match[1] : "";
+        }
+        if (child.nodeType === Node.ELEMENT_NODE) {
+            const normalized = normalizeTheoryWordMarkerText(child.textContent || "");
+            if (!normalized) {
+                continue;
+            }
+            const match = normalized.match(/^([^\s]+)/);
+            return match ? match[1] : "";
+        }
+    }
+    return "";
+}
+
+function isTheoryOrderedListMarker(marker) {
+    const normalized = normalizeTheoryWordMarkerText(marker);
+    if (!normalized) {
+        return false;
+    }
+    return /^(\(?\d+[\.\)]|[a-zа-яёivxlcdm]+[\.\)])$/i.test(normalized);
+}
+
+function trimLeadingTheoryWhitespace(container) {
+    if (!container || container.nodeType !== Node.ELEMENT_NODE) {
+        return;
+    }
+
+    while (container.firstChild) {
+        const firstChild = container.firstChild;
+        if (firstChild.nodeType === Node.TEXT_NODE) {
+            const nextValue = String(firstChild.nodeValue || "").replace(/^[\s\u00a0]+/, "");
+            if (!nextValue) {
+                firstChild.remove();
+                continue;
+            }
+            firstChild.nodeValue = nextValue;
+        } else if (firstChild.nodeType === Node.ELEMENT_NODE && !String(firstChild.textContent || "").trim()) {
+            firstChild.remove();
+            continue;
+        }
+        break;
+    }
+}
+
+function stripTheoryWordListMarker(element, marker = "") {
+    if (!element || element.nodeType !== Node.ELEMENT_NODE) {
+        return;
+    }
+
+    const markerToken = normalizeTheoryWordMarkerText(marker);
+    let firstMeaningfulChild = null;
+
+    for (const child of Array.from(element.childNodes || [])) {
+        if (child.nodeType === Node.TEXT_NODE && !String(child.nodeValue || "").trim()) {
+            continue;
+        }
+        if (child.nodeType === Node.ELEMENT_NODE && !String(child.textContent || "").trim()) {
+            continue;
+        }
+        firstMeaningfulChild = child;
+        break;
+    }
+
+    if (!firstMeaningfulChild) {
+        return;
+    }
+
+    if (firstMeaningfulChild.nodeType === Node.ELEMENT_NODE) {
+        const styleAttr = String(firstMeaningfulChild.getAttribute("style") || "");
+        const classAttr = String(firstMeaningfulChild.getAttribute("class") || "");
+        const childText = normalizeTheoryWordMarkerText(firstMeaningfulChild.textContent || "");
+        const shouldRemoveWholeNode =
+            /mso-list\s*:\s*ignore/i.test(styleAttr)
+            || /symbol|wingdings/i.test(styleAttr)
+            || /MsoList/i.test(classAttr)
+            || (markerToken && childText.startsWith(markerToken));
+
+        if (shouldRemoveWholeNode) {
+            firstMeaningfulChild.remove();
+            trimLeadingTheoryWhitespace(element);
+            return;
+        }
+    }
+
+    if (firstMeaningfulChild.nodeType === Node.TEXT_NODE) {
+        const currentValue = String(firstMeaningfulChild.nodeValue || "");
+        const escapedMarker = markerToken.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const nextValue = markerToken
+            ? currentValue.replace(new RegExp(`^[\\s\\u00a0]*${escapedMarker}[\\s\\u00a0]*`), "")
+            : currentValue;
+        firstMeaningfulChild.nodeValue = nextValue;
+    }
+
+    trimLeadingTheoryWhitespace(element);
+}
+
+function normalizeTheoryWordLists(doc) {
+    if (!doc || !doc.body) {
+        return;
+    }
+
+    const candidates = Array.from(doc.body.querySelectorAll("p, div"));
+    let activeList = null;
+    let activeSignature = "";
+
+    const resetActiveList = () => {
+        activeList = null;
+        activeSignature = "";
+    };
+
+    candidates.forEach((element) => {
+        if (!element || !element.parentNode) {
+            resetActiveList();
+            return;
+        }
+
+        const classAttr = String(element.getAttribute("class") || "");
+        const styleAttr = String(element.getAttribute("style") || "");
+        const marker = extractTheoryWordListMarker(element);
+        const hasWordListHint =
+            /(?:^|\s)MsoListParagraph/i.test(classAttr)
+            || /mso-list\s*:/i.test(styleAttr);
+
+        if (!hasWordListHint || !marker) {
+            resetActiveList();
+            return;
+        }
+
+        const listType = isTheoryOrderedListMarker(marker) ? "ol" : "ul";
+        const listSignatureMatch = styleAttr.match(/mso-list\s*:\s*([^;]+)/i);
+        const listSignature = `${listType}:${String(listSignatureMatch?.[1] || classAttr || marker).trim()}`;
+
+        if (!activeList || activeSignature !== listSignature || activeList.tagName.toLowerCase() !== listType) {
+            activeList = doc.createElement(listType);
+            activeSignature = listSignature;
+            element.parentNode.insertBefore(activeList, element);
+        }
+
+        const li = doc.createElement("li");
+        stripTheoryWordListMarker(element, marker);
+
+        while (element.firstChild) {
+            li.appendChild(element.firstChild);
+        }
+        if (!String(li.textContent || "").trim() && !li.querySelector("img")) {
+            li.innerHTML = "<br>";
+        }
+        activeList.appendChild(li);
+        element.remove();
+    });
+}
+
+function cleanTheoryWordHtml(html) {
+    if (!html) return "";
+
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, "text/html");
+
+    normalizeTheoryWordLists(doc);
+
+    // 1. Remove Word-specific tags and comments
+    const all = doc.createTreeWalker(doc.body, NodeFilter.SHOW_ALL);
+    const nodesToRemove = [];
+    let n = all.nextNode();
+    while (n) {
+        if (n.nodeType === Node.COMMENT_NODE) {
+            nodesToRemove.push(n);
+        } else if (n.nodeType === Node.ELEMENT_NODE) {
+            const tag = n.tagName.toLowerCase();
+            // Word-specific tags like <o:p>, <v:shape>, etc.
+            if (tag.includes(":") || tag === "meta" || tag === "link" || tag === "style" || tag === "title") {
+                nodesToRemove.push(n);
+            }
+        }
+        n = all.nextNode();
+    }
+    nodesToRemove.forEach((node) => {
+        if (node.parentNode) {
+            if (node.nodeType === Node.ELEMENT_NODE && node.childNodes.length > 0) {
+                // If it's an element, try to preserve its text content if it's not a meta/style tag
+                const tag = node.tagName.toLowerCase();
+                if (tag !== "style" && tag !== "meta" && tag !== "link" && tag !== "title") {
+                    while (node.firstChild) {
+                        node.parentNode.insertBefore(node.firstChild, node);
+                    }
+                }
+            }
+            node.remove();
+        }
+    });
+
+    // 2. Clean attributes and promote nested blocks
+    const promoteBlocks = ["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "blockquote"];
+    
+    function cleanElement(el) {
+        // Strip almost all attributes except essentials
+        const attrsToKeep = ["src", "alt", "href", "title"];
+        const styleToKeep = ["text-align", "color", "font-weight", "font-style", "text-decoration"];
+        
+        const preservedStyles = {};
+        if (el.style) {
+            styleToKeep.forEach(prop => {
+                const val = el.style.getPropertyValue(prop);
+                if (val) preservedStyles[prop] = val;
+            });
+        }
+        
+        while (el.attributes.length > 0) {
+            el.removeAttribute(el.attributes[0].name);
+        }
+        
+        attrsToKeep.forEach(attr => {
+            if (el.dataset && el.dataset[attr]) el.setAttribute(attr, el.dataset[attr]);
+        });
+        
+        // Restore whitelisted styles
+        Object.entries(preservedStyles).forEach(([prop, val]) => {
+            el.style.setProperty(prop, val);
+        });
+
+        // Recursively clean children
+        Array.from(el.children).forEach(cleanElement);
+    }
+
+    cleanElement(doc.body);
+
+    // 3. Ensure a flat structure for editorHtmlToTheoryDelta
+    // Replace leaf DIVs with Ps, unwrap DIVs that contain other blocks
+    const divs = doc.querySelectorAll("div");
+    divs.forEach(div => {
+        const hasBlockChildren = Array.from(div.children).some(child => 
+            ["p", "div", "h1", "h2", "ul", "ol", "blockquote"].includes(child.tagName.toLowerCase())
+        );
+        
+        if (hasBlockChildren) {
+            // Unwrap: insert children before div, then remove div
+            while (div.firstChild) {
+                div.parentNode.insertBefore(div.firstChild, div);
+            }
+            div.remove();
+        } else {
+            // Convert to P
+            const p = doc.createElement("p");
+            p.innerHTML = div.innerHTML;
+            div.parentNode.replaceChild(p, div);
+        }
+    });
+
+    return doc.body.innerHTML;
+}
+
 function getTheoryHeaderLevel(tag) {
     if (!tag || typeof tag !== "string") return null;
     const match = /^h([1-6])$/.exec(tag.toLowerCase());
@@ -683,39 +1391,77 @@ function editorHtmlToTheoryDelta() {
     if (!editor) return { ops: [{ insert: "\n" }] };
     const ops = [];
 
-    const nodes = Array.from(editor.childNodes || []);
-    if (!nodes.length) return { ops: [{ insert: "\n" }] };
+    function processNodes(nodesToProcess) {
+        const blockTags = new Set(["p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "blockquote"]);
+        let inlineBuffer = [];
 
-    for (const node of nodes) {
-        if (node.nodeType === Node.ELEMENT_NODE) {
-            const tag = node.tagName.toLowerCase();
-            if (tag === "ol" || tag === "ul") {
-                const listType = tag === "ol" ? "ordered" : "bullet";
-                const items = Array.from(node.children || []).filter(
-                    (child) => child.tagName && child.tagName.toLowerCase() === "li"
-                );
-                for (const li of items) {
-                    collectTheoryInlineOps(li, {}, ops);
-                    const liAttrs = { list: listType };
-                    if (li.style.textAlign) liAttrs.align = li.style.textAlign;
-                    ops.push({ insert: "\n", attributes: liAttrs });
-                }
-                continue;
+        const flushInlineBuffer = () => {
+            if (inlineBuffer.length > 0) {
+                inlineBuffer.forEach(node => {
+                    collectTheoryInlineOps(node, {}, ops);
+                });
+                ops.push({ insert: "\n" });
+                inlineBuffer = [];
             }
+        };
 
-            const lineAttrs = {};
-            const headerLevel = getTheoryHeaderLevel(tag);
-            if (headerLevel) lineAttrs.header = headerLevel;
-            if (tag === "blockquote") lineAttrs.blockquote = true;
-            if (node.style.textAlign) lineAttrs.align = node.style.textAlign;
+        for (const node of nodesToProcess) {
+            if (node.nodeType === Node.ELEMENT_NODE) {
+                const tag = node.tagName.toLowerCase();
+                
+                if (tag === "div") {
+                    const hasBlockChildren = Array.from(node.children).some(child => 
+                        blockTags.has(child.tagName.toLowerCase()) || child.tagName.toLowerCase() === "div"
+                    );
+                    if (hasBlockChildren) {
+                        flushInlineBuffer();
+                        processNodes(Array.from(node.childNodes));
+                        continue;
+                    }
+                    // If no block children, treat as inline (collect to buffer)
+                    inlineBuffer.push(node);
+                    continue;
+                }
 
-            collectTheoryInlineOps(node, {}, ops);
-            ops.push(Object.keys(lineAttrs).length ? { insert: "\n", attributes: lineAttrs } : { insert: "\n" });
-        } else {
-            collectTheoryInlineOps(node, {}, ops);
-            ops.push({ insert: "\n" });
+                if (blockTags.has(tag)) {
+                    flushInlineBuffer();
+                    if (tag === "ol" || tag === "ul") {
+                        const listType = tag === "ol" ? "ordered" : "bullet";
+                        const items = Array.from(node.children || []).filter(
+                            (child) => child.tagName && child.tagName.toLowerCase() === "li"
+                        );
+                        for (const li of items) {
+                            collectTheoryInlineOps(li, {}, ops);
+                            const liAttrs = { list: listType };
+                            if (li.style.textAlign) liAttrs.align = li.style.textAlign;
+                            ops.push({ insert: "\n", attributes: liAttrs });
+                        }
+                    } else {
+                        const lineAttrs = {};
+                        const headerLevel = getTheoryHeaderLevel(tag);
+                        if (headerLevel) lineAttrs.header = headerLevel;
+                        if (tag === "blockquote") lineAttrs.blockquote = true;
+                        if (node.style.textAlign) lineAttrs.align = node.style.textAlign;
+
+                        collectTheoryInlineOps(node, {}, ops);
+                        ops.push(Object.keys(lineAttrs).length ? { insert: "\n", attributes: lineAttrs } : { insert: "\n" });
+                    }
+                    continue;
+                }
+
+                // Any other element is treated as inline
+                inlineBuffer.push(node);
+            } else if (node.nodeType === Node.TEXT_NODE) {
+                if (!String(node.nodeValue || "").trim()) {
+                    continue;
+                }
+                inlineBuffer.push(node);
+            }
         }
+        flushInlineBuffer();
     }
+
+    processNodes(Array.from(editor.childNodes || []));
 
     const normalized = [];
     for (const op of ops) {
@@ -724,7 +1470,6 @@ function editorHtmlToTheoryDelta() {
             const normalizedImage = normalizeTheoryImageRef(op.insert.image);
             if (!normalizedImage) continue;
             const imageOp = { insert: { image: normalizedImage } };
-            // Preserve image attributes (width, align, rotate, float, flip)
             if (op.attributes && typeof op.attributes === "object") {
                 const attrs = {};
                 if (op.attributes.width) attrs.width = op.attributes.width;
@@ -818,12 +1563,851 @@ function setTheoryEditorContent(title, delta) {
 
 function resetTheoryEditorState() {
     theoryEditorState.activeTheoryId = "";
+    theoryEditorState.activeItem = null;
+    theoryEditorState.publicationItem = null;
     theoryEditorState.version = null;
     theoryEditorState.dirty = false;
     setTheoryEditorContent("", EMPTY_THEORY_DELTA);
     updateTheoryEditorUrl();
     renderTheoryContextHeader();
     updateTheoryEditorActions();
+}
+
+async function openTheoryPublicationDialog() {
+    const theoryId = String(theoryEditorState.activeTheoryId || "").trim();
+    if (!theoryId) {
+        theoryEditorToast("Сначала сохраните теорию, чтобы управлять публикацией.", "info", 3200);
+        return;
+    }
+
+    await resolveCurrentTheoryEditorUserId();
+
+    const activeTheory = theoryEditorState.activeItem
+        || theoryEditorState.catalog.find((item) => String(item?.id || "").trim() === theoryId)
+        || null;
+    if (!isTheoryOwnedByCurrentUser(activeTheory)) {
+        theoryEditorToast("Публикацией можно управлять только для своих теорий.", "warning", 3200);
+        return;
+    }
+
+    if (!theoryEditorState.publicationItem) {
+        try {
+            await fetchTheoryPublicationItems(true);
+        } catch (error) {
+            console.warn("[Theory Editor] Failed to refresh publication items", error);
+        }
+    }
+
+    const publication = theoryEditorState.publicationItem || resolveTheoryPublication(activeTheory);
+    const currentVisibility = String(publication?.catalog_visibility || "public").trim().toLowerCase() || "public";
+    const visibilityLock = getTheoryVisibilityLock(publication);
+    const accessCode = getTheoryAccessCodeValue(publication);
+    const theoryTitle = escapeTheoryHtml(
+        String(document.getElementById("theory-title")?.value || activeTheory?.title || "Без названия").trim() || "Без названия"
+    );
+
+    const modal = document.createElement("div");
+    modal.className = "fixed inset-0 z-[9999] overflow-y-auto bg-scrim p-4 sm:p-6";
+    modal.innerHTML = `
+        <div class="mx-auto flex min-h-full w-full max-w-4xl items-center justify-center">
+            <div class="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">
+                <div class="flex items-start justify-between gap-4 border-b border-border-subtle px-5 py-4 sm:px-6">
+                    <div class="space-y-1 max-w-3xl">
+                        <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
+                            <span class="material-symbols-outlined text-[16px]">public</span>
+                            Публикация теории
+                        </div>
+                        <h3 class="text-xl font-bold text-text-main">${theoryTitle}</h3>
+                        <p class="text-sm text-text-secondary">Публикуется последняя сохранённая версия теории. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.</p>
+                    </div>
+                    <button type="button" data-role="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-bg-tertiary hover:text-text-main">
+                        <span class="material-symbols-outlined">close</span>
+                    </button>
+                </div>
+                <div class="custom-scrollbar space-y-5 overflow-y-auto p-5 sm:p-6">
+                    <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Текущий статус</div>
+                                <div id="theory-publish-current-status" class="mt-1 text-base font-semibold text-text-main">${escapeTheoryHtml(publication ? getCatalogVisibilityLabel(publication.catalog_visibility) : "Не опубликована")}</div>
+                                <div id="theory-publish-current-meta" class="mt-1 text-sm text-text-secondary">${publication ? `Последняя публикация: ${escapeTheoryHtml(formatTheoryPublicationTimestamp(publication.latest_published_at))}` : "После первой публикации теория появится в каталоге или станет доступна по коду."}</div>
+                            </div>
+                            <span id="theory-publish-current-badge" class="theory-status-pill" data-tone="${publication ? getCatalogVisibilityTone(currentVisibility) : "muted"}">
+                                <span class="material-symbols-outlined text-[16px]">public</span>
+                                ${escapeTheoryHtml(publication ? getCatalogVisibilityLabel(currentVisibility) : "Не опубликована")}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <div class="text-sm font-semibold text-text-main">Режим доступа</div>
+                            <p class="mt-1 text-sm text-text-secondary">Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии. Новые правки из редактора увидят другие пользователи только после публикации.</p>
+                        </div>
+                        ${visibilityLock ? `
+                            <div class="rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
+                                Теория используется публичным комплексом. Режим доступа зафиксирован на «Общий доступ».
+                            </div>
+                        ` : ""}
+                        <div class="grid gap-3 md:grid-cols-3">
+                            ${["public", "access_code", "private"].map((visibility) => `
+                                <label class="${visibilityLock && visibility !== "public" ? "cursor-not-allowed opacity-60" : "cursor-pointer"} rounded-2xl border border-border-subtle bg-surface-1 p-4 transition-colors hover:border-primary-light">
+                                    <div class="flex items-start gap-3">
+                                        <input type="radio" name="theory-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? "checked" : ""} ${visibilityLock && visibility !== "public" ? "disabled" : ""} class="mt-1 h-4 w-4 text-primary" />
+                                        <div class="space-y-1 min-w-0">
+                                            <div class="text-sm font-semibold text-text-main">${escapeTheoryHtml(getCatalogVisibilityLabel(visibility))}</div>
+                                            <div class="text-sm text-text-secondary">${escapeTheoryHtml(getTheoryCatalogVisibilityDescription(visibility))}</div>
+                                        </div>
+                                    </div>
+                                </label>
+                            `).join("")}
+                        </div>
+                    </div>
+
+                    <div id="theory-publish-access-box" class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4 ${currentVisibility === "access_code" ? "" : "hidden"}">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Код доступа</div>
+                                <div id="theory-publish-access-code" class="mt-1 text-base font-semibold tracking-[0.12em] text-text-main">${escapeTheoryHtml(accessCode ? formatTheoryAccessCodeDisplay(accessCode) : "Код будет создан после публикации")}</div>
+                            </div>
+                            <button type="button" class="theory-neutral-btn inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary" data-role="copy-access-code">
+                                <span class="material-symbols-outlined text-[18px]">content_copy</span>
+                                Скопировать код
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="rounded-2xl border border-border-subtle bg-bg-secondary px-4 py-4">
+                        <div class="text-xs font-bold uppercase tracking-[0.14em] text-text-muted">Что произойдёт после изменения доступа</div>
+                        <ul class="mt-2 space-y-2 text-sm text-text-secondary">
+                            <li>Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.</li>
+                            <li>Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.</li>
+                            <li>Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.</li>
+                            <li>Новая публикация делает актуальной последнюю сохранённую версию теории для каталога и доступа по коду.</li>
+                        </ul>
+                    </div>
+
+                    <div id="theory-publish-unsaved-note" class="${theoryEditorState.dirty ? "" : "hidden"} rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker">
+                        Есть несохранённые изменения. В публикацию попадёт последняя сохранённая версия теории.
+                    </div>
+
+                    <div id="theory-publish-feedback" class="hidden rounded-2xl border px-4 py-3 text-sm"></div>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-5 py-4 sm:px-6">
+                    <button type="button" data-role="update-visibility" class="theory-neutral-btn inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
+                        <span class="material-symbols-outlined text-[18px]">tune</span>
+                        Сохранить доступ
+                    </button>
+                    <div class="flex flex-wrap items-center justify-end gap-3">
+                        <button type="button" data-role="close" class="theory-neutral-btn inline-flex h-10 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
+                            Отмена
+                        </button>
+                        <button type="button" data-role="publish-version" class="theory-save-btn inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-bold text-primary-fg shadow-sm transition-all hover:shadow-md">
+                            <span class="material-symbols-outlined text-[18px]">publish</span>
+                            Опубликовать версию
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const getSelectedVisibility = () => {
+        const checked = modal.querySelector('input[name="theory-publish-visibility"]:checked');
+        return String(checked?.value || "public").trim().toLowerCase() || "public";
+    };
+
+    const feedback = modal.querySelector("#theory-publish-feedback");
+    const currentStatus = modal.querySelector("#theory-publish-current-status");
+    const currentMeta = modal.querySelector("#theory-publish-current-meta");
+    const currentBadge = modal.querySelector("#theory-publish-current-badge");
+    const accessBox = modal.querySelector("#theory-publish-access-box");
+    const accessCodeEl = modal.querySelector("#theory-publish-access-code");
+    const updateBtn = modal.querySelector('[data-role="update-visibility"]');
+    const publishBtn = modal.querySelector('[data-role="publish-version"]');
+
+    const close = () => modal.remove();
+
+    const setFeedback = (message = "", tone = "info") => {
+        if (!feedback) return;
+        const text = String(message || "").trim();
+        feedback.classList.toggle("hidden", !text);
+        if (!text) {
+            feedback.textContent = "";
+            feedback.className = "hidden rounded-2xl border px-4 py-3 text-sm";
+            return;
+        }
+        const toneClasses = tone === "error"
+            ? "border-error-light bg-error-lighter text-error-text"
+            : tone === "success"
+                ? "border-success-light bg-success-lighter text-success-text"
+                : "border-info-light bg-info-lighter text-info-text";
+        feedback.className = `rounded-2xl border px-4 py-3 text-sm ${toneClasses}`;
+        feedback.textContent = text;
+    };
+
+    let modalBusy = false;
+    const applyVisibilityControlState = (currentItem = null) => {
+        const lock = getTheoryVisibilityLock(currentItem || publication);
+        const radios = Array.from(modal.querySelectorAll('input[name="theory-publish-visibility"]'));
+        let publicRadio = null;
+        radios.forEach((input) => {
+            const visibility = String(input?.value || "").trim().toLowerCase();
+            const disabledByLock = !!lock && visibility !== "public";
+            if (visibility === "public") {
+                publicRadio = input;
+            }
+            input.disabled = modalBusy || disabledByLock;
+        });
+        if (lock) {
+            const selected = getSelectedVisibility();
+            if (selected !== "public" && publicRadio) {
+                publicRadio.checked = true;
+            }
+        }
+        return lock;
+    };
+
+    const setBusy = (busy = false) => {
+        modalBusy = !!busy;
+        applyVisibilityControlState(theoryEditorState.publicationItem);
+        [updateBtn, publishBtn].forEach((node) => {
+            if (!node) return;
+            node.disabled = busy;
+            node.classList.toggle("opacity-60", busy);
+        });
+    };
+
+    const syncModalState = (currentItem = null) => {
+        const lock = applyVisibilityControlState(currentItem);
+        const selectedVisibility = getSelectedVisibility();
+        if (currentStatus) {
+            currentStatus.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : "Не опубликована";
+        }
+        if (currentMeta) {
+            currentMeta.textContent = currentItem
+                ? `Последняя публикация: ${formatTheoryPublicationTimestamp(currentItem.latest_published_at)}`
+                : "После первой публикации теория появится в каталоге или станет доступна по коду.";
+        }
+        if (currentBadge) {
+            currentBadge.dataset.tone = currentItem ? getCatalogVisibilityTone(currentItem.catalog_visibility) : "muted";
+            currentBadge.innerHTML = `
+                <span class="material-symbols-outlined text-[16px]">public</span>
+                ${escapeTheoryHtml(currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : "Не опубликована")}
+            `;
+        }
+        const activeCode = getTheoryAccessCodeValue(currentItem);
+        const showAccess = selectedVisibility === "access_code";
+        if (accessBox) accessBox.classList.toggle("hidden", !showAccess);
+        if (accessCodeEl) {
+            accessCodeEl.textContent = activeCode
+                ? formatTheoryAccessCodeDisplay(activeCode)
+                : (selectedVisibility === "access_code" ? "Код будет создан после публикации" : "");
+        }
+        if (updateBtn) {
+            const currentItemVisibility = String(currentItem?.catalog_visibility || "").trim().toLowerCase();
+            const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility && !(lock && selectedVisibility !== "public");
+            updateBtn.disabled = !canUpdateVisibility;
+            updateBtn.classList.toggle("opacity-60", !canUpdateVisibility);
+        }
+    };
+
+    modal.querySelectorAll('[data-role="close"]').forEach((node) => {
+        node.addEventListener("click", close);
+    });
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) close();
+    });
+    modal.querySelectorAll('input[name="theory-publish-visibility"]').forEach((input) => {
+        input.addEventListener("change", () => syncModalState(theoryEditorState.publicationItem));
+    });
+    modal.querySelector('[data-role="copy-access-code"]')?.addEventListener("click", () => {
+        copyTheoryAccessCode(accessCodeEl?.textContent || getTheoryAccessCodeValue(theoryEditorState.publicationItem));
+    });
+    updateBtn?.addEventListener("click", async () => {
+        const currentItem = theoryEditorState.publicationItem;
+        if (!currentItem) return;
+        const nextVisibility = getSelectedVisibility();
+        if (nextVisibility === String(currentItem.catalog_visibility || "").trim().toLowerCase()) {
+            setFeedback("Выбранный режим доступа уже сохранён.", "info");
+            return;
+        }
+        setBusy(true);
+        setFeedback("");
+        try {
+            const resp = await fetch(`/api/catalog/items/${encodeURIComponent(currentItem.item_id)}/visibility`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ catalog_visibility: nextVisibility }),
+            });
+            const data = await theoryReadJsonSafely(resp);
+            if (!resp.ok || data?.ok === false || !data?.item) {
+                throw new Error(getTheoryPublicationErrorMessage(data?.error || "catalog_visibility_update_failed"));
+            }
+            upsertTheoryPublicationItem(data.item);
+            syncModalState(data.item);
+            setFeedback(`Доступ обновлён: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success");
+            theoryEditorToast(`Статус публикации теории обновлён: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success", 2600);
+        } catch (error) {
+            console.error("[Theory Editor] Visibility update failed", error);
+            setFeedback(`Не удалось изменить доступ: ${String(error?.message || "catalog_visibility_update_failed")}`, "error");
+        } finally {
+            setBusy(false);
+        }
+    });
+    publishBtn?.addEventListener("click", async () => {
+        const selectedVisibility = getSelectedVisibility();
+        setBusy(true);
+        setFeedback("");
+        try {
+            const resp = await fetch(`/api/catalog/theories/${encodeURIComponent(theoryId)}/publish`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ catalog_visibility: selectedVisibility }),
+            });
+            const data = await theoryReadJsonSafely(resp);
+            if (!resp.ok || data?.ok === false || !data?.item) {
+                throw new Error(getTheoryPublicationErrorMessage(data?.error || "catalog_publish_failed"));
+            }
+            upsertTheoryPublicationItem(data.item);
+            syncModalState(data.item);
+            setFeedback(`Публикация обновлена. Режим доступа: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success");
+            theoryEditorToast(`Теория опубликована: ${getCatalogVisibilityLabel(data.item.catalog_visibility)}.`, "success", 2800);
+        } catch (error) {
+            console.error("[Theory Editor] Publish failed", error);
+            setFeedback(`Не удалось опубликовать теорию: ${String(error?.message || "catalog_publish_failed")}`, "error");
+        } finally {
+            setBusy(false);
+        }
+    });
+
+    syncModalState(publication);
+    document.body.appendChild(modal);
+}
+
+function markTheoryDirty() {
+    theoryEditorState.dirty = true;
+    updateTheoryEditorActions();
+    scheduleTheoryDraftSave();
+    setTheoryStatus("Есть несохранённые изменения", "warning", "edit");
+}
+
+async function syncPublishedTheoryAfterSave(savedItem, options = {}) {
+    return {
+        synced: false,
+        skipped: true,
+        notice: getTheoryPublicationNotice(savedItem),
+        silent: Boolean(options?.silent),
+    };
+}
+
+async function persistTheory(options = {}) {
+    if (theoryEditorState.saving) {
+        return null;
+    }
+
+    const titleEl = document.getElementById("theory-title");
+    const payload = {
+        title: titleEl ? String(titleEl.value || "").trim() : "",
+        delta: editorHtmlToTheoryDelta(),
+    };
+
+    theoryEditorState.saving = true;
+    updateTheoryEditorActions();
+    setTheoryStatus("Сохраняем теорию...", "info", "save");
+
+    try {
+        let response;
+        if (theoryEditorState.activeTheoryId) {
+            const body = { ...payload };
+            if (theoryEditorState.version) {
+                body.expected_version = theoryEditorState.version;
+            }
+            response = await fetch(`/api/theories/${encodeURIComponent(theoryEditorState.activeTheoryId)}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+        } else {
+            response = await fetch("/api/theories", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+        }
+
+        const data = await response.json();
+        if (!response.ok || !data?.ok || !data.item) {
+            throw new Error(data?.error || "theory_save_failed");
+        }
+
+        const previousDraftKey = getTheoryDraftKey();
+        const item = data.item;
+        const wasNewTheory = !theoryEditorState.activeTheoryId;
+        theoryEditorState.activeTheoryId = String(item.id || "").trim();
+        theoryEditorState.activeItem = item;
+        theoryEditorState.version = item.version || item.updated_at || null;
+        theoryEditorState.dirty = false;
+        window.clearTimeout(theoryDraftSaveTimer);
+        clearTheoryDraftByKey(previousDraftKey);
+        clearTheoryDraft(theoryEditorState.activeTheoryId);
+        const _titleEl = document.getElementById("theory-title");
+        if (_titleEl) _titleEl.value = item.title || payload.title || "";
+        updateTheoryEditorUrl();
+        renderTheoryContextHeader();
+        updateTheoryEditorActions();
+        await loadTheoryCatalog({ keepSelection: true });
+        const publicationSync = await syncPublishedTheoryAfterSave(item, options);
+        const publicationNotice = getTheoryPublicationNotice(item);
+        let statusMessage = "Теория сохранена";
+        let statusTone = "success";
+        let statusIcon = "check_circle";
+        let toastMessage = "Теория сохранена";
+        let toastTone = "success";
+        let toastDuration = 2200;
+
+        const saveFeedbackCtx = theoryEditorState.context || {};
+        if (wasNewTheory && saveFeedbackCtx.context === "topic" && saveFeedbackCtx.moduleId && saveFeedbackCtx.topicId) {
+            try {
+                await fetch(
+                    `/api/editor/topic/${encodeURIComponent(saveFeedbackCtx.moduleId)}/${encodeURIComponent(saveFeedbackCtx.topicId)}/theory-link`,
+                    {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            theory_link: { theory_id: theoryEditorState.activeTheoryId, relation: "link" },
+                            apply_to_complexes: true,
+                            dry_run: false,
+                            propagation_mode: "safe",
+                        }),
+                    }
+                );
+                statusMessage = "Теория сохранена и привязана к теме";
+                toastMessage = statusMessage;
+                toastDuration = 2800;
+            } catch (linkErr) {
+                console.warn("[Theory Editor] Auto-link to topic failed", linkErr);
+                statusMessage = "Теория сохранена (привязка к теме не удалась)";
+                statusTone = "warning";
+                statusIcon = "warning";
+                toastMessage = "Теория сохранена. Привяжите её к теме вручную.";
+                toastTone = "warning";
+                toastDuration = 3500;
+            }
+        }
+
+        if (publicationSync.synced) {
+            statusMessage = `${statusMessage}. Публикация обновлена автоматически.`;
+            toastMessage = `${toastMessage}. Публикация обновлена.`;
+            toastDuration = Math.max(toastDuration, 2800);
+        } else if (publicationSync.error) {
+            statusMessage = `${statusMessage}. Но публикацию не удалось обновить.`;
+            statusTone = "warning";
+            statusIcon = "warning";
+            toastMessage = `${toastMessage}. Публикация не обновилась: ${String(publicationSync.error?.message || "catalog_publish_failed")}`;
+            toastTone = "warning";
+            toastDuration = Math.max(toastDuration, 3800);
+        }
+
+        if (publicationNotice.kind === "stale" || publicationNotice.kind === "unpublished") {
+            statusMessage = publicationNotice.saveMessage;
+            statusTone = "warning";
+            statusIcon = "campaign";
+            toastMessage = publicationNotice.saveMessage;
+            toastTone = "warning";
+            toastDuration = Math.max(toastDuration, 3800);
+        }
+
+        setTheoryStatus(statusMessage, statusTone, statusIcon);
+        if (!options.silent) {
+            theoryEditorToast(toastMessage, toastTone, toastDuration);
+        }
+
+        document.title = item.title ? `${item.title} — Редактор теории` : "Редактор теории";
+        return item;
+
+        const ctx = theoryEditorState.context || {};
+        if (wasNewTheory && ctx.context === "topic" && ctx.moduleId && ctx.topicId) {
+            try {
+                await fetch(
+                    `/api/editor/topic/${encodeURIComponent(ctx.moduleId)}/${encodeURIComponent(ctx.topicId)}/theory-link`,
+                    {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            theory_link: { theory_id: theoryEditorState.activeTheoryId, relation: "link" },
+                            apply_to_complexes: true,
+                            dry_run: false,
+                            propagation_mode: "safe",
+                        }),
+                    }
+                );
+                setTheoryStatus("Теория сохранена и привязана к теме", "success", "check_circle");
+                if (!options.silent) {
+                    theoryEditorToast("Теория сохранена и привязана к теме", "success", 2800);
+                }
+            } catch (linkErr) {
+                console.warn("[Theory Editor] Auto-link to topic failed", linkErr);
+                setTheoryStatus("Теория сохранена (привязка к теме не удалась)", "warning", "warning");
+                if (!options.silent) {
+                    theoryEditorToast("Теория сохранена. Привяжите её к теме вручную.", "warning", 3500);
+                }
+            }
+        } else {
+            setTheoryStatus("Теория сохранена", "success", "check_circle");
+            if (!options.silent) {
+                theoryEditorToast("Теория сохранена", "success", 2200);
+            }
+        }
+
+        document.title = item.title ? `${item.title} — Редактор теории` : "Редактор теории";
+        return item;
+    } catch (error) {
+        console.error("[Theory Editor] Failed to save theory", error);
+        setTheoryStatus("Не удалось сохранить теорию", "error", "error");
+        theoryEditorToast("Не удалось сохранить теорию", "error", 3000);
+        throw error;
+    } finally {
+        theoryEditorState.saving = false;
+        updateTheoryEditorActions();
+    }
+}
+
+async function startNewTheory() {
+    const canLeave = await confirmDiscardUnsavedChanges();
+    if (!canLeave) {
+        return;
+    }
+    resetTheoryEditorState();
+    setTheoryStatus("Новая теория. Начните писать и сохраните материал.", "muted", "edit_square");
+    document.title = "Новая теория — Редактор теории";
+}
+
+let _selectedImage = null;
+
+function applyImageSettings(img, settings) {
+    if (!img) return;
+    
+    const { width, align, rotate, float, flip } = settings;
+    
+    if (width !== undefined) {
+        img.setAttribute("data-width", width);
+        img.style.maxWidth = width;
+        img.style.width = width;
+    }
+    
+    if (align !== undefined) {
+        img.setAttribute("data-align", align);
+        const alignClass = align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : "";
+        img.className = `theory-image ${alignClass}`;
+        if (_selectedImage === img) img.classList.add("theory-image-selected");
+    }
+    
+    if (rotate !== undefined) {
+        img.setAttribute("data-rotate", rotate);
+    }
+    
+    if (float !== undefined) {
+        img.setAttribute("data-float", float);
+    }
+    
+    if (flip !== undefined) {
+        img.setAttribute("data-flip", flip);
+    }
+    
+    const currentRotate = img.getAttribute("data-rotate") || "0";
+    const currentFlip = img.getAttribute("data-flip") || "none";
+    const flipScale = currentFlip === "horizontal" ? " scaleX(-1)" : "";
+    const transformStyle = currentRotate !== "0" || currentFlip === "horizontal" ? `rotate(${currentRotate}deg)${flipScale}` : "";
+    img.style.transform = transformStyle;
+    
+    const wrapper = img.closest(".theory-image-wrapper");
+    if (wrapper) {
+        const currentAlign = img.getAttribute("data-align") || "left";
+        const currentFloat = img.getAttribute("data-float") || "none";
+        let wrapperStyle = "";
+        
+        if (currentFloat === "left") {
+            wrapperStyle = "display:inline-block;float:left;margin:0 16px 8px 0;";
+        } else if (currentFloat === "right") {
+            wrapperStyle = "display:inline-block;float:right;margin:0 0 8px 16px;";
+        } else {
+            const textAlign = currentAlign === "center" ? "text-align:center;" : currentAlign === "right" ? "text-align:right;" : "";
+            wrapperStyle = `display:block;${textAlign}`;
+        }
+        
+        wrapper.style.cssText = wrapperStyle;
+    }
+    
+    markTheoryDirty();
+}
+
+function saveTheorySelection() {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const editor = document.getElementById("theory-editor");
+        if (editor && editor.contains(range.commonAncestorContainer)) {
+            lastTheoryEditorRange = range.cloneRange();
+        }
+    }
+}
+
+function restoreTheorySelection() {
+    if (!lastTheoryEditorRange) return;
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(lastTheoryEditorRange);
+}
+
+function isTheoryBlankEditableBlock(node) {
+    if (!(node instanceof Element)) return false;
+    if (!["P", "DIV", "LI"].includes(node.tagName)) return false;
+    if (node.querySelector(".theory-image-wrapper, img")) return false;
+    const normalizedText = String(node.textContent || "").replace(/[\s\u00A0\u200B]/g, "");
+    return normalizedText === "";
+}
+
+function isTheoryImageOnlyBlock(node) {
+    return node instanceof Element && !!node.querySelector(".theory-image-wrapper");
+}
+
+function placeCaretInsideTheoryBlock(node, placeAtEnd = false) {
+    if (!(node instanceof Element)) return;
+    const selection = window.getSelection();
+    if (!selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(!placeAtEnd);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    lastTheoryEditorRange = range.cloneRange();
+}
+
+function guardTheoryImageAdjacentDeletion(event) {
+    const key = String(event?.key || "");
+    if (key !== "Backspace" && key !== "Delete") return false;
+
+    const editor = document.getElementById("theory-editor");
+    const selection = window.getSelection();
+    if (!editor || !selection || !selection.rangeCount || !selection.isCollapsed) {
+        return false;
+    }
+
+    let anchor = selection.anchorNode;
+    if (!anchor) return false;
+    if (anchor.nodeType === Node.TEXT_NODE) {
+        anchor = anchor.parentElement;
+    }
+    if (!(anchor instanceof Element)) return false;
+
+    const currentBlock = anchor.closest("p, div, li");
+    if (!currentBlock || !editor.contains(currentBlock) || !isTheoryBlankEditableBlock(currentBlock)) {
+        return false;
+    }
+
+    const imageSibling = key === "Backspace" ? currentBlock.previousElementSibling : currentBlock.nextElementSibling;
+    if (!isTheoryImageOnlyBlock(imageSibling)) {
+        return false;
+    }
+
+    event.preventDefault();
+
+    const fallbackTarget = key === "Backspace" ? currentBlock.nextElementSibling : currentBlock.previousElementSibling;
+    if (fallbackTarget && fallbackTarget !== imageSibling) {
+        currentBlock.remove();
+        if (fallbackTarget instanceof Element) {
+            placeCaretInsideTheoryBlock(fallbackTarget, key === "Backspace");
+        }
+        markTheoryDirty();
+        return true;
+    }
+
+    currentBlock.innerHTML = "<br>";
+    placeCaretInsideTheoryBlock(currentBlock, false);
+    return true;
+}
+
+function selectImage(imgElement) {
+    if (!imgElement) return;
+    
+    if (_selectedImage) {
+        _selectedImage.classList.remove("theory-image-selected");
+    }
+    
+    _selectedImage = imgElement;
+    imgElement.classList.add("theory-image-selected");
+    
+    const textControls = document.getElementById("theory-text-controls");
+    const imageControls = document.getElementById("theory-image-controls");
+    if (textControls) {
+        textControls.classList.add("hidden");
+    }
+    if (imageControls) {
+        imageControls.classList.add("visible");
+        requestAnimationFrame(() => {
+            imageControls.style.opacity = "1";
+        });
+        updateImageControls();
+    }
+}
+
+function deselectImage() {
+    if (_selectedImage) {
+        _selectedImage.classList.remove("theory-image-selected");
+        _selectedImage = null;
+    }
+    
+    const textControls = document.getElementById("theory-text-controls");
+    const imageControls = document.getElementById("theory-image-controls");
+    if (imageControls) {
+        imageControls.classList.remove("visible");
+        imageControls.style.opacity = "";
+    }
+    if (textControls) {
+        textControls.classList.remove("hidden");
+    }
+}
+
+function updateImageControls() {
+    if (!_selectedImage) return;
+    
+    const width = _selectedImage.getAttribute("data-width") || "100%";
+    const align = _selectedImage.getAttribute("data-align") || "left";
+    const float = _selectedImage.getAttribute("data-float") || "none";
+    const flip = _selectedImage.getAttribute("data-flip") || "none";
+    
+    const widthSlider = document.getElementById("theory-image-width-slider");
+    const widthLabel = document.getElementById("theory-image-width-label");
+    if (widthSlider && widthLabel) {
+        const widthNum = parseInt(width) || 100;
+        widthSlider.value = widthNum;
+        widthLabel.textContent = `${widthNum}%`;
+    }
+    
+    document.querySelectorAll(".theory-image-align-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-align") === align);
+    });
+    
+    document.querySelectorAll(".theory-image-float-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.getAttribute("data-float") === float);
+    });
+    
+    const flipBtn = document.getElementById("theory-image-flip");
+    if (flipBtn) {
+        flipBtn.classList.toggle("active", flip === "horizontal");
+    }
+}
+
+function theoryImageClick(imgElement, e) {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (!imgElement) return;
+    selectImage(imgElement);
+}
+
+window.theoryImageClick = theoryImageClick;
+
+async function uploadTheoryImage(event) {
+    const input = event?.target;
+    const file = input && input.files ? input.files[0] : null;
+    if (!file) {
+        return;
+    }
+
+    try {
+        const item = await persistTheory({ silent: true });
+        const theoryId = String(item?.id || theoryEditorState.activeTheoryId || "").trim();
+        if (!theoryId) {
+            throw new Error("theory_not_ready");
+        }
+
+        const formData = new FormData();
+        formData.append("file", file);
+        const response = await fetch(`/api/theories/${encodeURIComponent(theoryId)}/upload-image`, {
+            method: "POST",
+            body: formData,
+        });
+        const data = await response.json();
+        if (!response.ok || !data?.ok || (!data.path && !data.asset_url && !data.asset_id)) {
+            throw new Error(data?.error || "image_upload_failed");
+        }
+
+        const editor = document.getElementById("theory-editor");
+        if (editor) {
+            const img = document.createElement("img");
+            img.src = theoryAssetSrc(data.asset_id, data.asset_url) || theoryLocalImageSrc(data.path);
+            if (data.path) img.setAttribute("data-path", data.path);
+            if (data.asset_id) img.setAttribute("data-asset-id", data.asset_id);
+            if (data.asset_url) img.setAttribute("data-asset-url", data.asset_url);
+            
+            img.setAttribute("data-width", "100%");
+            img.setAttribute("data-align", "left");
+            img.setAttribute("data-rotate", "0");
+            img.setAttribute("data-float", "none");
+            img.setAttribute("data-flip", "none");
+            img.alt = "";
+            img.className = "theory-image";
+            img.style.maxWidth = "100%";
+            img.style.width = "100%";
+            img.style.borderRadius = "12px";
+            img.style.cursor = "pointer";
+            img.onmousedown = function(e) { e.preventDefault(); };
+            img.onclick = function(e) { theoryImageClick(this, e); };
+
+            const wrapper = document.createElement("span");
+            wrapper.className = "theory-image-wrapper";
+            wrapper.setAttribute("contenteditable", "false");
+            wrapper.style.display = "block";
+            wrapper.appendChild(img);
+            
+            const p = document.createElement("p");
+            p.appendChild(wrapper);
+
+            if (lastTheoryEditorRange) {
+                try {
+                    restoreTheorySelection();
+                    const selection = window.getSelection();
+                    if (selection && selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        range.deleteContents();
+                        range.insertNode(p);
+                        
+                        const nextP = document.createElement("p");
+                        nextP.innerHTML = "<br>";
+                        p.after(nextP);
+                        
+                        const nextRange = document.createRange();
+                        nextRange.setStart(nextP, 0);
+                        nextRange.collapse(true);
+                        selection.removeAllRanges();
+                        selection.addRange(nextRange);
+                        lastTheoryEditorRange = nextRange.cloneRange();
+                    } else {
+                        editor.appendChild(p);
+                    }
+                } catch (e) {
+                    console.warn("[Theory Editor] Failed to insert image at range", e);
+                    editor.appendChild(p);
+                }
+            } else {
+                const lastChild = editor.lastElementChild;
+                if (lastChild && lastChild.tagName === "P" && lastChild.childNodes.length === 1 && lastChild.firstChild && lastChild.firstChild.nodeName === "BR") {
+                    editor.removeChild(lastChild);
+                }
+                editor.appendChild(p);
+            }
+            
+            theoryEditorState.version = data.version || theoryEditorState.version;
+            markTheoryDirty();
+            theoryEditorToast("Изображение добавлено. Кликните для настройки размера.", "success", 3000);
+        }
+    } catch (error) {
+        console.error("[Theory Editor] Failed to upload image", error);
+        setTheoryStatus("Не удалось загрузить изображение", "error", "error");
+        theoryEditorToast("Не удалось загрузить изображение", "error", 2800);
+    } finally {
+        if (input) input.value = "";
+    }
 }
 
 function updateTheoryEditorActions() {
@@ -841,6 +2425,8 @@ function updateTheoryEditorActions() {
         openComplexesBtn.disabled = false;
         openComplexesBtn.dataset.target = resolveTheoryComplexesUrl();
     }
+
+    updateTheoryPublicationControls();
 }
 
 function formatTheoryListDate(value) {
@@ -953,6 +2539,7 @@ function renderTheoryLibraryList() {
 
 async function loadTheoryCatalog(options = {}) {
     const keepSelection = options.keepSelection !== false;
+    const skipPublicationRefresh = options.skipPublicationRefresh === true;
     const currentTheoryId = keepSelection ? theoryEditorState.activeTheoryId : "";
     const host = document.getElementById("theory-library-list");
     if (host) {
@@ -970,8 +2557,23 @@ async function loadTheoryCatalog(options = {}) {
             throw new Error(data?.error || `HTTP ${response.status}`);
         }
         theoryEditorState.catalog = Array.isArray(data.items) ? data.items : [];
+        const activeTheory = theoryEditorState.catalog.find((item) => String(item?.id || "").trim() === String(theoryEditorState.activeTheoryId || "").trim()) || null;
+        if (activeTheory) {
+            theoryEditorState.activeItem = { ...(theoryEditorState.activeItem || {}), ...activeTheory };
+        }
         if (currentTheoryId && !theoryEditorState.activeTheoryId) {
             theoryEditorState.activeTheoryId = currentTheoryId;
+        }
+        if (!skipPublicationRefresh) {
+            try {
+                await fetchTheoryPublicationItems();
+            } catch (error) {
+                console.warn("[Theory Editor] Failed to load publication state", error);
+                theoryEditorState.publicationItem = null;
+                updateTheoryPublicationControls();
+            }
+        } else {
+            syncActiveTheoryPublicationFromIndex();
         }
         renderTheoryLibraryList();
     } catch (error) {
@@ -984,6 +2586,8 @@ async function loadTheoryCatalog(options = {}) {
             `;
         }
         theoryEditorToast("Не удалось загрузить список теорий", "warning", 2600);
+        theoryEditorState.publicationItem = null;
+        updateTheoryPublicationControls();
     }
 }
 
@@ -1009,11 +2613,13 @@ async function loadTheoryById(theoryId) {
 
         const item = data.item;
         theoryEditorState.activeTheoryId = String(item.id || normalizedTheoryId).trim();
+        theoryEditorState.activeItem = item;
         theoryEditorState.version = item.version || item.updated_at || null;
         theoryEditorState.dirty = false;
         setTheoryEditorContent(item.title || "", item.delta || EMPTY_THEORY_DELTA);
         updateTheoryEditorUrl();
         renderTheoryContextHeader();
+        syncActiveTheoryPublicationFromIndex();
         updateTheoryEditorActions();
         renderTheoryLibraryList();
         await restoreTheoryDraftIfPresent(theoryEditorState.activeTheoryId);
@@ -1053,351 +2659,6 @@ async function openTheoryFromLibrary(theoryId) {
     await loadTheoryById(normalizedTheoryId);
 }
 
-function markTheoryDirty() {
-    theoryEditorState.dirty = true;
-    updateTheoryEditorActions();
-    scheduleTheoryDraftSave();
-    setTheoryStatus("Есть несохранённые изменения", "warning", "edit");
-}
-
-async function persistTheory(options = {}) {
-    if (theoryEditorState.saving) {
-        return null;
-    }
-
-    const titleEl = document.getElementById("theory-title");
-    const payload = {
-        title: titleEl ? String(titleEl.value || "").trim() : "",
-        delta: editorHtmlToTheoryDelta(),
-    };
-
-    theoryEditorState.saving = true;
-    updateTheoryEditorActions();
-    setTheoryStatus("Сохраняем теорию...", "info", "save");
-
-    try {
-        let response;
-        if (theoryEditorState.activeTheoryId) {
-            const body = { ...payload };
-            if (theoryEditorState.version) {
-                body.expected_version = theoryEditorState.version;
-            }
-            response = await fetch(`/api/theories/${encodeURIComponent(theoryEditorState.activeTheoryId)}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(body),
-            });
-        } else {
-            response = await fetch("/api/theories", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-            });
-        }
-
-        const data = await response.json();
-        if (!response.ok || !data?.ok || !data.item) {
-            throw new Error(data?.error || "theory_save_failed");
-        }
-
-        const previousDraftKey = getTheoryDraftKey();
-        const item = data.item;
-        const wasNewTheory = !theoryEditorState.activeTheoryId;
-        theoryEditorState.activeTheoryId = String(item.id || "").trim();
-        theoryEditorState.version = item.version || item.updated_at || null;
-        theoryEditorState.dirty = false;
-        window.clearTimeout(theoryDraftSaveTimer);
-        clearTheoryDraftByKey(previousDraftKey);
-        clearTheoryDraft(theoryEditorState.activeTheoryId);
-        const _titleEl = document.getElementById("theory-title");
-        if (_titleEl) _titleEl.value = item.title || payload.title || "";
-        updateTheoryEditorUrl();
-        renderTheoryContextHeader();
-        updateTheoryEditorActions();
-        await loadTheoryCatalog({ keepSelection: true });
-
-        // P7: Auto-link theory to topic when a NEW theory is saved via topic context
-        const ctx = theoryEditorState.context || {};
-        if (wasNewTheory && ctx.context === "topic" && ctx.moduleId && ctx.topicId) {
-            try {
-                await fetch(
-                    `/api/editor/topic/${encodeURIComponent(ctx.moduleId)}/${encodeURIComponent(ctx.topicId)}/theory-link`,
-                    {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            theory_link: { theory_id: theoryEditorState.activeTheoryId, relation: "link" },
-                            apply_to_complexes: true,
-                            dry_run: false,
-                            propagation_mode: "safe",
-                        }),
-                    }
-                );
-                setTheoryStatus("Теория сохранена и привязана к теме", "success", "check_circle");
-                if (!options.silent) {
-                    theoryEditorToast("Теория сохранена и привязана к теме", "success", 2800);
-                }
-            } catch (linkErr) {
-                console.warn("[Theory Editor] Auto-link to topic failed", linkErr);
-                setTheoryStatus("Теория сохранена (привязка к теме не удалась)", "warning", "warning");
-                if (!options.silent) {
-                    theoryEditorToast("Теория сохранена. Привяжите её к теме вручную.", "warning", 3500);
-                }
-            }
-        } else {
-            setTheoryStatus("Теория сохранена", "success", "check_circle");
-            if (!options.silent) {
-                theoryEditorToast("Теория сохранена", "success", 2200);
-            }
-        }
-
-        document.title = item.title ? `${item.title} — Редактор теории` : "Редактор теории";
-        return item;
-    } catch (error) {
-        console.error("[Theory Editor] Failed to save theory", error);
-        setTheoryStatus("Не удалось сохранить теорию", "error", "error");
-        theoryEditorToast("Не удалось сохранить теорию", "error", 3000);
-        throw error;
-    } finally {
-        theoryEditorState.saving = false;
-        updateTheoryEditorActions();
-    }
-}
-
-async function startNewTheory() {
-    const canLeave = await confirmDiscardUnsavedChanges();
-    if (!canLeave) {
-        return;
-    }
-    resetTheoryEditorState();
-    setTheoryStatus("Новая теория. Начните писать и сохраните материал.", "muted", "edit_square");
-    document.title = "Новая теория — Редактор теории";
-}
-
-let _selectedImage = null;
-
-function applyImageSettings(img, settings) {
-    if (!img) return;
-    
-    const { width, align, rotate, float, flip } = settings;
-    
-    if (width !== undefined) {
-        img.setAttribute("data-width", width);
-        img.style.maxWidth = width;
-        img.style.width = width;
-    }
-    
-    if (align !== undefined) {
-        img.setAttribute("data-align", align);
-        const alignClass = align === "center" ? "mx-auto" : align === "right" ? "ml-auto" : "";
-        img.className = `theory-image ${alignClass}`;
-        if (_selectedImage === img) img.classList.add("theory-image-selected");
-    }
-    
-    if (rotate !== undefined) {
-        img.setAttribute("data-rotate", rotate);
-    }
-    
-    if (float !== undefined) {
-        img.setAttribute("data-float", float);
-    }
-    
-    if (flip !== undefined) {
-        img.setAttribute("data-flip", flip);
-    }
-    
-    // Update transform
-    const currentRotate = img.getAttribute("data-rotate") || "0";
-    const currentFlip = img.getAttribute("data-flip") || "none";
-    const flipScale = currentFlip === "horizontal" ? " scaleX(-1)" : "";
-    const transformStyle = currentRotate !== "0" || currentFlip === "horizontal" ? `rotate(${currentRotate}deg)${flipScale}` : "";
-    img.style.transform = transformStyle;
-    
-    // Update wrapper
-    const wrapper = img.closest(".theory-image-wrapper");
-    if (wrapper) {
-        const currentAlign = img.getAttribute("data-align") || "left";
-        const currentFloat = img.getAttribute("data-float") || "none";
-        let wrapperStyle = "";
-        
-        if (currentFloat === "left") {
-            wrapperStyle = "display:inline-block;float:left;margin:0 16px 8px 0;";
-        } else if (currentFloat === "right") {
-            wrapperStyle = "display:inline-block;float:right;margin:0 0 8px 16px;";
-        } else {
-            const textAlign = currentAlign === "center" ? "text-align:center;" : currentAlign === "right" ? "text-align:right;" : "";
-            wrapperStyle = `display:block;${textAlign}`;
-        }
-        
-        wrapper.style.cssText = wrapperStyle;
-    }
-    
-    markTheoryDirty();
-}
-
-function selectImage(imgElement) {
-    if (!imgElement) return;
-    
-    // Deselect previous image
-    if (_selectedImage) {
-        _selectedImage.classList.remove("theory-image-selected");
-    }
-    
-    // Select new image
-    _selectedImage = imgElement;
-    imgElement.classList.add("theory-image-selected");
-    
-    // Hide text controls and show image controls
-    const textControls = document.getElementById("theory-text-controls");
-    const imageControls = document.getElementById("theory-image-controls");
-    if (textControls) {
-        textControls.classList.add("hidden");
-    }
-    if (imageControls) {
-        // Add visible class first (sets display: flex but opacity: 0)
-        imageControls.classList.add("visible");
-        // Then trigger opacity transition on next frame
-        requestAnimationFrame(() => {
-            imageControls.style.opacity = "1";
-        });
-        updateImageControls();
-    }
-}
-
-function deselectImage() {
-    if (_selectedImage) {
-        _selectedImage.classList.remove("theory-image-selected");
-        _selectedImage = null;
-    }
-    
-    // Show text controls and hide image controls
-    const textControls = document.getElementById("theory-text-controls");
-    const imageControls = document.getElementById("theory-image-controls");
-    if (imageControls) {
-        // Hide immediately without transition
-        imageControls.classList.remove("visible");
-        imageControls.style.opacity = "";
-    }
-    if (textControls) {
-        textControls.classList.remove("hidden");
-    }
-}
-
-function updateImageControls() {
-    if (!_selectedImage) return;
-    
-    const width = _selectedImage.getAttribute("data-width") || "100%";
-    const align = _selectedImage.getAttribute("data-align") || "left";
-    const float = _selectedImage.getAttribute("data-float") || "none";
-    const flip = _selectedImage.getAttribute("data-flip") || "none";
-    
-    // Update width slider
-    const widthSlider = document.getElementById("theory-image-width-slider");
-    const widthLabel = document.getElementById("theory-image-width-label");
-    if (widthSlider && widthLabel) {
-        const widthNum = parseInt(width) || 100;
-        widthSlider.value = widthNum;
-        widthLabel.textContent = `${widthNum}%`;
-    }
-    
-    // Update alignment buttons
-    document.querySelectorAll(".theory-image-align-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-align") === align);
-    });
-    
-    // Update float buttons
-    document.querySelectorAll(".theory-image-float-btn").forEach(btn => {
-        btn.classList.toggle("active", btn.getAttribute("data-float") === float);
-    });
-    
-    // Update flip button
-    const flipBtn = document.getElementById("theory-image-flip");
-    if (flipBtn) {
-        flipBtn.classList.toggle("active", flip === "horizontal");
-    }
-}
-
-function theoryImageClick(imgElement, e) {
-    if (e) { e.preventDefault(); e.stopPropagation(); }
-    if (!imgElement) return;
-    selectImage(imgElement);
-}
-
-window.theoryImageClick = theoryImageClick;
-
-async function uploadTheoryImage(event) {
-    const input = event?.target;
-    const file = input && input.files ? input.files[0] : null;
-    if (!file) {
-        return;
-    }
-
-    try {
-        const item = await persistTheory({ silent: true });
-        const theoryId = String(item?.id || theoryEditorState.activeTheoryId || "").trim();
-        if (!theoryId) {
-            throw new Error("theory_not_ready");
-        }
-
-        const formData = new FormData();
-        formData.append("file", file);
-        const response = await fetch(`/api/theories/${encodeURIComponent(theoryId)}/upload-image`, {
-            method: "POST",
-            body: formData,
-        });
-        const data = await response.json();
-        if (!response.ok || !data?.ok || !data.path) {
-            throw new Error(data?.error || "image_upload_failed");
-        }
-
-        const editor = document.getElementById("theory-editor");
-        if (editor) {
-            const img = document.createElement("img");
-            img.src = theoryLocalImageSrc(data.path);
-            img.setAttribute("data-path", data.path);
-            img.setAttribute("data-width", "100%");
-            img.setAttribute("data-align", "left");
-            img.setAttribute("data-rotate", "0");
-            img.setAttribute("data-float", "none");
-            img.setAttribute("data-flip", "none");
-            img.alt = "";
-            img.className = "theory-image";
-            img.style.maxWidth = "100%";
-            img.style.width = "100%";
-            img.style.borderRadius = "12px";
-            img.style.cursor = "pointer";
-            img.onmousedown = function(e) { e.preventDefault(); };
-            img.onclick = function(e) { theoryImageClick(this, e); };
-
-            const wrapper = document.createElement("span");
-            wrapper.className = "theory-image-wrapper";
-            wrapper.setAttribute("contenteditable", "false");
-            wrapper.style.display = "block";
-            wrapper.appendChild(img);
-            
-            const p = document.createElement("p");
-            p.appendChild(wrapper);
-            const lastChild = editor.lastElementChild;
-            if (lastChild && lastChild.tagName === "P" && lastChild.childNodes.length === 1 && lastChild.firstChild && lastChild.firstChild.nodeName === "BR") {
-                editor.removeChild(lastChild);
-            }
-            editor.appendChild(p);
-            
-            theoryEditorState.version = data.version || theoryEditorState.version;
-            markTheoryDirty();
-            theoryEditorToast("Изображение добавлено. Кликните для настройки размера и выравнивания.", "success", 3000);
-        }
-    } catch (error) {
-        console.error("[Theory Editor] Failed to upload image", error);
-        setTheoryStatus("Не удалось загрузить изображение", "error", "error");
-        theoryEditorToast("Не удалось загрузить изображение", "error", 2800);
-    } finally {
-        if (input) {
-            input.value = "";
-        }
-    }
-}
-
 const THEORY_COLORS = [
     "#000000", "#374151", "#6b7280", "#d1d5db",
     "#ef4444", "#f97316", "#eab308", "#22c55e",
@@ -1421,7 +2682,6 @@ function initColorPicker() {
         document.execCommand("foreColor", false, color);
         setTheoryColorIndicator(color);
         palette.classList.add("hidden");
-        // Only mark dirty if there's content to apply color to
         const selection = window.getSelection();
         const hasSelection = selection && selection.toString().length > 0;
         const editorHasContent = editor && editor.textContent.trim().length > 0;
@@ -1443,7 +2703,6 @@ function initColorPicker() {
 }
 
 function initImageControls() {
-    // Width slider
     const widthSlider = document.getElementById("theory-image-width-slider");
     const widthLabel = document.getElementById("theory-image-width-label");
     if (widthSlider && widthLabel) {
@@ -1456,7 +2715,6 @@ function initImageControls() {
         });
     }
     
-    // Alignment buttons
     document.querySelectorAll(".theory-image-align-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
             const align = btn.getAttribute("data-align");
@@ -1467,7 +2725,6 @@ function initImageControls() {
         });
     });
     
-    // Float buttons
     document.querySelectorAll(".theory-image-float-btn").forEach((btn) => {
         btn.addEventListener("click", () => {
             const float = btn.getAttribute("data-float");
@@ -1478,7 +2735,6 @@ function initImageControls() {
         });
     });
     
-    // Rotate left (counter-clockwise, -90 degrees)
     document.getElementById("theory-image-rotate-left")?.addEventListener("click", () => {
         if (!_selectedImage) return;
         const currentRotate = parseInt(_selectedImage.getAttribute("data-rotate") || "0");
@@ -1486,7 +2742,6 @@ function initImageControls() {
         applyImageSettings(_selectedImage, { rotate: newRotate });
     });
     
-    // Rotate right (clockwise, +90 degrees)
     document.getElementById("theory-image-rotate-right")?.addEventListener("click", () => {
         if (!_selectedImage) return;
         const currentRotate = parseInt(_selectedImage.getAttribute("data-rotate") || "0");
@@ -1494,7 +2749,6 @@ function initImageControls() {
         applyImageSettings(_selectedImage, { rotate: newRotate });
     });
     
-    // Flip horizontal
     document.getElementById("theory-image-flip")?.addEventListener("click", () => {
         if (!_selectedImage) return;
         const currentFlip = _selectedImage.getAttribute("data-flip") || "none";
@@ -1503,18 +2757,15 @@ function initImageControls() {
         updateImageControls();
     });
     
-    // Click outside to deselect
     const editor = document.getElementById("theory-editor");
     if (editor) {
         editor.addEventListener("click", (e) => {
-            // If clicked on editor but not on an image, deselect
             if (e.target === editor || (e.target.closest && !e.target.closest(".theory-image"))) {
                 deselectImage();
             }
         });
     }
     
-    // Escape key to deselect
     document.addEventListener("keydown", (e) => {
         if (e.key === "Escape" && _selectedImage) {
             deselectImage();
@@ -1525,9 +2776,8 @@ function initImageControls() {
 function bindTheoryToolbar() {
     try {
         document.execCommand("styleWithCSS", false, true);
-    } catch (error) {
-        // Browsers that ignore styleWithCSS can safely continue with default behavior.
-    }
+    } catch (error) {}
+
     document.getElementById("theory-bold")?.addEventListener("click", () => {
         document.execCommand("bold");
         markTheoryDirty();
@@ -1572,6 +2822,16 @@ function bindTheoryToolbar() {
         document.execCommand("justifyFull");
         markTheoryDirty();
     });
+
+    document.getElementById("theory-toolbar")?.addEventListener("mousedown", (e) => {
+        const interactiveTarget = e.target instanceof Element
+            ? e.target.closest('input, select, textarea, option, [role="slider"]')
+            : null;
+        if (!interactiveTarget) {
+            e.preventDefault();
+        }
+    });
+
     initColorPicker();
     initImageControls();
 }
@@ -1583,7 +2843,29 @@ function bindTheoryEditorEvents() {
 
     document.getElementById("theory-editor")?.addEventListener("input", () => {
         markTheoryDirty();
+        saveTheorySelection();
     });
+
+    document.getElementById("theory-editor")?.addEventListener("keydown", (event) => {
+        guardTheoryImageAdjacentDeletion(event);
+    });
+
+    document.getElementById("theory-editor")?.addEventListener("paste", (e) => {
+        const html = e.clipboardData?.getData("text/html");
+        if (html) {
+            e.preventDefault();
+            const cleanHtml = cleanTheoryWordHtml(html);
+            document.execCommand("insertHTML", false, cleanHtml);
+            markTheoryDirty();
+        }
+    });
+
+    const editor = document.getElementById("theory-editor");
+    if (editor) {
+        ["keyup", "mouseup", "touchend", "focus"].forEach(evt => {
+            editor.addEventListener(evt, saveTheorySelection);
+        });
+    }
 
     document.getElementById("theory-library-search")?.addEventListener("input", (event) => {
         theoryEditorState.search = String(event?.target?.value || "").trim();
@@ -1593,9 +2875,11 @@ function bindTheoryEditorEvents() {
     document.getElementById("theory-save-btn")?.addEventListener("click", async () => {
         try {
             await persistTheory();
-        } catch (error) {
-            // handled in persistTheory
-        }
+        } catch (error) {}
+    });
+
+    document.getElementById("theory-publish-btn")?.addEventListener("click", async () => {
+        await openTheoryPublicationDialog();
     });
 
     document.getElementById("theory-new-btn")?.addEventListener("click", async () => {
@@ -1604,9 +2888,7 @@ function bindTheoryEditorEvents() {
 
     document.getElementById("theory-back-btn")?.addEventListener("click", async () => {
         const canLeave = await confirmDiscardUnsavedChanges();
-        if (!canLeave) {
-            return;
-        }
+        if (!canLeave) return;
         const button = document.getElementById("theory-back-btn");
         const target = button?.dataset.target || THEORY_CENTER_ROUTE;
         theoryEditorNavigate(target);
@@ -1614,24 +2896,21 @@ function bindTheoryEditorEvents() {
 
     document.getElementById("theory-open-center-btn")?.addEventListener("click", async () => {
         const canLeave = await confirmDiscardUnsavedChanges();
-        if (!canLeave) {
-            return;
-        }
+        if (!canLeave) return;
         const target = resolveTheoryCenterUrl();
         theoryEditorNavigate(target);
     });
 
     document.getElementById("theory-open-complexes-btn")?.addEventListener("click", async () => {
         const canLeave = await confirmDiscardUnsavedChanges();
-        if (!canLeave) {
-            return;
-        }
+        if (!canLeave) return;
         const button = document.getElementById("theory-open-complexes-btn");
         const target = button?.dataset.target || resolveTheoryComplexesUrl();
         theoryEditorNavigate(target);
     });
 
     document.getElementById("theory-image-btn")?.addEventListener("click", () => {
+        saveTheorySelection();
         document.getElementById("theory-image-input")?.click();
     });
     document.getElementById("theory-image-input")?.addEventListener("change", uploadTheoryImage);
@@ -1639,30 +2918,24 @@ function bindTheoryEditorEvents() {
     bindTheoryToolbar();
 
     document.addEventListener("keydown", async (event) => {
-        if (theoryReloadConfirmPending) {
-            return;
-        }
+        if (theoryReloadConfirmPending) return;
         const lowerKey = String(event.key || "").toLowerCase();
         if ((event.ctrlKey || event.metaKey) && lowerKey === "s") {
             event.preventDefault();
             try {
                 await persistTheory();
-            } catch (error) {
-                // handled in persistTheory
-            }
+            } catch (error) {}
             return;
         }
 
         const wantsReload = event.key === "F5" || ((event.ctrlKey || event.metaKey) && lowerKey === "r");
-        if (!theoryEditorState.dirty || !wantsReload) {
-            return;
-        }
+        if (!theoryEditorState.dirty || !wantsReload) return;
 
         event.preventDefault();
         theoryReloadConfirmPending = true;
         const canReload = await theoryEditorConfirm({
             title: "Обновить страницу?",
-            message: "Есть несохранённые изменения. Мы сохраним локальный черновик и после обновления предложим восстановить его.",
+            message: "Есть несохранённые изменения. Мы сохраним черновик и после обновления предложим восстановить его.",
             confirmText: "Обновить",
             cancelText: "Остаться",
             variant: "warning",
@@ -1677,18 +2950,14 @@ function bindTheoryEditorEvents() {
     });
 
     const persistDraftOnLeave = () => {
-        if (!theoryEditorState.dirty) {
-            return;
-        }
+        if (!theoryEditorState.dirty) return;
         saveTheoryDraftNow();
     };
 
     window.addEventListener("beforeunload", persistDraftOnLeave);
     window.addEventListener("pagehide", persistDraftOnLeave);
     document.addEventListener("visibilitychange", () => {
-        if (document.visibilityState === "hidden") {
-            persistDraftOnLeave();
-        }
+        if (document.visibilityState === "hidden") persistDraftOnLeave();
     });
 }
 
@@ -1710,46 +2979,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
-    document.addEventListener("keydown", async (event) => {
-        if (theoryReloadConfirmPending) {
-            return;
-        }
-        const lowerKey = String(event.key || "").toLowerCase();
-        const wantsReload = event.key === "F5" || ((event.ctrlKey || event.metaKey) && lowerKey === "r");
-        if (!theoryEditorState.dirty || !wantsReload) {
-            return;
-        }
-
-        event.preventDefault();
-        theoryReloadConfirmPending = true;
-        const canReload = await theoryEditorConfirm({
-            title: "Обновить страницу?",
-            message: "Есть несохранённые изменения. Мы сохраним черновик и после обновления предложим восстановить его.",
-            confirmText: "Обновить",
-            cancelText: "Остаться",
-            variant: "warning",
-        });
-        if (!canReload) {
-            theoryReloadConfirmPending = false;
-            return;
-        }
-
-        saveTheoryDraftNow();
-        window.location.reload();
-    });
-
-    window.addEventListener("beforeunload", () => {
-        if (!theoryEditorState.dirty) {
-            return;
-        }
-        saveTheoryDraftNow();
-    });
-
     window.setTimeout(async () => {
-        if (theoryEditorState.context?.theoryId || theoryEditorState.activeTheoryId) {
-            return;
-        }
+        if (theoryEditorState.context?.theoryId || theoryEditorState.activeTheoryId) return;
         await restoreTheoryDraftIfPresent("");
     }, 280);
 });
-

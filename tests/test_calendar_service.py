@@ -18,11 +18,14 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "desktop-app"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from persistence.runtime import PersistenceRuntimeSettings
+from services.hosted_shadow_fallback import HostedShadowReadFallbackDisabledError
 from services.calendar.calendar_service import (
     _normalize_activity_entry,
     _empty_activity_entry,
     CalendarService,
 )
+from services.calendar.models import UserCalendarSettings
 
 
 # ═══════════════════════════════════════════════════════════════════
@@ -110,6 +113,20 @@ def svc(tmp_path):
     return CalendarService(data_dir=str(tmp_path), user_id="user1")
 
 
+def _build_hosted_settings(tmp_path: Path) -> PersistenceRuntimeSettings:
+    return PersistenceRuntimeSettings(
+        runtime_mode="hosted_web",
+        data_root=tmp_path,
+        state_root=tmp_path / "runtime_state",
+        postgres_dsn="",
+        s3_endpoint="",
+        s3_bucket="",
+        s3_access_key="",
+        s3_secret_key="",
+        hosted_contract_errors=["missing_env:ACTRA_POSTGRES_DSN"],
+    )
+
+
 class TestInit:
     def test_creates_dir(self, tmp_path):
         svc = CalendarService(data_dir=str(tmp_path), user_id="user1")
@@ -154,6 +171,77 @@ class TestSettings:
         settings = svc.get_settings()
         assert settings is not None
         assert hasattr(settings, "schedule_mode") or isinstance(settings, dict)
+
+    def test_hosted_get_settings_blocks_shadow_when_postgres_unavailable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        hosted = CalendarService(
+            data_dir=str(tmp_path),
+            user_id="user1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        hosted._write_json_shadow(
+            hosted.settings_path,
+            UserCalendarSettings(user_id="user1").to_dict(),
+        )
+
+        with pytest.raises(HostedShadowReadFallbackDisabledError) as exc_info:
+            hosted.get_settings()
+
+        assert exc_info.value.operation == "calendar.load_settings"
+        assert hosted.hosted_shadow_fallback_active is True
+        assert hosted.hosted_shadow_read_fallback_blocked is True
+
+    def test_hosted_today_plan_blocks_shadow_when_postgres_unavailable(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        hosted = CalendarService(
+            data_dir=str(tmp_path),
+            user_id="user1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        hosted._write_json_shadow(
+            hosted.settings_path,
+            UserCalendarSettings(user_id="user1").to_dict(),
+        )
+
+        with pytest.raises(HostedShadowReadFallbackDisabledError):
+            hosted.get_today_plan(task_pool={}, complex_names={})
+
+    def test_hosted_save_does_not_write_shadow_file_after_repository_success(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+        monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+        class _FakeHostedCalendarRepository:
+            def __init__(self):
+                self.documents = {}
+
+            def ensure_schema(self):
+                return None
+
+            def get_document(self, user_id, doc_kind):
+                return self.documents.get((user_id, doc_kind))
+
+            def write_document(self, user_id, doc_kind, payload, *, updated_at):
+                self.documents[(user_id, doc_kind)] = payload
+
+        hosted = CalendarService(
+            data_dir=str(tmp_path),
+            user_id="user1",
+            persistence_settings=_build_hosted_settings(tmp_path),
+        )
+        hosted._calendar_repository = _FakeHostedCalendarRepository()
+
+        result = hosted._save_json(
+            hosted.settings_path,
+            {"user_id": "user1", "daily_time_limit_minutes": 45},
+        )
+
+        assert result is True
+        assert hosted._calendar_repository.documents[("user1", "settings")]["daily_time_limit_minutes"] == 45
+        assert hosted.settings_path.exists() is False
 
 
 # ═══════════════════════════════════════════════════════════════════

@@ -1,0 +1,17 @@
+.git
+.github
+.mypy_cache
+.pytest_cache
+.vscode
+__pycache__
+node_modules
+build
+dist
+logs
+reports
+tests
+docs
+*.pyc
+*.pyo
+*.pyd
+*.log

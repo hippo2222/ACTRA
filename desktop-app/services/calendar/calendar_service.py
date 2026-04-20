@@ -16,10 +16,14 @@ Calendar Service - Главный сервис календаря обучени
 import json
 import logging
 import os
+from copy import deepcopy
 from datetime import datetime, date, timedelta
 from pathlib import Path
-from typing import List, Optional, Dict, Any, Tuple
+from typing import List, Optional, Dict, Any, Tuple, TYPE_CHECKING
 
+from persistence.hosted_calendar_repository import HostedCalendarRepository
+from persistence.postgres import PostgresUnavailableError
+from services.hosted_shadow_fallback import HostedShadowFallbackMixin
 from .models import (
     ComplexProgress,
     TaskAttempt,
@@ -39,6 +43,22 @@ from .models import (
 from .health_score_service import HealthScoreService
 from .scheduler_service import SchedulerService
 from .notification_service import NotificationService
+
+if TYPE_CHECKING:
+    from persistence.runtime import PersistenceRuntimeSettings
+
+
+def _is_hosted_runtime() -> bool:
+    return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
+
+
+def _resolve_calendar_user_id(user_id: Optional[str], legacy_default: str = "default_user") -> str:
+    normalized = str(user_id or "").strip()
+    if normalized:
+        return normalized
+    if _is_hosted_runtime():
+        raise ValueError("user_id_required_in_hosted_runtime")
+    return legacy_default
 
 
 def _normalize_activity_entry(raw: Any) -> Dict[str, Any]:
@@ -135,14 +155,16 @@ def _empty_activity_entry() -> Dict[str, Any]:
     return _normalize_activity_entry({})
 
 
-class CalendarService:
+class CalendarService(HostedShadowFallbackMixin):
+    _hosted_schema_ready = False
     """Главный сервис календаря."""
     
     def __init__(
         self,
         data_dir: str,
-        user_id: str = "default_user",
-        use_fsrs: bool = False
+        user_id: Optional[str] = None,
+        use_fsrs: bool = False,
+        persistence_settings: Optional['PersistenceRuntimeSettings'] = None,
     ):
         """
         Инициализация сервиса.
@@ -153,8 +175,13 @@ class CalendarService:
             use_fsrs: Использовать FSRS модель (Stage 2)
         """
         self.data_dir = Path(data_dir)
-        self.user_id = user_id
+        self.user_id = _resolve_calendar_user_id(user_id)
         self.logger = logging.getLogger(self.__class__.__name__)
+        self.persistence_settings = persistence_settings
+        self._calendar_repository: Optional[HostedCalendarRepository] = None
+        self._storage_ready = not _is_hosted_runtime()
+        self._last_hosted_persistence_error: Optional[Exception] = None
+        self._init_hosted_shadow_fallback_state()
         
         # Инициализируем под-сервисы
         self.health_service = HealthScoreService(use_fsrs=use_fsrs)
@@ -162,7 +189,7 @@ class CalendarService:
         self.notification_service = NotificationService(self.health_service)
         
         # Пути к файлам данных
-        self.calendar_dir = self.data_dir / "user_calendar" / user_id
+        self.calendar_dir = self.data_dir / "user_calendar" / self.user_id
         self.calendar_dir.mkdir(parents=True, exist_ok=True)
         
         self.settings_path = self.calendar_dir / "settings.json"
@@ -171,16 +198,57 @@ class CalendarService:
         self.activity_path = self.calendar_dir / "activity.json"
         self.notifications_path = self.calendar_dir / "notifications.json"
         self.rest_days_path = self.calendar_dir / "rest_days.json"
+
+    @property
+    def hosted_storage_ready(self) -> bool:
+        return bool(self._storage_ready)
+
+    def ensure_hosted_persistence_ready(self) -> None:
+        if not _is_hosted_runtime():
+            self._storage_ready = True
+            self._last_hosted_persistence_error = None
+            return
+        if self._storage_ready:
+            return
+        try:
+            if not self.__class__._hosted_schema_ready:
+                self._get_calendar_repository().ensure_schema()
+                self.__class__._hosted_schema_ready = True
+            self._storage_ready = True
+            self._last_hosted_persistence_error = None
+        except PostgresUnavailableError as exc:
+            self._last_hosted_persistence_error = exc
+            self._storage_ready = False
+            if not self.hosted_shadow_fallback_active:
+                self._log_shadow_read_fallback("calendar.ensure_hosted_persistence_ready", exc)
+            else:
+                self._shadow_fallback_active = True
+
+    def _note_hosted_shadow_read_fallback(self, operation: str, exc: Exception) -> None:
+        self._last_hosted_persistence_error = exc
+        self._storage_ready = False
+        if not self.hosted_shadow_fallback_active:
+            self._log_shadow_read_fallback(operation, exc)
+        else:
+            self._shadow_fallback_active = True
+
+    def _get_calendar_repository(self) -> HostedCalendarRepository:
+        if self._calendar_repository is None:
+            if self.persistence_settings is None:
+                raise RuntimeError("hosted_calendar_repository_requires_persistence_settings")
+            self._calendar_repository = HostedCalendarRepository(self.persistence_settings.postgres_dsn)
+        return self._calendar_repository
     
-    def switch_user(self, user_id: str) -> None:
+    def switch_user(self, user_id: Optional[str]) -> None:
         """
         Переключить пользователя: обновить user_id и все пути к файлам.
         
         Args:
             user_id: Новый ID пользователя
         """
-        self.user_id = user_id
-        self.calendar_dir = self.data_dir / "user_calendar" / user_id
+        resolved_user_id = _resolve_calendar_user_id(user_id)
+        self.user_id = resolved_user_id
+        self.calendar_dir = self.data_dir / "user_calendar" / resolved_user_id
         self.calendar_dir.mkdir(parents=True, exist_ok=True)
         
         self.settings_path = self.calendar_dir / "settings.json"
@@ -190,7 +258,41 @@ class CalendarService:
         self.notifications_path = self.calendar_dir / "notifications.json"
         self.rest_days_path = self.calendar_dir / "rest_days.json"
         
-        self.logger.info("Switched calendar user to: %s", user_id)
+        self.logger.info("Switched calendar user to: %s", resolved_user_id)
+
+    def _calendar_doc_kind_for_path(self, path: Path) -> Optional[str]:
+        mapping = {
+            self.settings_path.resolve(): "settings",
+            self.progress_path.resolve(): "progress",
+            self.sessions_path.resolve(): "sessions",
+            self.activity_path.resolve(): "activity",
+            self.notifications_path.resolve(): "notifications",
+            self.rest_days_path.resolve(): "rest_days",
+        }
+        try:
+            return mapping.get(path.resolve())
+        except Exception:
+            return None
+
+    def _read_json_shadow(self, path: Path, default: Any = None) -> Any:
+        if not path.exists():
+            return deepcopy(default) if default is not None else {}
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            self.logger.error(f"Error loading {path}: {e}")
+            return deepcopy(default) if default is not None else {}
+
+    def _write_json_shadow(self, path: Path, data: Any) -> bool:
+        try:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception as e:
+            self.logger.error(f"Error saving {path}: {e}")
+            return False
     
     # =========================================================================
     # DATA LOADING / SAVING
@@ -198,6 +300,22 @@ class CalendarService:
     
     def _load_json(self, path: Path, default: Any = None) -> Any:
         """Загрузить JSON файл."""
+        doc_kind = self._calendar_doc_kind_for_path(path)
+        if _is_hosted_runtime() and doc_kind:
+            self.ensure_hosted_persistence_ready()
+            if not self.hosted_storage_ready:
+                fallback_reason = self._last_hosted_persistence_error or RuntimeError("postgres_unavailable")
+                self._guard_shadow_read_fallback(f"calendar.load_{doc_kind}", fallback_reason)
+            try:
+                repository = self._get_calendar_repository()
+                payload = repository.get_document(self.user_id, doc_kind)
+                if payload is None:
+                    return deepcopy(default) if default is not None else {}
+                return payload
+            except PostgresUnavailableError as exc:
+                self._note_hosted_shadow_read_fallback(f"calendar.load_{doc_kind}", exc)
+                self._guard_shadow_read_fallback(f"calendar.load_{doc_kind}", exc)
+
         if not path.exists():
             return default if default is not None else {}
         try:
@@ -209,6 +327,31 @@ class CalendarService:
     
     def _save_json(self, path: Path, data: Any) -> bool:
         """Сохранить JSON файл."""
+        doc_kind = self._calendar_doc_kind_for_path(path)
+        if _is_hosted_runtime() and doc_kind:
+            try:
+                self.ensure_hosted_persistence_ready()
+                if self.hosted_storage_ready:
+                    self._get_calendar_repository().write_document(
+                        self.user_id,
+                        doc_kind,
+                        data,
+                        updated_at=datetime.utcnow().isoformat() + "Z",
+                    )
+                    return True
+                else:
+                    fallback_reason = self._last_hosted_persistence_error or RuntimeError("postgres_unavailable")
+                    self._guard_shadow_write_fallback(f"calendar.save_{doc_kind}", fallback_reason)
+            except Exception as e:
+                if isinstance(e, PostgresUnavailableError):
+                    try:
+                        self._guard_shadow_write_fallback(f"calendar.save_{doc_kind}", e)
+                    except Exception:
+                        pass
+                self.logger.error(f"Error saving hosted calendar document {doc_kind}: {e}")
+                if not self.hosted_shadow_write_fallback_enabled:
+                    return False
+
         try:
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, ensure_ascii=False, indent=2)
@@ -610,6 +753,13 @@ class CalendarService:
                 ComplexStatus.FROZEN,
             )
         ]
+
+        known_complex_ids = set(complex_names.keys())
+        if known_complex_ids:
+            active_progress = [
+                p for p in active_progress
+                if p.complex_id in known_complex_ids
+            ]
         
         if not active_progress:
             return HealthSummary(overall_health=1.0)

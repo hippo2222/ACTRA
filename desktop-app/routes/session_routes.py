@@ -23,23 +23,53 @@ from flask import Blueprint, jsonify, request, send_file
 
 from api.web_models.sequence_models import WebSequenceAnswer  # type: ignore
 
-from routes._context import get_ctx, get_extra
-from routes._helpers import _is_within_data_dir, _json_safe
+from routes._context import get_ctx, get_extra, is_hosted_web_runtime
+from routes._helpers import (
+    _is_within_data_dir,
+    _json_safe,
+    _maybe_hosted_shadow_write_error_response,
+    _resolve_effective_user_id,
+)
 
 logger = logging.getLogger(__name__)
 
 session_bp = Blueprint("session", __name__)
 
 
-def _resolve_active_sessions_user_id(session_api: Any, requested_user_id: Any = None) -> str:
-    if isinstance(requested_user_id, str):
-        normalized = requested_user_id.strip()
-        if normalized:
-            return normalized
+def _hosted_runtime_asset_degraded_response(
+    *,
+    error: str,
+    operation: str,
+    reason: str,
+    status: int = 503,
+) -> Any:
+    payload: Dict[str, Any] = {
+        "ok": False,
+        "error": str(error or "").strip() or "hosted_asset_contract_blocked",
+        "degraded": True,
+        "details": {
+            "operation": str(operation or "").strip() or None,
+            "reason": str(reason or "").strip() or None,
+            "runtime_mode": "hosted_web" if is_hosted_web_runtime() else "legacy_local",
+            "source_of_truth": "asset_id/asset_url",
+        },
+        "route_contract": {
+            "mode": "read_asset",
+            "public_api": True,
+        },
+    }
+    return jsonify(payload), int(status)
 
-    ctx_user_id = getattr(get_ctx(), "user_id", None)
+
+def _resolve_active_sessions_user_id(session_api: Any, requested_user_id: Any = None) -> str:
+    ctx_user_id = _resolve_effective_user_id(requested_user_id, fallback="guest")
+    if ctx_user_id:
+        return ctx_user_id
+
+    if get_extra("runtime_mode") == "hosted_web":
+        return "guest"
+
     candidates = [
-        ctx_user_id,
         getattr(session_api, "default_user_id", None),
         getattr(session_api, "_default_user_id", None),
         "default_user",
@@ -166,9 +196,10 @@ def _list_active_session_items(session_api: Any, user_id: str) -> List[Dict[str,
 def get_current_task(session_id: str) -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
+    current_user_id = getattr(ctx, "user_id", None)
     # BUG-5 fix: не снимаем паузу автоматически в GET-запросе.
     # Если сессия на паузе, возвращаем флаг paused — фронтенд покажет модалку resume.
-    session_obj = session_api.get_session(session_id, user_id=getattr(ctx, "user_id", None))
+    session_obj = session_api.get_session(session_id, user_id=current_user_id)
     if session_obj and session_obj.paused:
         logger.info(
             "[HTTP] get_current_task session_id=%s paused=true current_task_index=%s ui_task_ref=%s ui_task_index=%s",
@@ -179,7 +210,7 @@ def get_current_task(session_id: str) -> Any:
         )
         return jsonify({"ok": True, "paused": True, "task": None})
 
-    data = session_api.get_current_task(session_id, auto_resume=False)
+    data = session_api.get_current_task(session_id, auto_resume=False, user_id=current_user_id)
     if data is None:
         resp = {"ok": False, "error": "task_not_found_or_session_mismatch"}
         try:
@@ -323,6 +354,7 @@ def list_active_sessions() -> Any:
 def submit_task(session_id: str) -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
+    current_user_id = getattr(ctx, "user_id", None)
     payload = request.get_json(force=True)
     task_id = payload.get("task_id")
     raw_user_input = payload.get("user_input") or {}
@@ -347,7 +379,7 @@ def submit_task(session_id: str) -> Any:
     try:
         sm = getattr(session_api, "_session_manager", None)
         ctrl = getattr(session_api, "_controller", None)
-        session_dbg = sm.get_session(session_id) if sm else None
+        session_dbg = session_api.get_session(session_id, user_id=current_user_id) if sm else None
         ctrl_task_ref = getattr(ctrl, "current_task_ref", None)
         ctrl_task_loaded = None
         try:
@@ -367,8 +399,10 @@ def submit_task(session_id: str) -> Any:
     except Exception:
         logger.exception("[HTTP][SUBMIT_STATE] failed to log controller/session state")
 
-    session = session_api.get_session(session_id)
-    if session and session.paused:
+    session = session_api.get_session(session_id, user_id=current_user_id)
+    if not session:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    if session.paused:
         return jsonify({"ok": False, "error": "session_paused"}), 409
 
     if not task_id:
@@ -376,7 +410,7 @@ def submit_task(session_id: str) -> Any:
 
     # Определяем тип текущего задания, чтобы при необходимости провалидировать
     # структуру user_input для sequence_assembly.
-    current_task = session_api.get_current_task(session_id) or {}
+    current_task = session_api.get_current_task(session_id, user_id=current_user_id) or {}
     task_data = current_task.get("task_data") or {}
     task_type = None
     if isinstance(task_data, dict):
@@ -420,7 +454,7 @@ def submit_task(session_id: str) -> Any:
             return jsonify({"ok": False, "error": "invalid_audit_control_mode"}), 400
 
         sm = getattr(session_api, "_session_manager", None)
-        session_obj = sm.get_session(session_id) if sm else None
+        session_obj = session_api.get_session(session_id, user_id=current_user_id) if sm else None
         if not session_obj:
             return jsonify({"ok": False, "error": "session_not_found"}), 404
 
@@ -642,9 +676,18 @@ def submit_task(session_id: str) -> Any:
     # use hardened raw_user_input
     user_input = raw_user_input
 
-    result_obj = session_api.submit_answer(
-        session_id=session_id, task_id=task_id, user_input=user_input
-    )
+    try:
+        result_obj = session_api.submit_answer(
+            session_id=session_id,
+            task_id=task_id,
+            user_input=user_input,
+            user_id=current_user_id,
+        )
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
     if result_obj is None:
         return jsonify({"ok": False, "error": "submit_failed_or_session_mismatch"}), 400
 
@@ -653,7 +696,7 @@ def submit_task(session_id: str) -> Any:
         return jsonify({"ok": False, **result_obj}), 409
 
     # Serialize EvaluationResult via SessionAPI helper
-    current_task = session_api.get_current_task(session_id) or {}
+    current_task = session_api.get_current_task(session_id, user_id=current_user_id) or {}
     task_ref = current_task.get("task_ref", "")
     serialized = session_api._serialize_evaluation_result(
         result_obj, session_id=session_id, task_ref=task_ref
@@ -681,7 +724,7 @@ def submit_task(session_id: str) -> Any:
         try:
             # Extract complex_id from session
             sm = getattr(session_api, "_session_manager", None)
-            session = sm.get_session(session_id) if sm else None
+            session = session_api.get_session(session_id, user_id=current_user_id) if sm else None
             complex_id = getattr(session, "complex_id", None) if session else None
 
             # Record attempt in calendar
@@ -715,12 +758,22 @@ def submit_task(session_id: str) -> Any:
 
 @session_bp.route("/api/session/<string:session_id>/task/next", methods=["POST"])
 def next_task(session_id: str) -> Any:
-    session_api = get_ctx().session_api
-    session = session_api.get_session(session_id, user_id=getattr(get_ctx(), "user_id", None))
-    if session and session.paused:
+    ctx = get_ctx()
+    session_api = ctx.session_api
+    current_user_id = getattr(ctx, "user_id", None)
+    session = session_api.get_session(session_id, user_id=current_user_id)
+    if not session:
+        return jsonify({"ok": False, "error": "session_not_found"}), 404
+    if session.paused:
         return jsonify({"ok": False, "error": "session_paused"}), 409
 
-    data = session_api.next_task(session_id)
+    try:
+        data = session_api.next_task(session_id, user_id=current_user_id)
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
     if data is None:
         resp = {"ok": False, "error": "no_next_task_or_session_mismatch"}
         try:
@@ -761,9 +814,10 @@ def pause_session(session_id: str) -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
     payload = request.get_json(silent=True) or {}
-    requested_user_id = payload.get("user_id") if isinstance(payload, dict) else None
-    if not isinstance(requested_user_id, str) or not requested_user_id.strip():
-        requested_user_id = getattr(ctx, "user_id", None)
+    requested_user_id = _resolve_effective_user_id(
+        payload.get("user_id") if isinstance(payload, dict) else None,
+        fallback="guest",
+    )
     user_input = payload.get("user_input") if isinstance(payload, dict) else None
     evaluation_result = payload.get("evaluation_result") if isinstance(payload, dict) else None
     view_state = payload.get("view_state") if isinstance(payload, dict) else None
@@ -798,23 +852,31 @@ def pause_session(session_id: str) -> Any:
         bool(evaluation_result),
     )
 
-    session_api.pause_session(
-        session_id,
-        user_id=requested_user_id,
-        user_input=user_input,
-        evaluation_result=evaluation_result,
-        view_state=view_state,
-        task_ref=task_ref,
-        task_index=task_index,
-        resume_target=resume_target,
-    )
+    try:
+        session_api.pause_session(
+            session_id,
+            user_id=requested_user_id,
+            user_input=user_input,
+            evaluation_result=evaluation_result,
+            view_state=view_state,
+            task_ref=task_ref,
+            task_index=task_index,
+            resume_target=resume_target,
+        )
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
     session = session_api.get_session(session_id, user_id=requested_user_id)
     return jsonify({"ok": True, "paused": True, "paused_at": _json_safe(session.paused_at)})
 
 
 @session_bp.route("/api/session/<string:session_id>/ui-state", methods=["POST"])
 def save_task_ui_state(session_id: str) -> Any:
-    session_api = get_ctx().session_api
+    ctx = get_ctx()
+    session_api = ctx.session_api
+    current_user_id = getattr(ctx, "user_id", None)
     payload = request.get_json(silent=True) or {}
     user_input = payload.get("user_input") if isinstance(payload, dict) else None
     evaluation_result = payload.get("evaluation_result") if isinstance(payload, dict) else None
@@ -833,14 +895,21 @@ def save_task_ui_state(session_id: str) -> Any:
     if not isinstance(task_index, int):
         task_index = None
 
-    result = session_api.save_task_ui_state(
-        session_id,
-        task_ref=task_ref,
-        task_index=task_index,
-        user_input=user_input,
-        evaluation_result=evaluation_result,
-        view_state=view_state,
-    )
+    try:
+        result = session_api.save_task_ui_state(
+            session_id,
+            task_ref=task_ref,
+            task_index=task_index,
+            user_input=user_input,
+            evaluation_result=evaluation_result,
+            view_state=view_state,
+            user_id=current_user_id,
+        )
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
 
     if not result.get("ok"):
         error = result.get("error")
@@ -857,19 +926,26 @@ def save_task_ui_state(session_id: str) -> Any:
 def resume_session(session_id: str) -> Any:
     session_api = get_ctx().session_api
     payload = request.get_json(silent=True) or {}
-    requested_user_id = payload.get("user_id") if isinstance(payload, dict) else None
+    requested_user_id = _resolve_effective_user_id(
+        payload.get("user_id") if isinstance(payload, dict) else None,
+        fallback="guest",
+    )
     resume_source = payload.get("source") if isinstance(payload, dict) else None
-    if not isinstance(requested_user_id, str) or not requested_user_id.strip():
-        requested_user_id = getattr(get_ctx(), "user_id", None)
     if not isinstance(resume_source, str) or not resume_source.strip():
         resume_source = "http_resume"
     else:
         resume_source = resume_source.strip()
-    session = session_api.resume_session(
-        session_id,
-        user_id=requested_user_id,
-        source=resume_source,
-    )
+    try:
+        session = session_api.resume_session(
+            session_id,
+            user_id=requested_user_id,
+            source=resume_source,
+        )
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
     if not session:
         return jsonify({"ok": False, "error": "session_not_found"}), 404
     resume_target = session_api.get_resume_target(session)
@@ -888,23 +964,36 @@ def resume_session(session_id: str) -> Any:
 @session_bp.route("/api/session/<string:session_id>/cancel", methods=["POST"])
 def cancel_session(session_id: str) -> Any:
     payload = request.get_json(silent=True) or {}
-    requested_user_id = payload.get("user_id") if isinstance(payload, dict) else None
-    if not isinstance(requested_user_id, str) or not requested_user_id.strip():
-        requested_user_id = getattr(get_ctx(), "user_id", None)
-    data = get_ctx().session_api.cancel_session(session_id, user_id=requested_user_id)
+    requested_user_id = _resolve_effective_user_id(
+        payload.get("user_id") if isinstance(payload, dict) else None,
+        fallback="guest",
+    )
+    try:
+        data = get_ctx().session_api.cancel_session(session_id, user_id=requested_user_id)
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
     status = 200 if data.get("ok") else 400
     return jsonify(_json_safe(data)), status
 
 
 @session_bp.route("/api/session/<string:session_id>/iteration-results", methods=["GET"])
 def get_iteration_results(session_id: str) -> Any:
-    session_api = get_ctx().session_api
+    ctx = get_ctx()
+    session_api = ctx.session_api
+    current_user_id = getattr(ctx, "user_id", None)
     requested_iteration = request.args.get("iteration")
     try:
         iteration_number = int(requested_iteration) if requested_iteration is not None else None
     except Exception:
         iteration_number = None
-    data = session_api.get_iteration_results(session_id, iteration_number=iteration_number)
+    data = session_api.get_iteration_results(
+        session_id,
+        iteration_number=iteration_number,
+        user_id=current_user_id,
+    )
     if data is None:
         resp = {"ok": False, "error": "iteration_results_not_found"}
         try:
@@ -916,7 +1005,7 @@ def get_iteration_results(session_id: str) -> Any:
     # Add has_next_iteration so web S1 can decide S2 vs S3 without calling /final-results.
     try:
         sm = getattr(session_api, "_session_manager", None)
-        session = sm.get_session(session_id) if sm is not None else None
+        session = session_api.get_session(session_id, user_id=current_user_id) if sm is not None else None
         has_next_iteration = False
         if session is not None:
             q = getattr(session, "queue", None)
@@ -939,7 +1028,14 @@ def get_iteration_results(session_id: str) -> Any:
 
 @session_bp.route("/api/session/<string:session_id>/final-results", methods=["GET"])
 def get_final_results(session_id: str) -> Any:
-    data = get_ctx().session_api.get_final_results(session_id)
+    ctx = get_ctx()
+    try:
+        data = ctx.session_api.get_final_results(session_id, user_id=getattr(ctx, "user_id", None))
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
     if data is None:
         return jsonify({"ok": False, "error": "final_results_not_found"}), 404
     return jsonify({"ok": True, "results": data})
@@ -958,11 +1054,39 @@ def serve_local_image() -> Any:
     """
 
     raw_path = request.args.get("path")
-    if not raw_path:
+    asset_id = str(request.args.get("asset_id") or "").strip()
+    if not raw_path and not asset_id:
         return jsonify({"ok": False, "error": "path_required"}), 400
 
     try:
         ctx = get_ctx()
+        if asset_id:
+            asset_service = getattr(ctx, "asset_service", None)
+            if asset_service is None:
+                return jsonify({"ok": False, "error": "asset_service_not_available"}), 503
+            asset = asset_service.get_asset(asset_id)
+            if asset is None:
+                return jsonify({"ok": False, "error": "asset_not_found"}), 404
+            if is_hosted_web_runtime():
+                user_id = getattr(ctx, "user_id", None)
+                if str(user_id or "").strip() == "guest":
+                    return jsonify({"ok": False, "error": "authentication_required"}), 401
+                if not asset_service.can_access_asset(asset, user_id=user_id):
+                    return jsonify({"ok": False, "error": "asset_forbidden"}), 403
+            target = asset_service.resolve_asset_file(asset_id)
+            if target is None:
+                return jsonify({"ok": False, "error": "asset_file_missing"}), 404
+            resp = send_file(str(target))
+            resp.headers["Cache-Control"] = "private, max-age=3600"
+            return resp
+
+        if is_hosted_web_runtime():
+            return _hosted_runtime_asset_degraded_response(
+                error="hosted_asset_path_blocked",
+                operation="runtime.local_image.path_lookup",
+                reason="asset_id_or_asset_url_required_in_hosted_runtime",
+            )
+
         normalized = unquote(raw_path)
         normalized = normalized.replace("\\\\", "\\")
         p = Path(normalized)

@@ -23,23 +23,120 @@ from typing import Any, Dict, Optional
 
 from flask import Blueprint, jsonify, request
 
-from routes._context import get_ctx, get_extra
+from persistence.postgres import PostgresUnavailableError
+from routes._context import get_ctx, get_extra, is_hosted_web_runtime
 from routes._helpers import (
     _get_complex_by_id,
     _json_safe,
+    _maybe_hosted_shadow_write_error_response,
     _normalize_complex_id,
     _resolve_effective_user_id,
     _serialize_complex_payload,
 )
+from services.hosted_shadow_fallback import HostedShadowReadFallbackDisabledError
 
 logger = logging.getLogger(__name__)
 
 quick_access_bp = Blueprint("quick_access", __name__)
+_HOSTED_UI_STATE_SETTINGS_KEY = "web_ui_state"
 
 
 # ---------------------------------------------------------------------------
 # UI state helpers (per-user JSON file)
 # ---------------------------------------------------------------------------
+
+
+def _normalize_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _is_imported_library_complex_payload(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    created_via = str(
+        item.get("created_via")
+        or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
+        or ""
+    ).strip().lower()
+    if created_via in {"workspace_import", "archive_import"}:
+        return True
+    return bool(
+        _normalize_optional_text(item.get("source_catalog_item_id"))
+        or _normalize_optional_text((item.get("source_lineage") or {}).get("catalog_item_id") if isinstance(item.get("source_lineage"), dict) else None)
+        or _normalize_optional_text((item.get("sourceLineage") or {}).get("catalog_item_id") if isinstance(item.get("sourceLineage"), dict) else None)
+    )
+
+
+def _is_visible_library_complex_for_current_user(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    if ownership.get("is_owned_by_current_user") is True:
+        return True
+    return _is_imported_library_complex_payload(item)
+
+
+def _should_adopt_ownerless_complex_payload(item: Any, *, current_user_id: str) -> bool:
+    normalized_user_id = _normalize_optional_text(current_user_id)
+    if not normalized_user_id or normalized_user_id == "guest":
+        return False
+    if not isinstance(item, dict):
+        return False
+    created_by_user_id = _normalize_optional_text(item.get("created_by_user_id"))
+    if created_by_user_id is not None:
+        return False
+    if bool(item.get("has_source_lineage")):
+        return False
+    if _normalize_optional_text(item.get("source_catalog_item_id")) is not None:
+        return False
+    workspace_copy_kind = str(item.get("workspace_copy_kind") or "").strip().lower()
+    if workspace_copy_kind and workspace_copy_kind != "local_draft":
+        return False
+    content_scope = str(item.get("content_scope") or "").strip().lower()
+    if content_scope and content_scope != "shared_local":
+        return False
+    return True
+
+
+def _adopt_ownerless_complexes_for_current_user(complexes: Any, *, current_user_id: str) -> Any:
+    normalized_user_id = _normalize_optional_text(current_user_id)
+    if not normalized_user_id or normalized_user_id == "guest" or not isinstance(complexes, list):
+        return complexes
+
+    service = get_ctx().complex_service
+    adopted_any = False
+    for complex_obj in list(complexes):
+        raw_payload = complex_obj.dict() if hasattr(complex_obj, "dict") else dict(complex_obj or {})
+        if not _should_adopt_ownerless_complex_payload(raw_payload, current_user_id=normalized_user_id):
+            continue
+        complex_id = _normalize_complex_id(raw_payload.get("id"))
+        if not complex_id:
+            continue
+        try:
+            service.update_complex(
+                complex_id,
+                {
+                    "created_by_user_id": normalized_user_id,
+                    "updated_by_user_id": normalized_user_id,
+                    "created_via": str(raw_payload.get("created_via") or "manual_editor").strip() or "manual_editor",
+                    "content_scope": "shared_local",
+                },
+            )
+            adopted_any = True
+            logger.info("[HTTP] Adopted ownerless complex %s for hosted user %s", complex_id, normalized_user_id)
+        except Exception as exc:
+            logger.warning(
+                "[HTTP] Failed to adopt ownerless complex %s for hosted user %s: %s",
+                complex_id,
+                normalized_user_id,
+                exc,
+            )
+    if adopted_any:
+        return service.get_all_complexes()
+    return complexes
 
 
 def _resolve_display_task_index(session_api: Any, session: Any) -> Optional[int]:
@@ -135,19 +232,65 @@ def _ui_state_path(user_id: str) -> Path:
     return _get_user_dir(user_id) / "ui_state.json"
 
 
+def _default_ui_state(user_id: str) -> Dict[str, Any]:
+    return {
+        "version": 1,
+        "user_id": user_id,
+        "updated_at": datetime.now().isoformat(),
+        "pinned": [],
+        "recent": [],
+        "settings": {},
+    }
+
+
+def _normalize_ui_state_payload(user_id: str, raw: Any) -> Dict[str, Any]:
+    normalized = _default_ui_state(user_id)
+    if isinstance(raw, dict):
+        updated_at = _normalize_optional_text(raw.get("updated_at"))
+        if updated_at:
+            normalized["updated_at"] = updated_at
+        normalized["pinned"] = [x for x in raw.get("pinned", []) if isinstance(x, str)]
+        normalized["recent"] = [x for x in raw.get("recent", []) if isinstance(x, str)]
+        settings = raw.get("settings")
+        if isinstance(settings, dict):
+            normalized["settings"] = dict(settings)
+    return normalized
+
+
+def _load_hosted_user_for_ui_state(user_id: str) -> Any:
+    user_service = getattr(get_ctx(), "user_service", None)
+    if user_service is None:
+        return None
+
+    repository = getattr(user_service, "repository", None)
+    ensure_persistence_ready = getattr(user_service, "ensure_persistence_ready", None)
+    if repository is None or not callable(ensure_persistence_ready):
+        getter = getattr(user_service, "get_user", None)
+        return getter(user_id) if callable(getter) else None
+
+    try:
+        ensure_persistence_ready()
+        return repository.get_user(user_id)
+    except PostgresUnavailableError as exc:
+        if hasattr(user_service, "_shadow_read_fallback_blocked"):
+            user_service._shadow_read_fallback_blocked = True
+        raise HostedShadowReadFallbackDisabledError("quick_access.ui_state", reason=str(exc)) from exc
+
+
 def _read_ui_state(user_id: str) -> Dict[str, Any]:
+    if is_hosted_web_runtime():
+        user = _load_hosted_user_for_ui_state(user_id)
+        if user is None:
+            return _default_ui_state(user_id)
+        settings = user.settings if isinstance(getattr(user, "settings", None), dict) else {}
+        return _normalize_ui_state_payload(user_id, settings.get(_HOSTED_UI_STATE_SETTINGS_KEY))
+
     user_dir = _get_user_dir(user_id)
     user_dir.mkdir(parents=True, exist_ok=True)
 
     path = _ui_state_path(user_id)
     if not path.exists():
-        return {
-            "version": 1,
-            "user_id": user_id,
-            "updated_at": datetime.now().isoformat(),
-            "pinned": [],
-            "recent": [],
-        }
+        return _default_ui_state(user_id)
 
     try:
         with open(path, "r", encoding="utf-8") as f:
@@ -162,26 +305,32 @@ def _read_ui_state(user_id: str) -> Dict[str, Any]:
             data["pinned"] = []
         if not isinstance(data.get("recent"), list):
             data["recent"] = []
-        return data
+        return _normalize_ui_state_payload(user_id, data)
     except Exception as exc:
         logger.exception("[HTTP] Failed to read ui_state for user %s: %s", user_id, exc)
-        return {
-            "version": 1,
-            "user_id": user_id,
-            "updated_at": datetime.now().isoformat(),
-            "pinned": [],
-            "recent": [],
-        }
+        return _default_ui_state(user_id)
 
 
 def _write_ui_state(user_id: str, data: Dict[str, Any]) -> None:
+    if is_hosted_web_runtime():
+        user_service = getattr(get_ctx(), "user_service", None)
+        if user_service is None:
+            raise RuntimeError("user_service_required")
+        user = _load_hosted_user_for_ui_state(user_id)
+        if user is None:
+            raise RuntimeError("user_not_found")
+        if not isinstance(getattr(user, "settings", None), dict):
+            user.settings = {}
+        user.settings[_HOSTED_UI_STATE_SETTINGS_KEY] = _normalize_ui_state_payload(user_id, data)
+        if user_service.update_user(user) is not True:
+            raise RuntimeError("hosted_ui_state_update_failed")
+        return
+
     user_dir = _get_user_dir(user_id)
     user_dir.mkdir(parents=True, exist_ok=True)
 
     path = _ui_state_path(user_id)
-    data["version"] = 1
-    data["user_id"] = user_id
-    data["updated_at"] = datetime.now().isoformat()
+    data = _normalize_ui_state_payload(user_id, data)
 
     dir_path = str(path.parent)
     final_path = str(path)
@@ -259,9 +408,15 @@ def start_complex_session(complex_id: str) -> Any:
         if not cancelled:
             return jsonify({"ok": False, "error": "failed_to_clear_paused_session"}), 409
 
-    data = session_api.start_session(
-        complex_id=complex_id, user_id=user_id, start_iteration=start_iteration
-    )
+    try:
+        data = session_api.start_session(
+            complex_id=complex_id, user_id=user_id, start_iteration=start_iteration
+        )
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        raise
     status = 200 if data.get("ok") else 400
     return jsonify(data), status
 
@@ -271,7 +426,14 @@ def get_quick_access() -> Any:
     ctx = get_ctx()
     session_api = ctx.session_api
     user_id = _resolve_effective_user_id(request.args.get("user_id"))
-    state = _read_ui_state(user_id)
+    try:
+        state = _read_ui_state(user_id)
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to load quick-access state for user %s: %s", user_id, exc)
+        return jsonify({"ok": False, "error": "quick_access_state_load_failed"}), 500
 
     pinned = [x for x in state.get("pinned", []) if isinstance(x, str)]
     recent = [x for x in state.get("recent", []) if isinstance(x, str)]
@@ -333,8 +495,11 @@ def get_quick_access() -> Any:
                 prev = paused_sessions_by_complex.get(cid)
                 if prev is None or payload["_sort_ts"] >= prev.get("_sort_ts", 0):
                     paused_sessions_by_complex[cid] = payload
-    except Exception:
-        pass
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.warning("[HTTP] Failed to load paused sessions for quick-access: %s", exc, exc_info=True)
 
     seen = set()
     ordered_ids = []
@@ -355,8 +520,11 @@ def get_quick_access() -> Any:
         stats_dict = ctx.statistics_service.get_complex_statistics(user_id)
         if isinstance(stats_dict, dict):
             complex_stats_map = stats_dict
-    except Exception:
-        pass
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.warning("[HTTP] Failed to load quick-access statistics: %s", exc, exc_info=True)
 
     calendar_service = get_extra("calendar_service")
     health_map = {}
@@ -376,8 +544,11 @@ def get_quick_access() -> Any:
                         else None
                     ),
                 }
-    except Exception:
-        pass
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.warning("[HTTP] Failed to load quick-access health map: %s", exc, exc_info=True)
 
     items = []
     for cid in ordered_ids:
@@ -428,13 +599,20 @@ def pin_quick_access() -> Any:
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
 
-    state = _read_ui_state(user_id)
-    pinned = [x for x in state.get("pinned", []) if isinstance(x, str)]
-    if complex_id not in pinned:
-        pinned.insert(0, complex_id)
-    state["pinned"] = pinned[:12]
-    _write_ui_state(user_id, state)
-    return jsonify({"ok": True})
+    try:
+        state = _read_ui_state(user_id)
+        pinned = [x for x in state.get("pinned", []) if isinstance(x, str)]
+        if complex_id not in pinned:
+            pinned.insert(0, complex_id)
+        state["pinned"] = pinned[:12]
+        _write_ui_state(user_id, state)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to pin quick-access item %s for user %s: %s", complex_id, user_id, exc)
+        return jsonify({"ok": False, "error": "quick_access_pin_failed"}), 500
 
 
 @quick_access_bp.route("/api/ui/quick-access/unpin", methods=["POST"])
@@ -445,11 +623,18 @@ def unpin_quick_access() -> Any:
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
 
-    state = _read_ui_state(user_id)
-    pinned = [x for x in state.get("pinned", []) if isinstance(x, str) and x != complex_id]
-    state["pinned"] = pinned
-    _write_ui_state(user_id, state)
-    return jsonify({"ok": True})
+    try:
+        state = _read_ui_state(user_id)
+        pinned = [x for x in state.get("pinned", []) if isinstance(x, str) and x != complex_id]
+        state["pinned"] = pinned
+        _write_ui_state(user_id, state)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to unpin quick-access item %s for user %s: %s", complex_id, user_id, exc)
+        return jsonify({"ok": False, "error": "quick_access_unpin_failed"}), 500
 
 
 @quick_access_bp.route("/api/ui/quick-access/remove", methods=["POST"])
@@ -461,11 +646,18 @@ def remove_from_quick_access() -> Any:
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
 
-    state = _read_ui_state(user_id)
-    state["pinned"] = [x for x in state.get("pinned", []) if isinstance(x, str) and x != complex_id]
-    state["recent"] = [x for x in state.get("recent", []) if isinstance(x, str) and x != complex_id]
-    _write_ui_state(user_id, state)
-    return jsonify({"ok": True})
+    try:
+        state = _read_ui_state(user_id)
+        state["pinned"] = [x for x in state.get("pinned", []) if isinstance(x, str) and x != complex_id]
+        state["recent"] = [x for x in state.get("recent", []) if isinstance(x, str) and x != complex_id]
+        _write_ui_state(user_id, state)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to remove quick-access item %s for user %s: %s", complex_id, user_id, exc)
+        return jsonify({"ok": False, "error": "quick_access_remove_failed"}), 500
 
 
 @quick_access_bp.route("/api/ui/quick-access/recent", methods=["POST"])
@@ -476,19 +668,33 @@ def mark_recent_complex() -> Any:
     if not complex_id:
         return jsonify({"ok": False, "error": "complex_id_required"}), 400
 
-    state = _read_ui_state(user_id)
-    recent = [x for x in state.get("recent", []) if isinstance(x, str) and x != complex_id]
-    recent.insert(0, complex_id)
-    state["recent"] = recent[:12]
-    _write_ui_state(user_id, state)
-    return jsonify({"ok": True})
+    try:
+        state = _read_ui_state(user_id)
+        recent = [x for x in state.get("recent", []) if isinstance(x, str) and x != complex_id]
+        recent.insert(0, complex_id)
+        state["recent"] = recent[:12]
+        _write_ui_state(user_id, state)
+        return jsonify({"ok": True})
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to mark quick-access recent item %s for user %s: %s", complex_id, user_id, exc)
+        return jsonify({"ok": False, "error": "quick_access_recent_failed"}), 500
 
 
 @quick_access_bp.route("/api/ui/settings", methods=["GET"])
 def get_ui_settings() -> Any:
     user_id = _resolve_effective_user_id(request.args.get("user_id"))
-    state = _read_ui_state(user_id)
-    return jsonify({"ok": True, "settings": state.get("settings", {})})
+    try:
+        state = _read_ui_state(user_id)
+        return jsonify({"ok": True, "settings": state.get("settings", {})})
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to load UI settings for user %s: %s", user_id, exc)
+        return jsonify({"ok": False, "error": "ui_settings_load_failed"}), 500
 
 
 @quick_access_bp.route("/api/ui/settings", methods=["POST"])
@@ -496,39 +702,74 @@ def update_ui_settings() -> Any:
     payload = request.get_json(silent=True) or {}
     user_id = _resolve_effective_user_id(payload.get("user_id"))
 
-    state = _read_ui_state(user_id)
-    current_settings = state.get("settings", {})
-    if not isinstance(current_settings, dict):
-        current_settings = {}
+    try:
+        state = _read_ui_state(user_id)
+        current_settings = state.get("settings", {})
+        if not isinstance(current_settings, dict):
+            current_settings = {}
 
-    # Merge updates
-    updates = payload.get("settings", {})
-    if isinstance(updates, dict):
-        current_settings.update(updates)
+        updates = payload.get("settings", {})
+        if isinstance(updates, dict):
+            current_settings.update(updates)
 
-    state["settings"] = current_settings
-    _write_ui_state(user_id, state)
-    return jsonify({"ok": True, "settings": current_settings})
+        state["settings"] = current_settings
+        _write_ui_state(user_id, state)
+        return jsonify({"ok": True, "settings": current_settings})
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to update UI settings for user %s: %s", user_id, exc)
+        return jsonify({"ok": False, "error": "ui_settings_update_failed"}), 500
 
 
 @quick_access_bp.route("/api/complexes", methods=["GET"])
 def list_complexes() -> Any:
     """Return the list of complexes available for the current user."""
     try:
-        complexes = get_ctx().complex_service.get_all_complexes()
+        ctx = get_ctx()
+        complexes = ctx.complex_service.get_all_complexes()
+        if is_hosted_web_runtime():
+            complexes = _adopt_ownerless_complexes_for_current_user(
+                complexes,
+                current_user_id=ctx.user_id,
+            )
         items = [
-            _serialize_complex_payload(c, current_user_id=get_ctx().user_id)
+            _serialize_complex_payload(c, current_user_id=ctx.user_id)
             for c in complexes
         ]
+        if is_hosted_web_runtime():
+            items = [
+                item
+                for item in items
+                if _is_visible_library_complex_for_current_user(item)
+            ]
         return jsonify({"ok": True, "items": items})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to list complexes: %s", exc)
         return jsonify({"ok": False, "error": "complexes_load_failed"}), 500
 
 
 @quick_access_bp.route("/api/complexes/<string:complex_id>", methods=["GET"])
 def get_complex(complex_id: str) -> Any:
-    obj = _get_complex_by_id(complex_id)
-    if not obj:
-        return jsonify({"ok": False, "error": "complex_not_found"}), 404
-    return jsonify({"ok": True, "item": obj})
+    try:
+        if is_hosted_web_runtime():
+            _adopt_ownerless_complexes_for_current_user(
+                get_ctx().complex_service.get_all_complexes(),
+                current_user_id=get_ctx().user_id,
+            )
+        obj = _get_complex_by_id(complex_id)
+        if not obj:
+            return jsonify({"ok": False, "error": "complex_not_found"}), 404
+        if is_hosted_web_runtime() and not _is_visible_library_complex_for_current_user(obj):
+            return jsonify({"ok": False, "error": "complex_not_found"}), 404
+        return jsonify({"ok": True, "item": obj})
+    except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
+        logger.exception("[HTTP] Failed to get complex %s: %s", complex_id, exc)
+        return jsonify({"ok": False, "error": "complex_load_failed"}), 500

@@ -53,12 +53,20 @@ from api.complexes_api import validate_and_normalize_theory_link
 from task_system.models.test_parser import TestFileParser
 from task_system.models.test_task import TestTask
 
-from routes._context import get_ctx, get_extra
+from routes._context import get_ctx, get_extra, is_hosted_web_runtime
 from routes._helpers import (
+    _maybe_hosted_shadow_write_error_response,
     _compute_inherited_theory_for_topics,
     _make_safe_id,
     _resolve_editor_image_path,
+    _serialize_workspace_catalog_modules,
+    _serialize_workspace_task_payload,
 )
+from services.hosted_shadow_fallback import (
+    HostedShadowReadFallbackDisabledError,
+    HostedShadowWriteFallbackDisabledError,
+)
+from persistence.runtime import HOSTED_SHADOW_WRITE_FALLBACK_ENV
 
 logger = logging.getLogger(__name__)
 
@@ -69,6 +77,171 @@ _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
 _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE: Dict[str, Dict[str, Any]] = {}
 _ARCHIVE_CONFIRM_IDEMPOTENCY_TTL_SECONDS = 15 * 60
 
+_WORKSPACE_IMPORT_MARKER_KEYS = (
+    "source_complex_id",
+    "source_catalog_item_id",
+    "source_catalog_version_id",
+    "prefer_existing_by_lineage",
+    "requested_by_user_id",
+)
+
+
+def _hosted_editor_asset_degraded_response(
+    *,
+    error: str,
+    operation: str,
+    reason: str,
+    status: int = 503,
+    route_contract: Optional[Dict[str, Any]] = None,
+) -> Any:
+    payload: Dict[str, Any] = {
+        "ok": False,
+        "error": str(error or "").strip() or "hosted_asset_contract_blocked",
+        "degraded": True,
+        "details": {
+            "operation": str(operation or "").strip() or None,
+            "reason": str(reason or "").strip() or None,
+            "runtime_mode": "hosted_web" if is_hosted_web_runtime() else "legacy_local",
+            "source_of_truth": "asset_id/asset_url",
+        },
+    }
+    if isinstance(route_contract, dict):
+        payload["route_contract"] = route_contract
+    return jsonify(payload), int(status)
+
+
+def _normalize_optional_text(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    normalized = str(value).strip()
+    return normalized or None
+
+
+def _is_imported_workspace_graph_payload(item: Any) -> bool:
+    if not isinstance(item, dict):
+        return False
+    created_via = str(
+        item.get("created_via")
+        or ((item.get("ownership") or {}).get("created_via") if isinstance(item.get("ownership"), dict) else "")
+        or ""
+    ).strip().lower()
+    if created_via in {"workspace_import", "archive_import"}:
+        return True
+    return bool(
+        _normalize_optional_text(item.get("source_catalog_item_id"))
+        or _normalize_optional_text(
+            (item.get("source_lineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("source_lineage"), dict)
+            else None
+        )
+        or _normalize_optional_text(
+            (item.get("sourceLineage") or {}).get("catalog_item_id")
+            if isinstance(item.get("sourceLineage"), dict)
+            else None
+        )
+    )
+
+
+def _is_ownerless_workspace_graph_payload(item: Any, *, current_user_id: str) -> bool:
+    normalized_user_id = _normalize_optional_text(current_user_id)
+    if not normalized_user_id or normalized_user_id == "guest":
+        return False
+    if not isinstance(item, dict):
+        return False
+    if _normalize_optional_text(item.get("created_by_user_id")) is not None:
+        return False
+    if bool(item.get("has_source_lineage")):
+        return False
+    if _normalize_optional_text(item.get("source_catalog_item_id")) is not None:
+        return False
+    workspace_copy_kind = str(item.get("workspace_copy_kind") or "").strip().lower()
+    if workspace_copy_kind and workspace_copy_kind != "local_draft":
+        return False
+    content_scope = str(item.get("content_scope") or "").strip().lower()
+    if content_scope and content_scope != "shared_local":
+        return False
+    return True
+
+
+def _is_visible_workspace_graph_payload_for_current_user(item: Any, *, current_user_id: str) -> bool:
+    if not isinstance(item, dict):
+        return False
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    if ownership.get("is_owned_by_current_user") is True:
+        return True
+    if _is_imported_workspace_graph_payload(item):
+        return True
+    return _is_ownerless_workspace_graph_payload(item, current_user_id=current_user_id)
+
+
+def _adopt_workspace_graph_payload_for_current_user(item: Any, *, current_user_id: str) -> Any:
+    if not isinstance(item, dict):
+        return item
+    normalized = dict(item)
+    if _is_ownerless_workspace_graph_payload(normalized, current_user_id=current_user_id):
+        normalized["created_by_user_id"] = current_user_id
+        normalized["updated_by_user_id"] = normalized.get("updated_by_user_id") or current_user_id
+        normalized["created_via"] = str(normalized.get("created_via") or "manual_editor").strip() or "manual_editor"
+        normalized["content_scope"] = str(normalized.get("content_scope") or "shared_local").strip() or "shared_local"
+        ownership = dict(normalized.get("ownership") or {})
+        ownership.update(
+            {
+                "scope": "workspace",
+                "content_scope": normalized["content_scope"],
+                "created_by_user_id": current_user_id,
+                "updated_by_user_id": normalized.get("updated_by_user_id"),
+                "created_via": normalized["created_via"],
+                "has_owner": True,
+                "is_owned_by_current_user": True,
+                "is_shared_library": normalized["content_scope"] == "shared_local",
+            }
+        )
+        normalized["ownership"] = ownership
+    return normalized
+
+
+def _filter_hosted_workspace_catalog_modules(modules: Any, *, current_user_id: str) -> List[Dict[str, Any]]:
+    filtered_modules: List[Dict[str, Any]] = []
+    if not isinstance(modules, list):
+        return filtered_modules
+
+    for module in modules:
+        module_payload = _adopt_workspace_graph_payload_for_current_user(
+            module,
+            current_user_id=current_user_id,
+        )
+        serialized_topics: List[Dict[str, Any]] = []
+        for topic in module_payload.get("topics") or []:
+            topic_payload = _adopt_workspace_graph_payload_for_current_user(
+                topic,
+                current_user_id=current_user_id,
+            )
+            serialized_tasks: List[Dict[str, Any]] = []
+            for task in topic_payload.get("tasks") or []:
+                task_payload = _adopt_workspace_graph_payload_for_current_user(
+                    task,
+                    current_user_id=current_user_id,
+                )
+                if _is_visible_workspace_graph_payload_for_current_user(
+                    task_payload,
+                    current_user_id=current_user_id,
+                ):
+                    serialized_tasks.append(task_payload)
+            topic_payload["tasks"] = serialized_tasks
+            if serialized_tasks or _is_visible_workspace_graph_payload_for_current_user(
+                topic_payload,
+                current_user_id=current_user_id,
+            ):
+                serialized_topics.append(topic_payload)
+        module_payload["topics"] = serialized_topics
+        if serialized_topics or _is_visible_workspace_graph_payload_for_current_user(
+            module_payload,
+            current_user_id=current_user_id,
+        ):
+            filtered_modules.append(module_payload)
+
+    return filtered_modules
+
 
 def _stable_json_hash(data: Any) -> str:
     payload = json.dumps(
@@ -78,6 +251,68 @@ def _stable_json_hash(data: Any) -> str:
         separators=(",", ":"),
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _public_import_route_contract(*, mode: str, import_family: str) -> Dict[str, Any]:
+    return {
+        "namespace": "public_editor_import_export",
+        "mode": mode,
+        "import_family": import_family,
+        "public_api": True,
+        "workspace_import": False,
+    }
+
+
+def _with_public_import_route_contract(
+    payload: Any,
+    *,
+    mode: str,
+    import_family: str,
+) -> Any:
+    if not isinstance(payload, dict):
+        return payload
+    normalized = dict(payload)
+    normalized["route_contract"] = _public_import_route_contract(
+        mode=mode,
+        import_family=import_family,
+    )
+    return normalized
+
+
+def _hosted_public_import_export_blocked_response(
+    *,
+    mode: str,
+    import_family: str,
+    operation: str,
+    write_path: bool,
+    service_contract: Optional[Dict[str, Any]] = None,
+) -> Optional[Any]:
+    if not is_hosted_web_runtime():
+        return None
+    error_cls = (
+        HostedShadowWriteFallbackDisabledError
+        if write_path
+        else HostedShadowReadFallbackDisabledError
+    )
+    exc = error_cls(
+        operation,
+        reason="public_import_export_hosted_source_of_truth_not_implemented",
+    )
+    extra_payload: Dict[str, Any] = {
+        "route_contract": _public_import_route_contract(
+            mode=mode,
+            import_family=import_family,
+        ),
+    }
+    if isinstance(service_contract, dict):
+        extra_payload["service_contract"] = dict(service_contract)
+    return _maybe_hosted_shadow_write_error_response(exc, extra_payload=extra_payload)
+
+
+def _workspace_import_markers_in_mapping(payload: Any) -> List[str]:
+    if not hasattr(payload, "__contains__"):
+        return []
+    return [key for key in _WORKSPACE_IMPORT_MARKER_KEYS if key in payload]
 
 
 def _cleanup_archive_confirm_idempotency_cache(cache: Dict[str, Dict[str, Any]]) -> None:
@@ -191,6 +426,56 @@ def _stream_result_response(payload: Dict[str, Any]) -> Response:
     return Response(body, mimetype="application/x-ndjson")
 
 
+def _hosted_shadow_stream_payload(
+    exc: Exception,
+    *,
+    mode: str,
+    import_family: str,
+    service_contract: Optional[Dict[str, Any]] = None,
+) -> Optional[Dict[str, Any]]:
+    if isinstance(exc, HostedShadowReadFallbackDisabledError):
+        payload: Dict[str, Any] = {
+            "ok": False,
+            "error": "hosted_shadow_read_blocked",
+            "degraded": True,
+            "details": {
+                "operation": str(exc.operation or "").strip() or None,
+                "reason": str(exc.reason or "").strip() or None,
+                "runtime_mode": "hosted_web" if is_hosted_web_runtime() else "legacy_local",
+                "source_of_truth": "postgres",
+            },
+            "route_contract": _public_import_route_contract(
+                mode=mode,
+                import_family=import_family,
+            ),
+        }
+        if isinstance(service_contract, dict):
+            payload["service_contract"] = dict(service_contract)
+        return payload
+
+    if not isinstance(exc, HostedShadowWriteFallbackDisabledError):
+        return None
+
+    payload = {
+        "ok": False,
+        "error": "hosted_shadow_write_blocked",
+        "degraded": True,
+        "details": {
+            "operation": str(exc.operation or "").strip() or None,
+            "reason": str(exc.reason or "").strip() or None,
+            "runtime_mode": "hosted_web" if is_hosted_web_runtime() else "legacy_local",
+            "env_opt_in": HOSTED_SHADOW_WRITE_FALLBACK_ENV,
+        },
+        "route_contract": _public_import_route_contract(
+            mode=mode,
+            import_family=import_family,
+        ),
+    }
+    if isinstance(service_contract, dict):
+        payload["service_contract"] = dict(service_contract)
+    return payload
+
+
 # ---------------------------------------------------------------------------
 # Editor CRUD
 # ---------------------------------------------------------------------------
@@ -200,9 +485,22 @@ def _stream_result_response(payload: Dict[str, Any]) -> Response:
 def get_editor_catalog() -> Any:
     """Return the full module/topic/task hierarchy for the editor."""
     try:
-        modules = get_ctx().storage_service.load_modules()
+        ctx = get_ctx()
+        modules = ctx.storage_service.load_modules()
+        modules = _serialize_workspace_catalog_modules(
+            modules,
+            current_user_id=ctx.user_id,
+        )
+        if is_hosted_web_runtime():
+            modules = _filter_hosted_workspace_catalog_modules(
+                modules,
+                current_user_id=ctx.user_id,
+            )
         return jsonify({"ok": True, "modules": modules})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to get editor catalog: %s", exc)
         return jsonify({"ok": False, "error": "catalog_load_failed"}), 500
 
@@ -211,11 +509,37 @@ def get_editor_catalog() -> Any:
 def get_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
     """Load full task data for editing."""
     try:
-        data = get_ctx().storage_service.load_task(module_id, topic_id, task_id)
+        ctx = get_ctx()
+        data = ctx.storage_service.load_task(module_id, topic_id, task_id)
         if not data:
             return jsonify({"ok": False, "error": "task_not_found"}), 404
+        data = _serialize_workspace_task_payload(
+            data,
+            current_user_id=ctx.user_id,
+        )
+        if is_hosted_web_runtime():
+            metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
+            metadata = _adopt_workspace_graph_payload_for_current_user(
+                metadata,
+                current_user_id=ctx.user_id,
+            )
+            if not _is_visible_workspace_graph_payload_for_current_user(
+                metadata,
+                current_user_id=ctx.user_id,
+            ):
+                return jsonify({"ok": False, "error": "task_not_found"}), 404
+            data["metadata"] = metadata
+            data["ownership"] = metadata.get("ownership")
+            task_data = data.get("task_data")
+            if isinstance(task_data, dict) and isinstance(task_data.get("meta"), dict):
+                task_data = dict(task_data)
+                task_data["meta"] = metadata
+                data["task_data"] = task_data
         return jsonify({"ok": True, "task": data})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to load editor task: %s", exc)
         return jsonify({"ok": False, "error": "task_load_failed"}), 500
 
@@ -260,6 +584,9 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
             return jsonify({"ok": False, "error": "save_failed"}), 500
 
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to save editor task: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -279,6 +606,9 @@ def delete_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
             )  # or 404 handled inside service logs
 
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to delete editor task: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -417,6 +747,7 @@ def _sync_topic_theory_to_complexes(
                 "updated_at": datetime.utcnow().isoformat(),
                 "topic_count": len(topic_refs),
                 "theory_ids": inherited.get("theory_ids") or [],
+                "topic_rows": inherited.get("topic_rows") or [],
             },
         }
 
@@ -511,7 +842,6 @@ def export_tasks() -> Any:
 
         if not tasks:
             return jsonify({"ok": False, "error": "tasks_required"}), 400
-
         zip_path = svc.create_export_archive(tasks)
         filename = f"export_tasks_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.zip"
 
@@ -528,6 +858,18 @@ def export_tasks() -> Any:
             zip_path, as_attachment=True, download_name=filename, mimetype="application/zip"
         )
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(
+            exc,
+            extra_payload={
+                "route_contract": _public_import_route_contract(
+                    mode="export",
+                    import_family="task_archive_export",
+                ),
+                "service_contract": dict(getattr(svc, "SERVICE_CONTRACT", {}) or {}),
+            },
+        )
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Export failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -549,7 +891,6 @@ def export_bulk() -> Any:
 
         if not module_id:
             return jsonify({"ok": False, "error": "module_id_required"}), 400
-
         storage = ctx.storage_service
         tasks_to_export = []
 
@@ -589,6 +930,18 @@ def export_bulk() -> Any:
             zip_path, as_attachment=True, download_name=filename, mimetype="application/zip"
         )
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(
+            exc,
+            extra_payload={
+                "route_contract": _public_import_route_contract(
+                    mode="export",
+                    import_family="task_archive_export",
+                ),
+                "service_contract": dict(getattr(svc, "SERVICE_CONTRACT", {}) or {}),
+            },
+        )
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Bulk export failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -636,6 +989,22 @@ def import_check() -> Any:
     try:
         _cleanup_import_cache()
 
+        workspace_markers = _workspace_import_markers_in_mapping(request.form)
+        if workspace_markers:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f"workspace_import_payload_not_supported:{','.join(workspace_markers)}",
+                        "route_contract": _public_import_route_contract(
+                            mode="check",
+                            import_family="task_archive_import",
+                        ),
+                    }
+                ),
+                400,
+            )
+
         if "file" not in request.files:
             return jsonify({"ok": False, "error": "file_required"}), 400
 
@@ -658,7 +1027,13 @@ def import_check() -> Any:
         if isinstance(report, dict):
             report["cache_id"] = cache_id
 
-        return jsonify(report)
+        return jsonify(
+            _with_public_import_route_contract(
+                report,
+                mode="check",
+                import_family="task_archive_import",
+            )
+        )
 
     except Exception as exc:
         logger.exception("[HTTP] Import check failed: %s", exc)
@@ -676,6 +1051,21 @@ def import_confirm() -> Any:
         return jsonify({"ok": False, "error": "service_not_available"}), 503
 
     try:
+        workspace_markers = _workspace_import_markers_in_mapping(request.form)
+        if workspace_markers:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f"workspace_import_payload_not_supported:{','.join(workspace_markers)}",
+                        "route_contract": _public_import_route_contract(
+                            mode="confirm",
+                            import_family="task_archive_import",
+                        ),
+                    }
+                ),
+                400,
+            )
         # Parse per-task conflict overrides (index -> resolution)
         per_task_conflict = {}
         request_fingerprint = ""
@@ -731,7 +1121,13 @@ def import_confirm() -> Any:
                 idempotency_key,
                 cache_id or "-",
             )
-            return _stream_result_response(cached_response)
+            return _stream_result_response(
+                _with_public_import_route_contract(
+                    cached_response,
+                    mode="confirm",
+                    import_family="task_archive_import",
+                )
+            )
 
         # Try to use cached archive from check step
         if cache_id and cache_id in _import_archive_cache:
@@ -764,6 +1160,11 @@ def import_confirm() -> Any:
                     res = dict(res)
                     res["idempotency_key"] = idempotency_key
                 if isinstance(res, dict):
+                    res = _with_public_import_route_contract(
+                        res,
+                        mode="confirm",
+                        import_family="task_archive_import",
+                    )
                     _archive_confirm_idempotency_store(
                         _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
                         idempotency_key,
@@ -772,6 +1173,24 @@ def import_confirm() -> Any:
                     )
                 q.put({"type": "result", "data": res})
             except Exception as e:
+                streamed_degraded = _hosted_shadow_stream_payload(
+                    e,
+                    mode="confirm",
+                    import_family="task_archive_import",
+                    service_contract=getattr(svc, "SERVICE_CONTRACT", None),
+                )
+                if streamed_degraded is not None:
+                    if idempotency_key:
+                        streamed_degraded = dict(streamed_degraded)
+                        streamed_degraded["idempotency_key"] = idempotency_key
+                    _archive_confirm_idempotency_store(
+                        _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                        idempotency_key,
+                        request_fingerprint,
+                        streamed_degraded,
+                    )
+                    q.put({"type": "result", "data": streamed_degraded})
+                    return
                 logger.exception("Import worker failed")
                 _archive_confirm_idempotency_release(
                     _TASK_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
@@ -806,6 +1225,9 @@ def import_confirm() -> Any:
             locals().get("idempotency_key", ""),
             locals().get("request_fingerprint", ""),
         )
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Import confirm setup failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -863,7 +1285,6 @@ def export_complexes_bundle() -> Any:
         ]
         if not complex_ids:
             return jsonify({"ok": False, "error": "complex_ids_required"}), 400
-
         options = {
             "include_tasks": payload.get("include_tasks", True),
             "include_theories": payload.get("include_theories", True),
@@ -887,6 +1308,18 @@ def export_complexes_bundle() -> Any:
             mimetype="application/zip",
         )
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(
+            exc,
+            extra_payload={
+                "route_contract": _public_import_route_contract(
+                    mode="export",
+                    import_family="complex_archive_export",
+                ),
+                "service_contract": dict(getattr(svc, "SERVICE_CONTRACT", {}) or {}),
+            },
+        )
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Complex export failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -902,6 +1335,22 @@ def import_complexes_check() -> Any:
 
     try:
         _cleanup_complex_import_cache()
+
+        workspace_markers = _workspace_import_markers_in_mapping(request.form)
+        if workspace_markers:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f"workspace_import_payload_not_supported:{','.join(workspace_markers)}",
+                        "route_contract": _public_import_route_contract(
+                            mode="check",
+                            import_family="complex_archive_import",
+                        ),
+                    }
+                ),
+                400,
+            )
 
         if "file" not in request.files:
             return jsonify({"ok": False, "error": "file_required"}), 400
@@ -919,7 +1368,13 @@ def import_complexes_check() -> Any:
         _complex_import_archive_cache[cache_id] = (temp_path, time.time())
         if isinstance(report, dict):
             report["cache_id"] = cache_id
-        return jsonify(report)
+        return jsonify(
+            _with_public_import_route_contract(
+                report,
+                mode="check",
+                import_family="complex_archive_import",
+            )
+        )
     except Exception as exc:
         logger.exception("[HTTP] Complex import check failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
@@ -935,6 +1390,21 @@ def import_complexes_confirm() -> Any:
         return jsonify({"ok": False, "error": "service_not_available"}), 503
 
     try:
+        workspace_markers = _workspace_import_markers_in_mapping(request.form)
+        if workspace_markers:
+            return (
+                jsonify(
+                    {
+                        "ok": False,
+                        "error": f"workspace_import_payload_not_supported:{','.join(workspace_markers)}",
+                        "route_contract": _public_import_route_contract(
+                            mode="confirm",
+                            import_family="complex_archive_import",
+                        ),
+                    }
+                ),
+                400,
+            )
         params = {
             "complex_conflict_resolution": request.form.get(
                 "complex_conflict_resolution", "new_id"
@@ -986,7 +1456,13 @@ def import_complexes_confirm() -> Any:
                 idempotency_key,
                 cache_id or "-",
             )
-            return _stream_result_response(cached_response)
+            return _stream_result_response(
+                _with_public_import_route_contract(
+                    cached_response,
+                    mode="confirm",
+                    import_family="complex_archive_import",
+                )
+            )
 
         if cache_id and cache_id in _complex_import_archive_cache:
             temp_path, _ = _complex_import_archive_cache.pop(cache_id)
@@ -1017,6 +1493,11 @@ def import_complexes_confirm() -> Any:
                     res = dict(res)
                     res["idempotency_key"] = idempotency_key
                 if isinstance(res, dict):
+                    res = _with_public_import_route_contract(
+                        res,
+                        mode="confirm",
+                        import_family="complex_archive_import",
+                    )
                     _archive_confirm_idempotency_store(
                         _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
                         idempotency_key,
@@ -1025,13 +1506,31 @@ def import_complexes_confirm() -> Any:
                     )
                 q.put({"type": "result", "data": res})
             except Exception as e:
-                logger.exception("Complex import worker failed")
-                _archive_confirm_idempotency_release(
-                    _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
-                    idempotency_key,
-                    request_fingerprint,
+                streamed_degraded = _hosted_shadow_stream_payload(
+                    e,
+                    mode="confirm",
+                    import_family="complex_archive_import",
+                    service_contract=getattr(svc, "SERVICE_CONTRACT", None),
                 )
-                q.put({"type": "error", "error": str(e)})
+                if streamed_degraded is not None:
+                    if idempotency_key:
+                        streamed_degraded = dict(streamed_degraded)
+                        streamed_degraded["idempotency_key"] = idempotency_key
+                    _archive_confirm_idempotency_store(
+                        _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                        idempotency_key,
+                        request_fingerprint,
+                        streamed_degraded,
+                    )
+                    q.put({"type": "result", "data": streamed_degraded})
+                else:
+                    logger.exception("Complex import worker failed")
+                    _archive_confirm_idempotency_release(
+                        _COMPLEX_ARCHIVE_CONFIRM_IDEMPOTENCY_CACHE,
+                        idempotency_key,
+                        request_fingerprint,
+                    )
+                    q.put({"type": "error", "error": str(e)})
             finally:
                 q.put(None)
 
@@ -1059,6 +1558,9 @@ def import_complexes_confirm() -> Any:
             locals().get("idempotency_key", ""),
             locals().get("request_fingerprint", ""),
         )
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Complex import confirm setup failed: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -1216,6 +1718,9 @@ def create_editor_task() -> Any:
             return jsonify({"ok": False, "error": "create_failed"}), 500
 
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to create editor task: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -1246,6 +1751,9 @@ def bootstrap_editor_task() -> Any:
         )
         return jsonify({"ok": True, **bootstrap})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to bootstrap editor task: %s", exc)
         return jsonify({"ok": False, "error": str(exc)}), 500
 
@@ -1264,17 +1772,27 @@ def create_editor_module() -> Any:
         module_id = _make_safe_id(name)
         if not module_id:
             return jsonify({"ok": False, "error": "invalid_module_name"}), 400
-        module_dir = ctx.storage_service.modules_dir / module_id
-        module_dir.mkdir(parents=True, exist_ok=True)
 
-        with open(module_dir / "module.json", "w", encoding="utf-8") as f:
-            json.dump(
-                {"id": module_id, "name": name, "topics": []}, f, indent=2, ensure_ascii=False
-            )
+        create_module = getattr(ctx.storage_service, "create_module", None)
+        if callable(create_module):
+            created = bool(create_module(module_id, name))
+            if not created:
+                return jsonify({"ok": False, "error": "module_create_failed"}), 500
+        else:
+            module_dir = ctx.storage_service.modules_dir / module_id
+            module_dir.mkdir(parents=True, exist_ok=True)
 
-        ctx.storage_service.reload_modules()
+            with open(module_dir / "module.json", "w", encoding="utf-8") as f:
+                json.dump(
+                    {"id": module_id, "name": name, "topics": []}, f, indent=2, ensure_ascii=False
+                )
+
+            ctx.storage_service.reload_modules()
         return jsonify({"ok": True, "module_id": module_id})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
@@ -1335,19 +1853,36 @@ def create_editor_topic() -> Any:
         topic_id = _make_safe_id(name)
         if not topic_id:
             return jsonify({"ok": False, "error": "invalid_topic_name"}), 400
-        topic_dir = ctx.storage_service.modules_dir / module_id / "topics" / topic_id
-        topic_dir.mkdir(parents=True, exist_ok=True)
-        (topic_dir / "tasks").mkdir(exist_ok=True)
 
-        topic_payload = {"id": topic_id, "name": name, "tasks": []}
-        if isinstance(normalized_theory_link, dict):
-            topic_payload["theory_link"] = normalized_theory_link
-        with open(topic_dir / "topic.json", "w", encoding="utf-8") as f:
-            json.dump(topic_payload, f, indent=2, ensure_ascii=False)
+        create_topic = getattr(ctx.storage_service, "create_topic", None)
+        if callable(create_topic):
+            created = bool(
+                create_topic(
+                    module_id,
+                    topic_id,
+                    name,
+                    theory_link=normalized_theory_link,
+                )
+            )
+            if not created:
+                return jsonify({"ok": False, "error": "topic_create_failed"}), 500
+        else:
+            topic_dir = ctx.storage_service.modules_dir / module_id / "topics" / topic_id
+            topic_dir.mkdir(parents=True, exist_ok=True)
+            (topic_dir / "tasks").mkdir(exist_ok=True)
 
-        ctx.storage_service.reload_modules()
+            topic_payload = {"id": topic_id, "name": name, "tasks": []}
+            if isinstance(normalized_theory_link, dict):
+                topic_payload["theory_link"] = normalized_theory_link
+            with open(topic_dir / "topic.json", "w", encoding="utf-8") as f:
+                json.dump(topic_payload, f, indent=2, ensure_ascii=False)
+
+            ctx.storage_service.reload_modules()
         return jsonify({"ok": True, "topic_id": topic_id})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
@@ -1475,6 +2010,9 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
             return jsonify({"ok": False, "error": "topic_not_found"}), 404
         return jsonify({"ok": False, "error": str(exc)}), 400
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception(
             "[HTTP] Failed to save topic theory link module=%s topic=%s: %s",
             module_id,
@@ -1489,11 +2027,13 @@ def set_editor_topic_theory_link(module_id: str, topic_id: str) -> Any:
 
 @editor_bp.route("/api/editor/upload-image", methods=["POST"])
 def upload_editor_image() -> Any:
-    """Upload image for a specific task and return its relative path."""
+    """Upload image for a specific task and return hosted-safe media references."""
     try:
+        ctx = get_ctx()
         module_id = request.form.get("module")
         topic_id = request.form.get("topic")
         task_id = request.form.get("task")
+        hosted_runtime = is_hosted_web_runtime()
 
         if not all([module_id, topic_id, task_id]):
             return jsonify({"ok": False, "error": "missing_params"}), 400
@@ -1540,9 +2080,57 @@ def upload_editor_image() -> Any:
         candidate_paths.extend(sorted(images_dir.glob(f"{stem}_*{suffix}")))
         for candidate in candidate_paths:
             if candidate.exists() and _hash_existing_image(candidate) == upload_digest:
-                relative_path = os.path.relpath(candidate, get_ctx().data_dir).replace("\\", "/")
+                relative_path = os.path.relpath(candidate, ctx.data_dir).replace("\\", "/")
+                response_payload = {"ok": True, "reused": True}
+                if not hosted_runtime:
+                    response_payload["path"] = relative_path
+                asset_service = getattr(ctx, "asset_service", None)
+                if asset_service is None and hosted_runtime:
+                    return _hosted_editor_asset_degraded_response(
+                        error="hosted_asset_contract_blocked",
+                        operation="editor.upload_image",
+                        reason="asset_service_required_in_hosted_runtime",
+                        route_contract={"mode": "upload_image", "public_api": False},
+                    )
+                if asset_service is not None:
+                    try:
+                        asset = asset_service.register_existing_file(
+                            candidate,
+                            owner_user_id=getattr(ctx, "user_id", None),
+                            visibility_scope="private_workspace",
+                            asset_kind="editor_task_image",
+                            metadata={
+                                "module_id": module_id,
+                                "topic_id": topic_id,
+                                "task_id": task_id,
+                            },
+                        )
+                        response_payload["asset_id"] = asset.get("asset_id")
+                        response_payload["asset_url"] = asset.get("asset_url")
+                    except Exception as exc:
+                        if hosted_runtime:
+                            logger.exception(
+                                "[HTTP] Hosted asset registration failed for reused editor image %s",
+                                relative_path,
+                            )
+                            return jsonify({"ok": False, "error": "asset_registration_failed"}), 500
+                        logger.warning(
+                            "[HTTP] Asset registration skipped for reused editor image %s: %s",
+                            relative_path,
+                            exc,
+                        )
+                if hosted_runtime and not (
+                    str(response_payload.get("asset_id") or "").strip()
+                    or str(response_payload.get("asset_url") or "").strip()
+                ):
+                    return _hosted_editor_asset_degraded_response(
+                        error="hosted_asset_contract_blocked",
+                        operation="editor.upload_image",
+                        reason="asset_id_or_asset_url_required_in_hosted_runtime",
+                        route_contract={"mode": "upload_image", "public_api": False},
+                    )
                 logger.info("[HTTP] Reused identical image for task %s: %s", task_id, relative_path)
-                return jsonify({"ok": True, "path": relative_path, "reused": True})
+                return jsonify(response_payload)
 
         counter = 1
         while file_path.exists():
@@ -1550,10 +2138,58 @@ def upload_editor_image() -> Any:
             counter += 1
 
         file.save(str(file_path))
-        relative_path = os.path.relpath(file_path, get_ctx().data_dir).replace("\\", "/")
+        relative_path = os.path.relpath(file_path, ctx.data_dir).replace("\\", "/")
 
         logger.info("[HTTP] Image uploaded for task %s: %s", task_id, relative_path)
-        return jsonify({"ok": True, "path": relative_path})
+        response_payload = {"ok": True}
+        if not hosted_runtime:
+            response_payload["path"] = relative_path
+        asset_service = getattr(ctx, "asset_service", None)
+        if asset_service is None and hosted_runtime:
+            return _hosted_editor_asset_degraded_response(
+                error="hosted_asset_contract_blocked",
+                operation="editor.upload_image",
+                reason="asset_service_required_in_hosted_runtime",
+                route_contract={"mode": "upload_image", "public_api": False},
+            )
+        if asset_service is not None:
+            try:
+                asset = asset_service.register_existing_file(
+                    file_path,
+                    owner_user_id=getattr(ctx, "user_id", None),
+                    visibility_scope="private_workspace",
+                    asset_kind="editor_task_image",
+                    metadata={
+                        "module_id": module_id,
+                        "topic_id": topic_id,
+                        "task_id": task_id,
+                    },
+                )
+                response_payload["asset_id"] = asset.get("asset_id")
+                response_payload["asset_url"] = asset.get("asset_url")
+            except Exception as exc:
+                if hosted_runtime:
+                    logger.exception(
+                        "[HTTP] Hosted asset registration failed for editor image %s",
+                        relative_path,
+                    )
+                    return jsonify({"ok": False, "error": "asset_registration_failed"}), 500
+                logger.warning(
+                    "[HTTP] Asset registration skipped for editor image %s: %s",
+                    relative_path,
+                    exc,
+                )
+        if hosted_runtime and not (
+            str(response_payload.get("asset_id") or "").strip()
+            or str(response_payload.get("asset_url") or "").strip()
+        ):
+            return _hosted_editor_asset_degraded_response(
+                error="hosted_asset_contract_blocked",
+                operation="editor.upload_image",
+                reason="asset_id_or_asset_url_required_in_hosted_runtime",
+                route_contract={"mode": "upload_image", "public_api": False},
+            )
+        return jsonify(response_payload)
 
     except Exception as exc:
         logger.exception("[HTTP] Failed to upload image: %s", exc)
@@ -1579,6 +2215,7 @@ def serve_editor_image() -> Any:
     topic_id = request.args.get("topic")
     task_id = request.args.get("task")
     path = request.args.get("path")
+    asset_id = request.args.get("asset_id")
     ed_logger.info(
         "REQUEST /api/editor/image path=%s module=%s topic=%s task=%s",
         path,
@@ -1586,6 +2223,27 @@ def serve_editor_image() -> Any:
         topic_id,
         task_id,
     )
+    if asset_id:
+        asset_service = getattr(get_ctx(), "asset_service", None)
+        if asset_service is None:
+            return jsonify({"ok": False, "error": "asset_service_not_available"}), 503
+        asset = asset_service.get_asset(asset_id)
+        if asset is None:
+            return jsonify({"ok": False, "error": "asset_not_found"}), 404
+        ctx = get_ctx()
+        if is_hosted_web_runtime():
+            user_id = getattr(ctx, "user_id", None)
+            if str(user_id or "").strip() == "guest":
+                return jsonify({"ok": False, "error": "authentication_required"}), 401
+            if not asset_service.can_access_asset(asset, user_id=user_id):
+                return jsonify({"ok": False, "error": "asset_forbidden"}), 403
+        target = asset_service.resolve_asset_file(asset_id)
+        if target is None:
+            return jsonify({"ok": False, "error": "asset_file_missing"}), 404
+        resp = send_file(str(target))
+        resp.headers["Cache-Control"] = "private, max-age=3600"
+        return resp
+
     if not path:
         logger.warning("[HTTP] /api/editor/image without 'path' parameter")
         ed_logger.warning(
@@ -1595,6 +2253,14 @@ def serve_editor_image() -> Any:
             task_id,
         )
         return jsonify({"ok": False, "error": "path_required"}), 400
+
+    if is_hosted_web_runtime():
+        return _hosted_editor_asset_degraded_response(
+            error="hosted_asset_path_blocked",
+            operation="editor.image.path_lookup",
+            reason="asset_id_or_asset_url_required_in_hosted_runtime",
+            route_contract={"mode": "read_asset", "public_api": False},
+        )
 
     target = _resolve_editor_image_path(
         path,

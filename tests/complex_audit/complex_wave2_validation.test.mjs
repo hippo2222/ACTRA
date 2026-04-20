@@ -11,6 +11,7 @@ import {
 } from "./helpers/base.mjs";
 import { createRuntimeHarness } from "./helpers/runtime_server.mjs";
 import { assertApiOk, fetchJson, seedTypeHappyPathFixture } from "./helpers/data_seed.mjs";
+import { ensureHostedBrowserAuth } from "./helpers/runtime_context.mjs";
 import { countSubmitRequestsDuring, assertBlockedSubmissionState } from "./helpers/s1_helpers.mjs";
 import { performTaskPartialAction } from "./helpers/task_type_actions.mjs";
 
@@ -64,6 +65,7 @@ async function startComplexAtIteration(page, { baseUrl, complexId, startIteratio
     throw new Error("start_complex_session_missing_session_id");
   }
 
+  await ensureHostedBrowserAuth(page, baseUrl);
   await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
   await waitForPageStable(page);
   return sessionId;

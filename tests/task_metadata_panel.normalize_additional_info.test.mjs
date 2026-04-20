@@ -13,7 +13,11 @@ describe("_normalizeAdditionalInfo", () => {
     expect(result).toEqual({
       type: "combined",
       text: "Helpful text",
-      images: ["img1.png", "img2.png", "img3.png"],
+      images: [
+        "/api/local-image?path=img1.png",
+        "/api/local-image?path=img2.png",
+        "/api/local-image?path=img3.png",
+      ],
     });
   });
 
@@ -30,7 +34,7 @@ describe("_normalizeAdditionalInfo", () => {
     const result = normalize(raw);
     expect(result).toEqual({
       type: "image",
-      images: ["relative/path.png"],
+      images: ["/api/local-image?path=relative%2Fpath.png"],
       text: "",
     });
   });
@@ -49,5 +53,31 @@ describe("_normalizeAdditionalInfo", () => {
   it("returns null for empty/invalid combined resource", () => {
     expect(normalize({ type: "combined", text: "   ", images: [" ", "  "] })).toBeNull();
     expect(normalize({})).toBeNull();
+  });
+
+  it("normalizes asset-backed images into canonical hosted asset URLs", () => {
+    const raw = {
+      type: "image",
+      images: [{ asset_id: "asset_meta_1" }],
+    };
+    const result = normalize(raw);
+    expect(result).toEqual({
+      type: "image",
+      images: ["/api/assets/asset_meta_1/content"],
+      text: "",
+    });
+  });
+
+  it("prefers canonical asset refs over legacy paths inside image entries", () => {
+    const raw = {
+      type: "image",
+      images: [{ asset_id: "asset_meta_2", path: "legacy/meta.png" }],
+    };
+    const result = normalize(raw);
+    expect(result).toEqual({
+      type: "image",
+      images: ["/api/assets/asset_meta_2/content"],
+      text: "",
+    });
   });
 });

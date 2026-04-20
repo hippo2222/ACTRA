@@ -615,6 +615,43 @@
     }
 
     function resolveReviewImageUrl(value) {
+      if (!value && value !== 0) return "";
+
+      if (isObject(value)) {
+        const nested = isObject(value.image) ? value.image : null;
+        const directUrl =
+          value.asset_url ||
+          value.image_asset_url ||
+          value.image_url ||
+          value.imageUrl ||
+          value.url ||
+          value.image_path ||
+          value.imagePath ||
+          value.path ||
+          value.src ||
+          (nested &&
+            (nested.asset_url ||
+              nested.image_asset_url ||
+              nested.image_url ||
+              nested.url ||
+              nested.image_path ||
+              nested.imagePath ||
+              nested.path ||
+              nested.src)) ||
+          "";
+        if (directUrl) return resolveReviewImageUrl(directUrl);
+
+        const assetId =
+          value.asset_id ||
+          value.image_asset_id ||
+          (nested && (nested.asset_id || nested.image_asset_id)) ||
+          "";
+        if (assetId) {
+          return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+        }
+        return "";
+      }
+
       const raw = String(value == null ? "" : value).trim();
       if (!raw) return "";
       if (/^https?:\/\//i.test(raw) || raw.startsWith("/")) return raw;
@@ -640,15 +677,22 @@
             item.value ||
             item.title
           );
-          const imageRaw = String(
-            item.image_url ||
-            item.imageUrl ||
-            item.image_path ||
-            item.imagePath ||
-            item.image ||
-            item.src ||
-            ""
-          ).trim();
+          const hasHostedAssetRef =
+            item.image_asset_url != null ||
+            item.image_asset_id != null ||
+            item.asset_url != null ||
+            item.asset_id != null;
+          const imageRaw = hasHostedAssetRef
+            ? item
+            : (
+              item.image_url ||
+              item.imageUrl ||
+              item.image_path ||
+              item.imagePath ||
+              item.image ||
+              item.src ||
+              ""
+            );
           const optionIndex = toNumberOrNull(item.option_index ?? item.optionIndex);
           const fallbackLabel = normalizeAnswer(item.fallback_label || item.fallbackLabel);
           const imageUrl = imageRaw ? resolveReviewImageUrl(imageRaw) : "";
@@ -1407,6 +1451,11 @@
         NotificationUI.toast("Итоговые результаты временно недоступны. Попробуйте открыть экран ещё раз.", "error");
       }
     }
+
+    window.__S3_TEST_HOOKS = {
+      normalizeReviewItems,
+      resolveReviewImageUrl,
+    };
 
     /* ─── INIT ───────────────────────────────────────────────── */
     window.addEventListener("DOMContentLoaded", () => {

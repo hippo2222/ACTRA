@@ -8,6 +8,7 @@ AI Generation Service — провайдеры LLM и сервис генера�
 import json
 import logging
 import math
+import os
 import re
 import time
 import threading
@@ -23,6 +24,109 @@ from services.analysis_capability_matrix import apply_capability_matrix_v1_annot
 from services.analysis_schema_v2 import normalize_analysis_schema_v2
 
 logger = logging.getLogger(__name__)
+
+
+_AI_ENV_PROVIDER_NAMES = ("openrouter", "gemini", "groq", "mock")
+
+
+def _env_bool(name: str, default: Optional[bool] = None) -> Optional[bool]:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _env_int(name: str, default: Optional[int] = None) -> Optional[int]:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    try:
+        return int(str(raw).strip())
+    except Exception:
+        return default
+
+
+def _warn_on_file_based_provider_secrets(config: Dict[str, Any], config_path: Path) -> None:
+    providers_cfg = config.get("providers", {})
+    if not isinstance(providers_cfg, dict):
+        return
+
+    warned = False
+    for provider_name in ("openrouter", "gemini", "groq"):
+        provider_cfg = providers_cfg.get(provider_name, {})
+        if not isinstance(provider_cfg, dict):
+            continue
+        api_key = str(provider_cfg.get("api_key") or "").strip()
+        if api_key:
+            warned = True
+            logger.warning(
+                "[AI] %s api_key is loaded from %s. Hosted deployments should use env secrets instead.",
+                provider_name,
+                config_path,
+            )
+
+    if warned:
+        logger.warning(
+            "[AI] File-based provider secrets are legacy-only and should not be used as the hosted source of truth."
+        )
+
+
+def _apply_env_ai_config_overrides(config: Dict[str, Any]) -> Dict[str, Any]:
+    resolved: Dict[str, Any] = dict(config or {})
+    providers_cfg = resolved.get("providers", {})
+    if not isinstance(providers_cfg, dict):
+        providers_cfg = {}
+    else:
+        providers_cfg = {
+            str(name): (dict(value) if isinstance(value, dict) else {})
+            for name, value in providers_cfg.items()
+        }
+
+    timeout_seconds = _env_int("ACTRA_AI_TIMEOUT_SECONDS", None)
+    if timeout_seconds is not None:
+        resolved["timeout_seconds"] = timeout_seconds
+
+    fallback_order_raw = str(os.environ.get("ACTRA_AI_FALLBACK_ORDER") or "").strip()
+    if fallback_order_raw:
+        resolved["fallback_order"] = [
+            item.strip().lower()
+            for item in fallback_order_raw.split(",")
+            if item.strip()
+        ]
+
+    for provider_name in _AI_ENV_PROVIDER_NAMES:
+        provider_cfg = providers_cfg.get(provider_name, {})
+        env_prefix = f"ACTRA_AI_{provider_name.upper()}_"
+
+        enabled = _env_bool(f"{env_prefix}ENABLED", None)
+        api_key_raw = os.environ.get(f"{env_prefix}API_KEY")
+        model_raw = os.environ.get(f"{env_prefix}MODEL")
+        fallback_models_raw = os.environ.get(f"{env_prefix}FALLBACK_MODELS")
+
+        if enabled is not None:
+            provider_cfg["enabled"] = enabled
+
+        if api_key_raw is not None:
+            api_key = str(api_key_raw).strip()
+            provider_cfg["api_key"] = api_key
+            if api_key and enabled is None:
+                provider_cfg["enabled"] = True
+
+        if model_raw is not None:
+            provider_cfg["model"] = str(model_raw).strip()
+
+        if fallback_models_raw is not None:
+            provider_cfg["fallback_models"] = [
+                item.strip()
+                for item in str(fallback_models_raw).split(",")
+                if item.strip()
+            ]
+
+        if provider_cfg:
+            providers_cfg[provider_name] = provider_cfg
+
+    resolved["providers"] = providers_cfg
+    return resolved
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -2043,15 +2147,18 @@ class DailyLimitTracker:
 def load_ai_config(data_dir: Path) -> Dict[str, Any]:
     """Загрузить конфигурацию AI-провайдеров из ai_config.json."""
     config_path = data_dir / "ai_config.json"
+    loaded: Dict[str, Any] = {}
     if not config_path.exists():
         logger.warning("[AI] ai_config.json not found at %s", config_path)
-        return {}
-    try:
-        with open(config_path, "r", encoding="utf-8-sig") as f:
-            return json.load(f)
-    except Exception as e:
-        logger.error("[AI] Failed to load ai_config.json: %s", e)
-        return {}
+    else:
+        try:
+            with open(config_path, "r", encoding="utf-8-sig") as f:
+                loaded = json.load(f)
+            _warn_on_file_based_provider_secrets(loaded, config_path)
+        except Exception as e:
+            logger.error("[AI] Failed to load ai_config.json: %s", e)
+            loaded = {}
+    return _apply_env_ai_config_overrides(loaded)
 
 
 # ---------------------------------------------------------------------------

@@ -57,30 +57,82 @@
 
   function _getImagePath(taskDto) {
     const { td, content } = _getTaskData(taskDto);
-    if (td.image_url || content.image_url || td.image_path || content.image_path) {
-      return td.image_url || content.image_url || td.image_path || content.image_path || "";
+    const directUrl =
+      td.image_asset_url ||
+      content.image_asset_url ||
+      td.image_url ||
+      content.image_url ||
+      "";
+    if (directUrl) return directUrl;
+
+    const directAssetId =
+      td.image_asset_id ||
+      content.image_asset_id ||
+      td.asset_id ||
+      content.asset_id ||
+      "";
+    if (directAssetId) {
+      return { asset_id: directAssetId };
+    }
+
+    if (td.image_path || content.image_path) {
+      return td.image_path || content.image_path || "";
     }
 
     if (content && typeof content.image === "object" && content.image) {
-      return content.image.url || content.image.path || "";
+      return content.image;
     }
     if (td && typeof td.image === "object" && td.image) {
-      return td.image.url || td.image.path || "";
+      return td.image;
     }
 
     if (Array.isArray(content.images) && content.images.length > 0) {
       const img0 = content.images[0];
       if (typeof img0 === "string") return img0;
-      if (img0 && typeof img0 === "object") {
-        return img0.url || img0.path || "";
-      }
+      if (img0 && typeof img0 === "object") return img0;
     }
 
     return td.image || content.image || "";
   }
 
   function _resolveImageUrl(imgSrc) {
-    const raw = imgSrc != null ? String(imgSrc) : "";
+    if (!imgSrc && imgSrc !== 0) return "";
+
+    if (imgSrc && typeof imgSrc === "object") {
+      const nested = imgSrc.image && typeof imgSrc.image === "object" ? imgSrc.image : null;
+      const directUrl =
+        imgSrc.asset_url ||
+        imgSrc.image_asset_url ||
+        imgSrc.image_url ||
+        imgSrc.url ||
+        imgSrc.src ||
+        (nested &&
+          (nested.asset_url ||
+            nested.image_asset_url ||
+            nested.url ||
+            nested.image_url ||
+            nested.src)) ||
+        "";
+      if (directUrl) return _resolveImageUrl(directUrl);
+
+      const assetId =
+        imgSrc.asset_id ||
+        imgSrc.image_asset_id ||
+        (nested && (nested.asset_id || nested.image_asset_id)) ||
+        "";
+      if (assetId) {
+        return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+      }
+      const legacyPath =
+        imgSrc.image_path ||
+        imgSrc.path ||
+        (nested && (nested.path || nested.image_path)) ||
+        "";
+      if (legacyPath) return _resolveImageUrl(legacyPath);
+      return "";
+    }
+
+    const raw = String(imgSrc != null ? imgSrc : "").trim();
     if (!raw) return "";
     if (raw.startsWith("http://") || raw.startsWith("https://")) return raw;
     if (raw.startsWith("/")) return raw;

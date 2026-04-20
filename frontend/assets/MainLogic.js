@@ -8,8 +8,12 @@
     let feedbackOptionsCache = null;
     let mainConsentGateResolver = null;
     let mainConsentGateUserId = null;
-    let updateInfoToastShown = false;
-    let updatesConfigured = null;
+    let projectLinksMenuInitialized = false;
+
+    const PROJECT_COMMUNITY_LINKS = Object.freeze({
+        github: 'https://github.com/hippo2222/ACTRA',
+        telegram: 'https://t.me/ACTRAsite',
+    });
 
     // --- Core API Helpers ---
     async function apiFetch(url, options = {}) {
@@ -48,6 +52,93 @@
         const appContent = document.getElementById('app-content');
         if (appContent) appContent.classList.remove('blurred');
     }
+
+    window.showReferencePlaceholder = function () {
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+            NotificationUI.toast('Справочник в разработке', 'warning', 2200);
+            return;
+        }
+        window.alert('Справочник в разработке');
+    }
+
+    function closeProjectLinksMenu() {
+        const menu = document.getElementById('projectLinksMenu');
+        const button = document.getElementById('projectLinksButton');
+        if (menu) {
+            menu.classList.add('hidden');
+        }
+        if (button) {
+            button.setAttribute('aria-expanded', 'false');
+        }
+    }
+
+    function openProjectLinksMenu() {
+        const menu = document.getElementById('projectLinksMenu');
+        const button = document.getElementById('projectLinksButton');
+        if (menu) {
+            menu.classList.remove('hidden');
+        }
+        if (button) {
+            button.setAttribute('aria-expanded', 'true');
+        }
+    }
+
+    function toggleProjectLinksMenu(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+
+        const menu = document.getElementById('projectLinksMenu');
+        if (!menu) return;
+
+        if (menu.classList.contains('hidden')) {
+            openProjectLinksMenu();
+            return;
+        }
+
+        closeProjectLinksMenu();
+    }
+
+    function initProjectLinksMenu() {
+        if (projectLinksMenuInitialized) return;
+        projectLinksMenuInitialized = true;
+
+        document.addEventListener('click', (event) => {
+            const menu = document.getElementById('projectLinksMenu');
+            const button = document.getElementById('projectLinksButton');
+            if (!menu || !button) return;
+            if (menu.contains(event.target) || button.contains(event.target)) return;
+            closeProjectLinksMenu();
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                closeProjectLinksMenu();
+            }
+        });
+    }
+
+    window.closeProjectLinksMenu = closeProjectLinksMenu;
+    window.toggleProjectLinksMenu = toggleProjectLinksMenu;
+    window.openProjectCommunityLink = function (kind) {
+        const url = PROJECT_COMMUNITY_LINKS[kind];
+        closeProjectLinksMenu();
+
+        if (!url) {
+            const message = kind === 'telegram'
+                ? '\u0421\u0441\u044b\u043b\u043a\u0430 \u043d\u0430 \u0442\u0435\u043b\u0435\u0433\u0440\u0430\u043c-\u043a\u0430\u043d\u0430\u043b \u043f\u043e\u044f\u0432\u0438\u0442\u0441\u044f, \u043a\u043e\u0433\u0434\u0430 \u0443\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u0435 \u043f\u0443\u0431\u043b\u0438\u0447\u043d\u044b\u0439 \u0430\u0434\u0440\u0435\u0441.'
+                : '\u0421\u0441\u044b\u043b\u043a\u0430 \u0434\u043b\u044f \u044d\u0442\u043e\u0433\u043e \u0440\u0430\u0437\u0434\u0435\u043b\u0430 \u043f\u043e\u043a\u0430 \u043d\u0435 \u0437\u0430\u0434\u0430\u043d\u0430.';
+            if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.toast === 'function') {
+                NotificationUI.toast(message, 'warning', 2600);
+                return;
+            }
+            window.alert(message);
+            return;
+        }
+
+        window.open(url, '_blank', 'noopener,noreferrer');
+    };
 
     function escapeHtml(value) {
         return String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -253,44 +344,6 @@
         return data;
     }
 
-    function setUpdateButtonConfigured(configured) {
-        if (typeof configured !== 'boolean') return;
-        const btn = document.getElementById('checkUpdatesButton');
-        if (!btn) return;
-
-        const defaultTitle = btn.dataset.defaultTitle || btn.getAttribute('title') || '';
-        if (!btn.dataset.defaultTitle) {
-            btn.dataset.defaultTitle = defaultTitle;
-        }
-
-        btn.disabled = !configured;
-        if (configured) {
-            btn.removeAttribute('aria-disabled');
-            if (btn.dataset.defaultTitle) {
-                btn.setAttribute('title', btn.dataset.defaultTitle);
-            }
-            return;
-        }
-
-        btn.setAttribute('aria-disabled', 'true');
-        btn.setAttribute('title', 'Проверка обновлений недоступна в этой сборке');
-    }
-
-    async function syncUpdatesConfiguredState(forceRefresh = false) {
-        if (!forceRefresh && typeof updatesConfigured === 'boolean') {
-            setUpdateButtonConfigured(updatesConfigured);
-            return updatesConfigured;
-        }
-
-        const network = await fetchNetworkStatus();
-        const configured = network?.updates?.configured;
-        if (typeof configured === 'boolean') {
-            updatesConfigured = configured;
-            setUpdateButtonConfigured(updatesConfigured);
-        }
-        return updatesConfigured;
-    }
-
     async function retryPendingFeedbackDelivery() {
         // Best-effort background retry for tickets queued while offline.
         await apiFetch('/api/feedback/retry-pending', {
@@ -299,105 +352,6 @@
             body: JSON.stringify({ limit: 5 }),
         });
     }
-
-    function showAppUpdateNotice(text, downloadUrl) {
-        const wrapEl = document.getElementById('appUpdateNotice');
-        const textEl = document.getElementById('appUpdateNoticeText');
-        const linkEl = document.getElementById('appUpdateNoticeLink');
-        const root = document.body;
-        if (!wrapEl || !textEl || !linkEl) return;
-
-        if (!text) {
-            textEl.textContent = '';
-            linkEl.classList.add('hidden');
-            linkEl.removeAttribute('href');
-            wrapEl.classList.add('hidden');
-            if (root) {
-                root.classList.remove('main-update-visible');
-            }
-            return;
-        }
-
-        textEl.textContent = text;
-        if (downloadUrl) {
-            linkEl.href = downloadUrl;
-            linkEl.classList.remove('hidden');
-        } else {
-            linkEl.classList.add('hidden');
-            linkEl.removeAttribute('href');
-        }
-        wrapEl.classList.remove('hidden');
-        if (root) {
-            root.classList.add('main-update-visible');
-        }
-    }
-
-    window.checkForAppUpdates = async function (force = false) {
-        const configured = await syncUpdatesConfiguredState(force);
-        if (configured === false) {
-            showAppUpdateNotice(null, null);
-            return;
-        }
-
-        const query = force ? '?force=1' : '';
-        const { ok, data } = await apiFetch(`/api/update/check${query}`);
-        if (!ok || !data) {
-            if (force) NotificationUI.toast('Не удалось проверить обновления', 'error');
-            return;
-        }
-
-        if (typeof data.manifest_url_configured === 'boolean') {
-            updatesConfigured = data.manifest_url_configured;
-            setUpdateButtonConfigured(updatesConfigured);
-        }
-
-        const currentVersion = data.current_version || '-';
-        const latestVersion = data.latest_version || null;
-        const downloadUrl = data.download_url || '';
-
-        if (data.update_available) {
-            const msg = latestVersion
-                ? `Доступна новая версия ${latestVersion} (у вас ${currentVersion}).`
-                : `Доступна новая версия (у вас ${currentVersion}).`;
-            showAppUpdateNotice(msg, downloadUrl);
-            if (!updateInfoToastShown || force) {
-                NotificationUI.toast(msg, 'warning');
-                updateInfoToastShown = true;
-            }
-            return;
-        }
-
-        showAppUpdateNotice(null, null);
-        if (!force) return;
-
-        if (data.reason === 'not_configured') {
-            updatesConfigured = false;
-            setUpdateButtonConfigured(false);
-            return;
-        }
-        if (data.reason === 'offline' || data.reason === 'offline_cached') {
-            NotificationUI.toast('Нет интернета: проверить обновления сейчас нельзя', 'warning');
-            return;
-        }
-        if (
-            data.reason === 'fetch_failed'
-            || data.reason === 'fetch_failed_cached'
-            || data.reason === 'manifest_invalid'
-            || data.reason === 'manifest_invalid_cached'
-        ) {
-            NotificationUI.toast('Не удалось получить данные об обновлениях', 'error');
-            return;
-        }
-        if (data.reason === 'disabled') {
-            NotificationUI.toast('Проверка обновлений отключена', 'warning');
-            return;
-        }
-        if (data.reason === 'up_to_date') {
-            NotificationUI.toast(`Установлена актуальная версия (${currentVersion})`, 'success');
-            return;
-        }
-        NotificationUI.toast('Проверка обновлений выполнена', 'success');
-    };
 
     function showMainConsentGateError(message) {
         const el = document.getElementById('mainConsentGateError');
@@ -626,26 +580,26 @@
         const options = await ensureFeedbackOptionsLoaded();
         if (options) {
             renderFeedbackSelectOptions('feedbackType', options.types || [], {
-                bug: 'Баг',
-                idea: 'Идея',
-                improvement: 'Улучшение',
-                question: 'Вопрос',
+                bug: '\u0411\u0430\u0433',
+                idea: '\u0418\u0434\u0435\u044f',
+                improvement: '\u0423\u043b\u0443\u0447\u0448\u0435\u043d\u0438\u0435',
+                question: '\u0412\u043e\u043f\u0440\u043e\u0441',
             }, 'bug');
             renderFeedbackSelectOptions('feedbackSeverity', options.severity || [], {
-                low: 'Низкая',
-                medium: 'Средняя',
-                high: 'Высокая',
-                critical: 'Критичная',
+                low: '\u041d\u0438\u0437\u043a\u0430\u044f',
+                medium: '\u0421\u0440\u0435\u0434\u043d\u044f\u044f',
+                high: '\u0412\u044b\u0441\u043e\u043a\u0430\u044f',
+                critical: '\u041a\u0440\u0438\u0442\u0438\u0447\u043d\u0430\u044f',
             }, 'medium');
         }
 
         const network = await fetchNetworkStatus();
         if (network && network.internet_online === false) {
-            showFeedbackNetworkStatus('Интернет недоступен. Обращение сохранится локально и будет отправлено при следующей попытке.', 'warning');
+            showFeedbackNetworkStatus('\u0418\u043d\u0442\u0435\u0440\u043d\u0435\u0442 \u043d\u0435\u0434\u043e\u0441\u0442\u0443\u043f\u0435\u043d. \u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0441\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e \u0438 \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u043f\u0440\u0438 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0439 \u043f\u043e\u043f\u044b\u0442\u043a\u0435.', 'warning');
         } else if (network?.feedback_delivery && network.feedback_delivery.configured === false) {
-            showFeedbackNetworkStatus('Канал отправки сообщений разработчику пока не настроен. Обращение сохранится локально.', 'neutral');
+            showFeedbackNetworkStatus('\u041a\u0430\u043d\u0430\u043b \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0438 \u0441\u043e\u043e\u0431\u0449\u0435\u043d\u0438\u0439 \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a\u0443 \u043f\u043e\u043a\u0430 \u043d\u0435 \u043d\u0430\u0441\u0442\u0440\u043e\u0435\u043d. \u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0441\u044f \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e.', 'neutral');
         } else if (network?.internet_online === true) {
-            showFeedbackNetworkStatus('Соединение с интернетом есть. Обращение будет отправлено разработчику по email.', 'success');
+            showFeedbackNetworkStatus('\u0421\u043e\u0435\u0434\u0438\u043d\u0435\u043d\u0438\u0435 \u0441 \u0438\u043d\u0442\u0435\u0440\u043d\u0435\u0442\u043e\u043c \u0435\u0441\u0442\u044c. \u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0431\u0443\u0434\u0435\u0442 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e \u0440\u0430\u0437\u0440\u0430\u0431\u043e\u0442\u0447\u0438\u043a\u0443 \u043f\u043e email.', 'success');
             retryPendingFeedbackDelivery();
         }
 
@@ -671,17 +625,17 @@
         const description = (descEl?.value || '').trim();
 
         if (title.length < 3 || title.length > 180) {
-            showFeedbackError('Тема должна содержать от 3 до 180 символов');
+            showFeedbackError('\u0422\u0435\u043c\u0430 \u0434\u043e\u043b\u0436\u043d\u0430 \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043e\u0442 3 \u0434\u043e 180 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432');
             titleEl?.focus();
             return;
         }
         if (description.length < 5 || description.length > 10000) {
-            showFeedbackError('Описание должно содержать от 5 до 10000 символов');
+            showFeedbackError('\u041e\u043f\u0438\u0441\u0430\u043d\u0438\u0435 \u0434\u043e\u043b\u0436\u043d\u043e \u0441\u043e\u0434\u0435\u0440\u0436\u0430\u0442\u044c \u043e\u0442 5 \u0434\u043e 10000 \u0441\u0438\u043c\u0432\u043e\u043b\u043e\u0432');
             descEl?.focus();
             return;
         }
         if (!currentUser?.user_id) {
-            showFeedbackError('Не удалось определить текущий профиль');
+            showFeedbackError('\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u043f\u0440\u0435\u0434\u0435\u043b\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0440\u043e\u0444\u0438\u043b\u044c');
             return;
         }
 
@@ -711,7 +665,7 @@
         if (submitBtn) submitBtn.disabled = false;
 
         if (!ok) {
-            const message = (data && (data.message || data.error)) || 'Не удалось отправить обращение';
+            const message = (data && (data.message || data.error)) || '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u043e\u0442\u043f\u0440\u0430\u0432\u0438\u0442\u044c \u043e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435';
             showFeedbackError(message);
             return;
         }
@@ -719,9 +673,9 @@
         const ticketId = data?.ticket_id ? ` (${data.ticket_id})` : '';
         const emailSent = !!data?.email_notification?.sent;
         if (emailSent) {
-            NotificationUI.toast(`Обращение отправлено${ticketId}`, 'success');
+            NotificationUI.toast(`\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u043e${ticketId}`, 'success');
         } else {
-            NotificationUI.toast(`Обращение сохранено локально${ticketId}. Отправим при следующей возможности`, 'warning');
+            NotificationUI.toast(`\u041e\u0431\u0440\u0430\u0449\u0435\u043d\u0438\u0435 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u043e \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u043e${ticketId}. \u041e\u0442\u043f\u0440\u0430\u0432\u0438\u043c \u043f\u0440\u0438 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0439 \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0441\u0442\u0438`, 'warning');
         }
         window.closeFeedbackModal();
     };
@@ -730,6 +684,7 @@
     async function initialize() {
         // 1. Update UI baseline
         updateDateTime();
+        initProjectLinksMenu();
 
         if (!window.updateDateTimeInterval) {
             window.updateDateTimeInterval = setInterval(updateDateTime, 30000);
@@ -770,9 +725,7 @@
                 loadUserSettings(), // Renamed from loadStatsSettings
                 loadCalendarWidget(),
                 loadMicrocardsWidget(),
-                syncUpdatesConfiguredState(false),
             ]);
-            window.checkForAppUpdates(false);
         }
     }
 
@@ -1197,6 +1150,9 @@
 
     // --- Statistics & Calendar ---
     let currentStatsPeriod = 30; // Default
+    let hasLoadedStatisticsOnce = false;
+    let isStatsPeriodSwitching = false;
+    let statsCardResizeRaf = null;
     let userSettingsLoaded = false;
     let isInitialThemeLoad = true;
 
@@ -1240,8 +1196,142 @@
                 btn.type = 'button';
                 btn.className = "main-period-toggle__button segmented-control__button";
                 btn.classList.toggle('is-active', currentStatsPeriod === d);
+                btn.disabled = isStatsPeriodSwitching;
+                btn.setAttribute('aria-pressed', currentStatsPeriod === d ? 'true' : 'false');
             }
         });
+    }
+
+    function setStatsTransitionState(isLoading) {
+        isStatsPeriodSwitching = !!isLoading;
+        const statsCard = document.getElementById('statsCard');
+        const statsContent = document.getElementById('statsContent');
+        if (statsCard) {
+            statsCard.classList.toggle('stats-card--busy', !!isLoading);
+        }
+        if (statsContent) {
+            statsContent.classList.toggle('stats-content--switching', !!isLoading);
+            statsContent.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+        updatePeriodButtons();
+    }
+
+    function animateStatsContentIn() {
+        return;
+    }
+
+    function getStatsCardNaturalHeight() {
+        const statsCard = document.getElementById('statsCard');
+        if (!statsCard) return 0;
+        const previousHeight = statsCard.style.height;
+        const previousOverflow = statsCard.style.overflow;
+        const previousTransition = statsCard.style.transition;
+
+        statsCard.style.transition = 'none';
+        statsCard.style.height = '';
+        statsCard.style.overflow = '';
+        const naturalHeight = Math.max(1, Math.ceil(statsCard.scrollHeight || statsCard.offsetHeight || 0));
+
+        statsCard.style.height = previousHeight;
+        statsCard.style.overflow = previousOverflow;
+        statsCard.style.transition = previousTransition;
+
+        return naturalHeight;
+    }
+
+    function animateStatsCardHeight(startHeight, targetHeight, duration, easing) {
+        const statsCard = document.getElementById('statsCard');
+        if (!statsCard) return;
+
+        if (statsCard.__statsHeightCleanupTimer) {
+            clearTimeout(statsCard.__statsHeightCleanupTimer);
+            statsCard.__statsHeightCleanupTimer = null;
+        }
+
+        statsCard.style.transition = 'none';
+        statsCard.style.height = `${startHeight}px`;
+        statsCard.style.overflow = 'hidden';
+        void statsCard.offsetWidth;
+
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                statsCard.style.transition = `height ${duration}ms ${easing}`;
+                statsCard.style.height = `${targetHeight}px`;
+
+                statsCard.__statsHeightCleanupTimer = setTimeout(() => {
+                    const settledHeight = getStatsCardNaturalHeight();
+                    statsCard.style.transition = 'none';
+                    statsCard.style.height = `${settledHeight}px`;
+                    statsCard.style.overflow = 'hidden';
+                    requestAnimationFrame(() => {
+                        statsCard.style.transition = '';
+                        statsCard.__statsHeightCleanupTimer = null;
+                    });
+                }, duration + 30);
+            });
+        });
+    }
+
+    function syncStatsCardHeightToContent() {
+        const statsCard = document.getElementById('statsCard');
+        if (!statsCard || isStatsPeriodSwitching) return;
+        const targetHeight = getStatsCardNaturalHeight();
+        if (!targetHeight) return;
+        statsCard.style.transition = 'none';
+        statsCard.style.height = `${targetHeight}px`;
+        statsCard.style.overflow = 'hidden';
+        requestAnimationFrame(() => {
+            statsCard.style.transition = '';
+        });
+    }
+
+    function scheduleStatsCardHeightSync() {
+        if (statsCardResizeRaf) {
+            cancelAnimationFrame(statsCardResizeRaf);
+        }
+        statsCardResizeRaf = requestAnimationFrame(() => {
+            statsCardResizeRaf = null;
+            syncStatsCardHeightToContent();
+        });
+    }
+
+    function pinStatsCardHeight() {
+        const statsCard = document.getElementById('statsCard');
+        if (!statsCard) return;
+        if (statsCard.__statsHeightCleanupTimer) {
+            clearTimeout(statsCard.__statsHeightCleanupTimer);
+            statsCard.__statsHeightCleanupTimer = null;
+        }
+        const currentHeight = statsCard.getBoundingClientRect().height;
+        if (currentHeight > 0) {
+            statsCard.style.transition = 'none';
+            statsCard.style.height = `${Math.ceil(currentHeight)}px`;
+            statsCard.style.overflow = 'hidden';
+        }
+    }
+
+    function releaseStatsCardHeight() {
+        const statsCard = document.getElementById('statsCard');
+        if (!statsCard) return;
+        const startHeight = Math.max(1, Math.ceil(parseFloat(statsCard.style.height) || statsCard.offsetHeight || 0));
+        if (!startHeight) return;
+
+        const targetHeight = getStatsCardNaturalHeight();
+        if (Math.abs(startHeight - targetHeight) <= 1) {
+            requestAnimationFrame(() => {
+                statsCard.style.transition = '';
+                statsCard.style.height = `${targetHeight}px`;
+                statsCard.style.overflow = 'hidden';
+            });
+            return;
+        }
+
+        const shrinking = targetHeight < startHeight;
+        const duration = shrinking ? 340 : 220;
+        const easing = shrinking
+            ? 'cubic-bezier(0.22, 1, 0.36, 1)'
+            : 'cubic-bezier(0.4, 0, 0.2, 1)';
+        animateStatsCardHeight(startHeight, targetHeight, duration, easing);
     }
 
     window.selectStatsPeriod = async function (eventOrDays, maybeDays, maybeBtn) {
@@ -1258,19 +1348,13 @@
             days = maybeDays;
         }
 
-        if (days === currentStatsPeriod) return;
+        if (days === currentStatsPeriod || isStatsPeriodSwitching) return;
         currentStatsPeriod = days;
-        updatePeriodButtons();
+        setStatsTransitionState(true);
 
         // RACE CONDITION FIX (7.4): Отменяем предыдущий запрос перед новым
         if (statsLoadAbortController) {
             statsLoadAbortController.abort();
-        }
-
-        // Animate OUT
-        const content = document.getElementById('statsContent');
-        if (content) {
-            content.classList.add('opacity-50', 'blur-[2px]', 'scale-[0.98]');
         }
 
         // Save preference
@@ -1279,29 +1363,21 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ settings: { stats_period: days } })
         });
-        // Small delay to make animation visible
-        await new Promise(r => setTimeout(r, 150));
-        await loadStatistics();
-
-        // Animate IN
-        if (content) {
-            content.classList.remove('opacity-50', 'blur-[2px]', 'scale-[0.98]');
+        try {
+            await loadStatistics();
+        } finally {
+            setStatsTransitionState(false);
         }
     }
 
     async function loadStatistics() {
         const statsContent = document.getElementById('statsContent');
-        const statSolvedTasks = document.getElementById('statSolvedTasks');
-        // Determine if this is first load (no data yet)
-        const isFirstLoad = !statSolvedTasks || !statSolvedTasks.textContent || statSolvedTasks.textContent === '0';
+        const isFirstLoad = !hasLoadedStatisticsOnce;
 
         if (isFirstLoad) {
             showStatsSkeleton();
         } else {
-            // For subsequent loads, use blur effect
-            if (statsContent) {
-                statsContent.classList.add('opacity-50', 'blur-[2px]');
-            }
+            pinStatsCardHeight();
         }
 
         updatePeriodButtons();
@@ -1315,7 +1391,7 @@
 
         // Если запрос был отменен, выходим без обновления
         if (cancelled) {
-            if (statsContent) statsContent.classList.remove('opacity-50', 'blur-[2px]');
+            releaseStatsCardHeight();
             return;
         }
 
@@ -1369,7 +1445,7 @@
                     : 'Запустите первый комплекс, и здесь появится прогресс.';
                 welcomeEl.className = 'main-stats-empty-state';
                 welcomeEl.innerHTML = `
-                    <span class="material-symbols-outlined main-stats-empty-state__icon">insights</span>
+                    <span class="material-symbols-outlined main-stats-empty-state__icon">bar_chart</span>
                     <div class="main-stats-empty-state__copy">
                         <p class="main-stats-empty-state__title">Статистика появится после первой активности</p>
                         <p class="main-stats-empty-state__text">${emptyCopy}</p>
@@ -1390,21 +1466,21 @@
             // Hide skeleton and error, show content
             hideStatsSkeleton();
             hideStatsError();
-
-            // Remove blur effect
-            if (statsContent) {
-                statsContent.classList.remove('opacity-50', 'blur-[2px]');
-            }
+            hasLoadedStatisticsOnce = true;
+            releaseStatsCardHeight();
+            animateStatsContentIn();
         } else {
             console.error('Failed to load statistics:', data);
             setMainRecommendationState({ statsEmpty: null });
             hideStatsSkeleton();
             showStatsError();
-            if (statsContent) {
-                statsContent.classList.remove('opacity-50', 'blur-[2px]');
-            }
+            hasLoadedStatisticsOnce = true;
+            releaseStatsCardHeight();
+            animateStatsContentIn();
         }
     }
+
+    window.addEventListener('resize', scheduleStatsCardHeightSync);
 
     // --- Statistics Helper Functions ---
     function showStatsSkeleton() {
@@ -1488,6 +1564,20 @@
     }
 
     // --- Microcards Widget (M9) ---
+    function setMicrocardsCardInteractive(enabled) {
+        const cardEl = document.getElementById('microcardsCard');
+        if (!cardEl) return;
+        cardEl.removeAttribute('role');
+        cardEl.removeAttribute('tabindex');
+        cardEl.removeAttribute('data-nav');
+        cardEl.classList.remove('interactive-card', 'cursor-pointer', 'hover:border-primary');
+        if (!enabled) return;
+        cardEl.setAttribute('role', 'link');
+        cardEl.setAttribute('tabindex', '0');
+        cardEl.setAttribute('data-nav', '/ui/microcards');
+        cardEl.classList.add('interactive-card', 'cursor-pointer', 'hover:border-primary');
+    }
+
     async function loadMicrocardsWidget() {
         const loadingState = document.getElementById('microcardsLoadingState');
         const emptyState = document.getElementById('microcardsEmptyState');
@@ -1495,10 +1585,13 @@
         const disabledState = document.getElementById('microcardsDisabledState');
         const cardEl = document.getElementById('microcardsCard');
         const ctaEl = document.getElementById('microcardsCTA');
+        const secondaryCtaEl = cardEl ? cardEl.querySelector('.main-secondary-cta') : null;
 
         if (!cardEl) return;
 
-        if (ctaEl) ctaEl.disabled = false;
+        setMicrocardsCardInteractive(false);
+        if (ctaEl) ctaEl.disabled = true;
+        if (secondaryCtaEl) secondaryCtaEl.disabled = true;
 
         const { ok, data } = await apiFetch('/api/microcards/summary');
         if (loadingState) loadingState.classList.add('hidden');
@@ -1511,8 +1604,19 @@
                 if (emptyState) emptyState.classList.add('hidden');
                 if (contentState) contentState.classList.add('hidden');
                 if (ctaEl) ctaEl.disabled = true;
+                const dueBadgeCount = document.getElementById('microcardsDueCount');
+                const ctaText = document.getElementById('microcardsCTAText');
+                const ctaIcon = document.getElementById('microcardsCTAIcon');
+                const secondaryIcon = secondaryCtaEl?.querySelector('.material-symbols-outlined');
+                const secondaryText = secondaryCtaEl?.querySelector('span:last-child');
+                if (dueBadgeCount) dueBadgeCount.textContent = '—';
+                if (ctaText) ctaText.textContent = 'Функционал в разработке';
+                if (ctaIcon) ctaIcon.textContent = 'construction';
+                if (secondaryIcon) secondaryIcon.textContent = 'schedule';
+                if (secondaryText) secondaryText.textContent = 'Скоро вернём';
             } else {
                 setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
+                if (disabledState) disabledState.classList.add('hidden');
                 if (emptyState) {
                     emptyState.classList.remove('hidden');
                     const titleEl = emptyState.querySelector('p.text-sm');
@@ -1537,7 +1641,9 @@
 
         if (!hasDecks) {
             setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
+            if (disabledState) disabledState.classList.add('hidden');
             if (emptyState) emptyState.classList.remove('hidden');
+            if (secondaryCtaEl) secondaryCtaEl.disabled = false;
             if (emptyState) {
                 const titleEl = emptyState.querySelector('p.text-sm');
                 const descEl = emptyState.querySelector('p.text-\\[10px\\]');
@@ -1549,11 +1655,15 @@
         }
 
         setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: true, microcardsDue: dueTotal });
+        setMicrocardsCardInteractive(true);
+        if (disabledState) disabledState.classList.add('hidden');
         if (emptyState) emptyState.classList.add('hidden');
         if (contentState) {
             contentState.classList.remove('hidden');
             contentState.classList.add('flex');
         }
+        if (ctaEl) ctaEl.disabled = false;
+        if (secondaryCtaEl) secondaryCtaEl.disabled = false;
 
         // Due badge in header
         const dueBadgeCount = document.getElementById('microcardsDueCount');
@@ -1876,15 +1986,8 @@
                         <span class="material-symbols-outlined text-[16px]">chevron_right</span>
                     </button>
                 </div>
-                <button type="button" id="quick-access-show-all">
-                    <span>\u041a\u0430\u0442\u0430\u043b\u043e\u0433</span>
-                    <span class="material-symbols-outlined text-[16px]">arrow_outward</span>
-                </button>
             </div>
         `;
-        header.querySelector('#quick-access-show-all')?.addEventListener('click', () => {
-            window.navigateWithTransition('/ui/complexes');
-        });
         return header;
     }
 
@@ -1947,12 +2050,19 @@
         ensureQuickAccessHeader();
         const container = document.getElementById("quick-access-list");
         const emptyEl = document.getElementById("quick-access-empty");
-        const showAllBtn = document.getElementById("quick-access-show-all");
         const quickAccessPreviewLimit = 4;
         if (!container) return;
         const emptyCta = document.getElementById('quick-access-empty-cta');
+        const emptyActions = document.getElementById('quick-access-empty-actions');
         if (emptyCta) {
-            emptyCta.className = 'qa-empty-cta btn-primary inline-flex items-center gap-2';
+            emptyCta.className = 'qa-empty-cta btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-bold';
+        }
+        const setQuickAccessEmptyVisible = (visible) => {
+            container.hidden = !!visible;
+            if (emptyEl) emptyEl.hidden = !visible;
+        };
+        if (emptyCta && emptyActions && emptyCta.parentElement !== emptyActions) {
+            emptyActions.appendChild(emptyCta);
         }
 
         const [{ ok, data }, sessionsResp] = await Promise.all([
@@ -2036,7 +2146,7 @@
 
         if (!ok) {
             container.innerHTML = `<div class="p-4 text-center"><p class="text-sm text-text-secondary">Не удалось загрузить</p><button onclick="window._retryQuickAccess()" class="mt-1 text-xs font-semibold text-primary hover:underline">Попробовать снова</button></div>`;
-            if (emptyEl) emptyEl.hidden = true;
+            setQuickAccessEmptyVisible(false);
             if (showAllBtn) showAllBtn.hidden = false;
             updateQuickAccessCount(NaN, quickAccessPreviewLimit);
             setupQuickAccessRail(0);
@@ -2044,27 +2154,30 @@
         }
         if (!data.items?.length) {
             container.innerHTML = "";
-            if (emptyEl) emptyEl.hidden = false;
+            setQuickAccessEmptyVisible(true);
             if (showAllBtn) showAllBtn.hidden = true;
             updateQuickAccessCount(0, quickAccessPreviewLimit);
             setupQuickAccessRail(0);
-            if (emptyEl) {
+            if (emptyEl && emptyActions) {
                 let cta = document.getElementById('quick-access-empty-cta');
                 if (!cta) {
                     cta = document.createElement('button');
                     cta.type = 'button';
                     cta.id = 'quick-access-empty-cta';
-                    cta.className = 'qa-empty-cta btn-primary mt-4 inline-flex items-center gap-2 px-4 py-2 text-sm font-bold';
+                    cta.className = 'qa-empty-cta btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-bold';
                     cta.textContent = 'Открыть комплексы';
                     cta.addEventListener('click', () => window.navigateWithTransition('/ui/complexes'));
-                    emptyEl.querySelector('.qa-empty-text')?.appendChild(cta);
+                    emptyActions.appendChild(cta);
+                }
+                if (cta.parentElement !== emptyActions) {
+                    emptyActions.appendChild(cta);
                 }
             }
             return;
         }
 
         setMainRecommendationState({ preferredAction: buildQuickAccessRecommendation(data.items[0]) });
-        if (emptyEl) emptyEl.hidden = true;
+        setQuickAccessEmptyVisible(false);
         if (showAllBtn) showAllBtn.hidden = false;
         updateQuickAccessCount(data.items.length, quickAccessPreviewLimit);
         const previewItems = data.items.slice(0, quickAccessPreviewLimit);

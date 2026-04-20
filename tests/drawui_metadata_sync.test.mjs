@@ -254,4 +254,13 @@ describe("DrawUI metadata synchronization", () => {
     expect(payload.display_height).toBe(250);
     expect(payload.brush_radius).toBe(10);
   });
+
+  it("prefers canonical asset refs over legacy paths in draw image helpers", () => {
+    const resolved = testing.resolveAssetUrl({
+      image_asset_id: "asset_draw_1",
+      image_path: "legacy/draw.png",
+    });
+
+    expect(resolved).toBe("/api/assets/asset_draw_1/content");
+  });
 });

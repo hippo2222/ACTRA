@@ -4,6 +4,8 @@
 <head>
     <script src="/assets/ThemeManager.js"></script>
     <script src="/assets/NotificationUI.js"></script>
+    <script src="/ui/editor/theory_editor.js?v=2" defer></script>
+    <script src="/assets/ConnectionMonitor.js"></script>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Редактор теории</title>
@@ -15,8 +17,9 @@
     <style>
         body {
             background:
-                radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 16%, transparent), transparent 34%),
-                radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-info) 14%, transparent), transparent 28%),
+                radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary) 14%, transparent), transparent 34%),
+                radial-gradient(circle at bottom right, color-mix(in srgb, var(--color-info) 10%, transparent), transparent 28%),
+                linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 82%, white), color-mix(in srgb, var(--color-bg-main) 92%, white)),
                 var(--color-bg-main);
         }
 
@@ -25,9 +28,7 @@
         }
 
         .theory-card {
-            background: var(--color-component-card-elevated-bg);
-            border: 1px solid var(--color-component-card-elevated-border);
-            box-shadow: var(--shadow-lg);
+            position: relative;
         }
 
         .theory-frame {
@@ -40,14 +41,44 @@
 
         .theory-main-grid {
             display: grid;
-            gap: 1rem;
+            gap: 1.4rem;
             flex: 1 1 auto;
+            align-items: stretch;
         }
 
         .theory-library-list {
             flex: 1 1 0;
             min-height: 0;
-            padding-top: 0.35rem;
+            padding-top: 0.55rem;
+        }
+
+        .theory-library-panel {
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 92%, white), color-mix(in srgb, var(--color-component-card-elevated-bg) 98%, white));
+            align-self: stretch;
+            min-height: 0;
+        }
+
+        .theory-workspace-panel {
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 96%, white), white 68%);
+            min-height: 0;
+        }
+
+        .theory-section-card {
+            border: 1px solid color-mix(in srgb, var(--color-component-panel-row-border) 85%, var(--color-primary) 10%);
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--color-component-panel-row-soft-bg) 72%, white), color-mix(in srgb, var(--color-surface-1) 94%, white));
+            border-radius: 1.35rem;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+        }
+
+        .theory-toolbar-shell {
+            border: 1px solid color-mix(in srgb, var(--color-component-panel-row-border) 88%, var(--color-primary) 12%);
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--color-surface-2) 84%, white), color-mix(in srgb, var(--color-component-panel-row-soft-bg) 100%, white));
+            border-radius: 1.25rem;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
         }
 
         .theory-save-btn:hover {
@@ -177,17 +208,19 @@
         }
 
         .theory-editor-surface {
-            min-height: 28rem;
+            min-height: 34rem;
             background:
-                linear-gradient(180deg, var(--color-component-panel-row-soft-bg), var(--color-surface-1)),
+                linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.95)),
                 var(--color-surface-1);
-            border: 1px solid var(--color-component-panel-row-soft-border);
+            border: 1px solid color-mix(in srgb, var(--color-component-panel-row-soft-border) 88%, var(--color-primary) 12%);
             border-radius: 1.5rem;
-            padding: 1.25rem;
+            padding: 1.5rem;
             line-height: 1.65;
             color: var(--color-text-main);
             caret-color: var(--color-text-main);
-            box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.3);
+            box-shadow:
+                inset 0 1px 1px rgba(255, 255, 255, 0.72),
+                0 10px 28px rgba(32, 43, 84, 0.06);
         }
 
         .theory-editor-surface:focus {
@@ -237,12 +270,14 @@
             width: 100%;
             text-align: left;
             border-radius: 1rem;
-            border: 1px solid transparent;
+            border: 1px solid color-mix(in srgb, var(--color-component-panel-row-border) 70%, transparent);
+            background: color-mix(in srgb, var(--color-surface-1) 88%, white);
             padding: 0.9rem 0.95rem;
-            transition: transform 0.16s ease;
+            transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
             will-change: transform;
             position: relative;
             z-index: 0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.64);
         }
 
         .theory-library-item:hover,
@@ -259,6 +294,9 @@
             background:
                 linear-gradient(135deg, var(--color-component-empty-state-icon-bg), transparent 60%),
                 var(--color-component-pill-info-bg);
+            box-shadow:
+                0 10px 24px rgba(32, 43, 84, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.72);
         }
 
         .theory-status-pill {
@@ -341,43 +379,60 @@
             color: var(--color-component-secondary-copy);
         }
 
-        .theory-accent-btn {
-            border-color: var(--color-primary);
-            background: var(--color-primary);
-            color: var(--color-primary-fg);
-            box-shadow: var(--shadow-sm);
+        .theory-save-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
-        .theory-accent-btn:hover,
-        .theory-accent-btn:focus-visible {
-            border-color: var(--color-primary-dark);
-            background: var(--color-primary-dark);
-            color: var(--color-primary-fg);
+        .theory-header-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
 
-        .theory-neutral-btn {
-            border-color: var(--color-component-button-muted-border);
-            background: var(--color-component-button-muted-bg);
-            color: var(--color-component-button-muted-fg);
+        .theory-header-copy {
+            max-width: 58rem;
         }
 
-        .theory-neutral-btn:hover,
-        .theory-neutral-btn:focus-visible {
-            border-color: var(--color-component-button-muted-hover-border);
-            background: var(--color-component-button-muted-hover-bg);
-            color: var(--color-component-button-muted-hover-fg);
+        .theory-header-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .theory-header-actions {
+            display: flex;
+            flex: 1 1 auto;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        .theory-header-action-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .theory-header-action-group > button {
+            min-height: 2.75rem;
         }
 
         .theory-form-field {
             display: block;
             width: 100%;
             border-radius: 0.75rem;
-            border: 1px solid var(--color-component-panel-row-border);
-            background: var(--color-component-panel-row-soft-bg);
+            border: 1px solid color-mix(in srgb, var(--color-component-panel-row-border) 88%, var(--color-primary) 10%);
+            background: color-mix(in srgb, var(--color-surface-1) 94%, white);
             color: var(--color-text-main);
             padding: 0.95rem 1rem;
             transition: border-color 0.16s ease, box-shadow 0.16s ease;
             will-change: border-color, box-shadow;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
         }
 
         .theory-form-field::placeholder {
@@ -406,9 +461,52 @@
             border-radius: 999px;
         }
 
+        .theory-content-stack {
+            gap: 1rem;
+        }
+
         @media (max-width: 1024px) {
             .theory-title {
                 font-size: 1.5rem;
+            }
+
+            .theory-header-actions {
+                justify-content: flex-start;
+            }
+
+            .theory-header-controls {
+                flex-wrap: wrap;
+                justify-content: flex-start;
+            }
+        }
+
+        @media (min-width: 1180px) {
+            .theory-header-layout {
+                flex-direction: row;
+                align-items: center;
+                justify-content: space-between;
+                gap: 1.5rem;
+            }
+
+            .theory-header-copy {
+                max-width: 38rem;
+            }
+
+            .theory-header-controls {
+                flex: 0 1 auto;
+                flex-wrap: nowrap;
+                justify-content: flex-end;
+                min-width: 0;
+            }
+
+            .theory-header-actions {
+                flex: 0 1 auto;
+                flex-wrap: nowrap;
+                justify-content: flex-end;
+            }
+
+            .theory-header-action-group {
+                flex-wrap: nowrap;
             }
         }
 
@@ -416,53 +514,71 @@
             #theory-save-btn span:not(.material-symbols-outlined) {
                 display: none;
             }
+
+            .theory-header-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            .theory-header-action-group > button {
+                flex: 1 1 12rem;
+            }
         }
     </style>
-    <script src="/ui/editor/theory_editor.js?v=1" defer></script>
 </head>
 
 <body class="text-text-main">
     <div class="theory-shell">
         <div class="theory-frame mx-auto flex min-h-screen flex-col px-4 py-4 sm:px-6 lg:px-8">
-            <header class="theory-card theory-panel animate-slide-up px-5 py-4 sm:px-6 sm:py-5">
-                <div class="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+            <header class="theory-card theory-panel card-elevated animate-slide-up px-5 py-4 sm:px-6 sm:py-5">
+                <div class="theory-header-layout">
                     <div class="min-w-0">
                         <h1 class="theory-title text-2xl font-bold tracking-tight text-text-main">Редактор теории</h1>
-                        <p id="theory-context-copy" class="mt-1.5 max-w-3xl text-sm text-text-secondary">
-                            Материалы: текст, структура и изображения теории.
+                        <p id="theory-context-copy" class="theory-header-copy mt-1.5 text-sm text-text-secondary">
+                            Пишите теорию как отдельный материал, который можно переиспользовать в разных темах и комплексах.
                         </p>
                     </div>
-                    <div class="flex flex-wrap items-center justify-between gap-2 sm:gap-3">
-                        <button id="theory-open-center-btn" type="button"
-                            class="theory-neutral-btn inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
-                            <span class="material-symbols-outlined text-[18px]">hub</span>
-                            Центр теории
-                        </button>
-                        <button id="theory-open-complexes-btn" type="button"
-                            class="theory-neutral-btn inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
-                            <span class="material-symbols-outlined text-[18px]">dashboard</span>
-                            К комплексам
-                        </button>
-                        <button id="theory-back-btn" type="button"
-                            class="theory-neutral-btn inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary">
-                            <span id="theory-back-btn-label">Назад</span>
-                        </button>
-                        <button id="theory-new-btn" type="button"
-                            class="theory-accent-btn inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition-colors">
-                            <span class="material-symbols-outlined text-[18px]">add_circle</span>
-                            Новая теория
-                        </button>
-                        <button id="theory-save-btn" type="button"
-                            class="theory-save-btn inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-bold text-primary-fg shadow-sm transition-all hover:shadow-md">
-                            <span class="material-symbols-outlined text-[18px]">save</span>
-                            Сохранить
-                        </button>
+                    <div class="theory-header-controls">
+                        <div class="theory-header-actions">
+                            <button id="theory-publish-btn" type="button" class="theory-status-pill hidden transition-colors hover:border-primary hover:text-primary disabled:opacity-60 disabled:cursor-not-allowed" data-tone="muted">
+                                <span class="material-symbols-outlined text-[16px]">public</span>
+                                Не опубликована
+                            </button>
+                            <div class="theory-header-action-group theory-header-action-group--secondary">
+                                <button id="theory-back-btn" type="button"
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span id="theory-back-btn-label">Назад</span>
+                                </button>
+                                <button id="theory-open-center-btn" type="button"
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span class="material-symbols-outlined text-[18px]">hub</span>
+                                    Центр теории
+                                </button>
+                                <button id="theory-open-complexes-btn" type="button"
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span class="material-symbols-outlined text-[18px]">dashboard</span>
+                                    К комплексам
+                                </button>
+                            </div>
+                            <div class="theory-header-action-group theory-header-action-group--primary">
+                                <button id="theory-new-btn" type="button"
+                                    class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span class="material-symbols-outlined text-[18px]">add_circle</span>
+                                    Новая теория
+                                </button>
+                                <button id="theory-save-btn" type="button"
+                                    class="theory-save-btn btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold shadow-sm hover:shadow-md">
+                                    <span class="material-symbols-outlined text-[18px]">save</span>
+                                    Сохранить
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </header>
 
             <main class="theory-main-grid mt-4">
-                <aside class="theory-card theory-panel animate-slide-up px-4 py-4 sm:px-5 flex flex-col overflow-visible">
+                <aside class="theory-card theory-panel theory-library-panel card-elevated animate-slide-up px-4 py-4 sm:px-5 flex flex-col overflow-visible">
                     <div class="flex items-center justify-between gap-3">
                         <div>
                             <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">Библиотека</p>
@@ -476,7 +592,7 @@
                     </div>
                     <div class="mt-3 flex items-center justify-between text-xs text-text-secondary">
                         <span id="theory-library-count">0 теорий</span>
-                        <span>Склад материалов</span>
+                        <span>Личная библиотека</span>
                     </div>
                     <div id="theory-library-list" class="theory-library-list theory-scroll mt-4 flex flex-col gap-2 overflow-y-auto pr-1 min-h-0">
                         <div class="rounded-2xl border border-dashed border-border-subtle px-4 py-5 text-sm text-text-secondary">
@@ -485,9 +601,9 @@
                     </div>
                 </aside>
 
-                <section class="theory-card theory-panel animate-slide-up px-4 py-4 sm:px-6 sm:py-5">
-                    <div class="flex flex-col gap-4">
-                        <div class="flex flex-col gap-3 border-b border-border-subtle pb-4 lg:flex-row lg:items-center lg:justify-between">
+                <section class="theory-card theory-panel theory-workspace-panel card-elevated animate-slide-up px-4 py-4 sm:px-6 sm:py-5">
+                    <div class="theory-content-stack flex flex-col">
+                        <div class="theory-section-card flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between">
                             <div class="min-w-0">
                                 <p class="text-[11px] font-bold uppercase tracking-[0.18em] text-text-muted">Материал</p>
                                 <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -498,17 +614,17 @@
                                 </div>
                             </div>
                             <p class="max-w-xl text-sm text-text-secondary">
-                                Создавайте и редактируйте теоретические материалы. Центр теории показывает, где эти материалы используются.
+                                Здесь вы редактируете сам материал. Использование в темах и комплексах управляется отдельно через Центр теории.
                             </p>
                         </div>
 
-                        <div>
+                        <div class="theory-section-card px-4 py-4">
                             <label class="mb-2 block text-sm font-semibold text-text-secondary" for="theory-title">Название теории</label>
                             <input id="theory-title" class="theory-form-field text-base" type="text"
                                 placeholder="Например: КТ органов грудной клетки" />
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-1.5 rounded-2xl border border-border-subtle bg-surface-2 px-3 py-3" onmousedown="event.preventDefault()">
+                        <div id="theory-toolbar" class="theory-toolbar-shell flex flex-wrap items-center gap-1.5 px-3 py-3">
                             <div id="theory-text-controls" class="inline-flex flex-wrap items-center gap-1.5">
                                 <button id="theory-bold" type="button" class="theory-toolbar-btn" title="Жирный (Ctrl+B)">
                                     <span class="material-symbols-outlined text-[18px]">format_bold</span>
@@ -563,7 +679,7 @@
                                 
                                 <!-- Width slider -->
                                 <div class="flex items-center gap-1.5">
-                                    <span class="text-xs text-text-muted">Ширина:</span>
+                                    <span class="text-xs text-text-muted">Размер:</span>
                                     <input id="theory-image-width-slider" type="range" min="10" max="100" value="100" 
                                         class="w-20 h-1.5 bg-border-subtle rounded-lg appearance-none cursor-pointer"
                                         style="accent-color: var(--color-primary);" />
@@ -615,22 +731,14 @@
 
                         <div id="theory-editor" class="theory-editor-surface theory-scroll text-sm" contenteditable="true"></div>
 
-                        <div class="flex flex-col gap-2 rounded-2xl border border-border-subtle bg-surface-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                            <p class="theory-help-note text-xs leading-relaxed">
-                                Теория хранится как Delta JSON и живёт отдельно от темы и комплекса. Это позволяет одной и той же теории переиспользоваться в разных сценариях без дублирования интерфейса.
-                            </p>
-                            <span class="theory-chip">
-                                <span class="material-symbols-outlined text-[15px]">inventory_2</span>
-                                Библиотека материалов
-                            </span>
-                        </div>
+                        <p class="theory-help-note px-1 pt-1 text-xs leading-relaxed">
+                            Теория сохраняется как отдельный материал и может использоваться в нескольких местах без дублирования содержимого.
+                        </p>
                     </div>
                 </section>
             </main>
         </div>
     </div>
-
-    <script src="/assets/ConnectionMonitor.js"></script>
 </body>
 
 </html>

@@ -61,9 +61,36 @@ class AdaptiveSessionManager:
         
         # Активные сессии в памяти: session_id -> ComplexSession
         self._active_sessions: Dict[str, ComplexSession] = {}
+        self._progress_manager_by_user: Dict[str, UserProgressManager] = {}
+        prototype_user_id = str(getattr(user_progress_manager, "user_id", "") or "").strip()
+        if prototype_user_id:
+            self._progress_manager_by_user[prototype_user_id] = user_progress_manager
         
         # Кэш метаданных заданий: task_ref -> task_type, а также дополнительные данные
         self.task_meta_cache: Dict[str, Any] = {}
+
+    def _get_progress_manager_for_user(self, user_id: Optional[str]) -> UserProgressManager:
+        normalized_user_id = str(user_id or "").strip()
+        if not normalized_user_id:
+            return self.user_progress_manager
+
+        prototype_user_id = str(getattr(self.user_progress_manager, "user_id", "") or "").strip()
+        if prototype_user_id == normalized_user_id:
+            return self.user_progress_manager
+
+        cached = self._progress_manager_by_user.get(normalized_user_id)
+        if cached is not None:
+            return cached
+
+        scoped_manager = UserProgressManager(
+            data_dir=str(getattr(self.user_progress_manager, "data_dir", "data")),
+            user_id=normalized_user_id,
+            difficulty_manager=getattr(self.user_progress_manager, "difficulty_manager", None),
+            event_bus=getattr(self.user_progress_manager, "event_bus", None),
+            persistence_settings=getattr(self.user_progress_manager, "persistence_settings", None),
+        )
+        self._progress_manager_by_user[normalized_user_id] = scoped_manager
+        return scoped_manager
     
     @staticmethod
     def _split_task_ref(task_ref: str) -> Tuple[Optional[str], Optional[str], Optional[str]]:
@@ -864,8 +891,9 @@ class AdaptiveSessionManager:
 
         # Фиксируем завершение комплекса в прогрессе (для streak/серии)
         try:
-            if hasattr(self, "user_progress_manager") and self.user_progress_manager:
-                self.user_progress_manager.add_complex_completion(
+            progress_manager = self._get_progress_manager_for_user(getattr(session, "user_id", None))
+            if progress_manager:
+                progress_manager.add_complex_completion(
                     complex_id=session.complex_id,
                     session_id=session.id,
                     timestamp=datetime.utcnow().isoformat(),
@@ -1136,7 +1164,8 @@ class AdaptiveSessionManager:
                             self.task_meta_cache[task_ref] = actual_task_type
                             task_type = actual_task_type
                 
-                self.user_progress_manager.save_attempt(
+                progress_manager = self._get_progress_manager_for_user(getattr(session, "user_id", None))
+                progress_manager.save_attempt(
                     module_id=module_id,
                     topic_id=topic_id,
                     task_id=task_id,

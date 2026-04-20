@@ -163,6 +163,42 @@
   }
 
   function resolveReviewImageUrl(value) {
+    if (!value && value !== 0) return "";
+
+    if (isObject(value)) {
+      const nested = isObject(value.image) ? value.image : null;
+      const directUrl =
+        value.asset_url ||
+        value.image_asset_url ||
+        value.image_url ||
+        value.imageUrl ||
+        value.url ||
+        value.image_path ||
+        value.imagePath ||
+        value.path ||
+        value.src ||
+        (nested &&
+          (nested.asset_url ||
+            nested.image_asset_url ||
+            nested.image_url ||
+            nested.url ||
+            nested.image_path ||
+            nested.path ||
+            nested.src)) ||
+        "";
+      if (directUrl) return resolveReviewImageUrl(directUrl);
+
+      const assetId =
+        value.asset_id ||
+        value.image_asset_id ||
+        (nested && (nested.asset_id || nested.image_asset_id)) ||
+        "";
+      if (assetId) {
+        return `/api/assets/${encodeURIComponent(String(assetId))}/content`;
+      }
+      return "";
+    }
+
     const raw = String(value == null ? "" : value).trim();
     if (!raw) return "";
     if (/^https?:\/\//i.test(raw) || raw.startsWith("/")) return raw;
@@ -188,15 +224,22 @@
             item.value ||
             item.title
         );
-        const imageRaw = String(
-          item.image_url ||
+        const hasHostedAssetRef =
+          item.image_asset_url != null ||
+          item.image_asset_id != null ||
+          item.asset_url != null ||
+          item.asset_id != null;
+        const imageRaw = hasHostedAssetRef
+          ? item
+          : (
+            item.image_url ||
             item.imageUrl ||
             item.image_path ||
             item.imagePath ||
             item.image ||
             item.src ||
             ""
-        ).trim();
+          );
         const optionIndex = toNumberOrNull(item.option_index ?? item.optionIndex);
         const fallbackLabel = normalizeAnswer(item.fallback_label || item.fallbackLabel);
         const imageUrl = imageRaw ? resolveReviewImageUrl(imageRaw) : "";
@@ -301,6 +344,7 @@
   function normalizeTask(task, index) {
     const source = isObject(task) ? task : {};
     const details = isObject(source.details) ? source.details : {};
+    const meta = isObject(source.meta) ? source.meta : {};
     const nestedTask = isObject(source.task) ? source.task : {};
     const taskData = isObject(source.task_data)
       ? source.task_data
@@ -311,6 +355,8 @@
     const name = humanLabel(
       source.task_name ||
         source.taskName ||
+        meta.name ||
+        meta.title ||
         source.name ||
         source.title ||
         details.name ||
@@ -428,6 +474,33 @@
     });
 
     return expanded.filter(hasReviewData);
+  }
+
+  function extractLegacyFailedTaskNames(data) {
+    return (Array.isArray(data && data.iteration_results) ? data.iteration_results : [])
+      .filter(function (task) {
+        return !(task && task.success);
+      })
+      .map(function (task, index) {
+        const source = isObject(task) ? task : {};
+        const review = isObject(source.review) ? source.review : {};
+        const details = isObject(source.details) ? source.details : {};
+        const meta = isObject(source.meta) ? source.meta : {};
+        return compactText(
+          source.task_name ||
+            source.taskName ||
+            review.title ||
+            meta.name ||
+            meta.title ||
+            source.name ||
+            source.title ||
+            details.name ||
+            details.title,
+          96
+        ) || `Задание ${index + 1}`;
+      })
+      .filter(Boolean)
+      .join(", ");
   }
 
   function normalizeIterationResults(data) {
@@ -730,6 +803,39 @@
     }
   }
 
+  function ensureLegacyDifficultyStat() {
+    const metaStrip = document.querySelector(".s2-meta-strip");
+    if (!metaStrip || typeof document === "undefined") return null;
+
+    let statEl = getById("stat-difficulty");
+    let wrapper = statEl ? statEl.closest(".s2-meta-inline") : null;
+
+    if (!statEl) {
+      wrapper = document.createElement("span");
+      wrapper.className = "s2-meta-inline";
+      const label = document.createElement("span");
+      label.className = "s2-meta-pill-label";
+      label.textContent = "Сложность";
+      statEl = document.createElement("strong");
+      statEl.id = "stat-difficulty";
+      statEl.textContent = "—";
+      wrapper.appendChild(label);
+      wrapper.appendChild(statEl);
+    }
+
+    if (wrapper && !metaStrip.contains(wrapper)) {
+      const timeEl = getById("stat-iteration-time");
+      const timeWrapper = timeEl ? timeEl.closest(".s2-meta-inline") : null;
+      if (timeWrapper && timeWrapper.parentElement === metaStrip) {
+        metaStrip.insertBefore(wrapper, timeWrapper);
+      } else {
+        metaStrip.appendChild(wrapper);
+      }
+    }
+
+    return statEl;
+  }
+
   function renderSummary(summary) {
     const outcome = deriveOutcome(summary);
     const failedChip = getById("hero-failed-chip");
@@ -740,7 +846,23 @@
     setText("iteration-number-label", summary.iteration);
     setText("hero-summary", outcome.summary);
     setText("stat-total-tasks", summary.total);
+    setText("stat-total-tasks-main", summary.total);
+    setText("stat-failed-tasks", summary.failed);
+    ensureLegacyDifficultyStat();
+    setText("stat-difficulty", Math.round(summary.difficulty || 0) || 0);
     setText("stat-iteration-time", formatDuration(summary.durationSeconds));
+    const triggerTasksEl = getById("trigger-tasks-list");
+    if (triggerTasksEl && !String(triggerTasksEl.textContent || "").trim()) {
+      setText(
+        "trigger-tasks-list",
+        expandReviewTasks(summary.failedTasks || [])
+          .map(function (task) {
+            return task && task.name ? task.name : "";
+          })
+          .filter(Boolean)
+          .join(", ")
+      );
+    }
 
     animateNumber(getById("stat-success-rate"), summary.ratePercent, { suffix: "%" });
     animateNumber(getById("hero-success-count"), summary.success);
@@ -1542,6 +1664,35 @@
   }
 
   function renderIterationResults(data) {
+    const rawFailedTaskNames = (Array.isArray(data && data.iteration_results) ? data.iteration_results : [])
+      .filter(function (task) {
+        return !(task && task.success);
+      })
+      .map(function (task, index) {
+        const source = isObject(task) ? task : {};
+        const review = isObject(source.review) ? source.review : {};
+        const details = isObject(source.details) ? source.details : {};
+        const meta = isObject(source.meta) ? source.meta : {};
+        return humanLabel(
+          source.task_name ||
+            source.taskName ||
+            review.title ||
+            meta.name ||
+            meta.title ||
+            source.name ||
+            source.title ||
+            details.name ||
+            details.title,
+          `Задание ${index + 1}`,
+          96
+        );
+      })
+      .filter(Boolean)
+      .join(", ");
+    if (rawFailedTaskNames) {
+      setText("trigger-tasks-list", rawFailedTaskNames);
+    }
+
     const summary = normalizeIterationResults(data);
     state.sessionId = summary.sessionId || state.sessionId;
     state.iteration = summary.iteration;
@@ -1552,8 +1703,51 @@
     renderSummary(summary);
     renderDetailsDialog(summary);
     renderReviewDialog(summary);
+    if (
+      state.sessionId &&
+      (!rawFailedTaskNames || /^Задание \d+(,\s*Задание \d+)*$/.test(rawFailedTaskNames))
+    ) {
+      const query = new URLSearchParams();
+      if (summary.iteration) {
+        query.set("iteration", String(summary.iteration));
+      }
+      const requestUrl = `/api/session/${encodeURIComponent(state.sessionId)}/iteration-results${query.toString() ? `?${query.toString()}` : ""}`;
+      root.fetch(requestUrl, { credentials: "same-origin" })
+        .then(function (response) {
+          return response.json().catch(function () {
+            return null;
+          });
+        })
+        .then(function (payload) {
+          const enriched = payload && payload.ok ? extractLegacyFailedTaskNames(payload.results || payload) : "";
+          if (enriched) {
+            setText("trigger-tasks-list", enriched);
+          }
+        })
+        .catch(function () {});
+    }
 
     const continueLabel = summary.hasNextIteration ? "К следующей итерации" : "К итогам комплекса";
+    if (state.sessionId) {
+      const legacyQuery = new URLSearchParams();
+      if (summary.iteration) {
+        legacyQuery.set("iteration", String(summary.iteration));
+      }
+      const legacyRequestUrl = `/api/session/${encodeURIComponent(state.sessionId)}/iteration-results${legacyQuery.toString() ? `?${legacyQuery.toString()}` : ""}`;
+      root.fetch(legacyRequestUrl, { credentials: "same-origin" })
+        .then(function (response) {
+          return response.json().catch(function () {
+            return null;
+          });
+        })
+        .then(function (payload) {
+          const enriched = payload && payload.ok ? extractLegacyFailedTaskNames(payload.results || payload) : "";
+          if (enriched) {
+            setText("trigger-tasks-list", enriched);
+          }
+        })
+        .catch(function () {});
+    }
     setText("continue-btn-label", continueLabel);
     const continueCard = getById("continue-btn");
     if (continueCard) {

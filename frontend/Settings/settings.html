@@ -11,12 +11,198 @@
     <link rel="stylesheet" href="/assets/fonts.css" />
     <link rel="stylesheet" href="/assets/lightB-variables.css" />
     <link rel="stylesheet" href="/assets/lightB-components.css" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
     <style>
         body {
             font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            background: var(--color-bg-main);
+            background:
+                radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary-lighter) 60%, transparent), transparent 34%),
+                linear-gradient(180deg, color-mix(in srgb, var(--color-bg-main) 92%, white) 0%, var(--color-bg-main) 100%);
             color: var(--color-text-main);
+        }
+
+        .settings-shell {
+            max-width: 74rem;
+        }
+
+        .settings-card {
+            border: 1px solid var(--color-border-subtle);
+            border-radius: 1.5rem;
+            background: color-mix(in srgb, var(--color-surface-1) 94%, transparent);
+            box-shadow: 0 24px 48px rgba(15, 23, 42, 0.07);
+        }
+
+        .settings-section-card {
+            border: 1px solid var(--color-border-subtle);
+            border-radius: 1.35rem;
+            background: color-mix(in srgb, var(--color-surface-1) 95%, transparent);
+        }
+
+        .settings-account-avatar {
+            width: 4.25rem;
+            height: 4.25rem;
+            border-radius: 1.4rem;
+            object-fit: cover;
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-bg-secondary);
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+        }
+
+        .settings-avatar-preview-image {
+            width: 4.75rem;
+            height: 4.75rem;
+            border-radius: 1.45rem;
+            object-fit: cover;
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-bg-secondary);
+        }
+
+        .settings-upload-frame {
+            border: 1px dashed color-mix(in srgb, var(--color-border-subtle) 72%, var(--color-primary) 28%);
+            border-radius: 1.25rem;
+            background:
+                radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter) 36%, transparent), transparent 46%),
+                var(--color-bg-secondary);
+        }
+
+        .settings-avatar-crop-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 60;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+            background: color-mix(in srgb, black 56%, transparent);
+            backdrop-filter: blur(10px);
+        }
+
+        .settings-avatar-crop-backdrop.hidden {
+            display: none;
+        }
+
+        .settings-avatar-crop-panel {
+            width: min(100%, 32rem);
+            border: 1px solid var(--color-border-subtle);
+            border-radius: 1.75rem;
+            background:
+                radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter) 28%, transparent), transparent 42%),
+                color-mix(in srgb, var(--color-surface-1) 96%, transparent);
+            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.22);
+        }
+
+        .settings-avatar-crop-stage {
+            position: relative;
+            width: min(100%, 19rem);
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            border-radius: 1.5rem;
+            border: 1px solid color-mix(in srgb, var(--color-border-subtle) 72%, var(--color-primary) 28%);
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--color-bg-secondary) 92%, white), color-mix(in srgb, var(--color-surface-1) 96%, transparent));
+            touch-action: none;
+        }
+
+        .settings-avatar-crop-image {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            max-width: none;
+            user-select: none;
+            -webkit-user-drag: none;
+            transform-origin: center center;
+            will-change: transform;
+            cursor: grab;
+        }
+
+        .settings-avatar-crop-image.is-dragging {
+            cursor: grabbing;
+        }
+
+        .settings-avatar-crop-grid {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            border: 1px solid color-mix(in srgb, var(--color-primary) 24%, white);
+            box-shadow:
+                inset 0 0 0 9999px color-mix(in srgb, black 12%, transparent),
+                inset 0 0 0 1px color-mix(in srgb, white 72%, transparent);
+        }
+
+        .settings-avatar-crop-grid::before,
+        .settings-avatar-crop-grid::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background-repeat: no-repeat;
+        }
+
+        .settings-avatar-crop-grid::before {
+            background-image:
+                linear-gradient(color-mix(in srgb, white 55%, transparent), color-mix(in srgb, white 55%, transparent)),
+                linear-gradient(color-mix(in srgb, white 55%, transparent), color-mix(in srgb, white 55%, transparent));
+            background-size: 1px 100%, 100% 1px;
+            background-position: 33.333% 0, 0 33.333%;
+        }
+
+        .settings-avatar-crop-grid::after {
+            background-image:
+                linear-gradient(color-mix(in srgb, white 40%, transparent), color-mix(in srgb, white 40%, transparent)),
+                linear-gradient(color-mix(in srgb, white 40%, transparent), color-mix(in srgb, white 40%, transparent));
+            background-size: 1px 100%, 100% 1px;
+            background-position: 66.666% 0, 0 66.666%;
+        }
+
+        .settings-info-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            border-radius: 999px;
+            padding: 0.38rem 0.72rem;
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-bg-secondary);
+            color: var(--color-text-secondary);
+            font-size: 0.74rem;
+            font-weight: 600;
+        }
+
+        .settings-inline-status {
+            display: inline-flex;
+            align-items: center;
+            min-height: 1.75rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .settings-section-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+
+        .settings-provider-card {
+            border-radius: 1.35rem;
+            border-color: var(--color-border-subtle) !important;
+            background:
+                linear-gradient(180deg, color-mix(in srgb, var(--color-surface-1) 96%, transparent), color-mix(in srgb, var(--color-bg-secondary) 90%, transparent)) !important;
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
+        }
+
+        .settings-action-bar {
+            border: 1px solid var(--color-border-subtle);
+            border-radius: 1.3rem;
+            background:
+                radial-gradient(circle at top right, color-mix(in srgb, var(--color-primary-lighter) 50%, transparent), transparent 42%),
+                var(--color-surface-1);
+        }
+
+        .settings-actions-cluster {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            align-items: center;
+            justify-content: flex-end;
         }
 
         .key-input {
@@ -25,11 +211,12 @@
         }
 
         .provider-card {
-            transition: all 0.2s ease;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .provider-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
         }
 
         .status-dot {
@@ -40,8 +227,15 @@
         }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
 
         .animate-fade-in {
@@ -49,8 +243,14 @@
         }
 
         @keyframes pulse-dot {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.4;
+            }
         }
 
         .validating .status-dot,
@@ -65,34 +265,15 @@
             box-shadow: var(--shadow-xs);
         }
 
-        .settings-shell {
-            max-width: 72rem;
-        }
-
-        .settings-topbar-back,
-        .settings-topbar > h1,
-        .settings-provider-heading {
-            min-width: 0;
-        }
-
-        .settings-topbar > h1 {
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-
-        .settings-provider-actions {
-            align-items: stretch;
-        }
-
-        .settings-provider-action {
-            justify-content: center;
-        }
-
-        #save-status {
+        #save-status,
+        #theme-save-status,
+        #settings-avatar-save-status,
+        #settings-name-save-status,
+        #settings-email-save-status,
+        #settings-password-save-status {
             display: inline-flex;
             align-items: center;
-            color: var(--color-text-secondary);
-            font-weight: 500;
+            font-weight: 600;
         }
 
         @media (max-width: 767px) {
@@ -101,162 +282,442 @@
                 align-items: flex-start;
             }
 
-            .settings-topbar > h1 {
+            .settings-topbar>h1 {
                 order: 2;
                 width: 100%;
                 text-align: left;
             }
 
-            .settings-topbar > div:last-child {
+            .settings-topbar>div:last-child {
                 display: none;
             }
 
-            .settings-provider-actions {
-                flex-direction: column;
-            }
-
-            .settings-provider-action {
-                width: 100%;
+            .settings-actions-cluster {
+                justify-content: stretch;
             }
         }
     </style>
 </head>
 
 <body class="min-h-screen">
-    <!-- Top bar -->
-    <header class="sticky top-0 z-30 bg-surface-1 border-b border-border-subtle backdrop-blur-sm">
+    <header class="sticky top-0 z-30 border-b border-border-subtle bg-surface-1/90 backdrop-blur-sm">
         <div class="settings-shell settings-topbar mx-auto flex items-center gap-4 px-4 py-4 sm:px-6">
             <a href="/ui/main"
-                class="settings-topbar-back flex items-center gap-2 text-text-secondary hover:text-primary transition-colors">
+                class="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-hover hover:text-primary">
                 <span class="material-symbols-outlined text-[20px]">arrow_back</span>
-                <span class="text-sm font-medium">Главная</span>
+                <span>Главная</span>
             </a>
             <div class="flex-1"></div>
             <h1 class="text-lg font-bold text-text-main">Настройки</h1>
             <div class="flex-1"></div>
-            <div class="w-[72px]"></div>
+            <div class="w-[88px]"></div>
         </div>
     </header>
 
-    <!-- Main content -->
     <main class="settings-shell mx-auto px-4 py-8 sm:px-6">
-        <section class="animate-fade-in mb-10">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="flex items-center justify-center w-10 h-10 rounded-xl border border-primary-light bg-surface-1 shadow-sm">
-                    <span class="material-symbols-outlined text-primary text-[22px]">palette</span>
-                </div>
-                <div class="settings-provider-heading">
-                    <h2 class="text-xl font-bold text-text-main">Тема интерфейса</h2>
-                    <p id="settings-profile-caption" class="text-sm text-text-secondary">Тема сохраняется для текущего профиля.</p>
-                </div>
-            </div>
-
-            <div class="mb-6 panel-row panel-row--soft items-start">
-                <div class="flex items-start gap-3">
-                    <span class="material-symbols-outlined text-info text-[20px] mt-0.5">light_mode</span>
-                    <div class="text-sm text-info-text">
-                        <p class="font-semibold mb-1">Смена темы перенесена сюда</p>
-                        <p class="text-xs leading-relaxed">
-                            Отдельная кнопка темы убрана с основных экранов.
-                            Теперь палитра выбирается как часть настроек профиля.
-                        </p>
+        <section class="animate-fade-in mb-6">
+            <div class="settings-card px-5 py-5 sm:px-6">
+                <div class="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-start gap-4">
+                        <img id="settings-account-avatar" class="settings-account-avatar" src="/api/assets/avatars/1.png"
+                            alt="Аккаунт" />
+                        <div class="min-w-0">
+                            <div class="flex flex-wrap items-center gap-2">
+                                <h2 id="settings-account-name" class="text-2xl font-bold text-text-main">Аккаунт ACTRA</h2>
+                                <span id="settings-account-caption" class="settings-info-pill">
+                                    <span class="material-symbols-outlined text-[14px]">account_circle</span>
+                                    Загружаем профиль...
+                                </span>
+                            </div>
+                            <p id="settings-account-email" class="mt-2 text-sm font-medium text-text-main">—</p>
+                            <div id="settings-account-axes" class="mt-3 flex flex-wrap gap-2">
+                                <span id="settings-account-role" class="settings-info-pill hidden"></span>
+                                <span id="settings-account-plan" class="settings-info-pill hidden"></span>
+                            </div>
+                            <p id="settings-account-subline" class="mt-2 text-sm text-text-secondary">
+                                Имя, почта, пароль и внешний вид сохраняются для текущего аккаунта.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-3">
+                        <a href="/ui/main"
+                            class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                            <span class="material-symbols-outlined text-[18px]">dashboard</span>
+                            Главная
+                        </a>
+                        <button id="settings-logout-btn" type="button"
+                            class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                            <span class="material-symbols-outlined text-[18px]">logout</span>
+                            Выйти
+                        </button>
                     </div>
                 </div>
-            </div>
-
-            <div id="theme-options" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-secondary">Загрузка тем...</div>
-            </div>
-
-            <div class="mt-4 flex flex-wrap items-center gap-3">
-                <span id="theme-save-status" class="hidden"></span>
             </div>
         </section>
 
-        <!-- AI Keys Section -->
-        <section class="animate-fade-in">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="flex items-center justify-center w-10 h-10 rounded-xl border border-primary-light bg-surface-1 shadow-sm">
-                    <span class="material-symbols-outlined text-primary text-[22px]">key</span>
-                </div>
-                <div class="settings-provider-heading">
-                    <h2 class="text-xl font-bold text-text-main">API-ключи для ИИ</h2>
-                    <p class="text-sm text-text-secondary">Настройте ключи для генерации заданий с помощью ИИ</p>
-                </div>
-            </div>
+        <div class="grid gap-6 lg:grid-cols-[1.35fr,0.95fr]">
+            <section class="animate-fade-in">
+                <div class="settings-card px-5 py-6 sm:px-6">
+                    <div class="mb-6 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-light bg-surface-1 shadow-sm">
+                            <span class="material-symbols-outlined text-[22px] text-primary">badge</span>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-text-main">Профиль</h2>
+                            <p class="text-sm text-text-secondary">Основные данные аккаунта и фото профиля.</p>
+                        </div>
+                    </div>
 
-            <!-- Info banner -->
-            <div class="mb-6 panel-row panel-row--soft items-start">
-                <div class="flex items-start gap-3">
-                    <span class="material-symbols-outlined text-info text-[20px] mt-0.5">info</span>
-                    <div class="text-sm text-info-text">
-                        <p class="font-semibold mb-1">Как это работает</p>
-                        <p class="text-xs leading-relaxed">
-                            Для работы ИИ-генерации заданий нужен хотя бы один API-ключ.
-                            Рекомендуем начать с <strong>OpenRouter</strong> — он предоставляет доступ
-                            к бесплатным моделям. Получите ключ за минуту на
-                            <a href="https://openrouter.ai/keys" target="_blank" rel="noopener"
-                                class="underline font-semibold hover:text-info">openrouter.ai/keys</a>.
-                        </p>
-                        <p class="text-xs leading-relaxed mt-2">
-                            Ключи хранятся <strong>локально</strong> в вашем профиле и никуда не отправляются,
-                            кроме непосредственных запросов к выбранным провайдерам.
-                        </p>
+                    <div class="settings-section-card settings-upload-frame mb-5 p-4 sm:p-5">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex items-center gap-4">
+                                <img id="settings-avatar-preview-image" class="settings-avatar-preview-image"
+                                    src="/api/assets/avatars/1.png" alt="Фото профиля" />
+                                <div class="min-w-0">
+                                    <h3 id="settings-avatar-preview-name" class="text-base font-semibold text-text-main">Фото профиля</h3>
+                                    <p id="settings-avatar-preview-note" class="mt-1 text-sm text-text-secondary">
+                                        Загрузите своё изображение. Оно сразу появится в меню и на странице настроек.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="flex flex-col items-start gap-3 sm:items-end">
+                                <input id="settings-avatar-file-input" type="file" accept="image/png,image/jpeg,image/webp"
+                                    class="hidden" />
+                                <button id="settings-avatar-upload-btn" type="button"
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span class="material-symbols-outlined text-[18px]">upload</span>
+                                    Загрузить изображение
+                                </button>
+                                <span id="settings-avatar-save-status" class="hidden"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="settings-section-stack">
+                        <div class="settings-section-card p-4 sm:p-5">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                                <label class="min-w-0 flex-1">
+                                    <span class="mb-2 block text-sm font-semibold text-text-main">Имя пользователя</span>
+                                    <input id="settings-name-input" type="text" autocomplete="name"
+                                        class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
+                                        placeholder="Введите имя" />
+                                </label>
+                                <div class="flex flex-col items-start gap-3 sm:items-end">
+                                    <button id="settings-name-save-btn" type="button"
+                                        class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                        <span class="material-symbols-outlined text-[18px]">save</span>
+                                        Сохранить имя
+                                    </button>
+                                    <span id="settings-name-save-status" class="hidden"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="settings-section-card p-4 sm:p-5">
+                            <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div class="min-w-0">
+                                    <p class="text-sm font-semibold text-text-main">Почта аккаунта</p>
+                                    <p id="settings-email-value" class="mt-1 text-sm text-text-secondary">—</p>
+                                    <p id="settings-email-note" class="mt-2 text-xs text-text-secondary">
+                                        Для входа по почте можно обновить адрес без выхода из аккаунта.
+                                    </p>
+                                </div>
+                                <button id="settings-email-toggle-btn" type="button"
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span class="material-symbols-outlined text-[18px]">mail</span>
+                                    Изменить почту
+                                </button>
+                            </div>
+                            <div id="settings-email-pending-panel" class="mt-4 hidden rounded-2xl border border-warning-light bg-warning-lighter/60 p-4">
+                                <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                                    <div class="min-w-0 flex-1">
+                                        <p id="settings-email-pending-title" class="text-sm font-semibold text-text-main">Смена почты ждёт подтверждения</p>
+                                        <p id="settings-email-pending-value" class="mt-1 break-all text-sm text-text-main">?</p>
+                                        <p id="settings-email-pending-hint" class="mt-2 text-xs text-text-secondary">
+                                            Пока новая почта не подтверждена, текущие уведомления и вход остаются на прежнем адресе.
+                                        </p>
+                                    </div>
+                                    <button id="settings-email-pending-resend-btn" type="button"
+                                        class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                        <span class="material-symbols-outlined text-[18px]">forward_to_inbox</span>
+                                        Отправить письмо ещё раз
+                                    </button>
+                                </div>
+                                <span id="settings-email-pending-status" class="mt-4 hidden"></span>
+                            </div>
+                            <div id="settings-email-form" class="mt-4 hidden rounded-2xl border border-border-subtle bg-bg-secondary p-4">
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-semibold text-text-main">Новая почта</span>
+                                    <input id="settings-email-input" type="email" autocomplete="email"
+                                        class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
+                                        placeholder="name@example.com" />
+                                </label>
+                                <div class="mt-4 flex flex-wrap items-center gap-3">
+                                    <button id="settings-email-save-btn" type="button"
+                                        class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                        <span class="material-symbols-outlined text-[18px]">check</span>
+                                        Сохранить почту
+                                    </button>
+                                    <button id="settings-email-cancel-btn" type="button"
+                                        class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                        <span class="material-symbols-outlined text-[18px]">close</span>
+                                        Отмена
+                                    </button>
+                                    <span id="settings-email-save-status" class="hidden"></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </section>
 
-            <div id="settings-draft-banner" class="hidden mb-6 panel-row panel-row--soft items-start">
-                <div class="flex items-start gap-3">
-                    <span class="material-symbols-outlined text-warning text-[20px] mt-0.5">history</span>
-                    <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-warning-text">Найден несохранённый черновик настроек</p>
-                        <p id="settings-draft-banner-text" class="text-xs text-warning-text mt-1">Можно восстановить последние несохранённые значения ключей.</p>
-                        <div class="mt-3 flex flex-wrap items-center gap-2">
-                            <button id="settings-draft-restore-btn" type="button"
-                                class="btn-primary px-3 py-2 text-xs font-semibold">
-                                Восстановить черновик
+            <section class="animate-fade-in">
+                <div class="settings-card px-5 py-6 sm:px-6">
+                    <div class="mb-6 flex items-center gap-3">
+                        <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-light bg-surface-1 shadow-sm">
+                            <span class="material-symbols-outlined text-[22px] text-primary">lock</span>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-text-main">Безопасность</h2>
+                            <p class="text-sm text-text-secondary">Смена пароля и базовая защита входа.</p>
+                        </div>
+                    </div>
+
+                    <div class="settings-section-card p-4 sm:p-5">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                            <div class="min-w-0">
+                                <p class="text-sm font-semibold text-text-main">Пароль</p>
+                                <p id="settings-password-state" class="mt-1 text-sm text-text-secondary">Проверяем состояние пароля...</p>
+                            </div>
+                            <button id="settings-password-toggle-btn" type="button"
+                                class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                <span class="material-symbols-outlined text-[18px]">password</span>
+                                Изменить пароль
                             </button>
-                            <button id="settings-draft-discard-btn" type="button"
-                                class="btn-secondary px-3 py-2 text-xs font-semibold">
-                                Удалить черновик
-                            </button>
+                        </div>
+                        <form id="settings-password-form" class="mt-4 hidden rounded-2xl border border-border-subtle bg-bg-secondary p-4">
+                            <input id="settings-password-username" type="email" autocomplete="username" tabindex="-1" aria-hidden="true" class="hidden" />
+                            <div class="grid gap-4">
+                                <label class="block" for="settings-password-current">
+                                    <span class="mb-2 block text-sm font-semibold text-text-main">Текущий пароль</span>
+                                    <input id="settings-password-current" type="password" autocomplete="current-password"
+                                        class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
+                                        placeholder="Введите текущий пароль" />
+                                </label>
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-semibold text-text-main">Новый пароль</span>
+                                    <input id="settings-password-new" type="password" autocomplete="new-password"
+                                        class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
+                                        placeholder="Минимум 8 символов" />
+                                </label>
+                                <label class="block">
+                                    <span class="mb-2 block text-sm font-semibold text-text-main">Повторите новый пароль</span>
+                                    <input id="settings-password-confirm" type="password" autocomplete="new-password"
+                                        class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
+                                        placeholder="Повторите новый пароль" />
+                                </label>
+                            </div>
+                            <div class="mt-4 flex flex-wrap items-center gap-3">
+                                <button id="settings-password-save-btn" type="button"
+                                    class="btn-primary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span class="material-symbols-outlined text-[18px]">check</span>
+                                    Сохранить пароль
+                                </button>
+                                <button id="settings-password-cancel-btn" type="button"
+                                    class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                                    <span class="material-symbols-outlined text-[18px]">close</span>
+                                    Отмена
+                                </button>
+                                <span id="settings-password-save-status" class="hidden"></span>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <section id="settings-admin-section" class="animate-fade-in mt-6 hidden">
+            <div class="settings-card px-5 py-6 sm:px-6">
+                <div class="mb-6 flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-light bg-surface-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[22px] text-primary">manage_accounts</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-text-main">Управление аккаунтами</h2>
+                        <p class="text-sm text-text-secondary">Поиск пользователей и переключение статуса premium.</p>
+                    </div>
+                </div>
+
+                <div class="settings-section-card p-4 sm:p-5">
+                    <label class="block">
+                        <span class="mb-2 block text-sm font-semibold text-text-main">Поиск по имени, логину или email</span>
+                        <input id="settings-admin-search-input" type="search"
+                            class="w-full rounded-xl border border-border-subtle bg-surface-1 px-4 py-3 text-sm text-text-main outline-none transition focus:border-primary focus:ring-2 focus:ring-primary-light/50"
+                            placeholder="Начните вводить имя, логин или email" />
+                    </label>
+                    <div class="mt-4 flex flex-wrap items-center gap-3">
+                        <button id="settings-admin-search-btn" type="button"
+                            class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
+                            <span class="material-symbols-outlined text-[18px]">search</span>
+                            Найти
+                        </button>
+                        <span id="settings-admin-status" class="hidden"></span>
+                    </div>
+                    <div id="settings-admin-users-list" class="mt-5 space-y-3">
+                        <div class="rounded-xl border border-border-subtle bg-bg-secondary px-4 py-4 text-sm text-text-secondary">
+                            Список пользователей загрузится после входа администратора.
                         </div>
                     </div>
                 </div>
             </div>
+        </section>
 
-            <!-- Provider cards -->
-            <div id="providers-container" class="space-y-4">
-                <div class="text-center py-12 text-text-secondary">
-                    <span class="material-symbols-outlined animate-spin text-primary text-[28px]">progress_activity</span>
-                    <p class="text-sm mt-2">Загрузка...</p>
+        <section id="settings-ai-section" class="animate-fade-in mt-6">
+            <div class="settings-card px-5 py-6 sm:px-6">
+                <div class="mb-6 flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-light bg-surface-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[22px] text-primary">palette</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-text-main">Оформление</h2>
+                        <p id="settings-profile-caption" class="text-sm text-text-secondary">
+                            Палитра интерфейса сохраняется для текущего аккаунта.
+                        </p>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Save button -->
-            <div class="mt-8 flex flex-wrap items-center gap-4">
-                <button id="save-keys-btn" onclick="saveKeys()"
-                    class="btn-primary px-6 py-2.5 font-semibold text-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-                    Сохранить ключи
-                </button>
-                <button id="validate-all-btn" onclick="validateAllKeys()"
-                    class="btn-secondary px-4 py-2.5 font-semibold text-sm rounded-xl disabled:opacity-50 disabled:cursor-not-allowed">
-                    Проверить все ключи
-                </button>
-                <span id="save-status" class="hidden"></span>
+                <div id="theme-options" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 text-sm text-text-secondary">Загрузка тем...</div>
+                </div>
+
+                <div class="mt-4 flex flex-wrap items-center gap-3">
+                    <span id="theme-save-status" class="hidden"></span>
+                </div>
+                <p id="settings-footer-profile-note" class="hidden"></p>
             </div>
         </section>
 
-        <!-- Spacer -->
-        <div class="mt-12 pt-8 border-t border-border-subtle">
-            <p id="settings-footer-profile-note" class="text-xs text-text-secondary text-center">
-                Настройки сохраняются в профиле текущего пользователя.
-            </p>
-        </div>
+        <section class="animate-fade-in mt-6">
+            <div class="settings-card px-5 py-6 sm:px-6">
+                <div class="mb-5 flex items-center gap-3">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-xl border border-primary-light bg-surface-1 shadow-sm">
+                        <span class="material-symbols-outlined text-[22px] text-primary">key</span>
+                    </div>
+                    <div>
+                        <h2 class="text-xl font-bold text-text-main">AI keys</h2>
+                        <p class="text-sm text-text-secondary">Сохраните ключи и проверьте их прямо на этой странице.</p>
+                    </div>
+                </div>
+
+                <div id="settings-ai-placeholder" class="mb-6 hidden rounded-3xl border border-border-subtle bg-bg-secondary px-5 py-5 sm:px-6">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined mt-0.5 text-[22px] text-warning-dark">construction</span>
+                        <div class="min-w-0">
+                            <p class="text-base font-semibold text-text-main">Функционал в разработке</p>
+                            <p class="mt-2 text-sm text-text-secondary">
+                                Настройки AI API временно прикрыты в hosted-версии, чтобы не оставлять полуживой контур.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="settings-ai-live-content">
+                <div id="settings-draft-banner" class="panel-row panel-row--soft mb-6 hidden items-start">
+                    <div class="flex items-start gap-3">
+                        <span class="material-symbols-outlined mt-0.5 text-[20px] text-warning">history</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-warning-text">Найден несохранённый черновик</p>
+                            <p id="settings-draft-banner-text" class="mt-1 text-xs text-warning-text">Можно восстановить последние изменения ключей.</p>
+                            <div class="mt-3 flex flex-wrap items-center gap-2">
+                                <button id="settings-draft-restore-btn" type="button" class="btn-primary px-3 py-2 text-xs font-semibold">
+                                    Восстановить
+                                </button>
+                                <button id="settings-draft-discard-btn" type="button" class="btn-secondary px-3 py-2 text-xs font-semibold">
+                                    Удалить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="providers-container" class="settings-section-stack">
+                    <div class="py-12 text-center text-text-secondary">
+                        <span class="material-symbols-outlined animate-spin text-[28px] text-primary">progress_activity</span>
+                        <p class="mt-2 text-sm">Загрузка...</p>
+                    </div>
+                </div>
+
+                <div class="settings-action-bar mt-8 px-4 py-4 sm:px-5">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div class="min-w-0">
+                            <p class="text-base font-semibold text-text-main">Сохранение и проверка ключей</p>
+                            <p class="mt-1 text-sm text-text-secondary">
+                                Сохраните текущий набор и при необходимости проверьте все ключи одним действием.
+                            </p>
+                        </div>
+                        <div class="settings-actions-cluster">
+                            <button id="save-keys-btn" onclick="saveKeys()"
+                                class="btn-primary rounded-xl px-6 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                                Сохранить ключи
+                            </button>
+                            <button id="validate-all-btn" onclick="validateAllKeys()"
+                                class="btn-secondary rounded-xl px-4 py-2.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50">
+                                Проверить все ключи
+                            </button>
+                            <span id="save-status" class="hidden"></span>
+                        </div>
+                    </div>
+                </div>
+                </div>
+            </div>
+        </section>
     </main>
 
-    <script src="/assets/NotificationUI.js"></script>
+    <div id="settings-avatar-crop-modal" class="settings-avatar-crop-backdrop hidden" aria-hidden="true" role="dialog"
+        aria-labelledby="settings-avatar-crop-title">
+        <div class="settings-avatar-crop-panel p-5 sm:p-6">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 id="settings-avatar-crop-title" class="text-xl font-bold text-text-main">Кадрирование аватара</h2>
+                    <p class="mt-1 text-sm text-text-secondary">Выберите квадратную область 1:1. После подтверждения загрузится именно этот фрагмент.</p>
+                </div>
+                <button id="settings-avatar-crop-cancel-icon-btn" type="button"
+                    class="btn-secondary inline-flex h-10 w-10 items-center justify-center rounded-xl" aria-label="Закрыть кадрирование">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+
+            <div class="mt-5 flex justify-center">
+                <div id="settings-avatar-crop-frame" class="settings-avatar-crop-stage">
+                    <img id="settings-avatar-crop-image" class="settings-avatar-crop-image hidden" alt="Предпросмотр кадрирования аватара" />
+                    <div class="settings-avatar-crop-grid"></div>
+                </div>
+            </div>
+
+            <div class="mt-5">
+                <div class="flex items-center justify-between gap-3 text-sm text-text-secondary">
+                    <span>Масштаб</span>
+                    <button id="settings-avatar-crop-reset-btn" type="button" class="btn-secondary rounded-xl px-3 py-2 text-xs font-semibold">
+                        Сбросить
+                    </button>
+                </div>
+                <input id="settings-avatar-crop-zoom" type="range" min="100" max="300" step="1" value="100"
+                    class="mt-3 w-full accent-primary" />
+                <p class="mt-3 text-xs text-text-secondary">Потяните изображение внутри рамки, чтобы выбрать нужную область.</p>
+            </div>
+
+            <div class="mt-6 flex flex-wrap items-center justify-end gap-3">
+                <button id="settings-avatar-crop-cancel-btn" type="button" class="btn-secondary rounded-xl px-4 py-2.5 text-sm font-semibold">
+                    Отмена
+                </button>
+                <button id="settings-avatar-crop-apply-btn" type="button" class="btn-primary rounded-xl px-4 py-2.5 text-sm font-semibold">
+                    Использовать фрагмент
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../assets/NotificationUI.js"></script>
     <script src="/ui/settings/settings.js"></script>
 </body>
 

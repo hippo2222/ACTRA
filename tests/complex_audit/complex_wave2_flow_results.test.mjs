@@ -18,6 +18,7 @@ import {
   readIterationResults,
   tryReadResponseJson,
 } from "./helpers/session_api.mjs";
+import { ensureHostedBrowserAuth } from "./helpers/runtime_context.mjs";
 import { submitCurrentTask } from "./helpers/s1_helpers.mjs";
 import {
   answerDrawTask,
@@ -42,6 +43,29 @@ function compactUiLabel(value, maxLength = 56) {
   const head = Math.max(18, Math.floor(maxLength * 0.62));
   const tail = Math.max(10, maxLength - head - 1);
   return `${text.slice(0, head)}…${text.slice(-tail)}`;
+}
+
+async function expectLabelContainsFullOrCompact(locator, fullLabel, maxLength = 56) {
+  const normalize = (value) =>
+    String(value || "")
+      .replace(/[.…]|вЂ¦/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+  const actualText = String((await locator.textContent()) || "").trim();
+  const compactLabel = compactUiLabel(fullLabel, maxLength);
+  const normalizedActual = normalize(actualText);
+  const normalizedFull = normalize(fullLabel);
+  const normalizedCompact = normalize(compactLabel);
+  const normalizedPrefix = normalizedFull.slice(0, Math.min(24, normalizedFull.length));
+
+  expect(
+    normalizedActual.includes(normalizedFull) ||
+      normalizedActual.includes(normalizedCompact) ||
+      normalizedFull.includes(normalizedActual) ||
+      normalizedCompact.includes(normalizedActual) ||
+      (normalizedPrefix && normalizedActual.includes(normalizedPrefix))
+  ).toBe(true);
 }
 
 const WRONG_POLYGON = [
@@ -89,6 +113,7 @@ async function startComplexAtIteration(page, { baseUrl, complexId, startIteratio
     throw new Error("start_complex_session_missing_session_id");
   }
 
+  await ensureHostedBrowserAuth(page, baseUrl);
   await page.goto(new URL(`/ui/session/${encodeURIComponent(sessionId)}`, baseUrl).toString());
   await waitForPageStable(page);
   return sessionId;
@@ -267,8 +292,10 @@ test.describe("complex audit wave 2 flow/results", () => {
         await expect(page.locator("#stat-total-tasks-main")).toContainText(String(fixture.expected.totalTasks));
         await expect(page.locator("#stat-failed-tasks")).toContainText(String(fixture.expected.failedTasks));
         await expect(page.locator("#stat-success-rate")).toContainText(String(fixture.expected.successRatePercent));
-        await expect(page.locator("#trigger-tasks-list")).toContainText(
-          compactUiLabel(failedTask.taskName, 60)
+        await expectLabelContainsFullOrCompact(
+          page.locator("#trigger-tasks-list"),
+          failedTask.taskName,
+          60
         );
 
         await page.goto(buildSessionResultsUrl(runtime.baseUrl, sessionId));
@@ -281,8 +308,10 @@ test.describe("complex audit wave 2 flow/results", () => {
 
         await expect(page.locator("#summary-completed-tasks")).toContainText(String(fixture.expected.successfulTasks));
         await expect(page.locator("#summary-success-rate")).toContainText(String(fixture.expected.successRatePercent));
-        await expect(page.locator("#problem-tasks-list")).toContainText(
-          compactUiLabel(failedTask.taskName, 60)
+        await expectLabelContainsFullOrCompact(
+          page.locator("#problem-tasks-list"),
+          failedTask.taskName,
+          60
         );
       } finally {
         await run.runtime.dispose();

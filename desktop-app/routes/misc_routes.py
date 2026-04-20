@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 from flask import Blueprint, jsonify, request
 
-from routes._context import get_ctx, get_extra
+from routes._context import get_authenticated_user_id, get_ctx, get_extra, is_hosted_web_runtime
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +31,27 @@ def should_welcome() -> Any:
     """Determine whether the Welcome Screen should be shown and in which mode."""
     try:
         h = _mh()
+        if is_hosted_web_runtime():
+            user_id = get_authenticated_user_id()
+            if user_id:
+                return jsonify(
+                    {
+                        "ok": True,
+                        "show_welcome": False,
+                        "mode": "authenticated",
+                        "authenticated": True,
+                        "auto_select_user_id": user_id,
+                    }
+                )
+            return jsonify(
+                {
+                    "ok": True,
+                    "show_welcome": True,
+                    "mode": "auth",
+                    "authenticated": False,
+                    "profiles": [],
+                }
+            )
         user_service = h["user_service"]
         users = user_service.get_all_users()
         items = [u.to_api_dict() for u in users]
@@ -133,7 +154,12 @@ def consent_status() -> Any:
     try:
         h = _mh()
         ctx = get_ctx()
-        user_id = request.args.get("user_id") or ctx.user_id
+        if is_hosted_web_runtime():
+            user_id = get_authenticated_user_id()
+            if not user_id:
+                return jsonify({"ok": False, "error": "authentication_required"}), 401
+        else:
+            user_id = request.args.get("user_id") or ctx.user_id
         if not user_id:
             return jsonify({"ok": False, "error": "user_id_required"}), 400
         user = h["user_service"].get_user(user_id)
@@ -154,7 +180,12 @@ def consent_accept() -> Any:
         h = _mh()
         ctx = get_ctx()
         payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id") or ctx.user_id
+        if is_hosted_web_runtime():
+            user_id = get_authenticated_user_id()
+            if not user_id:
+                return jsonify({"ok": False, "error": "authentication_required"}), 401
+        else:
+            user_id = payload.get("user_id") or ctx.user_id
         if not user_id:
             return jsonify({"ok": False, "error": "user_id_required"}), 400
         user = h["user_service"].get_user(user_id)
@@ -302,7 +333,12 @@ def feedback_submit() -> Any:
         h = _mh()
         ctx = get_ctx()
         payload = request.get_json(silent=True) or {}
-        user_id = payload.get("user_id") or ctx.user_id
+        if is_hosted_web_runtime():
+            user_id = get_authenticated_user_id()
+            if not user_id:
+                return jsonify({"ok": False, "error": "authentication_required"}), 401
+        else:
+            user_id = payload.get("user_id") or ctx.user_id
         if not user_id:
             return jsonify({"ok": False, "error": "user_id_required"}), 400
         user = h["user_service"].get_user(user_id)

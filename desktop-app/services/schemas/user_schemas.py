@@ -15,6 +15,8 @@ from task_system.core.exceptions import TaskValidationError
 
 # Алиас для обратной совместимости
 ValidationError = TaskValidationError
+_ALLOWED_USER_ROLES = {"user", "admin"}
+_ALLOWED_USER_PLANS = {"free", "premium"}
 
 
 class BaseUserSchema:
@@ -33,8 +35,42 @@ class BaseUserSchema:
         Returns:
             Список ошибок валидации (пустой если данные валидны)
         """
+        # Р‘Р°Р·РѕРІР°СЏ СЃС…РµРјР° РЅРµ Р·Р°РґР°РµС‚ СЃРѕР±СЃС‚РІРµРЅРЅС‹С… РїСЂР°РІРёР».
+        # РљРѕРЅРєСЂРµС‚РЅР°СЏ РІР°Р»РёРґР°С†РёСЏ РѕРїРёСЃС‹РІР°РµС‚СЃСЏ РІ РїРѕРґРєР»Р°СЃСЃР°С….
+        return []
         errors = []
+        profile = {}
         # Переопределяется в подклассах
+        if 'role' in profile:
+            role = str(profile.get('role') or '').strip().lower()
+            if role not in _ALLOWED_USER_ROLES:
+                errors.append("profile.role: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ user РёР»Рё admin")
+
+        if 'plan' in profile:
+            plan = str(profile.get('plan') or '').strip().lower()
+            if plan not in _ALLOWED_USER_PLANS:
+                errors.append("profile.plan: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ free РёР»Рё premium")
+
+        if 'role' in profile:
+            role = str(profile.get('role') or '').strip().lower()
+            if role not in _ALLOWED_USER_ROLES:
+                errors.append("profile.role: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ user РёР»Рё admin")
+
+        if 'plan' in profile:
+            plan = str(profile.get('plan') or '').strip().lower()
+            if plan not in _ALLOWED_USER_PLANS:
+                errors.append("profile.plan: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ free РёР»Рё premium")
+
+        if 'role' in profile:
+            role = str(profile.get('role') or '').strip().lower()
+            if role not in _ALLOWED_USER_ROLES:
+                errors.append("profile.role: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ user РёР»Рё admin")
+
+        if 'plan' in profile:
+            plan = str(profile.get('plan') or '').strip().lower()
+            if plan not in _ALLOWED_USER_PLANS:
+                errors.append("profile.plan: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ free РёР»Рё premium")
+
         return errors
     
     @classmethod
@@ -102,6 +138,12 @@ class ProfileSchema(BaseUserSchema):
             # Валидируем вложенный объект profile
             profile_errors = cls._validate_profile(data['profile'])
             errors.extend(profile_errors)
+            role = str(data['profile'].get('role') or '').strip().lower()
+            if role and role not in _ALLOWED_USER_ROLES:
+                errors.append("profile.role: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ user РёР»Рё admin")
+            plan = str(data['profile'].get('plan') or '').strip().lower()
+            if plan and plan not in _ALLOWED_USER_PLANS:
+                errors.append("profile.plan: РґРѕРїСѓСЃС‚РёРјС‹Рµ Р·РЅР°С‡РµРЅРёСЏ free РёР»Рё premium")
         
         return errors
     

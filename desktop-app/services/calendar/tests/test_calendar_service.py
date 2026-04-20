@@ -216,6 +216,27 @@ class TestNotificationService:
         assert notifications[0].type.value == "health_drop"
         assert "Нейрорадиология" in notifications[0].title
     
+    def test_health_drop_notification_skips_orphaned_complex(self):
+        """Health-drop notification should not be created for stale progress records."""
+        progress = [
+            ComplexProgress(
+                complex_id="orphan_complex", user_id="u1",
+                status=ComplexStatus.IN_PROGRESS,
+                health_score=0.40
+            ),
+        ]
+        settings = UserCalendarSettings(user_id="u1")
+
+        notifications = self.service.generate_notifications(
+            user_id="u1",
+            settings=settings,
+            all_progress=progress,
+            complex_names={"c1": "Known Complex"},
+        )
+
+        health_notifications = [n for n in notifications if n.type.value == "health_drop"]
+        assert health_notifications == []
+
     def test_streak_milestone(self):
         """Уведомление о milestone streak."""
         settings = UserCalendarSettings(user_id="u1", streak_days=7)
@@ -490,6 +511,90 @@ class TestCalendarServiceIntegration:
         assert "health_summary" in result
         assert "schedule_strip" in result
     
+    def test_health_summary_hides_orphaned_complex_progress(self):
+        """Health summary should skip stale progress records without a live complex."""
+        known = ComplexProgress(
+            complex_id="known_complex",
+            user_id="test_user",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.60,
+        )
+        orphan = ComplexProgress(
+            complex_id="orphan_complex",
+            user_id="test_user",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.20,
+        )
+
+        summary = self.service._build_health_summary(
+            [known, orphan],
+            {"known_complex": "Known Complex"},
+        )
+
+        assert [item["complex_id"] for item in summary.complexes] == ["known_complex"]
+        assert summary.critical_count == 1
+        assert summary.overall_health == pytest.approx(0.60)
+
+    def test_schedule_strip_hides_orphaned_complex_progress(self):
+        """Schedule strip should not expose stale complex ids as visible task names."""
+        known = ComplexProgress(
+            complex_id="known_complex",
+            user_id="test_user",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.60,
+            last_reviewed_at=datetime.now() - timedelta(days=3),
+        )
+        orphan = ComplexProgress(
+            complex_id="orphan_complex",
+            user_id="test_user",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.20,
+            last_reviewed_at=datetime.now() - timedelta(days=5),
+        )
+
+        schedule = self.service.scheduler_service.build_schedule_strip(
+            user_id="test_user",
+            days_count=3,
+            schedule_mode=ScheduleMode.DAILY.value,
+            activity_history={},
+            available_minutes=30,
+            all_progress=[known, orphan],
+            task_pool={"known_complex": [{"task_id": "t1", "complex_name": "Known Complex"}]},
+            complex_names={"known_complex": "Known Complex"},
+        )
+
+        today_plan = next(day for day in schedule if day.is_today)
+        task_names = [task["name"] for task in today_plan.all_tasks]
+
+        assert task_names == ["Known Complex"]
+        assert "orphan_complex" not in task_names
+
+    def test_schedule_strip_stays_empty_when_only_orphaned_progress_exists(self):
+        """If no live complex progress remains, the UI should receive an empty schedule state."""
+        orphan = ComplexProgress(
+            complex_id="orphan_complex",
+            user_id="test_user",
+            status=ComplexStatus.IN_PROGRESS,
+            health_score=0.20,
+            last_reviewed_at=datetime.now() - timedelta(days=5),
+        )
+
+        schedule = self.service.scheduler_service.build_schedule_strip(
+            user_id="test_user",
+            days_count=3,
+            schedule_mode=ScheduleMode.DAILY.value,
+            activity_history={},
+            available_minutes=30,
+            all_progress=[orphan],
+            task_pool={"known_complex": [{"task_id": "t1", "complex_name": "Known Complex"}]},
+            complex_names={"known_complex": "Known Complex"},
+        )
+
+        today_plan = next(day for day in schedule if day.is_today)
+
+        assert today_plan.all_tasks == []
+        assert today_plan.tasks == []
+
     def test_activity_heatmap(self):
         """Данные для heatmap."""
         # Сохраняем активность

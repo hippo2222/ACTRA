@@ -377,4 +377,21 @@ describe('OpenAnswerEditor image handling and saving', () => {
         expect(document.getElementById('editor-theory-grounding-beacon')).toBeNull();
         expect(document.getElementById('editor-theory-grounding-p8-panel')).toBeNull();
     });
+    it('keeps nested hosted asset refs through image normalization and preview resolution', () => {
+        const normalized = editor.normalizeImageReference({
+            image: {
+                asset_id: 'asset_open_editor_1',
+                path: 'legacy/open-answer-image.png'
+            }
+        });
+
+        expect(normalized).toEqual({
+            path: 'legacy/open-answer-image.png',
+            asset_id: 'asset_open_editor_1',
+            asset_url: null,
+        });
+        expect(editor.resolveEditorImagePreviewSrc(normalized)).toBe(
+            '/api/editor/image?asset_id=asset_open_editor_1'
+        );
+    });
 });

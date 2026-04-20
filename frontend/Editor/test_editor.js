@@ -48,6 +48,9 @@ class TestEditor extends BaseEditor {
 
     buildImageUrl(path) {
         if (!path) return '';
+        if (path.startsWith('/api/assets/') || path.startsWith('/api/editor/image') || path.startsWith('/api/local-image')) {
+            return path;
+        }
         const params = new URLSearchParams({ path });
         const ctx = this.getImageRequestContext();
         if (ctx.module) params.set('module', ctx.module);
@@ -56,17 +59,122 @@ class TestEditor extends BaseEditor {
         return `/api/editor/image?${params.toString()}`;
     }
 
+    buildAssetImageUrl(assetId) {
+        if (!assetId) return '';
+        return `/api/editor/image?asset_id=${encodeURIComponent(assetId)}`;
+    }
+
+    normalizeImageReference(raw, explicitAssetUrl = null, explicitAssetId = null) {
+        const fallbackAssetUrl = explicitAssetUrl != null ? String(explicitAssetUrl).trim() : "";
+        const fallbackAssetId = explicitAssetId != null ? String(explicitAssetId).trim() : "";
+
+        if (!raw && raw !== 0) {
+            return {
+                path: null,
+                asset_url: fallbackAssetUrl || null,
+                asset_id: fallbackAssetId || null,
+            };
+        }
+
+        if (typeof raw === "string") {
+            const value = raw.trim();
+            if (!value) {
+                return {
+                    path: null,
+                    asset_url: fallbackAssetUrl || null,
+                    asset_id: fallbackAssetId || null,
+                };
+            }
+            if (fallbackAssetUrl || fallbackAssetId) {
+                return {
+                    path: value,
+                    asset_url: fallbackAssetUrl || null,
+                    asset_id: fallbackAssetId || null,
+                };
+            }
+            if (value.startsWith("/api/assets/") || /^(https?:|data:)/i.test(value)) {
+                return {
+                    path: null,
+                    asset_url: value,
+                    asset_id: null,
+                };
+            }
+            return {
+                path: value,
+                asset_url: null,
+                asset_id: null,
+            };
+        }
+
+        if (typeof raw !== "object") {
+            return {
+                path: null,
+                asset_url: fallbackAssetUrl || null,
+                asset_id: fallbackAssetId || null,
+            };
+        }
+
+        const nested = raw.image && typeof raw.image === "object" ? raw.image : null;
+        const path = String(
+            raw.path ??
+            raw.image_path ??
+            (typeof raw.image === "string" ? raw.image : null) ??
+            raw.src ??
+            nested?.path ??
+            nested?.image_path ??
+            nested?.src ??
+            ""
+        ).trim();
+        const asset_url = String(
+            fallbackAssetUrl || (
+                raw.asset_url ??
+                raw.image_asset_url ??
+                raw.image_url ??
+                raw.url ??
+                nested?.asset_url ??
+                nested?.image_asset_url ??
+                nested?.image_url ??
+                nested?.url ??
+                ""
+            )
+        ).trim();
+        const asset_id = String(
+            fallbackAssetId || (
+                raw.asset_id ??
+                raw.image_asset_id ??
+                nested?.asset_id ??
+                nested?.image_asset_id ??
+                ""
+            )
+        ).trim();
+
+        return {
+            path: path || null,
+            asset_url: asset_url || null,
+            asset_id: asset_id || null,
+        };
+    }
+
+    resolveImageSource(path, assetUrl, assetId) {
+        const normalized = this.normalizeImageReference(path, assetUrl, assetId);
+        if (normalized.asset_url) return normalized.asset_url;
+        if (normalized.asset_id) return this.buildAssetImageUrl(normalized.asset_id);
+        return this.buildImageUrl(normalized.path);
+    }
+
     createEmptyQuestion() {
         return {
             id: Date.now(),
             text: "Новый вопрос",
             options: [
-                { text: "Вариант 1", is_correct: true, image_path: null },
-                { text: "Вариант 2", is_correct: false, image_path: null }
+                { text: "Вариант 1", is_correct: true, image_path: null, image_asset_id: null, image_asset_url: null },
+                { text: "Вариант 2", is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null }
             ],
             settings: { all_correct_required: true, allow_partial_credit: false },
             explanation: "",
             image: null,
+            image_asset_id: null,
+            image_asset_url: null,
             images: []
         };
     }
@@ -88,9 +196,16 @@ class TestEditor extends BaseEditor {
         }
 
         return answers.map((answer) => ({
+            ...(() => {
+                const ref = this.normalizeImageReference(answer);
+                return {
+                    image_path: ref.path,
+                    image_asset_id: ref.asset_id,
+                    image_asset_url: ref.asset_url,
+                };
+            })(),
             text: answer?.text ?? "",
             is_correct: Boolean(answer?.correct),
-            image_path: answer?.image_path ?? null
         }));
     }
 
@@ -102,12 +217,19 @@ class TestEditor extends BaseEditor {
         const hasBackendAnswers = Array.isArray(question.answers);
         const optionsSource = hasBackendAnswers ? question.answers : question.options;
         const options = Array.isArray(optionsSource)
-            ? optionsSource.map((opt) => ({
-                text: opt?.text ?? "",
-                is_correct: Boolean(opt?.is_correct ?? opt?.correct),
-                image_path: opt?.image_path ?? opt?.image ?? null
-            }))
+            ? optionsSource.map((opt) => {
+                const ref = this.normalizeImageReference(opt);
+                return {
+                    text: opt?.text ?? "",
+                    is_correct: Boolean(opt?.is_correct ?? opt?.correct),
+                    image_path: ref.path,
+                    image_asset_id: ref.asset_id,
+                    image_asset_url: ref.asset_url
+                };
+            })
             : this.createEmptyQuestion().options;
+
+        const questionRef = this.normalizeImageReference(question);
 
         return {
             id: Number.isFinite(question.id) ? question.id : fallbackIndex,
@@ -118,7 +240,9 @@ class TestEditor extends BaseEditor {
                 allow_partial_credit: Boolean(question.settings?.allow_partial_credit)
             },
             explanation: question.explanation ?? "",
-            image: question.image ?? question.image_path ?? null,
+            image: questionRef.path,
+            image_asset_id: questionRef.asset_id,
+            image_asset_url: questionRef.asset_url,
             images: Array.isArray(question.images) ? [...question.images] : []
         };
     }
@@ -138,18 +262,23 @@ class TestEditor extends BaseEditor {
             return [];
         }
 
-        return backendQuestions.map((question, idx) => ({
-            id: Number.isFinite(question?.id) ? question.id : idx,
-            text: question?.text ?? "",
-            options: this.normalizeAnswersToOptions(question?.answers),
-            settings: {
-                all_correct_required: true,
-                allow_partial_credit: false
-            },
-            explanation: question?.explanation ?? "",
-            image: question?.image_path ?? null,
-            images: Array.isArray(question?.images) ? [...question.images] : []
-        }));
+        return backendQuestions.map((question, idx) => {
+            const questionRef = this.normalizeImageReference(question);
+            return {
+                id: Number.isFinite(question?.id) ? question.id : idx,
+                text: question?.text ?? "",
+                options: this.normalizeAnswersToOptions(question?.answers),
+                settings: {
+                    all_correct_required: true,
+                    allow_partial_credit: false
+                },
+                explanation: question?.explanation ?? "",
+                image: questionRef.path,
+                image_asset_id: questionRef.asset_id,
+                image_asset_url: questionRef.asset_url,
+                images: Array.isArray(question?.images) ? [...question.images] : []
+            };
+        });
     }
 
     buildBackendContent() {
@@ -158,20 +287,49 @@ class TestEditor extends BaseEditor {
         const testSettings = this.normalizeTestSettings(originalContent.settings ?? this.DEFAULT_TEST_SETTINGS);
 
         const questions = this.questions.map((question, idx) => {
-            const answers = (question.options || []).map((opt) => ({
-                text: (opt.text ?? "").trim(),
-                correct: Boolean(opt.is_correct),
-                image_path: opt.image_path || null
-            }));
+            const answers = (question.options || []).map((opt) => {
+                const ref = this.normalizeImageReference(opt);
+                return {
+                    text: (opt.text ?? "").trim(),
+                    correct: Boolean(opt.is_correct),
+                    image_path: ref.path,
+                    image_asset_id: ref.asset_id,
+                    image_asset_url: ref.asset_url
+                };
+            });
+            const options = (question.options || []).map((opt) => {
+                const ref = this.normalizeImageReference(opt);
+                return {
+                    text: (opt.text ?? "").trim(),
+                    is_correct: Boolean(opt.is_correct),
+                    image_path: ref.path,
+                    image_asset_id: ref.asset_id,
+                    image_asset_url: ref.asset_url
+                };
+            });
+
+            const questionRef = this.normalizeImageReference({
+                image: question.image,
+                image_asset_id: question.image_asset_id,
+                image_asset_url: question.image_asset_url,
+            });
 
             const payload = {
                 id: Number.isFinite(question.id) ? question.id : idx,
                 text: (question.text ?? "").trim(),
-                answers
+                answers,
+                options
             };
 
-            if (question.image) {
-                payload.image_path = question.image;
+            if (questionRef.path) {
+                payload.image = questionRef.path;
+                payload.image_path = questionRef.path;
+            }
+            if (questionRef.asset_id) {
+                payload.image_asset_id = questionRef.asset_id;
+            }
+            if (questionRef.asset_url) {
+                payload.image_asset_url = questionRef.asset_url;
             }
             if (Array.isArray(question.images) && question.images.length) {
                 payload.images = question.images.slice();
@@ -263,7 +421,9 @@ class TestEditor extends BaseEditor {
 
     summarizeQuestion(question) {
         const options = Array.isArray(question?.options) ? question.options : [];
-        const filledOptions = options.filter((opt) => String(opt?.text || '').trim() || opt?.image_path).length;
+        const filledOptions = options.filter(
+            (opt) => String(opt?.text || '').trim() || opt?.image_path || opt?.image_asset_id || opt?.image_asset_url
+        ).length;
         const correctCount = options.filter((opt) => opt?.is_correct).length;
         const hasQuestionText = Boolean(String(question?.text || '').trim());
         const isReady = hasQuestionText && options.length >= 2 && filledOptions >= 2 && correctCount >= 1;
@@ -642,10 +802,12 @@ class TestEditor extends BaseEditor {
         const removeBtn = document.querySelector('#remove-question-image-btn');
         const mediaDock = document.querySelector('.question-media-dock');
         const textareaRoot = document.querySelector('#question-textarea');
+        const questionImageSrc = this.resolveImageSource(q.image, q.image_asset_url, q.image_asset_id);
+        const hasQuestionImage = Boolean(questionImageSrc);
 
         if (img && thumb) {
-            if (q.image) {
-                img.src = this.buildImageUrl(q.image);
+            if (hasQuestionImage) {
+                img.src = questionImageSrc;
                 thumb.classList.remove('hidden');
             } else {
                 img.src = '';
@@ -662,17 +824,17 @@ class TestEditor extends BaseEditor {
         }
 
         if (mediaDock) {
-            mediaDock.classList.toggle('has-image', Boolean(q.image));
+            mediaDock.classList.toggle('has-image', hasQuestionImage);
         }
 
         if (textareaRoot) {
-            textareaRoot.classList.toggle('has-question-image', Boolean(q.image));
+            textareaRoot.classList.toggle('has-question-image', hasQuestionImage);
         }
 
         if (uploadBtn) {
             const icon = uploadBtn.querySelector('.material-symbols-outlined');
             const label = uploadBtn.querySelector('.question-media-trigger__label');
-            if (q.image) {
+            if (hasQuestionImage) {
                 uploadBtn.classList.remove('hidden');
                 uploadBtn.title = 'Заменить изображение вопроса';
                 uploadBtn.setAttribute('aria-label', 'Заменить изображение вопроса');
@@ -718,6 +880,7 @@ class TestEditor extends BaseEditor {
             const label = String.fromCharCode(65 + index); // A, B, C...
             const optionLabel = `вариант ${label}`;
             const statusLabel = opt.is_correct ? 'Правильный' : 'Не выбран';
+            const optionImageSrc = this.resolveImageSource(opt.image_path, opt.image_asset_url, opt.image_asset_id);
 
             div.innerHTML = `
                 <button type="button" class="option-letter" aria-pressed="${opt.is_correct ? 'true' : 'false'}" title="Отметить ${optionLabel} как правильный">${label}</button>
@@ -739,12 +902,12 @@ class TestEditor extends BaseEditor {
                             placeholder="Введите текст варианта..." rows="1"></textarea>
                     </div>
                     <div class="option-row__media">
-                        ${opt.image_path ? `
+                        ${optionImageSrc ? `
                             <div class="option-row__media-frame option-row__media-frame--filled relative">
                                 <button class="upload-option-image option-row__media-preview-button"
                                     data-index="${index}" title="Заменить изображение ${optionLabel}" aria-label="Заменить изображение ${optionLabel}">
                                     <span class="option-row__media-preview w-full h-full rounded-lg border border-border-subtle shadow overflow-hidden bg-surface-1">
-                                        <img src="${this.buildImageUrl(opt.image_path)}" alt="Изображение ${optionLabel}"
+                                        <img src="${optionImageSrc}" alt="Изображение ${optionLabel}"
                                             class="w-full h-full object-cover" />
                                     </span>
                                     <span class="option-row__media-preview-caption">Заменить</span>
@@ -813,6 +976,8 @@ class TestEditor extends BaseEditor {
                 removeBtn.onclick = (ev) => {
                     ev.preventDefault();
                     q.options[index].image_path = null;
+                    q.options[index].image_asset_id = null;
+                    q.options[index].image_asset_url = null;
                     this.renderOptions();
                     this.renderQuestionList();
                     this.markUnsavedChanges();
@@ -850,7 +1015,7 @@ class TestEditor extends BaseEditor {
         if (!Array.isArray(q.options)) {
             q.options = [];
         }
-        q.options.push({ text: "", is_correct: false, image_path: null });
+        q.options.push({ text: "", is_correct: false, image_path: null, image_asset_id: null, image_asset_url: null });
         this.renderOptions();
         this.renderQuestionList();
         this.updateAnswerTypeDisplay();
@@ -1237,7 +1402,9 @@ class TestEditor extends BaseEditor {
             });
 
             const q = this.questions[this.currentQuestionIndex];
-            q.image = data.path;
+            q.image = data.path || null;
+            q.image_asset_id = data.asset_id || null;
+            q.image_asset_url = data.asset_url || null;
             this.isQuestionImageUploading = false;
             this.renderCurrentQuestion();
             this.showToast('Изображение обновлено', 'success');
@@ -1253,8 +1420,10 @@ class TestEditor extends BaseEditor {
 
     clearQuestionImage() {
         const q = this.questions[this.currentQuestionIndex];
-        if (!q || !q.image) return;
+        if (!q || (!q.image && !q.image_asset_id && !q.image_asset_url)) return;
         q.image = null;
+        q.image_asset_id = null;
+        q.image_asset_url = null;
         this.renderCurrentQuestion();
         this.showToast('Изображение удалено', 'info');
         this.markUnsavedChanges();
@@ -1286,7 +1455,9 @@ class TestEditor extends BaseEditor {
                 method: 'POST',
                 body: formData
             });
-            currentQuestion.options[targetIndex].image_path = data.path;
+            currentQuestion.options[targetIndex].image_path = data.path || null;
+            currentQuestion.options[targetIndex].image_asset_id = data.asset_id || null;
+            currentQuestion.options[targetIndex].image_asset_url = data.asset_url || null;
             this.uploadingOptionImageIndex = null;
             this.renderOptions();
             this.renderQuestionList();
@@ -1338,7 +1509,7 @@ class TestEditor extends BaseEditor {
             for (let j = 0; j < q.options.length; j++) {
                 const opt = q.options[j];
                 // Allow empty text if image is present
-                if ((!opt.text || !opt.text.trim()) && !opt.image_path) {
+                if ((!opt.text || !opt.text.trim()) && !opt.image_path && !opt.image_asset_id && !opt.image_asset_url) {
                     this.currentQuestionIndex = i;
                     this.renderUI();
                     return `Вопрос ${i + 1}, вариант ${j + 1}: пустой текст`;

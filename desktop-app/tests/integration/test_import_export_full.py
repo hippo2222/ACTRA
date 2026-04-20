@@ -80,6 +80,50 @@ class TestImportExportSystem(unittest.TestCase):
                 self.assertEqual(manifest["total_tasks"], 1)
                 self.assertIn(task_id, manifest["contains"]["tasks"])
 
+    def test_export_rewrites_task_image_refs_to_portable_local_paths(self):
+        task_id = "task_img"
+        module_id = "mod_img"
+        topic_id = "top_img"
+
+        task_path = self.modules_dir / module_id / "topics" / topic_id / "tasks" / task_id
+        image_path = task_path / "images" / "sample.png"
+        image_path.parent.mkdir(parents=True)
+        image_path.write_bytes(b"fake-png")
+
+        with open(task_path / "task.json", "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "id": task_id,
+                    "name": "Portable image task",
+                    "type": "test",
+                    "content": {
+                        "questions": [
+                            {
+                                "text": "Q",
+                                "image_path": f"modules/{module_id}/topics/{topic_id}/tasks/{task_id}/images/sample.png",
+                                "image_asset_id": "asset_old",
+                                "image_asset_url": "/api/assets/asset_old/content",
+                            }
+                        ]
+                    },
+                },
+                f,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        zip_path = self.service.create_export_archive(
+            [{"module_id": module_id, "topic_id": topic_id, "task_id": task_id}]
+        )
+
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            with zf.open(f"modules/{module_id}/topics/{topic_id}/tasks/{task_id}/task.json") as tf:
+                exported = json.load(tf)
+        question = exported["content"]["questions"][0]
+        self.assertEqual(question["image_path"], "images/sample.png")
+        self.assertNotIn("image_asset_id", question)
+        self.assertNotIn("image_asset_url", question)
+
     # =========================================================================
     # 2. New Feature Tests: Import Validation (Security)
     # =========================================================================
@@ -294,6 +338,37 @@ class TestImportExportSystem(unittest.TestCase):
         self.assertEqual(report["tasks"][0]["status"], "error")
         self.assertIn("Missing images", report["tasks"][0]["error"])
 
+    def test_confirm_does_not_import_task_with_missing_images(self):
+        """Broken tasks from archive check must not be materialized on confirm."""
+        zip_path = Path(self.test_dir) / "missing_img_confirm.zip"
+        task_data = {
+            "id": "t_img_confirm",
+            "name": "Broken image task",
+            "type": "test",
+            "content": {
+                "questions": [
+                    {"text": "Q", "image_path": "images/missing.jpg"}
+                ]
+            },
+        }
+
+        with zipfile.ZipFile(zip_path, 'w') as zf:
+            zf.writestr(
+                "modules/m/topics/t/tasks/t_img_confirm/task.json",
+                json.dumps(task_data, ensure_ascii=False),
+            )
+
+        result = self.service.import_tasks_atomic(
+            str(zip_path),
+            {"conflict_resolution": "overwrite", "skip_errors": True},
+        )
+        self.assertTrue(result["ok"])
+        self.assertEqual(result["imported"], 0)
+        self.assertEqual(result["errors"], 1)
+        self.assertFalse(
+            (self.modules_dir / "m" / "topics" / "t" / "tasks" / "t_img_confirm").exists()
+        )
+
     def test_idempotency_double_import(self):
         """Verify importing same archive twice results in 100% duplicates/skips."""
         # Setup generic archive
@@ -313,6 +388,40 @@ class TestImportExportSystem(unittest.TestCase):
              res2 = self.service.import_tasks_atomic(str(zip_path), {"conflict_resolution": "skip"})
              self.assertEqual(res2["skipped"], 1)
              self.assertEqual(res2["imported"], 0)
+
+    def test_import_sanitizes_stale_asset_refs_when_local_image_is_present(self):
+        zip_path = Path(self.test_dir) / "portable_import.zip"
+        task_json = {
+            "id": "task_portable",
+            "name": "Portable import",
+            "type": "test",
+            "content": {
+                "questions": [
+                    {
+                        "text": "Q",
+                        "image_path": "modules/source/topics/source/tasks/task_portable/images/ref.png",
+                        "image_asset_id": "asset_stale",
+                        "image_asset_url": "/api/assets/asset_stale/content",
+                    }
+                ]
+            },
+        }
+        with zipfile.ZipFile(zip_path, "w") as zf:
+            zf.writestr(
+                "modules/m/topics/t/tasks/task_portable/task.json",
+                json.dumps(task_json, ensure_ascii=False),
+            )
+            zf.writestr("modules/m/topics/t/tasks/task_portable/images/ref.png", b"fake-png")
+
+        res = self.service.import_tasks_atomic(str(zip_path), {"conflict_resolution": "overwrite"})
+        self.assertTrue(res["ok"])
+        imported_task_path = self.modules_dir / "m" / "topics" / "t" / "tasks" / "task_portable" / "task.json"
+        with open(imported_task_path, "r", encoding="utf-8") as f:
+            imported = json.load(f)
+        question = imported["content"]["questions"][0]
+        self.assertEqual(question["image_path"], "images/ref.png")
+        self.assertNotIn("image_asset_id", question)
+        self.assertNotIn("image_asset_url", question)
 
     def test_invalid_task_type(self):
         """Test handling of unknown task types (service marks them as warnings)."""

@@ -104,6 +104,20 @@ class TestGetAvailableLevels:
         # task override should take priority
         assert dm_with_config.get_available_levels("click", "mod/topic/special_task") == [1, 2]
 
+    def test_unknown_placeholder_falls_back_to_loaded_task_type(self, dm):
+        storage = MagicMock()
+        storage.load_task.return_value = {
+            "task_data": {
+                "type": "click",
+                "settings": {
+                    "difficulty": 2,
+                },
+            }
+        }
+        dm.storage_service = storage
+
+        assert dm.get_available_levels("unknown", "mod/topic/task") == [1, 2, 3]
+
 
 # ═══════════════════════════════════════════════════════════════════
 # get_smart_retry_config

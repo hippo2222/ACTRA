@@ -45,9 +45,7 @@ class OpenAnswerEditor extends BaseEditor {
         this.task.task_data.content = content;
 
         // Ensure images array exists
-        if (!Array.isArray(content.images)) {
-            content.images = [];
-        }
+        content.images = this.normalizeContentImages(content.images);
 
         // Load keywords
         this.keywords = content.keywords || [];
@@ -167,6 +165,103 @@ class OpenAnswerEditor extends BaseEditor {
         delete settings.maxLength;
     }
 
+    normalizeImageReference(raw) {
+        if (!raw && raw !== 0) return null;
+
+        if (typeof raw === 'string') {
+            const value = raw.trim();
+            if (!value) return null;
+            if (value.startsWith('/api/assets/') || /^(https?:|data:)/i.test(value)) {
+                return { path: null, asset_id: null, asset_url: value };
+            }
+            return { path: value, asset_id: null, asset_url: null };
+        }
+
+        if (typeof raw !== 'object') return null;
+
+        const nested = raw.image && typeof raw.image === 'object' ? raw.image : null;
+        const path = String(
+            raw.path ??
+            raw.image_path ??
+            (typeof raw.image === 'string' ? raw.image : null) ??
+            raw.src ??
+            nested?.path ??
+            nested?.image_path ??
+            nested?.src ??
+            ''
+        ).trim();
+        const asset_id = String(
+            raw.asset_id ??
+            raw.image_asset_id ??
+            nested?.asset_id ??
+            nested?.image_asset_id ??
+            ''
+        ).trim();
+        const asset_url = String(
+            raw.asset_url ??
+            raw.image_asset_url ??
+            raw.image_url ??
+            raw.url ??
+            nested?.asset_url ??
+            nested?.image_asset_url ??
+            nested?.image_url ??
+            nested?.url ??
+            ''
+        ).trim();
+
+        if (!path && !asset_id && !asset_url) return null;
+        return {
+            path: path || null,
+            asset_id: asset_id || null,
+            asset_url: asset_url || null,
+        };
+    }
+
+    serializeImageReference(raw) {
+        const normalized = this.normalizeImageReference(raw);
+        if (!normalized) return null;
+        if (normalized.asset_id || normalized.asset_url) {
+            const payload = {};
+            if (normalized.path) payload.path = normalized.path;
+            if (normalized.asset_id) payload.asset_id = normalized.asset_id;
+            if (normalized.asset_url) payload.asset_url = normalized.asset_url;
+            return payload;
+        }
+        return normalized.path || null;
+    }
+
+    normalizeContentImages(rawImages) {
+        if (!Array.isArray(rawImages)) return [];
+        const normalized = [];
+        const seen = new Set();
+        rawImages.forEach((item) => {
+            const serialized = this.serializeImageReference(item);
+            if (!serialized) return;
+            const ref = this.normalizeImageReference(serialized);
+            const key = ref
+                ? `${ref.asset_url || ''}::${ref.asset_id || ''}::${ref.path || ''}`
+                : String(serialized);
+            if (seen.has(key)) return;
+            seen.add(key);
+            normalized.push(serialized);
+        });
+        return normalized.slice(0, this.maxImages);
+    }
+
+    resolveEditorImagePreviewSrc(raw) {
+        const normalized = this.normalizeImageReference(raw);
+        if (!normalized) return '';
+        if (normalized.asset_url) return normalized.asset_url;
+        if (normalized.asset_id) {
+            return `/api/editor/image?asset_id=${encodeURIComponent(normalized.asset_id)}`;
+        }
+        const path = normalized.path || '';
+        if (!path) return '';
+        if (/^(https?:|data:)/i.test(path) || path.startsWith('/api/')) return path;
+        if (path.startsWith('/')) return path;
+        return `/api/editor/image?path=${encodeURIComponent(path)}`;
+    }
+
     renderKeywords() {
         const container = document.querySelector('#keywords-container');
         const badge = document.querySelector('#selected-count-badge');
@@ -241,7 +336,7 @@ class OpenAnswerEditor extends BaseEditor {
         if (!container || !this.task) return;
 
         const content = this.task.task_data.content || {};
-        let images = Array.isArray(content.images) ? content.images.filter(Boolean) : [];
+        let images = this.normalizeContentImages(content.images);
         if (images.length > this.maxImages) {
             images = images.slice(0, this.maxImages);
             content.images = images;
@@ -252,11 +347,11 @@ class OpenAnswerEditor extends BaseEditor {
         const addBtn = document.querySelector('#add-image-btn');
         const referenceNode = addBtn || container.lastElementChild;
 
-        images.forEach((path, index) => {
+        images.forEach((imageRef, index) => {
+            const fullPath = this.resolveEditorImagePreviewSrc(imageRef);
+            if (!fullPath) return;
             const div = document.createElement('div');
             div.className = 'open-answer-image-card card-elevated group relative aspect-square overflow-hidden animate-scale-in hover:translate-y-[-2px]';
-
-            const fullPath = `/api/editor/image?path=${encodeURIComponent(path)}`;
 
             div.innerHTML = `
                 <div class="absolute inset-0 flex items-center justify-center bg-bg-hover text-text-disabled">
@@ -344,9 +439,7 @@ class OpenAnswerEditor extends BaseEditor {
         if (!files.length) return;
 
         const content = this.task.task_data.content;
-        if (!Array.isArray(content.images)) {
-            content.images = [];
-        }
+        content.images = this.normalizeContentImages(content.images);
 
         const remainingSlots = this.maxImages - content.images.length;
         if (remainingSlots <= 0) {
@@ -374,9 +467,19 @@ class OpenAnswerEditor extends BaseEditor {
                 });
 
                 const data = await response.json();
-                if (response.ok !== false && data.ok) {
+                if (response.ok !== false && data.ok && (data.path || data.asset_id || data.asset_url)) {
                     if (!this.task.task_data.content.images) this.task.task_data.content.images = [];
-                    this.task.task_data.content.images.push(data.path);
+                    const nextImageRef = this.serializeImageReference({
+                        path: data.path,
+                        asset_id: data.asset_id,
+                        asset_url: data.asset_url,
+                    });
+                    if (!nextImageRef) {
+                        this.showToast('Не удалось подготовить ссылку на изображение.', 'error');
+                        continue;
+                    }
+                    this.task.task_data.content.images.push(nextImageRef);
+                    this.task.task_data.content.images = this.normalizeContentImages(this.task.task_data.content.images);
                     this.markUnsaved();
                 } else {
                     this.showToast(`Ошибка загрузки: ${data.error || 'upload_failed'}`, 'error');
@@ -526,9 +629,7 @@ class OpenAnswerEditor extends BaseEditor {
         delete content.require_all_keywords;
         content.sequence_matters = this.sequenceMatters;
         content.keywords = keywordsTexts;
-        content.images = Array.isArray(content.images)
-            ? content.images.slice(0, this.maxImages)
-            : [];
+        content.images = this.normalizeContentImages(content.images);
         this.syncLegacyMaxLength(maxLength);
 
         return this.task.task_data;

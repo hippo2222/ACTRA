@@ -79,4 +79,75 @@ describe("TestUI image-option lightbox", () => {
     zoomIn.click();
     expect(document.body.textContent).toContain("115%");
   });
+
+  it("resolves asset-backed answer images through the canonical asset content URL", () => {
+    const main = document.createElement("div");
+    document.body.appendChild(main);
+
+    const state = {
+      questions: [{ id: "q1", text: "Pick the correct image", index: 0 }],
+      rawQuestions: [
+        {
+          type: "single_choice",
+          answers: [
+            {
+              text: "Image option",
+              image_asset_id: "asset_testui_1",
+              correct: true,
+            },
+          ],
+        },
+      ],
+      currentIndex: 0,
+      answers: {},
+      selections: {},
+      questionResults: {},
+      flags: {},
+      isOpenMode: true,
+      mode: "answering",
+    };
+
+    const renderer = window.TestUIQuestion.createQuestionRenderer(state, main);
+    renderer.renderQuestionView();
+
+    const image = main.querySelector("img");
+    expect(image).toBeTruthy();
+    expect(image.getAttribute("src")).toBe("/api/assets/asset_testui_1/content");
+  });
+
+  it("prefers canonical asset refs over legacy image_path in TestUI answers", () => {
+    const main = document.createElement("div");
+    document.body.appendChild(main);
+
+    const state = {
+      questions: [{ id: "q1", text: "Pick the correct image", index: 0 }],
+      rawQuestions: [
+        {
+          type: "single_choice",
+          answers: [
+            {
+              text: "Image option",
+              image_asset_id: "asset_testui_2",
+              image_path: "legacy/option.png",
+              correct: true,
+            },
+          ],
+        },
+      ],
+      currentIndex: 0,
+      answers: {},
+      selections: {},
+      questionResults: {},
+      flags: {},
+      isOpenMode: true,
+      mode: "answering",
+    };
+
+    const renderer = window.TestUIQuestion.createQuestionRenderer(state, main);
+    renderer.renderQuestionView();
+
+    const image = main.querySelector("img");
+    expect(image).toBeTruthy();
+    expect(image.getAttribute("src")).toBe("/api/assets/asset_testui_2/content");
+  });
 });

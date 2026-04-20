@@ -1,0 +1,182 @@
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:var(--font-sans);}
+  .wrap{min-height:520px;display:flex;align-items:flex-start;justify-content:flex-end;padding:12px 12px 12px 12px;background:var(--color-background-tertiary);}
+  .panel{width:340px;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:18px;overflow:hidden;}
+
+  .header{padding:16px 16px 14px;border-bottom:0.5px solid var(--color-border-tertiary);}
+  .header-label{font-size:10px;font-weight:500;letter-spacing:.14em;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
+  .hosted-badge{font-size:10px;font-weight:500;letter-spacing:.04em;padding:2px 8px;border-radius:999px;border:0.5px solid var(--color-border-secondary);color:var(--color-text-secondary);background:var(--color-background-secondary);}
+  .user-row{display:flex;align-items:center;gap:12px;}
+  .avatar-wrap{position:relative;flex-shrink:0;}
+  .avatar{width:48px;height:48px;border-radius:14px;background:var(--color-background-info);border:0.5px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:var(--color-text-info);}
+  .avatar-dot{position:absolute;bottom:-2px;right:-2px;width:14px;height:14px;border-radius:50%;background:var(--color-background-success);border:2px solid var(--color-background-primary);display:flex;align-items:center;justify-content:center;}
+  .avatar-dot svg{width:7px;height:7px;}
+  .user-info{min-width:0;flex:1;}
+  .user-name{font-size:15px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .user-sub{font-size:12px;color:var(--color-text-secondary);margin-top:2px;}
+
+  .body{padding:10px;}
+  .menu-row{display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:12px;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);text-decoration:none;cursor:pointer;transition:background .12s,border-color .12s;margin-bottom:6px;width:100%;}
+  .menu-row:hover{background:var(--color-background-secondary);border-color:var(--color-border-secondary);}
+  .menu-icon{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px;}
+  .menu-icon.primary{background:var(--color-background-info);color:var(--color-text-info);}
+  .menu-icon.neutral{background:var(--color-background-secondary);color:var(--color-text-secondary);}
+  .menu-text{flex:1;min-width:0;}
+  .menu-title{font-size:13px;font-weight:500;color:var(--color-text-primary);}
+  .menu-desc{font-size:11px;color:var(--color-text-secondary);margin-top:1px;}
+  .menu-arrow{font-size:15px;color:var(--color-text-tertiary);flex-shrink:0;}
+  .menu-chevron{font-size:15px;color:var(--color-text-tertiary);flex-shrink:0;transition:transform .15s;}
+  .menu-chevron.open{transform:rotate(180deg);}
+
+  .theme-block{border:0.5px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;margin-bottom:6px;}
+  .theme-toggle{display:flex;align-items:center;gap:10px;padding:10px 10px;background:var(--color-background-primary);cursor:pointer;transition:background .12s;width:100%;border:none;}
+  .theme-toggle:hover{background:var(--color-background-secondary);}
+
+  .theme-panel{background:var(--color-background-secondary);border-top:0.5px solid var(--color-border-tertiary);padding:10px 10px 10px;display:none;}
+  .theme-panel.open{display:block;}
+  .theme-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+  .theme-chip{border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px;cursor:pointer;background:var(--color-background-primary);transition:background .1s,border-color .1s;}
+  .theme-chip:hover{background:var(--color-background-secondary);border-color:var(--color-border-secondary);}
+  .theme-chip.active{border-color:var(--color-border-info);background:var(--color-background-info);}
+  .swatches{display:flex;gap:3px;flex-shrink:0;}
+  .swatch{width:10px;height:10px;border-radius:50%;border:0.5px solid rgba(255,255,255,.35);}
+  .chip-label{font-size:11px;font-weight:500;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;}
+  .chip-label.active{color:var(--color-text-info);}
+  .chip-check{font-size:13px;color:var(--color-text-info);flex-shrink:0;}
+
+  .footer{padding:10px;border-top:0.5px solid var(--color-border-tertiary);}
+  .logout-btn{width:100%;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 14px;border-radius:10px;border:0.5px solid var(--color-border-tertiary);background:var(--color-background-primary);font-size:13px;font-weight:500;color:var(--color-text-secondary);cursor:pointer;transition:background .12s,border-color .12s,color .12s;}
+  .logout-btn:hover{border-color:var(--color-border-danger);background:var(--color-background-danger);color:var(--color-text-danger);}
+  .material-symbols-outlined{font-family:'Material Symbols Outlined';font-size:inherit;font-weight:300;line-height:1;display:inline-block;vertical-align:middle;}
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
+
+<div class="wrap">
+  <div class="panel">
+    <div class="header">
+      <div class="header-label">
+        <span>Аккаунт</span>
+        <span class="hosted-badge">Hosted</span>
+      </div>
+      <div class="user-row">
+        <div class="avatar-wrap">
+          <div class="avatar">АЗ</div>
+          <div class="avatar-dot">
+            <svg viewBox="0 0 8 8" fill="none"><circle cx="4" cy="4" r="3" fill="#fff"/></svg>
+          </div>
+        </div>
+        <div class="user-info">
+          <div class="user-name">Антон Зайченко</div>
+          <div class="user-sub">Личный кабинет ACTRA</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="body">
+      <a class="menu-row" href="#">
+        <div class="menu-icon primary">
+          <span class="material-symbols-outlined" style="font-size:18px;">manage_accounts</span>
+        </div>
+        <div class="menu-text">
+          <div class="menu-title">Настройки аккаунта</div>
+          <div class="menu-desc">Профиль, аватар и параметры</div>
+        </div>
+        <span class="material-symbols-outlined menu-arrow" style="font-size:16px;">arrow_forward_ios</span>
+      </a>
+
+      <div class="theme-block">
+        <button class="theme-toggle" id="themeToggle" type="button">
+          <div class="menu-icon neutral" style="width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span class="material-symbols-outlined" style="font-size:18px;">palette</span>
+          </div>
+          <div class="menu-text">
+            <div class="menu-title">Оформление</div>
+            <div class="menu-desc" id="themeLabel">Light A — Indigo</div>
+          </div>
+          <span class="material-symbols-outlined menu-chevron" id="chevron" style="font-size:18px;">expand_more</span>
+        </button>
+        <div class="theme-panel" id="themePanel">
+          <div class="theme-grid">
+            <button class="theme-chip active" type="button">
+              <div class="swatches">
+                <div class="swatch" style="background:#27187E;"></div>
+                <div class="swatch" style="background:#758BFD;"></div>
+                <div class="swatch" style="background:#EA580C;"></div>
+              </div>
+              <span class="chip-label active">Light A</span>
+              <span class="chip-check material-symbols-outlined" style="font-size:14px;">check_circle</span>
+            </button>
+            <button class="theme-chip" type="button">
+              <div class="swatches">
+                <div class="swatch" style="background:#2E7D6C;"></div>
+                <div class="swatch" style="background:#4DB8A3;"></div>
+                <div class="swatch" style="background:#F59E0B;"></div>
+              </div>
+              <span class="chip-label">Light B</span>
+            </button>
+            <button class="theme-chip" type="button">
+              <div class="swatches">
+                <div class="swatch" style="background:#b98ea7;"></div>
+                <div class="swatch" style="background:#f0d3f7;"></div>
+                <div class="swatch" style="background:#262244;"></div>
+              </div>
+              <span class="chip-label">Dark A</span>
+            </button>
+            <button class="theme-chip" type="button">
+              <div class="swatches">
+                <div class="swatch" style="background:#4ecdc4;"></div>
+                <div class="swatch" style="background:#a29bfe;"></div>
+                <div class="swatch" style="background:#0b081e;"></div>
+              </div>
+              <span class="chip-label">Dark B</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">
+      <button class="logout-btn" type="button">
+        <span class="material-symbols-outlined" style="font-size:16px;">logout</span>
+        Выйти
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const toggle=document.getElementById('themeToggle');
+const panel=document.getElementById('themePanel');
+const chevron=document.getElementById('chevron');
+const themeLabel=document.getElementById('themeLabel');
+const chips=document.querySelectorAll('.theme-chip');
+const labels=['Light A — Indigo','Light B','Dark A — Amethyst','Dark B — Neon'];
+let open=false;
+toggle.addEventListener('click',()=>{
+  open=!open;
+  panel.classList.toggle('open',open);
+  chevron.classList.toggle('open',open);
+});
+chips.forEach((chip,i)=>{
+  chip.addEventListener('click',()=>{
+    chips.forEach(c=>{
+      c.classList.remove('active');
+      const lbl=c.querySelector('.chip-label');
+      if(lbl)lbl.classList.remove('active');
+      const chk=c.querySelector('.chip-check');
+      if(chk)chk.remove();
+    });
+    chip.classList.add('active');
+    const lbl=chip.querySelector('.chip-label');
+    if(lbl)lbl.classList.add('active');
+    const chk=document.createElement('span');
+    chk.className='chip-check material-symbols-outlined';
+    chk.style.fontSize='14px';
+    chk.textContent='check_circle';
+    chip.appendChild(chk);
+    themeLabel.textContent=labels[i]||'Тема';
+  });
+});
+</script>

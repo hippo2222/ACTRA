@@ -412,6 +412,55 @@ class EditorDashboard {
         this.importManager.goToStep(1);
     }
 
+    buildWorkspaceImportPreviewRequestFromComplex(complexLike = {}) {
+        const complexId = String(complexLike?.id || '').trim();
+        if (!complexId) return null;
+
+        const sourceCatalogItemId = String(
+            complexLike?.source_catalog_item_id
+            || complexLike?.sourceCatalogItemId
+            || complexLike?.source_lineage?.source_catalog_item_id
+            || complexLike?.sourceLineage?.sourceCatalogItemId
+            || `internal_workspace_complex:${complexId}`
+        ).trim();
+        const sourceCatalogVersionId = String(
+            complexLike?.source_catalog_version_id
+            || complexLike?.sourceCatalogVersionId
+            || complexLike?.source_lineage?.source_catalog_version_id
+            || complexLike?.sourceLineage?.sourceCatalogVersionId
+            || 'draft'
+        ).trim();
+
+        return {
+            sourceComplexId: complexId,
+            sourceCatalogItemId,
+            sourceCatalogVersionId,
+            preferExistingByLineage: true,
+        };
+    }
+
+    previewWorkspaceCopyFromComplex(complexLike = {}) {
+        void complexLike;
+        this.showVoiceToast({
+            severity: 'info',
+            what: 'Legacy import is internal-only.',
+            impact: 'This hosted flow no longer creates editable workspace copies from library content.',
+            next: 'Open the linked publication directly or create a new complex from scratch.',
+        });
+        return;
+        const request = this.buildWorkspaceImportPreviewRequestFromComplex(complexLike);
+        if (!request) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: 'Preview workspace-копии не открыт.',
+                impact: 'Не удалось определить исходный комплекс.',
+                next: 'Обновите Theory Hub и повторите действие.',
+            });
+            return;
+        }
+        this.showWorkspaceImportPreviewModal(request);
+    }
+
     renderWorkspaceShortcuts() {
         const host = document.getElementById('editor-workspace-shortcuts');
         if (!host) return;
@@ -2562,6 +2611,8 @@ class EditorDashboard {
                 topicTheoryIds,
                 relatedTheoryIds,
                 ownership,
+                source_catalog_item_id: String(payload?.source_catalog_item_id || payload?.source_lineage?.source_catalog_item_id || '').trim() || null,
+                source_catalog_version_id: String(payload?.source_catalog_version_id || payload?.source_lineage?.source_catalog_version_id || '').trim() || null,
             };
             complexRows.push(row);
 
@@ -3017,6 +3068,11 @@ class EditorDashboard {
         const queueHost = document.getElementById('theory-hub-conflicts');
         const impactHost = document.getElementById('theory-hub-impact');
         if (!mapHost || !queueHost) return;
+
+        [mapHost, queueHost, impactHost].forEach((host) => {
+            if (!host) return;
+            host.querySelectorAll('[data-action="hub-preview-workspace-copy"]').forEach((btn) => btn.remove());
+        });
 
         mapHost.querySelectorAll('[data-action="hub-sync-topic"]').forEach((btn) => {
             btn.addEventListener('click', async () => {
@@ -5015,12 +5071,39 @@ class EditorDashboard {
         modal.classList.remove('hidden');
 
         if (this.importManager) {
+            this.importManager.resetWorkspaceImportState();
             this.importManager.enterImportModalMode();
             // Preset module/topic from current location before going to step 1
             this.importManager.presetFromCurrentLocation();
             this.importManager.goToStep(1);
             // Preload AI status in background (for faster AI mode switch)
             this.importManager.aiCheckStatus().catch(() => {});
+        } else {
+            console.error('[Dashboard] ImportManager not initialized');
+        }
+    }
+
+    showWorkspaceImportPreviewModal(payload = {}) {
+        void payload;
+        this.showVoiceToast({
+            severity: 'info',
+            what: 'Legacy import is internal-only.',
+            impact: 'This modal is no longer available from hosted editor surfaces.',
+            next: 'Use direct read-only library access or author a new workspace complex.',
+        });
+        return;
+        const modal = document.getElementById('import-modal');
+        if (!modal) {
+            console.error('[Dashboard] Import modal not found');
+            return;
+        }
+
+        modal.classList.remove('hidden');
+
+        if (this.importManager) {
+            this.importManager.openWorkspaceImportPreviewFlow(payload).catch((e) => {
+                console.error('[Dashboard] Failed to open workspace import preview:', e);
+            });
         } else {
             console.error('[Dashboard] ImportManager not initialized');
         }
@@ -5091,6 +5174,7 @@ class EditorDashboard {
             this.importManager.checkResult = null;
             this.importManager.archiveCacheId = null;
             this.importManager.perTaskConflictRes.clear();
+            this.importManager.resetWorkspaceImportState();
             this.importManager.aiTemplateType = 'material_analysis';
             // Reset AI state
             this.importManager.materialText = '';

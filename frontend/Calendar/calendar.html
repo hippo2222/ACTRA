@@ -2398,7 +2398,10 @@
 
             const renderMetrics = (metrics) => {
 
-                metricsEl.innerHTML = metrics.map((metric) => `
+                const safeMetrics = Array.isArray(metrics) ? metrics : [];
+                metricsEl.classList.toggle('is-hidden', safeMetrics.length === 0);
+
+                metricsEl.innerHTML = safeMetrics.map((metric) => `
 
             <span class="memory-health-stat">
 
@@ -2426,7 +2429,7 @@
                 renderMetrics(stats);
             };
 
-            const setHealthEmptyState = ({ headline, subline, listHtml }) => {
+            const setHealthEmptyState = ({ headline, subline }) => {
                 healthShell.classList.add('memory-health-shell--empty');
                 healthShell.classList.remove('memory-health-shell--compact');
                 allActionEl.classList.add('is-hidden');
@@ -2442,7 +2445,9 @@
                         { value: '0', label: 'в фокусе' },
                     ],
                 });
-                list.innerHTML = listHtml;
+                metricsEl.classList.add('is-hidden');
+                metricsEl.innerHTML = '';
+                list.innerHTML = '';
             };
 
             if (complexes.length === 0) {
@@ -2596,7 +2601,7 @@
                 const tone = getTone(complex.health_percent || 0, complex.is_critical);
                 const healthPercent = Math.max(0, Math.min(100, Math.round(complex.health_percent || 0)));
                 const safeComplexId = escapeHtml(complex.complex_id || '');
-                const safeComplexName = escapeHtml(complex.name || 'РљРѕРјРїР»РµРєСЃ');
+                const safeComplexName = escapeHtml(complex.name || 'Комплекс');
 
                 return `
 
@@ -2604,7 +2609,7 @@
 
                 <div class="memory-health-action__copy">
 
-                    <span class="memory-health-action__label">РџРѕРІС‚РѕСЂ</span>
+                    <span class="memory-health-action__label">Повтор</span>
 
                     <span class="memory-health-action__name">${safeComplexName}</span>
 
@@ -2614,7 +2619,7 @@
 
                     <span class="memory-health-action__percent">${escapeHtml(healthPercent)}%</span>
 
-                    <span class="memory-health-action__meta">РћСЃРІРµР¶РёС‚СЊ</span>
+                    <span class="memory-health-action__meta">Освежить</span>
 
                 </div>
 
@@ -2625,9 +2630,9 @@
 
             const renderCompactOverflowAction = (count) => `
 
-            <button type="button" class="memory-health-overflow-action" data-open-health-details="true" title="РћС‚РєСЂС‹С‚СЊ РІСЃРµ РєРѕРјРїР»РµРєСЃС‹ РІ С„РѕРєСѓСЃРµ">
+            <button type="button" class="memory-health-overflow-action" data-open-health-details="true" title="Открыть все комплексы в фокусе">
 
-                +${escapeHtml(count)} РµС‰С‘
+                +${escapeHtml(count)} ещё
 
             </button>
 

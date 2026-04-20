@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 # Добавляем desktop-app в PYTHONPATH, чтобы импортировать server/app
-DESKTOP_APP_PATH = Path(__file__).resolve().parents[2] / "desktop-app"
+DESKTOP_APP_PATH = Path(__file__).resolve().parents[2]
 if str(DESKTOP_APP_PATH) not in sys.path:
     sys.path.insert(0, str(DESKTOP_APP_PATH))
 
@@ -23,7 +23,9 @@ def test_health_returns_ok(client):
     resp = client.get("/health")
     assert resp.status_code == 200
     data = resp.get_json()
-    assert data == {"status": "ok"}
+    assert isinstance(data, dict)
+    assert data.get("status") == "ok"
+    assert data.get("runtime_mode") in {"legacy_local", "hosted_web"}
 
 
 def test_start_session_with_unknown_complex_returns_error(client):

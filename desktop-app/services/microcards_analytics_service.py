@@ -10,11 +10,14 @@ from __future__ import annotations
 import copy
 import json
 import logging
+import os
 import time
 from datetime import date, datetime
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, List, Optional, Tuple
+
+from services.hosted_shadow_fallback import HostedShadowReadFallbackDisabledError
 
 
 def _utc_now_iso() -> str:
@@ -66,6 +69,10 @@ def _event_local_day_iso(event: Dict[str, Any]) -> Optional[str]:
         return None
 
 
+def _is_hosted_runtime() -> bool:
+    return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
+
+
 class MicrocardsAnalyticsService:
     """Aggregates microcards summary + dynamics with user-scoped cache."""
 
@@ -99,6 +106,18 @@ class MicrocardsAnalyticsService:
             self._summary_cache.clear()
             self._dynamics_cache.clear()
 
+    def _guard_hosted_shadow_read(self, operation: str) -> None:
+        if not _is_hosted_runtime():
+            return
+        self.logger.error(
+            "[HOSTED][DEGRADED] Blocked legacy filesystem microcards analytics read for %s because hosted source of truth is not implemented",
+            operation,
+        )
+        raise HostedShadowReadFallbackDisabledError(
+            operation,
+            reason="microcards_hosted_source_of_truth_not_implemented",
+        )
+
     def get_summary(
         self,
         *,
@@ -107,6 +126,7 @@ class MicrocardsAnalyticsService:
         include_dynamics: bool = False,
         dynamics_days: int = 30,
     ) -> Dict[str, Any]:
+        self._guard_hosted_shadow_read("microcards.analytics.summary")
         resolved_user_id = self._normalize_user_id(user_id)
         now_ts = time.time()
 
@@ -138,6 +158,7 @@ class MicrocardsAnalyticsService:
         days: int = 30,
         force_refresh: bool = False,
     ) -> List[Dict[str, Any]]:
+        self._guard_hosted_shadow_read("microcards.analytics.dynamics")
         resolved_user_id = self._normalize_user_id(user_id)
         normalized_days = max(1, min(int(days or 30), 3650))
         cache_key = (resolved_user_id, normalized_days)
@@ -369,7 +390,11 @@ class MicrocardsAnalyticsService:
 
     def _normalize_user_id(self, user_id: Optional[str]) -> str:
         resolved = str(user_id or "").strip()
-        return resolved or "default_user"
+        if resolved:
+            return resolved
+        if _is_hosted_runtime():
+            raise ValueError("user_id_required_in_hosted_runtime")
+        return "default_user"
 
     def _event_card_type(self, details: Dict[str, Any]) -> str:
         card_type = str(details.get("card_type") or "").strip().lower()

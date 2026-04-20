@@ -1,0 +1,72 @@
+/* ── 18. QA SHOW-ALL BUTTON — ghost стиль ── */
+/* ── 19. QA COUNT BADGE ── */
+.main-quick-access-count {
+    height: 1.75rem !important;
+    min-width: 1.75rem !important;
+    font-size: 0.7rem !important;
+    border-radius: 6px !important;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5) !important;
+}
+
+/* ── 20. MAIN HEADING — calendar/stats titles ── */
+.main-side-card h3,
+.main-primary-card h3 {
+    font-size: 0.8rem !important;
+    font-weight: 800 !important;
+    letter-spacing: .01em !important;
+}
+
+/* ── 21. MICROCARDS HEADER TITLE ── */
+#microcardsCard > div:first-child h3 {
+    font-size: 0.85rem !important;
+}
+
+/* ── 22. NEXT STEP BANNER (если есть) — без лишних min-height ── */
+#mainNextStepBanner {
+    border-radius: var(--main-card-radius) !important;
+    box-shadow: var(--main-shadow-soft) !important;
+}
+
+/* ── 23. FOCUS VISIBLE — глобальный AAA-уровень ── */
+:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+/* ── 24. BADGE / PILL scale fix (убираем .82 scale который мельчит их) ── */
+.main-widget-badge {
+    transform: none !important;
+    scale: none !important;
+}
+
+/* ── 25. LOADING STATES — спиннеры центрируются корректно ── */
+#microcardsLoadingState,
+#calendarLoadingState {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* ── 26. EMPTY STATE QA — внутри list */
+#quick-access-empty[hidden] { display: none !important; }
+#quick-access-empty:not([hidden]) {
+    flex: 1 1 auto;
+}
+
+/* ── 27. DISABLED MICROCARDS STATE — аккуратнее ── */
+#microcardsDisabledState p.text-sm,
+#microcardsEmptyState p.text-sm {
+    font-size: 0.82rem !important;
+}
+
+/* ── 28. GRID RAIL OFF — убираем rail-режим на десктопе, используем grid ── */
+@media (min-width: 1024px) {
+    .main-quick-access-grid.main-quick-access-grid--rail {
+        grid-auto-flow: unset !important;
+        grid-auto-columns: unset !important;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 270px), 1fr)) !important;
+        overflow-x: hidden !important;
+        scroll-snap-type: none !important;
+    }
+}
+

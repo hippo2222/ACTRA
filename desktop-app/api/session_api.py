@@ -1,18 +1,26 @@
+import contextvars
+import copy
+import inspect
 import logging
 import os
-import copy
 import random
 import re
+import threading
 from datetime import datetime
+from contextlib import nullcontext
+from functools import wraps
 from pathlib import Path
-from urllib.parse import quote
-from typing import Any, Dict, Optional, List
+from urllib.parse import parse_qs, quote, urlparse
+from typing import Any, Dict, Optional, List, Tuple
 
 from services.statistics_service import StatisticsService
+from services.hosted_shadow_fallback import HostedShadowWriteFallbackDisabledError
 from services.adaptive_session_manager import AdaptiveSessionManager
 from services.complex_service import ComplexService
+from services.linked_complex_runtime import parse_linked_runtime_complex_id
 from services.storage_service import StorageService
 from logic.complex_session_controller import ComplexSessionController
+from logic.task_controller import TaskController
 from api.web_models.sequence_models import (
     WebSequenceElement,
     WebSequenceLevel,
@@ -23,6 +31,35 @@ from api.web_models.sequence_models import (
 
 
 logger = logging.getLogger(__name__)
+
+
+def _hosted_controller_serialized(fn):
+    """Bind controller-bound SessionAPI flows to an isolated hosted context."""
+
+    signature = inspect.signature(fn)
+
+    @wraps(fn)
+    def wrapper(self, *args, **kwargs):
+        bound = signature.bind(self, *args, **kwargs)
+        bound.apply_defaults()
+        operation_args = dict(bound.arguments)
+        operation_args.pop("self", None)
+
+        with self._controller_state_guard(fn.__name__, operation_args):
+            token = None
+            if self._is_hosted_runtime():
+                controller = self._resolve_operation_controller(
+                    fn.__name__,
+                    operation_args,
+                )
+                token = self._controller_context.set(controller)
+            try:
+                return fn(self, *args, **kwargs)
+            finally:
+                if token is not None:
+                    self._controller_context.reset(token)
+
+    return wrapper
 
 
 class SessionAPI:
@@ -43,16 +80,277 @@ class SessionAPI:
     ) -> None:
         if statistics_service is None:
             raise ValueError("statistics_service is required")
-        self._controller = session_controller
+        self._controller_prototype = session_controller
         self._session_manager = adaptive_session_manager
         self._complex_service = complex_service
         self._storage_service = storage_service
         self._statistics_service = statistics_service
         self._default_user_id = default_user_id
+        self._controller_context: contextvars.ContextVar[ComplexSessionController] = contextvars.ContextVar(
+            "session_api_controller",
+            default=session_controller,
+        )
+        self._hosted_controller_locks: Dict[str, threading.RLock] = {}
+        self._hosted_session_controllers: Dict[str, ComplexSessionController] = {}
+
+    @property
+    def _controller(self) -> ComplexSessionController:
+        return self._controller_context.get()
+
+    @staticmethod
+    def _normalize_user_id(value: Optional[str]) -> str:
+        return str(value or "").strip()
+
+    @staticmethod
+    def _is_hosted_runtime() -> bool:
+        return str(os.environ.get("ACTRA_RUNTIME_MODE") or "").strip().lower() == "hosted_web"
+
+    @staticmethod
+    def _normalize_session_id(value: Optional[str]) -> str:
+        return str(value or "").strip()
+
+    def _build_hosted_guard_key(
+        self,
+        operation_name: str,
+        arguments: Optional[Dict[str, Any]] = None,
+    ) -> str:
+        args = arguments or {}
+        session_id = self._normalize_session_id(args.get("session_id"))
+        if session_id:
+            return f"session:{session_id}"
+
+        user_id = self._resolve_runtime_user_id(
+            args.get("user_id"),
+            allow_default_in_hosted=True,
+        ) or "anonymous"
+        if operation_name == "start_session":
+            complex_id = str(args.get("complex_id") or "").strip() or "unknown_complex"
+            return f"start:{user_id}:{complex_id}"
+        if operation_name == "start_custom_session":
+            return f"start_custom:{user_id}"
+        return f"operation:{operation_name}:{user_id}"
+
+    def _controller_state_guard(
+        self,
+        operation_name: str,
+        arguments: Optional[Dict[str, Any]] = None,
+    ):
+        if not self._is_hosted_runtime():
+            return nullcontext()
+        guard_key = self._build_hosted_guard_key(operation_name, arguments)
+        lock = self._hosted_controller_locks.get(guard_key)
+        if lock is None:
+            lock = threading.RLock()
+            self._hosted_controller_locks[guard_key] = lock
+        return lock
+
+    def _build_hosted_task_controller(self) -> TaskController:
+        prototype_task_controller = getattr(self._controller_prototype, "task_controller", None)
+        evaluator_service = getattr(prototype_task_controller, "evaluator_service", None)
+        progress_service = getattr(prototype_task_controller, "progress_service", None)
+        session_manager = getattr(prototype_task_controller, "session_manager", None)
+        difficulty_manager = getattr(prototype_task_controller, "difficulty_manager", None)
+        if evaluator_service is None or progress_service is None:
+            raise RuntimeError("hosted_task_controller_requires_evaluator_and_progress")
+
+        task_controller_cls = getattr(prototype_task_controller, "__class__", TaskController)
+        try:
+            return task_controller_cls(
+                evaluator_service,
+                progress_service,
+                session_manager,
+                difficulty_manager,
+            )
+        except TypeError:
+            return TaskController(
+                evaluator_service,
+                progress_service,
+                session_manager,
+                difficulty_manager,
+            )
+
+    def _build_hosted_controller(self) -> ComplexSessionController:
+        controller_cls = getattr(self._controller_prototype, "__class__", ComplexSessionController)
+        controller = controller_cls(
+            session_manager=self._session_manager,
+            task_controller=self._build_hosted_task_controller(),
+            storage_service=self._storage_service,
+            complex_service=self._complex_service,
+        )
+        for callback_name in (
+            "on_task_changed",
+            "on_session_completed",
+            "on_iteration_completed",
+            "on_complex_completed",
+            "on_error",
+        ):
+            if hasattr(self._controller_prototype, callback_name):
+                setattr(
+                    controller,
+                    callback_name,
+                    getattr(self._controller_prototype, callback_name),
+                )
+        return controller
+
+    def _sync_hosted_controller_from_session(
+        self,
+        controller: ComplexSessionController,
+        session_id: str,
+        session: Any,
+    ) -> ComplexSessionController:
+        controller.current_session_id = session_id
+        queued_task, queue_index = self._resolve_current_queue_slot(session)
+        task_ref = getattr(queued_task, "task_ref", None) if queued_task is not None else None
+        if not task_ref:
+            ui_state = getattr(session, "ui_state", None) or {}
+            if isinstance(ui_state, dict):
+                candidate_task_ref = ui_state.get("task_ref")
+                if isinstance(candidate_task_ref, str) and candidate_task_ref.strip():
+                    task_ref = candidate_task_ref.strip()
+                candidate_task_index = ui_state.get("task_index")
+                if isinstance(candidate_task_index, int):
+                    queue_index = candidate_task_index
+
+        controller.current_task_ref = task_ref
+        setattr(controller, "_current_queue_index", queue_index if isinstance(queue_index, int) else None)
+
+        task_controller = getattr(controller, "task_controller", None)
+        current_task = getattr(task_controller, "current_task", None)
+        loaded_task_ref = getattr(current_task, "full_id", None)
+        if loaded_task_ref and loaded_task_ref != task_ref and hasattr(task_controller, "clear_task"):
+            task_controller.clear_task()
+        return controller
+
+    def _remember_hosted_session_controller(
+        self,
+        session_id: Optional[str],
+        controller: Optional[ComplexSessionController] = None,
+    ) -> None:
+        normalized_session_id = self._normalize_session_id(session_id)
+        if not self._is_hosted_runtime() or not normalized_session_id:
+            return
+
+        controller = controller or self._controller
+        self._hosted_session_controllers[normalized_session_id] = controller
+        session = self.get_session(normalized_session_id)
+        if session is not None:
+            self._sync_hosted_controller_from_session(controller, normalized_session_id, session)
+
+    def _release_hosted_session_controller(self, session_id: Optional[str]) -> None:
+        normalized_session_id = self._normalize_session_id(session_id)
+        if not normalized_session_id:
+            return
+        self._hosted_session_controllers.pop(normalized_session_id, None)
+
+    def _resolve_operation_controller(
+        self,
+        operation_name: str,
+        arguments: Optional[Dict[str, Any]] = None,
+    ) -> ComplexSessionController:
+        if not self._is_hosted_runtime():
+            return self._controller_prototype
+
+        args = arguments or {}
+        session_id = self._normalize_session_id(args.get("session_id"))
+        if session_id:
+            controller = self._hosted_session_controllers.get(session_id)
+            if controller is None:
+                controller = self._build_hosted_controller()
+                self._hosted_session_controllers[session_id] = controller
+            session = self.get_session(session_id)
+            if session is not None:
+                self._sync_hosted_controller_from_session(controller, session_id, session)
+            else:
+                controller.current_session_id = session_id
+            return controller
+
+        _ = operation_name
+        return self._build_hosted_controller()
+
+    def _register_linked_runtime_complex(self, complex_id: str, user_id: str) -> bool:
+        library_entry_id = parse_linked_runtime_complex_id(complex_id)
+        if not library_entry_id:
+            return False
+
+        from routes._context import get_ctx
+        from task_system.core.models.complex_models import Complex
+        from task_system.core.schemas.complex_schema import ComplexSchema
+
+        detail = get_ctx().catalog_service.get_complex_library_entry(
+            library_entry_id,
+            requested_by_user_id=user_id,
+        )
+        library_entry = detail.get("library_entry") if isinstance(detail, dict) else {}
+        if str((library_entry or {}).get("access_state") or "").strip().lower() != "active":
+            raise ValueError("complex_library_entry_not_accessible")
+
+        snapshot = detail.get("snapshot") if isinstance(detail, dict) else {}
+        snapshot_complex = snapshot.get("complex") if isinstance(snapshot, dict) else {}
+        if not isinstance(snapshot_complex, dict):
+            raise ValueError("complex_library_snapshot_missing")
+
+        payload = copy.deepcopy(snapshot_complex)
+        payload["id"] = complex_id
+        payload["name"] = str(payload.get("name") or "Linked complex").strip() or "Linked complex"
+        payload["description"] = str(payload.get("description") or "").strip()
+        payload["tasks"] = list(payload.get("tasks") or [])
+        payload["chains"] = list(payload.get("chains") or [])
+        payload["settings"] = dict(payload.get("settings") or {})
+        payload["created_via"] = "catalog_linked"
+        payload["content_scope"] = "linked_library"
+        payload["linked_library_entry_id"] = library_entry_id
+        payload["linked_library_access_state"] = "active"
+        payload["linked_library_access_reason"] = library_entry.get("access_reason")
+        payload["linked_library_resolved_version_id"] = library_entry.get("resolved_version_id")
+        payload["source_catalog_item_id"] = (detail.get("item") or {}).get("item_id") if isinstance(detail.get("item"), dict) else None
+
+        ComplexSchema.validate_or_raise(payload)
+        runtime_complex = Complex(**payload)
+        if hasattr(self._complex_service, "_complexes_cache"):
+            self._complex_service._complexes_cache[complex_id] = runtime_complex  # type: ignore[attr-defined]
+            logger.info(
+                "[SessionAPI] Registered linked runtime complex in memory: complex_id=%s library_entry_id=%s",
+                complex_id,
+                library_entry_id,
+            )
+            return True
+        return False
+
+    def _ensure_runtime_complex_available(self, complex_id: str, user_id: str) -> bool:
+        normalized_complex_id = str(complex_id or "").strip()
+        if not normalized_complex_id:
+            return False
+        if self._complex_service.get_complex(normalized_complex_id):
+            return True
+        if parse_linked_runtime_complex_id(normalized_complex_id):
+            return self._register_linked_runtime_complex(normalized_complex_id, user_id)
+        return False
+
+    def _resolve_runtime_user_id(
+        self,
+        user_id: Optional[str] = None,
+        *,
+        allow_default_in_hosted: bool = False,
+    ) -> Optional[str]:
+        """Resolve user id for the current runtime without silent hosted fallback.
+
+        In hosted runtime we only allow the legacy ``default_user_id`` fallback
+        when the caller explicitly opts in. This keeps desktop/test
+        compatibility while preventing web requests from silently drifting into
+        ``default_user`` semantics.
+        """
+        explicit_user_id = self._normalize_user_id(user_id)
+        if explicit_user_id:
+            return explicit_user_id
+
+        default_user_id = self._normalize_user_id(self._default_user_id)
+        if self._is_hosted_runtime() and not allow_default_in_hosted:
+            return None
+        return default_user_id or None
 
     @property
     def default_user_id(self) -> str:
-        """Compatibility accessor for services that rebind active user context."""
+        """Legacy compatibility accessor for desktop/test user rebinding only."""
         return self._default_user_id
 
     @default_user_id.setter
@@ -63,13 +361,20 @@ class SessionAPI:
     # Базовые операции сессии
     # ------------------------------------------------------------------
 
+    @_hosted_controller_serialized
     def start_session(self, complex_id: str, user_id: Optional[str] = None, start_iteration: int = 1) -> Dict[str, Any]:
         """Запустить новую сессию комплекса и вернуть её краткие данные.
 
         Поведение контроллера не меняем: он сам создаёт сессию и загружает
         первое задание. Здесь только оборачиваем в dict.
         """
-        user_id = user_id or self._default_user_id
+        user_id = self._resolve_runtime_user_id(user_id)
+        if not user_id:
+            return {
+                "ok": False,
+                "error": "user_id_required",
+                "complex_id": complex_id,
+            }
 
         # GUEST MODE PROTECTION: запретить запуск сессии для гостя
         if user_id == "guest":
@@ -83,6 +388,22 @@ class SessionAPI:
 
         logger.info("[SessionAPI.start_session] complex_id=%s, user_id=%s, start_iteration=%s", complex_id, user_id, start_iteration)
 
+        try:
+            if not self._ensure_runtime_complex_available(complex_id, user_id):
+                return {
+                    "ok": False,
+                    "error": "complex_not_found",
+                    "complex_id": complex_id,
+                    "user_id": user_id,
+                }
+        except ValueError as exc:
+            return {
+                "ok": False,
+                "error": str(exc),
+                "complex_id": complex_id,
+                "user_id": user_id,
+            }
+
         success = self._controller.start_session(complex_id, user_id, start_iteration=start_iteration)
         if not success or not self._controller.current_session_id:
             return {
@@ -93,6 +414,7 @@ class SessionAPI:
             }
 
         session_id = self._controller.current_session_id
+        self._remember_hosted_session_controller(session_id)
         session = self._session_manager.get_session(session_id)
         stats = self._controller.get_current_session_stats() or {}
 
@@ -109,6 +431,7 @@ class SessionAPI:
             },
         }
 
+    @_hosted_controller_serialized
     def start_custom_session(self, task_refs: List[str], user_id: Optional[str] = None) -> Dict[str, Any]:
         """Запустить кастомную сессию с заданным списком task_ref (для daily_mix).
 
@@ -122,7 +445,12 @@ class SessionAPI:
         Returns:
             dict: {ok, session_id, ...} или {ok: False, error}
         """
-        user_id = user_id or self._default_user_id
+        user_id = self._resolve_runtime_user_id(user_id)
+        if not user_id:
+            return {
+                "ok": False,
+                "error": "user_id_required",
+            }
 
         if not task_refs:
             return {
@@ -190,6 +518,7 @@ class SessionAPI:
                 logger.warning("[SessionAPI.start_custom_session] Failed to load first task: %s", e, exc_info=True)
 
             # Не двигаем current_task_index: queue[0] уже загружен, индекс обновится после submit_result.
+            self._remember_hosted_session_controller(session_id)
 
             # Регистрируем synthetic Complex для daily_mix только в памяти (без сохранения на диск)
             try:
@@ -263,9 +592,13 @@ class SessionAPI:
         preferred_user_id: Optional[str] = None,
     ) -> List[str]:
         candidates: List[str] = []
+        default_candidate = self._resolve_runtime_user_id(
+            None,
+            allow_default_in_hosted=False,
+        )
         for candidate in (
             preferred_user_id,
-            self._default_user_id,
+            default_candidate,
             self._infer_user_id_from_session_id(session_id),
         ):
             normalized = str(candidate or "").strip()
@@ -277,6 +610,27 @@ class SessionAPI:
         """Вернуть объект ComplexSession (активный или загруженный)."""
         session = self._session_manager.get_session(session_id)
         if session:
+            requested_user_id = str(user_id or "").strip()
+            session_user_id = str(getattr(session, "user_id", "") or "").strip()
+            if requested_user_id and session_user_id and session_user_id != requested_user_id:
+                logger.warning(
+                    "[SessionAPI.get_session] session ownership mismatch: session_id=%s requested_user=%s actual_user=%s",
+                    session_id,
+                    requested_user_id,
+                    session_user_id,
+                )
+                return None
+            try:
+                self._ensure_runtime_complex_available(
+                    str(getattr(session, "complex_id", "") or "").strip(),
+                    session_user_id or requested_user_id,
+                )
+            except Exception:
+                logger.warning(
+                    "[SessionAPI.get_session] Failed to ensure runtime complex for active session %s",
+                    session_id,
+                    exc_info=True,
+                )
             return session
 
         repo = getattr(self._session_manager, "session_repository", None)
@@ -300,11 +654,24 @@ class SessionAPI:
                 )
                 continue
             if loaded is not None:
-                return self.mark_interrupted_session_as_paused(
+                normalized = self.mark_interrupted_session_as_paused(
                     loaded,
                     persist=True,
                     source="repository_restore",
                 )
+                try:
+                    normalized_user_id = str(getattr(normalized, "user_id", "") or candidate_user_id).strip()
+                    self._ensure_runtime_complex_available(
+                        str(getattr(normalized, "complex_id", "") or "").strip(),
+                        normalized_user_id,
+                    )
+                except Exception:
+                    logger.warning(
+                        "[SessionAPI.get_session] Failed to ensure runtime complex for restored session %s",
+                        session_id,
+                        exc_info=True,
+                    )
+                return normalized
 
         return None
 
@@ -379,9 +746,19 @@ class SessionAPI:
             repo = getattr(self._session_manager, "session_repository", None)
             if repo is not None:
                 try:
+                    session_user_id = self._resolve_runtime_user_id(
+                        getattr(session, "user_id", None),
+                        allow_default_in_hosted=False,
+                    )
+                    if not session_user_id:
+                        logger.warning(
+                            "[SessionAPI.mark_interrupted_session_as_paused] Missing user_id for persisted session %s",
+                            session_id,
+                        )
+                        return session
                     repo.save_session(
                         session,
-                        getattr(session, "user_id", None) or self._default_user_id,
+                        session_user_id,
                     )
                 except Exception:
                     logger.exception(
@@ -797,6 +1174,7 @@ class SessionAPI:
             )
             return False
 
+    @_hosted_controller_serialized
     def pause_session(
         self,
         session_id: str,
@@ -899,6 +1277,7 @@ class SessionAPI:
             logger.exception("[SessionAPI.pause_session] Failed to persist current task input before pause")
         self._session_manager.pause_session(session_id)
 
+    @_hosted_controller_serialized
     def save_task_ui_state(
         self,
         session_id: str,
@@ -908,8 +1287,9 @@ class SessionAPI:
         user_input: Optional[Dict[str, Any]] = None,
         evaluation_result: Optional[Dict[str, Any]] = None,
         view_state: Optional[Dict[str, Any]] = None,
+        user_id: Optional[str] = None,
     ) -> Dict[str, Any]:
-        session = self.get_session(session_id)
+        session = self.get_session(session_id, user_id=user_id)
         if not session:
             return {"ok": False, "error": "session_not_found"}
         if getattr(session, "paused", False):
@@ -959,6 +1339,7 @@ class SessionAPI:
             logger.exception("[SessionAPI.save_task_ui_state] Failed to persist current task UI state")
             return {"ok": False, "error": "save_failed"}
 
+    @_hosted_controller_serialized
     def resume_session(
         self,
         session_id: str,
@@ -966,17 +1347,30 @@ class SessionAPI:
         source: Optional[str] = None,
     ) -> Optional[Any]:
         session = self.get_session(session_id, user_id=user_id)
-        resolved_user_id = (
-            getattr(session, "user_id", None)
-            or str(user_id or "").strip()
-            or self._default_user_id
+        resolved_user_id = self._resolve_runtime_user_id(
+            getattr(session, "user_id", None) or user_id,
+            allow_default_in_hosted=False,
         )
+        if not resolved_user_id:
+            logger.warning(
+                "[SessionAPI.resume_session] Missing user_id for session_id=%s in current runtime",
+                session_id,
+            )
+            return None
         resume_source = str(source or "unknown").strip() or "unknown"
-        resumed = self._session_manager.resume_session(
-            session_id,
-            resolved_user_id,
-            source=resume_source,
-        )
+        try:
+            resumed = self._session_manager.resume_session(
+                session_id,
+                resolved_user_id,
+                source=resume_source,
+            )
+        except TypeError:
+            # Backward-compatible path for tests or legacy adapters that still
+            # expose the older ``resume_session(session_id, user_id)`` contract.
+            resumed = self._session_manager.resume_session(
+                session_id,
+                resolved_user_id,
+            )
         if resumed:
             self._controller.current_session_id = session_id
             try:
@@ -995,11 +1389,13 @@ class SessionAPI:
                 logger.exception("[SessionAPI.resume_session] Failed to sync controller task_ref")
         return resumed
 
+    @_hosted_controller_serialized
     def get_current_task(
         self,
         session_id: str,
         auto_resume: bool = False,
         resume_source: Optional[str] = None,
+        user_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Вернуть описание текущего задания для активной сессии.
 
@@ -1008,13 +1404,14 @@ class SessionAPI:
         if not session_id:
             return None
 
-        session = self.get_session(session_id)
+        session = self.get_session(session_id, user_id=user_id)
         if session and not getattr(session, "is_active", True):
             logger.warning("[SessionAPI.get_current_task] session %s is not active -> None", session_id)
             return None
         if not session and auto_resume:
             session = self.resume_session(
                 session_id,
+                user_id=user_id,
                 source=resume_source or "get_current_task_auto_resume_missing_session",
             )
         if not session:
@@ -2098,6 +2495,9 @@ class SessionAPI:
         if not isinstance(question_order, list) or not question_order:
             return normalized_failed
 
+        if all(0 <= idx < len(question_order) for idx in normalized_failed):
+            return normalized_failed
+
         original_to_shuffled: Dict[int, int] = {}
         for shuffled_idx, original_idx in enumerate(question_order):
             oi = _to_int(original_idx)
@@ -2231,7 +2631,14 @@ class SessionAPI:
         if isinstance(result, dict):
             result["details"] = details
 
-    def submit_answer(self, session_id: str, task_id: str, user_input: Dict[str, Any]) -> Optional[Any]:
+    @_hosted_controller_serialized
+    def submit_answer(
+        self,
+        session_id: str,
+        task_id: str,
+        user_input: Dict[str, Any],
+        user_id: Optional[str] = None,
+    ) -> Optional[Any]:
         """Отправить ответ пользователя по текущему заданию.
 
         Для совместимости с существующим Tkinter UI возвращает исходный
@@ -2244,9 +2651,16 @@ class SessionAPI:
         """
         # GUEST MODE PROTECTION: запретить submit для гостя
         try:
-            session = self._session_manager.get_session(session_id)
+            session = self.get_session(session_id, user_id=user_id)
             if session and session.user_id == "guest":
                 logger.warning("[SessionAPI.submit_answer] Rejecting submit for guest user, session_id=%s", session_id)
+                return None
+            if session is None:
+                logger.warning(
+                    "[SessionAPI.submit_answer] session not found or ownership mismatch: session_id=%s user_id=%s",
+                    session_id,
+                    user_id,
+                )
                 return None
         except Exception:
             logger.exception("[SessionAPI.submit_answer] Failed to check guest status")
@@ -2256,7 +2670,7 @@ class SessionAPI:
             logger.warning("[SessionAPI.submit_answer] session_id mismatch: api=%s, controller=%s -> syncing", session_id, self._controller.current_session_id)
             self._controller.current_session_id = session_id
             try:
-                session = self._session_manager.get_session(session_id)
+                session = self.get_session(session_id, user_id=user_id)
                 self._sync_controller_task_ref_from_session(session)
             except Exception:
                 logger.exception("[SessionAPI.submit_answer] Failed to sync task_ref on mismatch")
@@ -2266,7 +2680,7 @@ class SessionAPI:
             # Fallback: пробуем взять task_ref по task_id из очереди
             task_ref_candidate = None
             try:
-                session = self._session_manager.get_session(session_id)
+                session = self.get_session(session_id, user_id=user_id)
                 if session and session.queue:
                     # сначала пытаемся по текущему индексу
                     idx = session.current_task_index
@@ -2291,11 +2705,18 @@ class SessionAPI:
         # который подтягивает данные из репозитория и восстанавливает сессию.
         if not current_task_ref:
             try:
-                task_data = self.get_current_task(
-                    session_id,
-                    auto_resume=True,
-                    resume_source="submit_answer_current_task_fallback",
-                )
+                try:
+                    task_data = self.get_current_task(
+                        session_id,
+                        auto_resume=True,
+                        resume_source="submit_answer_current_task_fallback",
+                        user_id=user_id,
+                    )
+                except TypeError:
+                    task_data = self.get_current_task(
+                        session_id,
+                        auto_resume=True,
+                    )
                 if isinstance(task_data, dict):
                     current_task_ref = task_data.get("task_ref")
                     if current_task_ref:
@@ -2318,7 +2739,7 @@ class SessionAPI:
         # Синхронизируем current_task_index по текущему queue-slot, чтобы retry-логика
         # и сохраненный task_ref не расходились с фактически открытым заданием.
         try:
-            session = self._session_manager.get_session(session_id)
+            session = self.get_session(session_id, user_id=user_id)
             if session and session.queue:
                 resolved_task, resolved_index = self._resolve_current_queue_slot(session)
                 target_index = None
@@ -2382,7 +2803,7 @@ class SessionAPI:
         # back to original (pre-shuffle) indices expected by evaluator.
         try:
             if session is None:
-                session = self._session_manager.get_session(session_id)
+                session = self.get_session(session_id, user_id=user_id)
             user_input = self._normalize_test_answers_from_shuffle(
                 session=session,
                 current_task_ref=current_task_ref,
@@ -2412,7 +2833,7 @@ class SessionAPI:
         # UI-friendly feedback in shuffled indices for review mode.
         try:
             if session is None:
-                session = self._session_manager.get_session(session_id)
+                session = self.get_session(session_id, user_id=user_id)
             self._attach_test_per_question_ui_from_shuffle(
                 session=session,
                 current_task_ref=current_task_ref,
@@ -2427,10 +2848,11 @@ class SessionAPI:
 
         return result
 
-    def next_task(self, session_id: str) -> Optional[Dict[str, Any]]:
+    @_hosted_controller_serialized
+    def next_task(self, session_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Перейти к следующему заданию и вернуть его описание как dict."""
         logger.info("[SessionAPI.next_task] ========== НАЧАЛО next_task, session_id=%s ==========", session_id)
-        session = self._session_manager.get_session(session_id)
+        session = self.get_session(session_id, user_id=user_id)
         if session:
             logger.info("[SessionAPI.next_task] Session found: complex_id=%s, current_task_index=%s, queue_length=%s, is_active=%s", 
                        session.complex_id, 
@@ -2439,6 +2861,7 @@ class SessionAPI:
                        session.is_active)
         else:
             logger.warning("[SessionAPI.next_task] Session NOT found for session_id=%s", session_id)
+            return None
         
         if session and not session.is_active:
             logger.warning("[SessionAPI.next_task] session %s is not active -> session_completed", session_id)
@@ -2515,15 +2938,17 @@ class SessionAPI:
                     self._controller.task_controller.clear_task()
             except Exception:
                 logger.exception("[SessionAPI.next_task] Failed to clear controller after completion")
+            self._release_hosted_session_controller(session_id)
             logger.info("[SessionAPI.next_task] ========== КОНЕЦ next_task, result=session_completed ==========")
             return {"ok": False, "error": "session_completed"}
 
         logger.info("[SessionAPI.next_task] controller.next_task() completed, calling get_current_task()...")
-        result = self.get_current_task(session_id)
+        result = self.get_current_task(session_id, user_id=user_id)
         logger.info("[SessionAPI.next_task] ========== КОНЕЦ next_task, result=%s ==========", "task_found" if result else "None")
         return result
 
-    def skip_task(self, session_id: str) -> Optional[Dict[str, Any]]:
+    @_hosted_controller_serialized
+    def skip_task(self, session_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Отложить текущее задание в конец очереди и загрузить следующее.
 
         Возвращает dict с результатом:
@@ -2531,6 +2956,11 @@ class SessionAPI:
         - При отказе: {"ok": False, "reason": "...", "error": "..."}
         - None при критической ошибке
         """
+        session = self.get_session(session_id, user_id=user_id)
+        if session is None:
+            logger.warning("[SessionAPI.skip_task] Session NOT found for session_id=%s", session_id)
+            return None
+
         if session_id != self._controller.current_session_id:
             logger.warning("[SessionAPI.skip_task] session_id mismatch: api=%s, controller=%s", session_id, self._controller.current_session_id)
             return None
@@ -2561,18 +2991,24 @@ class SessionAPI:
 
         # После успешного пропуска загружаем следующее задание через контроллер
         self._controller._load_next_task()
-        return self.get_current_task(session_id)
+        return self.get_current_task(session_id, user_id=user_id)
 
+    @_hosted_controller_serialized
     def cancel_session(self, session_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """Отменить активную сессию без сохранения результатов."""
         # Даже если контроллер уже перешел к другой сессии, пробуем отменить через менеджер.
         success = False
         session = self.get_session(session_id, user_id=user_id)
-        resolved_user_id = (
-            getattr(session, "user_id", None)
-            or str(user_id or "").strip()
-            or self._default_user_id
+        resolved_user_id = self._resolve_runtime_user_id(
+            getattr(session, "user_id", None) or user_id,
+            allow_default_in_hosted=False,
         )
+        if not resolved_user_id:
+            logger.warning(
+                "[SessionAPI.cancel_session] Missing user_id for session_id=%s in current runtime",
+                session_id,
+            )
+            return {"ok": False}
         try:
             success = self._session_manager.cancel_session(
                 session_id, user_id=resolved_user_id
@@ -2589,6 +3025,8 @@ class SessionAPI:
                 self._controller.task_controller.clear_task()
             except Exception:
                 logger.exception("[SessionAPI.cancel_session] Failed to clear task controller after cancellation")
+        if success:
+            self._release_hosted_session_controller(session_id)
 
         return {"ok": bool(success)}
 
@@ -2596,10 +3034,12 @@ class SessionAPI:
     # Результаты итераций и всей сессии
     # ------------------------------------------------------------------
 
+    @_hosted_controller_serialized
     def get_iteration_results(
         self,
         session_id: str,
         iteration_number: Optional[int] = None,
+        user_id: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """Вернуть результаты последней завершённой или текущей итерации.
 
@@ -2607,7 +3047,7 @@ class SessionAPI:
         через AdaptiveSessionManager.get_iteration_summary, затем конвертируем
         в dict.
         """
-        session = self.get_session(session_id)
+        session = self.get_session(session_id, user_id=user_id)
         if not session:
             logger.warning("[SessionAPI.get_iteration_results] session not found: %s", session_id)
             return None
@@ -2779,7 +3219,14 @@ class SessionAPI:
                         option_value.get("value"),
                         option_value.get("title"),
                     )
-                    if not label and option_value.get("image_path"):
+                    if not label and _first_text(
+                        option_value.get("image_asset_url"),
+                        option_value.get("image_asset_id"),
+                        option_value.get("image_path"),
+                        option_value.get("image_url"),
+                        option_value.get("image"),
+                        option_value.get("src"),
+                    ):
                         try:
                             option_index = options.index(option_value)
                         except ValueError:
@@ -2812,7 +3259,14 @@ class SessionAPI:
                     option.get("value"),
                     option.get("title"),
                 )
-                if not label and option.get("image_path"):
+                if not label and _first_text(
+                    option.get("image_asset_url"),
+                    option.get("image_asset_id"),
+                    option.get("image_path"),
+                    option.get("image_url"),
+                    option.get("image"),
+                    option.get("src"),
+                ):
                     label = f"Вариант {idx + 1}"
                 if label:
                     labels.append(label)
@@ -2830,6 +3284,8 @@ class SessionAPI:
                 if not isinstance(option, dict):
                     continue
                 if _first_text(
+                    option.get("image_asset_url"),
+                    option.get("image_asset_id"),
                     option.get("image_path"),
                     option.get("image_url"),
                     option.get("image"),
@@ -2849,11 +3305,21 @@ class SessionAPI:
                 option.get("value"),
                 option.get("title"),
             )
+            image_url = _first_text(
+                option.get("image_asset_url"),
+                option.get("asset_url"),
+                option.get("image_url"),
+                option.get("src"),
+            )
+            image_asset_id = _first_text(
+                option.get("image_asset_id"),
+                option.get("asset_id"),
+            )
+            if not image_url and image_asset_id:
+                image_url = f"/api/assets/{quote(image_asset_id)}/content"
             image_path = _first_text(
                 option.get("image_path"),
-                option.get("image_url"),
                 option.get("image"),
-                option.get("src"),
             )
             payload: Dict[str, Any] = {
                 "type": "choice_option",
@@ -2863,7 +3329,11 @@ class SessionAPI:
                 payload["fallback_label"] = f"Вариант {idx + 1}"
             if text:
                 payload["text"] = text
-            if image_path:
+            if image_url:
+                payload["image_url"] = image_url
+            if image_asset_id:
+                payload["image_asset_id"] = image_asset_id
+            if image_path and not hosted_runtime:
                 payload["image_path"] = image_path
             return payload if len(payload) > 1 else None
 
@@ -4001,7 +4471,7 @@ class SessionAPI:
             key=lambda item: (-int(item.get("errors") or 0), str(item.get("task_name") or item.get("task_ref") or "")),
         )
 
-    def get_final_results(self, session_id: str) -> Optional[Dict[str, Any]]:
+    def get_final_results(self, session_id: str, user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Завершить сессию и вернуть итоговый ExtendedSessionResultSummary как dict.
         Если активной сессии нет (переход на S3 после завершения), пытаемся восстановить
@@ -4010,15 +4480,15 @@ class SessionAPI:
         summary_from_cache = False
 
         # 1) Пытаемся завершить активную сессию
-        summary = self._session_manager.end_session(session_id)
+        session = self.get_session(session_id, user_id=user_id)
+        if not session:
+            return None
 
-        # Сессия нужна для вычисления динамики по итерациям (web S3).
-        # Берём её до возможного выхода в ветку восстановления.
-        session = self._session_manager.get_session(session_id)
+        summary = self._session_manager.end_session(session_id)
 
         # 2) Если активной нет, пробуем восстановить и сгенерировать
         if summary is None:
-            session = self.get_session(session_id)
+            session = self.get_session(session_id, user_id=user_id)
             if not session:
                 return None
 
@@ -4092,16 +4562,33 @@ class SessionAPI:
 
         # Hook: Update Complex Statistics
         try:
-            user_id = getattr(session, "user_id", self._default_user_id) if session else self._default_user_id
+            user_id = self._resolve_runtime_user_id(
+                getattr(session, "user_id", None) if session else user_id,
+                allow_default_in_hosted=False,
+            )
             complex_id = data.get("complex_id") or getattr(session, "complex_id", None)
 
             # summary is ExtendedSessionResultSummary here
-            self._statistics_service.update_complex_stats(
-                session_result=summary,
-                user_id=user_id,
-                complex_id=complex_id
-            )
-            logger.info("[SessionAPI.get_final_results] Complex statistics updated for session %s", session_id)
+            if user_id:
+                updated = self._statistics_service.update_complex_stats(
+                    session_result=summary,
+                    user_id=user_id,
+                    complex_id=complex_id
+                )
+                if updated:
+                    logger.info("[SessionAPI.get_final_results] Complex statistics updated for session %s", session_id)
+                else:
+                    logger.warning(
+                        "[SessionAPI.get_final_results] Complex statistics update returned False for session %s",
+                        session_id,
+                    )
+            else:
+                logger.warning(
+                    "[SessionAPI.get_final_results] Skipping complex statistics update for session %s due to missing user_id",
+                    session_id,
+                )
+        except HostedShadowWriteFallbackDisabledError:
+            raise
         except Exception:
             logger.exception("[SessionAPI.get_final_results] Failed to update complex statistics for session %s", session_id)
 
@@ -4177,23 +4664,174 @@ class SessionAPI:
         except Exception:
             task_dir_path = None
 
+        hosted_runtime = self._is_hosted_runtime()
+
+        def _first_text(*values: Any) -> str:
+            for value in values:
+                if isinstance(value, str):
+                    text = value.strip()
+                    if text:
+                        return text
+            return ""
+
+        def _strip_hosted_path_only_image_fields(payload: Any, image_path: Optional[str] = None) -> None:
+            if not hosted_runtime or not isinstance(payload, dict):
+                return
+
+            payload.pop("image_path", None)
+            image_value = payload.get("image")
+            if isinstance(image_value, str):
+                normalized_image_value = image_value.strip()
+                normalized_image_path = str(image_path or "").strip()
+                if normalized_image_value and (
+                    not normalized_image_path or normalized_image_value == normalized_image_path
+                ):
+                    payload.pop("image", None)
+            elif isinstance(image_value, dict):
+                image_value.pop("image_path", None)
+                image_value.pop("path", None)
+                if not image_value:
+                    payload.pop("image", None)
+
+        def _nested_image_payload_asset(payload: Any) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+            if not isinstance(payload, dict):
+                return None, None, None
+            nested = payload.get("image")
+            if not isinstance(nested, dict):
+                return None, None, None
+            return (
+                _first_text(
+                    nested.get("asset_url"),
+                    nested.get("image_asset_url"),
+                    nested.get("url"),
+                    nested.get("image_url"),
+                ),
+                _first_text(
+                    nested.get("asset_id"),
+                    nested.get("image_asset_id"),
+                ),
+                _first_text(
+                    nested.get("path"),
+                    nested.get("image_path"),
+                    nested.get("src"),
+                ),
+            )
+
+        def _asset_content_url(asset_id: Any) -> str:
+            clean_asset_id = str(asset_id or "").strip()
+            if not clean_asset_id:
+                return ""
+            return f"/api/assets/{quote(clean_asset_id)}/content"
+
+        def _normalize_existing_image_ref(value: Any) -> str:
+            raw = str(value or "").strip()
+            if not raw:
+                return ""
+            if raw.startswith("/api/assets/") or raw.startswith("http://") or raw.startswith("https://"):
+                return raw
+            if raw.startswith("data:"):
+                return raw
+            if "/api/local-image" in raw:
+                try:
+                    parsed = urlparse(raw)
+                    params = parse_qs(parsed.query or "")
+                    asset_id = str((params.get("asset_id") or [""])[0] or "").strip()
+                    if asset_id:
+                        return _asset_content_url(asset_id)
+                    if hosted_runtime:
+                        return ""
+                    return raw
+                except Exception:
+                    return ""
+            if hosted_runtime:
+                return ""
+            return raw
+
+        def _apply_canonical_image_url(url: str, content_payload: Any) -> None:
+            clean_url = str(url or "").strip()
+            if not clean_url:
+                return
+            task_data["image_url"] = clean_url
+            task_data["image"] = clean_url
+            if isinstance(content_payload, dict):
+                content_payload["image_url"] = clean_url
+                content_payload["image"] = clean_url
+                task_data["content"] = content_payload
+
         # Определяем тип задания
         task_type = task_data.get("type") or task_data.get("task_type")
-        if task_type == "click":
+        if task_type in {"click", "draw", "open_answer"}:
             content = task_data.get("content") or {}
 
-            # Не затираем уже подготовленный image_url
-            existing = task_data.get("image_url")
+            # Не затираем уже подготовленный image_url, но выравниваем stable alias в image/content.image.
+            existing = _normalize_existing_image_ref(task_data.get("image_url"))
+            if not existing:
+                existing = _normalize_existing_image_ref(task_data.get("image"))
             if not existing and isinstance(content, dict):
-                existing = content.get("image_url")
+                existing = _normalize_existing_image_ref(content.get("image_url"))
+                if not existing:
+                    existing = _normalize_existing_image_ref(content.get("image"))
             if existing:
+                _apply_canonical_image_url(existing, content)
+                return
+
+            asset_url = None
+            asset_id = None
+            if isinstance(content, dict):
+                asset_url = _first_text(
+                    content.get("image_asset_url"),
+                    content.get("asset_url"),
+                )
+                asset_id = _first_text(
+                    content.get("image_asset_id"),
+                    content.get("asset_id"),
+                )
+                nested_asset_url, nested_asset_id, nested_image_path = _nested_image_payload_asset(content)
+                if not asset_url:
+                    asset_url = nested_asset_url
+                if not asset_id:
+                    asset_id = nested_asset_id
+            else:
+                nested_image_path = None
+            if not asset_url:
+                asset_url = _first_text(
+                    task_data.get("image_asset_url"),
+                    task_data.get("asset_url"),
+                )
+            if not asset_id:
+                asset_id = _first_text(
+                    task_data.get("image_asset_id"),
+                    task_data.get("asset_id"),
+                )
+            task_nested_asset_url, task_nested_asset_id, task_nested_image_path = _nested_image_payload_asset(task_data)
+            if not asset_url:
+                asset_url = task_nested_asset_url
+            if not asset_id:
+                asset_id = task_nested_asset_id
+            if asset_url:
+                _apply_canonical_image_url(asset_url, content)
+                return
+            if asset_id:
+                url = _asset_content_url(asset_id)
+                _apply_canonical_image_url(url, content)
                 return
 
             img_path = None
             if isinstance(content, dict):
-                img_path = content.get("image") or task_data.get("image")
+                img_path = _first_text(
+                    content.get("image_path"),
+                    content.get("image"),
+                    nested_image_path,
+                    task_data.get("image_path"),
+                    task_data.get("image"),
+                    task_nested_image_path,
+                )
             else:
-                img_path = task_data.get("image")
+                img_path = _first_text(
+                    task_data.get("image_path"),
+                    task_data.get("image"),
+                    task_nested_image_path,
+                )
 
             if not img_path:
                 return
@@ -4216,11 +4854,15 @@ class SessionAPI:
             if not abs_path:
                 return
 
+            if hosted_runtime:
+                _strip_hosted_path_only_image_fields(content, img_path)
+                _strip_hosted_path_only_image_fields(task_data, img_path)
+                if isinstance(content, dict):
+                    task_data["content"] = content
+                return
+
             url = f"/api/local-image?path={quote(abs_path)}"
-            task_data["image_url"] = url
-            if isinstance(content, dict):
-                content["image_url"] = url
-                task_data["content"] = content
+            _apply_canonical_image_url(url, content)
             return
 
         if task_type != "test":
@@ -4234,12 +4876,43 @@ class SessionAPI:
         for q in questions:
             if not isinstance(q, dict):
                 continue
+            question_asset_url = _first_text(
+                q.get("image_asset_url"),
+                q.get("asset_url"),
+            )
+            question_asset_id = _first_text(
+                q.get("image_asset_id"),
+                q.get("asset_id"),
+            )
+            if not q.get("image_url"):
+                if question_asset_url:
+                    q["image_url"] = question_asset_url
+                elif question_asset_id:
+                    q["image_url"] = _asset_content_url(question_asset_id)
+            question_img_path = q.get("image_path") or q.get("image")
+            if hosted_runtime and question_img_path and not q.get("image_url"):
+                _strip_hosted_path_only_image_fields(q, question_img_path)
             answers = q.get("answers") or []
             if not isinstance(answers, list):
                 continue
             for ans in answers:
                 if not isinstance(ans, dict):
                     continue
+                asset_url = _first_text(
+                    ans.get("image_asset_url"),
+                    ans.get("asset_url"),
+                )
+                asset_id = _first_text(
+                    ans.get("image_asset_id"),
+                    ans.get("asset_id"),
+                )
+                if not ans.get("image_url"):
+                    if asset_url:
+                        ans["image_url"] = asset_url
+                        continue
+                    if asset_id:
+                        ans["image_url"] = _asset_content_url(asset_id)
+                        continue
                 img_path = ans.get("image_path") or ans.get("image")
                 # Не затираем уже подготовленный image_url
                 if not img_path or ans.get("image_url"):
@@ -4267,4 +4940,8 @@ class SessionAPI:
                     continue
 
                 # Создаём URL, который HTTP-сервер сможет отдать через /api/local-image
+                if hosted_runtime:
+                    _strip_hosted_path_only_image_fields(ans, img_path)
+                    continue
+
                 ans["image_url"] = f"/api/local-image?path={quote(abs_path)}"
