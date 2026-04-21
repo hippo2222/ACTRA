@@ -186,6 +186,74 @@ def test_task_bootstrap_creates_unsaved_payload_and_first_save_materializes_task
     assert loaded["content"]["questions"][0]["question"] == "Сколько будет 2+2?"
 
 
+def test_task_bootstrap_still_allows_draft_when_limit_reached_but_first_save_is_blocked(client, temp_editor_topic, monkeypatch):
+    module_id, topic_id, topic_dir = temp_editor_topic
+
+    bootstrap_resp = client.post(
+        "/api/editor/task/bootstrap",
+        json={
+            "module_id": module_id,
+            "topic_id": topic_id,
+            "task_name": "Quota Draft",
+            "task_type": "test",
+        },
+    )
+    assert bootstrap_resp.status_code == 200
+    bootstrap_data = bootstrap_resp.get_json()
+    assert bootstrap_data["ok"] is True
+
+    task_id = bootstrap_data["task_id"]
+    task_payload = bootstrap_data["task"]["task_data"]
+    task_json = topic_dir / "tasks" / task_id / "task.json"
+    assert not task_json.exists()
+
+    task_payload["content"] = {
+        "questions": [
+            {
+                "id": 0,
+                "question": "1+1?",
+                "answers": [
+                    {"id": "a", "text": "2", "correct": True},
+                    {"id": "b", "text": "3", "correct": False},
+                ],
+            }
+        ],
+        "test_type": "multiple_choice",
+        "settings": {
+            "shuffle_questions": False,
+            "shuffle_answers": False,
+            "time_limit": None,
+            "passing_score": 70,
+        },
+    }
+
+    from routes import editor_routes
+
+    def _raise_limit(*args, **kwargs):
+        raise editor_routes.WorkspaceLimitError(
+            entity_kind="task",
+            limit_kind="personal",
+            count=20,
+            limit=20,
+            remaining=0,
+            plan="free",
+            message="Task limit reached",
+        )
+
+    monkeypatch.setattr(
+        _headless_app_ctx.workspace_limits_service,
+        "assert_can_create_workspace_entity",
+        _raise_limit,
+    )
+
+    save_resp = client.post(f"/api/editor/task/{module_id}/{topic_id}/{task_id}", json=task_payload)
+    assert save_resp.status_code == 409
+    save_data = save_resp.get_json()
+    assert save_data["error"] == "workspace_limit_reached"
+    assert save_data["details"]["entity_kind"] == "task"
+    assert not task_json.exists()
+
+
 def test_save_task_normalizes_legacy_root_id_for_catalog(client, temp_editor_topic):
     module_id, topic_id, topic_dir = temp_editor_topic
     task_id = "legacy_click_task"

@@ -3,6 +3,7 @@
 
   const state = {
     overview: null,
+    workspaceLimits: null,
     scope: 'topics',
     search: '',
     moduleId: 'all',
@@ -1191,6 +1192,110 @@
       <div class="panel-row panel-row--soft justify-center px-5 py-10 text-center text-sm text-text-secondary">
         ${escapeHtml(message || 'Загружаем обзор теории...')}
       </div>
+    `;
+  }
+
+  async function fetchWorkspaceLimits() {
+    try {
+      const response = await fetch('/api/workspace-limits/summary');
+      const data = await readJsonSafely(response);
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
+      state.workspaceLimits = data;
+      return data;
+    } catch (error) {
+      console.warn('[Theory Center] Failed to load workspace limits', error);
+      state.workspaceLimits = null;
+      return null;
+    }
+  }
+
+  function getWorkspaceLimitSummary(entityKind) {
+    const key = entityKind === 'theory'
+      ? 'theories'
+      : entityKind === 'complex'
+        ? 'complexes'
+        : 'tasks';
+    return state.workspaceLimits && typeof state.workspaceLimits[key] === 'object'
+      ? state.workspaceLimits[key]
+      : null;
+  }
+
+  function isPremiumWorkspacePlan() {
+    return String(state.workspaceLimits?.plan || '').trim().toLowerCase() === 'premium';
+  }
+
+  function formatTheoryQuotaMessage(summary) {
+    if (!summary) {
+      return 'Не удалось проверить лимиты библиотеки. Попробуйте обновить страницу.';
+    }
+    if (isPremiumWorkspacePlan()) {
+      return '';
+    }
+    const personalCount = Number(summary.personal_count || 0);
+    const personalLimit = Number(summary.personal_limit || 0);
+    const libraryCount = Number(summary.library_total_count || 0);
+    const libraryLimit = Number(summary.library_limit || 0);
+    if (Number(summary.remaining_personal || 0) <= 0 && Number(summary.remaining_library || 0) <= 0) {
+      return `Лимит теорий достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`;
+    }
+    if (Number(summary.remaining_personal || 0) <= 0) {
+      return `Лимит своих теорий достигнут: ${personalCount}/${personalLimit}. Удалите одну из личных теорий или перейдите на Premium.`;
+    }
+    if (Number(summary.remaining_library || 0) <= 0) {
+      return `Библиотека теорий заполнена: ${libraryCount}/${libraryLimit}. Удалите лишнюю теорию или перейдите на Premium.`;
+    }
+    return '';
+  }
+
+  function isTheoryCreationBlocked() {
+    const summary = getWorkspaceLimitSummary('theory');
+    if (!summary || isPremiumWorkspacePlan()) {
+      return false;
+    }
+    return Number(summary.remaining_personal || 0) <= 0 || Number(summary.remaining_library || 0) <= 0;
+  }
+
+  function ensureTheoryCreationAllowed() {
+    if (!isTheoryCreationBlocked()) {
+      return true;
+    }
+    const message = formatTheoryQuotaMessage(getWorkspaceLimitSummary('theory'));
+    if (message) {
+      setFlash(message, 'warning', { scroll: true });
+    }
+    return false;
+  }
+
+  function renderWorkspaceLimitPills() {
+    const host = $('theory-center-limit-pills');
+    if (!host) return;
+    const theorySummary = getWorkspaceLimitSummary('theory');
+    if (!theorySummary) {
+      host.innerHTML = '';
+      return;
+    }
+    if (isPremiumWorkspacePlan()) {
+      host.innerHTML = `
+        <span class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${getTheoryToneClass('success')}">
+          <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+          Premium · без лимита
+        </span>
+      `;
+      return;
+    }
+    const personalBlocked = Number(theorySummary.remaining_personal || 0) <= 0;
+    const libraryBlocked = Number(theorySummary.remaining_library || 0) <= 0;
+    host.innerHTML = `
+      <span class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${getTheoryToneClass(personalBlocked ? 'warning' : 'info')}">
+        <span class="material-symbols-outlined text-[18px]">edit_note</span>
+        Мои теории: ${escapeHtml(`${Number(theorySummary.personal_count || 0)}/${Number(theorySummary.personal_limit || 0)}`)}
+      </span>
+      <span class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${getTheoryToneClass(libraryBlocked ? 'warning' : 'success')}">
+        <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+        Библиотека: ${escapeHtml(`${Number(theorySummary.library_total_count || 0)}/${Number(theorySummary.library_limit || 0)}`)}
+      </span>
     `;
   }
 
@@ -2591,6 +2696,7 @@
 
   function renderView() {
     syncControlsFromState();
+    renderWorkspaceLimitPills();
     renderSummaryCards();
     applySummaryCollapsedState();
     renderList();
@@ -2613,6 +2719,7 @@
       renderLoadingState('Обновляем обзор теории...');
     }
     try {
+      await fetchWorkspaceLimits();
       const overviewResponse = await fetch('/api/theory-center/overview');
       const overviewData = await readJsonSafely(overviewResponse);
       if (!overviewResponse.ok || !overviewData?.ok) {
@@ -2670,6 +2777,7 @@
   function openTopicTheory(moduleId, topicId, createNew) {
     const row = getTopicRow(moduleId, topicId);
     if (!row) return;
+    if (createNew && !ensureTheoryCreationAllowed()) return;
     const url = buildTheoryEditorUrl(createNew ? '' : row.theory_id, {
       context: 'topic',
       moduleId: row.module_id,
@@ -2877,7 +2985,10 @@
 
     const editorBtn = $('theory-center-open-editor');
     if (editorBtn) {
-      editorBtn.addEventListener('click', () => navigate('/ui/editor/Theory_Editor.html'));
+      editorBtn.addEventListener('click', () => {
+        if (!ensureTheoryCreationAllowed()) return;
+        navigate('/ui/editor/Theory_Editor.html');
+      });
     }
 
     const summaryToggleBtn = $('theory-center-summary-toggle');

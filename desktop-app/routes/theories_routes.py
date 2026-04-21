@@ -23,6 +23,7 @@ from services.theory_service import (  # type: ignore
     TheoryNotFoundError,
     TheoryValidationError,
 )
+from services.workspace_limits_service import WorkspaceLimitError
 
 from routes._context import get_ctx, is_hosted_web_runtime
 from persistence.postgres import PostgresUnavailableError
@@ -44,6 +45,10 @@ class TheoryInUseError(Exception):
         self.theory_id = theory_id
         self.usage_topics = usage_topics
         self.usage_complexes = usage_complexes
+
+
+def _workspace_limit_response(exc: WorkspaceLimitError) -> Any:
+    return jsonify(exc.to_payload()), 409
 
 
 def _hosted_theory_asset_degraded_response(
@@ -460,11 +465,14 @@ def create_theory() -> Any:
 
     payload = request.get_json(silent=True) or {}
     try:
+        ctx.workspace_limits_service.assert_can_create_workspace_entity(ctx.user_id, "theory")
         payload["created_by_user_id"] = ctx.user_id
         payload["updated_by_user_id"] = ctx.user_id
         item = ctx.theory_service.create_theory(payload)
         item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item}), 200
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc)
     except TheoryValidationError as exc:
         return jsonify({"ok": False, "error": "validation_error", "message": str(exc)}), 400
     except Exception as exc:
@@ -510,6 +518,7 @@ def copy_theory(theory_id: str) -> Any:
     payload = request.get_json(silent=True) or {}
     title = payload.get("title")
     try:
+        ctx.workspace_limits_service.assert_can_create_workspace_entity(ctx.user_id, "theory")
         item = ctx.theory_service.clone_theory(
             theory_id,
             title=title,
@@ -517,6 +526,8 @@ def copy_theory(theory_id: str) -> Any:
         )
         item = _serialize_theory_payload(item, current_user_id=ctx.user_id)
         return jsonify({"ok": True, "item": item})
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc)
     except TheoryNotFoundError:
         return jsonify({"ok": False, "error": "theory_not_found"}), 404
     except TheoryValidationError as exc:

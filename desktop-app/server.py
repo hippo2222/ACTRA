@@ -810,39 +810,39 @@ def _make_safe_id(name: str) -> str:
     Falls back to a short UUID prefix when transliteration yields nothing.
     """
     _CYRILLIC_MAP = {
-        "Р°": "a",
-        "Р±": "b",
-        "РІ": "v",
-        "Рі": "g",
-        "Рґ": "d",
-        "Рµ": "e",
-        "С‘": "yo",
-        "Р¶": "zh",
-        "Р·": "z",
-        "Рё": "i",
-        "Р№": "j",
-        "Рє": "k",
-        "Р»": "l",
-        "Рј": "m",
-        "РЅ": "n",
-        "Рѕ": "o",
-        "Рї": "p",
-        "СЂ": "r",
-        "СЃ": "s",
-        "С‚": "t",
-        "Сѓ": "u",
-        "С„": "f",
-        "С…": "kh",
-        "С†": "ts",
-        "С‡": "ch",
-        "С€": "sh",
-        "С‰": "sch",
-        "СЉ": "",
-        "С‹": "y",
-        "СЊ": "",
-        "СЌ": "e",
-        "СЋ": "yu",
-        "СЏ": "ya",
+        "а": "a",
+        "б": "b",
+        "в": "v",
+        "г": "g",
+        "д": "d",
+        "е": "e",
+        "ё": "yo",
+        "ж": "zh",
+        "з": "z",
+        "и": "i",
+        "й": "j",
+        "к": "k",
+        "л": "l",
+        "м": "m",
+        "н": "n",
+        "о": "o",
+        "п": "p",
+        "р": "r",
+        "с": "s",
+        "т": "t",
+        "у": "u",
+        "ф": "f",
+        "х": "kh",
+        "ц": "ts",
+        "ч": "ch",
+        "ш": "sh",
+        "щ": "sch",
+        "ъ": "",
+        "ы": "y",
+        "ь": "",
+        "э": "e",
+        "ю": "yu",
+        "я": "ya",
     }
     lowered = name.strip().lower()
     chars = []
@@ -896,6 +896,7 @@ from services.hosted_storage_service import HostedStorageService  # type: ignore
 from services.hosted_theory_service import HostedTheoryService  # type: ignore
 from services.catalog_service import CatalogService  # type: ignore
 from services.hosted_catalog_service import HostedCatalogService  # type: ignore
+from services.workspace_limits_service import WorkspaceLimitsService  # type: ignore
 from services.workspace_import_service import WorkspaceImportService  # type: ignore
 from services.microcards_service import MicrocardsService  # type: ignore
 from services.hosted_microcards_service import HostedMicrocardsService  # type: ignore
@@ -1209,7 +1210,7 @@ class AppContextHeadless:
             self.session_repository = SessionRepository(data_dir=str(self.data_dir))
             logger.info("[HTTP] SessionRepository initialized")
 
-        # ModuleRepository (РЅСѓР¶РµРЅ РґР»СЏ СЃС‚Р°С‚РёСЃС‚РёРєРё РїРѕ С‚РёРїР°Рј Р·Р°РґР°С‡)
+        # ModuleRepository (нужен для статистики по типам задач)
         self.module_repository = ModuleRepository(self.storage_service)
         logger.info("[HTTP] ModuleRepository initialized")
 
@@ -1310,6 +1311,16 @@ class AppContextHeadless:
         else:
             self.user_service = UserService(data_dir=str(self.data_dir))
             logger.info("[HTTP] UserService initialized")
+
+        self.workspace_limits_service = WorkspaceLimitsService(
+            user_service=self.user_service,
+            theory_service=self.theory_service,
+            complex_service=self.complex_service,
+            storage_service=self.storage_service,
+            catalog_service=self.catalog_service,
+        )
+        setattr(self.catalog_service, "workspace_limits_service", self.workspace_limits_service)
+        logger.info("[HTTP] WorkspaceLimitsService initialized")
 
         # Statistics Service (with EventBus for cache invalidation)
         self.statistics_service = StatisticsService(
@@ -1878,14 +1889,14 @@ def _get_user_dir(user_id: str) -> Path:
 
 LEGAL_DEFAULT_MANIFEST: Dict[str, Dict[str, str]] = {
     "terms": {
-        "title": "РЈСЃР»РѕРІРёСЏ РїРѕР»СЊР·РѕРІР°РЅРёСЏ",
+        "title": "Условия пользования",
         "version": "2026-02-15.1",
         "effective_at": "2026-02-15T00:00:00Z",
         "filename": "terms.md",
         "format": "markdown",
     },
     "privacy": {
-        "title": "РџРѕР»РёС‚РёРєР° РїСЂРёРІР°С‚РЅРѕСЃС‚Рё",
+        "title": "Политика приватности",
         "version": "2026-02-15.1",
         "effective_at": "2026-02-15T00:00:00Z",
         "filename": "privacy.md",
@@ -3837,8 +3848,8 @@ def _json_safe(obj: Any) -> Any:
 def _log_request() -> None:
     """Log incoming HTTP request (method + path).
 
-    РўРµР»Р° Р·Р°РїСЂРѕСЃРѕРІ РЅР°РјРµСЂРµРЅРЅРѕ РЅРµ Р»РѕРіРёСЂСѓРµРј С†РµР»РёРєРѕРј, С‡С‚РѕР±С‹ РЅРµ Р·Р°С€СѓРјР»СЏС‚СЊ Р»РѕРіРё,
-    РєСЂРѕРјРµ РѕС‚РґРµР»СЊРЅС‹С… С‚РѕС‡РµРє (submit/next), РєРѕС‚РѕСЂС‹Рµ Р»РѕРіРёСЂСѓСЋС‚СЃСЏ РѕС‚РґРµР»СЊРЅРѕ.
+    Тела запросов намеренно не логируем целиком, чтобы не зашумлять логи,
+    кроме отдельных точек (submit/next), которые логируются отдельно.
     """
 
     if not FLASK_DEBUG_ENABLED:
@@ -3847,7 +3858,7 @@ def _log_request() -> None:
     try:
         logger.debug("[HTTP] %s %s", request.method, request.path)
     except Exception:
-        # Р›РѕРіРёСЂРѕРІР°РЅРёРµ РЅРµ РґРѕР»Р¶РЅРѕ Р»РѕРјР°С‚СЊ РѕР±СЂР°Р±РѕС‚РєСѓ Р·Р°РїСЂРѕСЃР°
+        # Логирование не должно ломать обработку запроса
         pass
 
 
@@ -5906,7 +5917,7 @@ def _build_ai_analysis_topic_coverage_response(
 def _guess_language_code(text: str) -> str:
     if not isinstance(text, str) or not text.strip():
         return "unknown"
-    cyr = sum(1 for ch in text if "Р°" <= ch.lower() <= "СЏ" or ch.lower() == "С‘")
+    cyr = sum(1 for ch in text if "а" <= ch.lower() <= "я" or ch.lower() == "ё")
     lat = sum(1 for ch in text if "a" <= ch.lower() <= "z")
     if cyr > lat * 1.3:
         return "ru"
@@ -6277,10 +6288,10 @@ def _normalize_grounding_token(token: str) -> str:
     # Lightweight suffix trimming for RU/UK-like forms to reduce false negatives.
     if script == "cyr" and len(t) >= 5:
         suffixes = (
-            "РёСЏРјРё", "СЏРјРё", "Р°РјРё", "РµРІС–", "РѕРІС–", "РѕРіРѕ", "РµРјСѓ", "РёРјРё", "С‹РјРё",
-            "С–СЃС‚СЊ", "РѕСЃС‚Рё", "РµРЅРЅСЏ", "Р°РЅРЅСЏ", "СЏРјРё", "СЏРјРё", "СЏС…", "Р°С…", "РѕСЋ", "РµСЋ",
-            "РёР№", "С‹Р№", "С–Р№", "Р°СЏ", "СЏСЏ", "РѕРµ", "РµРµ", "С‹Рµ", "РёРµ", "РѕР№", "РµР№",
-            "Р°Рј", "СЏРј", "РѕРј", "РµРј", "Сѓ", "СЋ", "Р°", "СЏ", "С‹", "Рё", "Рµ", "Рѕ",
+            "иями", "ями", "ами", "еві", "ові", "ого", "ему", "ими", "ыми",
+            "ість", "ости", "ення", "ання", "ями", "ями", "ях", "ах", "ою", "ею",
+            "ий", "ый", "ій", "ая", "яя", "ое", "ее", "ые", "ие", "ой", "ей",
+            "ам", "ям", "ом", "ем", "у", "ю", "а", "я", "ы", "и", "е", "о",
         )
         for suf in suffixes:
             if len(t) - len(suf) >= 4 and t.endswith(suf):
@@ -6527,8 +6538,8 @@ def _normalize_output_language_request(
     translation_warning = None
     if mode == "custom" and raw_lang and material_language in {"ru", "en"} and raw_lang != material_language:
         translation_warning = (
-            "Р’С‹Р±СЂР°РЅ СЏР·С‹Рє Р·Р°РґР°РЅРёР№, РѕС‚Р»РёС‡РЅС‹Р№ РѕС‚ СЏР·С‹РєР° РјР°С‚РµСЂРёР°Р»Р°. РџРµСЂРµРІРѕРґ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїРѕСЃСЂРµРґСЃС‚РІРµРЅРЅС‹Рј, "
-            "Рё Р·Р°РґР°РЅРёСЏ, РІРµСЂРѕСЏС‚РЅРѕ, РїРѕС‚СЂРµР±СѓСЋС‚ РґРѕСЂР°Р±РѕС‚РєРё РІ СЂРµРґР°РєС‚РѕСЂРµ."
+            "Выбран язык заданий, отличный от языка материала. Перевод может быть посредственным, "
+            "и задания, вероятно, потребуют доработки в редакторе."
         )
 
     return {
@@ -6573,25 +6584,25 @@ def _score_unit_for_task_type(task_type: str, unit: Dict[str, Any]) -> int:
     blob = _ai_unit_planning_blob(unit)
     score = 0
     if task_type == "SEQUENCE":
-        if any(k in blob for k in ["order", "sequence", "step", "stage", "chronolog", "rank", "category", "ordered", "РїРѕСЂСЏРґ", "СЌС‚Р°Рї", "РїРѕСЃР»РµРґ"]):
+        if any(k in blob for k in ["order", "sequence", "step", "stage", "chronolog", "rank", "category", "ordered", "поряд", "этап", "послед"]):
             score += 4
-        if any(k in blob for k in ["classification", "РєР°С‚РµРіРѕСЂ"]):
+        if any(k in blob for k in ["classification", "категор"]):
             score += 2
     elif task_type == "CLICK_WORDS":
         if re.search(r"\d|%|p\s*[<=>]\s*0?\.\d+", blob):
             score += 4
-        if any(k in blob for k in ["date", "year", "risk", "odds", "ratio", "report", "guidance", "РґР°С‚Р°", "СЂРёСЃРє", "С‚СЂРµР±РѕРІР°РЅ", "РѕС‚С‡РµС‚", "РѕС‚С‡С‘С‚"]):
+        if any(k in blob for k in ["date", "year", "risk", "odds", "ratio", "report", "guidance", "дата", "риск", "требован", "отчет", "отчёт"]):
             score += 3
     elif task_type == "OPEN_ANSWER":
-        if any(k in blob for k in ["mechan", "why", "how", "effect", "process", "reason", "РІР»РёСЏ", "РјРµС…Р°РЅ", "РїСЂРѕС†РµСЃСЃ", "РїРѕС‡РµРјСѓ", "РєР°Рє"]):
+        if any(k in blob for k in ["mechan", "why", "how", "effect", "process", "reason", "влия", "механ", "процесс", "почему", "как"]):
             score += 3
-        if any(k in blob for k in ["concept", "classification", "conceptual", "РєРѕРЅС†РµРї"]):
+        if any(k in blob for k in ["concept", "classification", "conceptual", "концеп"]):
             score += 1
     elif task_type == "CLICK_TEXT":
-        if any(k in blob for k in ["difference", "distinction", "rule", "criteria", "risk", "accuracy", "С‡СѓРІСЃС‚РІ", "РїСЂР°РІРёР»", "СЂР°Р·Р»РёС‡", "РєСЂРёС‚РµСЂ"]):
+        if any(k in blob for k in ["difference", "distinction", "rule", "criteria", "risk", "accuracy", "чувств", "правил", "различ", "критер"]):
             score += 2
     elif task_type == "TEST":
-        if any(k in blob for k in ["fact", "term", "definition", "classification", "date", "number", "С„Р°РєС‚", "С‚РµСЂРјРёРЅ", "РѕРїСЂРµРґРµР»", "РєР°С‚РµРіРѕСЂ", "РґР°С‚Р°"]):
+        if any(k in blob for k in ["fact", "term", "definition", "classification", "date", "number", "факт", "термин", "определ", "категор", "дата"]):
             score += 2
     if unit.get("assessment_risk") == "high":
         score += 1  # often worth isolating to avoid hallucinated simplifications
@@ -6722,7 +6733,7 @@ def _postprocess_ai_generate_results(
                     task,
                     {
                         "severity": "warning",
-                        "message": "Р’РѕР·РјРѕР¶РЅРѕРµ РЅРµСЃРѕРѕС‚РІРµС‚СЃС‚РІРёРµ СЏР·С‹РєР° Р·Р°РґР°РЅРёСЏ РѕР¶РёРґР°РµРјРѕРјСѓ СЏР·С‹РєСѓ РіРµРЅРµСЂР°С†РёРё",
+                        "message": "Возможное несоответствие языка задания ожидаемому языку генерации",
                         "field": "language_mismatch",
                     },
                 )
@@ -6731,17 +6742,17 @@ def _postprocess_ai_generate_results(
             if task_type == "SEQUENCE":
                 prompt_lower = prompt_text.lower()
                 if any(phrase in prompt_lower for phrase in [
-                    "Р·Р»РѕРєР°С‡РµСЃС‚РІРµРЅ",
-                    "РїРѕРґРѕР·СЂРёС‚РµР»СЊРЅ",
+                    "злокачествен",
+                    "подозрительн",
                     "suspiciousness",
                     "malignan",
-                    "СЃС‚РµРїРµРЅРё РїРѕРґРѕР·СЂ",
+                    "степени подозр",
                 ]):
                     _append_validation_issue(
                         task,
                         {
                             "severity": "warning",
-                            "message": "РџСЂРѕРІРµСЂСЊС‚Рµ, С‡С‚Рѕ РїРѕСЂСЏРґРѕРє РІ SEQUENCE СЏРІРЅРѕ Р·Р°РґР°РЅ РІ РёСЃС…РѕРґРЅРѕРј РјР°С‚РµСЂРёР°Р»Рµ (РІРѕР·РјРѕР¶РµРЅ РЅРµСЏРІРЅС‹Р№ СЂРµР№С‚РёРЅРі).",
+                            "message": "Проверьте, что порядок в SEQUENCE явно задан в исходном материале (возможен неявный рейтинг).",
                             "field": "implicit_sequence_order",
                         },
                     )
@@ -6791,7 +6802,7 @@ def _postprocess_ai_generate_results(
                 task,
                 {
                     "severity": "warning",
-                    "message": "РџРѕС…РѕР¶Рµ РЅР° РґСѓР±Р»РёРєР°С‚ РґСЂСѓРіРѕРіРѕ СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅРЅРѕРіРѕ Р·Р°РґР°РЅРёСЏ",
+                    "message": "Похоже на дубликат другого сгенерированного задания",
                     "field": "duplicate_task",
                 },
             )
@@ -6904,7 +6915,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "Р’РѕРїСЂРѕСЃ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
+                        "message": "Вопрос не может быть пустым",
                         "field": "question",
                     }
                 )
@@ -6915,7 +6926,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 2 СЌР»РµРјРµРЅС‚Р°",
+                        "message": "Требуется минимум 2 элемента",
                         "field": "elements",
                     }
                 )
@@ -6923,7 +6934,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 1 СѓСЂРѕРІРµРЅСЊ",
+                        "message": "Требуется минимум 1 уровень",
                         "field": "levels",
                     }
                 )
@@ -6936,7 +6947,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 2 РІР°СЂРёР°РЅС‚Р° РѕС‚РІРµС‚Р°",
+                            "message": "Требуется минимум 2 варианта ответа",
                             "field": "options",
                         }
                     )
@@ -6947,7 +6958,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "Р”РѕР»Р¶РµРЅ Р±С‹С‚СЊ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ РїСЂР°РІРёР»СЊРЅС‹Р№ РІР°СЂРёР°РЅС‚",
+                            "message": "Должен быть хотя бы один правильный вариант",
                             "field": "options",
                         }
                     )
@@ -6958,7 +6969,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "РўРµРєСЃС‚ РЅРµ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСѓСЃС‚С‹Рј",
+                            "message": "Текст не может быть пустым",
                             "field": "text",
                         }
                     )
@@ -6966,7 +6977,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                     issues.append(
                         {
                             "severity": "error",
-                            "message": "РўСЂРµР±СѓРµС‚СЃСЏ РјРёРЅРёРјСѓРј 1 РѕС€РёР±РєР°",
+                            "message": "Требуется минимум 1 ошибка",
                             "field": "error_spans",
                         }
                     )
@@ -7009,7 +7020,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                             issues.append(
                                 {
                                     "severity": "error",
-                                    "message": f"РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ РґРёР°РїР°Р·РѕРЅ РѕС€РёР±РєРё #{idx + 1}",
+                                    "message": f"Некорректный диапазон ошибки #{idx + 1}",
                                     "field": "error_spans",
                                 }
                             )
@@ -7018,7 +7029,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "РќРµРёР·РІРµСЃС‚РЅС‹Р№ СЂРµР¶РёРј click-Р·Р°РґР°С‡Рё",
+                        "message": "Неизвестный режим click-задачи",
                         "field": "mode",
                     }
                 )
@@ -7028,7 +7039,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                 issues.append(
                     {
                         "severity": "error",
-                        "message": "РўРµСЃС‚ РЅРµ СЃРѕРґРµСЂР¶РёС‚ РІРѕРїСЂРѕСЃРѕРІ",
+                        "message": "Тест не содержит вопросов",
                         "field": "questions",
                     }
                 )
@@ -7040,7 +7051,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                         issues.append(
                             {
                                 "severity": "error",
-                                "message": f"Р’РѕРїСЂРѕСЃ {qi+1}: РїСѓСЃС‚РѕР№ С‚РµРєСЃС‚",
+                                "message": f"Вопрос {qi+1}: пустой текст",
                                 "field": "questions",
                             }
                         )
@@ -7049,7 +7060,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                         issues.append(
                             {
                                 "severity": "error",
-                                "message": f"Р’РѕРїСЂРѕСЃ {qi+1}: РЅРµС‚ РІР°СЂРёР°РЅС‚РѕРІ РѕС‚РІРµС‚РѕРІ",
+                                "message": f"Вопрос {qi+1}: нет вариантов ответов",
                                 "field": "questions",
                             }
                         )
@@ -7057,7 +7068,7 @@ def _validate_with_task_type(task_type: str, task_data: Dict[str, Any]) -> List[
                         issues.append(
                             {
                                 "severity": "error",
-                                "message": f"Р’РѕРїСЂРѕСЃ {qi+1}: РЅРµС‚ РїСЂР°РІРёР»СЊРЅС‹С… РѕС‚РІРµС‚РѕРІ",
+                                "message": f"Вопрос {qi+1}: нет правильных ответов",
                                 "field": "questions",
                             }
                         )

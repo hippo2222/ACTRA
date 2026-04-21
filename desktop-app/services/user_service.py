@@ -29,6 +29,31 @@ USER_PLAN_FREE = "free"
 USER_PLAN_PREMIUM = "premium"
 
 
+def normalize_user_role(role: Any) -> str:
+    clean_role = str(role or "").strip().lower()
+    return clean_role if clean_role == USER_ROLE_ADMIN else USER_ROLE_USER
+
+
+def normalize_user_plan(plan: Any) -> str:
+    clean_plan = str(plan or "").strip().lower()
+    return USER_PLAN_PREMIUM if clean_plan == USER_PLAN_PREMIUM else USER_PLAN_FREE
+
+
+def resolve_effective_plan_for_axes(role: Any, plan: Any) -> str:
+    if normalize_user_role(role) == USER_ROLE_ADMIN:
+        return USER_PLAN_PREMIUM
+    return normalize_user_plan(plan)
+
+
+def resolve_effective_plan(user: Any) -> str:
+    if user is None:
+        return USER_PLAN_FREE
+    return resolve_effective_plan_for_axes(
+        getattr(user, "role", USER_ROLE_USER),
+        getattr(user, "plan", USER_PLAN_FREE),
+    )
+
+
 @dataclass
 class User:
     """
@@ -58,6 +83,10 @@ class User:
         "require_password_on_edit": False
     })
     settings: Dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def effective_plan(self) -> str:
+        return resolve_effective_plan(self)
     
     def to_dict(self) -> Dict[str, Any]:
         """Преобразует User в словарь для сохранения в profile.json"""
@@ -83,6 +112,8 @@ class User:
 
     def to_api_dict(self) -> Dict[str, Any]:
         """Преобразует User в плоский словарь для API (совместимость с UI)"""
+        raw_role = self.role or USER_ROLE_USER
+        raw_plan = self.plan or USER_PLAN_FREE
         return {
             "user_id": self.user_id,
             "name": self.name,
@@ -97,8 +128,9 @@ class User:
             "pending_email_verification_sent_at": self.pending_email_verification_sent_at,
             "avatar_seed": self.avatar_seed or "1.png",  # Дефолтный аватар вместо user_id
             "has_password": bool(self.password_hash),
-            "role": self.role or USER_ROLE_USER,
-            "plan": self.plan or USER_PLAN_FREE,
+            "role": raw_role,
+            "plan": raw_plan,
+            "effective_plan": resolve_effective_plan_for_axes(raw_role, raw_plan),
             "security_settings": {
                 "require_password_on_login": self.security_settings.get("require_password_on_login", False),
                 "require_password_on_edit": self.security_settings.get("require_password_on_edit", False),

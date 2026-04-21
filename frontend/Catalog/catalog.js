@@ -7,6 +7,7 @@
     savedComplexEntries: [],
     currentUser: null,
     authenticated: false,
+    workspaceLimits: null,
     loading: false,
     error: '',
     query: '',
@@ -626,6 +627,79 @@
       state.authenticated = false;
     }
     els.authNote.classList.toggle('is-visible', !state.authenticated);
+  }
+
+  async function loadWorkspaceLimits() {
+    try {
+      const payload = await fetchJson('/api/workspace-limits/summary', { method: 'GET', credentials: 'same-origin' });
+      state.workspaceLimits = payload;
+      return payload;
+    } catch (error) {
+      state.workspaceLimits = null;
+      return null;
+    }
+  }
+
+  function isPremiumWorkspacePlan() {
+    return asString(state.workspaceLimits?.plan).toLowerCase() === 'premium';
+  }
+
+  function getWorkspaceLimitEntity(kind) {
+    const key = kind === 'theory' ? 'theories' : kind === 'complex' ? 'complexes' : 'tasks';
+    return state.workspaceLimits && typeof state.workspaceLimits[key] === 'object'
+      ? state.workspaceLimits[key]
+      : null;
+  }
+
+  function getWorkspaceLimitMessage(entitySummary, options = {}) {
+    if (!entitySummary || isPremiumWorkspacePlan()) return '';
+    const label = asString(options.label) || 'элементов';
+    const personalCount = Number(entitySummary.personal_count || 0);
+    const personalLimit = Number(entitySummary.personal_limit || 0);
+    const libraryCount = Number(entitySummary.library_total_count || 0);
+    const libraryLimit = Number(entitySummary.library_limit || 0);
+    if (Number(entitySummary.remaining_personal || 0) <= 0 && Number(entitySummary.remaining_library || 0) <= 0) {
+      return `Лимит ${label} достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}.`;
+    }
+    if (Number(entitySummary.remaining_library || 0) <= 0) {
+      return `Библиотека ${label} заполнена: ${libraryCount}/${libraryLimit}.`;
+    }
+    if (Number(entitySummary.remaining_personal || 0) <= 0) {
+      return `Лимит своих ${label} достигнут: ${personalCount}/${personalLimit}.`;
+    }
+    return '';
+  }
+
+  function buildWorkspaceLimitNote(preview) {
+    const evaluation = preview && preview.workspace_limits && typeof preview.workspace_limits === 'object'
+      ? preview.workspace_limits
+      : null;
+    const summary = evaluation && evaluation.summary ? evaluation.summary : state.workspaceLimits;
+    if (!summary) return '';
+    if (isPremiumWorkspacePlan()) return 'Premium-план: лимиты библиотеки не применяются.';
+
+    const notes = [];
+    const theories = summary && typeof summary.theories === 'object' ? summary.theories : null;
+    const complexes = summary && typeof summary.complexes === 'object' ? summary.complexes : null;
+    const createdCounts = preview?.summary?.created_counts || {};
+    if (preview?.item?.content_type === 'theory' && theories) {
+      notes.push(`Теории в библиотеке: ${Number(theories.library_total_count || 0)}/${Number(theories.library_limit || 0)}.`);
+      if (Number(createdCounts.theories || 0) > 0) notes.push('После добавления будет занят 1 слот теории.');
+    }
+    if (preview?.item?.content_type === 'complex' && complexes) {
+      notes.push(`Комплексы в библиотеке: ${Number(complexes.library_total_count || 0)}/${Number(complexes.library_limit || 0)}.`);
+      if (Number(createdCounts.complexes || 0) > 0) notes.push('После добавления будет занят 1 слот комплекса.');
+      if (Number(createdCounts.theories || 0) > 0 && theories) {
+        notes.push(`Связанная теория тоже займет слот: ${Number(theories.library_total_count || 0)}/${Number(theories.library_limit || 0)} сейчас.`);
+      }
+    }
+    if (preview?.blocked && Array.isArray(evaluation?.errors) && evaluation.errors.length) {
+      notes.push(getWorkspaceLimitMessage(
+        preview.item?.content_type === 'theory' ? theories : complexes,
+        { label: preview.item?.content_type === 'theory' ? 'теорий' : 'комплексов' }
+      ));
+    }
+    return notes.filter(Boolean).join(' ');
   }
 
   function getCurrentCatalogUserId() {
@@ -2235,6 +2309,125 @@
     `, null, { blurCatalogShell: true, variant: 'confirm' });
   }
 
+  async function openCatalogComplexConfirmModal(preview) {
+    const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
+    const item = preview && preview.item ? preview.item : {};
+    const owner = getDisplayOwner(item) || 'Автор не указан';
+    const relatedTheoryName = asString(item?.linked_theory_item?.title);
+    const primaryLabel = already
+      ? 'Открыть в библиотеке'
+      : preview?.blocked
+        ? 'Лимит достигнут'
+        : 'Добавить комплекс';
+    const factsMarkup = buildConfirmFacts([
+      { label: 'Задания', value: String(getTaskCount(item)) },
+      ...(relatedTheoryName ? [{ label: 'Теория', value: relatedTheoryName }] : []),
+    ]);
+    const summaryMarkup = buildConfirmSummaryItems([
+      {
+        icon: 'bookmark_added',
+        title: already ? 'Уже сохранен в вашей библиотеке каталога' : 'Появится в вашей библиотеке каталога',
+        text: already ? 'Можно открыть из каталога в любой момент.' : 'Материал сохранится рядом с другими вашими публикациями.',
+      },
+      {
+        icon: 'visibility',
+        title: 'Открывается только для чтения',
+        text: 'Комплекс можно просматривать без редактирования авторского оригинала.',
+      },
+      ...(relatedTheoryName ? [{
+        icon: 'menu_book',
+        title: 'Связанная теория добавится вместе с комплексом',
+        text: `${relatedTheoryName} будет доступна в библиотеке пользователя.`,
+      }] : []),
+    ]);
+    const limitNote = buildWorkspaceLimitNote(preview);
+    return openModal(`
+      <div class="catalog-confirm-modal custom-scrollbar">
+        <div class="catalog-confirm-modal__header">
+          <div>
+            <p class="catalog-confirm-modal__eyebrow">Комплекс</p>
+            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? 'Комплекс уже в библиотеке' : 'Добавить комплекс в библиотеку')}</p>
+          </div>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>Отмена</button>
+        </div>
+        <div class="catalog-confirm-modal__body">
+          <section class="catalog-confirm-modal__hero">
+            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || 'Комплекс')}</p>
+            <div class="catalog-confirm-modal__meta">
+              <span class="catalog-confirm-modal__meta-item">Автор: ${escapeHtml(owner)}</span>
+              <span class="catalog-confirm-modal__meta-item">Раздел: Каталог</span>
+            </div>
+            ${asString(item.description) ? `<p class="catalog-confirm-modal__description">${escapeHtml(asString(item.description))}</p>` : ''}
+          </section>
+          ${limitNote ? `<div class="mb-4 rounded-2xl border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-darker">${escapeHtml(limitNote)}</div>` : ''}
+          ${factsMarkup ? `<div class="catalog-confirm-modal__facts">${factsMarkup}</div>` : ''}
+          <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
+        </div>
+        <div class="catalog-confirm-modal__footer">
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Отмена</button>
+          <button type="button" class="${already || preview?.blocked ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}" ${preview?.blocked && !already ? 'disabled' : ''}>${escapeHtml(primaryLabel)}</button>
+        </div>
+      </div>
+    `, null, { blurCatalogShell: true, variant: 'confirm' });
+  }
+
+  async function openCatalogTheoryConfirmModal(preview) {
+    const already = !!(preview && preview.library_status && preview.library_status.already_in_library);
+    const item = preview && preview.item ? preview.item : {};
+    const owner = getDisplayOwner(item) || 'Автор не указан';
+    const relatedComplexTitle = asString((Array.isArray(item?.linked_complex_items) ? item.linked_complex_items : [])[0]?.title);
+    const primaryLabel = already
+      ? 'Открыть в Теоретическом центре'
+      : preview?.blocked
+        ? 'Лимит достигнут'
+        : 'Добавить теорию';
+    const summaryMarkup = buildConfirmSummaryItems([
+      {
+        icon: 'bookmark_added',
+        title: already ? 'Уже сохранена в Теоретическом центре' : 'Появится в Теоретическом центре',
+        text: 'Материал будет доступен рядом с другими сохраненными теориями.',
+      },
+      {
+        icon: 'library_add_check',
+        title: 'Можно привязывать к своим комплексам',
+        text: 'После добавления теория станет отдельной сущностью в вашей библиотеке.',
+      },
+      ...(relatedComplexTitle ? [{
+        icon: 'account_tree',
+        title: 'Комплекс не добавится автоматически',
+        text: `${relatedComplexTitle} останется отдельной публикацией и добавляется отдельно.`,
+      }] : []),
+    ]);
+    const limitNote = buildWorkspaceLimitNote(preview);
+    return openModal(`
+      <div class="catalog-confirm-modal catalog-confirm-modal--theory custom-scrollbar">
+        <div class="catalog-confirm-modal__header">
+          <div>
+            <p class="catalog-confirm-modal__eyebrow">Теория</p>
+            <p class="catalog-confirm-modal__headline">${escapeHtml(already ? 'Теория уже в библиотеке' : 'Добавить теорию')}</p>
+          </div>
+          <button type="button" class="btn-secondary h-10 px-4" data-close>Отмена</button>
+        </div>
+        <div class="catalog-confirm-modal__body">
+          <section class="catalog-confirm-modal__hero">
+            <p class="catalog-confirm-modal__item-title">${escapeHtml(asString(item.title) || 'Теория')}</p>
+            <div class="catalog-confirm-modal__meta">
+              <span class="catalog-confirm-modal__meta-item">Автор: ${escapeHtml(owner)}</span>
+              <span class="catalog-confirm-modal__meta-item">Раздел: Теоретический центр</span>
+            </div>
+            ${asString(item.description) ? `<p class="catalog-confirm-modal__description">${escapeHtml(asString(item.description))}</p>` : ''}
+          </section>
+          ${limitNote ? `<div class="mb-4 rounded-2xl border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-darker">${escapeHtml(limitNote)}</div>` : ''}
+          <div class="catalog-confirm-modal__summary">${summaryMarkup}</div>
+        </div>
+        <div class="catalog-confirm-modal__footer">
+          <button type="button" class="btn-secondary h-10 px-4" data-action="close">Отмена</button>
+          <button type="button" class="${already || preview?.blocked ? 'btn-secondary' : 'btn-primary'} h-10 px-4" data-action-key="${already ? 'open' : 'confirm'}" ${preview?.blocked && !already ? 'disabled' : ''}>${escapeHtml(primaryLabel)}</button>
+        </div>
+      </div>
+    `, null, { blurCatalogShell: true, variant: 'confirm' });
+  }
+
   function resolveLibraryTarget(resultPayload) {
     const libraryStatus = resultPayload && resultPayload.library_status ? resultPayload.library_status : {};
     const contentType = asString(libraryStatus.content_type || resultPayload?.item?.content_type) || 'complex';
@@ -2263,12 +2456,22 @@
   }
 
   async function executeAddToLibrary(item) {
-    const payload = await fetchJson(`/api/catalog/items/${encodeURIComponent(asString(item.item_id))}/library`, {
-      method: 'POST',
-      credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
+    let payload;
+    try {
+      payload = await fetchJson(`/api/catalog/items/${encodeURIComponent(asString(item.item_id))}/library`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+    } catch (error) {
+      if (error?.status === 409 && error?.payload?.error === 'workspace_limit_reached') {
+        await loadWorkspaceLimits();
+        const summary = getWorkspaceLimitEntity(item?.content_type === 'theory' ? 'theory' : 'complex');
+        showToast(getWorkspaceLimitMessage(summary, { label: item?.content_type === 'theory' ? 'теорий' : 'комплексов' }) || 'Лимит библиотеки достигнут.', 'warning', 4200);
+      }
+      throw error;
+    }
     const versionKey = getVersionKey(item);
     if (versionKey) {
       state.statusByVersionKey.set(versionKey, {
@@ -2279,31 +2482,45 @@
         library_status: payload.library_status,
       });
     }
+    await loadWorkspaceLimits();
     render();
     showToast(item && item.content_type === 'theory' ? 'Теория добавлена в Теоретический центр.' : 'Комплекс добавлен в сохранённые публикации каталога.', 'success', 2800);
     return payload;
   }
 
   async function openPreviewFlow(item) {
-    const preview = item && item.content_type === 'theory'
-      ? {
-        ok: true,
-        item,
-        library_status: getStatus(item)?.library_status || {
-          already_in_library: false,
-          action: 'create_link',
-          content_type: 'theory',
-        },
+    const versionId = asString(item && item.latest_version_id);
+    const basePreview = {
+      ok: true,
+      item,
+      library_status: getStatus(item)?.library_status || {
+        already_in_library: false,
+        action: 'create_link',
+        content_type: item?.content_type || 'complex',
+      },
+    };
+    let preview = basePreview;
+    if (versionId) {
+      try {
+        preview = await fetchJson(`/api/catalog/items/${encodeURIComponent(asString(item.item_id))}/versions/${encodeURIComponent(versionId)}/add-to-library/preview`, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        });
+      } catch (error) {
+        if (error?.status === 409 && error?.payload?.error === 'workspace_limit_reached') {
+          await loadWorkspaceLimits();
+          preview = {
+            ...basePreview,
+            blocked: true,
+            workspace_limits: error.payload?.details ? { blocked: true, errors: [error.payload.details], summary: state.workspaceLimits } : null,
+          };
+        } else {
+          throw error;
+        }
       }
-      : {
-        ok: true,
-        item,
-        library_status: getStatus(item)?.library_status || {
-          already_in_library: false,
-          action: 'create_link',
-          content_type: 'complex',
-        },
-      };
+    }
     const modalAction = item && item.content_type === 'theory'
       ? await openCatalogTheoryConfirmModal(preview)
       : await openCatalogComplexConfirmModal(preview);
@@ -2355,6 +2572,33 @@
         showToast(`Не удалось открыть превью: ${asString(error && error.message) || 'unknown_error'}`, 'error', 4200);
       }
     }
+  }
+
+  function renderSummary() {
+    const total = state.filteredItems.length;
+    const typeLabel =
+      state.contentType === 'saved' ? 'сохраненных комплексов'
+        : state.contentType === 'complex' ? 'комплексов'
+        : state.contentType === 'theory' ? 'теорий'
+          : 'публикаций';
+    const theorySummary = getWorkspaceLimitEntity('theory');
+    const complexSummary = getWorkspaceLimitEntity('complex');
+    const slotsText = !state.authenticated || isPremiumWorkspacePlan() || (!theorySummary && !complexSummary)
+      ? ''
+      : ` · Слоты: теории ${Number(theorySummary?.library_total_count || 0)}/${Number(theorySummary?.library_limit || 0)}, комплексы ${Number(complexSummary?.library_total_count || 0)}/${Number(complexSummary?.library_limit || 0)}`;
+    if (state.loading) {
+      els.summary.textContent = 'Загружаем каталог...';
+      return;
+    }
+    if (state.error) {
+      els.summary.textContent = 'Каталог сейчас недоступен';
+      return;
+    }
+    if (!total) {
+      els.summary.textContent = `Пустой результат поиска${slotsText}`;
+      return;
+    }
+    els.summary.textContent = `Найдено ${total} ${typeLabel}${slotsText}`;
   }
 
   function bindEvents() {
@@ -2417,6 +2661,7 @@
 
     bindEvents();
     await loadCurrentUser();
+    await loadWorkspaceLimits();
     await loadCatalogItems();
   }
 

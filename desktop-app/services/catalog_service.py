@@ -10,6 +10,7 @@ from uuid import uuid4
 
 from werkzeug.utils import secure_filename
 
+from services.workspace_limits_service import WorkspaceLimitError
 from services.workspace_import_service import WorkspaceImportService
 
 
@@ -126,6 +127,7 @@ class CatalogService:
         self.complex_service = complex_service
         self.theory_service = theory_service
         self.storage_service = storage_service
+        self.workspace_limits_service = None
         self._owner_display_name_cache: Dict[str, str] = {}
 
     @property
@@ -621,6 +623,91 @@ class CatalogService:
         result["preview_only"] = True
         return result
 
+    def _evaluate_workspace_limits(
+        self,
+        *,
+        requested_by_user_id: Optional[str],
+        theory_slots: int = 0,
+        complex_slots: int = 0,
+    ) -> Optional[Dict[str, Any]]:
+        service = getattr(self, "workspace_limits_service", None)
+        if service is None:
+            return None
+        return service.evaluate_capacity(
+            requested_by_user_id,
+            requests=[
+                {
+                    "entity_kind": "theory",
+                    "limit_kind": "library_total",
+                    "slots": int(theory_slots or 0),
+                },
+                {
+                    "entity_kind": "complex",
+                    "limit_kind": "library_total",
+                    "slots": int(complex_slots or 0),
+                },
+            ],
+        )
+
+    def _attach_workspace_limits(self, payload: Dict[str, Any], evaluation: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        if not isinstance(payload, dict) or not isinstance(evaluation, dict):
+            return payload
+        blocked = bool(evaluation.get("blocked"))
+        payload["workspace_limits"] = evaluation
+        library_status = payload.get("library_status") if isinstance(payload.get("library_status"), dict) else {}
+        payload["library_status"] = {
+            **library_status,
+            "blocked": blocked,
+            "workspace_limits": evaluation,
+        }
+        payload["blocked"] = blocked
+        if blocked:
+            errors = evaluation.get("errors") if isinstance(evaluation.get("errors"), list) else []
+            if errors:
+                first_error = errors[0] if isinstance(errors[0], dict) else {}
+                payload["message"] = str(first_error.get("message") or payload.get("message") or "")
+        return payload
+
+    def _raise_for_workspace_limits(self, evaluation: Optional[Dict[str, Any]]) -> None:
+        if not isinstance(evaluation, dict):
+            return
+        if bool(evaluation.get("blocked")):
+            service = getattr(self, "workspace_limits_service", None)
+            if service is not None and hasattr(service, "_raise_for_blocked_evaluation"):
+                service._raise_for_blocked_evaluation(evaluation)
+
+    def _preview_related_theory_library_entries_for_complex_snapshot(
+        self,
+        snapshot_payload: Any,
+        *,
+        requested_by_user_id: Optional[str],
+        preferred_owner_user_id: Optional[str],
+    ) -> List[Dict[str, Any]]:
+        requester = self._normalize_optional_text(requested_by_user_id)
+        if not requester:
+            return []
+
+        results: List[Dict[str, Any]] = []
+        seen_item_ids = set()
+        for theory_payload in self._iter_complex_snapshot_theory_payloads(snapshot_payload):
+            published_item = self._find_published_theory_item_for_snapshot(
+                theory_payload,
+                preferred_owner_user_id=preferred_owner_user_id,
+            )
+            item_id = self._normalize_optional_text((published_item or {}).get("item_id"))
+            if not item_id or item_id in seen_item_ids:
+                continue
+            seen_item_ids.add(item_id)
+            existing_entry = self._get_theory_library_entry_by_user_item(requester, item_id)
+            results.append(
+                {
+                    "item": self._summarize_item_payload(published_item),
+                    "created": not isinstance(existing_entry, dict),
+                    "reused": isinstance(existing_entry, dict),
+                }
+            )
+        return results
+
     def add_item_to_library(
         self,
         item_id: str,
@@ -638,6 +725,11 @@ class CatalogService:
         if content_type == "theory":
             self._assert_item_access(item_payload, requested_by_user_id=requester, access_code=access_code)
             existing_entry = self._get_theory_library_entry_by_user_item(requester, clean_item_id)
+            limit_evaluation = self._evaluate_workspace_limits(
+                requested_by_user_id=requester,
+                theory_slots=0 if isinstance(existing_entry, dict) else 1,
+            )
+            self._raise_for_workspace_limits(limit_evaluation)
             auto_source_entry_id = self._normalize_optional_text(auto_added_by_complex_library_entry_id)
             entry_payload = copy.deepcopy(existing_entry) if isinstance(existing_entry, dict) else {
                 "library_entry_id": self._build_theory_library_entry_id(clean_item_id),
@@ -676,6 +768,7 @@ class CatalogService:
                 "library_status": self._build_theory_linked_library_status(resolved["library_entry"]),
                 "created": not isinstance(existing_entry, dict),
                 "reused": isinstance(existing_entry, dict),
+                "workspace_limits": limit_evaluation,
             }
         if content_type == "complex":
             self._assert_item_access(item_payload, requested_by_user_id=requester, access_code=access_code)
@@ -693,6 +786,17 @@ class CatalogService:
                 entry_payload["granted_access_code"] = self._normalize_access_code(access_code, allow_empty=True)
 
             resolved = self._resolve_complex_library_entry_payload(entry_payload, requested_by_user_id=requester)
+            related_theories_preview = self._preview_related_theory_library_entries_for_complex_snapshot(
+                resolved.get("snapshot"),
+                requested_by_user_id=requester,
+                preferred_owner_user_id=self._normalize_optional_text(item_payload.get("owner_user_id")),
+            )
+            limit_evaluation = self._evaluate_workspace_limits(
+                requested_by_user_id=requester,
+                complex_slots=0 if isinstance(existing_entry, dict) else 1,
+                theory_slots=sum(1 for row in related_theories_preview if bool(row.get("created"))),
+            )
+            self._raise_for_workspace_limits(limit_evaluation)
             self._upsert_complex_library_entry_payload(resolved["entry_payload"])
             related_theories = self._sync_theory_library_entries_for_complex_snapshot(
                 resolved.get("snapshot"),
@@ -714,6 +818,7 @@ class CatalogService:
                 "related_theory_library_entries": related_theories,
                 "created": not isinstance(existing_entry, dict),
                 "reused": isinstance(existing_entry, dict),
+                "workspace_limits": limit_evaluation,
             }
         raise ValueError("catalog_item_content_type_not_supported")
 
@@ -744,6 +849,8 @@ class CatalogService:
             "library_status": copy.deepcopy(status),
             "summary": copy.deepcopy(preview.get("summary")),
             "workspace": copy.deepcopy(preview.get("workspace")),
+            "workspace_limits": copy.deepcopy(preview.get("workspace_limits")),
+            "blocked": bool(preview.get("blocked")),
         }
 
     def get_item_library_status(
@@ -1230,13 +1337,26 @@ class CatalogService:
         theory_payload["updated_by_user_id"] = requester
         theory_payload["created_via"] = "workspace_import"
         theory_payload["content_scope"] = "workspace_private"
+        existing = None
+        if prefer_existing_by_lineage and hasattr(self.theory_service, "find_theory_by_source_lineage"):
+            existing = self.theory_service.find_theory_by_source_lineage(
+                source_catalog_item_id=item_payload.get("item_id"),
+                source_catalog_version_id=version_payload.get("version_id"),
+                source_entity_kind="theory",
+                source_entity_id=source_theory_id,
+            )
+        limit_evaluation = self._evaluate_workspace_limits(
+            requested_by_user_id=requester,
+            theory_slots=0 if isinstance(existing, dict) else 1,
+        )
+        self._raise_for_workspace_limits(limit_evaluation)
 
         result = self.theory_service.ensure_workspace_theory_copy(
             theory_payload,
             prefer_existing_by_lineage=prefer_existing_by_lineage,
         )
         item = result.get("item") if isinstance(result.get("item"), dict) else {}
-        return {
+        payload = {
             "ok": True,
             "add_to_library_kind": "catalog_theory_add_to_library",
             "requested_by_user_id": requester,
@@ -1297,6 +1417,8 @@ class CatalogService:
                 "complex_theory_link": None,
             },
         }
+        payload["workspace_limits"] = limit_evaluation
+        return payload
 
     def _preview_add_theory_version_to_library(
         self,
@@ -1328,7 +1450,7 @@ class CatalogService:
 
         existing_item = copy.deepcopy(existing) if isinstance(existing, dict) else None
         already_in_library = bool(existing_item)
-        return {
+        payload = {
             "ok": True,
             "preview_kind": "catalog_theory_add_to_library_preview",
             "requested_by_user_id": requester,
@@ -1397,6 +1519,11 @@ class CatalogService:
                 "complex_theory_link": None,
             },
         }
+        limit_evaluation = self._evaluate_workspace_limits(
+            requested_by_user_id=requester,
+            theory_slots=0 if already_in_library else 1,
+        )
+        return self._attach_workspace_limits(payload, limit_evaluation)
 
     def _add_complex_version_to_library(
         self,
@@ -1411,6 +1538,20 @@ class CatalogService:
             item_payload,
             version_payload,
         )
+        preview_payload = snapshot_import_service.preview_complex_copy_by_source_complex_id(
+            source_complex_id,
+            source_catalog_item_id=str(item_payload.get("item_id") or ""),
+            source_catalog_version_id=str(version_payload.get("version_id") or ""),
+            source_catalog_visibility=str(item_payload.get("catalog_visibility") or ""),
+            requested_by_user_id=requester,
+            prefer_existing_by_lineage=prefer_existing_by_lineage,
+        )
+        limit_evaluation = self._evaluate_workspace_limits(
+            requested_by_user_id=requester,
+            theory_slots=int(((preview_payload.get("summary") or {}).get("created_counts") or {}).get("theories") or 0),
+            complex_slots=int(((preview_payload.get("summary") or {}).get("created_counts") or {}).get("complexes") or 0),
+        )
+        self._raise_for_workspace_limits(limit_evaluation)
         result = snapshot_import_service.import_complex_copy_by_source_complex_id(
             source_complex_id,
             source_catalog_item_id=str(item_payload.get("item_id") or ""),
@@ -1426,6 +1567,7 @@ class CatalogService:
         result["item"] = self._summarize_item_payload(item_payload)
         result["version"] = self._summarize_version_payload(item_payload, version_payload, include_snapshot=False)
         result["library_status"] = self._build_library_status_from_import_result(result, content_type="complex")
+        result["workspace_limits"] = limit_evaluation
         return result
 
     def _preview_add_complex_version_to_library(
@@ -1456,7 +1598,12 @@ class CatalogService:
         result["item"] = self._summarize_item_payload(item_payload)
         result["version"] = self._summarize_version_payload(item_payload, version_payload, include_snapshot=False)
         result["library_status"] = self._build_library_status_from_import_result(result, content_type="complex")
-        return result
+        limit_evaluation = self._evaluate_workspace_limits(
+            requested_by_user_id=requester,
+            theory_slots=int(((result.get("summary") or {}).get("created_counts") or {}).get("theories") or 0),
+            complex_slots=int(((result.get("summary") or {}).get("created_counts") or {}).get("complexes") or 0),
+        )
+        return self._attach_workspace_limits(result, limit_evaluation)
 
     def _build_complex_dependency_bundle(self, complex_snapshot: Dict[str, Any]) -> Dict[str, Any]:
         modules: Dict[str, Any] = {}

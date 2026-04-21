@@ -624,7 +624,7 @@ describe("Theory center regressions", () => {
         const markup = renderTheoryCatalogCard({
             id: "theory_library::catalog_theory_demo::123",
             library_entry_id: "theory_library::catalog_theory_demo::123",
-            title: "РЎРІСЏР·Р°РЅРЅР°СЏ С‚РµРѕСЂРёСЏ",
+            title: "Связанная теория",
             owner_user_id: "user_author",
             owner_display_name: "Author",
             catalog_visibility: "public",

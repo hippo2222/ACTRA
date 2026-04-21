@@ -25,6 +25,7 @@ from api.complexes_api import validate_and_normalize_create_payload
 from services.linked_complex_runtime import build_linked_runtime_complex_id
 from services.complex_service import ConflictError  # type: ignore
 from services.theory_service import TheoryNotFoundError  # type: ignore
+from services.workspace_limits_service import WorkspaceLimitError
 
 from routes._context import get_ctx
 from routes._helpers import (
@@ -40,6 +41,10 @@ complexes_bp = Blueprint("complexes", __name__)
 
 def _serialize_complex_response_item(complex_obj: Any) -> Dict[str, Any]:
     return _serialize_complex_payload(complex_obj, current_user_id=get_ctx().user_id)
+
+
+def _workspace_limit_response(exc: WorkspaceLimitError) -> Any:
+    return jsonify(exc.to_payload()), 409
 
 
 def _normalize_propagation_mode(value: Any) -> str:
@@ -456,6 +461,7 @@ def create_complex() -> Any:
     payload = request.get_json(silent=True) or {}
 
     try:
+        ctx.workspace_limits_service.assert_can_create_workspace_entity(ctx.user_id, "complex")
         complex_id = payload.get("id")
         normalized: Optional[Dict[str, Any]] = None
         errors: List[Dict[str, Any]] = []
@@ -539,6 +545,8 @@ def create_complex() -> Any:
 
         created = ctx.complex_service.create_complex(complex_data)
         return jsonify({"ok": True, "item": _serialize_complex_response_item(created)}), 200
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:

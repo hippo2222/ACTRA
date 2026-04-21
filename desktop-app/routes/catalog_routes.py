@@ -9,6 +9,7 @@ from flask import Blueprint, jsonify, request
 
 from routes._context import get_ctx
 from routes._helpers import _maybe_hosted_shadow_write_error_response
+from services.workspace_limits_service import WorkspaceLimitError
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,12 @@ def _error_response(*, mode: str, error: str, status: int, public_api: bool = Tr
         ),
         status,
     )
+
+
+def _workspace_limit_response(exc: WorkspaceLimitError, *, mode: str, public_api: bool = True) -> Any:
+    payload = exc.to_payload()
+    payload["route_contract"] = _route_contract(mode=mode, public_api=public_api)
+    return jsonify(payload), 409
 
 
 def _maybe_degraded_catalog_error(exc: Exception, *, mode: str, public_api: bool = True) -> Optional[Any]:
@@ -90,6 +97,8 @@ def _request_flag(name: str) -> bool:
 
 def _publish_error_status(error: str) -> int:
     text = str(error or "")
+    if text == "workspace_limit_reached":
+        return 409
     if text.endswith("_not_found"):
         return 404
     if "forbidden" in text:
@@ -213,6 +222,8 @@ def add_catalog_item_to_library(item_id: str) -> Any:
             access_code=_request_access_code(),
         )
         return jsonify(_with_route_contract(payload, mode="add_item_to_library", public_api=False))
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc, mode="add_item_to_library", public_api=False)
     except ValueError as exc:
         return _error_response(
             mode="add_item_to_library",
@@ -382,6 +393,8 @@ def add_catalog_version_to_library(item_id: str, version_id: str) -> Any:
             access_code=_request_access_code(),
         )
         return jsonify(_with_route_contract(payload, mode="add_to_library", public_api=False))
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc, mode="add_to_library", public_api=False)
     except ValueError as exc:
         return _error_response(
             mode="add_to_library",

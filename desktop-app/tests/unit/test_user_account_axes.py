@@ -11,6 +11,8 @@ from services.user_service import (
     User,
     UserService,
     USER_PLAN_FREE,
+    USER_PLAN_PREMIUM,
+    USER_ROLE_ADMIN,
     USER_ROLE_USER,
 )
 
@@ -45,6 +47,24 @@ def test_user_to_api_dict_exposes_role_and_plan():
 
     assert payload["role"] == "admin"
     assert payload["plan"] == "premium"
+    assert payload["effective_plan"] == "premium"
+
+
+def test_admin_effective_plan_is_premium_even_when_stored_plan_is_free():
+    user = User(
+        user_id="user_1",
+        name="Admin Free",
+        created_at="2026-04-20T10:00:00",
+        role=USER_ROLE_ADMIN,
+        plan=USER_PLAN_FREE,
+        settings={},
+    )
+
+    payload = user.to_api_dict()
+
+    assert user.effective_plan == USER_PLAN_PREMIUM
+    assert payload["plan"] == USER_PLAN_FREE
+    assert payload["effective_plan"] == USER_PLAN_PREMIUM
 
 
 def test_user_service_create_user_defaults_role_and_plan(tmp_path):

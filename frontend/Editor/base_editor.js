@@ -1136,7 +1136,14 @@ class BaseEditor {
 
             const result = await response.json();
 
-            if (result.ok) {
+            if (response.status === 409 && result?.error === 'workspace_limit_reached') {
+                this.updateSaveStatus({
+                    type: 'warning',
+                    message: 'Лимит заданий достигнут',
+                    detail: 'Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.',
+                });
+                this.showToast('Лимит заданий достигнут. Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.', 'warning');
+            } else if (result.ok) {
                 const semanticWarnings = this.getSemanticWarnings();
                 if (!semanticWarnings.length) {
                     this.showToast("Задание сохранено", 'success');

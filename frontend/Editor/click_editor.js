@@ -5172,7 +5172,14 @@ class ClickEditor extends BaseEditor {
                 body: JSON.stringify(payload)
             });
             const data = await response.json();
-            if (data.ok) {
+            if (response.status === 409 && data?.error === 'workspace_limit_reached') {
+                this.updateSaveStatus({
+                    type: "warning",
+                    message: "Лимит заданий достигнут",
+                    detail: "Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.",
+                });
+                this.showToast("Лимит заданий достигнут. Черновик можно продолжать редактировать, но сохранить новый task.json пока нельзя.", "warning");
+            } else if (data.ok) {
                 const semanticWarnings = this.getSemanticWarnings();
                 if (!semanticWarnings.length) {
                     this.showToast("Задание сохранено.", "success");

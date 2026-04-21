@@ -2409,6 +2409,7 @@
           <div class="cx-editor-header__state-pills">
             <span id="draft-state-badge" class="cx-header-pill cx-mini-pill cx-mini-pill--muted" hidden>Новый комплекс</span>
             <span id="publish-status-badge" class="cx-header-pill cx-mini-pill cx-mini-pill--muted" hidden></span>
+            <span id="complex-limit-badge" class="cx-header-pill cx-mini-pill cx-mini-pill--muted" hidden></span>
           </div>
         </div>
 
@@ -2475,6 +2476,8 @@
       </button>
     </div>
   </header>
+
+  <div id="complex-limit-banner" class="mx-4 mt-4 hidden rounded-2xl border border-warning-light bg-warning-light/40 px-4 py-3 text-sm text-warning-darker"></div>
 
   <main class="flex-1 flex overflow-hidden">
     <div class="w-full min-h-0 flex-1 max-w-[1600px] mx-auto p-6 flex flex-col lg:flex-row gap-6 items-stretch cx-create-enter">
@@ -3018,6 +3021,7 @@
         sourceComplexId: "",
         loading: false,
       },
+      workspaceLimits: null,
       autosave: {
         intervalId: null,
         inFlight: false,
@@ -3106,6 +3110,96 @@
     function notifyComplexToast(message, tone = 'info', duration = 2800) {
       if (typeof NotificationUI === 'undefined' || typeof NotificationUI.toast !== 'function') return;
       NotificationUI.toast(message, tone, duration);
+    }
+
+    async function loadComplexWorkspaceLimits() {
+      try {
+        const response = await fetch('/api/workspace-limits/summary', {
+          method: 'GET',
+          credentials: 'same-origin',
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || data?.ok === false) {
+          throw new Error(data?.error || `http_${response.status}`);
+        }
+        state.workspaceLimits = data;
+        return data;
+      } catch (error) {
+        console.warn('[Complex Builder] Failed to load workspace limits', error);
+        state.workspaceLimits = null;
+        return null;
+      } finally {
+        renderComplexLimitUi();
+      }
+    }
+
+    function getComplexLimitSummary() {
+      return state.workspaceLimits && typeof state.workspaceLimits.complexes === 'object'
+        ? state.workspaceLimits.complexes
+        : null;
+    }
+
+    function isComplexPremiumPlan() {
+      return String(state.workspaceLimits?.plan || '').trim().toLowerCase() === 'premium';
+    }
+
+    function getComplexLimitMessage(summary = getComplexLimitSummary()) {
+      if (!summary || isComplexPremiumPlan()) return '';
+      const personalCount = Number(summary.personal_count || 0);
+      const personalLimit = Number(summary.personal_limit || 0);
+      const libraryCount = Number(summary.library_total_count || 0);
+      const libraryLimit = Number(summary.library_limit || 0);
+      if (Number(summary.remaining_personal || 0) <= 0 && Number(summary.remaining_library || 0) <= 0) {
+        return `Лимит комплексов достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`;
+      }
+      if (Number(summary.remaining_personal || 0) <= 0) {
+        return `Лимит своих комплексов достигнут: ${personalCount}/${personalLimit}. Удалите один из личных комплексов или перейдите на Premium.`;
+      }
+      if (Number(summary.remaining_library || 0) <= 0) {
+        return `Библиотека комплексов заполнена: ${libraryCount}/${libraryLimit}. Удалите лишний комплекс или перейдите на Premium.`;
+      }
+      return '';
+    }
+
+    function isComplexCreationBlocked() {
+      if (asCleanString(state.editingId)) return false;
+      const summary = getComplexLimitSummary();
+      if (!summary || isComplexPremiumPlan()) return false;
+      return Number(summary.remaining_personal || 0) <= 0 || Number(summary.remaining_library || 0) <= 0;
+    }
+
+    function renderComplexLimitUi() {
+      const badge = document.getElementById('complex-limit-badge');
+      const banner = document.getElementById('complex-limit-banner');
+      const saveBtn = document.getElementById('save-btn');
+      const summary = getComplexLimitSummary();
+      const blocked = isComplexCreationBlocked();
+      if (badge) {
+        if (!summary) {
+          badge.hidden = true;
+          badge.textContent = '';
+        } else if (isComplexPremiumPlan()) {
+          badge.hidden = false;
+          badge.className = 'cx-header-pill cx-mini-pill';
+          badge.textContent = 'Premium · без лимита';
+        } else {
+          badge.hidden = false;
+          badge.className = blocked
+            ? 'cx-header-pill cx-mini-pill cx-mini-pill--warning'
+            : 'cx-header-pill cx-mini-pill cx-mini-pill--muted';
+          badge.textContent = `Мои комплексы ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · Библиотека ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
+        }
+      }
+      if (banner) {
+        const message = blocked ? getComplexLimitMessage(summary) : '';
+        banner.hidden = !message;
+        banner.textContent = message;
+      }
+      if (saveBtn) {
+        saveBtn.disabled = blocked;
+        saveBtn.classList.toggle('opacity-60', blocked);
+        saveBtn.classList.toggle('cursor-not-allowed', blocked);
+      }
     }
 
     function escapeHtml(value) {
@@ -8690,6 +8784,16 @@
 
       hideGlobalError();
 
+      if (!state.editingId && isComplexCreationBlocked()) {
+        const message = getComplexLimitMessage() || 'Лимит комплексов достигнут';
+        const btn = document.getElementById('save-btn');
+        showGlobalError(message);
+        notifyComplexToast(message, 'warning', 3600);
+        if (btn) btn.setAttribute('disabled', 'true');
+        renderComplexLimitUi();
+        return null;
+      }
+
       const btn = document.getElementById('save-btn');
 
       const openPublishDialog = options?.openPublishDialog === true;
@@ -8765,6 +8869,15 @@
 
           return;
 
+        }
+
+        if (resp.status === 409 && data?.error === 'workspace_limit_reached') {
+          await loadComplexWorkspaceLimits();
+          const message = getComplexLimitMessage() || 'Лимит комплексов достигнут';
+          showGlobalError(message);
+          notifyComplexToast(message, 'warning', 3600);
+          if (btn) btn.removeAttribute('disabled');
+          return null;
         }
 
         if (!data.ok) {
@@ -8846,6 +8959,8 @@
           await applyDataToEditor(data.item);
 
         }
+
+        await loadComplexWorkspaceLimits();
 
         await refreshComplexPublicationState(true);
         const publicationNotice = getComplexPublicationNotice();
@@ -8936,6 +9051,7 @@
       }
 
       updateComplexDraftBadge();
+      renderComplexLimitUi();
 
     }
 
@@ -9379,7 +9495,7 @@
 
       const editId = params.get('id');
 
-      await loadCatalog();
+      await Promise.all([loadCatalog(), loadComplexWorkspaceLimits()]);
 
       updateComplexPublishUi();
 

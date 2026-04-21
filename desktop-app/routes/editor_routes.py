@@ -66,6 +66,7 @@ from services.hosted_shadow_fallback import (
     HostedShadowReadFallbackDisabledError,
     HostedShadowWriteFallbackDisabledError,
 )
+from services.workspace_limits_service import WorkspaceLimitError
 from persistence.runtime import HOSTED_SHADOW_WRITE_FALLBACK_ENV
 
 logger = logging.getLogger(__name__)
@@ -84,6 +85,10 @@ _WORKSPACE_IMPORT_MARKER_KEYS = (
     "prefer_existing_by_lineage",
     "requested_by_user_id",
 )
+
+
+def _workspace_limit_response(exc: WorkspaceLimitError) -> Any:
+    return jsonify(exc.to_payload()), 409
 
 
 def _hosted_editor_asset_degraded_response(
@@ -570,6 +575,9 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
     if get_ctx().user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     try:
+        task_json_path = _resolve_task_dir(module_id, topic_id, task_id) / "task.json"
+        if not task_json_path.exists():
+            get_ctx().workspace_limits_service.assert_can_create_workspace_entity(get_ctx().user_id, "task")
         payload = request.json
         if not payload:
             return jsonify({"ok": False, "error": "payload_required"}), 400
@@ -583,6 +591,8 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
         else:
             return jsonify({"ok": False, "error": "save_failed"}), 500
 
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:
@@ -1696,6 +1706,7 @@ def create_editor_task() -> Any:
     if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     try:
+        ctx.workspace_limits_service.assert_can_create_workspace_entity(ctx.user_id, "task")
         payload = request.json
         if not payload:
             return jsonify({"ok": False, "error": "payload_required"}), 400
@@ -1717,6 +1728,8 @@ def create_editor_task() -> Any:
         else:
             return jsonify({"ok": False, "error": "create_failed"}), 500
 
+    except WorkspaceLimitError as exc:
+        return _workspace_limit_response(exc)
     except Exception as exc:
         degraded_response = _maybe_hosted_shadow_write_error_response(exc)
         if degraded_response is not None:

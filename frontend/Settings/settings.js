@@ -700,6 +700,26 @@
             : '\u041f\u043b\u0430\u043d: free';
     }
 
+    function getRawPlan(user) {
+        return String(user?.plan || '').trim().toLowerCase() === 'premium' ? 'premium' : 'free';
+    }
+
+    function getEffectivePlan(user) {
+        const effectivePlan = String(user?.effective_plan || '').trim().toLowerCase();
+        if (effectivePlan === 'premium') return 'premium';
+        return getRawPlan(user);
+    }
+
+    function getEffectivePlanLabel(user) {
+        const rawPlan = getRawPlan(user);
+        const effectivePlan = getEffectivePlan(user);
+        const role = String(user?.role || '').trim().toLowerCase();
+        if (role === 'admin' && effectivePlan === 'premium' && rawPlan !== 'premium') {
+            return '\u041f\u043b\u0430\u043d: premium (admin)';
+        }
+        return getPlanLabel(effectivePlan);
+    }
+
     function updateAccountAxes(user) {
         const roleEl = document.getElementById('settings-account-role');
         const planEl = document.getElementById('settings-account-plan');
@@ -709,9 +729,9 @@
             roleEl.classList.toggle('hidden', !role);
         }
         if (planEl) {
-            const plan = String(user?.plan || '').trim().toLowerCase();
-            planEl.textContent = getPlanLabel(plan);
-            planEl.classList.toggle('hidden', !plan);
+            const effectivePlan = getEffectivePlan(user);
+            planEl.textContent = getEffectivePlanLabel(user);
+            planEl.classList.toggle('hidden', !effectivePlan);
         }
     }
 
@@ -883,11 +903,15 @@
             const login = escapeHtml(user.login || '\u2014');
             const email = escapeHtml(user.email || '\u2014');
             const role = escapeHtml(getRoleLabel(user.role));
-            const plan = String(user.plan || '').trim().toLowerCase() === 'premium' ? 'premium' : 'free';
-            const nextPlan = plan === 'premium' ? 'free' : 'premium';
-            const buttonLabel = plan === 'premium'
+            const rawPlan = getRawPlan(user);
+            const isAdminRow = String(user.role || '').trim().toLowerCase() === 'admin';
+            const nextPlan = rawPlan === 'premium' ? 'free' : 'premium';
+            const buttonLabel = rawPlan === 'premium'
                 ? '\u0421\u0434\u0435\u043b\u0430\u0442\u044c free'
                 : '\u0421\u0434\u0435\u043b\u0430\u0442\u044c premium';
+            const buttonDisabledAttrs = isAdminRow
+                ? ' disabled title="\u0410\u0434\u043c\u0438\u043d \u0432\u0441\u0435\u0433\u0434\u0430 \u0438\u043c\u0435\u0435\u0442 effective premium"'
+                : '';
             return `
                 <article class="rounded-2xl border border-border-subtle bg-surface-1 px-4 py-4">
                     <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -897,15 +921,15 @@
                             <p class="mt-1 text-xs text-text-secondary">login: ${login}</p>
                             <div class="mt-3 flex flex-wrap gap-2">
                                 <span class="settings-info-pill">${role}</span>
-                                <span class="settings-info-pill">${escapeHtml(getPlanLabel(plan))}</span>
+                                <span class="settings-info-pill">${escapeHtml(getEffectivePlanLabel(user))}</span>
                             </div>
                         </div>
                         <button type="button"
                             class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
                             data-admin-plan-user="${userId}"
-                            data-admin-next-plan="${nextPlan}">
+                            data-admin-next-plan="${nextPlan}"${buttonDisabledAttrs}>
                             <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
-                            ${buttonLabel}
+                            ${isAdminRow ? '\u041f\u043b\u0430\u043d \u0437\u0430\u0434\u0430\u0451\u0442\u0441\u044f \u0440\u043e\u043b\u044c\u044e' : buttonLabel}
                         </button>
                     </div>
                 </article>
@@ -975,6 +999,7 @@
                 _accountContext.user = {
                     ..._accountContext.user,
                     plan: data.user.plan,
+                    effective_plan: data.user.effective_plan,
                 };
                 updateAccountSummary(_accountContext.user, { hosted: _accountContext?.hosted === true });
             }

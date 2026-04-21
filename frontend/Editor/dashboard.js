@@ -5,6 +5,7 @@
 class EditorDashboard {
     constructor() {
         this.catalog = [];
+        this.workspaceLimits = null;
         this.placeholderTaskNames = [
             'тест теста',
             'тест теста 2',
@@ -111,7 +112,10 @@ class EditorDashboard {
 
         const lastView = this.loadDashboardState();
 
-        this.loadCatalog().then(() => {
+        Promise.all([
+            this.loadCatalog(),
+            this.loadWorkspaceLimits(),
+        ]).then(() => {
             // Clean up orphaned drafts after catalog is loaded
             this.cleanupOrphanedDrafts();
         }); // Clean orphaned drafts after catalog loads
@@ -204,6 +208,93 @@ class EditorDashboard {
         }
 
         console.warn('[Dashboard] Toast unavailable:', message);
+    }
+
+    async loadWorkspaceLimits() {
+        try {
+            const response = await fetch('/api/workspace-limits/summary', {
+                method: 'GET',
+                credentials: 'same-origin',
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || data?.ok === false) {
+                throw new Error(data?.error || `http_${response.status}`);
+            }
+            this.workspaceLimits = data;
+            return data;
+        } catch (error) {
+            console.warn('[Dashboard] Failed to load workspace limits', error);
+            this.workspaceLimits = null;
+            return null;
+        } finally {
+            this.renderTaskLimitUi();
+        }
+    }
+
+    getTaskLimitSummary() {
+        return this.workspaceLimits && typeof this.workspaceLimits.tasks === 'object'
+            ? this.workspaceLimits.tasks
+            : null;
+    }
+
+    isPremiumWorkspacePlan() {
+        return String(this.workspaceLimits?.plan || '').trim().toLowerCase() === 'premium';
+    }
+
+    getTaskLimitMessage(summary = this.getTaskLimitSummary()) {
+        if (!summary || this.isPremiumWorkspacePlan()) return '';
+        return `Лимит своих заданий достигнут: ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}. Удалите лишние задания или перейдите на Premium.`;
+    }
+
+    getTaskDraftNotice(summary = this.getTaskLimitSummary()) {
+        if (!summary || this.isPremiumWorkspacePlan() || !this.isTaskCreationBlocked()) return '';
+        return `${this.getTaskLimitMessage(summary)} Новый черновик открыть можно, но первое сохранение нового задания будет заблокировано, пока не освободится слот.`;
+    }
+
+    isTaskCreationBlocked() {
+        const summary = this.getTaskLimitSummary();
+        if (!summary || this.isPremiumWorkspacePlan()) return false;
+        return Number(summary.remaining_personal || 0) <= 0;
+    }
+
+    renderTaskLimitUi() {
+        const pill = document.getElementById('task-workspace-limit-pill');
+        const note = document.getElementById('create-task-limit-note');
+        const submitBtn = document.getElementById('create-task-submit-btn');
+        const createCard = document.querySelector('[data-role="create-task-card"]');
+        const summary = this.getTaskLimitSummary();
+        const blocked = this.isTaskCreationBlocked();
+
+        if (pill) {
+            if (!summary) {
+                pill.classList.add('hidden');
+            } else if (this.isPremiumWorkspacePlan()) {
+                pill.classList.remove('hidden');
+                pill.classList.add('inline-flex');
+                pill.innerHTML = '<span class="material-symbols-outlined text-[18px]">workspace_premium</span><span>Premium · без лимита</span>';
+            } else {
+                pill.classList.remove('hidden');
+                pill.classList.add('inline-flex');
+                pill.innerHTML = `<span class="material-symbols-outlined text-[18px]">${blocked ? 'lock' : 'task'}</span><span>Мои задания: ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}</span>`;
+            }
+        }
+
+        if (note) {
+            const message = blocked ? this.getTaskDraftNotice(summary) : '';
+            note.classList.toggle('hidden', !message);
+            note.textContent = message;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        }
+
+        if (createCard) {
+            createCard.disabled = false;
+            createCard.classList.remove('opacity-60', 'cursor-not-allowed');
+            createCard.title = blocked ? (this.getTaskDraftNotice(summary) || 'Можно открыть черновик, но сохранить новое задание пока нельзя') : 'Создать новое задание';
+        }
     }
 
     makeTaskUniqueId(moduleId, topicId, taskId) {
@@ -362,29 +453,53 @@ class EditorDashboard {
         });
     }
 
-    getImportHistoryEntries(limit = 4) {
+    loadImportHistory() {
         try {
             const raw = localStorage.getItem(this.importHistoryStorageKey);
             const parsed = raw ? JSON.parse(raw) : [];
-            if (!Array.isArray(parsed)) return [];
-            return parsed
-                .slice(0, Math.max(0, Number(limit) || 0))
-                .map((item) => ({
-                    timestamp: Number(item?.timestamp || 0),
-                    status: String(item?.status || 'unknown'),
-                    mode: String(item?.mode || 'text'),
-                    module: String(item?.module || ''),
-                    topic: String(item?.topic || ''),
-                    moduleId: String(item?.module_id || ''),
-                    topicId: String(item?.topic_id || ''),
-                    imported: Number(item?.imported || 0),
-                    skipped: Number(item?.skipped || 0),
-                    errors: Number(item?.errors || 0),
-                    message: String(item?.message || ''),
-                }));
+            return Array.isArray(parsed) ? parsed : [];
         } catch (e) {
             return [];
         }
+    }
+
+    saveImportHistory(items = []) {
+        try {
+            localStorage.setItem(this.importHistoryStorageKey, JSON.stringify(items));
+        } catch (e) {
+            console.warn('[Dashboard] Failed to persist import history', e);
+        }
+    }
+
+    getImportHistoryEntries(limit = 4) {
+        return this.loadImportHistory()
+            .slice(0, Math.max(0, Number(limit) || 0))
+            .map((item, historyIndex) => ({
+                historyIndex,
+                timestamp: Number(item?.timestamp || 0),
+                status: String(item?.status || 'unknown'),
+                mode: String(item?.mode || 'text'),
+                module: String(item?.module || ''),
+                topic: String(item?.topic || ''),
+                moduleId: String(item?.module_id || ''),
+                topicId: String(item?.topic_id || ''),
+                imported: Number(item?.imported || 0),
+                skipped: Number(item?.skipped || 0),
+                errors: Number(item?.errors || 0),
+                message: String(item?.message || ''),
+            }));
+    }
+
+    dismissImportHistoryEntry(historyIndex) {
+        const normalizedIndex = Number(historyIndex);
+        if (!Number.isInteger(normalizedIndex) || normalizedIndex < 0) return;
+
+        const items = this.loadImportHistory();
+        if (normalizedIndex >= items.length) return;
+
+        items.splice(normalizedIndex, 1);
+        this.saveImportHistory(items);
+        this.renderWorkspaceShortcuts();
     }
 
     getImportHistoryTone(status) {
@@ -531,6 +646,7 @@ class EditorDashboard {
         return section;
     }
 
+
     createImportHistorySection(title, entries = []) {
         const section = document.createElement('div');
         section.className = 'mb-3';
@@ -560,23 +676,57 @@ class EditorDashboard {
                         : tone === 'error'
                             ? 'Ошибка'
                             : 'Недавно';
-
             const location = [entry.module, entry.topic].filter(Boolean).join(' / ') || 'Без привязки';
-            const summary = `+${entry.imported} В· skip ${entry.skipped} В· err ${entry.errors}`;
+            const summary = `+${entry.imported} | skip ${entry.skipped} | err ${entry.errors}`;
+            const timeLabel = this.formatImportHistoryTime(entry.timestamp);
 
-            const row = document.createElement('button');
-            row.type = 'button';
-            row.className = 'w-full text-left px-2.5 py-2 rounded-lg border border-border-subtle bg-surface-1 hover:border-primary hover:bg-bg-hover transition-colors';
-            row.innerHTML = `
-                <div class="flex flex-wrap items-start justify-between gap-2">
-                    <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${toneClass}">${statusLabel}</span>
-                    <span class="editor-import-history-meta text-[10px]" title="${this.escapeHtml(this.formatImportHistoryTime(entry.timestamp))}">${this.escapeHtml(this.formatImportHistoryTime(entry.timestamp))}</span>
-                </div>
-                <p class="editor-import-history-title mt-1 text-[11px] font-semibold text-text-main">${this.escapeHtml(location)}</p>
-                <p class="editor-import-history-summary mt-0.5 text-[10px]">${this.escapeHtml(summary)}</p>
-            `;
-            row.addEventListener('click', () => this.openImportHistoryEntry(entry));
+            const row = document.createElement('div');
+            row.className = 'flex items-start gap-1';
 
+            const openBtn = document.createElement('button');
+            openBtn.type = 'button';
+            openBtn.dataset.role = 'import-history-open';
+            openBtn.className = 'flex-1 min-w-0 text-left px-2.5 py-2 rounded-lg border border-border-subtle bg-surface-1 hover:border-primary hover:bg-bg-hover transition-colors';
+            openBtn.addEventListener('click', () => this.openImportHistoryEntry(entry));
+
+            const metaRow = document.createElement('div');
+            metaRow.className = 'flex flex-wrap items-start justify-between gap-2';
+
+            const statusBadge = document.createElement('span');
+            statusBadge.className = `inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${toneClass}`;
+            statusBadge.textContent = statusLabel;
+
+            const timeMeta = document.createElement('span');
+            timeMeta.className = 'editor-import-history-meta text-[10px]';
+            timeMeta.title = timeLabel;
+            timeMeta.textContent = timeLabel;
+
+            metaRow.append(statusBadge, timeMeta);
+
+            const titleEl = document.createElement('p');
+            titleEl.className = 'editor-import-history-title mt-1 text-[11px] font-semibold text-text-main';
+            titleEl.textContent = location;
+
+            const summaryEl = document.createElement('p');
+            summaryEl.className = 'editor-import-history-summary mt-0.5 text-[10px]';
+            summaryEl.textContent = summary;
+
+            openBtn.append(metaRow, titleEl, summaryEl);
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.type = 'button';
+            dismissBtn.dataset.role = 'import-history-dismiss';
+            dismissBtn.dataset.historyIndex = String(entry.historyIndex);
+            dismissBtn.className = 'h-8 w-8 mt-1 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-disabled hover:text-text-main hover:border-border-strong hover:bg-bg-hover transition-colors';
+            dismissBtn.title = 'Убрать из истории импорта';
+            dismissBtn.setAttribute('aria-label', 'Убрать из истории импорта');
+            dismissBtn.innerHTML = '<span class="material-symbols-outlined text-[17px]">close</span>';
+            dismissBtn.addEventListener('click', (event) => {
+                event.stopPropagation();
+                this.dismissImportHistoryEntry(entry.historyIndex);
+            });
+
+            row.append(openBtn, dismissBtn);
             list.appendChild(row);
         });
 
@@ -1249,6 +1399,15 @@ class EditorDashboard {
         modal.classList.add('flex');
         const modalContent = modal.querySelector('.bg-surface-1');
         if (modalContent) modalContent.classList.add('animate-scale-in');
+        if (this.isTaskCreationBlocked()) {
+            this.showVoiceToast({
+                severity: 'warning',
+                what: 'Лимит заданий достигнут.',
+                impact: this.getTaskDraftNotice() || 'Новый черновик открыть можно, но сохранить его пока не получится.',
+                next: 'Освободите слот или перейдите на Premium.',
+                timeout: 4800,
+            });
+        }
     }
 
     updateTopicSelect() {
@@ -3895,6 +4054,15 @@ class EditorDashboard {
 
             const data = await response.json();
             if (data.ok) {
+                if (this.isTaskCreationBlocked()) {
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Черновик создан.',
+                        impact: this.getTaskDraftNotice() || 'Сохранение нового задания будет недоступно, пока не освободится слот.',
+                        next: 'Можно подготовить черновик и сохранить его позже.',
+                        timeout: 5000,
+                    });
+                }
                 this.storeTaskBootstrap(module_id, topic_id, data.task_id, data.task);
                 window.navigateWithTransition(
                     this.getEditorUrl(task_type, module_id, topic_id, data.task_id, {

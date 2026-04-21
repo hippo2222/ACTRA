@@ -208,13 +208,13 @@
       : 'btn-primary';
 
     const config = (options && typeof options === 'object') ? options : {};
-    const dialogTitle = asString(config.title) || 'РџРµСЂРµРґ СЃРѕР·РґР°РЅРёРµРј СЂР°Р±РѕС‡РµР№ РІРµСЂСЃРёРё';
-    const dialogLead = asString(config.lead) || 'РџСЂРѕРІРµСЂСЊС‚Рµ, С‡С‚Рѕ РёРјРµРЅРЅРѕ Р±СѓРґРµС‚ СЃРѕР·РґР°РЅРѕ РІ РІР°С€РµРј workspace. РСЃС‚РѕС‡РЅРёРє РїСЂРё СЌС‚РѕРј РЅРµ РёР·РјРµРЅРёС‚СЃСЏ.';
-    const sourceLabel = asString(config.sourceLabel) || 'РСЃС‚РѕС‡РЅРёРє';
-    const targetLabel = asString(config.targetLabel) || 'Р‘СѓРґРµС‚ СЃРѕР·РґР°РЅРѕ';
-    const modeValue = asString(config.modeValue) || 'РќРµР·Р°РІРёСЃРёРјР°СЏ РІРµСЂСЃРёСЏ РІ workspace';
-    const dialogCancelText = asString(config.cancelText) || 'РћС‚РјРµРЅР°';
-    const dialogConfirmText = asString(config.confirmText) || 'РЎРѕР·РґР°С‚СЊ СЃРІРѕСЋ РІРµСЂСЃРёСЋ';
+    const dialogTitle = asString(config.title) || 'Перед созданием рабочей версии';
+    const dialogLead = asString(config.lead) || 'Проверьте, что именно будет создано в вашем workspace. Источник при этом не изменится.';
+    const sourceLabel = asString(config.sourceLabel) || 'Источник';
+    const targetLabel = asString(config.targetLabel) || 'Будет создано';
+    const modeValue = asString(config.modeValue) || 'Независимая версия в workspace';
+    const dialogCancelText = asString(config.cancelText) || 'Отмена';
+    const dialogConfirmText = asString(config.confirmText) || 'Создать свою версию';
 
     return showModalOverlay(`
       <div class="w-full max-w-lg overflow-hidden rounded-[28px] border border-border-subtle bg-surface-1 shadow-xl">

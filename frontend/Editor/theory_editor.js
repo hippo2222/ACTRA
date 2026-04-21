@@ -15,6 +15,7 @@ const theoryEditorState = {
     search: "",
     context: null,
     publicationItem: null,
+    workspaceLimits: null,
 };
 
 let theoryDraftSaveTimer = 0;
@@ -413,6 +414,8 @@ function renderTheoryContextHeader() {
     if (centerBtn) {
         centerBtn.disabled = false;
     }
+
+    renderTheoryQuotaUi();
 }
 
 function theoryLocalImageSrc(path) {
@@ -430,6 +433,97 @@ async function theoryReadJsonSafely(response) {
         return await response.json();
     } catch (error) {
         return null;
+    }
+}
+
+async function fetchTheoryWorkspaceLimits() {
+    try {
+        const response = await fetch("/api/workspace-limits/summary");
+        const data = await theoryReadJsonSafely(response);
+        if (!response.ok || !data?.ok) {
+            throw new Error(data?.error || `http_${response.status}`);
+        }
+        theoryEditorState.workspaceLimits = data;
+        return data;
+    } catch (error) {
+        console.warn("[Theory Editor] Failed to load workspace limits", error);
+        theoryEditorState.workspaceLimits = null;
+        return null;
+    } finally {
+        renderTheoryQuotaUi();
+    }
+}
+
+function getTheoryWorkspaceLimitSummary() {
+    const summary = theoryEditorState.workspaceLimits;
+    return summary && typeof summary.theories === "object" ? summary.theories : null;
+}
+
+function isTheoryEditorPremiumPlan() {
+    return String(theoryEditorState.workspaceLimits?.plan || "").trim().toLowerCase() === "premium";
+}
+
+function getTheoryLimitMessage(summary = getTheoryWorkspaceLimitSummary()) {
+    if (!summary) {
+        return "";
+    }
+    const personalCount = Number(summary.personal_count || 0);
+    const personalLimit = Number(summary.personal_limit || 0);
+    const libraryCount = Number(summary.library_total_count || 0);
+    const libraryLimit = Number(summary.library_limit || 0);
+    if (isTheoryEditorPremiumPlan()) {
+        return "";
+    }
+    if (Number(summary.remaining_personal || 0) <= 0 && Number(summary.remaining_library || 0) <= 0) {
+        return `Лимит теорий достигнут: свои ${personalCount}/${personalLimit}, библиотека ${libraryCount}/${libraryLimit}. Удалите лишнее или перейдите на Premium.`;
+    }
+    if (Number(summary.remaining_personal || 0) <= 0) {
+        return `Лимит своих теорий достигнут: ${personalCount}/${personalLimit}. Удалите одну из личных теорий или перейдите на Premium.`;
+    }
+    if (Number(summary.remaining_library || 0) <= 0) {
+        return `Библиотека теорий заполнена: ${libraryCount}/${libraryLimit}. Удалите лишнюю теорию или перейдите на Premium.`;
+    }
+    return "";
+}
+
+function isTheoryCreationBlocked() {
+    if (String(theoryEditorState.activeTheoryId || "").trim()) {
+        return false;
+    }
+    const summary = getTheoryWorkspaceLimitSummary();
+    if (!summary || isTheoryEditorPremiumPlan()) {
+        return false;
+    }
+    return Number(summary.remaining_personal || 0) <= 0 || Number(summary.remaining_library || 0) <= 0;
+}
+
+function renderTheoryQuotaUi() {
+    const pill = document.getElementById("theory-quota-pill");
+    const banner = document.getElementById("theory-limit-banner");
+    const summary = getTheoryWorkspaceLimitSummary();
+    const isPremium = isTheoryEditorPremiumPlan();
+    const blocked = isTheoryCreationBlocked();
+
+    if (pill) {
+        if (!summary) {
+            pill.hidden = true;
+            pill.textContent = "";
+        } else if (isPremium) {
+            pill.className = "theory-chip theory-chip--primary";
+            pill.hidden = false;
+            pill.innerHTML = '<span class="material-symbols-outlined text-[16px]">workspace_premium</span> Premium · без лимита';
+        } else {
+            const toneClass = blocked ? "theory-chip" : "theory-chip theory-chip--primary";
+            pill.className = toneClass;
+            pill.hidden = false;
+            pill.innerHTML = `<span class="material-symbols-outlined text-[16px]">inventory_2</span> Мои теории ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · Библиотека ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
+        }
+    }
+
+    if (banner) {
+        const message = blocked ? getTheoryLimitMessage(summary) : "";
+        banner.hidden = !message;
+        banner.textContent = message;
     }
 }
 
@@ -1905,6 +1999,14 @@ async function persistTheory(options = {}) {
     if (theoryEditorState.saving) {
         return null;
     }
+    if (!theoryEditorState.activeTheoryId && isTheoryCreationBlocked()) {
+        const message = getTheoryLimitMessage();
+        setTheoryStatus(message || "Лимит теорий достигнут", "warning", "lock");
+        if (!options.silent) {
+            theoryEditorToast(message || "Лимит теорий достигнут", "warning", 3600);
+        }
+        return null;
+    }
 
     const titleEl = document.getElementById("theory-title");
     const payload = {
@@ -1937,6 +2039,15 @@ async function persistTheory(options = {}) {
         }
 
         const data = await response.json();
+        if (response.status === 409 && data?.error === "workspace_limit_reached") {
+            await fetchTheoryWorkspaceLimits();
+            const message = getTheoryLimitMessage() || "Лимит теорий достигнут";
+            setTheoryStatus(message, "warning", "lock");
+            if (!options.silent) {
+                theoryEditorToast(message, "warning", 3600);
+            }
+            return null;
+        }
         if (!response.ok || !data?.ok || !data.item) {
             throw new Error(data?.error || "theory_save_failed");
         }
@@ -1957,6 +2068,7 @@ async function persistTheory(options = {}) {
         renderTheoryContextHeader();
         updateTheoryEditorActions();
         await loadTheoryCatalog({ keepSelection: true });
+        await fetchTheoryWorkspaceLimits();
         const publicationSync = await syncPublishedTheoryAfterSave(item, options);
         const publicationNotice = getTheoryPublicationNotice(item);
         let statusMessage = "Теория сохранена";
@@ -2413,7 +2525,7 @@ async function uploadTheoryImage(event) {
 function updateTheoryEditorActions() {
     const saveBtn = document.getElementById("theory-save-btn");
     if (saveBtn) {
-        saveBtn.disabled = theoryEditorState.saving;
+        saveBtn.disabled = theoryEditorState.saving || isTheoryCreationBlocked();
         saveBtn.innerHTML = theoryEditorState.saving
             ? '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Сохраняем'
             : '<span class="material-symbols-outlined text-[18px]">save</span> Сохранить';
@@ -2427,6 +2539,31 @@ function updateTheoryEditorActions() {
     }
 
     updateTheoryPublicationControls();
+}
+
+function updateTheoryEditorActions() {
+    const saveBtn = document.getElementById("theory-save-btn");
+    const blocked = isTheoryCreationBlocked();
+    if (saveBtn) {
+        saveBtn.disabled = theoryEditorState.saving || blocked;
+        if (theoryEditorState.saving) {
+            saveBtn.innerHTML = '<span class="material-symbols-outlined animate-spin text-[18px]">progress_activity</span> Сохраняем';
+        } else if (blocked) {
+            saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">lock</span> Лимит достигнут';
+        } else {
+            saveBtn.innerHTML = '<span class="material-symbols-outlined text-[18px]">save</span> Сохранить';
+        }
+        saveBtn.classList.toggle('theory-save-btn--dirty', !theoryEditorState.saving && theoryEditorState.dirty);
+    }
+
+    const openComplexesBtn = document.getElementById("theory-open-complexes-btn");
+    if (openComplexesBtn) {
+        openComplexesBtn.disabled = false;
+        openComplexesBtn.dataset.target = resolveTheoryComplexesUrl();
+    }
+
+    updateTheoryPublicationControls();
+    renderTheoryQuotaUi();
 }
 
 function formatTheoryListDate(value) {
@@ -2966,7 +3103,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderTheoryContextHeader();
     bindTheoryEditorEvents();
     updateTheoryEditorActions();
-    await loadTheoryCatalog({ keepSelection: true });
+    await Promise.all([
+        loadTheoryCatalog({ keepSelection: true }),
+        fetchTheoryWorkspaceLimits(),
+    ]);
 
     if (theoryEditorState.context?.theoryId) {
         await loadTheoryById(theoryEditorState.context.theoryId);

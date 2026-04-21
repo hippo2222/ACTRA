@@ -402,6 +402,22 @@ def get_current_user() -> Any:
         return jsonify({"ok": False, "error": "user_get_failed"}), 500
 
 
+@users_bp.route("/api/workspace-limits/summary", methods=["GET"])
+def get_workspace_limits_summary() -> Any:
+    try:
+        user_id = get_current_user_id(guest_if_missing=False) if is_hosted_web_runtime() else get_ctx().user_id
+        clean_user_id = str(user_id or "").strip()
+        if is_hosted_web_runtime() and not clean_user_id:
+            return jsonify({"ok": False, "error": "authentication_required"}), 401
+        if clean_user_id == "guest":
+            return jsonify({"ok": False, "error": "guest_cannot_read_workspace_limits"}), 403
+        payload = get_ctx().workspace_limits_service.get_summary(clean_user_id)
+        return jsonify(payload)
+    except Exception as exc:
+        logger.exception("[HTTP] Failed to get workspace limits summary: %s", exc)
+        return jsonify({"ok": False, "error": "workspace_limits_summary_failed"}), 500
+
+
 # ---------------------------------------------------------------------------
 # Select user
 # ---------------------------------------------------------------------------

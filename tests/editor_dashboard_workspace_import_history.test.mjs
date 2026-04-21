@@ -138,12 +138,26 @@ describe("EditorDashboard workspace import history", () => {
     expect(host.classList.contains("hidden")).toBe(false);
     expect(host.textContent).toContain("Модуль A / Тема A");
 
-    const firstEntryBtn = host.querySelector("button");
+    const firstEntryBtn = host.querySelector('[data-role="import-history-open"]');
     expect(firstEntryBtn).toBeTruthy();
     firstEntryBtn.click();
 
     const importModal = document.getElementById("import-modal");
     expect(importModal.classList.contains("hidden")).toBe(false);
+  });
+
+  it("dismisses import history shortcut and removes it from storage", () => {
+    const host = document.getElementById("editor-workspace-shortcuts");
+    expect(host).toBeTruthy();
+    expect(host.querySelector('[data-role="import-history-open"]')).toBeTruthy();
+
+    const dismissBtn = host.querySelector('[data-role="import-history-dismiss"]');
+    expect(dismissBtn).toBeTruthy();
+    dismissBtn.click();
+
+    expect(JSON.parse(localStorage.getItem("editor_import_history_v1") || "null")).toEqual([]);
+    expect(host.classList.contains("hidden")).toBe(true);
+    expect(host.querySelector('[data-role="import-history-open"]')).toBeNull();
   });
 
   it("shows orphan draft in recovery center with human-readable module/topic names", () => {

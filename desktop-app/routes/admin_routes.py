@@ -14,6 +14,7 @@ from routes._context import (
     get_ctx,
     is_hosted_web_runtime,
 )
+from services.user_service import resolve_effective_plan
 
 logger = logging.getLogger(__name__)
 
@@ -49,13 +50,15 @@ def _require_admin_user() -> tuple[Optional[Any], Optional[str], Optional[Any]]:
 
 
 def _serialize_admin_user(user: Any) -> Dict[str, Any]:
+    raw_plan = str(getattr(user, "plan", "") or "").strip().lower() or "free"
     return {
         "user_id": str(getattr(user, "user_id", "") or "").strip(),
         "name": str(getattr(user, "name", "") or "").strip(),
         "login": str(getattr(user, "login", "") or "").strip() or None,
         "email": str(getattr(user, "email", "") or "").strip() or None,
         "role": str(getattr(user, "role", "") or "").strip().lower() or "user",
-        "plan": str(getattr(user, "plan", "") or "").strip().lower() or "free",
+        "plan": raw_plan,
+        "effective_plan": resolve_effective_plan(user),
         "created_at": str(getattr(user, "created_at", "") or "").strip(),
     }
 

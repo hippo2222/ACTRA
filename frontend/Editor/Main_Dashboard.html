@@ -532,6 +532,8 @@
                 <span class="cursor-pointer hover:text-primary transition-colors">Библиотека</span>
             </nav>
             <div class="editor-header-actions flex items-center gap-4 justify-end min-w-0 shrink-0">
+                <span id="task-workspace-limit-pill"
+                    class="hidden items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-3 py-2 text-sm font-semibold text-text-secondary shadow-sm"></span>
                 <div class="relative search-container-expanding shrink-0 rounded-lg">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-text-disabled">search</span>
@@ -613,6 +615,7 @@
                         <span class="material-symbols-outlined">close</span>
                     </button>
                 </div>
+                <div id="create-task-limit-note" class="hidden mb-4 rounded-lg border border-warning-light bg-warning-lighter px-4 py-3 text-sm text-warning-darker"></div>
                 <form id="create-task-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-semibold text-text-secondary mb-1">Модуль</label>
@@ -666,7 +669,7 @@
                     class="px-4 py-2 text-sm font-medium text-text-secondary hover:text-text-main transition-colors">
                     Отмена
                 </button>
-                <button type="button" onclick="dashboard.submitTaskForm()"
+                <button id="create-task-submit-btn" type="button" onclick="dashboard.submitTaskForm()"
                     class="px-6 py-2 bg-primary hover:bg-primary-dark text-primary-contrast font-bold rounded-lg transition-all shadow-md">
                     Создать задание
                 </button>
