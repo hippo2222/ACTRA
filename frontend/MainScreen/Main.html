@@ -14,6 +14,12 @@
             --main-card-radius: 18px;
             --main-card-radius-sm: 12px;
             --main-card-padding: clamp(0.55rem, 1.1vh, 0.9rem);
+            --main-topbar-inline-padding: clamp(0.75rem, 0.9vw + 0.25rem, 1.5rem);
+            --main-topbar-group-gap: clamp(0.55rem, 0.85vw, 1.5rem);
+            --main-topbar-brand-gap: clamp(0.65rem, 0.75vw, 1rem);
+            --main-topbar-secondary-gap: clamp(0.45rem, 0.65vw, 0.75rem);
+            --main-topbar-button-gap: clamp(0.35rem, 0.5vw, 0.5rem);
+            --main-topbar-button-inline-padding: clamp(0.7rem, 0.75vw, 0.95rem);
             --main-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
             --main-shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.06);
             --main-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
@@ -25,17 +31,65 @@
         }
 
         body {
-            overflow: hidden;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         #app-content {
-            height: calc(100vh - var(--connection-banner-height, 0px));
             min-height: calc(100vh - var(--connection-banner-height, 0px));
+            min-height: calc(100dvh - var(--connection-banner-height, 0px));
+            height: auto;
         }
 
         .main-topbar {
             height: var(--main-header-height);
             min-height: var(--main-header-height);
+            padding-inline: var(--main-topbar-inline-padding) !important;
+            column-gap: clamp(0.65rem, 1vw, 1.1rem);
+        }
+
+        .main-topbar__group {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .main-topbar__group--primary {
+            flex: 1 1 auto;
+            gap: var(--main-topbar-group-gap);
+        }
+
+        .main-topbar__group--secondary {
+            flex: 0 0 auto;
+            gap: var(--main-topbar-secondary-gap);
+        }
+
+        .main-topbar__brand {
+            display: flex;
+            align-items: center;
+            gap: var(--main-topbar-brand-gap);
+            min-width: 0;
+            flex: 0 0 auto;
+        }
+
+        .main-topbar__divider {
+            margin-inline: clamp(0.05rem, 0.25vw, 0.2rem);
+        }
+
+        .main-topbar__button,
+        .main-topbar__profile {
+            gap: var(--main-topbar-button-gap) !important;
+            padding-inline: var(--main-topbar-button-inline-padding) !important;
+            flex: 0 0 auto;
+        }
+
+        .main-topbar__datetime {
+            gap: clamp(0.3rem, 0.45vw, 0.5rem) !important;
+            flex: 0 0 auto;
+        }
+
+        .main-topbar__user-name {
+            max-width: clamp(6.25rem, 10vw, 8.75rem) !important;
         }
         ::-webkit-scrollbar {
             width: 8px;
@@ -141,7 +195,7 @@
             padding: var(--main-gap) clamp(0.75rem, 1.6vw, 1.5rem);
             flex: 1 1 auto;
             min-height: 0;
-            overflow: hidden;
+            overflow: visible;
             box-sizing: border-box;
         }
 
@@ -1182,6 +1236,17 @@
             }
         }
 
+        @media (max-width: 1440px) {
+            :root {
+                --main-topbar-inline-padding: clamp(0.65rem, 0.7vw + 0.2rem, 1rem);
+                --main-topbar-group-gap: clamp(0.45rem, 0.55vw, 0.95rem);
+                --main-topbar-brand-gap: clamp(0.55rem, 0.55vw, 0.8rem);
+                --main-topbar-secondary-gap: clamp(0.35rem, 0.5vw, 0.6rem);
+                --main-topbar-button-gap: clamp(0.3rem, 0.35vw, 0.45rem);
+                --main-topbar-button-inline-padding: clamp(0.55rem, 0.45vw + 0.25rem, 0.78rem);
+            }
+        }
+
         @media (max-height: 880px) {
             #quick-access-section {
                 gap: 0.45rem;
@@ -1522,38 +1587,38 @@
         class="relative flex min-h-screen w-full flex-col overflow-x-hidden transition-all duration-300">
         <header
             class="main-topbar sticky top-0 flex flex-none items-center justify-between whitespace-nowrap border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-2 z-50">
-            <div class="flex items-center gap-6">
-                <div class="flex items-center gap-4 text-text-main">
+            <div class="main-topbar__group main-topbar__group--primary flex items-center gap-6">
+                <div class="main-topbar__brand flex items-center gap-4 text-text-main">
                     <span class="brand-logo w-12 h-12" style="color:var(--color-primary)" aria-hidden="true"></span>
                     <h2 class="text-text-main text-2xl font-black leading-tight tracking-wide uppercase">
                         ACTRA</h2>
                 </div>
-                <div class="hidden md:block h-6 w-px bg-border-subtle"></div>
+                <div class="main-topbar__divider hidden md:block h-6 w-px bg-border-subtle"></div>
                 <a href="/ui/editor"
-                    class="hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    class="main-topbar__button hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">edit_document</span>
                     Редактор заданий
                 </a>
                 <a href="/ui/complexes/create"
-                    class="hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    class="main-topbar__button hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">design_services</span>
                     Редактор комплексов
                 </a>
                 <button type="button" onclick="showReferencePlaceholder()"
-                    class="hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    class="main-topbar__button hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">menu_book</span>
                     Справочник
                 </button>
             </div>
-            <div class="flex items-center gap-3">
-                <div class="hidden md:flex items-center gap-2 text-sm text-text-secondary" id="datetime-display">
+            <div class="main-topbar__group main-topbar__group--secondary flex items-center gap-3">
+                <div class="main-topbar__datetime hidden md:flex items-center gap-2 text-sm text-text-secondary" id="datetime-display">
                     <span class="material-symbols-outlined text-lg">schedule</span>
                     <span id="datetime-text">Загрузка...</span>
                 </div>
                 <div class="relative">
                     <button id="projectLinksButton" type="button" onclick="toggleProjectLinksMenu(event)"
                         aria-haspopup="menu" aria-expanded="false"
-                        class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95"
+                        class="main-topbar__button inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95"
                         title="&#1057;&#1089;&#1099;&#1083;&#1082;&#1080; &#1087;&#1088;&#1086;&#1077;&#1082;&#1090;&#1072;">
                         <span class="material-symbols-outlined text-[20px]">public</span>
                         <span class="hidden lg:inline">&#1057;&#1089;&#1099;&#1083;&#1082;&#1080;</span>
@@ -1585,15 +1650,15 @@
                     </div>
                 </div>
                 <button onclick="openFeedbackModal()"
-                    class="inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                    class="main-topbar__button inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
                     <span class="material-symbols-outlined text-[20px]">feedback</span>
                     <span class="hidden lg:inline">&#1054;&#1073;&#1088;&#1072;&#1090;&#1085;&#1072;&#1103; &#1089;&#1074;&#1103;&#1079;&#1100;</span>
                 </button>
                 <button type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false"
-                    class="flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
+                    class="main-topbar__profile flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
                     onclick="openProfileMenu(event)">
                     <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
-                    <span class="text-text-main text-sm font-medium hidden sm:inline max-w-[140px] truncate"
+                    <span class="main-topbar__user-name text-text-main text-sm font-medium hidden sm:inline max-w-[140px] truncate"
                         id="headerUserName">Загрузка...</span>
                     <span class="material-symbols-outlined text-[18px] text-text-muted">expand_more</span>
                 </button>
