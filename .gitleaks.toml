@@ -1,0 +1,58 @@
+title = "ACTRA gitleaks configuration"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "actra-env-secret"
+description = "ACTRA environment secret"
+regex = '''(?i)(?:ACTRA_SECRET_KEY|ACTRA_AUTH_SMTP_PASSWORD|ACTRA_FEEDBACK_SMTP_PASSWORD|POSTGRES_PASSWORD|ACTRA_S3_SECRET_KEY|ACTRA_S3_ACCESS_KEY)\s*[:=]\s*['"]?([^'"`\s]{8,})'''
+secretGroup = 1
+keywords = [
+  "ACTRA_SECRET_KEY",
+  "ACTRA_AUTH_SMTP_PASSWORD",
+  "ACTRA_FEEDBACK_SMTP_PASSWORD",
+  "POSTGRES_PASSWORD",
+  "ACTRA_S3_SECRET_KEY",
+  "ACTRA_S3_ACCESS_KEY",
+]
+
+[[rules.allowlists]]
+description = "Example placeholders are documented in tracked templates"
+regexTarget = "match"
+regexes = [
+  '''(?i)replace-with-''',
+  '''(?i)change-me-before-production''',
+  '''(?i)minioadmin''',
+  '''\$\{[A-Z0-9_]+:-[^}]*\}''',
+  '''resolvedSecretKey''',
+  '''local-launch-acceptance-secret''',
+]
+
+[[rules]]
+id = "actra-postgres-dsn"
+description = "ACTRA Postgres DSN with inline credentials"
+regex = '''(?i)ACTRA_POSTGRES_DSN\s*[:=]\s*['"]?((?:postgres|postgresql):\/\/[^'"`\s]+)'''
+secretGroup = 1
+keywords = [
+  "ACTRA_POSTGRES_DSN",
+  "postgresql://",
+]
+
+[[rules.allowlists]]
+description = "Example DSNs are allowed in tracked templates"
+regexTarget = "match"
+regexes = [
+  '''(?i)replace-with-''',
+  '''(?i)change-me-before-production''',
+]
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "ACTRA access code alphabet is not a credential"
+regexTarget = "line"
+regexes = [
+  '''_ACCESS_CODE_ALPHABET\s*=''',
+]
