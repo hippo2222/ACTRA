@@ -1,5 +1,7 @@
 # ACTRA v1.0.0
 
+Legacy desktop release. This document describes the historical Windows-packaged line and should not be treated as the current hosted release contract.
+
 ## What's included
 
 - Windows installer: `ACTRA-Setup.exe`

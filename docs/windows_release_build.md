@@ -1,5 +1,7 @@
 ﻿# Windows Release Build
 
+Legacy desktop packaging only. This flow is no longer the primary delivery model for ACTRA, and it is not the release path for the hosted product line.
+
 This project now supports two release artifacts:
 
 - Portable app folder: `dist/ACTRA/`

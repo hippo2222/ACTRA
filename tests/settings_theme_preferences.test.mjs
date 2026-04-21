@@ -43,6 +43,7 @@ function setupDom() {
         <img id="settings-account-avatar" />
         <div id="settings-account-name"></div>
         <div id="settings-account-caption"></div>
+        <div id="settings-account-axes"></div>
         <div id="settings-account-subline"></div>
         <div id="settings-account-email"></div>
         <button id="settings-logout-btn" type="button"></button>
@@ -85,6 +86,15 @@ function setupDom() {
         <div id="settings-password-save-status" class="hidden"></div>
         <div id="theme-options"></div>
         <div id="theme-save-status" class="hidden"></div>
+        <div id="settings-profile-title"></div>
+        <div id="settings-profile-description"></div>
+        <div id="settings-security-title"></div>
+        <div id="settings-security-description"></div>
+        <div id="settings-admin-title"></div>
+        <div id="settings-admin-description"></div>
+        <div id="settings-appearance-title"></div>
+        <div id="settings-ai-title"></div>
+        <div id="settings-ai-description"></div>
         <div id="settings-profile-caption"></div>
         <div id="settings-footer-profile-note"></div>
         <div id="providers-container"></div>
@@ -274,7 +284,33 @@ describe('settings theme preferences', () => {
     expect(html).toContain('id="settings-password-username"');
     expect(html).toContain('id="settings-avatar-crop-modal"');
     expect(html).toContain('id="settings-main-btn"');
+    expect(html).toContain('id="settings-profile-title"');
+    expect(html).toContain('id="settings-security-title"');
+    expect(html).toContain('id="settings-appearance-title"');
+    expect(html).toContain('id="settings-ai-title"');
     expect(html).toContain('.settings-avatar-crop-backdrop.hidden');
+  });
+
+  it('applies explicit section labels without shifting appearance and AI headings', async () => {
+    const fetchMock = buildFetchMock({
+      'GET /api/ui/settings': async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+      }),
+    });
+
+    dom.window.fetch = fetchMock;
+    defineGlobal('fetch', fetchMock);
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    expect(dom.window.document.getElementById('settings-profile-title')?.textContent).toBe('Профиль');
+    expect(dom.window.document.getElementById('settings-security-title')?.textContent).toBe('Безопасность');
+    expect(dom.window.document.getElementById('settings-appearance-title')?.textContent).toBe('Оформление');
+    expect(dom.window.document.getElementById('settings-ai-title')?.textContent).toBe('AI keys');
   });
 
   it('keeps the main button icon intact and navigates via PageTransition', async () => {

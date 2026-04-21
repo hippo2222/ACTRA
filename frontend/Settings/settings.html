@@ -160,9 +160,9 @@
             gap: 0.35rem;
             border-radius: 999px;
             padding: 0.38rem 0.72rem;
-            border: 1px solid var(--color-border-subtle);
-            background: var(--color-bg-secondary);
-            color: var(--color-text-secondary);
+            border: 1px solid color-mix(in srgb, var(--color-border-subtle) 52%, var(--color-primary) 48%);
+            background: color-mix(in srgb, var(--color-bg-secondary) 84%, white 16%);
+            color: color-mix(in srgb, var(--color-text-main) 62%, var(--color-text-secondary) 38%);
             font-size: 0.74rem;
             font-weight: 600;
         }
@@ -179,6 +179,64 @@
             display: flex;
             flex-direction: column;
             gap: 1.25rem;
+        }
+
+        .settings-account-summary {
+            flex: 1 1 0%;
+            min-width: 0;
+        }
+
+        .settings-account-name,
+        .settings-account-email,
+        .settings-account-subline {
+            min-width: 0;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        .settings-account-statuses {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .settings-account-actions {
+            display: flex;
+            width: 100%;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+
+        @media (min-width: 1024px) {
+            .settings-account-actions {
+                width: auto;
+                flex-direction: column;
+                align-items: flex-end;
+                justify-content: center;
+                flex: 0 0 auto;
+            }
+        }
+
+        .settings-shell .text-text-secondary {
+            color: color-mix(in srgb, var(--color-text-main) 58%, var(--color-text-secondary) 42%);
+        }
+
+        .settings-shell .text-xs.text-text-secondary,
+        .settings-shell .text-sm.text-text-secondary {
+            color: color-mix(in srgb, var(--color-text-main) 62%, var(--color-text-secondary) 38%);
+        }
+
+        .settings-shell .bg-warning-lighter\/60 .text-text-secondary,
+        .settings-shell .bg-danger-lighter\/40 .text-text-secondary,
+        .settings-shell .bg-bg-secondary .text-text-secondary,
+        .settings-shell .settings-upload-frame .text-text-secondary {
+            color: color-mix(in srgb, var(--color-text-main) 68%, var(--color-text-secondary) 32%);
+        }
+
+        .settings-shell #settings-delete-warning {
+            color: color-mix(in srgb, var(--color-danger-dark, #991b1b) 82%, var(--color-text-main) 18%);
         }
 
         .settings-provider-card {
@@ -322,25 +380,25 @@
                     <div class="flex items-start gap-4">
                         <img id="settings-account-avatar" class="settings-account-avatar" src="/api/assets/avatars/1.png"
                             alt="Аккаунт" />
-                        <div class="min-w-0">
+                        <div class="settings-account-summary">
                             <div class="flex flex-wrap items-center gap-2">
-                                <h2 id="settings-account-name" class="text-2xl font-bold text-text-main">Аккаунт ACTRA</h2>
+                                <h2 id="settings-account-name" class="settings-account-name text-2xl font-bold text-text-main">Аккаунт ACTRA</h2>
                                 <span id="settings-account-caption" class="settings-info-pill">
                                     <span class="material-symbols-outlined text-[14px]">account_circle</span>
                                     Загружаем профиль...
                                 </span>
                             </div>
-                            <p id="settings-account-email" class="mt-2 text-sm font-medium text-text-main">—</p>
-                            <div id="settings-account-axes" class="mt-3 flex flex-wrap gap-2">
+                            <p id="settings-account-email" class="settings-account-email mt-2 text-sm font-medium text-text-main">—</p>
+                            <div id="settings-account-axes" class="settings-account-statuses mt-3">
                                 <span id="settings-account-role" class="settings-info-pill hidden"></span>
                                 <span id="settings-account-plan" class="settings-info-pill hidden"></span>
                             </div>
-                            <p id="settings-account-subline" class="mt-2 text-sm text-text-secondary">
+                            <p id="settings-account-subline" class="settings-account-subline mt-2 text-sm text-text-secondary">
                                 Имя, почта, пароль и внешний вид сохраняются для текущего аккаунта.
                             </p>
                         </div>
                     </div>
-                    <div class="flex flex-wrap gap-3">
+                    <div class="settings-account-actions">
                         <a id="settings-main-btn" href="/ui/main"
                             class="btn-secondary inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold">
                             <span class="material-symbols-outlined text-[18px]">dashboard</span>
@@ -364,8 +422,8 @@
                             <span class="material-symbols-outlined text-[22px] text-primary">badge</span>
                         </div>
                         <div>
-                            <h2 class="text-xl font-bold text-text-main">Профиль</h2>
-                            <p class="text-sm text-text-secondary">Основные данные аккаунта и фото профиля.</p>
+                            <h2 id="settings-profile-title" class="text-xl font-bold text-text-main">Профиль</h2>
+                            <p id="settings-profile-description" class="text-sm text-text-secondary">Основные данные аккаунта и фото профиля.</p>
                         </div>
                     </div>
 
@@ -479,8 +537,8 @@
                             <span class="material-symbols-outlined text-[22px] text-primary">lock</span>
                         </div>
                         <div>
-                            <h2 class="text-xl font-bold text-text-main">Безопасность</h2>
-                            <p class="text-sm text-text-secondary">Смена пароля и базовая защита входа.</p>
+                            <h2 id="settings-security-title" class="text-xl font-bold text-text-main">Безопасность</h2>
+                            <p id="settings-security-description" class="text-sm text-text-secondary">Смена пароля и базовая защита входа.</p>
                         </div>
                     </div>
 
@@ -583,8 +641,8 @@
                         <span class="material-symbols-outlined text-[22px] text-primary">manage_accounts</span>
                     </div>
                     <div>
-                        <h2 class="text-xl font-bold text-text-main">Управление аккаунтами</h2>
-                        <p class="text-sm text-text-secondary">Поиск пользователей и переключение статуса premium.</p>
+                        <h2 id="settings-admin-title" class="text-xl font-bold text-text-main">Управление аккаунтами</h2>
+                        <p id="settings-admin-description" class="text-sm text-text-secondary">Поиск пользователей и переключение статуса premium.</p>
                     </div>
                 </div>
 
@@ -619,7 +677,7 @@
                         <span class="material-symbols-outlined text-[22px] text-primary">palette</span>
                     </div>
                     <div>
-                        <h2 class="text-xl font-bold text-text-main">Оформление</h2>
+                        <h2 id="settings-appearance-title" class="text-xl font-bold text-text-main">Оформление</h2>
                         <p id="settings-profile-caption" class="text-sm text-text-secondary">
                             Палитра интерфейса сохраняется для текущего аккаунта.
                         </p>
@@ -644,8 +702,8 @@
                         <span class="material-symbols-outlined text-[22px] text-primary">key</span>
                     </div>
                     <div>
-                        <h2 class="text-xl font-bold text-text-main">AI keys</h2>
-                        <p class="text-sm text-text-secondary">Сохраните ключи и проверьте их прямо на этой странице.</p>
+                        <h2 id="settings-ai-title" class="text-xl font-bold text-text-main">AI keys</h2>
+                        <p id="settings-ai-description" class="text-sm text-text-secondary">Сохраните ключи и проверьте их прямо на этой странице.</p>
                     </div>
                 </div>
 

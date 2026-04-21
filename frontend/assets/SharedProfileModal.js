@@ -153,7 +153,35 @@
         return getThemeCatalog().find((theme) => theme.id === getCurrentThemeId()) || null;
     }
 
+    function ensureMenuStyles() {
+        if (document.getElementById('sharedProfileMenuStyles')) {
+            return;
+        }
+
+        const style = document.createElement('style');
+        style.id = 'sharedProfileMenuStyles';
+        style.textContent = `
+            #sharedProfileMenuPanel .shared-profile-focus-target:focus-visible {
+                outline: 2px solid color-mix(in srgb, var(--color-primary) 72%, white 28%);
+                outline-offset: 2px;
+                border-color: color-mix(in srgb, var(--color-primary) 72%, white 28%);
+                box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-light) 34%, transparent);
+            }
+
+            #sharedProfileMenuPanel .shared-profile-theme-chip {
+                scroll-margin: 0.75rem;
+            }
+
+            #sharedProfileMenuPanel .shared-profile-theme-chip:focus-visible {
+                transform: translateY(-1px);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     function injectMenu() {
+        ensureMenuStyles();
+
         if (document.getElementById('sharedProfileMenuOverlay')) {
             return getElements();
         }
@@ -162,13 +190,14 @@
         wrapper.innerHTML = `
         <div id="sharedProfileMenuOverlay" class="fixed inset-0 z-[100] hidden">
             <div id="sharedProfileMenuPanel"
-                class="absolute w-[min(23rem,calc(100vw-1rem))] overflow-hidden rounded-[1.35rem] border border-border-subtle bg-surface-1 shadow-2xl">
+                class="absolute overflow-hidden rounded-[1.35rem] border border-border-subtle bg-surface-1 shadow-2xl">
             </div>
         </div>`;
 
         document.body.appendChild(wrapper.firstElementChild);
 
         const elements = getElements();
+        applyPanelDimensions(elements.panel);
         elements.panel.style.maxHeight = 'min(36rem, calc(100vh - 1rem))';
         elements.panel.style.overflowY = 'auto';
         elements.overlay.addEventListener('click', (event) => {
@@ -221,9 +250,19 @@
         activeAnchor.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     }
 
+    function applyPanelDimensions(panel) {
+        if (!panel) return;
+        const viewportWidth = typeof window.innerWidth === 'number' ? window.innerWidth : 1440;
+        const width = Math.max(280, Math.min(368, viewportWidth - 16));
+        panel.style.width = `${width}px`;
+        panel.style.maxWidth = 'calc(100vw - 1rem)';
+    }
+
     function positionMenu() {
         const { panel } = getElements();
         if (!panel || !activeAnchor) return;
+
+        applyPanelDimensions(panel);
 
         const anchorRect = activeAnchor.getBoundingClientRect();
         const menuWidth = panel.offsetWidth || 360;
@@ -328,13 +367,12 @@
         const currentThemeMeta = getCurrentThemeMeta();
         const currentThemeLabel = currentThemeMeta?.name || 'Тема';
         const spoilerIcon = isThemeSectionExpanded ? 'expand_less' : 'expand_more';
-        const spoilerState = isThemeSectionExpanded ? 'Скрыть палитру' : 'Показать палитру';
 
         panel.innerHTML = `
             <div class="border-b border-border-subtle px-4 py-4">
                 <div class="flex items-center justify-between gap-3">
-                    <p class="text-[10px] font-bold uppercase tracking-[0.24em] text-text-secondary">Аккаунт</p>
-                    <span class="inline-flex items-center rounded-full border border-border-subtle bg-bg-secondary px-2.5 py-1 text-[11px] font-semibold text-text-secondary">
+                    <p class="text-xs font-semibold uppercase tracking-[0.18em] text-text-secondary">Аккаунт</p>
+                    <span class="inline-flex items-center rounded-full border border-border-subtle bg-bg-secondary px-3 py-1 text-xs font-semibold text-text-secondary">
                         Hosted
                     </span>
                 </div>
@@ -345,14 +383,14 @@
             <div class="px-4 py-4 space-y-3">
                 <a href="/ui/settings"
                     id="sharedProfileSettings"
-                    class="flex items-center justify-between rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition-all hover:border-primary hover:bg-bg-hover">
+                    class="shared-profile-focus-target flex items-center justify-between rounded-2xl border border-border-subtle bg-surface-1 px-4 py-3 text-left transition-all hover:border-primary hover:bg-bg-hover">
                     <div class="flex items-center gap-3">
                         <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary-light bg-primary-lighter text-primary">
                             <span class="material-symbols-outlined text-[20px]">settings_account_box</span>
                         </span>
                         <div>
                             <div class="text-sm font-semibold text-text-main">Настройки аккаунта</div>
-                            <div class="text-xs text-text-secondary">Профиль, аватар и персональные параметры</div>
+                            <div class="text-sm text-text-secondary">Профиль, аватар и персональные параметры</div>
                         </div>
                     </div>
                     <span class="material-symbols-outlined text-text-secondary">arrow_forward</span>
@@ -362,27 +400,24 @@
                         id="sharedProfileThemeToggle"
                         data-profile-theme-toggle="true"
                         aria-expanded="${isThemeSectionExpanded ? 'true' : 'false'}"
-                        class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover">
+                        class="shared-profile-focus-target flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-bg-hover">
                         <div class="flex min-w-0 items-center gap-3">
                             <span class="flex h-11 w-11 items-center justify-center rounded-2xl border border-border-subtle bg-bg-secondary text-primary">
                                 <span class="material-symbols-outlined text-[20px]">palette</span>
                             </span>
                             <div class="min-w-0">
                                 <div class="text-sm font-semibold text-text-main">Оформление</div>
-                                <div class="mt-0.5 flex items-center gap-2 text-xs text-text-secondary">
+                                <div class="mt-0.5 text-sm text-text-secondary">
                                     <span class="truncate">${escapeHtml(currentThemeLabel)}</span>
-                                    <span class="inline-flex rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-text-secondary">
-                                        ${spoilerState}
-                                    </span>
                                 </div>
                             </div>
                         </div>
                         <span class="material-symbols-outlined text-text-secondary">${spoilerIcon}</span>
                     </button>
-                    <div id="sharedProfileThemeSection" class="${isThemeSectionExpanded ? 'block' : 'hidden'} border-t border-border-subtle px-4 pb-4 pt-3">
-                        <p class="text-xs text-text-secondary">Подберите палитру. Изменение применяется сразу и сохраняется для аккаунта.</p>
-                        <div id="sharedProfileThemeList" class="mt-3 grid grid-cols-2 gap-2">
-                            <div class="col-span-2 rounded-xl border border-border-subtle bg-bg-secondary px-3 py-4 text-center text-sm text-text-secondary">
+                    <div id="sharedProfileThemeSection" class="${isThemeSectionExpanded ? 'block' : 'hidden'} overflow-x-hidden border-t border-border-subtle px-4 pb-4 pt-3">
+                        <p class="text-sm text-text-secondary">Подберите палитру. Изменение применяется сразу и сохраняется для аккаунта.</p>
+                        <div id="sharedProfileThemeList" class="mt-3 grid min-w-0 grid-cols-1 gap-2 overflow-x-hidden">
+                            <div class="rounded-xl border border-border-subtle bg-bg-secondary px-3 py-4 text-center text-sm text-text-secondary">
                                 Загружаем темы...
                             </div>
                         </div>
@@ -391,7 +426,7 @@
             </div>
             <div class="border-t border-border-subtle p-2">
                 <button id="sharedProfileLogout" type="button"
-                    class="flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm font-semibold text-text-main transition-colors hover:border-error hover:bg-bg-hover hover:text-error">
+                    class="shared-profile-focus-target flex w-full items-center justify-center gap-2 rounded-xl border border-border-subtle bg-surface-1 px-3 py-2.5 text-sm font-semibold text-text-main transition-colors hover:border-error hover:bg-bg-hover hover:text-error">
                     <span class="material-symbols-outlined text-[18px]">logout</span>
                     <span>${isLogoutPending ? 'Выходим...' : 'Выйти'}</span>
                 </button>
@@ -407,7 +442,10 @@
 
         const themeToggleButton = document.getElementById('sharedProfileThemeToggle');
         if (themeToggleButton) {
-            themeToggleButton.addEventListener('click', () => {
+            themeToggleButton.addEventListener('click', (event) => {
+                if (event.currentTarget instanceof HTMLElement) {
+                    event.currentTarget.blur();
+                }
                 isThemeSectionExpanded = !isThemeSectionExpanded;
                 renderHostedShell();
                 renderCurrentProfile(currentHostedUser);
@@ -452,8 +490,8 @@
                     : ''}
             </div>
             <div class="min-w-0">
-                <div class="truncate text-[1.05rem] font-semibold text-text-main">${safeName}</div>
-                <div class="mt-1 text-xs text-text-secondary">${subtitle}</div>
+                <div class="truncate text-lg font-semibold text-text-main">${safeName}</div>
+                <div class="mt-1 text-sm text-text-secondary">${subtitle}</div>
             </div>
         `;
     }
@@ -475,7 +513,7 @@
 
         if (!themes.length) {
             container.innerHTML = `
-                <div class="col-span-2 rounded-xl border border-border-subtle bg-bg-secondary px-3 py-4 text-center text-sm text-text-secondary">
+                <div class="rounded-xl border border-border-subtle bg-bg-secondary px-3 py-4 text-center text-sm text-text-secondary">
                     Темы недоступны
                 </div>
             `;
@@ -493,27 +531,22 @@
                 <button type="button"
                     data-theme-chip="${escapeHtml(theme.id)}"
                     title="${escapeHtml(theme.name || theme.id)}"
-                    class="group flex min-h-[94px] flex-col rounded-2xl border p-3 text-left transition-all ${isActive
+                    class="shared-profile-focus-target shared-profile-theme-chip group flex w-full min-w-0 items-center gap-2 overflow-hidden rounded-xl border px-3 py-2.5 text-left transition-all ${isActive
                         ? 'border-primary bg-primary-lighter shadow-md'
                         : 'border-border-subtle bg-surface-1 hover:border-primary hover:-translate-y-0.5'} ${isThemeSaving ? 'cursor-wait opacity-70' : ''}"
                     ${isThemeSaving ? 'disabled aria-disabled="true"' : ''}>
-                    <span class="flex items-center justify-between gap-2">
-                        <span class="inline-flex items-center gap-1.5 rounded-full border border-border-subtle bg-bg-secondary px-2 py-1">
-                            ${supportSwatches.map((color) => `
-                                <span class="h-3 w-3 rounded-full border shadow-sm" style="background:${escapeHtml(color)};border-color:rgba(255,255,255,0.4)"></span>
-                            `).join('')}
-                        </span>
-                        <span class="material-symbols-outlined text-[16px] ${isActive ? 'text-primary' : 'text-text-secondary'}">
-                            ${isActive ? 'check_circle' : 'palette'}
-                        </span>
+                    <span class="inline-flex shrink-0 items-center gap-1 rounded-full border border-border-subtle bg-bg-secondary px-2 py-1">
+                        ${supportSwatches.map((color) => `
+                            <span class="h-3 w-3 rounded-full border shadow-sm" style="background:${escapeHtml(color)};border-color:rgba(255,255,255,0.4)"></span>
+                        `).join('')}
                     </span>
-                    <span class="mt-4 flex items-end justify-between gap-2">
-                        <span class="block min-w-0">
-                            <span class="block truncate text-sm font-semibold text-text-main">${escapeHtml(theme.name || theme.id)}</span>
-                            <span class="mt-1 block text-[11px] text-text-secondary">${theme.isDark ? 'Тёмная палитра' : 'Светлая палитра'}</span>
-                        </span>
-                        <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border shadow-sm" style="background:${swatch};border-color:${border};color:${accentInk}">
-                            <span class="material-symbols-outlined text-[16px]">ink_highlighter</span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block truncate text-sm font-semibold text-text-main">${escapeHtml(theme.name || theme.id)}</span>
+                        <span class="mt-0.5 block text-xs text-text-secondary">${theme.isDark ? 'Тёмная палитра' : 'Светлая палитра'}</span>
+                    </span>
+                    <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border shadow-sm" style="background:${swatch};border-color:${border};color:${accentInk}">
+                        <span class="material-symbols-outlined text-[16px] ${isActive ? 'text-primary' : ''}">
+                            ${isActive ? 'check_circle' : 'ink_highlighter'}
                         </span>
                     </span>
                 </button>
@@ -521,7 +554,10 @@
         }).join('');
 
         container.querySelectorAll('[data-theme-chip]').forEach((button) => {
-            button.addEventListener('click', () => {
+            button.addEventListener('click', (event) => {
+                if (event.currentTarget instanceof HTMLElement) {
+                    event.currentTarget.blur();
+                }
                 const themeId = button.getAttribute('data-theme-chip');
                 if (!themeId) return;
                 void saveHostedTheme(themeId);

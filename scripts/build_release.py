@@ -197,7 +197,7 @@ def run_release_catalog_validation() -> bool:
         str(CATALOG_VALIDATOR),
         "--data-dir",
         str(PROJECT_ROOT / "data"),
-        "--require-non-demo",
+        "--expect-empty",
     ]
     print(f"  Validating release catalog: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=str(PROJECT_ROOT))
@@ -208,7 +208,7 @@ def run_release_catalog_validation() -> bool:
 
 
 def create_release_data_bundle() -> None:
-    """Copy validated release catalog into dist/ACTRA/data."""
+    """Create an empty runtime data baseline inside dist/ACTRA/data."""
     app_dir = DIST_DIR / APP_NAME
     release_data = app_dir / "data"
     source_data = PROJECT_ROOT / "data"
@@ -217,26 +217,14 @@ def create_release_data_bundle() -> None:
         shutil.rmtree(release_data, ignore_errors=True)
     release_data.mkdir(parents=True, exist_ok=True)
 
-    # Copy curated learning content.
-    source_modules = source_data / "modules"
-    source_complexes = source_data / "complexes"
-    if not source_modules.exists():
-        raise RuntimeError(f"Missing source modules directory: {source_modules}")
-    if not source_complexes.exists():
-        raise RuntimeError(f"Missing source complexes directory: {source_complexes}")
-
-    shutil.copytree(source_modules, release_data / "modules", dirs_exist_ok=True)
-    shutil.copytree(source_complexes, release_data / "complexes", dirs_exist_ok=True)
-
-    # Ship bundled default avatars (if present).
-    source_avatars = source_data / "avatars"
-    if source_avatars.exists():
-        shutil.copytree(source_avatars, release_data / "avatars", dirs_exist_ok=True)
-    else:
-        (release_data / "avatars").mkdir(parents=True, exist_ok=True)
-
-    # Runtime directories must start empty (except bundled avatars above).
+    # Runtime directories must start empty.
     runtime_dirs = [
+        release_data / "modules",
+        release_data / "catalog",
+        release_data / "microcards" / "decks",
+        release_data / "avatars",
+        release_data / "complexes" / "theories",
+        release_data / "complexes" / "history",
         release_data / "users",
         release_data / "images",
         release_data / "user_calendar",
@@ -247,6 +235,8 @@ def create_release_data_bundle() -> None:
     for d in runtime_dirs:
         d.mkdir(parents=True, exist_ok=True)
 
+    (release_data / "complexes" / "complexes.json").write_text("[]\n", encoding="utf-8")
+
     # Keep essential static config.
     src_difficulty = source_data / "difficulty_config.json"
     if src_difficulty.exists():
@@ -254,12 +244,6 @@ def create_release_data_bundle() -> None:
     src_update_manifest = source_data / "system" / "update_manifest.json"
     if src_update_manifest.exists():
         shutil.copy2(src_update_manifest, release_data / "system" / "update_manifest.json")
-
-    # Drop mutable history from shipped content.
-    history_dir = release_data / "complexes" / "history"
-    if history_dir.exists():
-        shutil.rmtree(history_dir, ignore_errors=True)
-    history_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"  Release data bundle created in {release_data}")
 

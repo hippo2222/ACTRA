@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import path from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 import { spawn } from "node:child_process";
@@ -85,9 +84,15 @@ function sanitizeComposeProjectName(runId = "") {
   return `actra-${slug}`;
 }
 
-function buildAuditSecretKey(runId = "") {
-  const hash = crypto.createHash("sha256").update(String(runId || "cpw")).digest("hex");
-  return `actra-runtime-key-${hash}`;
+function buildAuditRuntimeKey(runId = "") {
+  const slug =
+    String(runId || "cpw")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/-+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 42) || "cpw";
+  return `actra-${slug}-runtime-key`;
 }
 
 async function fetchHealth(baseUrl, readyPath = "/api/health", expectedRuntimeMode = "") {
@@ -328,9 +333,10 @@ async function startLocalRuntimeServer({
     "hosted_web";
   const resolvedExpectedRuntimeMode =
     String(expectedRuntimeMode || resolvedRuntimeMode).trim() || "";
+  const generatedRuntimeKey = buildAuditRuntimeKey(runId);
   const resolvedSecretKey =
-    String(env.ACTRA_SECRET_KEY || process.env.ACTRA_SECRET_KEY || buildAuditSecretKey(runId)).trim() ||
-    buildAuditSecretKey(runId);
+    String(env.ACTRA_SECRET_KEY || process.env.ACTRA_SECRET_KEY || generatedRuntimeKey).trim() ||
+    generatedRuntimeKey;
   let resolvedStartupUserId = String(startupUserId || "").trim();
 
   await ensureDir(logsDir);
@@ -448,9 +454,10 @@ async function startDockerComposeRuntime({
   const stderrPath = path.resolve(logsDir, "compose.stderr.log");
   const composeProjectName = sanitizeComposeProjectName(runId);
   const composeFile = resolveProjectPath(projectRoot, "docker-compose.hosted.yml");
+  const generatedRuntimeKey = buildAuditRuntimeKey(runId);
   const resolvedSecretKey =
-    String(env.ACTRA_SECRET_KEY || process.env.ACTRA_SECRET_KEY || buildAuditSecretKey(runId)).trim() ||
-    buildAuditSecretKey(runId);
+    String(env.ACTRA_SECRET_KEY || process.env.ACTRA_SECRET_KEY || generatedRuntimeKey).trim() ||
+    generatedRuntimeKey;
   const composeEnv = {
     ...process.env,
     ...env,

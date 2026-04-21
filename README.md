@@ -1,8 +1,8 @@
 <div align="center">
 
-# ACTRA — Платформа Активного Обучения
+# ACTRA
 
-**Превращаем пассивное чтение в интерактивную практику**
+Веб-платформа активного обучения с инструментами для работы с интерактивными заданиями, контентом, тренировочными сессиями, статистикой, календарем и microcards.
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=white)](https://python.org)
 [![Flask](https://img.shields.io/badge/Flask-3.0-green?logo=flask&logoColor=white)](https://flask.palletsprojects.com)
@@ -16,355 +16,247 @@
 
 ## О проекте
 
-**ACTRA** (Active Training) — это EdTech-платформа, которая трансформирует учебный контент (тексты, изображения, PDF-документы) в интерактивные задания для активного запоминания и отработки знаний на практике.
+ACTRA предоставляет инструменты для перевода пассивного учебного контента в практику: интерактивные задания, теории, связанные комплексы, повторение, календарь и аналитику прогресса в hosted web-runtime.
 
-### Проблема
+Текущий фокус проекта - hosted web-версия. Репозиторий уже не стоит воспринимать как desktop-first приложение для локальной установки на отдельные компьютеры. Desktop/webview и Windows release-сборка в кодовой базе еще присутствуют, но основной продуктовый и инфраструктурный контур сейчас hosted-first.
 
-Традиционное чтение учебников — один из наименее эффективных методов обучения. В условиях «клипового мышления» студенты с трудом удерживают внимание на длинных текстах, а информация забывается через дни. Многократное перечитывание создаёт иллюзию знания, но не формирует реальные навыки.
+## Текущее состояние
 
-### Решение
+Канонический источник статуса hosted-перехода:
 
-ACTRA реализует подход **«сразу применяй на практике»**: вместо пассивного чтения пользователь сразу отрабатывает материал через разнообразные интерактивные задания — клик по областям изображения, рисование контуров, тесты, сборка последовательностей, открытые ответы. Платформа включает адаптивную систему повторений, календарное планирование занятий и детальную статистику прогресса.
+- [docs/hosted_web_migration/current_state.md](docs/hosted_web_migration/current_state.md)
+- [docs/hosted_web_migration/hosted_finish_line_matrix.md](docs/hosted_web_migration/hosted_finish_line_matrix.md)
 
-### Для кого
+На текущем срезе:
 
-Проект **доменно-агностичен** — его можно применять в медицинском образовании (рентгенология, анатомия), техническом обучении, изучении языков и любых других сценариях, где важно не просто запомнить, а **понять, закрепить и перенести знания в практику**.
+- `green`: `main + quick access`, `statistics + progress`, `calendar + memory health`, `catalog + library + publication`, `complex passage`, `linked theory / open flows`, `task editor`, `complex editor`, `theory editor + theory center`, `assets + media`, `microcards`, `readiness + degraded signaling`
+- `transitional`: `auth + email lifecycle`, `import/export`, `hosted infra + production launch`
+- `AI editor extras`: в hosted-продукте намеренно закрыты честным placeholder-состоянием `in progress`, а не считаются живым rollout-контуром
 
----
+Важно: AI-генерация заданий, AI-анализ теории и AI-driven microcards сейчас не должны описываться как доступная hosted-функция. Для публичного hosted runtime они переведены в явный placeholder-контракт.
 
-## Ключевые возможности
+## Что уже работает в hosted
 
-### 🎯 Разнообразные типы заданий
+- Интерактивные типы заданий: click, draw, test, open answer, sequence и связанные runtime/UI-контракты.
+- Главный экран, quick access, статистика, календарь, schedule block и memory health.
+- Каталог публикаций, пользовательская библиотека и linked-theory/open flows.
+- Hosted CRUD для task editor, complex editor и theory editor.
+- Hosted assets/media-контур с `asset_id` / `asset_url` как каноническим источником.
+- Тренировочный complex passage flow.
+- Microcards как отдельный пользовательский режим с hosted persistence и аналитикой.
+- `/api/ready` как канонический readiness/degraded-сигнал для hosted контуров.
 
-| Тип задания | Описание | Применение |
-|---|---|---|
-| **Click** | Клик по точке или области на изображении (точки, полигоны) | Анатомия, рентгенология, топография |
-| **Draw** | Рисование контуров и обводка областей на изображении | Обводка органов, контуры структур |
-| **Test** | Тестовые вопросы с одним или несколькими вариантами ответов | Теория, классификации, терминология |
-| **Open Answer** | Открытый текстовый ответ с оценкой по ключевым словам и морфологией | Описание снимков, свободные ответы |
-| **Sequence Assembly** | Сборка последовательности из перемешанных элементов | Алгоритмы, этапы процедур, протоколы |
-| **Error Detection** | Поиск и исправление ошибок в тексте | Редактура, внимательность к деталям |
+## Что еще в переходном статусе
 
-### 🤖 AI-генерация заданий
+- `Auth + email lifecycle`: базовый hosted auth flow уже работает, включая `register -> verify -> me -> logout -> login -> forgot-password`, но production proof для реального домена, SMTP и публичного env еще не закрыт.
+- `Import/export`: strict hosted gate уже есть, но контур еще остается transitional и требует дальнейшей зачистки compatibility-мостов.
+- `Hosted infra + production launch`: локальный Docker acceptance run уже зеленый, но финальный production proof по public domain / reverse proxy / real SMTP / backup drill еще не завершен.
 
-- **Автоматический анализ** загруженных документов (PDF, текст, изображения) с помощью LLM
-- **Генерация заданий** по проанализированному материалу — от тестовых вопросов до click-заданий
-- **Интеллектуальный импорт** сгенерированных заданий с валидацией и автоматической привязкой к теориям
-- **Пайплайн AI run** с сохранением артефактов: анализ → генерация → импорт, полный аудитный трейл каждого запуска
+## Что намеренно отключено
 
-### 📚 Редактор заданий
+- AI-генерация заданий в редакторе
+- AI-анализ теории
+- AI-driven microcards generation
 
-- Визуальный редактор для каждого типа задания с моментальным предпросмотром
-- **Click Editor** — расстановка точек и полигонов на изображении, настройка допусков и зон
-- **Draw Editor** — определение эталонных контуров для рисования
-- **Test / Open Answer / Sequence / Error Detection Editor** — создание теоретических заданий
-- Система **undo/redo**, автосохранение, drag & drop
-- Менеджер импорта заданий из внешних источников и AI-генерации
-
-### 🔁 Тренажёр с адаптивными повторениями
-
-- **Сессионное прохождение** — задания группируются в сессии с навигацией, прогрессом и таймером
-- **Адаптивная логика повторов** — задания, в которых допущены ошибки, повторяются чаще
-- **Daily Mix** — режим «ежедневная смесь», автоматически подбирающий задания для повторения на основе прогресса
-- **Microcards** — модуль быстрого повторения через компактные интерактивные карточки с аналитикой эффективности
-
-### 📅 Календарь и планирование
-
-- Календарь занятий с расписанием тренировок и дней отдыха
-- **Health Score** памяти — индикатор «здоровья» усвоения каждой темы
-- **Heatmap активности** — визуализация активности по дням
-- Планирование нагрузки, учёт rest days
-
-### 🏗️ Комплексы заданий
-
-- Конструктор **комплексов (цепочек)** заданий с произвольной структурой
-- Привязка заданий к теоретическому материалу (theory link)
-- **Автосохранение** и **история версий** с возможностью восстановления
-- Импорт/экспорт комплексов в формате JSON через API
-
-### 📊 Статистика и аналитика
-
-- Прогресс по попыткам, сессиям и освоению материала
-- Статистика по каждому заданию, теме и комплексу
-- Динамика обучения во времени
-- Оценка сложности заданий (difficulty manager)
-
-### 🎨 Интерфейс и темы
-
-- Современный UI на основе **TailwindCSS** с адаптивной вёрсткой
-- Система **тем оформления** (светлые, тёмные, нейтральные палитры) с мгновенным переключением
-- Welcome-экран с анимированным логотипом и онбордингом
-- Контрастный аудитор для проверки доступности UI (WCAG)
-- Система уведомлений и профилей пользователей
-
-### ⚙️ Инфраструктура и качество
-
-- **CI/CD** — GitHub Actions: синтаксис-проверка Python, flake8, black, mypy, pytest (Python 3.10/3.11), vitest, lint фронтенда, валидация тем, проверка mojibake
-- **Тестирование** — `pytest` (бэкенд, 100+ тестов) + `vitest` (фронтенд) + Playwright (E2E)
-- **Crash dump** — периодическое сохранение состояния для восстановления после сбоев
-- **Обратная связь** — встроенный feedback с email-уведомлениями (SMTP, Proton Bridge)
-- **Авто-обновления** — проверка обновлений через GitHub Releases + манифест `latest.json`
-- **Watchdog** — мониторинг процессов и автоматическое восстановление
-- **Миграции данных** — версионированная система миграций для обновления структуры данных
-
----
+В hosted-продукте эти поверхности сейчас должны показывать честное состояние "Функционал в разработке", а не частично работающий функционал.
 
 ## Архитектура
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│                         Frontend                               │
-│   HTML / JS / TailwindCSS — SPA-like навигация                │
-│   MainScreen · Editor · S1 (Session) · Calendar · Statistics   │
-│   Microcards · Complexes · Welcome · Themes                   │
-└────────────────────────┬───────────────────────────────────────┘
-                         │ REST API (JSON)
-┌────────────────────────▼───────────────────────────────────────┐
-│                    Desktop-App (Flask)                          │
-│  ┌──────────┐  ┌──────────┐  ┌─────────────┐                  │
-│  │  Routes   │  │  Logic   │  │  Services   │                  │
-│  │ (15 mod.) │  │ (ctrl,   │  │ (evaluator, │                  │
-│  │           │  │  session, │  │  progress,  │                  │
-│  │           │  │  repo)   │  │  AI, import, │                  │
-│  │           │  │          │  │  storage...) │                  │
-│  └──────────┘  └──────────┘  └─────────────┘                  │
-│                    server.py · webview_launcher.py              │
-└────────────────────────┬───────────────────────────────────────┘
-                         │
-┌────────────────────────▼───────────────────────────────────────┐
-│                     Task System                                │
-│   Ядро: модели данных, типы заданий, парсеры, миграции         │
-└────────────────────────┬───────────────────────────────────────┘
-                         │
-┌────────────────────────▼───────────────────────────────────────┐
-│                      Data Layer                                │
-│   JSON-файлы: комплексы, теории, прогресс, AI runs, аватары    │
-└────────────────────────────────────────────────────────────────┘
+ACTRA сейчас стоит воспринимать как hosted web-систему с таким основным контуром:
+
+```text
+Frontend (HTML / JS / Tailwind)
+        |
+        v
+Flask application (`desktop-app/server.py`)
+        |
+        +-- hosted entrypoint (`desktop-app/hosted_entrypoint.py`)
+        +-- routes / services / hosted repositories
+        |
+        +-- Postgres-backed hosted persistence
+        +-- S3-compatible asset storage
+        +-- readiness / degraded signaling
 ```
 
-Приложение имеет **два режима запуска**:
-- **Web** — Flask HTTP-сервер, открывается в браузере (`http://127.0.0.1:8000/ui/main`)
-- **Desktop** — нативное окно через `pywebview`, тот же Flask-сервер работает внутри
+Локальный production-like запуск строится вокруг:
 
----
+- [`desktop-app/hosted_entrypoint.py`](desktop-app/hosted_entrypoint.py)
+- [`docker-compose.hosted.yml`](docker-compose.hosted.yml)
+- [`Dockerfile.hosted`](Dockerfile.hosted)
+- [`.env.hosted.example`](.env.hosted.example)
 
-## Структура проекта
+## Ключевые возможности
 
-```
-ACTRA/
-├── desktop-app/              # Серверная часть (Flask)
-│   ├── server.py             # HTTP-сервер с API
-│   ├── webview_launcher.py   # Нативное окно (pywebview)
-│   ├── api/                  # Модули REST API (комплексы, календарь)
-│   ├── routes/               # Роуты: AI, сессии, импорт, статистика, ...
-│   ├── logic/                # Бизнес-логика: контроллеры, сессии, репозитории
-│   └── services/             # 25+ сервисов: оценка, AI-генерация, прогресс, ...
-│
-├── frontend/                 # Клиентская часть (HTML / JS / CSS)
-│   ├── MainScreen/           # Главный экран — навигация, обзор комплексов
-│   ├── Editor/               # Редактор заданий (click, draw, test, sequence, ...)
-│   ├── S1/                   # Экран тренировочной сессии
-│   ├── Calendar/             # Календарь занятий и планирование
-│   ├── Complexes/            # Конструктор комплексов
-│   ├── Microcards/           # Модуль быстрого повторения
-│   ├── statistics/           # Панель статистики и аналитики
-│   ├── Welcome/              # Экран приветствия и онбординг
-│   ├── PalletesThemes/       # Палитры и темы оформления (6 тем)
-│   ├── ClickUI/              # UI-компоненты click-заданий
-│   ├── DrawUI/               # UI-компоненты draw-заданий
-│   ├── TestUI/               # UI-компоненты тестовых заданий
-│   ├── OpenAnswerUI/         # UI открытых ответов
-│   ├── SequenceUI/           # UI сборки последовательностей
-│   ├── MistakesUI/           # UI обнаружения ошибок
-│   └── assets/               # CSS (Tailwind), шрифты, SVG-логотип, утилиты
-│
-├── task_system/              # Ядро системы заданий
-│   ├── core/                 # Базовые классы, IO, хуки, менеджеры
-│   ├── models/               # Модели данных и парсеры
-│   ├── migrations/           # Версионированные миграции данных
-│   └── VERSION               # Версия ядра
-│
-├── common/                   # Общие утилиты (конфиг, watchdog)
-├── data/                     # Данные: комплексы, теории, AI runs, аватары
-├── tests/                    # Тесты: pytest (70+ файлов) + vitest (12 файлов)
-├── scripts/                  # Скрипты: сборка, линтинг, бенчмарки, валидация
-├── .github/workflows/        # CI (GitHub Actions) + Release Manifest
-├── pyproject.toml            # Конфигурация Python-проекта и зависимостей
-├── package.json              # Frontend tooling (Tailwind, Vitest)
-└── config.json               # Конфигурация приложения
+### Контент и прохождение
+
+- Интерактивные задания нескольких типов: click, draw, test, open answer, sequence.
+- Complex passage runtime с hosted session persistence.
+- Связка complex -> theory -> library/open flows.
+- Assets/media pipeline для изображений и контента в runtime и редакторах.
+
+### Авторинг
+
+- Task editor CRUD.
+- Complex editor CRUD, autosave, history, restore.
+- Theory editor и theory center.
+- Каталог и публикация контента в hosted-модели.
+
+### Обучающий цикл
+
+- Main dashboard и quick access.
+- Statistics + progress.
+- Calendar + schedule + memory health.
+- Microcards с hosted review/runtime/analytics.
+
+### Надежность и качество
+
+- Hosted readiness/degraded matrix через `/api/ready`.
+- GitHub Actions CI.
+- Secret scanning через `gitleaks` в pre-commit и CI.
+- Набор strict hosted smoke/gate-команд для ключевых контуров.
+
+## Hosted quickstart
+
+Основной локальный путь для проверки hosted-контура - через Docker stack.
+
+### 1. Подготовить env
+
+```bash
+cp .env.hosted.example .env.hosted
 ```
 
----
+Заполни реальные значения там, где это нужно. Для локального verification-run важны как минимум:
+
+- `ACTRA_SECRET_KEY`
+- `ACTRA_AUTH_PUBLIC_BASE_URL`
+- `ACTRA_AUTH_SMTP_*`
+- `POSTGRES_PASSWORD`
+- `ACTRA_POSTGRES_DSN`
+- `ACTRA_S3_*`
+
+В [.env.hosted.example](.env.hosted.example) уже зафиксирован hosted baseline:
+
+- `ACTRA_RUNTIME_MODE=hosted_web`
+- `ACTRA_HOSTED_PERSISTENCE_STRICT=1`
+- `ACTRA_HOSTED_DEV_AUTH_BRIDGE=0`
+- `ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK=0`
+
+### 2. Поднять локальный hosted stack
+
+```bash
+docker compose --env-file .env.hosted -f docker-compose.hosted.yml up --build
+```
+
+После старта основные точки:
+
+- приложение: `http://localhost:8000`
+- Mailpit UI: `http://localhost:8025`
+
+Остановить стек:
+
+```bash
+docker compose --env-file .env.hosted -f docker-compose.hosted.yml down
+```
+
+## Hosted smoke и acceptance
+
+Канонические команды из текущего hosted-контура:
+
+```bash
+npm run smoke:main-quick-access:hosted
+npm run smoke:statistics:hosted
+npm run smoke:calendar:hosted
+npm run smoke:complex-passage:hosted
+npm run smoke:task-editor:hosted
+npm run smoke:complex-editor:hosted
+npm run smoke:theory-editor:hosted
+npm run smoke:catalog-library:hosted
+npm run smoke:linked-theory-open:hosted
+npm run smoke:assets-media:hosted
+npm run smoke:microcards:hosted
+npm run smoke:ai-placeholder:hosted
+npm run smoke:import-export:hosted
+npm run smoke:readiness:hosted
+npm run smoke:launch-contract:hosted
+npm run smoke:launch-acceptance:hosted
+```
+
+Полезные ориентиры:
+
+- [docs/hosted_web_migration/hosted_launch_acceptance.md](docs/hosted_web_migration/hosted_launch_acceptance.md)
+- [docs/hosted_web_migration/qa_runbook.md](docs/hosted_web_migration/qa_runbook.md)
+- [docs/hosted_web_migration/smoke_matrix.md](docs/hosted_web_migration/smoke_matrix.md)
+
+## Разработка без Docker
+
+Этот путь полезен для локальной разработки отдельных частей, но он уже не является главным способом верификации hosted runtime.
+
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e ".[dev]"
+
+npm ci
+npm run build:css
+```
+
+Локальные базовые проверки:
+
+```bash
+pytest
+npm test
+npm run validate:themes
+python -m pre_commit run --all-files
+```
+
+Если нужен именно production-like hosted proof, ориентироваться нужно не на `python desktop-app/server.py`, а на Docker stack и hosted smoke-команды.
 
 ## Технологический стек
 
 | Слой | Технологии |
-|------|-----------|
-| **Backend** | Python 3.10+, Flask 3.0, Pydantic 2.0, PyMuPDF |
-| **Desktop** | pywebview 5.0 (нативное окно) |
-| **Frontend** | Vanilla JS, TailwindCSS 3.4, HTML5 Canvas |
-| **NLP** | pymorphy2 (русская морфология), python-Levenshtein (нечёткое сравнение) |
-| **AI** | Интеграция с LLM (анализ документов, генерация заданий) |
-| **Тестирование** | pytest, vitest, Playwright |
-| **CI/CD** | GitHub Actions (lint, test, build, release) |
-| **Линтинг** | black, flake8, mypy, ESLint (frontend) |
-| **Сборка** | PyInstaller (Windows .exe), Tailwind CLI |
+| --- | --- |
+| Backend | Python 3.10+, Flask 3.x, Pydantic 2.x |
+| Hosted runtime | Waitress / Flask app entrypoint, Docker Compose |
+| Frontend | Vanilla JS, TailwindCSS 3.4 |
+| Persistence | Postgres-backed hosted repositories |
+| Assets | S3-compatible storage |
+| Testing | pytest, vitest, Playwright |
+| CI | GitHub Actions |
+| Security | pre-commit + gitleaks |
 
----
+## Структура репозитория
 
-## Системные требования
-
-| Компонент | Версия |
-|-----------|--------|
-| **Python** | 3.10+ |
-| **Node.js** | 18+ (только для сборки CSS, не нужен в runtime) |
-| **ОС** | Windows 10 / 11 |
-
----
-
-## Быстрый старт
-
-### Разработка
-
-```bash
-# Клонировать репозиторий
-git clone https://github.com/hippo2222/ACTRA.git
-cd ACTRA
-
-# Создать виртуальное окружение
-python -m venv .venv
-.venv\Scripts\activate
-
-# Установить Python-зависимости
-pip install -e ".[dev]"
-
-# Установить frontend-зависимости и собрать CSS
-npm install
-npm run build:css
-
-# Запустить сервер (веб-режим)
-cd desktop-app
-python server.py
-# → Открыть http://127.0.0.1:8000/ui/main
+```text
+desktop-app/                    Flask app, routes, services, hosted entrypoint
+frontend/                       Клиентский UI
+task_system/                    Ядро моделей и task system
+common/                         Общие утилиты и конфигурация
+data/                           Локальные data/artifact каталоги для dev/runtime сценариев
+docs/hosted_web_migration/      Каноническая документация hosted transition
+tests/                          Python и frontend тесты
+scripts/                        Smoke, acceptance, audit и service scripts
+.github/workflows/              CI и release workflows
+docker-compose.hosted.yml       Локальный hosted stack
+Dockerfile.hosted               Hosted container image
+.env.hosted.example             Пример hosted env
+pyproject.toml                  Python dependencies и tooling
+package.json                    Frontend tooling и smoke scripts
 ```
 
-### Десктоп-режим (нативное окно)
+## Legacy desktop / Windows notes
 
-```bash
-cd desktop-app
-python webview_launcher.py
-```
+В кодовой базе все еще есть legacy desktop/webview и Windows release tooling:
 
-### Запуск тестов
+- `desktop-app/webview_launcher.py`
+- `scripts/build_release.py`
+- [docs/windows_release_build.md](docs/windows_release_build.md)
 
-```bash
-# Python-тесты (pytest + coverage)
-pytest
+Исторические GitHub releases `v1.0.0` и `v1.1.0` относятся именно к этой legacy desktop-линейке.
 
-# Frontend-тесты (vitest)
-npm test
+Будущий hosted release line стоит вести отдельно: без `latest.json`/`.exe` как основного канала поставки и с опорой на hosted smoke + launch acceptance. Для этого контура см. [docs/hosted_web_migration/hosted_release_v2.md](docs/hosted_web_migration/hosted_release_v2.md).
 
-# Валидация тем оформления
-npm run validate:themes
-
-# Контрастный аудит UI
-npm run audit:contrast:auto
-```
-
----
-
-## Сборка релиза (Windows .exe)
-
-```bash
-pip install pyinstaller
-python scripts/build_release.py
-# → Результат: dist/Radioproject/
-```
-
-Подробности — `docs/windows_release_build.md`.
-
----
-
-## Конфигурация
-
-### Переменные окружения
-
-<details>
-<summary><b>Основные настройки</b></summary>
-
-| Переменная | Описание | По умолчанию |
-|---|---|---|
-| `TRAINER_HTTP_PORT` | Порт HTTP-сервера | `8000` |
-| `TRAINER_SHOW_CONSOLE` | Показать консоль при запуске webview | `0` |
-| `FLASK_DEBUG` | Отладочный режим Flask | `0` |
-| `TRAINER_SESSION_ID` | ID сессии для прямого открытия | — |
-| `TRAINER_CRASH_DUMP_INTERVAL` | Интервал crash-дампов (сек) | — |
-
-</details>
-
-<details>
-<summary><b>Email-уведомления (feedback)</b></summary>
-
-| Переменная | Описание | По умолчанию |
-|---|---|---|
-| `ACTRA_FEEDBACK_EMAIL_ENABLED` | Включить email-уведомления | `1` |
-| `ACTRA_FEEDBACK_EMAIL_TO` | Получатели (через запятую) | `actrafb@proton.me` |
-| `ACTRA_FEEDBACK_SMTP_HOST` | SMTP host | — |
-| `ACTRA_FEEDBACK_SMTP_PORT` | SMTP порт | `587` |
-| `ACTRA_FEEDBACK_SMTP_USER` | SMTP логин | — |
-| `ACTRA_FEEDBACK_SMTP_PASSWORD` | SMTP пароль | — |
-| `ACTRA_FEEDBACK_SMTP_FROM` | Email отправителя | берётся из `SMTP_USER` |
-| `ACTRA_FEEDBACK_SMTP_USE_TLS` | STARTTLS | `1` |
-| `ACTRA_FEEDBACK_SMTP_USE_SSL` | SMTP SSL | `0` |
-| `ACTRA_FEEDBACK_SMTP_TIMEOUT_SEC` | Таймаут (сек) | `15` |
-
-> Для Proton Mail используйте Proton Bridge (локальный SMTP host/port и bridge-учётные данные).
-
-</details>
-
-<details>
-<summary><b>Авто-обновления</b></summary>
-
-| Переменная | Описание | По умолчанию |
-|---|---|---|
-| `ACTRA_UPDATE_CHECK_ENABLED` | Включить проверку обновлений | `1` |
-| `ACTRA_UPDATE_MANIFEST_URL` | URL манифеста обновлений | из `config.json` |
-| `ACTRA_UPDATE_CHECK_INTERVAL_SEC` | TTL кэша проверки (сек) | `86400` |
-| `ACTRA_UPDATE_REQUEST_TIMEOUT_SEC` | Таймаут запроса (сек) | `3` |
-
-В `config.json` задаётся URL манифеста:
-
-```json
-{
-  "update_manifest_url": "https://hippo2222.github.io/ACTRA/latest.json"
-}
-```
-
-Поддерживаются `http(s)://`, `file://` и относительные пути к локальному JSON.
-
-</details>
-
-### Автоканал обновлений через GitHub Releases
-
-Workflow `.github/workflows/release-manifest.yml` автоматически публикует `latest.json` в ветку `gh-pages` при каждом релизе. Для использования:
-
-1. Включите GitHub Pages → Source: `Deploy from a branch`, Branch: `gh-pages`
-2. Укажите `update_manifest_url` в `config.json`
-
-Опциональные repository variables:
-- `ACTRA_UPDATE_ASSET_NAME` — имя ассета релиза (по умолчанию `ACTRA-Setup.exe`)
-- `ACTRA_MIN_SUPPORTED_VERSION` — значение `min_supported_version` в манифесте
-
----
+Но это уже не лучший entry point для понимания проекта. Если README читается впервые, ориентироваться нужно на hosted runtime, а desktop/webview воспринимать как вторичный или legacy-контур.
 
 ## Лицензия
 
-[Apache License 2.0](LICENSE) — свободное использование, модификация и распространение с сохранением атрибуции.
-
----
-
-<div align="center">
-
-**ACTRA** — учись через практику, а не через перечитывание.
-
-</div>
+[Apache License 2.0](LICENSE)

@@ -94,13 +94,16 @@
             display: flex;
             align-items: center;
             gap: 0.25rem;
+            max-width: 0;
+            overflow: hidden;
             opacity: 0;
             pointer-events: none;
-            transition: opacity 160ms ease;
+            transition: max-width 160ms ease, opacity 160ms ease;
         }
 
         .editor-sidebar-tree-button:hover .editor-sidebar-tree-hover-actions,
         .editor-sidebar-tree-button:focus-visible .editor-sidebar-tree-hover-actions {
+            max-width: 7rem;
             opacity: 1;
             pointer-events: auto;
         }
@@ -532,8 +535,6 @@
                 <span class="cursor-pointer hover:text-primary transition-colors">Библиотека</span>
             </nav>
             <div class="editor-header-actions flex items-center gap-4 justify-end min-w-0 shrink-0">
-                <span id="task-workspace-limit-pill"
-                    class="hidden items-center gap-2 rounded-lg border border-border-subtle bg-surface-1 px-3 py-2 text-sm font-semibold text-text-secondary shadow-sm"></span>
                 <div class="relative search-container-expanding shrink-0 rounded-lg">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <span class="material-symbols-outlined text-text-disabled">search</span>

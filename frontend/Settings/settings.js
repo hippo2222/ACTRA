@@ -287,17 +287,20 @@
         const pageTitle = document.querySelector('.settings-topbar h1');
         if (pageTitle) pageTitle.textContent = '\u041d\u0430\u0441\u0442\u0440\u043e\u0439\u043a\u0438';
 
-        const sectionTitles = Array.from(document.querySelectorAll('main .settings-card h2.text-xl.font-bold.text-text-main'));
-        const sectionDescriptions = Array.from(document.querySelectorAll('main .settings-card h2.text-xl.font-bold.text-text-main + p.text-sm.text-text-secondary'));
         const sectionCopy = [
-            ['\u041f\u0440\u043e\u0444\u0438\u043b\u044c', '\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0438 \u0444\u043e\u0442\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f.'],
-            ['\u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c', '\u0421\u043c\u0435\u043d\u0430 \u043f\u0430\u0440\u043e\u043b\u044f \u0438 \u0431\u0430\u0437\u043e\u0432\u0430\u044f \u0437\u0430\u0449\u0438\u0442\u0430 \u0432\u0445\u043e\u0434\u0430.'],
-            ['\u041e\u0444\u043e\u0440\u043c\u043b\u0435\u043d\u0438\u0435', '\u041f\u0430\u043b\u0438\u0442\u0440\u0430 \u0438\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u044f\u0435\u0442\u0441\u044f \u0434\u043b\u044f \u0442\u0435\u043a\u0443\u0449\u0435\u0433\u043e \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.'],
-            ['AI keys', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0435 \u043a\u043b\u044e\u0447\u0438 \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0438\u0445 \u043f\u0440\u044f\u043c\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435.'],
+            ['settings-profile-title', '\u041f\u0440\u043e\u0444\u0438\u043b\u044c'],
+            ['settings-profile-description', '\u041e\u0441\u043d\u043e\u0432\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0438 \u0444\u043e\u0442\u043e \u043f\u0440\u043e\u0444\u0438\u043b\u044f.'],
+            ['settings-security-title', '\u0411\u0435\u0437\u043e\u043f\u0430\u0441\u043d\u043e\u0441\u0442\u044c'],
+            ['settings-security-description', '\u0421\u043c\u0435\u043d\u0430 \u043f\u0430\u0440\u043e\u043b\u044f \u0438 \u0431\u0430\u0437\u043e\u0432\u0430\u044f \u0437\u0430\u0449\u0438\u0442\u0430 \u0432\u0445\u043e\u0434\u0430.'],
+            ['settings-admin-title', '\u0423\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430\u043c\u0438'],
+            ['settings-admin-description', '\u041f\u043e\u0438\u0441\u043a \u043f\u043e\u043b\u044c\u0437\u043e\u0432\u0430\u0442\u0435\u043b\u0435\u0439 \u0438 \u043f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0435 \u0441\u0442\u0430\u0442\u0443\u0441\u0430 premium.'],
+            ['settings-appearance-title', '\u041e\u0444\u043e\u0440\u043c\u043b\u0435\u043d\u0438\u0435'],
+            ['settings-ai-title', 'AI keys'],
+            ['settings-ai-description', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u0435 \u043a\u043b\u044e\u0447\u0438 \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044c\u0442\u0435 \u0438\u0445 \u043f\u0440\u044f\u043c\u043e \u043d\u0430 \u044d\u0442\u043e\u0439 \u0441\u0442\u0440\u0430\u043d\u0438\u0446\u0435.'],
         ];
-        sectionCopy.forEach(([title, description], index) => {
-            if (sectionTitles[index]) sectionTitles[index].textContent = title;
-            if (sectionDescriptions[index]) sectionDescriptions[index].textContent = description;
+        sectionCopy.forEach(([id, value]) => {
+            const element = document.getElementById(id);
+            if (element) element.textContent = value;
         });
 
         const mainActionButton = document.getElementById('settings-main-btn');
@@ -417,6 +420,17 @@
         setButtonLabel('settings-delete-confirm-btn', 'delete_forever', '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430');
         setButtonLabel('settings-delete-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
         setButtonLabel('settings-logout-btn', 'logout', '\u0412\u044b\u0439\u0442\u0438');
+        syncAccountCaptionPlacement();
+    }
+
+    function syncAccountCaptionPlacement() {
+        const captionEl = document.getElementById('settings-account-caption');
+        const axesEl = document.getElementById('settings-account-axes');
+        if (!captionEl || !axesEl) return;
+        if (captionEl.parentElement !== axesEl) {
+            axesEl.prepend(captionEl);
+        }
+        captionEl.classList.remove('hidden');
     }
 
     function getThemeCatalog() {
@@ -783,6 +797,7 @@
     function updateAccountAxes(user) {
         const roleEl = document.getElementById('settings-account-role');
         const planEl = document.getElementById('settings-account-plan');
+        syncAccountCaptionPlacement();
         if (roleEl) {
             const role = String(user?.role || '').trim().toLowerCase();
             roleEl.textContent = getRoleLabel(role);

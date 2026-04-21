@@ -2,8 +2,8 @@
 """Validate release catalog integrity for build/release pipelines.
 
 Checks:
-1. Module catalog integrity (`data/modules/**/module.json`)
-2. Complex/theory integrity (`data/complexes/complexes.json`, `data/complexes/theories/*`)
+1. Contentful release catalog integrity (`data/modules/**/module.json`, `data/complexes/**`)
+2. Empty release baseline integrity (no bundled modules/topics/tasks/complexes/theories)
 3. Orphan task files (`task.json` that are not referenced in module.json)
 """
 
@@ -481,9 +481,43 @@ def _validate_non_demo_minimums(data_dir: Path, stats: Dict[str, int]) -> List[V
     return errors
 
 
-def validate_release_catalog(data_dir: Path, *, require_non_demo: bool = False) -> ValidationResult:
+def _validate_empty_release_baseline(data_dir: Path, stats: Dict[str, int]) -> List[ValidationIssue]:
+    errors: List[ValidationIssue] = []
+    for key in ("modules", "topics", "tasks", "complexes", "theories"):
+        actual = int(stats.get(key, 0))
+        if actual != 0:
+            _issue(
+                errors,
+                "error",
+                f"expected_empty_{key}",
+                data_dir,
+                f"Release baseline must not ship bundled {key}: found {actual}.",
+            )
+    return errors
+
+
+def validate_release_catalog(
+    data_dir: Path,
+    *,
+    require_non_demo: bool = False,
+    expect_empty: bool = False,
+) -> ValidationResult:
     all_errors: List[ValidationIssue] = []
     all_warnings: List[ValidationIssue] = []
+
+    if require_non_demo and expect_empty:
+        raise ValueError("require_non_demo and expect_empty are mutually exclusive")
+
+    if expect_empty:
+        stats = _collect_catalog_stats(data_dir)
+        all_errors.extend(_validate_empty_release_baseline(data_dir, stats))
+        return ValidationResult(
+            errors=all_errors,
+            warnings=all_warnings,
+            orphan_task_files=[],
+            catalog_task_refs=set(),
+            catalog_stats=stats,
+        )
 
     mod_errors, mod_warnings, referenced_task_files, catalog_task_refs = _validate_modules(data_dir)
     all_errors.extend(mod_errors)
@@ -565,15 +599,28 @@ def main() -> int:
             f"theories>={NON_DEMO_MINIMUMS['theories']})."
         ),
     )
+    parser.add_argument(
+        "--expect-empty",
+        action="store_true",
+        help="Validate an empty release baseline with no bundled learning content.",
+    )
     args = parser.parse_args()
 
     data_dir = Path(args.data_dir).resolve()
-    result = validate_release_catalog(data_dir, require_non_demo=args.require_non_demo)
+    result = validate_release_catalog(
+        data_dir,
+        require_non_demo=args.require_non_demo,
+        expect_empty=args.expect_empty,
+    )
 
     pruned: List[Tuple[Path, Optional[str]]] = []
     if args.prune_orphans and result.orphan_task_files:
         pruned = _prune_orphan_tasks(result.orphan_task_files)
-        result = validate_release_catalog(data_dir, require_non_demo=args.require_non_demo)
+        result = validate_release_catalog(
+            data_dir,
+            require_non_demo=args.require_non_demo,
+            expect_empty=args.expect_empty,
+        )
         for path, err in pruned:
             if err is not None:
                 _issue(result.errors, "error", "orphan_prune_failed", path, err)
@@ -581,6 +628,7 @@ def main() -> int:
     payload = {
         "data_dir": str(data_dir),
         "require_non_demo": args.require_non_demo,
+        "expect_empty": args.expect_empty,
         "non_demo_minimums": dict(NON_DEMO_MINIMUMS),
         "catalog_stats": dict(result.catalog_stats),
         "errors": [asdict(issue) for issue in result.errors],

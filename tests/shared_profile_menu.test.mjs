@@ -205,21 +205,28 @@ describe('shared profile menu', () => {
     expect(dom.window.document.body.textContent).toContain('Настройки аккаунта');
     expect(dom.window.document.body.textContent).toContain('Оформление');
     expect(dom.window.document.body.textContent).toContain('Выйти');
+    expect(dom.window.document.body.textContent).not.toContain('Показать палитру');
+    expect(dom.window.document.body.textContent).not.toContain('Скрыть палитру');
     expect(dom.window.document.body.textContent).not.toContain('hosted@example.com');
     expect(dom.window.document.body.textContent).not.toContain('hosted-login');
 
+    expect(dom.window.document.getElementById('sharedProfileMenuStyles')).toBeTruthy();
+
     const settingsLink = dom.window.document.getElementById('sharedProfileSettings');
     expect(settingsLink?.getAttribute('href')).toBe('/ui/settings');
+    expect(settingsLink?.className).toContain('shared-profile-focus-target');
 
     expect(dom.window.document.querySelector('[data-theme-chip="dark-a"]')).toBeNull();
 
     const toggleButton = dom.window.document.querySelector('[data-profile-theme-toggle="true"]');
     expect(toggleButton?.getAttribute('aria-expanded')).toBe('false');
+    expect(toggleButton?.className).toContain('shared-profile-focus-target');
     toggleButton.click();
     await flushPromises();
 
     const darkChip = dom.window.document.querySelector('[data-theme-chip="dark-a"]');
     expect(darkChip).toBeTruthy();
+    expect(darkChip?.className).toContain('shared-profile-theme-chip');
     expect(dom.window.document.querySelector('[data-profile-theme-toggle="true"]')?.getAttribute('aria-expanded')).toBe('true');
 
     const lightChip = dom.window.document.querySelector('[data-theme-chip="light-a"]');
@@ -236,6 +243,7 @@ describe('shared profile menu', () => {
     );
 
     const logoutButton = dom.window.document.getElementById('sharedProfileLogout');
+    expect(logoutButton?.className).toContain('shared-profile-focus-target');
     logoutButton.click();
     await flushPromises();
 

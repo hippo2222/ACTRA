@@ -80,10 +80,14 @@ class EditorDashboard {
         const button = document.createElement('button');
         button.className = 'editor-sidebar-tree-button flex items-center gap-2 px-3 min-h-[2.5rem] text-text-secondary hover:text-text-main hover:bg-bg-hover rounded-lg transition-colors w-full text-left';
         button.dataset.allTasksButton = 'true';
+        const badgeMarkup = this.getAllTasksNavBadgeMarkup();
         button.innerHTML = `
             <span class="material-symbols-outlined text-[20px]">all_inclusive</span>
             <span class="editor-sidebar-tree-label truncate text-sm font-semibold flex-1 text-inherit">Все задания</span>
         `;
+        if (badgeMarkup) {
+            button.insertAdjacentHTML('beforeend', badgeMarkup);
+        }
         button.addEventListener('click', () => {
             this.activeModuleId = null;
             this.activeTopicId = null;
@@ -97,6 +101,20 @@ class EditorDashboard {
             this.renderGrid();
         });
         return button;
+    }
+
+    getAllTasksNavBadgeMarkup(summary = this.getTaskLimitSummary()) {
+        if (!summary) return '';
+
+        const isPremium = this.isPremiumWorkspacePlan();
+        const label = isPremium
+            ? 'Premium'
+            : `${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)}`;
+        const title = isPremium
+            ? 'Premium · без лимита'
+            : `Мои задания: ${label}`;
+
+        return `<span class="shrink-0 rounded-full border border-border-subtle bg-bg-secondary px-2 py-0.5 text-[11px] font-semibold leading-none text-text-secondary" data-role="all-tasks-limit-badge" title="${this.escapeHtml(title)}">${this.escapeHtml(label)}</span>`;
     }
 
     init() {
@@ -145,6 +163,11 @@ class EditorDashboard {
             this.pendingInitialView = { moduleId: routeState.module, topicId: routeState.topic };
         } else if (routeState.module) {
             this.pendingInitialView = { moduleId: routeState.module, topicId: null };
+        } else if (lastView?.moduleId) {
+            this.pendingInitialView = {
+                moduleId: lastView.moduleId,
+                topicId: lastView.topicId || null,
+            };
         } else {
             this.renderGrid();
         }
@@ -258,7 +281,7 @@ class EditorDashboard {
     }
 
     renderTaskLimitUi() {
-        const pill = document.getElementById('task-workspace-limit-pill');
+        const pill = null;
         const note = document.getElementById('create-task-limit-note');
         const submitBtn = document.getElementById('create-task-submit-btn');
         const createCard = document.querySelector('[data-role="create-task-card"]');
@@ -295,6 +318,7 @@ class EditorDashboard {
             createCard.classList.remove('opacity-60', 'cursor-not-allowed');
             createCard.title = blocked ? (this.getTaskDraftNotice(summary) || 'Можно открыть черновик, но сохранить новое задание пока нельзя') : 'Создать новое задание';
         }
+        this.renderSidebar();
     }
 
     makeTaskUniqueId(moduleId, topicId, taskId) {
@@ -889,9 +913,7 @@ class EditorDashboard {
             if (stored) {
                 const state = JSON.parse(stored);
                 this.expandedState = state.expanded || { modules: [], topics: [] };
-                // Ensure structure
-                if (!Array.isArray(this.expandedState.modules)) this.expandedState.modules = [];
-                if (!Array.isArray(this.expandedState.topics)) this.expandedState.topics = [];
+                this.normalizeExpandedState();
 
                 // Return saved view for init
                 return state.lastView || null;
@@ -928,6 +950,7 @@ class EditorDashboard {
     saveDashboardState() {
         try {
             const state = JSON.parse(localStorage.getItem('editorDashboardState') || '{}');
+            this.normalizeExpandedState();
             state.expanded = this.expandedState;
             state.lastView = {
                 moduleId: this.activeModuleId,
@@ -937,6 +960,94 @@ class EditorDashboard {
         } catch (e) {
             console.warn('Failed to save dashboard state', e);
         }
+    }
+
+    normalizeExpandedState() {
+        const modules = Array.isArray(this.expandedState?.modules) ? this.expandedState.modules : [];
+        const topics = Array.isArray(this.expandedState?.topics) ? this.expandedState.topics : [];
+        this.expandedState = {
+            modules: Array.from(new Set(modules.map((value) => String(value || '').trim()).filter(Boolean))),
+            topics: Array.from(new Set(topics.map((value) => String(value || '').trim()).filter(Boolean))),
+        };
+        return this.expandedState;
+    }
+
+    getTopicExpandedStateKey(moduleId, topicId) {
+        if (!moduleId || !topicId) return '';
+        return `${moduleId}:${topicId}`;
+    }
+
+    ensureModuleExpandedState(moduleId, { save = true } = {}) {
+        const normalizedId = String(moduleId || '').trim();
+        if (!normalizedId) return false;
+        this.normalizeExpandedState();
+        if (this.expandedState.modules.includes(normalizedId)) return false;
+        this.expandedState.modules.push(normalizedId);
+        if (save) this.saveDashboardState();
+        return true;
+    }
+
+    ensureTopicExpandedState(moduleId, topicId, { save = true } = {}) {
+        const topicKey = this.getTopicExpandedStateKey(moduleId, topicId);
+        if (!topicKey) return false;
+        this.normalizeExpandedState();
+        if (this.expandedState.topics.includes(topicKey)) return false;
+        this.expandedState.topics.push(topicKey);
+        if (save) this.saveDashboardState();
+        return true;
+    }
+
+    removeModuleExpandedState(moduleId, { save = true, includeTopics = false } = {}) {
+        const normalizedId = String(moduleId || '').trim();
+        if (!normalizedId) return false;
+        this.normalizeExpandedState();
+        const nextModules = this.expandedState.modules.filter((id) => id !== normalizedId);
+        const nextTopics = includeTopics
+            ? this.expandedState.topics.filter((key) => !key.startsWith(`${normalizedId}:`))
+            : this.expandedState.topics;
+        const changed = nextModules.length !== this.expandedState.modules.length
+            || nextTopics.length !== this.expandedState.topics.length;
+        if (!changed) return false;
+        this.expandedState.modules = nextModules;
+        this.expandedState.topics = nextTopics;
+        if (save) this.saveDashboardState();
+        return true;
+    }
+
+    removeTopicExpandedState(moduleId, topicId, { save = true } = {}) {
+        const topicKey = this.getTopicExpandedStateKey(moduleId, topicId);
+        if (!topicKey) return false;
+        this.normalizeExpandedState();
+        const nextTopics = this.expandedState.topics.filter((key) => key !== topicKey);
+        if (nextTopics.length === this.expandedState.topics.length) return false;
+        this.expandedState.topics = nextTopics;
+        if (save) this.saveDashboardState();
+        return true;
+    }
+
+    pruneExpandedState({ save = true } = {}) {
+        this.normalizeExpandedState();
+        const moduleIds = new Set((this.catalog || []).map((module) => String(module?.id || '').trim()).filter(Boolean));
+        const topicIds = new Set();
+        (this.catalog || []).forEach((module) => {
+            const moduleId = String(module?.id || '').trim();
+            (module?.topics || []).forEach((topic) => {
+                const topicId = String(topic?.id || '').trim();
+                if (moduleId && topicId) {
+                    topicIds.add(this.getTopicExpandedStateKey(moduleId, topicId));
+                }
+            });
+        });
+
+        const nextModules = this.expandedState.modules.filter((id) => moduleIds.has(id));
+        const nextTopics = this.expandedState.topics.filter((key) => topicIds.has(key));
+        const changed = nextModules.length !== this.expandedState.modules.length
+            || nextTopics.length !== this.expandedState.topics.length;
+
+        this.expandedState.modules = nextModules;
+        this.expandedState.topics = nextTopics;
+        if (changed && save) this.saveDashboardState();
+        return changed;
     }
 
     updateUrlState() {
@@ -968,6 +1079,7 @@ class EditorDashboard {
                 if (!this.catalog || this.catalog.length === 0) {
                     this.log("WARNING: Catalog is empty.");
                 }
+                this.pruneExpandedState();
                 this.renderSidebar(); // Moved here to ensure catalog is loaded before rendering sidebar
                 this.applyPendingInitialView();
                 await this.applyPendingTheoryHubIntent();
@@ -1001,13 +1113,24 @@ class EditorDashboard {
             return;
         }
 
-        if (pending.moduleId && pending.topicId) {
-            this.renderTopicTasks(pending.moduleId, pending.topicId);
+        const module = (this.catalog || []).find((item) => item?.id === pending.moduleId);
+        if (!module) {
+            this.activeModuleId = null;
+            this.activeTopicId = null;
+            this.renderGrid();
             return;
         }
 
+        if (pending.topicId) {
+            const topic = (module.topics || []).find((item) => item?.id === pending.topicId);
+            if (topic) {
+                this.renderTopicTasks(module.id, topic.id);
+                return;
+            }
+        }
+
         if (pending.moduleId) {
-            this.renderModuleTopics(pending.moduleId);
+            this.renderModuleTopics(module.id);
             return;
         }
 
@@ -4822,19 +4945,14 @@ class EditorDashboard {
                     chevron.style.transform = 'rotate(0deg)';
                 }
                 // Update state
-                if (!this.expandedState.modules.includes(module.id)) {
-                    this.expandedState.modules.push(module.id);
-                    this.saveDashboardState();
-                }
+                this.ensureModuleExpandedState(module.id);
             } else {
                 childrenContainer.classList.add('hidden');
                 childrenContainer.classList.remove('animate-slide-up');
                 if (chevron) {
                     chevron.style.transform = 'rotate(-90deg)';
                 }
-                // Update state
-                this.expandedState.modules = this.expandedState.modules.filter(id => id !== module.id);
-                this.saveDashboardState();
+                this.removeModuleExpandedState(module.id);
             }
         };
 
@@ -4969,19 +5087,14 @@ class EditorDashboard {
                     chevron.style.transform = 'rotate(0deg)';
                 }
                 // Update state
-                if (!this.expandedState.topics.includes(topicKey)) {
-                    this.expandedState.topics.push(topicKey);
-                    this.saveDashboardState();
-                }
+                this.ensureTopicExpandedState(moduleId, topic.id);
             } else {
                 tasksContainer.classList.add('hidden');
                 tasksContainer.classList.remove('animate-slide-up');
                 if (chevron) {
                     chevron.style.transform = 'rotate(-90deg)';
                 }
-                // Update state
-                this.expandedState.topics = this.expandedState.topics.filter(key => key !== topicKey);
-                this.saveDashboardState();
+                this.removeTopicExpandedState(moduleId, topic.id);
             }
         };
 
@@ -5053,7 +5166,7 @@ class EditorDashboard {
         return button;
     }
 
-    expandSidebarModule(moduleId) {
+    expandSidebarModule(moduleId, { saveState = true } = {}) {
         if (!moduleId) return;
         const moduleContainer = document.querySelector(`[data-module="${moduleId}"]`);
         const children = moduleContainer?.querySelector(`[data-module-children="${moduleId}"]`);
@@ -5065,9 +5178,10 @@ class EditorDashboard {
         if (chevron) {
             chevron.style.transform = 'rotate(0deg)';
         }
+        this.ensureModuleExpandedState(moduleId, { save: saveState });
     }
 
-    expandSidebarTopic(moduleId, topicId) {
+    expandSidebarTopic(moduleId, topicId, { saveState = true } = {}) {
         if (!moduleId || !topicId) return;
         const topicContainer = document.querySelector(`[data-topic="${moduleId}:${topicId}"]`);
         const tasksContainer = topicContainer?.querySelector(`[data-topic-tasks="${moduleId}:${topicId}"]`);
@@ -5079,6 +5193,8 @@ class EditorDashboard {
         if (chevron) {
             chevron.style.transform = 'rotate(0deg)';
         }
+        this.ensureModuleExpandedState(moduleId, { save: false });
+        this.ensureTopicExpandedState(moduleId, topicId, { save: saveState });
     }
 
     syncSidebarSelection() {
@@ -6204,6 +6320,11 @@ class EditorDashboard {
             const data = await response.json();
 
             if (data.ok) {
+                if (type === 'module') {
+                    this.removeModuleExpandedState(payload.module_id, { save: true, includeTopics: true });
+                } else if (type === 'topic') {
+                    this.removeTopicExpandedState(payload.module_id, payload.topic_id);
+                }
                 if (onSuccess) onSuccess();
                 // If we deleted the active thing, clear view
                 if (type === 'module' && this.activeModuleId === payload.module_id) {

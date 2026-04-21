@@ -62,9 +62,9 @@ jobs:
         run: |
           python scripts/check_mojibake.py
 
-      - name: Release catalog gate (non-demo baseline)
+      - name: Release data gate (empty baseline)
         run: |
-          python scripts/validate_release_catalog.py --data-dir data --require-non-demo
+          python scripts/validate_release_catalog.py --data-dir data --expect-empty
 
       - name: Black (runtime baseline)
         run: |
@@ -162,7 +162,6 @@ jobs:
       - name: Build CSS
         run: |
           npm run build:css
-
 
 
 

@@ -1269,8 +1269,8 @@
     }
     if (isPremiumWorkspacePlan()) {
       host.innerHTML = `
-        <span class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${getTheoryToneClass('success')}">
-          <span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+        <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass('success')}">
+          <span class="material-symbols-outlined text-[12px] leading-none">workspace_premium</span>
           Premium · без лимита
         </span>
       `;
@@ -1279,12 +1279,12 @@
     const personalBlocked = Number(theorySummary.remaining_personal || 0) <= 0;
     const libraryBlocked = Number(theorySummary.remaining_library || 0) <= 0;
     host.innerHTML = `
-      <span class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${getTheoryToneClass(personalBlocked ? 'warning' : 'info')}">
-        <span class="material-symbols-outlined text-[18px]">edit_note</span>
+      <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass(personalBlocked ? 'warning' : 'info')}">
+        <span class="material-symbols-outlined text-[12px] leading-none">edit_note</span>
         Мои теории: ${escapeHtml(`${Number(theorySummary.personal_count || 0)}/${Number(theorySummary.personal_limit || 0)}`)}
       </span>
-      <span class="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${getTheoryToneClass(libraryBlocked ? 'warning' : 'success')}">
-        <span class="material-symbols-outlined text-[18px]">inventory_2</span>
+      <span class="inline-flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[11px] leading-none font-medium whitespace-nowrap ${getTheoryToneClass(libraryBlocked ? 'warning' : 'success')}">
+        <span class="material-symbols-outlined text-[12px] leading-none">inventory_2</span>
         Библиотека: ${escapeHtml(`${Number(theorySummary.library_total_count || 0)}/${Number(theorySummary.library_limit || 0)}`)}
       </span>
     `;

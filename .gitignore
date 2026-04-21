@@ -1,6 +1,7 @@
 # Backup directories
 *.backup/
 *.backup
+*.bak
 *.backup_abs_paths
 data.backup/
 desktop-app/data.backup/
@@ -83,13 +84,13 @@ data/avatars/
 runtime_state/
 
 # Runtime content — modules, complexes, import history are user-generated at runtime
-# data/modules/  # Commented out to allow demo modules for CI validation
+data/modules/
 data/ai_runs/
 data/catalog/
+data/complexes/complexes.json
 data/complexes/history/
 data/complexes/*.autosave.json
-data/complexes/theories/th_*/
-data/complexes/theories/release_smoke_theory/
+data/complexes/theories/
 data/microcards/
 data/modules/test_*/
 data/import_journal.json

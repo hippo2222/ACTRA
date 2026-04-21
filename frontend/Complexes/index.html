@@ -65,6 +65,47 @@
       min-width: 0;
     }
 
+    .cx-breadcrumb-row {
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .cx-breadcrumb-main {
+      min-width: 0;
+    }
+
+    .cx-breadcrumb-limit {
+      display: inline-flex;
+      align-items: center;
+      justify-content: flex-end;
+      min-height: 2rem;
+      padding: 0.35rem 0.75rem;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--color-border-strong) 72%, transparent);
+      background: color-mix(in srgb, var(--color-surface-1) 92%, var(--color-bg-main) 8%);
+      color: var(--color-text-secondary);
+      font-size: 0.78rem;
+      font-weight: 700;
+      line-height: 1.15;
+      text-align: right;
+      white-space: nowrap;
+      box-shadow: var(--shadow-sm);
+      margin-left: auto;
+    }
+
+    .cx-breadcrumb-limit--warning {
+      border-color: var(--color-component-pill-warning-border);
+      background: var(--color-component-pill-warning-bg);
+      color: var(--color-component-pill-warning-fg);
+    }
+
+    .cx-breadcrumb-limit--premium {
+      border-color: var(--color-component-pill-success-border);
+      background: var(--color-component-pill-success-bg);
+      color: var(--color-component-pill-success-fg);
+    }
+
     .cx-toolbar-actions {
       min-width: 0;
       flex-wrap: wrap;
@@ -1025,19 +1066,22 @@
     <div class="layout-container flex h-full grow flex-col">
       <div class="flex flex-1 justify-center px-4 py-4 sm:px-6 sm:py-5 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
         <div class="layout-content-container cx-page-shell flex flex-col flex-1 cx-page-enter">
-          <div class="flex items-center gap-3 px-4 pb-4">
-            <button id="back-button"
-              class="icon-button-muted"
-              title="Назад на главную">
-              <span class="material-symbols-outlined text-text-secondary">arrow_back</span>
-            </button>
-            <div class="flex flex-wrap gap-2">
-              <a id="breadcrumb-home"
-                class="text-text-secondary text-base font-medium leading-normal hover:text-primary cursor-pointer transition-colors">Главное
-                меню</a>
-              <span class="text-text-secondary text-base font-medium leading-normal">/</span>
-              <span class="text-text-main text-base font-medium leading-normal">Комплексы заданий</span>
+          <div class="cx-breadcrumb-row flex flex-wrap px-4 pb-4">
+            <div class="cx-breadcrumb-main flex min-w-0 items-center gap-3">
+              <button id="back-button"
+                class="icon-button-muted"
+                title="Назад на главную">
+                <span class="material-symbols-outlined text-text-secondary">arrow_back</span>
+              </button>
+              <div class="flex min-w-0 flex-wrap gap-2">
+                <a id="breadcrumb-home"
+                  class="text-text-secondary text-base font-medium leading-normal hover:text-primary cursor-pointer transition-colors">Главное
+                  меню</a>
+                <span class="text-text-secondary text-base font-medium leading-normal">/</span>
+                <span class="text-text-main text-base font-medium leading-normal">Комплексы заданий</span>
+              </div>
             </div>
+            <div id="complex-library-limit-badge" class="cx-breadcrumb-limit" hidden aria-live="polite"></div>
           </div>
           <div class="flex flex-wrap justify-between items-center gap-4 p-4 mb-4">
             <p class="cx-toolbar-title text-text-main text-4xl font-black leading-tight tracking-[-0.033em] min-w-0">
@@ -1351,8 +1395,68 @@
           let currentComplexesUserId = "";
           let currentComplexesUserIdPromise = null;
           let complexTaskNameCache = {};
+          let workspaceLimitsSummary = null;
+          let workspacePlanName = "";
           const linkedComplexDetailCache = new Map();
           let pendingLinkedComplexRevealId = "";
+
+          function getComplexLimitSummary() {
+            return workspaceLimitsSummary && typeof workspaceLimitsSummary === "object"
+              ? workspaceLimitsSummary
+              : null;
+          }
+
+          function isComplexPremiumPlan() {
+            return String(workspacePlanName || "").trim().toLowerCase() === "premium";
+          }
+
+          function renderComplexLibraryLimitBadge() {
+            const badge = document.getElementById("complex-library-limit-badge");
+            const summary = getComplexLimitSummary();
+            if (!badge) return;
+            if (!summary) {
+              badge.hidden = true;
+              badge.textContent = "";
+              badge.className = "cx-breadcrumb-limit";
+              return;
+            }
+
+            badge.hidden = false;
+            if (isComplexPremiumPlan()) {
+              badge.className = "cx-breadcrumb-limit cx-breadcrumb-limit--premium";
+              badge.textContent = "Premium · без лимита";
+              return;
+            }
+
+            const personalBlocked = Number(summary.remaining_personal || 0) <= 0;
+            const libraryBlocked = Number(summary.remaining_library || 0) <= 0;
+            badge.className = personalBlocked || libraryBlocked
+              ? "cx-breadcrumb-limit cx-breadcrumb-limit--warning"
+              : "cx-breadcrumb-limit";
+            badge.textContent = `Мои комплексы ${Number(summary.personal_count || 0)}/${Number(summary.personal_limit || 0)} · Библиотека ${Number(summary.library_total_count || 0)}/${Number(summary.library_limit || 0)}`;
+          }
+
+          async function fetchComplexWorkspaceLimits() {
+            try {
+              const response = await fetch("/api/workspace-limits/summary", {
+                credentials: "same-origin",
+              });
+              const data = await response.json().catch(() => ({}));
+              if (!response.ok || data?.ok === false) {
+                throw new Error(data?.error || `http_${response.status}`);
+              }
+              workspacePlanName = String(data?.plan || "").trim();
+              workspaceLimitsSummary = data && typeof data.complexes === "object" ? data.complexes : null;
+              return workspaceLimitsSummary;
+            } catch (error) {
+              console.warn("[Complexes] Failed to load workspace limits", error);
+              workspacePlanName = "";
+              workspaceLimitsSummary = null;
+              return null;
+            } finally {
+              renderComplexLibraryLimitBadge();
+            }
+          }
 
           async function resolveCurrentComplexesUserId(forceRefresh = false) {
             if (!forceRefresh && currentComplexesUserId) {
@@ -3377,6 +3481,7 @@
             if (!listEl) return;
 
             isComplexesLoading = true;
+            fetchComplexWorkspaceLimits();
             if (!hasLoadedComplexesOnce) {
               scheduleComplexesSkeleton(listEl);
             }

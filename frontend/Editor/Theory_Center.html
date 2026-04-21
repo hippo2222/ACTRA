@@ -42,23 +42,48 @@
             align-items: start;
         }
 
+        .theory-header-main {
+            min-width: 0;
+        }
+
         .theory-header-actions {
             align-content: start;
         }
 
-        .theory-header-meta {
+        .theory-header-subline {
             display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            justify-content: flex-start;
-            margin-top: 1rem;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.75rem;
+            grid-column: 1 / -1;
         }
 
-        .theory-center-header > .min-w-0 > .inline-flex:first-child {
+        .theory-header-subline > p {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .theory-header-limit-pills {
+            display: flex;
+            flex: 0 0 auto;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.375rem;
+            margin-left: auto;
+        }
+
+        .theory-header-limit-pills > span {
+            line-height: 1;
+        }
+
+        .theory-center-header > .min-w-0 > .inline-flex:first-child,
+        .theory-center-header > .theory-header-main > .inline-flex:first-child {
             display: none;
         }
 
-        .theory-center-header > .min-w-0 > .inline-flex:first-child + .space-y-2 {
+        .theory-center-header > .min-w-0 > .inline-flex:first-child + .theory-header-title,
+        .theory-center-header > .theory-header-main > .inline-flex:first-child + .theory-header-title {
             margin-top: 0 !important;
         }
 
@@ -76,12 +101,20 @@
                 flex-wrap: nowrap;
             }
 
-            .theory-header-meta {
-                justify-content: flex-end;
-            }
-
             .theory-header-title {
                 white-space: nowrap;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .theory-header-subline {
+                flex-wrap: wrap;
+            }
+
+            .theory-header-limit-pills {
+                width: 100%;
+                margin-left: 0;
+                justify-content: flex-start;
             }
         }
 
@@ -364,17 +397,12 @@
         <div class="theory-center-shell mx-auto flex flex-col gap-5">
             <section class="theory-center-panel rounded-[30px] p-5 sm:p-6 lg:p-7">
                 <div class="theory-center-header">
-                    <div class="min-w-0 space-y-3">
+                    <div class="min-w-0 theory-header-main space-y-3">
                         <div class="theory-pill-tone theory-tone--primary inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em]">
                             <span class="theory-tone-accent material-symbols-outlined text-[15px]">hub</span>
                             Центр теории
                         </div>
-                        <div class="space-y-2">
-                            <h1 class="theory-header-title text-3xl font-bold tracking-[-0.02em] text-text-main sm:text-4xl">Теории тем и комплексов в одном месте</h1>
-                            <p class="max-w-3xl text-sm leading-5 text-text-secondary sm:text-[14px] lg:max-w-none lg:whitespace-nowrap">
-                                Обзор теории по темам и комплексам: где она уже есть, где ее еще нет и где нужна синхронизация.
-                            </p>
-                        </div>
+                        <h1 class="theory-header-title text-3xl font-bold tracking-[-0.02em] text-text-main sm:text-4xl">Теории тем и комплексов</h1>
                     </div>
                     <div class="theory-header-actions flex flex-wrap items-center justify-end gap-2">
                         <button id="theory-center-go-home" type="button"
@@ -397,9 +425,12 @@
                             Редактор теории
                         </button>
                     </div>
-                </div>
-                <div class="theory-header-meta">
-                    <div id="theory-center-limit-pills" class="flex flex-wrap items-center gap-2 xl:justify-end"></div>
+                    <div class="theory-header-subline">
+                        <p class="text-sm leading-5 text-text-secondary sm:text-[14px]">
+                            Обзор теории по темам и комплексам: где она уже есть, где ее еще нет и где нужна синхронизация.
+                        </p>
+                        <div id="theory-center-limit-pills" class="theory-header-limit-pills"></div>
+                    </div>
                 </div>
             </section>
 

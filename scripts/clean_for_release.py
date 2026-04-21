@@ -87,6 +87,11 @@ DATA_DIRS_TO_DELETE = []
 # не очищаем автоматически — это релизный контент.
 DATA_DIRS_TO_WIPE_CONTENTS = [
     "data/images",
+    "data/modules",
+    "data/complexes",
+    "data/catalog",
+    "data/microcards",
+    "data/avatars",
     "data/complexes/history",
     "data/users",
     "data/user_calendar",
