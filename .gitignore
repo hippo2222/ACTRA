@@ -99,6 +99,7 @@ data/hosted_identity_migration_report.json
 
 # AI config with API keys — never commit
 data/ai_config.json
+data/ai_config.json.*
 
 # Local/manual verification artifacts
 .tmp_pytest_feedback/
