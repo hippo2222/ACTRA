@@ -74,6 +74,7 @@
     let _isSavingTheme = false;
     let _accountContext = null;
     let _isLogoutPending = false;
+    let _isDeletePending = false;
     let _availableAvatars = [];
     let _isAvatarSaving = false;
     let _isNameSaving = false;
@@ -369,6 +370,25 @@
         const confirmPasswordLabel = document.getElementById('settings-password-confirm')?.closest('label')?.querySelector('span');
         if (confirmPasswordLabel) confirmPasswordLabel.textContent = '\u041f\u043e\u0432\u0442\u043e\u0440\u0438\u0442\u0435 \u043d\u043e\u0432\u044b\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
 
+        const deleteTitle = document.getElementById('settings-delete-title');
+        if (deleteTitle) deleteTitle.textContent = '\u0423\u0434\u0430\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430';
+
+        const deleteNote = document.getElementById('settings-delete-note');
+        if (deleteNote) {
+            deleteNote.textContent = '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0431\u0443\u0434\u0435\u0442 \u0443\u0434\u0430\u043b\u0451\u043d \u0432\u043c\u0435\u0441\u0442\u0435 \u0441 \u043f\u043e\u0447\u0442\u043e\u0439 \u0438 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u043c\u0438 \u0434\u0430\u043d\u043d\u044b\u043c\u0438.';
+        }
+
+        const deleteWarning = document.getElementById('settings-delete-warning');
+        if (deleteWarning) deleteWarning.textContent = '\u042d\u0442\u043e \u0434\u0435\u0439\u0441\u0442\u0432\u0438\u0435 \u043d\u0435\u043b\u044c\u0437\u044f \u043e\u0442\u043c\u0435\u043d\u0438\u0442\u044c.';
+
+        const deletePasswordLabel = document.getElementById('settings-delete-password')?.closest('label')?.querySelector('span');
+        if (deletePasswordLabel) deletePasswordLabel.textContent = '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+
+        const deletePasswordInput = document.getElementById('settings-delete-password');
+        if (deletePasswordInput) {
+            deletePasswordInput.setAttribute('placeholder', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c');
+        }
+
         const themePlaceholder = document.querySelector('#theme-options > div');
         if (themePlaceholder) themePlaceholder.textContent = '\u0417\u0430\u0433\u0440\u0443\u0437\u043a\u0430 \u0442\u0435\u043c...';
 
@@ -393,6 +413,9 @@
         setButtonLabel('settings-password-toggle-btn', 'password', '\u0418\u0437\u043c\u0435\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c');
         setButtonLabel('settings-password-save-btn', 'check', '\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u043f\u0430\u0440\u043e\u043b\u044c');
         setButtonLabel('settings-password-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
+        setButtonLabel('settings-delete-toggle-btn', 'delete_forever', '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442');
+        setButtonLabel('settings-delete-confirm-btn', 'delete_forever', '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430');
+        setButtonLabel('settings-delete-cancel-btn', 'close', '\u041e\u0442\u043c\u0435\u043d\u0430');
         setButtonLabel('settings-logout-btn', 'logout', '\u0412\u044b\u0439\u0442\u0438');
     }
 
@@ -673,6 +696,24 @@
             _isLogoutPending = false;
             updateLogoutButtonState();
         }
+    }
+
+    async function confirmAccountDeletion() {
+        const title = '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442?';
+        const message = '\u0411\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435. \u041f\u043e\u0441\u043b\u0435 \u044d\u0442\u043e\u0433\u043e \u043c\u043e\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441\u043d\u043e\u0432\u0430 \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.';
+        if (typeof NotificationUI !== 'undefined' && typeof NotificationUI.confirm === 'function') {
+            return NotificationUI.confirm({
+                title,
+                message,
+                confirmText: '\u0423\u0434\u0430\u043b\u0438\u0442\u044c \u043d\u0430\u0432\u0441\u0435\u0433\u0434\u0430',
+                cancelText: '\u041e\u0442\u043c\u0435\u043d\u0430',
+                variant: 'error',
+            });
+        }
+        if (typeof window.confirm === 'function') {
+            return window.confirm(`${title}\n\n${message}`);
+        }
+        return false;
     }
 
     function getAccountDisplayName(user) {
@@ -1054,6 +1095,12 @@
         if (next) next.value = '';
         if (confirm) confirm.value = '';
         setInlineStatus('settings-password-save-status');
+    }
+
+    function resetDeleteForm() {
+        const password = document.getElementById('settings-delete-password');
+        if (password) password.value = '';
+        setInlineStatus('settings-delete-status');
     }
 
     function clearAvatarFileInput() {
@@ -1458,11 +1505,142 @@
                 : '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c (\u0435\u0441\u043b\u0438 \u043e\u043d \u0435\u0441\u0442\u044c)';
         }
 
+        updateDeleteControls(user, { hosted });
+
         if (!canEdit) {
             setSectionOpen('settings-email-form', false);
             setSectionOpen('settings-password-form', false);
             resetEmailForm();
             resetPasswordForm();
+        }
+    }
+
+    function updateDeleteControls(user, options = {}) {
+        const hosted = options.hosted === true;
+        const canDelete = hosted && !!String(user?.user_id || '').trim();
+        const requiresPassword = !!(user?.has_password || user?.password_hash);
+        const note = document.getElementById('settings-delete-note');
+        const warning = document.getElementById('settings-delete-warning');
+        const toggle = document.getElementById('settings-delete-toggle-btn');
+        const confirmBtn = document.getElementById('settings-delete-confirm-btn');
+        const cancelBtn = document.getElementById('settings-delete-cancel-btn');
+        const passwordWrap = document.getElementById('settings-delete-password-wrap');
+        const passwordInput = document.getElementById('settings-delete-password');
+        const passwordLabel = passwordInput?.closest('label')?.querySelector('span');
+
+        if (note) {
+            if (!canDelete) {
+                note.textContent = '\u0423\u0434\u0430\u043b\u0435\u043d\u0438\u0435 \u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430 \u0434\u043e\u0441\u0442\u0443\u043f\u043d\u043e \u0442\u043e\u043b\u044c\u043a\u043e \u0434\u043b\u044f hosted-\u0430\u043a\u043a\u0430\u0443\u043d\u0442\u0430.';
+            } else if (requiresPassword) {
+                note.textContent = '\u0410\u043a\u043a\u0430\u0443\u043d\u0442, \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b. \u0414\u043b\u044f \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0436\u0434\u0435\u043d\u0438\u044f \u043d\u0443\u0436\u0435\u043d \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c.';
+            } else {
+                note.textContent = '\u0410\u043a\u043a\u0430\u0443\u043d\u0442, \u043f\u043e\u0447\u0442\u0430, \u0437\u0430\u0434\u0430\u043d\u0438\u044f, \u043a\u043e\u043c\u043f\u043b\u0435\u043a\u0441\u044b \u0438 \u0434\u0440\u0443\u0433\u0438\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u0431\u0443\u0434\u0443\u0442 \u0443\u0434\u0430\u043b\u0435\u043d\u044b \u0431\u0435\u0437\u0432\u043e\u0437\u0432\u0440\u0430\u0442\u043d\u043e.';
+            }
+        }
+        if (warning) {
+            warning.textContent = canDelete
+                ? '\u041f\u043e\u0441\u043b\u0435 \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u044f \u043c\u043e\u0436\u043d\u043e \u0431\u0443\u0434\u0435\u0442 \u0437\u0430\u043d\u043e\u0432\u043e \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.'
+                : '\u041b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0435 \u043f\u0440\u043e\u0444\u0438\u043b\u0438 \u0437\u0434\u0435\u0441\u044c \u043d\u0435 \u0443\u0434\u0430\u043b\u044f\u044e\u0442\u0441\u044f.';
+        }
+        if (passwordWrap) {
+            passwordWrap.classList.toggle('hidden', !requiresPassword);
+        }
+        if (passwordInput) {
+            passwordInput.disabled = !canDelete || _isDeletePending || !requiresPassword;
+            passwordInput.setAttribute('aria-disabled', (!canDelete || _isDeletePending || !requiresPassword) ? 'true' : 'false');
+            passwordInput.placeholder = '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+            if (!requiresPassword) {
+                passwordInput.value = '';
+            }
+        }
+        if (passwordLabel) {
+            passwordLabel.textContent = '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c';
+        }
+        if (toggle) {
+            toggle.disabled = !canDelete || _isDeletePending;
+            toggle.setAttribute('aria-disabled', (!canDelete || _isDeletePending) ? 'true' : 'false');
+        }
+        if (confirmBtn) {
+            confirmBtn.disabled = !canDelete || _isDeletePending;
+            confirmBtn.setAttribute('aria-disabled', (!canDelete || _isDeletePending) ? 'true' : 'false');
+        }
+        if (cancelBtn) {
+            cancelBtn.disabled = _isDeletePending;
+            cancelBtn.setAttribute('aria-disabled', _isDeletePending ? 'true' : 'false');
+        }
+
+        if (!canDelete) {
+            setSectionOpen('settings-delete-form', false);
+            resetDeleteForm();
+        }
+    }
+
+    async function deleteCurrentAccount() {
+        if (_isDeletePending) return;
+
+        const user = _accountContext?.user;
+        const hosted = _accountContext?.hosted === true;
+        const canDelete = hosted && !!String(user?.user_id || '').trim();
+        if (!canDelete) return;
+
+        const requiresPassword = !!(user?.has_password || user?.password_hash);
+        const passwordInput = document.getElementById('settings-delete-password');
+        const verificationPassword = String(passwordInput?.value || '').trim();
+
+        if (requiresPassword && !verificationPassword) {
+            setInlineStatus('settings-delete-status', '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435', 'error');
+            passwordInput?.focus?.();
+            return;
+        }
+
+        const confirmed = await confirmAccountDeletion();
+        if (!confirmed) return;
+
+        _isDeletePending = true;
+        updateDeleteControls(user, { hosted });
+        setInlineStatus('settings-delete-status', '\u0423\u0434\u0430\u043b\u044f\u0435\u043c \u0430\u043a\u043a\u0430\u0443\u043d\u0442 \u0438 \u043e\u0447\u0438\u0449\u0430\u0435\u043c \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435...', 'neutral');
+
+        try {
+            const payload = requiresPassword ? { verification_password: verificationPassword } : {};
+            const response = await fetch('/api/users/delete', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => null);
+            if (!response.ok || !data?.ok) {
+                throw new Error(data?.error || 'delete_failed');
+            }
+
+            resetDeleteForm();
+            setInlineStatus('settings-delete-status', '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0443\u0434\u0430\u043b\u0451\u043d', 'success');
+            showVoiceToast({
+                severity: 'success',
+                what: '\u0410\u043a\u043a\u0430\u0443\u043d\u0442 \u0443\u0434\u0430\u043b\u0451\u043d.',
+                impact: '\u041f\u043e\u0447\u0442\u0430 \u0438 \u0441\u0432\u044f\u0437\u0430\u043d\u043d\u044b\u0435 \u0434\u0430\u043d\u043d\u044b\u0435 \u043e\u0441\u0432\u043e\u0431\u043e\u0436\u0434\u0435\u043d\u044b.',
+                next: '\u041c\u043e\u0436\u043d\u043e \u0437\u0430\u0440\u0435\u0433\u0438\u0441\u0442\u0440\u0438\u0440\u043e\u0432\u0430\u0442\u044c\u0441\u044f \u0441\u043d\u043e\u0432\u0430 \u0441 \u0442\u043e\u0439 \u0436\u0435 \u043f\u043e\u0447\u0442\u043e\u0439.',
+            });
+            navigateTo('/ui/welcome');
+        } catch (error) {
+            const code = String(error?.message || '');
+            const message = code === 'password_required_for_delete'
+                ? '\u0412\u0432\u0435\u0434\u0438\u0442\u0435 \u0442\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c, \u0447\u0442\u043e\u0431\u044b \u043f\u043e\u0434\u0442\u0432\u0435\u0440\u0434\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0435\u043d\u0438\u0435'
+                : code === 'invalid_password'
+                    ? '\u0422\u0435\u043a\u0443\u0449\u0438\u0439 \u043f\u0430\u0440\u043e\u043b\u044c \u0443\u043a\u0430\u0437\u0430\u043d \u043d\u0435\u0432\u0435\u0440\u043d\u043e'
+                    : code === 'authentication_required'
+                        ? '\u0421\u0435\u0441\u0441\u0438\u044f \u0438\u0441\u0442\u0435\u043a\u043b\u0430. \u0412\u043e\u0439\u0434\u0438\u0442\u0435 \u0441\u043d\u043e\u0432\u0430.'
+                        : '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442. \u041f\u043e\u043f\u0440\u043e\u0431\u0443\u0439\u0442\u0435 \u0435\u0449\u0451 \u0440\u0430\u0437 \u0447\u0443\u0442\u044c \u043f\u043e\u0437\u0436\u0435.';
+            console.error('[Settings] Failed to delete account:', error);
+            setInlineStatus('settings-delete-status', message, 'error');
+            showVoiceToast({
+                severity: 'error',
+                what: '\u041d\u0435 \u0443\u0434\u0430\u043b\u043e\u0441\u044c \u0443\u0434\u0430\u043b\u0438\u0442\u044c \u0430\u043a\u043a\u0430\u0443\u043d\u0442.',
+                impact: '\u0414\u0430\u043d\u043d\u044b\u0435 \u0438 \u0441\u0435\u0441\u0441\u0438\u044f \u043f\u043e\u043a\u0430 \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u044b.',
+                next: message,
+            });
+        } finally {
+            _isDeletePending = false;
+            updateDeleteControls(_accountContext?.user, { hosted: _accountContext?.hosted === true });
         }
     }
 
@@ -2105,6 +2283,41 @@
             passwordSaveBtn.onclick = () => {
                 void savePasswordPreference();
             };
+        }
+
+        const deleteToggleBtn = document.getElementById('settings-delete-toggle-btn');
+        if (deleteToggleBtn) {
+            deleteToggleBtn.onclick = () => {
+                if (_isDeletePending) return;
+                const form = document.getElementById('settings-delete-form');
+                const nextState = !!form && form.classList.contains('hidden');
+                resetDeleteForm();
+                setSectionOpen('settings-delete-form', nextState);
+            };
+        }
+
+        const deleteCancelBtn = document.getElementById('settings-delete-cancel-btn');
+        if (deleteCancelBtn) {
+            deleteCancelBtn.onclick = () => {
+                if (_isDeletePending) return;
+                resetDeleteForm();
+                setSectionOpen('settings-delete-form', false);
+            };
+        }
+
+        const deleteConfirmBtn = document.getElementById('settings-delete-confirm-btn');
+        if (deleteConfirmBtn) {
+            deleteConfirmBtn.onclick = () => {
+                void deleteCurrentAccount();
+            };
+        }
+
+        const deleteForm = document.getElementById('settings-delete-form');
+        if (deleteForm) {
+            deleteForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                void deleteCurrentAccount();
+            });
         }
 
         const passwordForm = document.getElementById('settings-password-form');

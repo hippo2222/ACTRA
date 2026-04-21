@@ -166,20 +166,26 @@ describe("Theory center regressions", () => {
         expect(dom.window.document.getElementById("theory-center-summary").textContent).toContain("Модуль 1");
     });
 
-    it("persists summary collapse state in localStorage", () => {
+    it("starts with collapsed summary and does not persist toggle state", () => {
         const dom = setupTheoryCenterDom();
-        const { state, applySummaryCollapsedState, toggleSummaryCollapsed } = dom.window.__theoryCenterTestExports;
+        const { state, readUiState, applySummaryCollapsedState, toggleSummaryCollapsed } = dom.window.__theoryCenterTestExports;
         const wrap = dom.window.document.getElementById("theory-center-summary-wrap");
         const label = dom.window.document.getElementById("theory-center-summary-toggle-label");
+        const toggle = dom.window.document.getElementById("theory-center-summary-toggle");
 
         state.summaryCollapsed = false;
+        readUiState();
+        expect(state.summaryCollapsed).toBe(true);
         applySummaryCollapsedState();
-        expect(wrap.classList.contains("hidden")).toBe(false);
+        expect(wrap.classList.contains("hidden")).toBe(true);
+        expect(toggle.getAttribute("aria-expanded")).toBe("false");
+        expect(label.textContent).toBe("Развернуть");
 
         toggleSummaryCollapsed();
-        expect(wrap.classList.contains("hidden")).toBe(true);
-        expect(dom.window.localStorage.getItem("theory-center-summary-collapsed")).toBe("1");
-        expect(label.textContent).toBe("Развернуть");
+        expect(wrap.classList.contains("hidden")).toBe(false);
+        expect(toggle.getAttribute("aria-expanded")).toBe("true");
+        expect(dom.window.localStorage.getItem("theory-center-summary-collapsed")).toBeNull();
+        expect(label.textContent).toBe("Свернуть");
     });
 
     it("renders complex sync action and all-theories list view without topic sync button", () => {

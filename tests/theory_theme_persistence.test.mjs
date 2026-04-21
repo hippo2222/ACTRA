@@ -79,10 +79,54 @@ describe("Theory theme persistence", () => {
 
         expect(dom.window.document.documentElement.getAttribute("data-theme")).toBe("dark-b");
         expect(dom.window.document.documentElement.classList.contains("dark")).toBe(true);
+        expect(dom.window.document.documentElement.style.colorScheme).toBe("dark");
 
         dom.window.ThemeManager.setTheme("light-b");
         expect(dom.window.localStorage.getItem("app-theme")).toBe("light-b");
         expect(dom.window.document.documentElement.getAttribute("data-theme")).toBe("light-b");
         expect(dom.window.document.documentElement.classList.contains("dark")).toBe(false);
+        expect(dom.window.document.documentElement.style.colorScheme).toBe("light");
+    });
+
+    it("preserves leading material icons when button text is reassigned", () => {
+        const dom = new JSDOM(`<!DOCTYPE html><html><body>
+            <button id="home-btn" type="button">
+                <span class="material-symbols-outlined">home</span>
+                Главная
+            </button>
+            <a id="main-link" href="/ui/main">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span>Библиотека</span>
+            </a>
+        </body></html>`, {
+            url: "http://localhost/ui/settings",
+            runScripts: "dangerously",
+        });
+
+        bindDomGlobals(dom);
+        dom.window.requestAnimationFrame = dom.window.requestAnimationFrame || ((cb) => setTimeout(cb, 0));
+        dom.window.matchMedia = dom.window.matchMedia || (() => ({
+            matches: false,
+            media: "",
+            addEventListener() {},
+            removeEventListener() {},
+            addListener() {},
+            removeListener() {},
+            dispatchEvent() { return false; },
+        }));
+
+        dom.window.eval(themeManagerSource);
+
+        const homeButton = dom.window.document.getElementById("home-btn");
+        homeButton.textContent = "На главную";
+
+        expect(homeButton.querySelector(".material-symbols-outlined")?.textContent).toBe("home");
+        expect(homeButton.querySelector("[data-button-label]")?.textContent).toBe("На главную");
+
+        const mainLink = dom.window.document.getElementById("main-link");
+        mainLink.textContent = "Главная";
+
+        expect(mainLink.querySelector(".material-symbols-outlined")?.textContent).toBe("dashboard");
+        expect(mainLink.querySelector("[data-button-label]")?.textContent).toBe("Главная");
     });
 });

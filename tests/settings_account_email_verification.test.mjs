@@ -67,6 +67,21 @@ function setupDom(fetchMock, url = 'http://localhost/ui/settings') {
         <button id="settings-password-save-btn" type="button"></button>
         <button id="settings-password-cancel-btn" type="button"></button>
         <div id="settings-password-save-status" class="hidden"></div>
+        <div id="settings-delete-section">
+          <div id="settings-delete-title"></div>
+          <div id="settings-delete-note"></div>
+          <div id="settings-delete-warning"></div>
+          <button id="settings-delete-toggle-btn" type="button"></button>
+          <form id="settings-delete-form" class="hidden">
+            <label id="settings-delete-password-wrap" class="hidden">
+              <span>Current password</span>
+              <input id="settings-delete-password" type="password" />
+            </label>
+            <button id="settings-delete-confirm-btn" type="button"></button>
+            <button id="settings-delete-cancel-btn" type="button"></button>
+            <div id="settings-delete-status" class="hidden"></div>
+          </form>
+        </div>
         <div id="theme-options"></div>
         <div id="theme-save-status" class="hidden"></div>
         <div id="settings-profile-caption"></div>
@@ -119,6 +134,7 @@ function installCommonUi(dom) {
   dom.window.NotificationUI = {
     toastVoice: vi.fn(),
     toast: vi.fn(),
+    confirm: vi.fn(async () => true),
     voiceMessage: vi.fn(({ what = '', impact = '', next = '' } = {}) => [what, impact, next].filter(Boolean).join(' ')),
     resolveVariant: vi.fn((value) => value || 'info'),
   };
@@ -283,5 +299,36 @@ describe('settings pending email verification', () => {
     expect(dom.window.document.getElementById('settings-email-value').textContent).toContain('anna.next@example.com');
     expect(dom.window.document.getElementById('settings-email-pending-panel').classList.contains('hidden')).toBe(false);
     expect(dom.window.document.getElementById('settings-email-pending-title').textContent).toContain('подтверждена');
+  });
+  it('deletes the hosted account from settings and navigates to welcome', async () => {
+    const fetchMock = buildFetchMock({
+      'POST /api/users/delete': async (_input, init) => {
+        expect(JSON.parse(init.body)).toEqual({ verification_password: 'StrongPass1' });
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ ok: true }),
+        };
+      },
+    });
+
+    dom = setupDom(fetchMock);
+    installCommonUi(dom);
+    dom.window.PageTransition = { navigate: vi.fn() };
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    dom.window.document.getElementById('settings-delete-toggle-btn').click();
+    dom.window.document.getElementById('settings-delete-password').value = 'StrongPass1';
+    dom.window.document.getElementById('settings-delete-confirm-btn').click();
+    await flushPromises();
+
+    expect(dom.window.NotificationUI.confirm).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/users/delete', expect.objectContaining({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    expect(dom.window.PageTransition.navigate).toHaveBeenCalledWith('/ui/welcome');
   });
 });

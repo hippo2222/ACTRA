@@ -20,15 +20,24 @@ Endpoints:
 import io
 import logging
 import re
+import shutil
 import threading
 import time
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import bcrypt
 from flask import Blueprint, jsonify, request, send_file, send_from_directory
 
+from persistence.hosted_asset_repository import HostedAssetRepository
+from persistence.hosted_calendar_repository import HostedCalendarRepository
+from persistence.hosted_catalog_repository import HostedCatalogRepository
+from persistence.hosted_complex_statistics_repository import HostedComplexStatisticsRepository
+from persistence.hosted_microcards_repository import HostedMicrocardsRepository
+from persistence.hosted_microcards_review_repository import HostedMicrocardsReviewRepository
+from persistence.hosted_progress_repository import HostedProgressRepository
+from persistence.postgres import postgres_connection
 from routes._context import (
     get_authenticated_user_id,
     get_ctx,
@@ -308,6 +317,429 @@ def _build_default_avatar_svg(size: int = 256) -> bytes:
   <path d="M32 99C35.5 83.8 48.7 74 64 74C79.3 74 92.5 83.8 96 99" fill="#CBD5E1"/>
 </svg>"""
     return svg.encode("utf-8")
+
+
+def _payload_owned_by_user(payload: Any, user_id: str, *, ownership_keys: Optional[List[str]] = None) -> bool:
+    if not isinstance(payload, dict):
+        return False
+    clean_user_id = str(user_id or "").strip()
+    if not clean_user_id:
+        return False
+    keys = ownership_keys or ["created_by_user_id", "owner_user_id", "user_id"]
+    for key in keys:
+        if str(payload.get(key) or "").strip() == clean_user_id:
+            return True
+    return False
+
+
+def _task_owned_by_user(task_payload: Any, user_id: str) -> bool:
+    if _payload_owned_by_user(task_payload, user_id):
+        return True
+    if not isinstance(task_payload, dict):
+        return False
+    metadata = task_payload.get("metadata")
+    if _payload_owned_by_user(metadata, user_id):
+        return True
+    task_data = task_payload.get("task_data")
+    if isinstance(task_data, dict):
+        return _payload_owned_by_user(task_data.get("meta"), user_id)
+    return False
+
+
+def _delete_user_owned_workspace_content(ctx: Any, user_id: str) -> Dict[str, int]:
+    report = {
+        "tasks_deleted": 0,
+        "topics_deleted": 0,
+        "modules_deleted": 0,
+        "complexes_deleted": 0,
+        "theories_deleted": 0,
+    }
+    clean_user_id = str(user_id or "").strip()
+    if not clean_user_id:
+        return report
+
+    storage_service = getattr(ctx, "storage_service", None)
+    if storage_service is not None:
+        try:
+            modules = list(storage_service.load_modules() or [])
+        except Exception:
+            logger.exception("[HTTP] Failed to enumerate workspace catalog for account deletion of %s", clean_user_id)
+            raise
+
+        owned_module_ids = set()
+        owned_topic_refs = set()
+        owned_task_refs = set()
+
+        for module in modules:
+            if not isinstance(module, dict):
+                continue
+            module_id = str(module.get("id") or "").strip()
+            if not module_id:
+                continue
+            if _payload_owned_by_user(module, clean_user_id):
+                owned_module_ids.add(module_id)
+                continue
+            for topic in module.get("topics") or []:
+                if not isinstance(topic, dict):
+                    continue
+                topic_id = str(topic.get("id") or "").strip()
+                if not topic_id:
+                    continue
+                if _payload_owned_by_user(topic, clean_user_id):
+                    owned_topic_refs.add((module_id, topic_id))
+                    continue
+                for task in topic.get("tasks") or []:
+                    if not isinstance(task, dict):
+                        continue
+                    task_id = str(task.get("id") or "").strip()
+                    if not task_id:
+                        continue
+                    if _task_owned_by_user(task, clean_user_id):
+                        owned_task_refs.add((module_id, topic_id, task_id))
+
+        for module_id, topic_id, task_id in sorted(owned_task_refs):
+            if getattr(storage_service, "delete_task", None) and storage_service.delete_task(module_id, topic_id, task_id):
+                report["tasks_deleted"] += 1
+
+        for module_id, topic_id in sorted(owned_topic_refs):
+            if module_id in owned_module_ids:
+                continue
+            if getattr(storage_service, "delete_topic", None) and storage_service.delete_topic(module_id, topic_id):
+                report["topics_deleted"] += 1
+
+        for module_id in sorted(owned_module_ids):
+            if getattr(storage_service, "delete_module", None) and storage_service.delete_module(module_id):
+                report["modules_deleted"] += 1
+
+    complex_service = getattr(ctx, "complex_service", None)
+    if complex_service is not None and getattr(complex_service, "get_all_complexes", None):
+        try:
+            for complex_obj in list(complex_service.get_all_complexes() or []):
+                if str(getattr(complex_obj, "created_by_user_id", "") or "").strip() != clean_user_id:
+                    continue
+                complex_id = str(getattr(complex_obj, "id", "") or "").strip()
+                if not complex_id:
+                    continue
+                if complex_service.delete_complex(complex_id):
+                    report["complexes_deleted"] += 1
+        except Exception:
+            logger.exception("[HTTP] Failed to delete owned complexes for account %s", clean_user_id)
+            raise
+
+    theory_service = getattr(ctx, "theory_service", None)
+    if theory_service is not None and getattr(theory_service, "list_theories", None):
+        try:
+            for theory in list(theory_service.list_theories() or []):
+                if not isinstance(theory, dict):
+                    continue
+                if str(theory.get("created_by_user_id") or "").strip() != clean_user_id:
+                    continue
+                theory_id = str(theory.get("id") or "").strip()
+                if not theory_id:
+                    continue
+                theory_service.delete_theory(theory_id)
+                report["theories_deleted"] += 1
+        except Exception:
+            logger.exception("[HTTP] Failed to delete owned theories for account %s", clean_user_id)
+            raise
+
+    return report
+
+
+def _resolve_managed_storage_path(ctx: Any, storage_root: str, storage_rel_path: str) -> Optional[Path]:
+    clean_root = str(storage_root or "").strip()
+    clean_rel_path = str(storage_rel_path or "").strip()
+    if not clean_root or not clean_rel_path:
+        return None
+
+    persistence_settings = getattr(ctx, "persistence_runtime", None)
+    if clean_root == "data_root":
+        return (Path(ctx.data_dir) / clean_rel_path).resolve()
+    if clean_root == "state_root" and persistence_settings is not None:
+        return (Path(persistence_settings.state_root) / clean_rel_path).resolve()
+    return None
+
+
+def _delete_user_avatar_files(ctx: Any, user: Any) -> int:
+    user_id = str(getattr(user, "user_id", "") or "").strip()
+    if not user_id:
+        return 0
+
+    avatar_dir = Path(ctx.data_dir) / "avatars"
+    if not avatar_dir.exists():
+        return 0
+
+    deleted = 0
+    seen_paths = set()
+    pattern = f"user-{user_id}-*.*"
+    for candidate in avatar_dir.glob(pattern):
+        if not candidate.is_file():
+            continue
+        resolved = candidate.resolve()
+        if resolved in seen_paths:
+            continue
+        seen_paths.add(resolved)
+        try:
+            candidate.unlink(missing_ok=True)
+            deleted += 1
+        except Exception:
+            logger.warning("[HTTP] Failed to remove avatar file %s during account deletion", candidate, exc_info=True)
+
+    current_avatar = Path(str(getattr(user, "avatar_seed", "") or "").strip()).name
+    if current_avatar and not _is_legacy_default_avatar(current_avatar):
+        current_path = (avatar_dir / current_avatar).resolve()
+        if current_path not in seen_paths and current_path.exists() and current_path.is_file():
+            try:
+                current_path.unlink(missing_ok=True)
+                deleted += 1
+            except Exception:
+                logger.warning("[HTTP] Failed to remove active avatar %s during account deletion", current_path, exc_info=True)
+
+    return deleted
+
+
+def _delete_owned_hosted_postgres_records(ctx: Any, user_id: str) -> Dict[str, int]:
+    report = {
+        "sessions_deleted": 0,
+        "progress_deleted": 0,
+        "statistics_deleted": 0,
+        "calendar_docs_deleted": 0,
+        "microcards_review_docs_deleted": 0,
+        "microcards_decks_deleted": 0,
+        "catalog_items_deleted": 0,
+        "catalog_versions_deleted": 0,
+        "catalog_theory_entries_deleted": 0,
+        "catalog_complex_entries_deleted": 0,
+        "assets_deleted": 0,
+        "asset_files_deleted": 0,
+    }
+    clean_user_id = str(user_id or "").strip()
+    persistence_settings = getattr(ctx, "persistence_runtime", None)
+    dsn = str(getattr(persistence_settings, "postgres_dsn", "") or "").strip()
+    if not clean_user_id or not dsn:
+        return report
+
+    HostedProgressRepository(dsn).ensure_schema()
+    HostedComplexStatisticsRepository(dsn).ensure_schema()
+    HostedCalendarRepository(dsn).ensure_schema()
+    HostedMicrocardsReviewRepository(dsn).ensure_schema()
+    HostedMicrocardsRepository(dsn).ensure_schema()
+    HostedCatalogRepository(dsn).ensure_schema()
+    HostedAssetRepository(dsn).ensure_schema()
+
+    session_repository = getattr(ctx, "session_repository", None)
+    if session_repository is not None and getattr(session_repository, "load_all_sessions", None):
+        try:
+            sessions = list(session_repository.load_all_sessions(clean_user_id) or [])
+            for session in sessions:
+                session_id = str(getattr(session, "id", "") or "").strip()
+                if not session_id:
+                    continue
+                if session_repository.delete_session_by_session_id(session_id, clean_user_id):
+                    report["sessions_deleted"] += 1
+        except Exception:
+            logger.exception("[HTTP] Failed to delete active sessions for account %s", clean_user_id)
+            raise
+
+    owned_catalog_item_ids: List[str] = []
+    owned_complex_item_ids: List[str] = []
+    owned_theory_item_ids: List[str] = []
+    owned_asset_paths: List[Path] = []
+    owned_microcards_deck_ids: List[str] = []
+
+    with postgres_connection(dsn) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT item_id, content_type
+                FROM actra_catalog_items
+                WHERE owner_user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            for row in cur.fetchall() or []:
+                item_id = str((row or [None])[0] or "").strip()
+                content_type = str((row or [None, None])[1] or "").strip().lower()
+                if not item_id:
+                    continue
+                owned_catalog_item_ids.append(item_id)
+                if content_type == "complex":
+                    owned_complex_item_ids.append(item_id)
+                elif content_type == "theory":
+                    owned_theory_item_ids.append(item_id)
+
+            cur.execute(
+                """
+                SELECT asset_id, storage_root, storage_rel_path
+                FROM actra_hosted_assets
+                WHERE owner_user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            for row in cur.fetchall() or []:
+                storage_root = str((row or [None, None, None])[1] or "").strip()
+                storage_rel_path = str((row or [None, None, None])[2] or "").strip()
+                resolved_path = _resolve_managed_storage_path(ctx, storage_root, storage_rel_path)
+                if resolved_path is not None:
+                    owned_asset_paths.append(resolved_path)
+
+            cur.execute(
+                """
+                SELECT deck_id
+                FROM actra_hosted_microcards_decks
+                WHERE coalesce(payload->'meta'->>'created_by_user_id', '') = %s
+                """,
+                (clean_user_id,),
+            )
+            for row in cur.fetchall() or []:
+                deck_id = str((row or [None])[0] or "").strip()
+                if deck_id:
+                    owned_microcards_deck_ids.append(deck_id)
+
+            cur.execute(
+                """
+                DELETE FROM actra_hosted_progress_documents
+                WHERE user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["progress_deleted"] = int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_hosted_complex_statistics_documents
+                WHERE user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["statistics_deleted"] = int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_hosted_calendar_documents
+                WHERE user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["calendar_docs_deleted"] = int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_hosted_microcards_user_documents
+                WHERE user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["microcards_review_docs_deleted"] = int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_complex_library_entries
+                WHERE user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["catalog_complex_entries_deleted"] += int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_theory_library_entries
+                WHERE user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["catalog_theory_entries_deleted"] += int(cur.rowcount or 0)
+
+            for item_id in owned_complex_item_ids:
+                cur.execute(
+                    """
+                    DELETE FROM actra_complex_library_entries
+                    WHERE catalog_item_id = %s
+                    """,
+                    (item_id,),
+                )
+                report["catalog_complex_entries_deleted"] += int(cur.rowcount or 0)
+
+            for item_id in owned_theory_item_ids:
+                cur.execute(
+                    """
+                    DELETE FROM actra_theory_library_entries
+                    WHERE catalog_item_id = %s
+                    """,
+                    (item_id,),
+                )
+                report["catalog_theory_entries_deleted"] += int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_catalog_versions
+                WHERE owner_user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["catalog_versions_deleted"] = int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_catalog_items
+                WHERE owner_user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["catalog_items_deleted"] = int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_hosted_microcards_decks
+                WHERE coalesce(payload->'meta'->>'created_by_user_id', '') = %s
+                """,
+                (clean_user_id,),
+            )
+            report["microcards_decks_deleted"] = int(cur.rowcount or 0)
+
+            cur.execute(
+                """
+                DELETE FROM actra_hosted_assets
+                WHERE owner_user_id = %s
+                """,
+                (clean_user_id,),
+            )
+            report["assets_deleted"] = int(cur.rowcount or 0)
+
+    for asset_path in owned_asset_paths:
+        try:
+            if asset_path.exists() and asset_path.is_file():
+                asset_path.unlink(missing_ok=True)
+                report["asset_files_deleted"] += 1
+        except Exception:
+            logger.warning("[HTTP] Failed to remove managed asset blob %s during account deletion", asset_path, exc_info=True)
+
+    decks_root = Path(ctx.data_dir) / "microcards" / "decks"
+    for deck_id in owned_microcards_deck_ids:
+        deck_path = decks_root / f"{deck_id}.json"
+        try:
+            if deck_path.exists() and deck_path.is_file():
+                deck_path.unlink(missing_ok=True)
+        except Exception:
+            logger.warning("[HTTP] Failed to remove shadow microcards deck %s during account deletion", deck_path, exc_info=True)
+
+    runtime_user_root = persistence_settings.user_runtime_root(clean_user_id) if persistence_settings is not None else None
+    if runtime_user_root and runtime_user_root.exists():
+        shutil.rmtree(runtime_user_root, ignore_errors=True)
+
+    return report
+
+
+def _delete_hosted_account_related_data(ctx: Any, user: Any) -> Dict[str, int]:
+    clean_user_id = str(getattr(user, "user_id", "") or "").strip()
+    if not clean_user_id:
+        return {}
+
+    report: Dict[str, int] = {}
+    report.update(_delete_user_owned_workspace_content(ctx, clean_user_id))
+    report.update(_delete_owned_hosted_postgres_records(ctx, clean_user_id))
+    report["avatar_files_deleted"] = _delete_user_avatar_files(ctx, user)
+    return report
 
 
 # ---------------------------------------------------------------------------
@@ -818,6 +1250,9 @@ def delete_user_profile() -> Any:
             if not user_service.verify_password(user_id, password):
                 return jsonify({"ok": False, "error": "invalid_password"}), 401
 
+        if is_hosted_web_runtime() and user is not None:
+            _delete_hosted_account_related_data(ctx, user)
+
         success = user_service.delete_user(user_id)
         if not success:
             return jsonify({"ok": False, "error": "user_not_found"}), 404
@@ -836,6 +1271,9 @@ def delete_user_profile() -> Any:
 
         return jsonify({"ok": True})
     except Exception as exc:
+        degraded_response = _maybe_hosted_shadow_write_error_response(exc)
+        if degraded_response is not None:
+            return degraded_response
         logger.exception("[HTTP] Failed to delete user profile: %s", exc)
         return jsonify({"ok": False, "error": "delete_failed"}), 500
 

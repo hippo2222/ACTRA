@@ -7,6 +7,8 @@
 
 /* ========== GLOBAL SEMANTIC TOKENS ========== */
 :root {
+   color-scheme: light;
+
    /* Fallbacks for themes that do not override these explicitly */
    --color-secondary-text: var(--color-text-secondary);
    --color-border: var(--color-border-normal);
@@ -850,6 +852,14 @@
    --color-heatmap-low: #717e9c;
    --color-heatmap-mid: #617192;
    --color-heatmap-high: #506286;
+}
+
+html.dark,
+:root[data-theme="dark-a"],
+:root[data-theme="dark-b"],
+[data-theme="dark-a"],
+[data-theme="dark-b"] {
+   color-scheme: dark;
 }
 
 /* ============================================================================

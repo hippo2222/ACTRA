@@ -46,6 +46,14 @@
             align-content: start;
         }
 
+        .theory-header-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            justify-content: flex-start;
+            margin-top: 1rem;
+        }
+
         .theory-center-header > .min-w-0 > .inline-flex:first-child {
             display: none;
         }
@@ -66,6 +74,10 @@
             .theory-header-actions {
                 justify-self: end;
                 flex-wrap: nowrap;
+            }
+
+            .theory-header-meta {
+                justify-content: flex-end;
             }
 
             .theory-header-title {
@@ -365,7 +377,6 @@
                         </div>
                     </div>
                     <div class="theory-header-actions flex flex-wrap items-center justify-end gap-2">
-                        <div id="theory-center-limit-pills" class="flex flex-wrap items-center justify-end gap-2"></div>
                         <button id="theory-center-go-home" type="button"
                             class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary" title="На главную">
                             <span class="material-symbols-outlined text-[18px]">home</span>
@@ -387,6 +398,9 @@
                         </button>
                     </div>
                 </div>
+                <div class="theory-header-meta">
+                    <div id="theory-center-limit-pills" class="flex flex-wrap items-center gap-2 xl:justify-end"></div>
+                </div>
             </section>
 
             <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
@@ -397,12 +411,12 @@
                     </div>
                     <button id="theory-center-summary-toggle" type="button"
                         class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary"
-                        aria-expanded="true">
-                        <span id="theory-center-summary-toggle-icon" class="material-symbols-outlined text-[18px]">expand_less</span>
-                        <span id="theory-center-summary-toggle-label">Свернуть</span>
+                        aria-expanded="false">
+                        <span id="theory-center-summary-toggle-icon" class="material-symbols-outlined text-[18px]">expand_more</span>
+                        <span id="theory-center-summary-toggle-label">Развернуть</span>
                     </button>
                 </div>
-                <div id="theory-center-summary-wrap" class="theory-summary-wrap mt-4" data-collapsed="0">
+                <div id="theory-center-summary-wrap" class="theory-summary-wrap mt-4 hidden" data-collapsed="1">
                     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5" id="theory-center-summary">
                         <div class="theory-center-panel rounded-[24px] p-4 text-sm text-text-secondary">Загрузка...</div>
                     </div>

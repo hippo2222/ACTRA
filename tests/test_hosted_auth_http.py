@@ -254,6 +254,17 @@ class _FakeHostedUserService:
         self._users[user_id] = user
         return user
 
+    def delete_user(self, user_id):
+        removed = self._users.pop(str(user_id or "").strip(), None)
+        if removed is None:
+            return False
+        self._email_tokens = {
+            raw_token: payload
+            for raw_token, payload in self._email_tokens.items()
+            if str(payload.get("user_id") or "").strip() != removed.user_id
+        }
+        return True
+
     def _check_duplicate_name(self, name):
         lowered = str(name or "").strip().lower()
         return any(str(user.name or "").strip().lower() == lowered for user in self._users.values())
@@ -389,6 +400,119 @@ def _png_bytes(color=(80, 140, 220), size=(12, 12)):
     return buffer
 
 
+def test_delete_hosted_account_related_data_removes_owned_workspace_content_and_avatar(tmp_path):
+    class _FakeStorageService:
+        def __init__(self):
+            self.deleted_tasks = []
+            self.deleted_topics = []
+            self.deleted_modules = []
+
+        def load_modules(self):
+            return [
+                {
+                    "id": "module-owned",
+                    "created_by_user_id": "user_1",
+                    "topics": [
+                        {"id": "topic-inside-owned-module", "created_by_user_id": "user_1", "tasks": []},
+                    ],
+                },
+                {
+                    "id": "module-shared",
+                    "topics": [
+                        {"id": "topic-owned", "created_by_user_id": "user_1", "tasks": []},
+                        {
+                            "id": "topic-shared",
+                            "tasks": [
+                                {"id": "task-owned", "created_by_user_id": "user_1"},
+                                {"id": "task-other", "created_by_user_id": "user_2"},
+                            ],
+                        },
+                    ],
+                },
+            ]
+
+        def delete_task(self, module_id, topic_id, task_id):
+            self.deleted_tasks.append((module_id, topic_id, task_id))
+            return True
+
+        def delete_topic(self, module_id, topic_id):
+            self.deleted_topics.append((module_id, topic_id))
+            return True
+
+        def delete_module(self, module_id):
+            self.deleted_modules.append(module_id)
+            return True
+
+    class _FakeComplexService:
+        def __init__(self):
+            self.deleted_complex_ids = []
+
+        def get_all_complexes(self):
+            return [
+                SimpleNamespace(id="complex-owned", created_by_user_id="user_1"),
+                SimpleNamespace(id="complex-other", created_by_user_id="user_2"),
+            ]
+
+        def delete_complex(self, complex_id):
+            self.deleted_complex_ids.append(complex_id)
+            return True
+
+    class _FakeTheoryService:
+        def __init__(self):
+            self.deleted_theory_ids = []
+
+        def list_theories(self):
+            return [
+                {"id": "theory-owned", "created_by_user_id": "user_1"},
+                {"id": "theory-other", "created_by_user_id": "user_2"},
+            ]
+
+        def delete_theory(self, theory_id):
+            self.deleted_theory_ids.append(theory_id)
+
+    avatar_dir = tmp_path / "avatars"
+    avatar_dir.mkdir(parents=True, exist_ok=True)
+    avatar_path = avatar_dir / "user-user_1-avatar.png"
+    avatar_path.write_bytes(b"avatar")
+
+    storage_service = _FakeStorageService()
+    complex_service = _FakeComplexService()
+    theory_service = _FakeTheoryService()
+    ctx = SimpleNamespace(
+        data_dir=str(tmp_path),
+        storage_service=storage_service,
+        complex_service=complex_service,
+        theory_service=theory_service,
+        persistence_runtime=SimpleNamespace(
+            postgres_dsn="",
+            user_runtime_root=lambda user_id: tmp_path / "runtime" / str(user_id or ""),
+        ),
+    )
+    user = User(
+        user_id="user_1",
+        name="Delete Me",
+        created_at="2026-04-13T10:00:00Z",
+        avatar_seed=avatar_path.name,
+        login="delete.me",
+        email="delete@example.com",
+    )
+
+    report = users_routes._delete_hosted_account_related_data(ctx, user)
+
+    assert report["tasks_deleted"] == 1
+    assert report["topics_deleted"] == 1
+    assert report["modules_deleted"] == 1
+    assert report["complexes_deleted"] == 1
+    assert report["theories_deleted"] == 1
+    assert report["avatar_files_deleted"] == 1
+    assert storage_service.deleted_tasks == [("module-shared", "topic-shared", "task-owned")]
+    assert storage_service.deleted_topics == [("module-shared", "topic-owned")]
+    assert storage_service.deleted_modules == ["module-owned"]
+    assert complex_service.deleted_complex_ids == ["complex-owned"]
+    assert theory_service.deleted_theory_ids == ["theory-owned"]
+    assert not avatar_path.exists()
+
+
 def test_register_creates_hosted_user_and_logs_in(client):
     response = client.post(
         "/api/auth/register",
@@ -461,6 +585,45 @@ def test_register_generates_unique_login_from_display_name(client):
     second_payload = second.get_json()
     assert first_payload["user"]["login"] == "author-one"
     assert second_payload["user"]["login"] == "author-one-2"
+
+
+def test_delete_account_allows_reregister_with_same_email(client):
+    payload = {
+        "name": "Reusable Email",
+        "email": "reusable@example.com",
+        "password": "StrongPass1",
+        "consent": {
+            "accepted": True,
+            "terms_version": "terms-v1",
+            "privacy_version": "privacy-v1",
+        },
+    }
+
+    register = client.post("/api/auth/register", json=payload)
+    assert register.status_code == 201
+
+    delete = client.post(
+        "/api/users/delete",
+        json={"verification_password": "StrongPass1"},
+    )
+    assert delete.status_code == 200
+    assert delete.get_json()["ok"] is True
+
+    me = client.get("/api/auth/me")
+    assert me.status_code == 200
+    assert me.get_json()["authenticated"] is False
+
+    reregister = client.post(
+        "/api/auth/register",
+        json={
+            **payload,
+            "name": "Reusable Email Again",
+        },
+    )
+    assert reregister.status_code == 201
+    reregister_payload = reregister.get_json()
+    assert reregister_payload["ok"] is True
+    assert reregister_payload["user"]["email"] == "reusable@example.com"
 
 
 def test_login_accepts_email_identifier(client):

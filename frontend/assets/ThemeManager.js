@@ -49,6 +49,9 @@ const ThemeManager = {
         }
     },
 
+    _nativeTextContent: null,
+    _buttonTextPreservationInstalled: false,
+
     init() {
         console.log('[ThemeManager] Init started');
         const savedTheme = localStorage.getItem('app-theme') || 'light-a';
@@ -81,6 +84,8 @@ const ThemeManager = {
             html.classList.remove('dark');
         }
 
+        html.style.colorScheme = this.themes[themeId].isDark ? 'dark' : 'light';
+
         if (persist) {
             localStorage.setItem('app-theme', themeId);
         }
@@ -102,6 +107,122 @@ const ThemeManager = {
             id,
             ...value,
         }));
+    },
+
+    getButtonIconSelector() {
+        return '.material-symbols-outlined, .material-icons, [data-button-icon]';
+    },
+
+    getDirectButtonIconChildren(element) {
+        if (!(element instanceof HTMLElement)) return [];
+        return Array.from(element.children).filter((child) => child.matches?.(this.getButtonIconSelector()));
+    },
+
+    shouldPreserveIconLabel(element) {
+        if (!(element instanceof HTMLElement)) return false;
+        if (!element.matches('button, a, [role="button"]')) return false;
+        return this.getDirectButtonIconChildren(element).length > 0;
+    },
+
+    _getButtonContentNodes(element, iconChildren) {
+        return Array.from(element.childNodes).filter((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return node.textContent.trim().length > 0;
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) {
+                return false;
+            }
+            return !iconChildren.includes(node);
+        });
+    },
+
+    _findExistingButtonLabel(element, iconChildren) {
+        const directChildren = Array.from(element.children);
+        const explicitLabel = directChildren.find((child) => child.hasAttribute?.('data-button-label'));
+        if (explicitLabel) return explicitLabel;
+
+        const contentNodes = this._getButtonContentNodes(element, iconChildren);
+        if (contentNodes.length !== 1) return null;
+        const [candidate] = contentNodes;
+        if (!(candidate instanceof HTMLElement)) return null;
+        candidate.setAttribute('data-button-label', 'true');
+        return candidate;
+    },
+
+    ensureButtonLabelElement(element) {
+        if (!this.shouldPreserveIconLabel(element)) return null;
+
+        const iconChildren = this.getDirectButtonIconChildren(element);
+        if (!iconChildren.length) return null;
+
+        const existingLabel = this._findExistingButtonLabel(element, iconChildren);
+        if (existingLabel) return existingLabel;
+
+        const contentNodes = this._getButtonContentNodes(element, iconChildren);
+        if (contentNodes.some((node) => node.nodeType === Node.ELEMENT_NODE)) {
+            return null;
+        }
+
+        const label = document.createElement('span');
+        label.setAttribute('data-button-label', 'true');
+
+        const lastIcon = iconChildren[iconChildren.length - 1] || null;
+        element.insertBefore(label, lastIcon ? lastIcon.nextSibling : element.firstChild);
+        contentNodes.forEach((node) => label.appendChild(node));
+        return label;
+    },
+
+    setButtonLabel(target, label) {
+        const element = typeof target === 'string'
+            ? document.getElementById(target)
+            : target;
+        if (!(element instanceof HTMLElement)) return false;
+
+        const nativeTextSetter = this._nativeTextContent?.set;
+        if (!nativeTextSetter) {
+            element.textContent = label == null ? '' : String(label);
+            return true;
+        }
+
+        if (!this.shouldPreserveIconLabel(element)) {
+            nativeTextSetter.call(element, label == null ? '' : String(label));
+            return true;
+        }
+
+        const labelElement = this.ensureButtonLabelElement(element);
+        if (!labelElement) {
+            nativeTextSetter.call(element, label == null ? '' : String(label));
+            return true;
+        }
+
+        nativeTextSetter.call(labelElement, label == null ? '' : String(label));
+        return true;
+    },
+
+    installButtonTextPreservation() {
+        if (this._buttonTextPreservationInstalled) return;
+
+        const descriptor = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
+        if (!descriptor?.get || !descriptor?.set) return;
+
+        this._nativeTextContent = descriptor;
+
+        Object.defineProperty(Node.prototype, 'textContent', {
+            configurable: true,
+            enumerable: descriptor.enumerable,
+            get() {
+                return descriptor.get.call(this);
+            },
+            set(value) {
+                if (window.ThemeManager?.shouldPreserveIconLabel?.(this)) {
+                    const handled = window.ThemeManager.setButtonLabel(this, value);
+                    if (handled) return;
+                }
+                descriptor.set.call(this, value);
+            },
+        });
+
+        this._buttonTextPreservationInstalled = true;
     }
 };
 
@@ -234,6 +355,7 @@ const PageTransition = {
 };
 
 // Auto-init on script load
+ThemeManager.installButtonTextPreservation();
 ThemeManager.init();
 PageTransition.init();
 

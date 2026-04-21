@@ -9,7 +9,7 @@
     moduleId: 'all',
     stateFilter: 'all',
     loading: false,
-    summaryCollapsed: false,
+    summaryCollapsed: true,
     selectionMode: false,
     selectedTheoryIds: new Set(),
     lastSelectedTheoryId: '',
@@ -17,7 +17,6 @@
     linkedEntryAutoOpened: false,
   };
 
-  const SUMMARY_COLLAPSE_STORAGE_KEY = 'theory-center-summary-collapsed';
   const THEORY_CENTER_TEST_HOOKS_FLAG = '__THEORY_CENTER_ENABLE_TEST_HOOKS__';
   const THEORY_CENTER_AUTO_INIT_DISABLED_FLAG = '__THEORY_CENTER_AUTO_INIT_DISABLED__';
   const THEORY_DELETE_UNDO_WINDOW_MS = 5000;
@@ -1075,19 +1074,11 @@
   }
 
   function readUiState() {
-    try {
-      state.summaryCollapsed = window.localStorage.getItem(SUMMARY_COLLAPSE_STORAGE_KEY) === '1';
-    } catch (error) {
-      state.summaryCollapsed = false;
-    }
+    state.summaryCollapsed = true;
   }
 
   function writeUiState() {
-    try {
-      window.localStorage.setItem(SUMMARY_COLLAPSE_STORAGE_KEY, state.summaryCollapsed ? '1' : '0');
-    } catch (error) {
-      // Ignore storage errors and keep UI working in-memory.
-    }
+    // Keep the toggle state only for the current page session.
   }
 
   function applySummaryCollapsedState() {
