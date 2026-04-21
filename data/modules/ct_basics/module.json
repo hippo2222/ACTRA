@@ -5,27 +5,7 @@
     {
       "id": "head_ct",
       "name": "Head CT Reading",
-      "tasks": [
-        {
-          "id": "task_demo_ct_001",
-          "type": "single_choice",
-          "path": "modules/ct_basics/topics/head_ct/tasks/task_demo_ct_001/task.json"
-        },
-        {
-          "id": "task_demo_ct_002",
-          "type": "single_choice",
-          "path": "modules/ct_basics/topics/head_ct/tasks/task_demo_ct_002/task.json"
-        },
-        {
-          "id": "task_demo_ct_003",
-          "type": "single_choice",
-          "path": "modules/ct_basics/topics/head_ct/tasks/task_demo_ct_003/task.json"
-        }
-      ],
-      "theory_link": {
-        "theory_id": "th_demo_ct",
-        "relation": "link"
-      }
+      "tasks": []
     }
   ]
 }

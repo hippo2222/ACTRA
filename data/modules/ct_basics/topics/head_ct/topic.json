@@ -1,40 +1,5 @@
 {
   "id": "head_ct",
   "name": "Head CT Reading",
-  "tasks": [
-    {
-      "id": "task_demo_ct_001",
-      "type": "test",
-      "path": "modules/ct_basics/topics/head_ct/tasks/task_demo_ct_001/task.json",
-      "name": null,
-      "subtype": null,
-      "description": "",
-      "created_at": "2026-02-28T22:47:54.747983",
-      "author": null
-    },
-    {
-      "id": "task_demo_ct_002",
-      "type": "test",
-      "path": "modules/ct_basics/topics/head_ct/tasks/task_demo_ct_002/task.json",
-      "name": null,
-      "subtype": null,
-      "description": "",
-      "created_at": "2026-02-28T22:47:55.710000",
-      "author": null
-    },
-    {
-      "id": "task_demo_ct_003",
-      "type": "test",
-      "path": "modules/ct_basics/topics/head_ct/tasks/task_demo_ct_003/task.json",
-      "name": null,
-      "subtype": null,
-      "description": "",
-      "created_at": "2026-02-28T22:47:56.807598",
-      "author": null
-    }
-  ],
-  "theory_link": {
-    "theory_id": "th_demo_ct",
-    "relation": "link"
-  }
+  "tasks": []
 }

@@ -1,9 +1,5 @@
 {
   "id": "vidy_mg",
   "name": "Виды МГ",
-  "tasks": [],
-  "theory_link": {
-    "theory_id": "th_demo_xray",
-    "relation": "link"
-  }
+  "tasks": []
 }
