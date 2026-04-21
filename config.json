@@ -1,6 +1,4 @@
 {
   "data_root": "data",
-  "task_system_root": "task_system",
-  "update_manifest_url": "https://hippo2222.github.io/ACTRA/latest.json"
+  "task_system_root": "task_system"
 }
-

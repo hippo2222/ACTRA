@@ -685,6 +685,9 @@
     function configureHostedRegistrationMode() {
         clearHostedVerificationState();
         setHostedAuthChoiceVisible(false);
+        toggleHidden('onboardingAvatarPreviewWrap', true);
+        toggleHidden('onboardingAvatarGallery', true);
+        toggleHidden('onboardingLoginField', true);
         toggleHidden('hostedRegistrationFields', false);
         toggleHidden('onboardingSecondaryAction', false);
 
@@ -696,15 +699,20 @@
         const nameInput = document.getElementById('onboardingName');
         if (nameInput) nameInput.placeholder = 'Отображаемое имя';
 
-        loadAvatarGallery('onboardingAvatarGallery', 'onboardingAvatarSeed', 'onboardingAvatarPreview');
+        const avatarSeedInput = document.getElementById('onboardingAvatarSeed');
+        if (avatarSeedInput) avatarSeedInput.value = '1.png';
         window.welcomeUpdateConsentState('onboarding');
     }
 
     function configureDesktopRegistrationMode() {
         clearHostedVerificationState();
         setHostedAuthChoiceVisible(false);
+        toggleHidden('onboardingAvatarPreviewWrap', false);
+        toggleHidden('onboardingAvatarGallery', false);
+        toggleHidden('onboardingLoginField', false);
         toggleHidden('hostedRegistrationFields', true);
         toggleHidden('onboardingSecondaryAction', true);
+        loadAvatarGallery('onboardingAvatarGallery', 'onboardingAvatarSeed', 'onboardingAvatarPreview');
 
         const button = document.getElementById('onboardingCreateBtn');
         if (button) {
@@ -1144,20 +1152,13 @@
     window.welcomeCreateProfile = async function () {
         if (isHostedAuthMode()) {
             const name = document.getElementById('onboardingName').value;
-            const login = document.getElementById('onboardingLogin').value;
             const email = document.getElementById('onboardingEmail').value;
             const password = document.getElementById('onboardingPassword').value;
             const passwordConfirm = document.getElementById('onboardingPasswordConfirm').value;
-            const avatar = document.getElementById('onboardingAvatarSeed').value;
 
             const nameError = validateName(name);
             if (nameError) {
                 showError('onboardingError', nameError);
-                return;
-            }
-            const loginError = validateLogin(login);
-            if (loginError) {
-                showError('onboardingError', loginError);
                 return;
             }
             const emailError = validateEmail(email);
@@ -1192,10 +1193,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     name: name.trim(),
-                    login: String(login || '').trim().toLowerCase(),
                     email: String(email || '').trim().toLowerCase(),
                     password,
-                    avatar_seed: avatar || '1.png',
                     consent,
                 })
             });
@@ -1644,7 +1643,6 @@
                 case 'onboarding':
                     showMode('onboarding');
                     configureDesktopRegistrationMode();
-                    loadAvatarGallery('onboardingAvatarGallery', 'onboardingAvatarSeed', 'onboardingAvatarPreview');
                     setTimeout(() => document.getElementById('onboardingName').focus(), 400);
                     break;
 

@@ -101,13 +101,6 @@ describe('welcome hosted auth flow', () => {
         };
       }
 
-      if (url === '/api/assets/avatars') {
-        return {
-          ok: true,
-          json: async () => ({ ok: true, files: ['1.png', '2.png'] }),
-        };
-      }
-
       if (url === '/api/legal/current') {
         return {
           ok: true,
@@ -128,7 +121,7 @@ describe('welcome hosted auth flow', () => {
             ok: true,
             user: {
               user_id: 'user_1',
-              login: 'reader.one',
+              login: 'reader-one',
               email: 'reader@example.com',
               email_verification_sent_at: '2026-04-13T10:17:00Z',
             },
@@ -154,7 +147,6 @@ describe('welcome hosted auth flow', () => {
     await flushPromises();
 
     dom.window.document.getElementById('onboardingName').value = 'Reader One';
-    dom.window.document.getElementById('onboardingLogin').value = 'reader.one';
     dom.window.document.getElementById('onboardingEmail').value = 'reader@example.com';
     dom.window.document.getElementById('onboardingPassword').value = 'StrongPass1';
     dom.window.document.getElementById('onboardingPasswordConfirm').value = 'StrongPass1';
@@ -170,10 +162,12 @@ describe('welcome hosted auth flow', () => {
     const body = JSON.parse(registerCall[1].body);
 
     expect(body.name).toBe('Reader One');
-    expect(body.login).toBe('reader.one');
     expect(body.email).toBe('reader@example.com');
     expect(body.password).toBe('StrongPass1');
+    expect(Object.prototype.hasOwnProperty.call(body, 'login')).toBe(false);
+    expect(Object.prototype.hasOwnProperty.call(body, 'avatar_seed')).toBe(false);
     expect(body.consent.accepted).toBe(true);
+    expect(fetchMock.mock.calls.some(([url]) => url === '/api/assets/avatars')).toBe(false);
     expect(navigateSpy).not.toHaveBeenCalled();
     expect(dom.window.document.getElementById('onboardingVerificationPanel').classList.contains('hidden')).toBe(false);
     expect(dom.window.document.getElementById('onboardingVerificationEmail').textContent).toContain('reader@example.com');

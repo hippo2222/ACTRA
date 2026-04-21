@@ -64,6 +64,11 @@ def test_shadow_fallback_synthesizes_auth_identity_for_legacy_users(tmp_path, mo
     assert hosted.verify_password(created.user_id, expected_password, auto_migrate=False) is True
 
 
+def test_build_login_base_from_name_transliterates_cyrillic():
+    assert HostedUserService.build_login_base_from_name("Іван Петренко") == "ivan-petrenko"
+    assert HostedUserService.build_login_base_from_name("Олена's профіль") == "olenas-profil"
+
+
 def test_shadow_fallback_updates_user_when_postgres_unavailable(tmp_path, monkeypatch):
     monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
     monkeypatch.setenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", "1")

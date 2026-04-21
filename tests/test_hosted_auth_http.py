@@ -1,5 +1,6 @@
 import io
 import os
+import re
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -30,19 +31,36 @@ class _FakeHostedUserService:
         self._email_token_counter = 0
         self.PASSWORD_RESET_TOKEN_TTL_SECONDS = 60 * 60
 
+    @staticmethod
+    def _build_login_from_name(name):
+        base = re.sub(r"[^a-z0-9]+", "-", str(name or "").strip().lower()).strip("-")
+        if not base:
+            base = "user"
+        if len(base) < 3:
+            base = f"user-{base}".strip("-")
+        return base[:32].rstrip("-") or "user"
+
     def create_auth_user(self, *, name, login, email, password, avatar_seed=None):
         clean_name = str(name or "").strip()
         login = str(login or "").strip().lower()
         email = str(email or "").strip().lower()
         if any((user.name or "").strip().lower() == clean_name.lower() for user in self._users.values()):
             raise ValueError("duplicate_name")
-        if any((user.login or "").lower() == login for user in self._users.values()):
-            raise ValueError("login_already_exists")
         if any(
             (user.email or "").lower() == email or (getattr(user, "pending_email", "") or "").lower() == email
             for user in self._users.values()
         ):
             raise ValueError("email_already_exists")
+        if not login:
+            base_login = self._build_login_from_name(clean_name)
+            login = base_login
+            suffix_number = 2
+            while any((user.login or "").lower() == login for user in self._users.values()):
+                suffix = f"-{suffix_number}"
+                login = f"{base_login[:32 - len(suffix)].rstrip('-')}{suffix}"
+                suffix_number += 1
+        elif any((user.login or "").lower() == login for user in self._users.values()):
+            raise ValueError("login_already_exists")
 
         self._counter += 1
         user = User(
@@ -376,10 +394,8 @@ def test_register_creates_hosted_user_and_logs_in(client):
         "/api/auth/register",
         json={
             "name": "Author One",
-            "login": "author.one",
             "email": "author@example.com",
             "password": "StrongPass1",
-            "avatar_seed": "2.png",
             "consent": {
                 "accepted": True,
                 "terms_version": "terms-v1",
@@ -392,8 +408,9 @@ def test_register_creates_hosted_user_and_logs_in(client):
     payload = response.get_json()
     assert payload["ok"] is True
     assert payload["user"]["authenticated"] is True
-    assert payload["user"]["login"] == "author.one"
+    assert payload["user"]["login"] == "author-one"
     assert payload["user"]["email"] == "author@example.com"
+    assert payload["user"]["avatar_seed"] == "1.png"
     assert payload["user"]["email_verified"] is False
     assert payload["user"]["email_verification_sent_at"] == "2026-04-13T10:17:00Z"
     assert payload["user"]["auth_source"] == "auth_session"
@@ -404,8 +421,46 @@ def test_register_creates_hosted_user_and_logs_in(client):
     me_payload = me.get_json()
     assert me.status_code == 200
     assert me_payload["authenticated"] is True
-    assert me_payload["user"]["login"] == "author.one"
+    assert me_payload["user"]["login"] == "author-one"
     assert me_payload["user"]["email"] == "author@example.com"
+
+
+def test_register_generates_unique_login_from_display_name(client):
+    first = client.post(
+        "/api/auth/register",
+        json={
+            "name": "Author One",
+            "email": "author.one@example.com",
+            "password": "StrongPass1",
+            "consent": {
+                "accepted": True,
+                "terms_version": "terms-v1",
+                "privacy_version": "privacy-v1",
+            },
+        },
+    )
+    assert first.status_code == 201
+    assert client.post("/api/auth/logout").status_code == 200
+
+    second = client.post(
+        "/api/auth/register",
+        json={
+            "name": "Author-One",
+            "email": "author.two@example.com",
+            "password": "StrongPass1",
+            "consent": {
+                "accepted": True,
+                "terms_version": "terms-v1",
+                "privacy_version": "privacy-v1",
+            },
+        },
+    )
+    assert second.status_code == 201
+
+    first_payload = first.get_json()
+    second_payload = second.get_json()
+    assert first_payload["user"]["login"] == "author-one"
+    assert second_payload["user"]["login"] == "author-one-2"
 
 
 def test_login_accepts_email_identifier(client):

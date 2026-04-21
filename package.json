@@ -1,7 +1,7 @@
 {
   "name": "actra",
   "version": "1.1.0",
-  "description": "ACTRA — frontend build tooling (Tailwind CSS, Vitest)",
+  "description": "ACTRA — фронтенд-инструменты веб-платформы активного обучения",
   "private": true,
   "directories": {
     "test": "tests"

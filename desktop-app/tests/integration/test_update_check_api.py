@@ -141,3 +141,17 @@ def test_update_check_uses_local_config_manifest_without_internet(client, monkey
     assert data.get("manifest_url_configured") is True
     assert data.get("manifest_requires_internet") is False
     assert data.get("reason") == "up_to_date"
+
+
+def test_build_update_status_retires_legacy_updates_in_hosted_runtime(monkeypatch):
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+    monkeypatch.setenv("ACTRA_UPDATE_CHECK_ENABLED", "1")
+    monkeypatch.setenv("ACTRA_UPDATE_MANIFEST_URL", "https://updates.example.com/latest.json")
+    monkeypatch.setattr(server, "_get_cached_internet_connectivity", lambda **kwargs: True)
+
+    status = server._build_update_status(force=False)
+
+    assert status.get("manifest_url_configured") is False
+    assert status.get("manifest_requires_internet") is False
+    assert status.get("update_available") is False
+    assert status.get("reason") == "legacy_desktop_updates_retired"

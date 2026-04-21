@@ -263,8 +263,6 @@ def register_auth_user() -> Any:
 
         if not name:
             return jsonify({"ok": False, "error": "name_required"}), 400
-        if is_hosted_web_runtime() and not login:
-            return _validation_error_response("login_required")
         if is_hosted_web_runtime() and not email:
             return _validation_error_response("email_required")
         if is_hosted_web_runtime() and not password:

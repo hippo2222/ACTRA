@@ -9,6 +9,7 @@ import re
 import secrets
 import shutil
 import tempfile
+import unicodedata
 import uuid
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -37,6 +38,57 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
 
     LOGIN_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9._-]{1,30}[a-z0-9])?$")
     EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    LOGIN_TRANSLITERATION_MAP = {
+        "\u0430": "a",
+        "\u0431": "b",
+        "\u0432": "v",
+        "\u0433": "g",
+        "\u0491": "g",
+        "\u0434": "d",
+        "\u0435": "e",
+        "\u0451": "e",
+        "\u0454": "ye",
+        "\u0436": "zh",
+        "\u0437": "z",
+        "\u0438": "i",
+        "\u0456": "i",
+        "\u0457": "yi",
+        "\u0439": "y",
+        "\u043a": "k",
+        "\u043b": "l",
+        "\u043c": "m",
+        "\u043d": "n",
+        "\u043e": "o",
+        "\u043f": "p",
+        "\u0440": "r",
+        "\u0441": "s",
+        "\u0442": "t",
+        "\u0443": "u",
+        "\u0444": "f",
+        "\u0445": "kh",
+        "\u0446": "ts",
+        "\u0447": "ch",
+        "\u0448": "sh",
+        "\u0449": "shch",
+        "\u044a": "",
+        "\u044b": "y",
+        "\u044c": "",
+        "\u044d": "e",
+        "\u044e": "yu",
+        "\u044f": "ya",
+        "\u0493": "gh",
+        "\u04af": "u",
+        "\u04b1": "u",
+        "\u04d9": "e",
+        "\u045f": "dj",
+        "\u045c": "k",
+        "\u0452": "dj",
+        "\u0459": "lj",
+        "\u045a": "nj",
+        "\u045b": "c",
+        "\u2019": "",
+        "'": "",
+    }
     SYNTHETIC_EMAIL_DOMAIN = "actra.local"
     EMAIL_TOKEN_TTL_SECONDS = 24 * 60 * 60
     PASSWORD_RESET_TOKEN_TTL_SECONDS = 60 * 60
@@ -110,13 +162,16 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
         clean_name = self._validate_name(name)
         clean_login = self.normalize_login(login)
         clean_email = self.normalize_email(email)
-        self.validate_login(clean_login)
         self.validate_email(clean_email)
 
         if self.repository.name_exists(clean_name):
             raise ValueError("duplicate_name")
-        if self.repository.login_exists(clean_login):
-            raise ValueError("login_already_exists")
+        if clean_login:
+            self.validate_login(clean_login)
+            if self.repository.login_exists(clean_login):
+                raise ValueError("login_already_exists")
+        else:
+            clean_login = self.generate_available_login_from_name(clean_name)
         if self.repository.email_exists(clean_email) or self.repository.pending_email_exists(clean_email):
             raise ValueError("email_already_exists")
         if len(str(password or "")) < 8:
@@ -127,7 +182,7 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
             user_id=self._generate_user_id(),
             name=clean_name,
             created_at=created_at,
-            avatar_seed=(str(avatar_seed or "").strip() or f"{random.randint(1, 7)}.png"),
+            avatar_seed=(str(avatar_seed or "").strip() or "1.png"),
             login=clean_login,
             email=clean_email,
             password_hash=bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8"),
@@ -771,6 +826,50 @@ class HostedUserService(HostedShadowFallbackMixin, UserService):
     @classmethod
     def normalize_login(cls, login: str) -> str:
         return str(login or "").strip().lower()
+
+    @classmethod
+    def build_login_base_from_name(cls, name: str) -> str:
+        transliterated_parts: List[str] = []
+        normalized_name = unicodedata.normalize("NFKD", str(name or "").strip().lower())
+        for char in normalized_name:
+            if unicodedata.category(char) == "Mn":
+                continue
+            mapped = cls.LOGIN_TRANSLITERATION_MAP.get(char)
+            if mapped is not None:
+                transliterated_parts.append(mapped)
+                continue
+            if char.isascii():
+                transliterated_parts.append(char)
+
+        candidate = "".join(transliterated_parts)
+        candidate = re.sub(r"[^a-z0-9._-]+", "-", candidate)
+        candidate = re.sub(r"[-._]{2,}", "-", candidate)
+        candidate = candidate.strip("-._")
+        if not candidate:
+            candidate = "user"
+        if len(candidate) < 3:
+            candidate = f"user-{candidate}".strip("-")
+        candidate = candidate[:32].rstrip("-._")
+        if len(candidate) < 3:
+            candidate = "user"
+        cls.validate_login(candidate)
+        return candidate
+
+    def generate_available_login_from_name(self, name: str) -> str:
+        base_login = self.build_login_base_from_name(name)
+        if not self.repository.login_exists(base_login):
+            return base_login
+
+        for suffix_number in range(2, 1000):
+            suffix = f"-{suffix_number}"
+            stem = base_login[: 32 - len(suffix)].rstrip("-._")
+            if len(stem) < 3:
+                stem = "user"
+            candidate = f"{stem}{suffix}"
+            if not self.repository.login_exists(candidate):
+                return candidate
+
+        raise ValueError("login_already_exists")
 
     @classmethod
     def normalize_email(cls, email: str) -> str:

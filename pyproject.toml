@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "actra"
 version = "1.1.0"
-description = "ACTRA — система для создания и прохождения интерактивных заданий и тренировки насмотренности"
+description = "ACTRA — веб-платформа активного обучения с инструментами для интерактивных заданий, контента и тренировочных сессий"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}

@@ -2272,6 +2272,9 @@ def _get_app_version() -> str:
 
 
 def _update_manifest_url() -> str:
+    if _runtime_mode() == "hosted_web":
+        return ""
+
     env_value = str(os.environ.get("ACTRA_UPDATE_MANIFEST_URL") or "").strip()
     if env_value:
         return env_value
@@ -2444,6 +2447,12 @@ def _build_update_status(*, force: bool = False) -> Dict[str, Any]:
         "from_cache": False,
         "reason": "unknown",
     }
+
+    if _runtime_mode() == "hosted_web":
+        base["manifest_url_configured"] = False
+        base["manifest_requires_internet"] = False
+        base["reason"] = "legacy_desktop_updates_retired"
+        return base
 
     if not _env_bool("ACTRA_UPDATE_CHECK_ENABLED", True):
         base["reason"] = "disabled"
