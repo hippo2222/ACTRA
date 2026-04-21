@@ -3,7 +3,7 @@ param(
     [ValidateSet("show-clone-plan", "init-local")]
     [string]$Mode = "show-clone-plan",
     [string]$RemoteUrl = "",
-    [string]$Branch = "main",
+    [string]$Branch = "online-hosting",
     [string]$InitialCommitMessage = "Initial local snapshot",
     [switch]$NoCommit
 )
@@ -113,4 +113,3 @@ switch ($Mode) {
     "show-clone-plan" { Show-ClonePlan }
     "init-local" { Init-LocalRepo }
 }
-

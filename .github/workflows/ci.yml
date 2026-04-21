@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ online-hosting, main, master ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ online-hosting, main, master ]
 
 jobs:
   backend-tests:
@@ -162,7 +162,6 @@ jobs:
       - name: Build CSS
         run: |
           npm run build:css
-
 
 
 
