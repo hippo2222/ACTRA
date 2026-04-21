@@ -55,6 +55,13 @@ nul
 logs/
 *.log
 
+# Environment and local secrets
+.env
+.env.*
+*.env
+!.env.example
+!.env.*.example
+
 # IDE
 .vscode/
 .idea/
@@ -72,11 +79,15 @@ data/users/
 data/telemetry/
 data/user_calendar/user_*/
 data/app_state.json
+data/avatars/
+runtime_state/
 
 # Runtime content — modules, complexes, import history are user-generated at runtime
 # data/modules/  # Commented out to allow demo modules for CI validation
 data/ai_runs/
+data/catalog/
 data/complexes/history/
+data/complexes/*.autosave.json
 data/complexes/theories/th_*/
 data/complexes/theories/release_smoke_theory/
 data/microcards/
@@ -84,6 +95,13 @@ data/modules/test_*/
 data/import_journal.json
 data/import_manifests/
 data/feedback/
+data/hosted_identity_migration_report.json
 
 # AI config with API keys — never commit
 data/ai_config.json
+data/ai_config.json.*
+
+# Local/manual verification artifacts
+.tmp_pytest_feedback/
+tmp_*.png
+tmp_*.html
