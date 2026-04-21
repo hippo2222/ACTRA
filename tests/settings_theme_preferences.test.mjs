@@ -23,6 +23,23 @@ function setupDom() {
   const html = `<!DOCTYPE html>
     <html>
       <body>
+        <header>
+          <div class="settings-topbar">
+            <a href="/ui/main">
+              <span class="material-symbols-outlined">arrow_back</span>
+              <span></span>
+            </a>
+            <h1></h1>
+          </div>
+        </header>
+        <main>
+          <section>
+            <a id="settings-main-btn" href="/ui/main">
+              <span class="material-symbols-outlined">dashboard</span>
+              Главная
+            </a>
+          </section>
+        </main>
         <img id="settings-account-avatar" />
         <div id="settings-account-name"></div>
         <div id="settings-account-caption"></div>
@@ -256,7 +273,40 @@ describe('settings theme preferences', () => {
     expect(html).toContain('<form id="settings-password-form"');
     expect(html).toContain('id="settings-password-username"');
     expect(html).toContain('id="settings-avatar-crop-modal"');
+    expect(html).toContain('id="settings-main-btn"');
     expect(html).toContain('.settings-avatar-crop-backdrop.hidden');
+  });
+
+  it('keeps the main button icon intact and navigates via PageTransition', async () => {
+    const navigateSpy = vi.fn();
+    dom.window.PageTransition = { navigate: navigateSpy };
+    defineGlobal('PageTransition', dom.window.PageTransition);
+
+    const fetchMock = buildFetchMock({
+      'GET /api/ui/settings': async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true, settings: { theme: 'light-a' } }),
+      }),
+    });
+
+    dom.window.fetch = fetchMock;
+    defineGlobal('fetch', fetchMock);
+
+    dom.window.eval(loadScript('frontend/Settings/settings.js'));
+    dom.window.document.dispatchEvent(new dom.window.Event('DOMContentLoaded'));
+    await flushPromises();
+
+    const mainButton = dom.window.document.getElementById('settings-main-btn');
+    const icon = mainButton?.querySelector('.material-symbols-outlined');
+    const label = mainButton?.querySelector('.settings-main-link-label');
+
+    expect(icon?.textContent).toBe('dashboard');
+    expect(label?.textContent).toBe('Главная');
+
+    mainButton.click();
+
+    expect(navigateSpy).toHaveBeenCalledWith('/ui/main');
   });
 
   it('renders compact account context, theme cards, and saves a newly selected theme', async () => {

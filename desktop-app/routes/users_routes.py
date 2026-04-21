@@ -47,6 +47,15 @@ users_bp = Blueprint("users", __name__)
 _EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _ALLOWED_AVATAR_INPUT_FORMATS = {"PNG", "JPEG", "WEBP"}
 _AVATAR_RENDER_SIZE = 512
+_LEGACY_DEFAULT_AVATAR_FILES = frozenset({
+    "1.png",
+    "2.png",
+    "3.png",
+    "4.png",
+    "5.png",
+    "6.png",
+    "7.png",
+})
 _SETTINGS_RATE_LIMITS: Dict[str, Dict[str, int]] = {
     "change_email": {"limit": 4, "window_seconds": 60},
     "resend_email_change": {"limit": 6, "window_seconds": 60},
@@ -284,6 +293,21 @@ def _try_self_service_shadow_profile_update(
         target_user_id,
     )
     return bool(shadow_updater(user))
+
+
+def _is_legacy_default_avatar(filename: str) -> bool:
+    clean_name = Path(str(filename or "").strip()).name.lower()
+    return clean_name in _LEGACY_DEFAULT_AVATAR_FILES
+
+
+def _build_default_avatar_svg(size: int = 256) -> bytes:
+    safe_size = max(64, min(1024, int(size or 256)))
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{safe_size}" height="{safe_size}" viewBox="0 0 128 128" fill="none">
+  <rect width="128" height="128" rx="32" fill="#F3F4F6"/>
+  <circle cx="64" cy="46" r="18" fill="#CBD5E1"/>
+  <path d="M32 99C35.5 83.8 48.7 74 64 74C79.3 74 92.5 83.8 96 99" fill="#CBD5E1"/>
+</svg>"""
+    return svg.encode("utf-8")
 
 
 # ---------------------------------------------------------------------------
@@ -1107,7 +1131,11 @@ def list_avatars() -> Any:
             avatar_dir.mkdir(parents=True, exist_ok=True)
 
         extensions = {".png", ".jpg", ".jpeg", ".svg", ".webp"}
-        files = [f.name for f in avatar_dir.iterdir() if f.suffix.lower() in extensions]
+        files = [
+            f.name
+            for f in avatar_dir.iterdir()
+            if f.suffix.lower() in extensions and not _is_legacy_default_avatar(f.name)
+        ]
         return jsonify({"ok": True, "files": sorted(files)})
     except Exception as exc:
         logger.exception("[HTTP] Failed to list avatars: %s", exc)
@@ -1120,6 +1148,17 @@ def serve_avatar(filename: str) -> Any:
     avatar_dir = Path(get_ctx().data_dir) / "avatars"
     if not avatar_dir.exists():
         avatar_dir.mkdir(parents=True, exist_ok=True)
+    if _is_legacy_default_avatar(filename):
+        try:
+            requested_size = int(str(request.args.get("size") or "256"))
+        except Exception:
+            requested_size = 256
+        resp = send_file(io.BytesIO(_build_default_avatar_svg(requested_size)), mimetype="image/svg+xml")
+        try:
+            resp.headers["Cache-Control"] = "public, max-age=300"
+        except Exception:
+            pass
+        return resp
     trim_param = str(request.args.get("trim") or "").strip().lower()
     trim_enabled = trim_param in {"1", "true", "yes", "on"}
 

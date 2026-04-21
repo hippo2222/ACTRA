@@ -1263,3 +1263,28 @@ def test_hosted_avatar_upload_rejects_unsupported_file_type(client):
 
     assert response.status_code == 400
     assert response.get_json()["error"] == "invalid_image"
+
+
+def test_legacy_default_avatar_url_returns_neutral_placeholder_svg(client):
+    response = client.get("/api/assets/avatars/1.png")
+
+    assert response.status_code == 200
+    assert response.mimetype == "image/svg+xml"
+    body = response.get_data(as_text=True)
+    assert "<svg" in body
+    assert "#F3F4F6" in body
+
+
+def test_list_avatars_excludes_legacy_default_files(client, tmp_path):
+    avatar_dir = tmp_path / "avatars"
+    avatar_dir.mkdir(parents=True, exist_ok=True)
+    (avatar_dir / "1.png").write_bytes(b"legacy")
+    (avatar_dir / "7.png").write_bytes(b"legacy")
+    (avatar_dir / "custom-user-avatar.png").write_bytes(b"custom")
+
+    response = client.get("/api/assets/avatars")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["ok"] is True
+    assert payload["files"] == ["custom-user-avatar.png"]

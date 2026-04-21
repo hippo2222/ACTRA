@@ -299,7 +299,26 @@
             if (sectionDescriptions[index]) sectionDescriptions[index].textContent = description;
         });
 
-        const accountActions = Array.from(document.querySelectorAll('main > section:first-child a[href="/ui/main"] span:last-child'));
+        const mainActionButton = document.getElementById('settings-main-btn');
+        if (mainActionButton) {
+            let label = mainActionButton.querySelector('.settings-main-link-label');
+            if (!label) {
+                const directTextNodes = Array.from(mainActionButton.childNodes).filter((node) => {
+                    return node.nodeType === Node.TEXT_NODE && String(node.textContent || '').trim();
+                });
+                const fallbackLabel = directTextNodes
+                    .map((node) => String(node.textContent || '').trim())
+                    .filter(Boolean)
+                    .join(' ') || '\u0413\u043b\u0430\u0432\u043d\u0430\u044f';
+                directTextNodes.forEach((node) => node.remove());
+                label = document.createElement('span');
+                label.className = 'settings-main-link-label';
+                label.textContent = fallbackLabel;
+                mainActionButton.appendChild(label);
+            }
+        }
+
+        const accountActions = Array.from(document.querySelectorAll('.settings-main-link-label'));
         if (accountActions[0]) accountActions[0].textContent = '\u0413\u043b\u0430\u0432\u043d\u0430\u044f';
 
         const avatarPreviewName = document.getElementById('settings-avatar-preview-name');
@@ -1920,6 +1939,14 @@
             };
         }
         updateLogoutButtonState();
+
+        const mainBtn = document.getElementById('settings-main-btn');
+        if (mainBtn) {
+            mainBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                navigateTo('/ui/main');
+            });
+        }
 
         const adminSearchBtn = document.getElementById('settings-admin-search-btn');
         if (adminSearchBtn) {
