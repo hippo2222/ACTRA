@@ -3441,6 +3441,33 @@ text: Сердце человека состоит из [трёх] камер. �
         }
     }
 
+    async _readErrorResponse(response) {
+        let payload = null;
+        try {
+            payload = await response.clone().json();
+        } catch (_) {
+            payload = null;
+        }
+
+        if (payload && typeof payload === 'object') {
+            const message = payload.message || payload.error || payload.details;
+            if (message) {
+                return String(message);
+            }
+        }
+
+        try {
+            const rawText = await response.text();
+            if (rawText && rawText.trim()) {
+                return rawText.trim();
+            }
+        } catch (_) {
+            // Ignore body-read errors and fall back to status text below.
+        }
+
+        return `HTTP error! status: ${response.status}`;
+    }
+
     async parseManualAnalysisText(text) {
         try {
             const response = await fetch('/api/editor/import/parse-analysis', {
@@ -3450,7 +3477,7 @@ text: Сердце человека состоит из [трёх] камер. �
             });
 
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(await this._readErrorResponse(response));
             }
 
             return await response.json();
