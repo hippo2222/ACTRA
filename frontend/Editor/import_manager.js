@@ -10,6 +10,7 @@ class ImportManager {
         this.selectedModuleName = '';
         this.selectedTopicName = '';
         this.sourceText = '';
+        this.manualAnalysisResult = null;
         this.parsedResult = null;
         this.excludedTasks = new Set();
         this.selectedTasks = new Set(); // For bulk actions
@@ -517,6 +518,19 @@ class ImportManager {
                     ${this.renderWorkspaceImportNodePreview('Задания', result.tasks, 'Заданий нет.')}
                     ${this.renderWorkspaceImportNodePreview('Теории', result.theories, 'Теорий нет.')}
                 </div>
+
+                ${isMaterialAnalysisMode ? `
+                    <div class="mt-3 flex items-start gap-2 p-3 bg-primary-lighter border border-primary-light rounded-lg">
+                        <span class="material-symbols-outlined text-primary text-[20px]">analytics</span>
+                        <div class="text-xs text-primary-dark">
+                            <p class="font-medium mb-1">Формат ответа для анализа материала:</p>
+                            <p>&lt;human_summary&gt; - краткая оценка материала</p>
+                            <p>&lt;analysis_json&gt; - образовательные единицы и рекомендации</p>
+                            <p class="mt-1">После разбора анализа выберите рекомендуемый тип и сгенерируйте уже сами задания в одном из импортируемых форматов.</p>
+                        </div>
+                    </div>
+                ` : ''}
+                ${manualAnalysisPreview}
             </div>
         `;
     }
@@ -922,7 +936,7 @@ class ImportManager {
             nextBtn.textContent = this.importInProgress ? 'Импорт...' : 'Импортировать';
         } else if (this.importMode === 'ai') {
             if (this.currentStep === 1) nextBtn.textContent = 'К промптам';
-            else if (this.currentStep === 2) nextBtn.textContent = 'Проверить текст';
+            else if (this.currentStep === 2) nextBtn.textContent = this.aiTemplateType === 'material_analysis' ? 'Разобрать анализ' : 'Проверить текст';
             else if (this.currentStep === 3) nextBtn.textContent = 'К импорту';
             else nextBtn.textContent = 'Далее';
         } else {
@@ -1222,6 +1236,20 @@ class ImportManager {
                         <option value="">Сначала выберите модуль...</option>
                     </select>
                 </div>
+
+                ${isMaterialAnalysisMode ? `
+                    <div class="mt-3 flex items-start gap-2 p-3 bg-primary-lighter border border-primary-light rounded-lg">
+                        <span class="material-symbols-outlined text-primary text-[20px]">analytics</span>
+                        <div class="text-xs text-primary-dark">
+                            <p class="font-medium mb-1">Формат ответа для анализа материала:</p>
+                            <p>&lt;human_summary&gt; - краткая оценка материала</p>
+                            <p>&lt;analysis_json&gt; - образовательные единицы и рекомендации</p>
+                            <p class="mt-1">После разбора анализа выберите рекомендуемый тип и сгенерируйте уже сами задания в одном из импортируемых форматов.</p>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${manualAnalysisPreview}
             </div>
         `;
     }
@@ -1292,6 +1320,8 @@ class ImportManager {
         const templateOptions = this.getAIAgentTemplateOptions();
         const activeTemplate = templateOptions[this.aiTemplateType] || templateOptions.open_answer;
         const isAiPromptMode = this.importMode === 'ai';
+        const isMaterialAnalysisMode = isAiPromptMode && this.aiTemplateType === 'material_analysis';
+        const manualAnalysisPreview = isMaterialAnalysisMode ? this.renderManualAnalysisPreviewCard() : '';
         const stepTitle = isAiPromptMode ? 'Скопируйте промпт и вставьте ответ внешнего ИИ' : 'Вставьте текст с заданиями';
         const stepDescription = isAiPromptMode
             ? 'Сгенерируйте задания во внешней нейросети, затем вставьте результат сюда для проверки и импорта.'
@@ -1377,6 +1407,143 @@ class ImportManager {
                         <p class="mt-1 font-medium">Поддерживается только подтип Клик/Ошибки (error_detection). Рисование и координатные click-задачи не поддерживаются.</p>
                     </div>
                 </div>
+            </div>
+        `;
+    }
+
+    getAIAgentTemplateKeyForTaskType(taskType) {
+        const normalized = String(taskType || '').trim().toUpperCase();
+        const mapping = {
+            OPEN_ANSWER: 'open_answer',
+            SEQUENCE: 'sequence',
+            TEST: 'test',
+            CLICK_TEXT: 'click_text',
+            CLICK_WORDS: 'click_words',
+        };
+        return mapping[normalized] || null;
+    }
+
+    applyManualAnalysisRecommendation(taskType) {
+        const normalizedTaskType = String(taskType || '').trim().toUpperCase();
+        const templateKey = this.getAIAgentTemplateKeyForTaskType(normalizedTaskType);
+        if (!templateKey) {
+            this.showToast('Этот тип нельзя продолжить через текстовый импорт. Его нужно создавать вручную в редакторе.', 'warning');
+            return;
+        }
+
+        this.aiTemplateType = templateKey;
+        this.sourceText = '';
+        this.parsedResult = null;
+        const templateSelect = document.getElementById('ai-agent-template-type');
+        if (templateSelect) templateSelect.value = templateKey;
+        const textArea = document.getElementById('import-text-area');
+        if (textArea) textArea.value = '';
+        this.updateAIAgentPromptTextarea();
+        this._updateLiveCounter('');
+        this.showToast(`Шаблон переключён на ${normalizedTaskType}. Теперь сгенерируйте задания этого типа и вставьте их сюда.`, 'success');
+        this.renderCurrentStep();
+    }
+
+    renderManualAnalysisPreviewCard() {
+        const analysis = (this.manualAnalysisResult && typeof this.manualAnalysisResult === 'object')
+            ? this.manualAnalysisResult
+            : null;
+        if (!analysis?.ok) return '';
+
+        const units = Array.isArray(analysis.educational_units) ? analysis.educational_units : [];
+        const recommendations = Array.isArray(analysis.recommendations) ? analysis.recommendations : [];
+        const notRecommended = Array.isArray(analysis.not_recommended) ? analysis.not_recommended : [];
+        const warnings = Array.isArray(analysis.warnings) ? analysis.warnings.filter(Boolean) : [];
+        const unitMap = new Map(units.map((unit) => [Number(unit?.id), unit]));
+        const typeLabels = {
+            OPEN_ANSWER: 'Открытый ответ',
+            SEQUENCE: 'Последовательность',
+            TEST: 'Тест',
+            CLICK_TEXT: 'Выбор утверждений',
+            CLICK_WORDS: 'Поиск ошибок',
+            CLICK: 'Клик по изображению',
+            DRAW: 'Рисование на изображении',
+        };
+
+        return `
+            <div class="mt-4 rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
+                <div class="flex items-start justify-between gap-3">
+                    <div>
+                        <h4 class="text-sm font-bold text-text-main">Разобранный анализ материала</h4>
+                        <p class="text-xs text-text-secondary mt-1">Теперь можно выбрать рекомендованный тип и перейти к генерации задач.</p>
+                    </div>
+                    <div class="text-right text-xs text-text-secondary">
+                        <div>Единиц: <span class="font-bold text-text-main">${units.length}</span></div>
+                        <div>Рекомендаций: <span class="font-bold text-text-main">${recommendations.length}</span></div>
+                    </div>
+                </div>
+
+                ${analysis.human_summary ? `
+                    <div class="rounded-lg border border-border-subtle bg-surface-2 p-3 text-sm text-text-secondary leading-relaxed">
+                        ${this.escapeHtml(analysis.human_summary)}
+                    </div>
+                ` : ''}
+
+                ${warnings.length ? `
+                    <div class="rounded-lg border border-warning-light bg-warning-lighter p-3">
+                        <div class="text-xs font-semibold text-warning-text mb-1">Предупреждения</div>
+                        <div class="space-y-1 text-xs text-warning-text">
+                            ${warnings.map((warning) => `<p>${this.escapeHtml(String(warning))}</p>`).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+
+                <div>
+                    <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Рекомендованные типы</div>
+                    <div class="space-y-3">
+                        ${recommendations.map((rec) => {
+                            const taskType = String(rec?.task_type || '').trim().toUpperCase();
+                            const templateKey = this.getAIAgentTemplateKeyForTaskType(taskType);
+                            const manualOnly = rec?.manual_only === true || rec?.auto_generation_supported === false || !templateKey;
+                            const coveredUnits = (Array.isArray(rec?.covers_units) ? rec.covers_units : [])
+                                .map((unitId) => unitMap.get(Number(unitId)))
+                                .filter(Boolean)
+                                .map((unit) => `#${unit.id} ${unit.title}`);
+                            return `
+                                <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
+                                    <div class="flex flex-wrap items-start justify-between gap-3">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <div class="text-sm font-bold text-text-main">${this.escapeHtml(typeLabels[taskType] || taskType)}</div>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary">${this.escapeHtml(String(rec?.priority || 'medium'))}</span>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-secondary border border-border-subtle">${Number(rec?.count || 0)} шт.</span>
+                                                ${manualOnly ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning-lighter text-warning-text border border-warning-light">manual only</span>' : ''}
+                                            </div>
+                                            ${rec?.coverage_role ? `<div class="mt-2 text-xs text-text-secondary">${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
+                                            ${coveredUnits.length ? `<div class="mt-2 text-[11px] text-text-secondary">Покрывает: ${this.escapeHtml(coveredUnits.join('; '))}</div>` : ''}
+                                            ${rec?.count_rationale ? `<div class="mt-1 text-[11px] text-text-muted">${this.escapeHtml(String(rec.count_rationale))}</div>` : ''}
+                                        </div>
+                                        <button
+                                            onclick="dashboard.importManager.applyManualAnalysisRecommendation('${this.escapeInlineJsString(taskType)}')"
+                                            class="px-3 py-1.5 text-xs font-semibold rounded-lg ${manualOnly ? 'border border-border-subtle text-text-disabled cursor-not-allowed' : 'border border-primary text-primary hover:bg-primary hover:text-primary-fg'} transition-colors"
+                                            ${manualOnly ? 'disabled' : ''}>
+                                            ${manualOnly ? 'Только вручную' : 'Выбрать этот тип'}
+                                        </button>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+
+                ${notRecommended.length ? `
+                    <div>
+                        <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Не рекомендуется</div>
+                        <div class="space-y-2">
+                            ${notRecommended.map((item) => `
+                                <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
+                                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(typeLabels[String(item?.task_type || '').trim().toUpperCase()] || String(item?.task_type || 'Тип'))}</div>
+                                    <div class="mt-1 text-xs text-text-secondary">${this.escapeHtml(String(item?.reason || ''))}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
     }
@@ -2634,8 +2801,12 @@ class ImportManager {
 
             if (templateSelect) {
                 templateSelect.addEventListener('change', (e) => {
+                    this.parsedResult = null;
+                    this.manualAnalysisResult = null;
                     this.aiTemplateType = e.target.value;
                     this.updateAIAgentPromptTextarea();
+                    this._updateLiveCounter(this.sourceText || '');
+                    this.renderCurrentStep();
                 });
             }
 
@@ -2651,6 +2822,10 @@ class ImportManager {
                 let liveCounterTimer = null;
                 textArea.addEventListener('input', (e) => {
                     this.sourceText = e.target.value;
+                    this.parsedResult = null;
+                    if (this.aiTemplateType === 'material_analysis') {
+                        this.manualAnalysisResult = null;
+                    }
                     clearTimeout(liveCounterTimer);
                     liveCounterTimer = setTimeout(() => this._updateLiveCounter(e.target.value), 300);
                 });
@@ -2709,6 +2884,27 @@ class ImportManager {
     _updateLiveCounter(text) {
         const container = document.getElementById('import-live-counter');
         if (!container) return;
+
+        if (this.aiTemplateType === 'material_analysis') {
+            const markers = [
+                { marker: '<human_summary>', label: 'Краткое резюме', color: 'bg-sky-100 text-sky-700' },
+                { marker: '<analysis_json>', label: 'Структурный JSON', color: 'bg-emerald-100 text-emerald-700' },
+            ];
+            const badges = [];
+            let total = 0;
+            for (const { marker, label, color } of markers) {
+                if (String(text || '').includes(marker)) {
+                    total += 1;
+                    badges.push(`<span class="px-2 py-0.5 rounded-full ${color} font-medium">${label}</span>`);
+                }
+            }
+            if (total > 0) {
+                container.innerHTML = `<span class="text-text-muted py-0.5">Найдено:</span>${badges.join('')}`;
+            } else {
+                container.innerHTML = text.trim() ? '<span class="text-text-disabled py-0.5">Маркеры анализа не найдены</span>' : '';
+            }
+            return;
+        }
 
         const markers = [
             { marker: '@OPEN_ANSWER', label: 'Открытый ответ', color: 'bg-blue-100 text-blue-700' },
@@ -3270,6 +3466,25 @@ text: Сердце человека состоит из [трёх] камер. �
         }
     }
 
+    async parseManualAnalysisText(text) {
+        try {
+            const response = await fetch('/api/editor/import/parse-analysis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ text }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        } catch (error) {
+            console.error('Manual analysis parse error:', error);
+            throw error;
+        }
+    }
+
     async executeImport(moduleId, topicId, tasks, options = {}) {
         try {
             const response = await fetch('/api/editor/import/execute', {
@@ -3391,6 +3606,42 @@ text: Сердце человека состоит из [трёх] камер. �
                 }
             }
         } else if (this.currentStep === 2) {
+            if (this.importMode === 'ai' && this.aiTemplateType === 'material_analysis') {
+                if (!this.sourceText.trim()) {
+                    this.showVoiceToast({
+                        severity: 'warning',
+                        what: 'Разбор анализа не запущен.',
+                        impact: 'Поле с ответом ИИ пустое.',
+                        next: 'Вставьте ответ внешнего ИИ с блоками <human_summary> и <analysis_json>.',
+                    });
+                    return;
+                }
+
+                try {
+                    const result = await this.parseManualAnalysisText(this.sourceText);
+                    if (!result.ok) {
+                        this.manualAnalysisResult = null;
+                        this.parsedResult = {
+                            parsing_errors: [result.message || result.error || 'analysis_parse_failed'],
+                        };
+                        this.renderCurrentStep();
+                        return;
+                    }
+
+                    this.parsedResult = null;
+                    this.manualAnalysisResult = result;
+                    this.showToast('Анализ материала распознан. Можно выбрать тип задания ниже.', 'success');
+                    this.renderCurrentStep();
+                } catch (error) {
+                    this.manualAnalysisResult = null;
+                    this.parsedResult = {
+                        parsing_errors: ['Ошибка разбора анализа: ' + error.message],
+                    };
+                    this.renderCurrentStep();
+                }
+                return;
+            }
+
             // Parse text
             if (!this.sourceText.trim()) {
                 this.showVoiceToast({

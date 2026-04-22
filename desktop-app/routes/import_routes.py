@@ -50,6 +50,30 @@ def _ih() -> Dict[str, Any]:
     return get_extra("import_helpers")
 
 
+def _parse_imported_analysis_response(raw_text: str) -> Dict[str, Any]:
+    text = str(raw_text or "").strip()
+    if not text:
+        raise ValueError("text_required")
+
+    from services.ai_generation_service import parse_analysis_response, parse_human_summary
+
+    parsed = parse_analysis_response(text)
+    human_summary = parse_human_summary(text)
+    payload: Dict[str, Any] = {
+        "ok": True,
+        "human_summary": human_summary,
+        **(parsed if isinstance(parsed, dict) else {}),
+    }
+
+    ai_helpers = get_extra("ai_helpers")
+    sanitize = None
+    if isinstance(ai_helpers, dict):
+        sanitize = ai_helpers.get("sanitize_analysis_response_for_client")
+    if callable(sanitize):
+        payload = sanitize(payload)
+    return payload
+
+
 def _coerce_optional_bool(value: Any) -> Optional[bool]:
     if isinstance(value, bool):
         return value
@@ -1234,6 +1258,47 @@ def import_parse() -> Any:
     except Exception as exc:
         logger.exception("[HTTP] Failed to parse import text: %s", exc)
         return jsonify({"ok": False, "error": "parse_failed"}), 500
+
+
+@import_bp.route("/api/editor/import/parse-analysis", methods=["POST"])
+def import_parse_analysis() -> Any:
+    """Parse external AI material-analysis response and return normalized recommendations."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_import"}), 403
+
+    payload = request.get_json(silent=True) or {}
+    text = payload.get("text", "")
+    if not text or not isinstance(text, str):
+        return jsonify({"ok": False, "error": "text_required"}), 400
+
+    try:
+        response = _parse_imported_analysis_response(text)
+        logger.info(
+            "[HTTP] import/parse-analysis: units=%s recommendations=%s",
+            len(response.get("educational_units") or []),
+            len(response.get("recommendations") or []),
+        )
+        return jsonify(
+            _with_public_import_route_contract(
+                response,
+                mode="parse",
+                import_family="manual_material_analysis",
+            )
+        )
+    except Exception as exc:
+        logger.warning("[HTTP] Failed to parse imported analysis response: %s", exc)
+        return jsonify(
+            _with_public_import_route_contract(
+                {
+                    "ok": False,
+                    "error": "analysis_parse_failed",
+                    "message": str(exc) or "analysis_parse_failed",
+                },
+                mode="parse",
+                import_family="manual_material_analysis",
+            )
+        ), 400
 
 
 @import_bp.route("/api/editor/import/execute", methods=["POST"])
