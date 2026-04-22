@@ -50,6 +50,84 @@ def _ih() -> Dict[str, Any]:
     return get_extra("import_helpers")
 
 
+def _coerce_optional_bool(value: Any) -> Optional[bool]:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int) and value in (0, 1):
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"true", "1", "yes", "да"}:
+            return True
+        if lowered in {"false", "0", "no", "нет"}:
+            return False
+    return None
+
+
+def _infer_imported_sequence_flags(
+    prompt: str,
+    level_blocks: List[List[str]],
+    metadata: Dict[str, Any],
+) -> Tuple[bool, bool]:
+    metadata = metadata if isinstance(metadata, dict) else {}
+    level_order = _coerce_optional_bool(metadata.get("level_order_matters"))
+    if level_order is None:
+        level_order = _coerce_optional_bool(metadata.get("levels_order_matters"))
+
+    sequence_inside = _coerce_optional_bool(metadata.get("sequence_within_level_matters"))
+    if sequence_inside is None:
+        sequence_inside = _coerce_optional_bool(metadata.get("order_inside_matters"))
+
+    prompt_low = str(prompt or "").strip().lower()
+    level_sizes = [len(blocks) for blocks in level_blocks if isinstance(blocks, list)]
+    has_multi_block_level = any(size > 1 for size in level_sizes)
+    all_single_block = bool(level_sizes) and all(size == 1 for size in level_sizes)
+    ordering_markers = (
+        "поряд",
+        "хронолог",
+        "алгоритм",
+        "этап",
+        "стади",
+        "последоват",
+        "ранж",
+        "иерарх",
+        "timeline",
+        "order",
+        "sequence",
+        "rank",
+        "hierarch",
+    )
+    grouping_markers = (
+        "классиф",
+        "сгруп",
+        "распредел",
+        "категор",
+        "group",
+        "classif",
+        "categor",
+    )
+
+    if level_order is None:
+        if all_single_block and len(level_sizes) > 1:
+            level_order = True
+        elif any(marker in prompt_low for marker in ordering_markers):
+            level_order = True
+        elif any(marker in prompt_low for marker in grouping_markers):
+            level_order = False
+        else:
+            level_order = False
+
+    if sequence_inside is None:
+        if has_multi_block_level and any(marker in prompt_low for marker in ordering_markers) and not any(
+            marker in prompt_low for marker in grouping_markers
+        ):
+            sequence_inside = True
+        else:
+            sequence_inside = False
+
+    return bool(sequence_inside), bool(level_order)
+
+
 def _public_import_route_contract(*, mode: str, import_family: str) -> Dict[str, Any]:
     return {
         "namespace": "public_editor_import_export",
@@ -497,28 +575,58 @@ def _build_imported_task_payload(
             task_json_data["content"] = oa_content
     elif task.get("type") == "sequence_assembly":
             data = task.get("data", {})
-            # Convert to editor format
-            sequence = []
-            levels = data.get("levels", {})
-            for level_num in sorted(levels.keys(), key=lambda k: int(k)):
-                level_elements = levels[level_num]
+            elements_map = data.get("elements", {}) if isinstance(data.get("elements"), dict) else {}
+            raw_levels = data.get("levels", {}) if isinstance(data.get("levels"), dict) else {}
+            sorted_level_keys = sorted(raw_levels.keys(), key=lambda k: int(k))
+
+            canonical_elements = [
+                {
+                    "id": str(element_id),
+                    "text": str(element_text or ""),
+                }
+                for element_id, element_text in elements_map.items()
+            ]
+
+            canonical_levels = []
+            legacy_sequence = []
+            level_blocks_for_flags: List[List[str]] = []
+            for level_num in sorted_level_keys:
+                level_id = f"level_{level_num}"
+                level_elements = [str(element_id) for element_id in raw_levels.get(level_num, []) if element_id]
                 level_items = []
                 for element_id in level_elements:
-                    element_text = data.get("elements", {}).get(element_id, element_id)
-                    level_items.append({"id": element_id, "label": element_text})
-                sequence.append(
+                    element_text = elements_map.get(element_id, element_id)
+                    level_items.append({"id": element_id, "label": str(element_text or "")})
+                canonical_levels.append(
                     {
-                        "id": f"level_{level_num}",
+                        "level_id": level_id,
+                        "blocks": level_elements,
+                        "level_name": f"Level {level_num}",
+                    }
+                )
+                legacy_sequence.append(
+                    {
+                        "level_id": level_id,
                         "title": f"Level {level_num}",
                         "items": level_items,
                     }
                 )
+                level_blocks_for_flags.append(level_elements)
+
+            sequence_within_level_matters, level_order_matters = _infer_imported_sequence_flags(
+                task.get("prompt", ""),
+                level_blocks_for_flags,
+                task_metadata,
+            )
 
             task_json_data["content"] = {
                 "prompt": task.get("prompt", ""),
-                "sequence": sequence,
-                "order_inside_matters": True,
-                "level_order_matters": True,
+                "elements": canonical_elements,
+                "levels": canonical_levels,
+                "sequence": legacy_sequence,
+                "sequence_within_level_matters": sequence_within_level_matters,
+                "level_order_matters": level_order_matters,
+                "order_inside_matters": sequence_within_level_matters,
             }
     elif task.get("type") == "click":
             data = _normalize_click_import_data(task.get("data", {}))

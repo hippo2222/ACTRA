@@ -2743,69 +2743,124 @@ class ImportManager {
 2. Прикрепите файл с материалом (PDF, DOCX) или вставьте текст после промпта.
 3. Изучите рекомендации ИИ и выберите подходящий тип задания из списка выше.
 Этот промпт НЕ генерирует задания — он помогает выбрать оптимальную стратегию.`,
-                prompt: `Ты — эксперт по педагогическому дизайну. Преподаватель предоставит тебе учебный материал.
+                prompt: `Ты — старший методист и эксперт по педагогическому дизайну. Проанализируй учебный материал.
+
+<goal>
+Твоя задача — не оценивать материал по объёму текста и не выдавать примерные диапазоны заданий. Построй полную и практическую карту оценивания: какие задания нужны, чтобы всесторонне закрепить материал, проверить его с разных когнитивных сторон и не раздуть набор искусственными повторами.
+</goal>
 
 <task>
-Выполни три действия:
-1. Вычлени из материала «образовательные единицы» — конкретные концепции, факты, процессы, термины, которые студент должен понять и запомнить.
-2. Для каждой единицы определи, каким типом задания её лучше всего закрепить.
-3. Дай итоговую таблицу: тип задания → количество → на какие единицы направлено.
+Выполни 4 действия:
+1. Выдели образовательные единицы — проверяемые смысловые единицы, которые студент действительно должен усвоить.
+2. Для каждой единицы определи, какие когнитивные действия стоит проверить: распознавание, различение, объяснение, структурирование, обнаружение искажения, визуальное распознавание.
+3. Подбери такой набор типов заданий, который совместно покрывает материал полно, разносторонне и без лишнего дублирования.
+4. Верни строгий структурированный ответ только в блоках <human_summary> и <analysis_json>.
 </task>
 
+<coverage_policy>
+Принципы принятия решений:
+- НЕ определяй количество заданий по объёму текста, числу слов, страниц или абзацев.
+- Определяй количество по числу существенных единиц, плотности фактов, сложности причинно-следственных связей, количеству потенциальных заблуждений, наличию структуры/иерархии и наличию визуальных объектов.
+- Каждая существенная единица должна быть покрыта хотя бы одним рекомендованным типом задания.
+- Ключевые, сложные, часто путаемые или ошибкоопасные единицы желательно покрывать минимум двумя разными типами заданий, если каждый тип даёт новый угол проверки.
+- Одна единица может входить в несколько рекомендаций. Many-to-many покрытие допустимо и желательно, если оно повышает качество проверки.
+- Не добавляй задание только ради количества. Останавливайся, когда следующее задание уже не даёт новой проверочной ценности.
+- Если для какого-то типа в материале нет достаточного основания, прямо укажи это в not_recommended.
+- Если материал узкий, дай мало заданий. Если материал богатый и многослойный, дай столько, сколько нужно для полноценного покрытия.
+</coverage_policy>
+
 <available_task_types>
-OPEN_ANSWER — свободный ответ. Студент формулирует ответ своими словами.
-  Подходит для: концепций, определений, причинно-следственных связей, механизмов.
+OPEN_ANSWER — свободный ответ своими словами.
+  Лучше всего подходит для: объяснения понятий, причинно-следственных связей, механизмов, сравнений, интерпретации, аргументации.
+  Не лучший выбор для: простых одиночных фактов, терминов или числовых данных, которые эффективнее проверяются компактными форматами.
 
-SEQUENCE — восстановление порядка перетаскиванием.
-  Подходит для: алгоритмов, этапов, хронологии, протоколов.
+SEQUENCE — сборка правильной структуры перетаскиванием элементов.
+  Подходит для: хронологии, алгоритмов, стадий процесса, классификации по группам, иерархии, ранжирования, распределения элементов по уровням, если правильная структура однозначно следует из материала.
+  Не подходит для: спорных классификаций, открытых интерпретаций, случаев, где порядок/группировка неоднозначны или требуют внешних знаний.
 
-TEST — тест с вариантами ответов (один или несколько правильных).
-  Подходит для: фактов, классификаций, терминологии, количественных данных.
+TEST — выбор одного или нескольких правильных вариантов.
+  Подходит для: фактов, терминов, признаков, классификаций, различения похожих понятий, количественных данных.
+  Не лучший выбор для: сложных объяснений и развёрнутых причинно-следственных связей, где важна формулировка студента.
 
-CLICK_TEXT — выбор верных/неверных утверждений из списка.
-  Подходит для: тем с распространёнными заблуждениями, похожими понятиями, тонкими различиями.
+CLICK_TEXT — выбор верных и неверных утверждений из списка.
+  Подходит для: типичных заблуждений, тонких различий, сопоставления похожих утверждений, проверки понимания нюансов.
+  Не подходит для: тем, где невозможно составить правдоподобные контрастные утверждения без натяжки.
 
 CLICK_WORDS — поиск фактических ошибок в тексте.
-  Подходит для: плотного фактического текста с числами, терминами, характеристиками.
+  Подходит для: материалов с достаточным числом фактических опор — терминов, чисел, дат, параметров, характеристик, классификационных признаков — которые можно правдоподобно исказить.
+  Не подходит для: слишком общих, интерпретативных или бедных на фактические опоры материалов.
+
+CLICK — нахождение нужных элементов на изображении.
+  Подходит для: визуального распознавания объектов, анатомических структур, элементов схем, карт, диаграмм, интерфейсов.
+  Важно: такие задания создаются вручную в редакторе, но их нужно полноценно рекомендовать, если без них покрытие материала будет неполным.
+
+DRAW — обводка/выделение нужных зон на изображении.
+  Подходит для: пространственного распознавания, выделения областей, контуров, зон, анатомических структур, частей схем.
+  Важно: такие задания создаются вручную в редакторе, но их нужно полноценно рекомендовать, если это необходимо для полного покрытия.
 </available_task_types>
 
-<calibration>
-Ориентиры количества заданий (суммарно по всем типам):
-- ~300 слов (1 стр.) → 2–4 задания.
-- ~1000 слов (3–4 стр.) → 8–15 заданий.
-- ~3000+ слов (10+ стр.) → 20–40 заданий.
-
-Если материала мало — прямо скажи об этом. Укажи, сколько заданий реально создать без потери качества. Рекомендуй только те типы, для которых материал даёт достаточно содержания. Типы, для которых материала не хватает — перечисли отдельно с пояснением.
-
-Принцип: лучше 5 качественных заданий, чем 20 раздутых.
-</calibration>
+<decision_rules>
+- Не выбирай тип задания только потому, что он в целом подходит. Выбирай его только если он даёт лучший или дополнительный способ проверить конкретные единицы.
+- Не своди весь материал к одному доминирующему типу, если разные аспекты знания требуют разных форм проверки.
+- Если материал содержит явную структуру, не игнорируй SEQUENCE.
+- Если материал содержит визуальные объекты, не игнорируй CLICK и DRAW.
+- Если материал богат фактами, числами и параметрами, отдельно оцени пригодность CLICK_WORDS.
+- Если единица требует не узнавания, а объяснения, отдавай приоритет OPEN_ANSWER.
+- Если визуальный тип рекомендован, пометь его как manual_only=true и auto_generation_supported=false.
+</decision_rules>
 
 <illustrations_rule>
-Если в материале есть или упоминаются иллюстрации, схемы, диаграммы, фотографии — отметь это. Платформа поддерживает задания с изображениями (клик по картинке, рисование), но они создаются вручную в редакторе. Кратко опиши, какие визуальные задания можно было бы создать.
+Если материал упоминает или содержит изображения, схемы, диаграммы или фотографии:
+- установи "illustrations_detected": true;
+- кратко опиши потенциал визуальных заданий в "illustrations_note";
+- не скрывай CLICK и DRAW в not_recommended, если они реально нужны для покрытия;
+- ясно укажи, что такие задания создаются вручную в редакторе.
 </illustrations_rule>
 
 <output_format>
-Формат ответа (строго):
+Верни ответ ровно в таком формате. Не добавляй никакой прозы до или после блоков.
+Поля rationale, coverage_role, count_rationale и reason должны быть короткими и содержательными (1 предложение каждое).
 
-ОЦЕНКА МАТЕРИАЛА
-[2–3 предложения: тема, объём, плотность]
+<human_summary>
+2–4 предложения: тема, содержательная плотность, насколько материал структурный/фактический/визуальный, какие есть ограничения.
+</human_summary>
 
-ОБРАЗОВАТЕЛЬНЫЕ ЕДИНИЦЫ
-[Пронумерованный список единиц, каждая — одна строка: название + краткое описание]
-
-РЕКОМЕНДАЦИИ
-[Для каждого рекомендуемого типа:]
-ТИП — N заданий (приоритет: высокий/средний/низкий)
-Направлено на единицы: [номера]
-Обоснование: [1 предложение]
-
-НЕ РЕКОМЕНДУЕТСЯ
-[Типы, которые не подходят, с причиной в 1 предложение. Если все подходят — опустить секцию.]
-
-ВИЗУАЛЬНЫЕ ВОЗМОЖНОСТИ
-[Только если есть иллюстрации. Иначе — опустить секцию.]
-
-ИТОГО: N заданий, M типов. Начать с: [тип].
+<analysis_json>
+{
+  "material_volume": "small | medium | large",
+  "educational_units": [
+    {
+      "id": 1,
+      "title": "...",
+      "type": "concept|process|fact|term|classification",
+      "description": "...",
+      "explicitness": "explicit|inferred",
+      "evidence": "...",
+      "modality": "text|visual|mixed",
+      "assessment_risk": "low|medium|high"
+    }
+  ],
+  "recommendations": [
+    {
+      "task_type": "TEST|OPEN_ANSWER|SEQUENCE|CLICK_TEXT|CLICK_WORDS|CLICK|DRAW",
+      "count": N,
+      "priority": "high|medium|low",
+      "covers_units": [1, 2],
+      "rationale": "Почему этот тип нужен.",
+      "coverage_role": "Какой когнитивный угол проверки он закрывает.",
+      "count_rationale": "Почему именно столько заданий нужно без ссылок на объём текста.",
+      "manual_only": false,
+      "auto_generation_supported": true
+    }
+  ],
+  "not_recommended": [
+    { "task_type": "...", "reason": "Почему этот тип не нужен или не имеет достаточного основания." }
+  ],
+  "illustrations_detected": false,
+  "illustrations_note": null,
+  "warnings": ["строка предупреждения, если есть"]
+}
+</analysis_json>
 </output_format>`
             },
             open_answer: {
@@ -8057,7 +8112,11 @@ text: Сердце человека состоит из [трёх] камер. �
         // Initialize selections if empty
         if (this.aiSelectedRecs.size === 0) {
             recs.forEach(r => {
-                this.aiSelectedRecs.set(r.task_type, { enabled: r.priority === 'high' || r.priority === 'medium', count: r.count });
+                const manualOnly = r?.manual_only === true || r?.auto_generation_supported === false;
+                this.aiSelectedRecs.set(r.task_type, {
+                    enabled: manualOnly ? false : (r.priority === 'high' || r.priority === 'medium'),
+                    count: r.count,
+                });
             });
         }
 
@@ -8067,6 +8126,8 @@ text: Сердце человека состоит из [трёх] камер. �
             'SEQUENCE': { icon: 'sort', label: 'Последовательность', color: 'bg-accent-light text-accent-dark' },
             'CLICK_TEXT': { icon: 'touch_app', label: 'Выбор утверждений', color: 'bg-secondary-light text-secondary-dark' },
             'CLICK_WORDS': { icon: 'spellcheck', label: 'Поиск ошибок', color: 'bg-error-light text-error-dark' },
+            'CLICK': { icon: 'image_search', label: 'Клик по изображению', color: 'bg-primary-lighter text-primary' },
+            'DRAW': { icon: 'gesture', label: 'Обводка на изображении', color: 'bg-success-light text-success-dark' },
         };
         const _PRIORITY_BADGES = {
             'high': '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-error-light text-error-dark">Высокий</span>',
@@ -8161,6 +8222,7 @@ text: Сердце человека состоит из [трёх] камер. �
                         ${recs.map(rec => {
             const sel = this.aiSelectedRecs.get(rec.task_type) || { enabled: false, count: rec.count };
             const typeInfo = _TYPE_LABELS[rec.task_type] || { icon: 'help', label: rec.task_type, color: 'bg-surface-2 text-text-muted' };
+            const manualOnly = rec?.manual_only === true || rec?.auto_generation_supported === false;
             const coveredUnits = (rec.covers_units || []).map(id => {
                 const u = units.find(u => u.id === id);
                 return u ? u.title : `#${id}`;
@@ -8169,6 +8231,8 @@ text: Сердце человека состоит из [трёх] камер. �
             const supportedLevels = Array.isArray(rec.supported_levels) ? rec.supported_levels : [];
             const sequenceIntentOptions = Array.isArray(rec.sequence_intent_options) ? rec.sequence_intent_options : [];
             const sequenceIntentLabels = sequenceIntentOptions.map(i => _SEQUENCE_INTENT_LABELS[i] || i);
+            const coverageRole = String(rec.coverage_role || '').trim();
+            const countRationale = String(rec.count_rationale || '').trim();
             const progressionMetaHtml = rec.progression_is_fixed ? `
                 <div class="mt-2 p-2 rounded-md bg-surface-2 border border-border-subtle">
                     <p class="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Фиксированная прогрессия</p>
@@ -8185,24 +8249,31 @@ text: Сердце человека состоит из [трёх] камер. �
             const specialRoleHtml = rec.complex_role === 'finisher_special'
                 ? `<p class="text-[10px] text-text-disabled mt-2">Роль в системе: специальный финализатор (${this.escapeHtml(rec.error_detection_mode || 'error_detection')})</p>`
                 : '';
+            const manualOnlyHtml = manualOnly
+                ? `<p class=\"text-[10px] text-info-text mt-2\">Создаётся вручную в редакторе. В этом потоке автогенерация недоступна.</p>`
+                : '';
 
             return `
-                                <div class="border-2 rounded-lg overflow-hidden transition-all ${sel.enabled ? 'border-primary bg-primary-lighter/30' : 'border-border-subtle opacity-70'}">
+                                <div class="border-2 rounded-lg overflow-hidden transition-all ${(sel.enabled && !manualOnly) ? 'border-primary bg-primary-lighter/30' : 'border-border-subtle opacity-70'}">
                                     <div class="p-3 flex items-start gap-3">
                                         <input type="checkbox" 
                                             class="w-4 h-4 mt-1 text-primary rounded focus:ring-primary flex-shrink-0"
                                             data-ai-rec-type="${rec.task_type}"
                                             data-testid="ai-rec-toggle-${rec.task_type}"
                                             ${sel.enabled ? 'checked' : ''}
+                                            ${manualOnly ? 'disabled' : ''}
                                             onchange="dashboard.importManager.toggleAIRec('${rec.task_type}', this.checked)">
                                         <span class="material-symbols-outlined ${typeInfo.color} rounded-lg p-1.5 text-[18px] mt-0.5">${typeInfo.icon}</span>
                                         <div class="flex-1 min-w-0">
                                             <div class="flex items-center gap-2 mb-1">
                                                 <span class="font-bold text-sm text-text-main">${typeInfo.label}</span>
                                                 ${_PRIORITY_BADGES[rec.priority] || ''}
+                                                ${manualOnly ? '<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-info-lighter text-info-text">Вручную</span>' : ''}
                                             </div>
                                             <!-- Truncate class removed below for full visibility -->
                                             <p class="text-xs text-text-muted leading-relaxed">${this.escapeHtml(rec.rationale || '')}</p>
+                                            ${coverageRole ? `<p class="text-[11px] text-text-secondary mt-2"><strong class="text-text-main">Что проверяет:</strong> ${this.escapeHtml(coverageRole)}</p>` : ''}
+                                            ${countRationale ? `<p class="text-[11px] text-text-secondary mt-1"><strong class="text-text-main">Почему именно столько:</strong> ${this.escapeHtml(countRationale)}</p>` : ''}
                                             ${progressionMetaHtml}
                                             ${sequenceIntentsHtml}
                                             ${specialRoleHtml}
@@ -8210,10 +8281,10 @@ text: Сердце человека состоит из [трёх] камер. �
                                         </div>
                                         <div class="flex items-center gap-1 flex-shrink-0 mt-0.5 ml-2">
                                             <button onclick="dashboard.importManager.adjustAIRecCount('${rec.task_type}', -1)" 
-                                                class="w-7 h-7 rounded-full bg-surface-2 hover:bg-bg-hover flex items-center justify-center text-text-secondary transition-colors ${!sel.enabled ? 'pointer-events-none opacity-50' : ''}">−</button>
+                                                class="w-7 h-7 rounded-full bg-surface-2 hover:bg-bg-hover flex items-center justify-center text-text-secondary transition-colors ${(!sel.enabled || manualOnly) ? 'pointer-events-none opacity-50' : ''}">−</button>
                                             <span class="w-8 text-center font-bold text-sm text-text-main" data-ai-rec-count="${rec.task_type}">${sel.count}</span>
                                             <button onclick="dashboard.importManager.adjustAIRecCount('${rec.task_type}', 1)" 
-                                                class="w-7 h-7 rounded-full bg-surface-2 hover:bg-bg-hover flex items-center justify-center text-text-secondary transition-colors ${!sel.enabled ? 'pointer-events-none opacity-50' : ''}">+</button>
+                                                class="w-7 h-7 rounded-full bg-surface-2 hover:bg-bg-hover flex items-center justify-center text-text-secondary transition-colors ${(!sel.enabled || manualOnly) ? 'pointer-events-none opacity-50' : ''}">+</button>
                                         </div>
                                     </div>
                                 </div>
@@ -8606,6 +8677,9 @@ text: Сердце человека состоит из [трёх] камер. �
         this.aiSelectedRecs.forEach((val, key) => {
             if (val.enabled && val.count > 0) {
                 const rec = (this.analysisResult?.recommendations || []).find(r => r.task_type === key);
+                if (rec?.manual_only === true || rec?.auto_generation_supported === false) {
+                    return;
+                }
                 tasksToGenerate.push({
                     task_type: key,
                     count: val.count,

@@ -334,6 +334,81 @@ class TestAnalysisCapabilityMatrixP1:
         assert click_words["complex_role"] == "finisher_special"
         assert click_words["progression_is_fixed"] is False
 
+    def test_visual_recommendations_are_added_as_manual_only_when_illustrations_matter(self):
+        raw = {
+            "educational_units": [
+                {
+                    "id": 1,
+                    "title": "Анатомические зоны на схеме",
+                    "type": "classification",
+                    "description": "Нужно различать области и контуры на иллюстрации",
+                    "explicitness": "explicit",
+                    "evidence": "На схеме подписаны три анатомические области",
+                    "modality": "visual",
+                    "assessment_risk": "high",
+                }
+            ],
+            "recommendations": [
+                {
+                    "task_type": "TEST",
+                    "count": 1,
+                    "priority": "medium",
+                    "covers_units": [1],
+                    "rationale": "Факты можно проверить объективно.",
+                }
+            ],
+            "not_recommended": [],
+            "illustrations_detected": True,
+            "illustrations_note": "Есть схема.",
+            "warnings": [],
+        }
+
+        normalized = _ensure_analysis_quality(raw, material="На рисунке показаны зоны и контуры органа.", fallback_target_language="ru")
+
+        click_rec = next(r for r in normalized["recommendations"] if r["task_type"] == "CLICK")
+        draw_rec = next(r for r in normalized["recommendations"] if r["task_type"] == "DRAW")
+        assert click_rec["manual_only"] is True
+        assert click_rec["auto_generation_supported"] is False
+        assert click_rec["coverage_role"]
+        assert click_rec["count_rationale"]
+        assert draw_rec["manual_only"] is True
+        assert draw_rec["auto_generation_supported"] is False
+
+    def test_sequence_count_is_not_capped_by_old_calibration_rules(self):
+        raw = {
+            "educational_units": [
+                {
+                    "id": 1,
+                    "title": "Стадии процесса",
+                    "type": "process",
+                    "description": "Четыре явно заданные стадии",
+                    "explicitness": "explicit",
+                    "evidence": "Перечислены этапы 1-4",
+                    "modality": "text",
+                    "assessment_risk": "medium",
+                }
+            ],
+            "recommendations": [
+                {
+                    "task_type": "SEQUENCE",
+                    "count": 4,
+                    "priority": "high",
+                    "covers_units": [1],
+                    "rationale": "Материал содержит несколько явных структур для сборки.",
+                }
+            ],
+            "not_recommended": [],
+            "illustrations_detected": False,
+            "warnings": [],
+        }
+
+        normalized = _ensure_analysis_quality(raw, material="Этап 1, этап 2, этап 3, этап 4.", fallback_target_language="ru")
+
+        seq_rec = next(r for r in normalized["recommendations"] if r["task_type"] == "SEQUENCE")
+        assert seq_rec["count"] == 4
+        assert all("target ~" not in warning for warning in normalized["warnings"])
+        assert all("capped at 2" not in warning for warning in normalized["warnings"])
+
 
 # ============================================================================
 # DailyLimitTracker
@@ -406,6 +481,54 @@ class TestBuildGenerationPrompt:
         prompt = _build_generation_prompt("TEST", 5, [])
         assert "@TEST" in prompt
         assert "ровно 5 заданий" in prompt
+
+    def test_test_prompt_has_stronger_methodical_rules(self):
+        prompt = _build_generation_prompt("TEST", 2, [])
+        assert "проверки распознавания, различения, точности знания фактов" in prompt
+        assert "Не используй TEST для случаев, где студент должен развернуто объяснять механизм" in prompt
+        assert "ровно 4 варианта ответа" in prompt
+        assert "Обычно делай 1 правильный ответ" in prompt
+        assert "без внешних знаний" in prompt
+        assert "дистракторы" in prompt
+        assert "не дублировать друг друга" in prompt
+
+    def test_open_answer_prompt_has_stronger_methodical_rules(self):
+        prompt = _build_generation_prompt("OPEN_ANSWER", 2, [])
+        assert "самостоятельное объяснение" in prompt
+        assert "Не используй OPEN_ANSWER для простых одиночных фактов" in prompt
+        assert "без внешних знаний" in prompt
+        assert "4-8 значимых ключевых слов" in prompt
+        assert 'Не превращай открытый вопрос в простое "назовите/перечислите"' in prompt
+
+    def test_sequence_prompt_has_stronger_structure_rules(self):
+        prompt = _build_generation_prompt("SEQUENCE", 2, [])
+        assert "однозначную структуру" in prompt
+        assert "каждый элемент можно однозначно поместить" in prompt
+        assert "ровно один раз" in prompt
+        assert "3-8 элементов и 2-5 уровней" in prompt
+        assert "@ level_order_matters: true|false" in prompt
+        assert "@ sequence_within_level_matters: true|false" in prompt
+        assert "Не превращай простой перечень фактов" in prompt
+
+    def test_click_text_prompt_has_stronger_distinction_rules(self):
+        prompt = _build_generation_prompt("CLICK_TEXT", 2, [])
+        assert "тонких различий, типичных заблуждений" in prompt
+        assert "Не используй CLICK_TEXT для тем, где утверждения получаются искусственными" in prompt
+        assert "несколько верных и несколько неверных" in prompt
+        assert "без внешних знаний" in prompt
+        assert "смешении похожих понятий" in prompt
+        assert "нельзя было угадать по оформлению" in prompt
+        assert "разные типы заблуждений" in prompt
+
+    def test_click_words_prompt_has_stronger_fact_substitution_rules(self):
+        prompt = _build_generation_prompt("CLICK_WORDS", 2, [])
+        assert "устойчивые фактические опоры" in prompt
+        assert "Не используй CLICK_WORDS для слишком общих" in prompt
+        assert "именно фактическими подменами" in prompt
+        assert "Не создавай орфографические, пунктуационные" in prompt
+        assert "Ошибочные фрагменты должны быть минимальными" in prompt
+        assert "не должны пересекаться, вкладываться друг в друга" in prompt
+        assert "разные типы фактических опор" in prompt
 
     def test_with_educational_units(self):
         units = [
@@ -790,15 +913,22 @@ class TestStructuredPrompt:
 
     def test_prompt_contains_required_sections(self):
         assert "<task>" in STRUCTURED_ANALYSIS_PROMPT
+        assert "<goal>" in STRUCTURED_ANALYSIS_PROMPT
         assert "<available_task_types>" in STRUCTURED_ANALYSIS_PROMPT
-        assert "<calibration>" in STRUCTURED_ANALYSIS_PROMPT
+        assert "<coverage_policy>" in STRUCTURED_ANALYSIS_PROMPT
+        assert "<decision_rules>" in STRUCTURED_ANALYSIS_PROMPT
         assert "<output_format>" in STRUCTURED_ANALYSIS_PROMPT
         assert "<analysis_json>" in STRUCTURED_ANALYSIS_PROMPT
         assert "<human_summary>" in STRUCTURED_ANALYSIS_PROMPT
 
     def test_prompt_contains_all_task_types(self):
-        for tt in ("OPEN_ANSWER", "SEQUENCE", "TEST", "CLICK_TEXT", "CLICK_WORDS"):
+        for tt in ("OPEN_ANSWER", "SEQUENCE", "TEST", "CLICK_TEXT", "CLICK_WORDS", "CLICK", "DRAW"):
             assert tt in STRUCTURED_ANALYSIS_PROMPT
+
+    def test_prompt_avoids_word_count_calibration_and_describes_structure_first_sequence(self):
+        assert "числу слов" in STRUCTURED_ANALYSIS_PROMPT
+        assert "~300 слов" not in STRUCTURED_ANALYSIS_PROMPT
+        assert "сборка правильной структуры" in STRUCTURED_ANALYSIS_PROMPT
 
     def test_p3_routes_addendum_contains_progression_and_route_rules(self):
         assert "type_progression_suitability" in ANALYSIS_V2_ROUTES_ADDENDUM

@@ -428,75 +428,118 @@ _PROVIDER_CLASSES = {
 # Prompts
 # ---------------------------------------------------------------------------
 
-STRUCTURED_ANALYSIS_PROMPT = r"""Ты — эксперт по педагогическому дизайну. Проанализируй учебный материал.
+STRUCTURED_ANALYSIS_PROMPT = r"""Ты — старший методист и эксперт по педагогическому дизайну. Проанализируй учебный материал.
+
+<goal>
+Твоя задача — не оценивать материал по объёму текста и не выдавать примерные диапазоны заданий. Построй полную и практическую карту оценивания: какие задания нужны, чтобы всесторонне закрепить материал, проверить его с разных когнитивных сторон и не раздуть набор искусственными повторами.
+</goal>
 
 <task>
-Твоя задача — тщательно проанализировать текст и выделить все объективно значимые смысловые пункты, которые студент должен усвоить.
-Определи эти «образовательные единицы» — концепции, факты, процессы, термины, классификации.
-Для каждой выявленной единицы определи оптимальный тип интерактивного задания, который наилучшим образом закрепит эти знания.
-Сформируй свой ответ точно по описанному формату, используя только блоки <human_summary> и <analysis_json>.
+Выполни 4 действия:
+1. Выдели образовательные единицы — проверяемые смысловые единицы, которые студент действительно должен усвоить.
+2. Для каждой единицы определи, какие когнитивные действия стоит проверить: распознавание, различение, объяснение, структурирование, обнаружение искажения, визуальное распознавание.
+3. Подбери такой набор типов заданий, который совместно покрывает материал полно, разносторонне и без лишнего дублирования.
+4. Верни строгий структурированный ответ только в блоках <human_summary> и <analysis_json>.
 </task>
 
+<coverage_policy>
+Принципы принятия решений:
+- НЕ определяй количество заданий по объёму текста, числу слов, страниц или абзацев.
+- Определяй количество по числу существенных единиц, плотности фактов, сложности причинно-следственных связей, количеству потенциальных заблуждений, наличию структуры/иерархии и наличию визуальных объектов.
+- Каждая существенная единица должна быть покрыта хотя бы одним рекомендованным типом задания.
+- Ключевые, сложные, часто путаемые или ошибкоопасные единицы желательно покрывать минимум двумя разными типами заданий, если каждый тип даёт новый угол проверки.
+- Одна единица может входить в несколько рекомендаций. Many-to-many покрытие допустимо и желательно, если оно повышает качество проверки.
+- Не добавляй задание только ради количества. Останавливайся, когда следующее задание уже не даёт новой проверочной ценности.
+- Если для какого-то типа в материале нет достаточного основания, прямо укажи это в not_recommended.
+- Если материал узкий, дай мало заданий. Если материал богатый и многослойный, дай столько, сколько нужно для полноценного покрытия.
+</coverage_policy>
+
 <available_task_types>
-OPEN_ANSWER — свободный ответ. Студент формулирует ответ своими словами.
-  Подходит для: концепций, определений, причинно-следственных связей, механизмов.
+OPEN_ANSWER — свободный ответ своими словами.
+  Лучше всего подходит для: объяснения понятий, причинно-следственных связей, механизмов, сравнений, интерпретации, аргументации.
+  Не лучший выбор для: простых одиночных фактов, терминов или числовых данных, которые эффективнее проверяются компактными форматами.
 
-SEQUENCE — восстановление порядка и структуры перетаскиванием элементов.
-  Подходит не только для хронологии и алгоритмов, но и для заданий на: классификацию данных, правильное понимание иерархии, группировку понятий и ранжирование (с возможностью отключения жесткой проверки порядка там, где это уместно).
+SEQUENCE — сборка правильной структуры перетаскиванием элементов.
+  Подходит для: хронологии, алгоритмов, стадий процесса, классификации по группам, иерархии, ранжирования, распределения элементов по уровням, если правильная структура однозначно следует из материала.
+  Не подходит для: спорных классификаций, открытых интерпретаций, случаев, где порядок/группировка неоднозначны или требуют внешних знаний.
 
-TEST — тест с вариантами ответов (один или несколько правильных).
-  Подходит для: фактов, классификаций, терминологии, количественных данных.
+TEST — выбор одного или нескольких правильных вариантов.
+  Подходит для: фактов, терминов, признаков, классификаций, различения похожих понятий, количественных данных.
+  Не лучший выбор для: сложных объяснений и развёрнутых причинно-следственных связей, где важна формулировка студента.
 
-CLICK_TEXT — выбор верных/неверных утверждений из списка.
-  Подходит для: тем с распространёнными заблуждениями, похожими понятиями, тонкими различиями.
+CLICK_TEXT — выбор верных и неверных утверждений из списка.
+  Подходит для: типичных заблуждений, тонких различий, сопоставления похожих утверждений, проверки понимания нюансов.
+  Не подходит для: тем, где невозможно составить правдоподобные контрастные утверждения без натяжки.
 
 CLICK_WORDS — поиск фактических ошибок в тексте.
-  Подходит для: проверки внимательности и понимания материала. Сам исходный текст не обязан содержать ошибок. Задача состоит в том, чтобы впоследствии на основе этих фактов сгенерировать похожий на правду текст с намеренными искажениями, которые студент будет находить и исправлять.
+  Подходит для: материалов с достаточным числом фактических опор — терминов, чисел, дат, параметров, характеристик, классификационных признаков — которые можно правдоподобно исказить.
+  Не подходит для: слишком общих, интерпретативных или бедных на фактические опоры материалов.
 
-CLICK — нахождение элементов на изображении. Студент кликает по нужным элементам.
-  Подходит для: визуального распознавания, нахождения анатомических структур, указания на элементы схем.
-  ВАЖНО: задания этого типа создаются ТОЛЬКО вручную в редакторе (требуются изображения). Не включай в recommendations, но укажи пригодность в type_progression_suitability.
+CLICK — нахождение нужных элементов на изображении.
+  Подходит для: визуального распознавания объектов, анатомических структур, элементов схем, карт, диаграмм, интерфейсов.
+  Важно: такие задания создаются вручную в редакторе, но их нужно полноценно рекомендовать, если без них покрытие материала будет неполным.
 
-DRAW — обводка элементов на изображении. Студент обводит нужные области.
-  Подходит для: пространственного распознавания, выделения зон, обводки анатомических структур.
-  ВАЖНО: задания этого типа создаются ТОЛЬКО вручную в редакторе (требуются изображения). Не включай в recommendations, но укажи пригодность в type_progression_suitability.
+DRAW — обводка/выделение нужных зон на изображении.
+  Подходит для: пространственного распознавания, выделения областей, контуров, зон, анатомических структур, частей схем.
+  Важно: такие задания создаются вручную в редакторе, но их нужно полноценно рекомендовать, если это необходимо для полного покрытия.
 </available_task_types>
 
-<calibration>
-Выяви все объективно присутствующие в материале «образовательные единицы». Количество рекомендованных заданий должно быть оптимальным и строго обоснованным количеством этих найденных единиц. Ни больше, ни меньше.
-Ориентировочные рамки в зависимости от объёма текста:
-- ~300 слов (1 стр.) → 2–5 заданий суммарно.
-- ~1000 слов (3–4 стр.) → 10–15 заданий.
-- ~3000+ слов (10+ стр.) → 25–40 заданий.
-Рекомендуй только типы, для которых материал даёт достаточно содержания. Если полезного смыслового материала мало — честно укажи это и предложи минимум заданий.
-</calibration>
+<decision_rules>
+- Не выбирай тип задания только потому, что он в целом подходит. Выбирай его только если он даёт лучший или дополнительный способ проверить конкретные единицы.
+- Не своди весь материал к одному доминирующему типу, если разные аспекты знания требуют разных форм проверки.
+- Если материал содержит явную структуру, не игнорируй SEQUENCE.
+- Если материал содержит визуальные объекты, не игнорируй CLICK и DRAW.
+- Если материал богат фактами, числами и параметрами, отдельно оцени пригодность CLICK_WORDS.
+- Если единица требует не узнавания, а объяснения, отдавай приоритет OPEN_ANSWER.
+- Если визуальный тип рекомендован, пометь его как manual_only=true и auto_generation_supported=false.
+</decision_rules>
 
 <illustrations_rule>
-Если материал упоминает или содержит изображения, схемы, диаграммы —
-установи "illustrations_detected": true и опиши потенциал
-в "illustrations_note". Задания с изображениями создаются
-в редакторе вручную, не через генерацию.
+Если материал упоминает или содержит изображения, схемы, диаграммы или фотографии:
+- установи "illustrations_detected": true;
+- кратко опиши потенциал визуальных заданий в "illustrations_note";
+- не скрывай CLICK и DRAW в not_recommended, если они реально нужны для покрытия;
+- ясно укажи, что такие задания создаются вручную в редакторе.
 </illustrations_rule>
 
 <output_format>
-Верни ответ ровно в таком формате.
-Внимание к полям rationale и reason: они должны состоять из 1 короткого, ёмкого предложения без многословия.
+Верни ответ ровно в таком формате. Не добавляй никакой прозы до или после блоков.
+Поля rationale, coverage_role, count_rationale и reason должны быть короткими и содержательными (1 предложение каждое).
 
 <human_summary>
-2–4 предложения: тема, объём, ключевые выводы для преподавателя.
+2–4 предложения: тема, содержательная плотность, насколько материал структурный/фактический/визуальный, какие есть ограничения.
 </human_summary>
 
 <analysis_json>
 {
   "material_volume": "small | medium | large",
   "educational_units": [
-    { "id": 1, "title": "...", "type": "concept|process|fact|term|classification", "description": "..." }
+    {
+      "id": 1,
+      "title": "...",
+      "type": "concept|process|fact|term|classification",
+      "description": "...",
+      "explicitness": "explicit|inferred",
+      "evidence": "...",
+      "modality": "text|visual|mixed",
+      "assessment_risk": "low|medium|high"
+    }
   ],
   "recommendations": [
-    { "task_type": "TEST|OPEN_ANSWER|SEQUENCE|CLICK_TEXT|CLICK_WORDS", "count": N, "priority": "high|medium|low", "covers_units": [1, 2], "rationale": "Краткое изложение причины выбора данного формата." }
+    {
+      "task_type": "TEST|OPEN_ANSWER|SEQUENCE|CLICK_TEXT|CLICK_WORDS|CLICK|DRAW",
+      "count": N,
+      "priority": "high|medium|low",
+      "covers_units": [1, 2],
+      "rationale": "Почему этот тип нужен.",
+      "coverage_role": "Какой когнитивный угол проверки он закрывает.",
+      "count_rationale": "Почему именно столько заданий нужно без ссылок на объём текста.",
+      "manual_only": false,
+      "auto_generation_supported": true
+    }
   ],
   "not_recommended": [
-    { "task_type": "...", "reason": "Краткая причина (1 предложение)." }
+    { "task_type": "...", "reason": "Почему этот тип не нужен или не имеет достаточного основания." }
   ],
   "illustrations_detected": false,
   "illustrations_note": null,
@@ -510,18 +553,24 @@ _GENERATION_PROMPTS = {
     "TEST": r"""Ты — генератор заданий для образовательной платформы.
 
 <task_context>
-Задания типа TEST — это тестовые вопросы с вариантами ответов. Студент выбирает один или несколько правильных вариантов из предложенных.
+Задания типа TEST — это тестовые вопросы с вариантами ответов. Они подходят для проверки распознавания, различения, точности знания фактов, признаков, терминов, классификаций и устойчивых различий между похожими понятиями.
 </task_context>
 
 <task>
 Преобразуй предоставленный материал в тестовые вопросы формата @TEST.
+Используй этот тип там, где правильность ответа можно определить однозначно по материалу. Не используй TEST для случаев, где студент должен развернуто объяснять механизм, причинно-следственную связь, интерпретацию или аргументацию своими словами.
 </task>
 
 <quality_criteria>
-- На каждый вопрос 4 варианта ответа. Среди них 1–2 правильных и 2–3 неправильных.
-- Неправильные варианты (дистракторы) должны быть правдоподобными.
-- Формулировки всех вариантов сопоставимы по длине и стилю.
-- Вопросы покрывают разные аспекты материала, избегая повторов.
+- На каждый вопрос должно быть ровно 4 варианта ответа.
+- Обычно делай 1 правильный ответ; 2 правильных ответа допустимы только если это действительно нужно для проверки материала и оба ответа независимо обоснованы источником.
+- Вопрос должен быть самодостаточным, однозначным и полностью ответимым по предоставленному материалу без внешних знаний.
+- Каждый вопрос должен проверять один конкретный факт, признак, различие, классификационное правило или устойчивое утверждение, а не смесь нескольких несвязанных проверок.
+- Неправильные варианты (дистракторы) должны быть правдоподобными, тематически близкими и основанными на типичных смешениях, а не очевидно абсурдными.
+- Формулировки всех вариантов должны быть сопоставимы по длине, стилю и грамматической форме, чтобы правильный ответ не выделялся технически.
+- Не делай варианты, которые пересекаются, вкладываются друг в друга или отличаются только случайной детализацией, если это создаёт неоднозначность выбора.
+- Не используй вопросы, где правильный ответ угадывается по длине, слишком общей формулировке, словам-маркерам вроде "всегда/никогда" или другим формальным подсказкам.
+- Если создаётся несколько вопросов, они должны покрывать разные аспекты материала и не дублировать друг друга.
 - Вопросы с несколькими правильными ответами помечай несколькими "+".
 </quality_criteria>
 
@@ -542,18 +591,24 @@ _GENERATION_PROMPTS = {
     "OPEN_ANSWER": r"""Ты — генератор заданий для образовательной платформы.
 
 <task_context>
-Задания типа OPEN_ANSWER — это вопросы со свободным ответом. Студент видит вопрос и пишет ответ своими словами.
+Задания типа OPEN_ANSWER — это вопросы со свободным ответом. Они подходят тогда, когда нужно проверить не узнавание, а самостоятельное объяснение: понимание понятий, причинно-следственных связей, механизмов, различий, интерпретации и аргументации.
 </task_context>
 
 <task>
 Преобразуй предоставленный материал в задания формата @OPEN_ANSWER.
+Используй этот тип только там, где студент должен сформулировать смысл своими словами. Не используй OPEN_ANSWER для простых одиночных фактов, терминов, дат, чисел и других случаев, где лучше подходит более компактный формат.
 </task>
 
 <quality_criteria>
-- Вопросы проверяют понимание, а не механическое запоминание.
-- Эталонный ответ (строка =) содержит краткий, но полный ответ.
-- Ключевые слова (строки *) — существенные термины, без которых ответ неполон.
-- Каждый вопрос самодостаточен.
+- Каждый вопрос проверяет объяснение, сравнение, причинно-следственную связь, механизм, интерпретацию или обоснование.
+- Вопрос должен быть самодостаточным, однозначным и полностью ответимым по предоставленному материалу без внешних знаний.
+- Если создаётся несколько вопросов, они должны проверять разные аспекты материала и не дублировать друг друга.
+- Эталонный ответ (строка =) должен быть кратким, но содержательно полным: фиксировать правильную мысль, причинность или различие без лишней воды.
+- Эталонный ответ не должен добавлять фактов, которых нет в исходном материале.
+- Ключевые слова (строки *) — это только обязательные слова или короткие фразы, без которых ответ нельзя считать полным по смыслу.
+- Обычно выбирай 4-8 значимых ключевых слов, но не раздувай список искусственно.
+- Включай в ключевые слова общепринятые аббревиатуры и синонимичные формулировки только если они действительно нужны для корректной проверки.
+- Не превращай открытый вопрос в простое "назовите/перечислите", если материал требует более глубокого понимания.
 </quality_criteria>
 
 <output_format>
@@ -569,24 +624,35 @@ _GENERATION_PROMPTS = {
     "SEQUENCE": r"""Ты — генератор заданий для образовательной платформы.
 
 <task_context>
-Задания типа SEQUENCE — это упражнения на восстановление правильного порядка перетаскиванием.
+Задания типа SEQUENCE — это упражнения на сборку правильной структуры перетаскиванием. Они подходят не только для линейного порядка, но и для явной классификации по группам, иерархии, распределения элементов по уровням и ранжирования, но только если материал задаёт одну проверяемую и однозначную структуру.
 </task_context>
 
 <task>
 Преобразуй предоставленный материал в задания формата @SEQUENCE.
+Используй этот тип только если каждый элемент можно однозначно поместить в правильное место структуры на основе самого материала. Не используй SEQUENCE для простых списков, спорных классификаций, пересекающихся категорий и случаев, где возможны несколько равноценных структур.
 </task>
 
 <quality_criteria>
-- Каждое задание содержит от 3 до 7 элементов.
-- Правильный порядок должен быть однозначным и обоснованным материалом.
-- Формулировки элементов краткие и сопоставимые по длине.
-- Вопрос в строке # чётко указывает принцип упорядочивания.
+- Каждое задание обычно содержит 3-8 элементов и 2-5 уровней.
+- Правильная структура должна быть однозначной, полностью обоснованной материалом и не требовать внешних знаний.
+- Каждый элемент должен быть использован ровно один раз: без пропусков, дублирования и пустых уровней.
+- Формулировки элементов должны быть краткими, сопоставимыми по длине и одного смыслового уровня.
+- Вопрос в строке # должен чётко указывать, что именно нужно собрать и по какому принципу: порядок, стадии, классификация, иерархия, ранжирование или распределение по уровням.
+- Для хронологии, алгоритма или процесса используй SEQUENCE только если порядок шагов единственный и устойчивый.
+- Для классификации, группировки, иерархии или ранжирования используй SEQUENCE только если критерий группировки и относительный порядок уровней явно следуют из материала.
+- Если несколько элементов находятся на одном уровне, их совместное размещение должно быть однозначно подтверждено материалом.
+- В каждом блоке явно укажи @ level_order_matters: true|false и @ sequence_within_level_matters: true|false.
+- Устанавливай @ level_order_matters: true, если порядок уровней является частью правильного ответа; для чистой классификации или группировки без фиксированного порядка уровней ставь false.
+- Устанавливай @ sequence_within_level_matters: true только если внутри одного уровня порядок элементов тоже значим; если элементы в уровне образуют группу без внутреннего порядка — ставь false.
+- Не превращай простой перечень фактов, примеров или терминов в искусственную структуру.
 </quality_criteria>
 
 <output_format>
 Каждый блок начинается с маркера @SEQUENCE на отдельной строке. Между блоками — одна пустая строка. Ответ содержит только блоки заданий, без пояснений и без Markdown.
 
 @SEQUENCE
+@ level_order_matters: true
+@ sequence_within_level_matters: false
 # <инструкция: что и по какому принципу упорядочить>
 element_1: <текст элемента>
 element_2: <текст элемента>
@@ -596,24 +662,32 @@ level_2: element_2
 level_3: element_3
 
 Элементы нумеруются последовательно (element_1, element_2, ...).
-Уровни (level_N) задают правильный порядок. Если два элемента равноправны — через запятую: level_2: element_3, element_4.
+Уровни (level_N) задают правильную структуру и должны идти последовательно без пропусков.
+Каждый element_X должен встретиться ровно в одном level_N.
+Если два элемента должны оказаться в одной группе/на одном уровне — укажи их через запятую: level_2: element_3, element_4.
 </output_format>""",
 
     "CLICK_TEXT": r"""Ты — генератор заданий для образовательной платформы.
 
 <task_context>
-Задания типа CLICK_TEXT — это упражнения на классификацию утверждений. Студент видит список утверждений и отмечает верные или неверные.
+Задания типа CLICK_TEXT — это упражнения на классификацию утверждений. Студент видит список утверждений и отмечает верные или неверные. Этот тип подходит для проверки тонких различий, типичных заблуждений, правил с исключениями, похожих формулировок и нюансов понимания.
 </task_context>
 
 <task>
 Преобразуй предоставленный материал в задания формата @CLICK_TEXT.
+Используй этот тип только там, где можно составить несколько содержательно сильных и правдоподобных утверждений для различения. Не используй CLICK_TEXT для тем, где утверждения получаются искусственными, тривиальными или требуют развернутого объяснения вместо различения формулировок.
 </task>
 
 <quality_criteria>
-- Каждое задание содержит 4–7 утверждений: часть верных (+), часть неверных (-).
-- Неверные утверждения основаны на типичных заблуждениях.
-- Все утверждения относятся к одной теме.
-- Формулировки сопоставимы по длине и стилю.
+- Каждое задание содержит 4-7 утверждений.
+- В одном задании должны быть и верные (+), и неверные (-) утверждения; по возможности делай несколько верных и несколько неверных, а не формат с одним очевидным правильным пунктом.
+- Все утверждения в одном задании должны относиться к одной узкой теме, одному правилу, одному механизму или одному набору близких различий.
+- Каждое утверждение должно быть самодостаточным, однозначным и полностью проверяемым по предоставленному материалу без внешних знаний.
+- Неверные утверждения должны быть правдоподобными и основанными на типичных заблуждениях, смешении похожих понятий, неправильных обобщениях, перепутанных признаках, числах, датах, стадиях или условиях.
+- Не делай ложные утверждения абсурдными, слишком грубо ошибочными или легко отсекаемыми по формальным словам-маркерам.
+- Формулировки утверждений должны быть сопоставимы по длине, стилю и грамматической форме, чтобы правильность нельзя было угадать по оформлению.
+- Не дублируй одно и то же различие несколькими почти одинаковыми утверждениями.
+- Если создаётся несколько заданий, они должны покрывать разные нюансы материала и разные типы заблуждений.
 </quality_criteria>
 
 <output_format>
@@ -632,18 +706,23 @@ level_3: element_3
     "CLICK_WORDS": r"""Ты — генератор заданий для образовательной платформы.
 
 <task_context>
-Задания типа CLICK_WORDS — это упражнения на поиск фактических ошибок в тексте. Студент кликает на неверные слова/фразы.
+Задания типа CLICK_WORDS — это упражнения на поиск фактических ошибок в тексте. Студент кликает на неверные слова или короткие фрагменты. Этот тип подходит для материалов, где есть устойчивые фактические опоры: термины, числа, даты, пороги, классификационные признаки, параметры и характеристики.
 </task_context>
 
 <task>
-На основе предоставленного материала создай задания формата @CLICK_WORDS. Напиши связный текст из 2–4 предложений с 2–4 фактическими ошибками. Ошибочные фрагменты оберни в [квадратные скобки].
+На основе предоставленного материала создай задания формата @CLICK_WORDS. Напиши связный текст из 2-4 предложений с 2-4 фактическими ошибками. Ошибочные фрагменты оберни в [квадратные скобки].
+Используй этот тип только там, где можно создать правдоподобные фактические подмены без искажения стиля текста. Не используй CLICK_WORDS для слишком общих, интерпретативных или бедных на фактологические опоры материалов.
 </task>
 
 <quality_criteria>
-- Текст читается как связный параграф — ошибки не очевидны без знания материала.
-- Ошибки — подмены фактов: неправильные числа, перепутанные термины, инверсии.
-- Ошибочные фрагменты в [квадратных скобках].
-- Верная часть текста действительно верна.
+- Текст должен читаться как естественный связный параграф; ошибки не должны бросаться в глаза без знания материала.
+- Все ошибки должны быть именно фактическими подменами: неправильные числа, даты, пороги, термины, признаки, стадии, классификационные признаки, органы, вещества, параметры или условия.
+- Не создавай орфографические, пунктуационные, стилистические или грамматические ошибки, если они не меняют фактический смысл.
+- Верная часть текста действительно должна оставаться верной по материалу.
+- Ошибочные фрагменты должны быть минимальными: обычно одно слово или короткий компактный фрагмент, а не большие куски предложения.
+- Ошибочные фрагменты в [квадратных скобках] не должны пересекаться, вкладываться друг в друга или ломать читаемость текста.
+- Не делай ошибки абсурдными или слишком лёгкими; хорошая ошибка должна быть правдоподобной заменой, а не случайным шумом.
+- Если создаётся несколько заданий, они должны покрывать разные типы фактических опор и не повторять один и тот же паттерн ошибки.
 </quality_criteria>
 
 <output_format>
@@ -800,10 +879,11 @@ _GENERATION_GUARDRAILS = {
         "Each TEST should target a distinct fact/rule unless intentionally covering a broad unit with subfacts.",
     ],
     "SEQUENCE": [
-        "Create SEQUENCE only for explicitly stated orders/chronologies/rankings.",
-        "Do not invent medical rankings if the source only lists terms.",
-        "State the ordering principle clearly in the # instruction.",
-        "If the order is only loosely inferred, do not use SEQUENCE.",
+        "Create SEQUENCE only when the source defines an explicit structure: order, stages, classification, hierarchy, ranking, or grouping.",
+        "Do not invent hidden structures if the source only lists terms or loosely related facts.",
+        "State the structuring principle clearly in the # instruction.",
+        "Use shared levels for grouping/classification tasks when several elements belong together.",
+        "If the structure is only loosely inferred, do not use SEQUENCE.",
     ],
     "OPEN_ANSWER": [
         "Include keywords that cover abbreviations and synonyms used in the material.",
@@ -814,17 +894,22 @@ _GENERATION_GUARDRAILS = {
         "Use misconception-style contrasts and subtle distinctions from the source.",
         "When available, include statement traps around numbers/dates/regulatory details.",
         "Mix true and false statements with plausible wording; avoid obvious fillers.",
+        "Do not collapse CLICK_TEXT into a disguised single-choice item; prefer multiple meaningful true/false judgments.",
     ],
     "CLICK_WORDS": [
         "Prefer factual substitutions in numbers, dates, thresholds, and terminology (not spelling errors).",
         "Create exactly 2-4 factual errors per task.",
         "Wrap only single-word (or hyphenated single-token) erroneous fragments in [brackets]; avoid multi-word bracket spans.",
+        "Keep the surrounding text fully correct; only the bracketed fragment should be wrong.",
         "Do not leave unmatched '[' or ']' in the final text.",
     ],
 }
 
 
-_AI_TASK_TYPES = {"TEST", "OPEN_ANSWER", "SEQUENCE", "CLICK_TEXT", "CLICK_WORDS"}
+_TEXT_AI_TASK_TYPES = {"TEST", "OPEN_ANSWER", "SEQUENCE", "CLICK_TEXT", "CLICK_WORDS"}
+_MANUAL_ANALYSIS_TASK_TYPES = {"CLICK", "DRAW"}
+_ANALYSIS_TASK_TYPES = _TEXT_AI_TASK_TYPES | _MANUAL_ANALYSIS_TASK_TYPES
+_AI_TASK_TYPES = _TEXT_AI_TASK_TYPES
 _PRIORITY_SCORE = {"low": 0, "medium": 1, "high": 2}
 _PRIORITY_BY_SCORE = {v: k for k, v in _PRIORITY_SCORE.items()}
 
@@ -906,32 +991,57 @@ def _is_numeric_or_regulatory_unit(unit: Dict[str, Any]) -> bool:
     return bool(re.search(r"\d|%|p\s*[<=>]\s*0?\.\d+", blob)) or any(t in blob for t in keyword_tokens)
 
 
-def _estimate_text_task_target(
-    word_count: int,
-    units_count: int,
-    illustrations_detected: bool,
-    numeric_signal: int,
-) -> Tuple[int, int]:
-    if units_count <= 0:
-        base = 8 if word_count >= 600 else 5
-    else:
-        base = max(8, int(math.ceil(units_count * 1.4)))
-    if word_count >= 900:
-        base = max(base, 14)
-    if word_count >= 1200:
-        base = max(base, 16)
-    if word_count >= 2000:
-        base = max(base, 20)
-    if numeric_signal >= 8:
-        base += 2
-    elif numeric_signal >= 4:
-        base += 1
-    if illustrations_detected:
-        base += 1
-    target_min = max(5, min(32, base))
-    extra_band = max(4, int(math.ceil(units_count * 0.35))) if units_count else 4
-    target_max = max(target_min + 2, min(40, target_min + extra_band))
-    return target_min, target_max
+def _coerce_boolish(value: Any, default: bool = False) -> bool:
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return bool(value)
+    raw = str(value).strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    return default
+
+
+def _is_spatial_visual_unit(unit: Dict[str, Any]) -> bool:
+    blob = _unit_text_blob(unit).lower()
+    tokens = [
+        "zone", "region", "contour", "outline", "boundary", "layer", "spatial", "anatom",
+        "зон", "област", "контур", "границ", "слой", "простран", "анатом", "структур",
+    ]
+    return any(token in blob for token in tokens)
+
+
+def _default_recommendation_coverage_role(task_type: str) -> str:
+    mapping = {
+        "TEST": "Проверяет распознавание, различение и точность знания фактов.",
+        "OPEN_ANSWER": "Проверяет объяснение, интерпретацию и причинно-следственные связи.",
+        "SEQUENCE": "Проверяет понимание структуры, порядка, уровней и связей между элементами.",
+        "CLICK_TEXT": "Проверяет различение похожих утверждений и понимание нюансов.",
+        "CLICK_WORDS": "Проверяет обнаружение фактических искажений и внимательность к опорным фактам.",
+        "CLICK": "Проверяет визуальное распознавание и локализацию элементов на изображении.",
+        "DRAW": "Проверяет пространственное распознавание и выделение правильных зон на изображении.",
+    }
+    return mapping.get(task_type, "Проверяет отдельный аспект усвоения материала.")
+
+
+def _default_recommendation_count_rationale(task_type: str, covers_count: int, manual_only: bool) -> str:
+    if manual_only:
+        if covers_count > 1:
+            return "Количество отражает число визуально значимых единиц, которые нельзя полноценно закрыть только текстом."
+        return "Достаточно минимума ручных визуальных заданий, чтобы закрыть ключевой визуальный навык без дублирования."
+    if covers_count >= 6:
+        return "Количество увеличено, потому что этот формат закрывает несколько разных единиц без потери качества."
+    if covers_count >= 3:
+        return "Количество соответствует числу существенных единиц, которые этот формат проверяет с новой стороны."
+    if task_type == "OPEN_ANSWER":
+        return "Количество ограничено, чтобы оставить только действительно объяснительные и недублирующиеся вопросы."
+    if task_type == "SEQUENCE":
+        return "Количество зависит только от числа явно выраженных структур, а не от объёма текста."
+    return "Количество выбрано по реальной потребности покрытия, а не по длине материала."
 
 
 def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) -> List[Dict[str, Any]]:
@@ -943,12 +1053,21 @@ def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) ->
         if not isinstance(rec, dict):
             continue
         task_type = str(rec.get("task_type") or "").strip().upper()
-        if task_type not in _AI_TASK_TYPES:
+        if task_type not in _ANALYSIS_TASK_TYPES:
             continue
         count = max(1, min(20, _coerce_int(rec.get("count"), 1)))
         priority = _normalize_priority(rec.get("priority"))
         covers_units = _unique_int_list(rec.get("covers_units"), allowed=valid_unit_ids)
         rationale = str(rec.get("rationale") or "").strip()
+        coverage_role = str(rec.get("coverage_role") or "").strip()
+        count_rationale = str(rec.get("count_rationale") or "").strip()
+        manual_only = _coerce_boolish(rec.get("manual_only"), default=task_type in _MANUAL_ANALYSIS_TASK_TYPES)
+        auto_generation_supported = _coerce_boolish(
+            rec.get("auto_generation_supported"),
+            default=not manual_only,
+        )
+        if manual_only:
+            auto_generation_supported = False
 
         if task_type not in merged:
             merged[task_type] = {
@@ -957,6 +1076,10 @@ def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) ->
                 "priority": priority,
                 "covers_units": covers_units,
                 "rationale": rationale,
+                "coverage_role": coverage_role,
+                "count_rationale": count_rationale,
+                "manual_only": manual_only,
+                "auto_generation_supported": auto_generation_supported,
             }
             order.append(task_type)
             continue
@@ -975,6 +1098,12 @@ def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) ->
         )
         if rationale and not existing.get("rationale"):
             existing["rationale"] = rationale
+        if coverage_role and not existing.get("coverage_role"):
+            existing["coverage_role"] = coverage_role
+        if count_rationale and not existing.get("count_rationale"):
+            existing["count_rationale"] = count_rationale
+        existing["manual_only"] = bool(existing.get("manual_only")) or manual_only
+        existing["auto_generation_supported"] = bool(existing.get("auto_generation_supported", True)) and auto_generation_supported
     return [merged[t] for t in order]
 
 
@@ -1059,7 +1188,6 @@ def _ensure_analysis_quality(
         if task_type:
             not_recommended.append({"task_type": task_type, "reason": reason})
 
-    material_word_count = len((material or "").split())
     numeric_signal = _material_numeric_signal(material or "")
 
     if numeric_signal >= 6:
@@ -1094,18 +1222,55 @@ def _ensure_analysis_quality(
                 "Heuristic adjustment: CLICK_WORDS was removed from not_recommended because this material supports factual error-detection tasks.",
             )
 
+    visual_unit_ids = [
+        u["id"]
+        for u in units
+        if u.get("modality") in {"visual", "mixed"} or _is_visualish_unit(u)
+    ]
+    spatial_visual_unit_ids = [
+        u["id"]
+        for u in units
+        if u.get("modality") in {"visual", "mixed"} and _is_spatial_visual_unit(u)
+    ]
+
     if illustrations_detected:
-        image_guidance_reason = (
-            "Illustrations are present. Image-based tasks are not auto-generated in this flow; "
-            "consider manually creating 2-4 image tasks in the editor for visual recognition/classification."
-        )
-        has_image_guidance = any(
-            "image" in str(item.get("task_type", "")).lower()
-            or "illustr" in str(item.get("reason", "")).lower()
-            for item in not_recommended
-        )
-        if not has_image_guidance:
-            not_recommended.append({"task_type": "IMAGE_TASKS (manual)", "reason": image_guidance_reason})
+        click_rec = _find_recommendation(recommendations, "CLICK")
+        if click_rec is None and visual_unit_ids:
+            click_rec = {
+                "task_type": "CLICK",
+                "count": max(1, min(4, int(math.ceil(len(visual_unit_ids) / 3)))),
+                "priority": "high" if len(visual_unit_ids) >= 2 else "medium",
+                "covers_units": visual_unit_ids[: min(len(visual_unit_ids), 8)],
+                "rationale": "Нужен для проверки визуального распознавания там, где текстовых форматов недостаточно.",
+                "coverage_role": _default_recommendation_coverage_role("CLICK"),
+                "count_rationale": _default_recommendation_count_rationale("CLICK", len(visual_unit_ids), True),
+                "manual_only": True,
+                "auto_generation_supported": False,
+            }
+            recommendations.append(click_rec)
+            _append_unique(
+                warnings,
+                "Visual coverage was expanded with CLICK because the material contains image-dependent learning targets.",
+            )
+
+        draw_rec = _find_recommendation(recommendations, "DRAW")
+        if draw_rec is None and spatial_visual_unit_ids:
+            draw_rec = {
+                "task_type": "DRAW",
+                "count": max(1, min(3, int(math.ceil(len(spatial_visual_unit_ids) / 3)))),
+                "priority": "medium",
+                "covers_units": spatial_visual_unit_ids[: min(len(spatial_visual_unit_ids), 6)],
+                "rationale": "Нужен для проверки пространственного распознавания и выделения правильных зон на изображениях.",
+                "coverage_role": _default_recommendation_coverage_role("DRAW"),
+                "count_rationale": _default_recommendation_count_rationale("DRAW", len(spatial_visual_unit_ids), True),
+                "manual_only": True,
+                "auto_generation_supported": False,
+            }
+            recommendations.append(draw_rec)
+            _append_unique(
+                warnings,
+                "Visual coverage was expanded with DRAW where the material requires spatial or contour-based recognition.",
+            )
 
         existing_note = str(data.get("illustrations_note") or "").strip()
         if existing_note:
@@ -1127,6 +1292,20 @@ def _ensure_analysis_quality(
         rec["covers_units"] = _unique_int_list(rec.get("covers_units"), allowed=valid_unit_ids)
         if not str(rec.get("rationale") or "").strip():
             rec["rationale"] = "Recommended based on educational unit fit and coverage balance."
+        manual_only = _coerce_boolish(rec.get("manual_only"), default=rec["task_type"] in _MANUAL_ANALYSIS_TASK_TYPES)
+        rec["manual_only"] = manual_only
+        rec["auto_generation_supported"] = False if manual_only else _coerce_boolish(
+            rec.get("auto_generation_supported"),
+            default=True,
+        )
+        if not str(rec.get("coverage_role") or "").strip():
+            rec["coverage_role"] = _default_recommendation_coverage_role(rec["task_type"])
+        if not str(rec.get("count_rationale") or "").strip():
+            rec["count_rationale"] = _default_recommendation_count_rationale(
+                rec["task_type"],
+                len(rec["covers_units"]),
+                manual_only,
+            )
         for uid in rec["covers_units"]:
             coverage_map[uid] += 1
 
@@ -1153,109 +1332,29 @@ def _ensure_analysis_quality(
             f"Heuristic adjustment: {len(uncovered_units)} educational unit(s) were not covered by AI recommendations; coverage was expanded automatically.",
         )
 
-    target_min, target_max = _estimate_text_task_target(
-        material_word_count,
-        len(units),
-        illustrations_detected,
-        numeric_signal,
-    )
-    current_total = sum(int(rec.get("count", 1)) for rec in recommendations)
-
-    def _bump_or_add(task_type: str, amount: int, covers: Optional[List[int]] = None, rationale: str = "") -> None:
-        if amount <= 0:
-            return
-        rec = _find_recommendation(recommendations, task_type)
-        if rec is None:
-            rec = {
-                "task_type": task_type,
-                "count": 0,
-                "priority": "medium",
-                "covers_units": [],
-                "rationale": rationale or "Added by heuristic coverage calibration.",
-            }
-            recommendations.append(rec)
-        rec["count"] = min(20, int(rec.get("count", 0)) + amount)
-        if covers:
-            rec["covers_units"] = _unique_int_list(list(rec.get("covers_units") or []) + covers, allowed=valid_unit_ids)
-        if rationale and not str(rec.get("rationale") or "").strip():
-            rec["rationale"] = rationale
-
-    if current_total < target_min:
-        deficit = target_min - current_total
-        numeric_unit_ids = [u["id"] for u in units if _is_numeric_or_regulatory_unit(u)]
-        preferred_cycle = ["TEST", "CLICK_TEXT", "OPEN_ANSWER", "CLICK_WORDS", "TEST", "CLICK_TEXT"]
-        caps = {"TEST": 8, "CLICK_TEXT": 7, "OPEN_ANSWER": 5, "CLICK_WORDS": 4, "SEQUENCE": 2}
-        while deficit > 0:
-            progress = False
-            for task_type in preferred_cycle:
-                rec = _find_recommendation(recommendations, task_type)
-                if rec is None:
-                    if task_type == "CLICK_WORDS" and numeric_signal < 6:
-                        continue
-                    default_covers = numeric_unit_ids if task_type == "CLICK_WORDS" and numeric_unit_ids else [u["id"] for u in units]
-                    _bump_or_add(task_type, 1, default_covers, "Added by coverage calibration to improve overall material coverage.")
-                    deficit -= 1
-                    progress = True
-                    if deficit <= 0:
-                        break
-                    continue
-
-                if int(rec.get("count", 0)) >= caps.get(task_type, 6):
-                    continue
-                rec["count"] = int(rec.get("count", 0)) + 1
-                if task_type == "CLICK_WORDS" and numeric_unit_ids:
-                    rec["covers_units"] = _unique_int_list(
-                        list(rec.get("covers_units") or []) + numeric_unit_ids,
-                        allowed=valid_unit_ids,
-                    )
-                deficit -= 1
-                progress = True
-                if deficit <= 0:
-                    break
-
-            if not progress:
-                _bump_or_add("TEST", deficit, [u["id"] for u in units], "Added by coverage calibration to reach a reasonable task count.")
-                deficit = 0
-
-        _append_unique(
-            warnings,
-            f"Coverage calibration increased recommended text tasks to improve coverage (target ~{target_min}-{target_max}).",
-        )
-    elif current_total > target_max + 6:
-        _append_unique(
-            warnings,
-            f"AI recommended a high total task count ({current_total}); trim low-priority items if authoring time is limited (rough target ~{target_min}-{target_max}).",
-        )
-    else:
-        _append_unique(
-            warnings,
-            f"Heuristic coverage target for this material is roughly {target_min}-{target_max} text tasks (plus manual image tasks where relevant).",
-        )
-
-    seq_rec = _find_recommendation(recommendations, "SEQUENCE")
-    if seq_rec and int(seq_rec.get("count", 0)) > 2:
-        seq_rec["count"] = 2
-        _append_unique(warnings, "SEQUENCE recommendation count was capped at 2 to avoid forcing implicit rankings.")
-
     # Ensure the user sees guidance for every supported text task type
     # even if the model omitted some types entirely.
     recommended_types = {str(r.get("task_type") or "").upper() for r in recommendations}
     notrec_types = {str(n.get("task_type") or "").upper() for n in not_recommended}
-    missing_types = [t for t in sorted(_AI_TASK_TYPES) if t not in recommended_types and t not in notrec_types]
+    missing_types = [t for t in sorted(_ANALYSIS_TASK_TYPES) if t not in recommended_types and t not in notrec_types]
     for missing_type in missing_types:
         if missing_type == "SEQUENCE":
-            reason = "No explicit order/ranking was clearly identified; use SEQUENCE only if the source defines a strict order."
+            reason = "Не рекомендован, потому что материал не задаёт достаточно явную структуру, порядок или группировку."
         elif missing_type == "OPEN_ANSWER":
-            reason = "May still be suitable for manual authoring if you want explanation-focused tasks, but it was not prioritized by the analysis."
+            reason = "Не рекомендован как приоритетный формат, потому что материал лучше проверяется более компактными или более структурными способами."
         elif missing_type == "CLICK_WORDS":
-            reason = "Use when the material has factual anchors (numbers/dates/terms) that can be intentionally distorted."
+            reason = "Не рекомендован, потому что в материале недостаточно устойчивых фактических опор для правдоподобных искажений."
         elif missing_type == "CLICK_TEXT":
-            reason = "Use when the topic contains subtle distinctions or common misconceptions that fit true/false statements."
+            reason = "Не рекомендован, потому что материал не даёт достаточно сильной базы для правдоподобных контрастных утверждений."
+        elif missing_type == "CLICK":
+            reason = "Не рекомендован, потому что материал не требует отдельной проверки визуального распознавания по изображению."
+        elif missing_type == "DRAW":
+            reason = "Не рекомендован, потому что материал не требует пространственного выделения зон или контуров на изображении."
         else:  # TEST
-            reason = "Use for precise facts, definitions, and classifications if you need additional objective coverage."
+            reason = "Не рекомендован как основной формат, потому что материал требует не столько узнавания фактов, сколько других когнитивных действий."
         not_recommended.append({"task_type": missing_type, "reason": reason})
 
-    order_index = {"TEST": 0, "CLICK_TEXT": 1, "OPEN_ANSWER": 2, "CLICK_WORDS": 3, "SEQUENCE": 4}
+    order_index = {"TEST": 0, "CLICK_TEXT": 1, "OPEN_ANSWER": 2, "CLICK_WORDS": 3, "SEQUENCE": 4, "CLICK": 5, "DRAW": 6}
     recommendations.sort(
         key=lambda r: (
             order_index.get(str(r.get("task_type") or "").upper(), 99),
@@ -1903,7 +2002,7 @@ def _merge_chunk_analysis_payloads(
             if not isinstance(rec, dict):
                 continue
             task_type = str(rec.get("task_type") or "").strip().upper()
-            if task_type not in _AI_TASK_TYPES:
+            if task_type not in _ANALYSIS_TASK_TYPES:
                 continue
             mapped_covers: List[int] = []
             for raw_uid in (rec.get("covers_units") or []):
