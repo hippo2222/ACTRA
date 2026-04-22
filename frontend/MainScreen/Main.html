@@ -17,9 +17,11 @@
             --main-topbar-inline-padding: clamp(0.75rem, 0.9vw + 0.25rem, 1.5rem);
             --main-topbar-group-gap: clamp(0.55rem, 0.85vw, 1.5rem);
             --main-topbar-brand-gap: clamp(0.65rem, 0.75vw, 1rem);
+            --main-topbar-actions-gap: clamp(0.28rem, 0.45vw, 0.6rem);
             --main-topbar-secondary-gap: clamp(0.45rem, 0.65vw, 0.75rem);
             --main-topbar-button-gap: clamp(0.35rem, 0.5vw, 0.5rem);
             --main-topbar-button-inline-padding: clamp(0.7rem, 0.75vw, 0.95rem);
+            --main-topbar-primary-button-inline-padding: clamp(0.55rem, 0.55vw, 0.82rem);
             --main-ease: cubic-bezier(0.2, 0.75, 0.2, 1);
             --main-shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.06);
             --main-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
@@ -76,11 +78,23 @@
             margin-inline: clamp(0.05rem, 0.25vw, 0.2rem);
         }
 
+        .main-topbar__actions {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            gap: var(--main-topbar-actions-gap);
+            flex: 0 1 auto;
+        }
+
         .main-topbar__button,
         .main-topbar__profile {
             gap: var(--main-topbar-button-gap) !important;
             padding-inline: var(--main-topbar-button-inline-padding) !important;
             flex: 0 0 auto;
+        }
+
+        .main-topbar__button--primary {
+            padding-inline: var(--main-topbar-primary-button-inline-padding) !important;
         }
 
         .main-topbar__datetime {
@@ -1241,9 +1255,11 @@
                 --main-topbar-inline-padding: clamp(0.65rem, 0.7vw + 0.2rem, 1rem);
                 --main-topbar-group-gap: clamp(0.45rem, 0.55vw, 0.95rem);
                 --main-topbar-brand-gap: clamp(0.55rem, 0.55vw, 0.8rem);
+                --main-topbar-actions-gap: clamp(0.2rem, 0.32vw, 0.4rem);
                 --main-topbar-secondary-gap: clamp(0.35rem, 0.5vw, 0.6rem);
                 --main-topbar-button-gap: clamp(0.3rem, 0.35vw, 0.45rem);
                 --main-topbar-button-inline-padding: clamp(0.55rem, 0.45vw + 0.25rem, 0.78rem);
+                --main-topbar-primary-button-inline-padding: clamp(0.45rem, 0.35vw + 0.15rem, 0.68rem);
             }
         }
 
@@ -1594,21 +1610,23 @@
                         ACTRA</h2>
                 </div>
                 <div class="main-topbar__divider hidden md:block h-6 w-px bg-border-subtle"></div>
-                <a href="/ui/editor"
-                    class="main-topbar__button hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
-                    <span class="material-symbols-outlined text-[20px]">edit_document</span>
-                    Редактор заданий
-                </a>
-                <a href="/ui/complexes/create"
-                    class="main-topbar__button hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
-                    <span class="material-symbols-outlined text-[20px]">design_services</span>
-                    Редактор комплексов
-                </a>
-                <button type="button" onclick="showReferencePlaceholder()"
-                    class="main-topbar__button hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
-                    <span class="material-symbols-outlined text-[20px]">menu_book</span>
-                    Справочник
-                </button>
+                <div class="main-topbar__actions">
+                    <a href="/ui/editor"
+                        class="main-topbar__button main-topbar__button--primary hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">edit_document</span>
+                        Редактор заданий
+                    </a>
+                    <a href="/ui/complexes/create"
+                        class="main-topbar__button main-topbar__button--primary hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">design_services</span>
+                        Редактор комплексов
+                    </a>
+                    <button type="button" onclick="showReferencePlaceholder()"
+                        class="main-topbar__button main-topbar__button--primary hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">menu_book</span>
+                        Справочник
+                    </button>
+                </div>
             </div>
             <div class="main-topbar__group main-topbar__group--secondary flex items-center gap-3">
                 <div class="main-topbar__datetime hidden md:flex items-center gap-2 text-sm text-text-secondary" id="datetime-display">
