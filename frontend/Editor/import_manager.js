@@ -1382,6 +1382,8 @@ class ImportManager {
                         <p class="mt-1 font-medium">Поддерживается только подтип Клик/Ошибки (error_detection). Рисование и координатные click-задачи не поддерживаются.</p>
                     </div>
                 </div>
+
+                ${manualAnalysisPreview}
             </div>
         `;
     }
