@@ -32,6 +32,11 @@ class _DummyHostedUserService:
         return _DummyHostedUser(clean) if clean else None
 
 
+class _WorkspaceLimitsStub:
+    def assert_can_create_workspace_entity(self, user_id: str, entity_kind: str):
+        return None
+
+
 class _HostedTheoryServiceStub:
     def __init__(self, data_dir: Path):
         self.data_dir = data_dir
@@ -279,6 +284,7 @@ def _install_hosted_ctx(monkeypatch, tmp_path, *, theory_service, storage_servic
             "catalog_service": _DummyCatalogService(),
             "asset_service": _DummyAssetService(),
             "user_service": _DummyHostedUserService(),
+            "workspace_limits_service": _WorkspaceLimitsStub(),
             "data_dir": tmp_path,
             "user_id": "",
         },

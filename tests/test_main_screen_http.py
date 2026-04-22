@@ -192,6 +192,19 @@ def test_hosted_ui_pages_redirect_to_welcome_without_auth(client, monkeypatch, t
     assert welcome_response.status_code == 200
 
 
+def test_root_redirects_to_ui_entrypoint(client):
+    response = client.get("/")
+
+    assert response.status_code == 302
+    assert response.headers["Location"].endswith("/ui")
+
+
+def test_missing_route_preserves_http_404(client):
+    response = client.get("/definitely-missing")
+
+    assert response.status_code == 404
+
+
 def test_hosted_ui_page_serves_when_authenticated(client, monkeypatch, tmp_path):
     mainscreen_dir = tmp_path / "MainScreen"
     mainscreen_dir.mkdir(parents=True, exist_ok=True)

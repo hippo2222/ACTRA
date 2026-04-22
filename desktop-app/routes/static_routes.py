@@ -154,6 +154,12 @@ def serve_catalog_file(filename: str) -> Any:
 # Welcome UI
 # ---------------------------------------------------------------------------
 
+@static_bp.route("/", methods=["GET"])
+def serve_root_ui_alias() -> Any:
+    """Send the browser through the canonical UI entrypoint."""
+    return redirect("/ui")
+
+
 @static_bp.route("/ui/welcome", methods=["GET"])
 def serve_welcome_ui() -> Any:
     """Serve the Welcome / onboarding screen."""

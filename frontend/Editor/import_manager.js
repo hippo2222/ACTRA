@@ -3943,12 +3943,12 @@ text: Сердце человека состоит из [трёх] камер. �
         return `
             <div class="w-full animate-slide-up-fade">
                 <div class="rounded-2xl border border-border-strong bg-surface-1 p-6 lg:p-8 shadow-sm">
-                    <div class="max-w-2xl">
+                    <div class="w-full">
                         <div class="inline-flex items-center gap-2 rounded-full border border-warning-light bg-warning-lighter px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-warning-text">
                             В разработке
                         </div>
                         <h3 class="mt-4 text-xl font-bold text-text-main">В разработке</h3>
-                        <p class="mt-3 text-sm leading-6 text-text-secondary text-justify">
+                        <p class="mt-3 w-full max-w-none text-sm leading-6 text-text-secondary text-justify">
                             Внутренняя ИИ-генерация и связанные сценарии временно прикрыты единым placeholder-состоянием.
                             В этом разделе пока не доступны запуск анализа, история прогонов и остальные встроенные AI-потоки.
                         </p>

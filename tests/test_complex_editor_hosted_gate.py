@@ -33,6 +33,11 @@ class _DummyHostedUserService:
         return _DummyHostedUser(clean)
 
 
+class _WorkspaceLimitsStub:
+    def assert_can_create_workspace_entity(self, user_id: str, entity_kind: str):
+        return None
+
+
 class _ComplexRecord:
     def __init__(self, payload):
         self._payload = copy.deepcopy(payload)
@@ -239,6 +244,7 @@ def _install_hosted_ctx(monkeypatch, tmp_path, *, complex_service):
             "catalog_service": _CatalogServiceStub(complex_service),
             "theory_service": object(),
             "user_service": _DummyHostedUserService(),
+            "workspace_limits_service": _WorkspaceLimitsStub(),
             "session_api": object(),
             "data_dir": tmp_path,
             "user_id": "",

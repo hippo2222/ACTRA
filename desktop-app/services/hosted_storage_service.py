@@ -16,7 +16,6 @@ from persistence.hosted_workspace_catalog_repository import HostedWorkspaceCatal
 from persistence.runtime import PersistenceRuntimeSettings
 from services.hosted_shadow_fallback import HostedShadowFallbackMixin
 from services.storage_service import StorageService
-from services.workspace_lineage import normalize_workspace_graph_entity_fields
 
 
 class HostedStorageService(HostedShadowFallbackMixin, StorageService):
@@ -346,24 +345,8 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         try:
             module_dir.mkdir(parents=True, exist_ok=False)
             payload: Dict[str, Any] = {"id": module_id, "name": clean_name, "topics": []}
-            if isinstance(workspace_meta, dict):
-                payload.update(
-                    {
-                        field_name: workspace_meta.get(field_name)
-                        for field_name in (
-                            "source_catalog_item_id",
-                            "source_catalog_version_id",
-                            "source_entity_kind",
-                            "source_entity_id",
-                        )
-                        if workspace_meta.get(field_name) is not None
-                    }
-                )
-            payload = normalize_workspace_graph_entity_fields(
-                payload,
-                entity_kind="module",
-                module_id=module_id,
-            )
+            payload = self._apply_workspace_meta_fields(payload, workspace_meta)
+            payload = self._normalize_module_payload(payload)
             self._atomic_json_dump(module_dir / "module.json", payload)
             self._sync_catalog_from_shadow()
             return True
@@ -411,25 +394,8 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
             payload: Dict[str, Any] = {"id": topic_id, "name": clean_name, "tasks": []}
             if isinstance(theory_link, dict):
                 payload["theory_link"] = dict(theory_link)
-            if isinstance(workspace_meta, dict):
-                payload.update(
-                    {
-                        field_name: workspace_meta.get(field_name)
-                        for field_name in (
-                            "source_catalog_item_id",
-                            "source_catalog_version_id",
-                            "source_entity_kind",
-                            "source_entity_id",
-                        )
-                        if workspace_meta.get(field_name) is not None
-                    }
-                )
-            payload = normalize_workspace_graph_entity_fields(
-                payload,
-                entity_kind="topic",
-                module_id=module_id,
-                topic_id=topic_id,
-            )
+            payload = self._apply_workspace_meta_fields(payload, workspace_meta)
+            payload = self._normalize_topic_payload(module_id, payload)
             self._atomic_json_dump(topic_dir / "topic.json", payload)
             self._sync_catalog_from_shadow()
             return True

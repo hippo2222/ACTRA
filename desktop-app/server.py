@@ -47,6 +47,7 @@ from flask import (
     Response,
     stream_with_context,
 )
+from werkzeug.exceptions import HTTPException
 from urllib.parse import quote, unquote, urlparse
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
@@ -1758,6 +1759,8 @@ if FLASK_DEBUG_ENABLED:
 @app.errorhandler(Exception)
 def handle_unhandled_exception(e):
     """Return JSON instead of HTML for unhandled exceptions."""
+    if isinstance(e, HTTPException):
+        return e
     logger.exception("[HTTP] Unhandled exception: %s", e)
     return jsonify({"ok": False, "error": "internal_server_error"}), 500
 

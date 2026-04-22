@@ -13,6 +13,8 @@ if str(DESKTOP_APP_DIR) not in sys.path:
 
 import server  # type: ignore
 import routes._context as ctx_module  # type: ignore
+from routes._helpers import _serialize_workspace_catalog_modules
+from routes.editor_routes import _filter_hosted_workspace_catalog_modules
 from persistence.postgres import PostgresUnavailableError
 from persistence.runtime import PersistenceRuntimeSettings
 from services.hosted_catalog_service import HostedCatalogService
@@ -127,6 +129,54 @@ def test_hosted_storage_shadow_writes_can_be_opted_in_for_dev(tmp_path, monkeypa
     assert service.hosted_shadow_write_fallback_enabled is True
     assert service.hosted_shadow_write_fallback_blocked is False
     assert (tmp_path / "modules" / "module_dev" / "module.json").exists()
+
+
+def test_hosted_storage_dev_shadow_writes_keep_module_and_topic_visible_for_owner(tmp_path, monkeypatch):
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+    monkeypatch.setenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", "1")
+
+    service = HostedStorageService(data_dir=str(tmp_path), persistence_settings=_build_settings(tmp_path))
+    workspace_meta = {
+        "created_by_user_id": "editor_user",
+        "updated_by_user_id": "editor_user",
+        "created_via": "manual_editor",
+        "content_scope": "shared_local",
+    }
+
+    assert service.create_module("module_dev", "Module Dev", workspace_meta=workspace_meta) is True
+    assert (
+        service.create_topic(
+            "module_dev",
+            "topic_dev",
+            "Topic Dev",
+            workspace_meta=workspace_meta,
+        )
+        is True
+    )
+
+    module_payload = json.loads(
+        (tmp_path / "modules" / "module_dev" / "module.json").read_text(encoding="utf-8")
+    )
+    topic_payload = json.loads(
+        (
+            tmp_path / "modules" / "module_dev" / "topics" / "topic_dev" / "topic.json"
+        ).read_text(encoding="utf-8")
+    )
+
+    assert module_payload["created_by_user_id"] == "editor_user"
+    assert module_payload["content_scope"] == "shared_local"
+    assert topic_payload["created_by_user_id"] == "editor_user"
+    assert topic_payload["content_scope"] == "shared_local"
+
+    modules = service.load_modules()
+    serialized = _serialize_workspace_catalog_modules(modules, current_user_id="editor_user")
+    filtered = _filter_hosted_workspace_catalog_modules(
+        serialized,
+        current_user_id="editor_user",
+    )
+
+    assert [module["id"] for module in filtered] == ["module_dev"]
+    assert [topic["id"] for topic in filtered[0]["topics"]] == ["topic_dev"]
 
 
 def test_ready_payload_reports_shadow_fallback_state(tmp_path, monkeypatch):
