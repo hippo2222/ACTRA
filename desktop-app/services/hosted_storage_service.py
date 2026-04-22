@@ -41,8 +41,6 @@ class HostedStorageService(HostedShadowFallbackMixin, StorageService):
         self.repository.ensure_schema()
         self.content_repository.ensure_schema()
         self._storage_ready = True
-        self._bootstrap_from_shadow_if_empty()
-        self._bootstrap_task_content_from_shadow()
         self._modules_cache = None
         self._modules_cache_timestamp = 0
 

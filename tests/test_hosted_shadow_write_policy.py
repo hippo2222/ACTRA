@@ -37,6 +37,25 @@ def _build_settings(tmp_path: Path) -> PersistenceRuntimeSettings:
     )
 
 
+class _InMemoryWorkspaceCatalogRepository:
+    def __init__(self):
+        self.modules = []
+
+    def ensure_schema(self) -> None:
+        return None
+
+    def count_catalogs(self) -> int:
+        return 0
+
+    def load_catalog(self):
+        return list(self.modules)
+
+
+class _InMemoryTaskContentRepository:
+    def ensure_schema(self) -> None:
+        return None
+
+
 def test_hosted_storage_keeps_read_fallback_for_shadow_catalog(tmp_path, monkeypatch):
     monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
     monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
@@ -55,6 +74,28 @@ def test_hosted_storage_keeps_read_fallback_for_shadow_catalog(tmp_path, monkeyp
     assert [item["id"] for item in modules] == ["legacy_module"]
     assert service.hosted_shadow_fallback_active is True
     assert service.hosted_shadow_write_fallback_blocked is False
+
+
+def test_hosted_storage_does_not_bootstrap_shadow_catalog_when_postgres_is_available(tmp_path, monkeypatch):
+    monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
+    monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+
+    module_dir = tmp_path / "modules" / "legacy_module"
+    module_dir.mkdir(parents=True, exist_ok=True)
+    (module_dir / "module.json").write_text(
+        json.dumps({"id": "legacy_module", "name": "Legacy Module", "topics": []}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+    service = HostedStorageService(data_dir=str(tmp_path), persistence_settings=_build_settings(tmp_path))
+    service.repository = _InMemoryWorkspaceCatalogRepository()
+    service.content_repository = _InMemoryTaskContentRepository()
+
+    modules = service.load_modules()
+
+    assert modules == []
+    assert service.hosted_shadow_fallback_active is False
+    assert service.hosted_storage_ready is True
 
 
 def test_hosted_storage_blocks_shadow_writes_by_default(tmp_path, monkeypatch):
@@ -220,6 +261,11 @@ class _DummyHostedUserService:
         return type("User", (), {"user_id": clean_user_id})()
 
 
+class _WorkspaceLimitsStub:
+    def assert_can_create_workspace_entity(self, user_id: str, entity_kind: str):
+        return None
+
+
 class _DummyHostedAssetService:
     def __init__(self, *, asset_id: str = "asset_editor_1", asset_url: str = "/api/assets/asset_editor_1/content"):
         self.asset_id = asset_id
@@ -243,7 +289,7 @@ def test_editor_route_returns_explicit_degraded_response_for_blocked_shadow_writ
         (),
         {
             "create_module": staticmethod(
-                lambda module_id, name: (_ for _ in ()).throw(
+                lambda module_id, name, workspace_meta=None: (_ for _ in ()).throw(
                     HostedShadowWriteFallbackDisabledError("create_module", reason="postgres_dsn_missing")
                 )
             )
@@ -257,6 +303,7 @@ def test_editor_route_returns_explicit_degraded_response_for_blocked_shadow_writ
             "theory_service": object(),
             "catalog_service": object(),
             "user_service": _DummyHostedUserService(),
+            "workspace_limits_service": _WorkspaceLimitsStub(),
             "data_dir": tmp_path,
             "user_id": "",
         },
@@ -434,6 +481,7 @@ def test_hosted_theory_upload_returns_degraded_when_asset_contract_missing(monke
             "theory_service": theory_service,
             "catalog_service": object(),
             "user_service": _DummyHostedUserService(),
+            "workspace_limits_service": _WorkspaceLimitsStub(),
             "data_dir": tmp_path,
             "user_id": "",
         },
@@ -513,6 +561,7 @@ def test_theory_route_returns_explicit_degraded_response_for_blocked_shadow_writ
             "theory_service": theory_service,
             "catalog_service": object(),
             "user_service": _DummyHostedUserService(),
+            "workspace_limits_service": _WorkspaceLimitsStub(),
             "data_dir": tmp_path,
             "user_id": "",
         },

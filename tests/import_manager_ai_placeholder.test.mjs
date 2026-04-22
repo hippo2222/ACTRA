@@ -67,8 +67,8 @@ describe('ImportManager AI placeholder mode', () => {
         expect(dom.window.fetch).not.toHaveBeenCalled();
 
         const content = dom.window.document.querySelector('[data-role="import-content"]');
-        expect(content.textContent).toContain('Функционал в разработке');
-        expect(content.textContent).toContain('AI-анализ');
+        expect(content.textContent).toContain('В разработке');
+        expect(content.textContent).toContain('Внутренняя ИИ-генерация');
     });
 
     it('routes microcards entrypoints into the same placeholder while ai_mode is disabled', async () => {
@@ -78,6 +78,21 @@ describe('ImportManager AI placeholder mode', () => {
         expect(dom.window.fetch).not.toHaveBeenCalled();
 
         const content = dom.window.document.querySelector('[data-role="import-content"]');
-        expect(content.textContent).toContain('Функционал в разработке');
+        expect(content.textContent).toContain('В разработке');
+    });
+
+    it('keeps theory analysis behind the same placeholder even if ai_mode flag is enabled', async () => {
+        manager.theoryFeatureFlags.ai_mode = true;
+        manager.theoryFeatureFlags.analysis_v2_schema = true;
+        manager.theoryFeatureFlags.analysis_report_blocks_v1 = true;
+        manager.theoryFeatureFlags.analysis_report_renderer_v1 = true;
+
+        const result = await manager.openTheoryAnalysisMode();
+
+        expect(result).toMatchObject({ ok: false, error: 'ai_mode_in_progress' });
+        expect(dom.window.fetch).not.toHaveBeenCalled();
+
+        const content = dom.window.document.querySelector('[data-role="import-content"]');
+        expect(content.textContent).toContain('В разработке');
     });
 });

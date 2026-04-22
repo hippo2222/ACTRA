@@ -163,6 +163,10 @@ class ImportManager {
         return { ok: false, error: 'ai_mode_in_progress' };
     }
 
+    isInternalAiGenerationInDevelopment() {
+        return true;
+    }
+
     createWorkspaceImportState() {
         return {
             request: null,
@@ -731,6 +735,9 @@ class ImportManager {
         this.aiGenerating = false;
         this.aiAnalyzing = false;
         this.theoryOpeningRunId = null;
+        if (this.isInternalAiGenerationInDevelopment()) {
+            return this.openTheoryAiInProgressPlaceholder();
+        }
         this.renderTheoryAnalysisMode();
         if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
             return { ok: false, error: 'ai_mode_in_progress' };
@@ -914,8 +921,8 @@ class ImportManager {
         if (this.currentStep === 4) {
             nextBtn.textContent = this.importInProgress ? 'Импорт...' : 'Импортировать';
         } else if (this.importMode === 'ai') {
-            if (this.currentStep === 1) nextBtn.textContent = 'Анализировать';
-            else if (this.currentStep === 2) nextBtn.textContent = 'Генерировать';
+            if (this.currentStep === 1) nextBtn.textContent = 'К промптам';
+            else if (this.currentStep === 2) nextBtn.textContent = 'Проверить текст';
             else if (this.currentStep === 3) nextBtn.textContent = 'К импорту';
             else nextBtn.textContent = 'Далее';
         } else {
@@ -1183,7 +1190,7 @@ class ImportManager {
                             <span class="material-symbols-outlined text-2xl ${this.importMode === 'ai' ? 'text-primary' : 'text-text-disabled'}">auto_awesome</span>
                             <span class="font-bold text-text-main">ИИ-генерация</span>
                         </div>
-                        <p class="text-xs text-text-secondary">Загрузите материал — ИИ создаст задания автоматически</p>
+                        <p class="text-xs text-text-secondary">Промпты для самостоятельной работы с внешней нейросетью и последующего импорта результата</p>
                     </button>
                 </div>
 
@@ -1269,10 +1276,6 @@ class ImportManager {
         `;
     }
     renderStep2() {
-        if (this.importMode === 'ai') {
-            return this.renderStep2AI();
-        }
-
         if (this.importMode === 'archive') {
             // Step 2 for Archive is "Validating..." (Spinner)
             return `
@@ -1288,11 +1291,16 @@ class ImportManager {
         const errorsList = this.parsedResult?.parsing_errors || [];
         const templateOptions = this.getAIAgentTemplateOptions();
         const activeTemplate = templateOptions[this.aiTemplateType] || templateOptions.open_answer;
+        const isAiPromptMode = this.importMode === 'ai';
+        const stepTitle = isAiPromptMode ? 'Скопируйте промпт и вставьте ответ внешнего ИИ' : 'Вставьте текст с заданиями';
+        const stepDescription = isAiPromptMode
+            ? 'Сгенерируйте задания во внешней нейросети, затем вставьте результат сюда для проверки и импорта.'
+            : 'Вставьте текст, содержащий задания в формате парсера';
 
         return `
             <div class="max-w-3xl mx-auto animate-slide-up-fade">
-                <h3 class="text-lg font-bold text-text-main mb-2">Вставьте текст с заданиями</h3>
-                <p class="text-sm text-text-secondary mb-6">Вставьте текст, содержащий задания в формате парсера</p>
+                <h3 class="text-lg font-bold text-text-main mb-2">${stepTitle}</h3>
+                <p class="text-sm text-text-secondary mb-6">${stepDescription}</p>
 
                 <div class="mb-4 p-4 bg-surface-2 border border-border-subtle rounded-lg">
                     <div class="flex items-start justify-between gap-3 mb-3">
@@ -1376,9 +1384,6 @@ class ImportManager {
     renderStep3() {
         if (this.hasActiveWorkspaceImportFlow()) {
             return this.renderWorkspaceImportPreviewStep();
-        }
-        if (this.importMode === 'ai') {
-            return this.renderStep3AI();
         }
         if (this.importMode === 'archive') {
             return this.renderStep3Archive();
@@ -3256,42 +3261,16 @@ text: Сердце человека состоит из [трёх] камер. �
         }
         if (this.currentStep === 1) {
             if (this.importMode === 'ai') {
-                // Validate AI step 1: need material + module/topic
                 if (!this.selectedModule || !this.selectedTopic) {
                     this.showVoiceToast({
                         severity: 'warning',
-                        what: 'Переход к анализу приостановлен.',
+                        what: 'Переход к промптам приостановлен.',
                         impact: 'Модуль и тема не выбраны.',
-                        next: 'Выберите модуль и тему, затем запустите анализ снова.',
+                        next: 'Выберите модуль и тему, затем продолжите.',
                     });
                     return;
                 }
-                // Save textarea content
-                const textarea = document.getElementById('ai-material-textarea');
-                if (textarea) this.materialText = textarea.value;
-
-                if (!this.materialText || this.materialText.split(/\s+/).filter(Boolean).length < 50) {
-                    this.showVoiceToast({
-                        severity: 'warning',
-                        what: 'Анализ не запущен.',
-                        impact: 'Материала недостаточно: нужно минимум 50 слов.',
-                        next: 'Загрузите файл или вставьте более полный текст.',
-                    });
-                    return;
-                }
-                if (this.aiOutputLanguageMode === 'custom' && !this.aiOutputLanguage) {
-                    this.showVoiceToast({
-                        severity: 'warning',
-                        what: 'Генерация приостановлена.',
-                        impact: 'Не выбран язык итоговых заданий.',
-                        next: 'Выберите язык генерации и повторите запуск.',
-                    });
-                    return;
-                }
-
-                // Go to Step 2 and trigger analysis
                 this.nextStep();
-                await this.aiAnalyze();
                 return;
             }
 
@@ -3357,13 +3336,6 @@ text: Сердце человека состоит из [трёх] камер. �
                 }
             }
         } else if (this.currentStep === 2) {
-            if (this.importMode === 'ai') {
-                // AI Step 2 → Step 3: trigger generation
-                this.nextStep();
-                await this.aiGenerate();
-                return;
-            }
-
             // Parse text
             if (!this.sourceText.trim()) {
                 this.showVoiceToast({
@@ -3480,11 +3452,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 const importContext = this.importMode === 'ai'
                     ? {
                         source: 'ai',
-                        ai_run_id: this.aiRunId || this.generationResult?.ai_run_id || null,
-                        ai_provider: this.aiProvider || null,
-                        ai_model: this.aiProviderModel || null,
-                        source_file_info: this.aiFileInfo || (this.aiUploadedFile ? { name: this.aiUploadedFile.name } : null),
-                        source_file_name: this.aiUploadedFile?.name || this.aiFileInfo?.name || null,
+                        ai_origin: 'external_prompt',
                     }
                     : { source: 'text' };
                 const result = await this.executeImport(this.selectedModule, this.selectedTopic, validTasks, {
@@ -3879,7 +3847,7 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     renderTheoryAnalysisLayout() {
-        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
+        if (this.isInternalAiGenerationInDevelopment() || !this.isTheoryFeatureEnabled('ai_mode', false)) {
             return this.renderTheoryAiInProgressPlaceholder();
         }
         const isMicrocardsMode = this.theorySubMode === 'microcards';
@@ -3977,13 +3945,12 @@ text: Сердце человека состоит из [трёх] камер. �
                 <div class="rounded-2xl border border-border-strong bg-surface-1 p-6 lg:p-8 shadow-sm">
                     <div class="max-w-2xl">
                         <div class="inline-flex items-center gap-2 rounded-full border border-warning-light bg-warning-lighter px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em] text-warning-text">
-                            In progress
+                            В разработке
                         </div>
-                        <h3 class="mt-4 text-xl font-bold text-text-main">Функционал в разработке</h3>
-                        <p class="mt-3 text-sm leading-6 text-text-secondary">
-                            AI-анализ и связанные сценарии временно прикрыты единым placeholder-состоянием.
-                            Как только контур вернётся в продуктовый scope, здесь снова появятся запуск анализа,
-                            история прогонов и связанные AI-потоки.
+                        <h3 class="mt-4 text-xl font-bold text-text-main">В разработке</h3>
+                        <p class="mt-3 text-sm leading-6 text-text-secondary text-justify">
+                            Внутренняя ИИ-генерация и связанные сценарии временно прикрыты единым placeholder-состоянием.
+                            В этом разделе пока не доступны запуск анализа, история прогонов и остальные встроенные AI-потоки.
                         </p>
                     </div>
                 </div>
@@ -7866,6 +7833,10 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async theoryAnalyze() {
+        if (this.isInternalAiGenerationInDevelopment()) {
+            this.openTheoryAiInProgressPlaceholder();
+            return { ok: false, error: 'ai_mode_in_progress' };
+        }
         const textarea = document.getElementById('ai-material-textarea');
         if (textarea) this.materialText = textarea.value;
 
@@ -7923,6 +7894,13 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async loadTheoryAnalysisRuns() {
+        if (this.isInternalAiGenerationInDevelopment()) {
+            this.theoryRuns = [];
+            this.theoryRunsLoading = false;
+            this.theoryRunsError = '';
+            if (this.modalPurpose === 'theory_analysis') this.renderTheoryAnalysisMode();
+            return { ok: false, error: 'ai_mode_in_progress' };
+        }
         const requestToken = ++this.theoryRunsRequestToken;
         this.theoryRunsLoading = true;
         this.theoryRunsError = '';
@@ -7957,6 +7935,10 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async openTheoryAnalysisRun(aiRunId) {
+        if (this.isInternalAiGenerationInDevelopment()) {
+            this.openTheoryAiInProgressPlaceholder();
+            return { ok: false, error: 'ai_mode_in_progress' };
+        }
         const runId = (aiRunId || '').trim();
         if (!runId) return { ok: false, error: 'ai_run_id_required' };
 
@@ -7999,90 +7981,34 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     renderStep1AI(modules) {
-        if (this.aiStatus && this.aiStatus.status_check_failed) {
-            return `
-                <div class="space-y-5 animate-fade-in">
-                    <div class="p-6 bg-surface-2 border-2 border-dashed border-border-subtle rounded-xl text-center">
-                        <div class="flex flex-col items-center gap-3 py-4">
-                            <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-error-lighter">
-                                <span class="material-symbols-outlined text-error text-[28px]">cloud_off</span>
-                            </div>
-                            <h4 class="text-base font-bold text-text-main">Не удалось проверить ИИ-сервис</h4>
-                            <p class="text-sm text-text-secondary max-w-md">
-                                Статус ИИ сейчас недоступен. Это похоже на сетевую ошибку или временную недоступность backend.
-                            </p>
-                            <div class="mt-2 flex flex-wrap items-center justify-center gap-2">
-                                <button type="button"
-                                    onclick="dashboard.importManager.aiCheckStatus().then(() => dashboard.importManager.renderCurrentStep())"
-                                    class="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-fg font-semibold text-sm rounded-xl hover:brightness-110 transition-all shadow-sm">
-                                    <span class="material-symbols-outlined text-[18px]">refresh</span>
-                                    Повторить
-                                </button>
-                                <button type="button"
-                                    onclick="dashboard.importManager.setImportMode('text')"
-                                    class="inline-flex items-center gap-2 px-4 py-2.5 border border-border-strong text-text-secondary font-semibold text-sm rounded-xl hover:bg-bg-hover transition-all">
-                                    Ручной режим
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        // Show "no API keys" placeholder if AI is unavailable
-        if (this.aiStatus && this.aiStatus.ai_available === false) {
-            return `
-                <div class="space-y-5 animate-fade-in">
-                    <div class="p-6 bg-surface-2 border-2 border-dashed border-border-subtle rounded-xl text-center">
-                        <div class="flex flex-col items-center gap-3 py-4">
-                            <div class="flex items-center justify-center w-14 h-14 rounded-2xl bg-warning-lighter">
-                                <span class="material-symbols-outlined text-warning text-[28px]">key_off</span>
-                            </div>
-                            <h4 class="text-base font-bold text-text-main">ИИ-генерация не настроена</h4>
-                            <p class="text-sm text-text-secondary max-w-md">
-                                Для работы ИИ-генерации заданий необходимо указать хотя бы один API-ключ
-                                в настройках. Рекомендуем начать с OpenRouter — бесплатный доступ к ИИ-моделям.
-                            </p>
-                            <a href="/ui/settings"
-                                class="mt-2 inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-fg font-semibold text-sm rounded-xl hover:brightness-110 transition-all shadow-sm">
-                                <span class="material-symbols-outlined text-[18px]">settings</span>
-                                Настроить API-ключи
-                            </a>
-                            <p class="text-xs text-text-disabled mt-1">
-                                Получите бесплатный ключ за минуту на
-                                <a href="https://openrouter.ai/keys" target="_blank" rel="noopener"
-                                   class="text-primary hover:underline">openrouter.ai/keys</a>
-                            </p>
-                        </div>
-                    </div>
-                </div>`;
-        }
-
-        const limitInfo = this.dailyLimit;
-        const limitHtml = limitInfo ? `
-            <div class="flex items-center gap-2 text-xs text-text-muted">
-                <span class="material-symbols-outlined text-[16px]">cloud_upload</span>
-                <span>Загрузок файлов сегодня: <strong class="${limitInfo.files_remaining === 0 ? 'text-error' : 'text-text-main'}">${limitInfo.max_files_per_day - limitInfo.files_remaining}</strong> из ${limitInfo.max_files_per_day}</span>
-            </div>` : '';
-
         return `
             <div class="space-y-5 animate-fade-in">
                 <div class="p-4 bg-primary-lighter border border-primary-light rounded-lg">
                     <div class="flex items-start gap-3">
                         <span class="material-symbols-outlined text-primary text-[22px] mt-0.5">auto_awesome</span>
                         <div>
-                            <h4 class="text-sm font-bold text-text-main mb-1">Как это работает</h4>
+                            <h4 class="text-sm font-bold text-text-main mb-1">Единственный путь: через внешний ИИ</h4>
                             <ol class="text-xs text-text-secondary space-y-1 list-decimal list-inside">
-                                <li>Загрузите учебный материал (файл или текст)</li>
-                                <li>ИИ проанализирует материал и предложит типы заданий</li>
-                                <li>Выберите нужные типы и количество</li>
-                                <li>ИИ сгенерирует задания, вы просмотрите и импортируете</li>
+                                <li>Выберите модуль и тему, куда пойдут задания</li>
+                                <li>На следующем шаге получите готовый промпт для внешней нейросети</li>
+                                <li>Сгенерируйте задания вне платформы и вставьте ответ сюда</li>
+                                <li>Проверьте парсинг и импортируйте результат</li>
                             </ol>
                         </div>
                     </div>
                 </div>
 
-                <!-- Module / Topic selection -->
+                <div class="p-4 border border-border-subtle rounded-lg bg-surface-1">
+                    <div class="flex items-start gap-2">
+                        <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">tips_and_updates</span>
+                        <div class="text-sm text-text-secondary leading-relaxed">
+                            Встроенная автоматическая генерация в этом разделе больше не используется.
+                            Здесь остаётся только сценарий с выдачей промптов для самостоятельной работы
+                            с нейросетями "на стороне".
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
@@ -8098,83 +8024,6 @@ text: Сердце человека состоит из [трёх] камер. �
                             disabled>
                             <option value="">Сначала выберите модуль...</option>
                         </select>
-                    </div>
-                </div>
-
-                <!-- Output language -->
-                <div class="p-4 border border-border-subtle rounded-lg bg-surface-1">
-                    <div class="flex items-start gap-2 mb-3">
-                        <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">translate</span>
-                        <div>
-                            <div class="text-sm font-semibold text-text-main">Язык генерируемых заданий</div>
-                            <div class="text-xs text-text-secondary">Выберите язык вывода заранее: это повлияет на анализ и генерацию.</div>
-                        </div>
-                    </div>
-                    <div class="space-y-2">
-                        <label class="flex items-start gap-2 p-2 rounded-lg border border-border-subtle bg-surface-2 cursor-pointer">
-                            <input type="radio" name="ai-output-language-mode" value="same_as_material"
-                                class="mt-0.5 text-primary focus:ring-primary"
-                                ${this.aiOutputLanguageMode !== 'custom' ? 'checked' : ''}>
-                            <div class="min-w-0">
-                                <div class="text-sm font-medium text-text-main">Согласен: задания на языке материала</div>
-                                <div class="text-xs text-text-muted">Рекомендуемый вариант для лучшего качества и меньшего числа правок.</div>
-                            </div>
-                        </label>
-                        <label class="flex items-start gap-2 p-2 rounded-lg border border-border-subtle bg-surface-2 cursor-pointer">
-                            <input type="radio" name="ai-output-language-mode" value="custom"
-                                class="mt-0.5 text-primary focus:ring-primary"
-                                ${this.aiOutputLanguageMode === 'custom' ? 'checked' : ''}>
-                            <div class="min-w-0 flex-1">
-                                <div class="text-sm font-medium text-text-main">Выбрать другой язык заданий</div>
-                                <div class="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
-                                    <select id="ai-output-language-select"
-                                        class="rounded-lg border-border-subtle bg-surface-1 py-2 px-2 text-sm text-text-main focus:ring-2 focus:ring-primary ${this.aiOutputLanguageMode !== 'custom' ? 'opacity-60' : ''}"
-                                        ${this.aiOutputLanguageMode !== 'custom' ? 'disabled' : ''}>
-                                        <option value="ru" ${this.aiOutputLanguage === 'ru' ? 'selected' : ''}>Русский</option>
-                                        <option value="en" ${this.aiOutputLanguage === 'en' ? 'selected' : ''}>English</option>
-                                    </select>
-                                    <span class="text-[11px] text-warning-text ${this.aiOutputLanguageMode === 'custom' ? '' : 'hidden'}" id="ai-output-language-warning">
-                                        Перевод может быть посредственным; задания почти наверняка потребуют доработки в редакторе.
-                                    </span>
-                                </div>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- File Upload -->
-                <div>
-                    <label class="block text-sm font-semibold text-text-secondary mb-2">Загрузка материала</label>
-                    <div id="ai-drop-zone" class="border-2 border-dashed border-border-subtle rounded-lg p-6 text-center bg-surface-2 hover:bg-bg-hover hover:border-primary transition-all cursor-pointer relative">
-                        <input type="file" id="ai-file-input" accept=".pdf,.docx,.txt" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-                        <div class="pointer-events-none">
-                            ${this.aiUploadedFile ? `
-                                <span class="material-symbols-outlined text-3xl text-success-text mb-1">check_circle</span>
-                                <p class="text-sm font-bold text-success-text" id="ai-file-name">${this.escapeHtml(this.aiUploadedFile.name)}</p>
-                                <p class="text-xs text-text-muted mt-1">${this.aiFileInfo ? `${this.aiFileInfo.word_count} слов` : 'Загружено'}</p>
-                            ` : `
-                                <span class="material-symbols-outlined text-3xl text-text-disabled mb-1">upload_file</span>
-                                <p class="text-sm font-medium text-text-secondary" id="ai-file-name">Перетащите PDF, DOCX или TXT</p>
-                                <p class="text-xs text-text-disabled mt-1">Максимум 18 МБ</p>
-                            `}
-                        </div>
-                    </div>
-                    ${limitHtml}
-                </div>
-
-                <!-- Or paste text -->
-                <div>
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="flex-1 h-px bg-border-subtle"></div>
-                        <span class="text-xs text-text-disabled font-medium">или вставьте текст</span>
-                        <div class="flex-1 h-px bg-border-subtle"></div>
-                    </div>
-                    <textarea id="ai-material-textarea" rows="6" 
-                        class="block w-full rounded-lg border-border-subtle bg-surface-2 p-3 text-sm text-text-main focus:ring-2 focus:ring-primary resize-y"
-                        placeholder="Вставьте учебный материал сюда...">${this.escapeHtml(this.materialText)}</textarea>
-                    <div class="flex justify-between mt-1">
-                        <span class="text-xs text-text-disabled" id="ai-word-count">${this.materialText ? this.materialText.split(/\s+/).filter(Boolean).length + ' слов' : ''}</span>
-                        <span class="text-xs text-text-disabled">Минимум 50 слов</span>
                     </div>
                 </div>
             </div>
@@ -8628,6 +8477,16 @@ text: Сердце человека состоит из [трёх] камер. �
     // =========================================================================
 
     async aiCheckStatus() {
+        if (this.isInternalAiGenerationInDevelopment()) {
+            const data = {
+                ok: false,
+                error: 'ai_mode_in_progress',
+                ai_available: false,
+                status_check_failed: true,
+            };
+            this.aiStatus = data;
+            return data;
+        }
         try {
             const resp = await fetch('/api/editor/ai/status');
             const data = await resp.json();
@@ -8643,6 +8502,10 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async aiUploadFile(file) {
+        if (this.isInternalAiGenerationInDevelopment()) {
+            this.openTheoryAiInProgressPlaceholder();
+            return { ok: false, error: 'ai_mode_in_progress' };
+        }
         const formData = new FormData();
         formData.append('file', file);
         try {
@@ -8667,6 +8530,11 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async aiAnalyze() {
+        if (this.isInternalAiGenerationInDevelopment()) {
+            this.aiAnalyzing = false;
+            this.openTheoryAiInProgressPlaceholder();
+            return { ok: false, error: 'ai_mode_in_progress' };
+        }
         this.aiAnalyzing = true;
         this.analysisResult = null;
         this.aiRunId = null;
@@ -8729,6 +8597,11 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     async aiGenerate() {
+        if (this.isInternalAiGenerationInDevelopment()) {
+            this.aiGenerating = false;
+            this.openTheoryAiInProgressPlaceholder();
+            return { ok: false, error: 'ai_mode_in_progress' };
+        }
         const tasksToGenerate = [];
         this.aiSelectedRecs.forEach((val, key) => {
             if (val.enabled && val.count > 0) {

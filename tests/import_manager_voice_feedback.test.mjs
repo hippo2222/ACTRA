@@ -46,6 +46,8 @@ describe('ImportManager voice feedback on gate checks', () => {
             closeModals: vi.fn(),
             loadCatalog: vi.fn(),
         });
+        manager.theoryFeatureFlags.ai_mode = true;
+        manager.theoryFeatureFlags.microcards_mode = true;
     });
 
     it('uses voice feedback when AI mode misses module/topic', async () => {
@@ -112,6 +114,44 @@ describe('ImportManager voice feedback on gate checks', () => {
             severity: 'warning',
         }));
         expect(toastSpy).not.toHaveBeenCalled();
+    });
+
+    it('moves AI mode to prompt step without launching internal analysis', async () => {
+        manager.importMode = 'ai';
+        manager.currentStep = 1;
+        manager.selectedModule = 'module_1';
+        manager.selectedTopic = 'topic_1';
+
+        const analyzeSpy = vi.spyOn(manager, 'aiAnalyze').mockResolvedValue({ ok: true });
+
+        await manager.handleNext();
+
+        expect(manager.currentStep).toBe(2);
+        expect(analyzeSpy).not.toHaveBeenCalled();
+    });
+
+    it('parses external AI response on AI step 2 instead of generating internally', async () => {
+        manager.importMode = 'ai';
+        manager.currentStep = 2;
+        manager.selectedModule = 'module_1';
+        manager.selectedTopic = 'topic_1';
+        manager.sourceText = '@OPEN_ANSWER\n# Вопрос\n= Ответ\n* ключ';
+
+        const parseResult = {
+            ok: true,
+            tasks: [{ id: 'task_1', type: 'OPEN_ANSWER', name: 'Task 1', data: {} }],
+            summary: { total: 1 },
+            parsing_errors: [],
+        };
+        const parseSpy = vi.spyOn(manager, 'parseText').mockResolvedValue(parseResult);
+        const generateSpy = vi.spyOn(manager, 'aiGenerate').mockResolvedValue({ ok: true });
+
+        await manager.handleNext();
+
+        expect(parseSpy).toHaveBeenCalledWith(manager.sourceText, 'module_1', 'topic_1');
+        expect(generateSpy).not.toHaveBeenCalled();
+        expect(manager.currentStep).toBe(3);
+        expect(manager.parsedResult).toMatchObject(parseResult);
     });
 
     it('uses voice feedback when microcards create has no ai_run_id', async () => {

@@ -174,9 +174,80 @@ def _is_visible_workspace_graph_payload_for_current_user(item: Any, *, current_u
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
     if ownership.get("is_owned_by_current_user") is True:
         return True
-    if _is_imported_workspace_graph_payload(item):
-        return True
-    return _is_ownerless_workspace_graph_payload(item, current_user_id=current_user_id)
+    return _is_imported_workspace_graph_payload(item)
+
+
+def _build_hosted_editor_workspace_meta(
+    *,
+    current_user_id: str,
+    existing_payload: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    existing = existing_payload if isinstance(existing_payload, dict) else {}
+    created_by_user_id = _normalize_optional_text(existing.get("created_by_user_id")) or current_user_id
+    created_via = _normalize_optional_text(existing.get("created_via")) or "manual_editor"
+    content_scope = _normalize_optional_text(existing.get("content_scope")) or "shared_local"
+    return {
+        "created_by_user_id": created_by_user_id,
+        "updated_by_user_id": current_user_id,
+        "created_via": created_via,
+        "content_scope": content_scope,
+    }
+
+
+def _apply_hosted_editor_task_ownership(
+    payload: Any,
+    *,
+    current_user_id: str,
+    existing_metadata: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    normalized = dict(payload or {}) if isinstance(payload, dict) else {}
+    normalized.pop("ownership", None)
+
+    workspace_meta = _build_hosted_editor_workspace_meta(
+        current_user_id=current_user_id,
+        existing_payload=existing_metadata,
+    )
+
+    metadata = normalized.get("metadata") if isinstance(normalized.get("metadata"), dict) else {}
+    metadata = dict(metadata)
+    metadata.pop("ownership", None)
+    metadata.update(workspace_meta)
+    normalized["metadata"] = metadata
+
+    task_data = normalized.get("task_data") if isinstance(normalized.get("task_data"), dict) else None
+    if isinstance(task_data, dict):
+        task_data = dict(task_data)
+        meta = task_data.get("meta") if isinstance(task_data.get("meta"), dict) else {}
+        meta = dict(meta)
+        meta.pop("ownership", None)
+        meta.update(workspace_meta)
+        task_data["meta"] = meta
+        normalized["task_data"] = task_data
+
+    return normalized
+
+
+def _load_hosted_editor_task_metadata_if_visible(
+    module_id: str,
+    topic_id: str,
+    task_id: str,
+    *,
+    current_user_id: str,
+) -> Optional[Dict[str, Any]]:
+    data = get_ctx().storage_service.load_task(module_id, topic_id, task_id)
+    if not data:
+        return None
+    serialized = _serialize_workspace_task_payload(
+        data,
+        current_user_id=current_user_id,
+    )
+    metadata = serialized.get("metadata") if isinstance(serialized.get("metadata"), dict) else {}
+    if not _is_visible_workspace_graph_payload_for_current_user(
+        metadata,
+        current_user_id=current_user_id,
+    ):
+        return None
+    return metadata
 
 
 def _adopt_workspace_graph_payload_for_current_user(item: Any, *, current_user_id: str) -> Any:
@@ -211,22 +282,19 @@ def _filter_hosted_workspace_catalog_modules(modules: Any, *, current_user_id: s
         return filtered_modules
 
     for module in modules:
-        module_payload = _adopt_workspace_graph_payload_for_current_user(
-            module,
-            current_user_id=current_user_id,
-        )
+        if not isinstance(module, dict):
+            continue
+        module_payload = dict(module)
         serialized_topics: List[Dict[str, Any]] = []
         for topic in module_payload.get("topics") or []:
-            topic_payload = _adopt_workspace_graph_payload_for_current_user(
-                topic,
-                current_user_id=current_user_id,
-            )
+            if not isinstance(topic, dict):
+                continue
+            topic_payload = dict(topic)
             serialized_tasks: List[Dict[str, Any]] = []
             for task in topic_payload.get("tasks") or []:
-                task_payload = _adopt_workspace_graph_payload_for_current_user(
-                    task,
-                    current_user_id=current_user_id,
-                )
+                if not isinstance(task, dict):
+                    continue
+                task_payload = dict(task)
                 if _is_visible_workspace_graph_payload_for_current_user(
                     task_payload,
                     current_user_id=current_user_id,
@@ -524,10 +592,6 @@ def get_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
         )
         if is_hosted_web_runtime():
             metadata = data.get("metadata") if isinstance(data.get("metadata"), dict) else {}
-            metadata = _adopt_workspace_graph_payload_for_current_user(
-                metadata,
-                current_user_id=ctx.user_id,
-            )
             if not _is_visible_workspace_graph_payload_for_current_user(
                 metadata,
                 current_user_id=ctx.user_id,
@@ -575,14 +639,43 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
     if get_ctx().user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     try:
+        ctx = get_ctx()
+        existing_metadata: Optional[Dict[str, Any]] = None
+        existing_task_payload: Optional[Dict[str, Any]] = None
+        if is_hosted_web_runtime():
+            existing_task_payload = ctx.storage_service.load_task(module_id, topic_id, task_id)
+            if existing_task_payload:
+                serialized = _serialize_workspace_task_payload(
+                    existing_task_payload,
+                    current_user_id=ctx.user_id,
+                )
+                existing_metadata = serialized.get("metadata") if isinstance(serialized.get("metadata"), dict) else {}
+                if not _is_visible_workspace_graph_payload_for_current_user(
+                    existing_metadata,
+                    current_user_id=ctx.user_id,
+                ):
+                    return jsonify({"ok": False, "error": "task_not_found"}), 404
+            else:
+                existing_metadata = None
+        else:
+            existing_metadata = None
         task_json_path = _resolve_task_dir(module_id, topic_id, task_id) / "task.json"
-        if not task_json_path.exists():
-            get_ctx().workspace_limits_service.assert_can_create_workspace_entity(get_ctx().user_id, "task")
+        if not task_json_path.exists() and existing_task_payload is None:
+            ctx.workspace_limits_service.assert_can_create_workspace_entity(
+                ctx.user_id,
+                "task",
+            )
         payload = request.json
         if not payload:
             return jsonify({"ok": False, "error": "payload_required"}), 400
+        if is_hosted_web_runtime():
+            payload = _apply_hosted_editor_task_ownership(
+                payload,
+                current_user_id=ctx.user_id,
+                existing_metadata=existing_metadata,
+            )
 
-        success = get_ctx().storage_service.save_task(
+        success = ctx.storage_service.save_task(
             module_id, topic_id, task_id, payload, validate=True
         )
 
@@ -603,10 +696,20 @@ def save_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
 
 @editor_bp.route("/api/editor/task/<module_id>/<topic_id>/<task_id>", methods=["DELETE"])
 def delete_editor_task(module_id: str, topic_id: str, task_id: str) -> Any:
-    if get_ctx().user_id == "guest":
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
         return jsonify({"ok": False, "error": "guest_cannot_edit"}), 403
     try:
-        success = get_ctx().storage_service.delete_task(module_id, topic_id, task_id)
+        if is_hosted_web_runtime():
+            metadata = _load_hosted_editor_task_metadata_if_visible(
+                module_id,
+                topic_id,
+                task_id,
+                current_user_id=ctx.user_id,
+            )
+            if metadata is None:
+                return jsonify({"ok": False, "error": "task_not_found"}), 404
+        success = ctx.storage_service.delete_task(module_id, topic_id, task_id)
         if success:
             return jsonify({"ok": True})
         else:
@@ -1719,8 +1822,15 @@ def create_editor_task() -> Any:
         if not all([module_id, topic_id, task_name, task_type]):
             return jsonify({"ok": False, "error": "missing_required_fields"}), 400
 
+        workspace_meta = None
+        if is_hosted_web_runtime():
+            workspace_meta = _build_hosted_editor_workspace_meta(current_user_id=ctx.user_id)
         task_id = ctx.storage_service.create_task(
-            module_id, topic_id, task_name, task_type
+            module_id,
+            topic_id,
+            task_name,
+            task_type,
+            workspace_meta=workspace_meta,
         )
 
         if task_id:
@@ -1755,12 +1865,16 @@ def bootstrap_editor_task() -> Any:
         if not all([module_id, topic_id, task_name, task_type]):
             return jsonify({"ok": False, "error": "missing_required_fields"}), 400
 
+        workspace_meta = None
+        if is_hosted_web_runtime():
+            workspace_meta = _build_hosted_editor_workspace_meta(current_user_id=ctx.user_id)
         bootstrap = ctx.storage_service.build_task_draft_bootstrap(
             module_id,
             topic_id,
             task_name,
             task_type,
             preferred_task_id=preferred_task_id,
+            workspace_meta=workspace_meta,
         )
         return jsonify({"ok": True, **bootstrap})
     except Exception as exc:
@@ -1787,8 +1901,11 @@ def create_editor_module() -> Any:
             return jsonify({"ok": False, "error": "invalid_module_name"}), 400
 
         create_module = getattr(ctx.storage_service, "create_module", None)
+        workspace_meta = None
+        if is_hosted_web_runtime():
+            workspace_meta = _build_hosted_editor_workspace_meta(current_user_id=ctx.user_id)
         if callable(create_module):
-            created = bool(create_module(module_id, name))
+            created = bool(create_module(module_id, name, workspace_meta=workspace_meta))
             if not created:
                 return jsonify({"ok": False, "error": "module_create_failed"}), 500
         else:
@@ -1868,6 +1985,9 @@ def create_editor_topic() -> Any:
             return jsonify({"ok": False, "error": "invalid_topic_name"}), 400
 
         create_topic = getattr(ctx.storage_service, "create_topic", None)
+        workspace_meta = None
+        if is_hosted_web_runtime():
+            workspace_meta = _build_hosted_editor_workspace_meta(current_user_id=ctx.user_id)
         if callable(create_topic):
             created = bool(
                 create_topic(
@@ -1875,6 +1995,7 @@ def create_editor_topic() -> Any:
                     topic_id,
                     name,
                     theory_link=normalized_theory_link,
+                    workspace_meta=workspace_meta,
                 )
             )
             if not created:

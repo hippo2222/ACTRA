@@ -33,6 +33,11 @@ class _DummyHostedUserService:
         return _DummyHostedUser(clean)
 
 
+class _WorkspaceLimitsStub:
+    def assert_can_create_workspace_entity(self, user_id: str, entity_kind: str):
+        return None
+
+
 class _EditorStorageStub:
     def __init__(self):
         self.modules = []
@@ -40,6 +45,20 @@ class _EditorStorageStub:
         self.bootstrap_counter = 0
         self.fail_read_operation = None
         self.fail_write_operation = None
+
+    @staticmethod
+    def _workspace_fields(workspace_meta=None):
+        meta = workspace_meta if isinstance(workspace_meta, dict) else {}
+        payload = {}
+        for field_name in (
+            "created_by_user_id",
+            "updated_by_user_id",
+            "created_via",
+            "content_scope",
+        ):
+            if meta.get(field_name) is not None:
+                payload[field_name] = meta.get(field_name)
+        return payload
 
     def _clone_modules(self):
         return copy.deepcopy(self.modules)
@@ -59,7 +78,16 @@ class _EditorStorageStub:
                 return topic
         return None
 
-    def _task_ref_payload(self, *, module_id: str, topic_id: str, task_id: str, task_name: str, owner_id=None):
+    def _task_ref_payload(
+        self,
+        *,
+        module_id: str,
+        topic_id: str,
+        task_id: str,
+        task_name: str,
+        owner_id=None,
+        workspace_meta=None,
+    ):
         payload = {
             "id": task_id,
             "name": task_name,
@@ -68,21 +96,33 @@ class _EditorStorageStub:
             "created_via": "manual_editor",
             "content_scope": "shared_local",
         }
-        if owner_id:
-            payload["created_by_user_id"] = owner_id
+        payload.update(self._workspace_fields(workspace_meta))
+        effective_owner_id = owner_id or payload.get("created_by_user_id")
+        if effective_owner_id:
+            payload["created_by_user_id"] = effective_owner_id
             payload["ownership"] = {
                 "scope": "workspace",
-                "content_scope": "shared_local",
-                "created_by_user_id": owner_id,
-                "created_via": "manual_editor",
+                "content_scope": payload.get("content_scope", "shared_local"),
+                "created_by_user_id": effective_owner_id,
+                "updated_by_user_id": payload.get("updated_by_user_id"),
+                "created_via": payload.get("created_via", "manual_editor"),
                 "has_owner": True,
                 "is_owned_by_current_user": False,
-                "is_shared_library": True,
+                "is_shared_library": payload.get("content_scope", "shared_local") == "shared_local",
             }
         return payload
 
-    def _task_payload(self, *, module_id: str, topic_id: str, task_id: str, task_name: str, task_type: str):
-        return {
+    def _task_payload(
+        self,
+        *,
+        module_id: str,
+        topic_id: str,
+        task_id: str,
+        task_name: str,
+        task_type: str,
+        workspace_meta=None,
+    ):
+        payload = {
             "task_data": {
                 "type": task_type,
                 "name": task_name,
@@ -110,6 +150,10 @@ class _EditorStorageStub:
             },
             "task_dir": f"/virtual/{module_id}/{topic_id}/{task_id}",
         }
+        fields = self._workspace_fields(workspace_meta)
+        payload["metadata"].update(fields)
+        payload["task_data"]["meta"].update(fields)
+        return payload
 
     def load_modules(self):
         if self.fail_read_operation == "load_modules":
@@ -119,7 +163,15 @@ class _EditorStorageStub:
             )
         return self._clone_modules()
 
-    def build_task_draft_bootstrap(self, module_id, topic_id, task_name, task_type, preferred_task_id=None):
+    def build_task_draft_bootstrap(
+        self,
+        module_id,
+        topic_id,
+        task_name,
+        task_type,
+        preferred_task_id=None,
+        workspace_meta=None,
+    ):
         if self.fail_write_operation == "build_task_draft_bootstrap":
             raise HostedShadowWriteFallbackDisabledError(
                 "build_task_draft_bootstrap",
@@ -136,26 +188,27 @@ class _EditorStorageStub:
                     task_id=task_id,
                     task_name=task_name,
                     task_type=task_type,
+                    workspace_meta=workspace_meta,
                 ),
                 "is_new": True,
             },
         }
 
-    def create_module(self, module_id, name):
+    def create_module(self, module_id, name, workspace_meta=None):
         if self.fail_write_operation == "create_module":
             raise HostedShadowWriteFallbackDisabledError(
                 "create_module",
                 reason="test_editor_module_create_blocked",
             )
-        self.modules.append(
-            {
-                "id": module_id,
-                "name": name,
-                "created_via": "manual_editor",
-                "content_scope": "shared_local",
-                "topics": [],
-            }
-        )
+        payload = {
+            "id": module_id,
+            "name": name,
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+            "topics": [],
+        }
+        payload.update(self._workspace_fields(workspace_meta))
+        self.modules.append(payload)
         return True
 
     def create_topic(self, module_id, topic_id, name, theory_link=None, workspace_meta=None):
@@ -174,6 +227,7 @@ class _EditorStorageStub:
                 "created_via": "manual_editor",
                 "content_scope": "shared_local",
                 "tasks": [],
+                **self._workspace_fields(workspace_meta),
             }
         )
         return True
@@ -194,6 +248,7 @@ class _EditorStorageStub:
             task_id=task_id,
             task_name=task_name,
             task_type=task_type,
+            workspace_meta=workspace_meta,
         )
         self.tasks[(module_id, topic_id, task_id)] = copy.deepcopy(payload)
         topic.setdefault("tasks", []).append(
@@ -202,6 +257,7 @@ class _EditorStorageStub:
                 topic_id=topic_id,
                 task_id=task_id,
                 task_name=task_name,
+                workspace_meta=workspace_meta,
             )
         )
         return task_id
@@ -245,6 +301,7 @@ class _EditorStorageStub:
                         topic_id=topic_id,
                         task_id=task_id,
                         task_name=task_name,
+                        workspace_meta=metadata,
                     )
                 )
                 break
@@ -255,6 +312,7 @@ class _EditorStorageStub:
                     topic_id=topic_id,
                     task_id=task_id,
                     task_name=task_name,
+                    workspace_meta=metadata,
                 )
             )
         self.tasks[(module_id, topic_id, task_id)] = normalized
@@ -290,6 +348,7 @@ def _install_hosted_ctx(monkeypatch, tmp_path, *, storage_service):
     monkeypatch.setenv("ACTRA_RUNTIME_MODE", "hosted_web")
     monkeypatch.delenv("ACTRA_HOSTED_DEV_AUTH_BRIDGE", raising=False)
     monkeypatch.delenv("ACTRA_ENABLE_HOSTED_SHADOW_WRITE_FALLBACK", raising=False)
+    storage_service.modules_dir = tmp_path / "modules"
     app_ctx = type(
         "Ctx",
         (),
@@ -298,6 +357,7 @@ def _install_hosted_ctx(monkeypatch, tmp_path, *, storage_service):
             "theory_service": object(),
             "catalog_service": object(),
             "user_service": _DummyHostedUserService(),
+            "workspace_limits_service": _WorkspaceLimitsStub(),
             "data_dir": tmp_path,
             "user_id": "",
         },
@@ -349,6 +409,9 @@ def test_hosted_task_editor_crud_flow_uses_single_hosted_truth(client, monkeypat
     assert bootstrap_payload["ok"] is True
     task_id = bootstrap_payload["task_id"]
     assert bootstrap_payload["task"]["is_new"] is True
+    assert bootstrap_payload["task"]["metadata"]["created_by_user_id"] == "editor-user"
+    assert bootstrap_payload["task"]["metadata"]["updated_by_user_id"] == "editor-user"
+    assert bootstrap_payload["task"]["task_data"]["meta"]["created_by_user_id"] == "editor-user"
 
     save_payload = bootstrap_payload["task"]
     save_payload["task_data"]["content"]["questions"] = [
@@ -374,6 +437,8 @@ def test_hosted_task_editor_crud_flow_uses_single_hosted_truth(client, monkeypat
     loaded_task = load_response.get_json()["task"]
     assert loaded_task["metadata"]["id"] == task_id
     assert loaded_task["metadata"]["name"] == "Hosted Saved Task"
+    assert loaded_task["metadata"]["created_by_user_id"] == "editor-user"
+    assert loaded_task["metadata"]["updated_by_user_id"] == "editor-user"
     assert loaded_task["task_data"]["content"]["questions"][0]["text"] == "Hosted question"
 
     catalog_response = client.get("/api/editor/catalog")
@@ -410,12 +475,16 @@ def test_hosted_task_editor_hides_foreign_owned_tasks_in_catalog_and_load(client
         {
             "id": "module_1",
             "name": "Module 1",
+            "created_by_user_id": "editor-user",
+            "updated_by_user_id": "editor-user",
             "created_via": "manual_editor",
             "content_scope": "shared_local",
             "topics": [
                 {
                     "id": "topic_1",
                     "name": "Topic 1",
+                    "created_by_user_id": "editor-user",
+                    "updated_by_user_id": "editor-user",
                     "created_via": "manual_editor",
                     "content_scope": "shared_local",
                     "tasks": [
@@ -424,6 +493,7 @@ def test_hosted_task_editor_hides_foreign_owned_tasks_in_catalog_and_load(client
                             topic_id="topic_1",
                             task_id="task_visible",
                             task_name="Visible task",
+                            owner_id="editor-user",
                         ),
                         storage._task_ref_payload(
                             module_id="module_1",
@@ -443,6 +513,12 @@ def test_hosted_task_editor_hides_foreign_owned_tasks_in_catalog_and_load(client
         task_id="task_visible",
         task_name="Visible task",
         task_type="test",
+        workspace_meta={
+            "created_by_user_id": "editor-user",
+            "updated_by_user_id": "editor-user",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+        },
     )
     foreign_task = storage._task_payload(
         module_id="module_1",
@@ -476,6 +552,113 @@ def test_hosted_task_editor_hides_foreign_owned_tasks_in_catalog_and_load(client
     foreign_response = client.get("/api/editor/task/module_1/topic_1/task_foreign")
     assert foreign_response.status_code == 404
     assert foreign_response.get_json()["error"] == "task_not_found"
+
+
+def test_hosted_task_editor_hides_ownerless_legacy_catalog_entries(client, monkeypatch, tmp_path):
+    storage = _EditorStorageStub()
+    storage.modules = [
+        {
+            "id": "legacy_module",
+            "name": "Legacy Module",
+            "created_via": "legacy_unknown",
+            "content_scope": "shared_local",
+            "topics": [
+                {
+                    "id": "legacy_topic",
+                    "name": "Legacy Topic",
+                    "created_via": "legacy_unknown",
+                    "content_scope": "shared_local",
+                    "tasks": [
+                        storage._task_ref_payload(
+                            module_id="legacy_module",
+                            topic_id="legacy_topic",
+                            task_id="legacy_task",
+                            task_name="Legacy Task",
+                        )
+                    ],
+                }
+            ],
+        }
+    ]
+    storage.tasks[("legacy_module", "legacy_topic", "legacy_task")] = storage._task_payload(
+        module_id="legacy_module",
+        topic_id="legacy_topic",
+        task_id="legacy_task",
+        task_name="Legacy Task",
+        task_type="test",
+    )
+
+    _install_hosted_ctx(monkeypatch, tmp_path, storage_service=storage)
+    _login(client)
+
+    catalog_response = client.get("/api/editor/catalog")
+    assert catalog_response.status_code == 200
+    assert catalog_response.get_json()["modules"] == []
+
+    task_response = client.get("/api/editor/task/legacy_module/legacy_topic/legacy_task")
+    assert task_response.status_code == 404
+    assert task_response.get_json()["error"] == "task_not_found"
+
+
+def test_hosted_task_editor_blocks_foreign_owned_task_save_and_delete(client, monkeypatch, tmp_path):
+    storage = _EditorStorageStub()
+    storage.modules = [
+        {
+            "id": "module_1",
+            "name": "Module 1",
+            "created_by_user_id": "other-user",
+            "updated_by_user_id": "other-user",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+            "topics": [
+                {
+                    "id": "topic_1",
+                    "name": "Topic 1",
+                    "created_by_user_id": "other-user",
+                    "updated_by_user_id": "other-user",
+                    "created_via": "manual_editor",
+                    "content_scope": "shared_local",
+                    "tasks": [
+                        storage._task_ref_payload(
+                            module_id="module_1",
+                            topic_id="topic_1",
+                            task_id="task_foreign",
+                            task_name="Foreign task",
+                            owner_id="other-user",
+                        )
+                    ],
+                }
+            ],
+        }
+    ]
+    foreign_task = storage._task_payload(
+        module_id="module_1",
+        topic_id="topic_1",
+        task_id="task_foreign",
+        task_name="Foreign task",
+        task_type="test",
+        workspace_meta={
+            "created_by_user_id": "other-user",
+            "updated_by_user_id": "other-user",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+        },
+    )
+    storage.tasks[("module_1", "topic_1", "task_foreign")] = foreign_task
+
+    _install_hosted_ctx(monkeypatch, tmp_path, storage_service=storage)
+    _login(client)
+
+    save_response = client.post(
+        "/api/editor/task/module_1/topic_1/task_foreign",
+        json=foreign_task,
+    )
+    assert save_response.status_code == 404
+    assert save_response.get_json()["error"] == "task_not_found"
+
+    delete_response = client.delete("/api/editor/task/module_1/topic_1/task_foreign")
+    assert delete_response.status_code == 404
+    assert delete_response.get_json()["error"] == "task_not_found"
 
 
 def test_hosted_editor_catalog_returns_degraded_when_shadow_read_is_blocked(client, monkeypatch, tmp_path):
