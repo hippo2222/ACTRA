@@ -519,18 +519,6 @@ class ImportManager {
                     ${this.renderWorkspaceImportNodePreview('Теории', result.theories, 'Теорий нет.')}
                 </div>
 
-                ${isMaterialAnalysisMode ? `
-                    <div class="mt-3 flex items-start gap-2 p-3 bg-primary-lighter border border-primary-light rounded-lg">
-                        <span class="material-symbols-outlined text-primary text-[20px]">analytics</span>
-                        <div class="text-xs text-primary-dark">
-                            <p class="font-medium mb-1">Формат ответа для анализа материала:</p>
-                            <p>&lt;human_summary&gt; - краткая оценка материала</p>
-                            <p>&lt;analysis_json&gt; - образовательные единицы и рекомендации</p>
-                            <p class="mt-1">После разбора анализа выберите рекомендуемый тип и сгенерируйте уже сами задания в одном из импортируемых форматов.</p>
-                        </div>
-                    </div>
-                ` : ''}
-                ${manualAnalysisPreview}
             </div>
         `;
     }
@@ -1237,19 +1225,6 @@ class ImportManager {
                     </select>
                 </div>
 
-                ${isMaterialAnalysisMode ? `
-                    <div class="mt-3 flex items-start gap-2 p-3 bg-primary-lighter border border-primary-light rounded-lg">
-                        <span class="material-symbols-outlined text-primary text-[20px]">analytics</span>
-                        <div class="text-xs text-primary-dark">
-                            <p class="font-medium mb-1">Формат ответа для анализа материала:</p>
-                            <p>&lt;human_summary&gt; - краткая оценка материала</p>
-                            <p>&lt;analysis_json&gt; - образовательные единицы и рекомендации</p>
-                            <p class="mt-1">После разбора анализа выберите рекомендуемый тип и сгенерируйте уже сами задания в одном из импортируемых форматов.</p>
-                        </div>
-                    </div>
-                ` : ''}
-
-                ${manualAnalysisPreview}
             </div>
         `;
     }
