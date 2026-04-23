@@ -3028,9 +3028,18 @@ ${remaining}
                         <h4 class="text-sm font-bold text-text-main">Разобранный анализ материала</h4>
                         <p class="text-xs text-text-secondary mt-1">Теперь можно выбрать рекомендованный тип и перейти к генерации задач.</p>
                     </div>
-                    <div class="text-right text-xs text-text-secondary">
-                        <div>Единиц: <span class="font-bold text-text-main">${units.length}</span></div>
-                        <div>Рекомендаций: <span class="font-bold text-text-main">${recommendations.length}</span></div>
+                    <div class="flex flex-col items-end gap-2">
+                        <div class="text-right text-xs text-text-secondary">
+                            <div>Единиц: <span class="font-bold text-text-main">${units.length}</span></div>
+                            <div>Рекомендаций: <span class="font-bold text-text-main">${recommendations.length}</span></div>
+                        </div>
+                        ${session ? `
+                            <button
+                                onclick="dashboard.importManager.archiveActiveManualAnalysisSession()"
+                                class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                                Сохранить в архив
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
 
