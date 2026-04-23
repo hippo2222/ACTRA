@@ -770,8 +770,6 @@
       img.className = "h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-[1.02]";
       img.draggable = false;
 
-      const shade = _createEl("div", "absolute inset-0 bg-scrim group-hover:bg-transparent transition-colors", "");
-
       const zoomBtn = document.createElement("button");
       zoomBtn.type = "button";
       zoomBtn.className =
@@ -795,7 +793,6 @@
       zoomBtn.addEventListener("click", open);
 
       wrapper.appendChild(img);
-      wrapper.appendChild(shade);
       wrapper.appendChild(zoomBtn);
       card.appendChild(wrapper);
     }

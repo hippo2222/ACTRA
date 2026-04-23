@@ -60,6 +60,7 @@ describe("OpenAnswerUI restoreInput", () => {
     const preview = container.querySelector(".group.relative");
     expect(preview).toBeTruthy();
     expect(preview.className).toContain("max-w-3xl");
+    expect(preview.querySelector(".bg-scrim")).toBeNull();
     expect(container.textContent).toContain("Inspect image");
     expect(container.textContent).not.toContain("Пустой ответ отправить нельзя");
 
