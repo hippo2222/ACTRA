@@ -538,6 +538,51 @@ def test_editor_import_export_endpoints(client):
     assert "+Correct" in body
 
 
+def test_editor_import_cache_can_be_discarded(client, temp_test_task):
+    module_id, topic_id, task_id, _task_dir = temp_test_task
+
+    export_resp = client.post(
+        "/api/editor/export/tasks",
+        json={
+            "tasks": [
+                {
+                    "module_id": module_id,
+                    "topic_id": topic_id,
+                    "task_id": task_id,
+                }
+            ]
+        },
+    )
+    assert export_resp.status_code == 200
+
+    check_resp = client.post(
+        "/api/editor/import/check",
+        data={"file": (io.BytesIO(export_resp.data), "task_bundle.zip")},
+        content_type="multipart/form-data",
+    )
+    assert check_resp.status_code == 200
+    check_data = check_resp.get_json()
+    assert check_data["ok"] is True
+    cache_id = str(check_data.get("cache_id") or "")
+    assert cache_id
+
+    from routes import editor_routes
+
+    temp_path, _ = editor_routes._import_archive_cache[cache_id]
+    assert Path(temp_path).exists()
+
+    discard_resp = client.post(
+        "/api/editor/import/discard-cache",
+        json={"cache_id": cache_id},
+    )
+    assert discard_resp.status_code == 200
+    discard_data = discard_resp.get_json()
+    assert discard_data["ok"] is True
+    assert discard_data["removed"] is True
+    assert cache_id not in editor_routes._import_archive_cache
+    assert not Path(temp_path).exists()
+
+
 def test_editor_save_copies_images(client, temp_test_task):
     module_id, topic_id, task_id, task_dir = temp_test_task
     task_json = task_dir / "task.json"

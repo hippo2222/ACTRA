@@ -18,6 +18,12 @@ class BaseEditor {
         this.validationFeedbackState = {
             lastBlockingToastKey: '',
         };
+        this._navigationGuardsSetup = false;
+        this._beforeUnloadHandler = null;
+        this._historyGuardHandler = null;
+        this._historyGuardToken = '';
+        this._historyGuardPromptOpen = false;
+        this._historyGuardDisabled = false;
 
         // Undo/Redo support
         this.undoManager = new UndoManager(50);
@@ -26,6 +32,7 @@ class BaseEditor {
         // P8 bridge state (theory report <-> manual editor)
         this.editorTheoryBridgeStorageKey = 'rp_editor_theory_bridge_v1';
         this.editorTheoryGroundingPrefsStorageKey = 'rp_editor_theory_grounding_p8_prefs_v1';
+        this.manualAnalysisArchiveStorageKey = 'editor_manual_analysis_archive_v1';
         this.theoryGrounding = {
             panelOpen: false,
             bridgeContext: null,
@@ -43,6 +50,13 @@ class BaseEditor {
             trustLevel: 'normal',
             selectedUnitIds: new Set(),
             selectedChunkIds: new Set(),
+            items: [],
+            itemsLoading: false,
+            itemsError: '',
+            selectedAnalysisId: '',
+            selectedAnalysisData: null,
+            showAll: false,
+            currentTaskType: '',
         };
         this.difficultyAuthoring = {
             metaCache: new Map(),
@@ -57,6 +71,8 @@ class BaseEditor {
                 expanded: false,
             },
         };
+
+        this.setupNavigationGuards();
     }
 
     // ===== TASK CONTEXT =====
@@ -1220,13 +1236,12 @@ class BaseEditor {
 
         if (!container || !dot || !text) {
             // Fallback for older layouts or if elements not found
-            const legacyIndicator = document.querySelector('.save-status');
-            if (legacyIndicator && !container) {
+            const legacyIndicator = document.querySelector('.save-status');            if (legacyIndicator && !container) {
                 if (type === 'blocking') {
                     legacyIndicator.textContent = resolvedOptions.message || '! Требуется правка';
                     legacyIndicator.className = 'save-status unsaved text-xs font-bold text-error-dark';
                 } else if (this.hasUnsavedChanges) {
-                    legacyIndicator.textContent = 'Несохранено';
+                    legacyIndicator.textContent = 'Не сохранено';
                     legacyIndicator.className = 'save-status unsaved text-xs font-bold text-warning-dark';
                 } else {
                     legacyIndicator.textContent = 'Сохранено';
@@ -1510,13 +1525,23 @@ class BaseEditor {
                 <span class="empty-state-card__icon h-16 w-16 border border-error-light bg-error-lighter text-error-text"><span class="material-symbols-outlined text-4xl">error</span></span>
                 <h3 class="text-xl font-bold text-text-main mb-2">Ошибка загрузки</h3>
                 <p class="text-text-secondary mb-6">${safeMessage}</p>
-                <button onclick="window.navigateWithTransition ? window.navigateWithTransition('/ui/editor') : (window.location.href = '/ui/editor')" class="btn-secondary inline-flex w-full items-center justify-center gap-2">
+                <button id="fatal-error-back-btn" class="btn-secondary inline-flex w-full items-center justify-center gap-2">
                     <span class="material-symbols-outlined">arrow_back</span>
                     Вернуться в меню
                 </button>
             </div>
         `;
         document.body.appendChild(overlay);
+        const backBtn = overlay.querySelector('#fatal-error-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                if (typeof window.navigateWithTransition === 'function') {
+                    window.navigateWithTransition('/ui/editor');
+                    return;
+                }
+                window.location.href = '/ui/editor';
+            });
+        }
     }
 
     /**
@@ -1868,6 +1893,14 @@ class BaseEditor {
         return 'editor-theory-grounding-beacon';
     }
 
+    _theoryGroundingHeaderHost() {
+        const header = document.querySelector('header');
+        return {
+            header: header instanceof HTMLElement ? header : null,
+            host: header instanceof HTMLElement ? (header.parentElement || null) : null,
+        };
+    }
+
     _hasTheoryGroundingContext(taskMeta = null, bridge = null) {
         const meta = taskMeta || this._getTaskTheoryLinkMeta();
         const bridgeContext = bridge !== null ? bridge : this._readEditorTheoryBridgeContext();
@@ -1940,13 +1973,7 @@ class BaseEditor {
     renderTheoryGroundingBeacon(taskMeta = null, bridge = null, warnings = []) {
         const meta = taskMeta || this._getTaskTheoryLinkMeta();
         const bridgeContext = bridge !== null ? bridge : this._readEditorTheoryBridgeContext();
-        const shouldShow = this._hasTheoryGroundingContext(meta, bridgeContext) || Boolean(this.theoryGrounding?.panelOpen);
         let beacon = document.getElementById(this._theoryGroundingBeaconId());
-
-        if (!shouldShow) {
-            if (beacon) beacon.remove();
-            return;
-        }
 
         const saveStatus = document.getElementById('save-status-container');
         const saveButton = document.getElementById('save-task-btn');
@@ -1993,6 +2020,161 @@ class BaseEditor {
         if (!(this.theoryGrounding.selectedChunkIds instanceof Set)) {
             this.theoryGrounding.selectedChunkIds = new Set();
         }
+        if (!Array.isArray(this.theoryGrounding.items)) {
+            this.theoryGrounding.items = [];
+        }
+        if (typeof this.theoryGrounding.selectedAnalysisId !== 'string') {
+            this.theoryGrounding.selectedAnalysisId = '';
+        }
+        if (typeof this.theoryGrounding.selectedAnalysisData === 'undefined') {
+            this.theoryGrounding.selectedAnalysisData = null;
+        }
+    }
+
+    _sanitizeTheoryAnalysisText(value, fallback = '') {
+        const text = String(value == null ? '' : value).trim();
+        if (!text) return String(fallback || '').trim();
+        const blockedMarkers = new Set([
+            'ai_mode_in_progress',
+            'analysis_pending',
+            'network_error',
+            'parse_failed',
+            'generation_failed',
+            'material_analysis',
+        ]);
+        const normalized = text.toLowerCase();
+        const containsBlockedMarker = [...blockedMarkers].some((marker) => normalized.includes(marker));
+        return containsBlockedMarker
+            ? String(fallback || '').trim()
+            : text;
+    }
+
+    _theoryGroundingCompositeId(source, id) {
+        return `${String(source || '').trim()}:${String(id || '').trim()}`;
+    }
+
+    _normalizeTheoryAnalysisItem(payload, source, id, extra = {}) {
+        const analysisPayload = (payload && typeof payload === 'object') ? payload : null;
+        const recommendations = Array.isArray(analysisPayload?.recommendations) ? analysisPayload.recommendations : [];
+        const rawTitle = String(
+            extra.title
+            || analysisPayload?.source_file_name
+            || analysisPayload?.human_summary
+            || analysisPayload?.ai_run_id
+            || id
+            || 'Анализ без названия'
+        );
+        const rawSummary = String(
+            extra.summary
+            || analysisPayload?.human_summary
+            || ''
+        );
+        return {
+            source,
+            id: String(id || '').trim(),
+            composite_id: this._theoryGroundingCompositeId(source, id),
+            title: this._sanitizeTheoryAnalysisText(rawTitle, 'Анализ без названия'),
+            summary: this._sanitizeTheoryAnalysisText(rawSummary, ''),
+            updated_at: String(
+                extra.updated_at
+                || analysisPayload?.updated_at
+                || analysisPayload?.created_at
+                || ''
+            ),
+            analysis_payload: analysisPayload,
+            available_task_types: [...new Set(recommendations.map((rec) => String(rec?.task_type || '').trim().toUpperCase()).filter(Boolean))],
+        };
+    }
+
+    _readManualTheoryAnalysisArchive() {
+        try {
+            const raw = window.localStorage.getItem(this.manualAnalysisArchiveStorageKey);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (_) {
+            return [];
+        }
+    }
+
+    _normalizeManualTheoryArchiveItem(entry) {
+        const session = (entry?.session && typeof entry.session === 'object') ? entry.session : null;
+        const payload = (session?.analysis && typeof session.analysis === 'object') ? session.analysis : null;
+        if (!payload?.ok) return null;
+        const id = String(entry?.id || session?.id || '').trim();
+        if (!id) return null;
+        return this._normalizeTheoryAnalysisItem(payload, 'manual_archive', id, {
+            title: [session?.module_name || session?.module_id || '', session?.topic_name || session?.topic_id || '']
+                .filter(Boolean)
+                .join(' / ') || payload?.source_file_name || id,
+            updated_at: entry?.archived_at || session?.updated_at || session?.created_at || '',
+        });
+    }
+
+    _normalizeServerTheoryAnalysisItem(row) {
+        const rid = String(row?.ai_run_id || '').trim();
+        if (!rid) return null;
+        return this._normalizeTheoryAnalysisItem(row?.analysis_json || null, 'server_analysis', rid, {
+            title: row?.source_file_name || row?.human_summary || rid,
+            summary: row?.human_summary || '',
+            updated_at: row?.updated_at || row?.created_at || '',
+        });
+    }
+
+    _getTheoryGroundingSelectedItem() {
+        const items = Array.isArray(this.theoryGrounding?.items) ? this.theoryGrounding.items : [];
+        const selectedId = String(this.theoryGrounding?.selectedAnalysisId || '').trim();
+        if (selectedId) {
+            return items.find((item) => String(item?.composite_id || '') === selectedId) || null;
+        }
+        const selectedRunId = String(this.theoryGrounding?.selectedRunId || '').trim();
+        if (selectedRunId) {
+            return items.find((item) => String(item?.id || '') === selectedRunId) || null;
+        }
+        return null;
+    }
+
+    _theoryGroundingCurrentTaskType() {
+        const taskType = String(this.taskType || this.taskTypeParam || this.task?.task_data?.type || '').trim().toLowerCase();
+        if (taskType === 'open_answer') return 'OPEN_ANSWER';
+        if (taskType === 'sequence') return 'SEQUENCE';
+        if (taskType === 'test') return 'TEST';
+        if (taskType === 'draw' || this.isDrawTask) return 'DRAW';
+        if (taskType === 'click') {
+            if (typeof this.isErrorDetectionTask === 'function' && this.isErrorDetectionTask()) {
+                const mode = String(this.errorDetection?.mode || this.task?.task_data?.content?.mode || 'text_errors').trim();
+                return mode === 'text_choice' ? 'CLICK_TEXT' : 'CLICK_WORDS';
+            }
+            return 'CLICK';
+        }
+        return String(taskType || '').trim().toUpperCase();
+    }
+
+    _theoryGroundingTaskTypeLabel(taskType) {
+        const normalized = String(taskType || '').trim().toUpperCase();
+        const labels = {
+            OPEN_ANSWER: 'Открытый ответ',
+            SEQUENCE: 'Последовательность',
+            TEST: 'Тест',
+            CLICK: 'Клик',
+            CLICK_TEXT: 'Клик/Ошибки (тексты)',
+            CLICK_WORDS: 'Клик/Ошибки (слова)',
+            DRAW: 'Рисование по изображению',
+        };
+        return labels[normalized] || normalized || 'Тип не определён';
+    }
+
+    _theoryGroundingTypeRecommendation(payload, taskType) {
+        const normalized = String(taskType || '').trim().toUpperCase();
+        const recommendations = Array.isArray(payload?.recommendations) ? payload.recommendations : [];
+        return recommendations.find((rec) => String(rec?.task_type || '').trim().toUpperCase() === normalized) || null;
+    }
+
+    _theoryGroundingRelatedUnits(payload, recommendation) {
+        const units = Array.isArray(payload?.educational_units) ? payload.educational_units : [];
+        const covers = new Set(Array.isArray(recommendation?.covers_units) ? recommendation.covers_units.map((id) => Number(id)) : []);
+        if (!covers.size) return [];
+        return units.filter((unit) => covers.has(Number(unit?.id)));
     }
 
     cleanupPersistedTaskRoute() {
@@ -2212,22 +2394,47 @@ class BaseEditor {
     async loadTheoryGroundingAnalyses() {
         this._ensureTheoryGroundingSets();
         this.theoryGrounding.analysesLoading = true;
+        this.theoryGrounding.itemsLoading = true;
         this.theoryGrounding.analysesError = '';
+        this.theoryGrounding.itemsError = '';
         this.renderTheoryGroundingPanel();
         try {
             const resp = await fetch('/api/editor/ai/analyses?limit=15');
             const data = await resp.json();
+            const manualItems = this._readManualTheoryAnalysisArchive()
+                .map((entry) => this._normalizeManualTheoryArchiveItem(entry))
+                .filter(Boolean);
             if (data?.ok) {
                 this.theoryGrounding.analyses = Array.isArray(data.items) ? data.items : [];
+                const serverItems = this.theoryGrounding.analyses
+                    .map((row) => this._normalizeServerTheoryAnalysisItem(row))
+                    .filter(Boolean);
+                this.theoryGrounding.items = [...manualItems, ...serverItems];
             } else {
                 this.theoryGrounding.analyses = [];
+                this.theoryGrounding.items = [...manualItems];
                 this.theoryGrounding.analysesError = data?.error || data?.message || this.aiUxMessage('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.');
+                this.theoryGrounding.itemsError = this.theoryGrounding.analysesError;
             }
         } catch (_) {
             this.theoryGrounding.analyses = [];
+            this.theoryGrounding.items = this._readManualTheoryAnalysisArchive()
+                .map((entry) => this._normalizeManualTheoryArchiveItem(entry))
+                .filter(Boolean);
             this.theoryGrounding.analysesError = this.aiUxMessage('p8.analysis.list_load_failed', 'Не удалось загрузить список анализов. Можно повторить позже.');
+            this.theoryGrounding.itemsError = this.theoryGrounding.analysesError;
         } finally {
             this.theoryGrounding.analysesLoading = false;
+            this.theoryGrounding.itemsLoading = false;
+            if (!this.theoryGrounding.selectedAnalysisId) {
+                const selectedRunId = String(this.theoryGrounding.selectedRunId || '').trim();
+                const matched = (Array.isArray(this.theoryGrounding.items) ? this.theoryGrounding.items : [])
+                    .find((item) => String(item?.id || '') === selectedRunId);
+                if (matched) {
+                    this.theoryGrounding.selectedAnalysisId = String(matched.composite_id || '');
+                    this.theoryGrounding.selectedAnalysisData = matched;
+                }
+            }
             this.renderTheoryGroundingPanel();
         }
     }
@@ -2261,18 +2468,28 @@ class BaseEditor {
             const data = await resp.json();
             if (data?.ok) {
                 this.theoryGrounding.analysisData = data;
+                const matchedItem = (Array.isArray(this.theoryGrounding.items) ? this.theoryGrounding.items : [])
+                    .find((item) => String(item?.id || '') === rid) || null;
+                this.theoryGrounding.selectedAnalysisId = matchedItem?.composite_id || this._theoryGroundingCompositeId('server_analysis', rid);
+                this.theoryGrounding.selectedAnalysisData = this._normalizeTheoryAnalysisItem(data, matchedItem?.source || 'server_analysis', rid, {
+                    title: matchedItem?.title || data?.source_file_name || data?.human_summary || rid,
+                    summary: matchedItem?.summary || data?.human_summary || '',
+                    updated_at: matchedItem?.updated_at || data?.updated_at || data?.created_at || '',
+                });
                 this.theoryGrounding.analysisError = '';
                 this._hydrateTheorySelectionsFromTaskMetaAndBridge();
                 await this.refreshTheoryGroundingCoverage();
                 if (!silent) this.showToast(this.aiUxMessage('p8.analysis.loaded', 'Анализ открыт для ручной привязки.'), 'success');
             } else {
                 this.theoryGrounding.analysisData = null;
+                this.theoryGrounding.selectedAnalysisData = null;
                 this.theoryGrounding.coverageData = null;
                 this.theoryGrounding.analysisError = data?.error || data?.message || this.aiUxMessage('p8.analysis.open_failed', 'Не удалось открыть анализ. Можно выбрать другой или продолжить без него.');
                 if (!silent) this.showToast(this.theoryGrounding.analysisError, 'warning');
             }
         } catch (_) {
             this.theoryGrounding.analysisData = null;
+            this.theoryGrounding.selectedAnalysisData = null;
             this.theoryGrounding.coverageData = null;
             this.theoryGrounding.analysisError = this.aiUxMessage('p8.analysis.open_failed', 'Не удалось открыть анализ. Можно выбрать другой или продолжить без него.');
             if (!silent) this.showToast(this.theoryGrounding.analysisError, 'warning');
@@ -2331,14 +2548,24 @@ class BaseEditor {
 
     setTheoryGroundingSelectedRun(runId) {
         const rid = String(runId || '').trim();
-        this.theoryGrounding.selectedRunId = rid || null;
-        this._syncTheoryGroundingRunPrefsState(rid);
+        this.theoryGrounding.selectedAnalysisId = rid || '';
+        const selectedItem = (Array.isArray(this.theoryGrounding.items) ? this.theoryGrounding.items : [])
+            .find((item) => String(item?.composite_id || '') === rid) || null;
+        this.theoryGrounding.selectedAnalysisData = selectedItem;
+        this.theoryGrounding.selectedRunId = selectedItem?.id || rid || null;
+        this._syncTheoryGroundingRunPrefsState(this.theoryGrounding.selectedRunId);
         this.theoryGrounding.analysisData = null;
         this.theoryGrounding.coverageData = null;
         this.theoryGrounding.analysisError = '';
         this.theoryGrounding.coverageError = '';
         this.renderTheoryGroundingPanel();
-        if (rid) this.openTheoryGroundingAnalysis(rid).catch(() => {});
+        if (selectedItem?.source === 'manual_archive' && selectedItem?.analysis_payload) {
+            this.theoryGrounding.analysisData = selectedItem.analysis_payload;
+            this.theoryGrounding.selectedAnalysisData = selectedItem;
+            this.renderTheoryGroundingPanel();
+            return;
+        }
+        if (this.theoryGrounding.selectedRunId) this.openTheoryGroundingAnalysis(this.theoryGrounding.selectedRunId).catch(() => {});
     }
 
     toggleTheoryGroundingUnit(unitId, checked) {
@@ -2463,77 +2690,44 @@ class BaseEditor {
         }
         return warnings;
     }
+    _positionTheoryGroundingPanel(panel) {
+        if (!(panel instanceof HTMLElement)) return;
+        const card = panel.querySelector('[data-role="theory-grounding-card"]');
+        if (!(card instanceof HTMLElement)) return;
 
+        const { header } = this._theoryGroundingHeaderHost();
+        const headerRect = header instanceof HTMLElement ? header.getBoundingClientRect() : null;
+        const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 1280;
+        const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 800;
+        const margin = 16;
+        const headerLeft = Math.max(margin, headerRect?.left || margin);
+        const headerRight = Math.min(viewportWidth - margin, headerRect?.right || (viewportWidth - margin));
+        const cardWidth = Math.max(320, headerRight - headerLeft);
+        const left = headerLeft;
+        const top = Math.max(margin, (headerRect?.bottom || 0) + 10);
+        const maxHeight = Math.max(220, viewportHeight - top - margin);
+
+        card.style.position = 'fixed';
+        card.style.left = `${left}px`;
+        card.style.top = `${top}px`;
+        card.style.width = `${cardWidth}px`;
+        card.style.maxHeight = `${maxHeight}px`;
+    }
     renderTheoryGroundingPanel() {
         this._ensureTheoryGroundingSets();
+        this.theoryGrounding.currentTaskType = this._theoryGroundingCurrentTaskType();
+        this.renderTheoryGroundingBeacon();
 
         const state = this.theoryGrounding;
-        const bridge = this._readEditorTheoryBridgeContext();
-        state.bridgeContext = bridge;
-        const taskMeta = this._getTaskTheoryLinkMeta();
-        const selectedRunId = String(state.selectedRunId || '').trim();
-        const analysis = state.analysisData && typeof state.analysisData === 'object' ? state.analysisData : null;
-        const units = Array.isArray(analysis?.educational_units) ? analysis.educational_units : [];
-        const chunks = Array.isArray(analysis?.learning_chunks) ? analysis.learning_chunks : [];
-        const coverage = state.coverageData && typeof state.coverageData === 'object' ? state.coverageData : null;
-        const summary = coverage?.summary || {};
-        const currentRow = this._theoryGroundingCurrentTaskCoverageRow();
-        const prefs = this._syncTheoryGroundingRunPrefsState(selectedRunId);
-        const coverageIgnored = prefs.ignoreCoverage;
-        const trustLevel = prefs.trustLevel;
         const warnings = this._computeTheoryGroundingWarnings();
-        const hasWarning = warnings.length > 0;
-        const hasContext = this._hasTheoryGroundingContext(taskMeta, bridge);
+        const { header } = this._theoryGroundingHeaderHost();
         let panel = document.getElementById(this._theoryGroundingContainerId());
 
-        this.renderTheoryGroundingBeacon(taskMeta, bridge, warnings);
-
-        if (!hasContext && !state.panelOpen) {
+        if (!state.panelOpen) {
             if (panel) panel.remove();
             return;
         }
-
-        const analysisOptions = (Array.isArray(state.analyses) ? state.analyses : []).map((row) => {
-            const rid = String(row?.ai_run_id || '').trim();
-            if (!rid) return '';
-            const selected = rid === selectedRunId ? 'selected' : '';
-            const label = `${row?.source_file_name || row?.human_summary || rid} (${row?.units_count || 0} разделов / ${row?.learning_chunks_count || 0} фрагментов)`;
-            return `<option value="${this.escapeHtml(rid)}" ${selected}>${this.escapeHtml(label)}</option>`;
-        }).join('');
-
-        const unitSelector = units.length ? `
-            <div class="max-h-28 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1 p-2 space-y-1">
-                ${units.slice(0, 24).map((u) => {
-                    const uid = Number.parseInt(u?.id, 10);
-                    if (!Number.isFinite(uid)) return '';
-                    const checked = state.selectedUnitIds.has(uid) ? 'checked' : '';
-                    return `
-                        <label class="flex items-start gap-2 text-[11px] text-text-main">
-                            <input type="checkbox" ${checked} onchange="window.editor && window.editor.toggleTheoryGroundingUnit(${uid}, this.checked)" class="mt-0.5 text-primary focus:ring-primary">
-                            <span><span class="font-semibold">#${uid}</span> ${this.escapeHtml(u?.title || 'Раздел')}</span>
-                        </label>
-                    `;
-                }).join('')}
-                ${units.length > 24 ? `<div class="text-[10px] text-text-secondary">Показаны первые 24/${units.length}</div>` : ''}
-            </div>` : '<div class="text-[11px] text-text-secondary">Выберите анализ, чтобы увидеть список разделов.</div>';
-
-        const chunkSelector = chunks.length ? `
-            <div class="max-h-24 overflow-y-auto rounded-lg border border-border-subtle bg-surface-1 p-2 space-y-1">
-                ${chunks.slice(0, 20).map((c) => {
-                    const cid = String(c?.id || '').trim();
-                    if (!cid) return '';
-                    const checked = state.selectedChunkIds.has(cid) ? 'checked' : '';
-                    return `
-                        <label class="flex items-start gap-2 text-[11px] text-text-main">
-                            <input type="checkbox" ${checked} onchange="window.editor && window.editor.toggleTheoryGroundingChunk('${this.escapeHtml(cid)}', this.checked)" class="mt-0.5 text-primary focus:ring-primary">
-                            <span><span class="font-semibold">${this.escapeHtml(cid)}</span> ${this.escapeHtml(c?.title || '')}</span>
-                        </label>
-                    `;
-                }).join('')}
-                ${chunks.length > 20 ? `<div class="text-[10px] text-text-secondary">Показаны первые 20/${chunks.length}</div>` : ''}
-            </div>` : '<div class="text-[11px] text-text-secondary">Фрагменты пока недоступны или анализ ещё не выбран.</div>';
-
-        if (!state.panelOpen) {
+        if (!header) {
             if (panel) panel.remove();
             return;
         }
@@ -2541,109 +2735,143 @@ class BaseEditor {
         if (!panel) {
             panel = document.createElement('section');
             panel.id = this._theoryGroundingContainerId();
+        }
+        panel.className = 'fixed inset-0 z-[140]';
+        panel.style.pointerEvents = 'none';
+        if (panel.parentElement !== document.body) {
             document.body.appendChild(panel);
         }
 
-        panel.className = `fixed z-40 bottom-4 right-4 w-[min(28rem,calc(100vw-1rem))] max-h-[72vh] overflow-hidden rounded-xl border shadow-2xl ${hasWarning ? 'border-warning-light bg-warning-lighter' : 'border-border-subtle bg-surface-1'}`;
+        const items = Array.isArray(state.items) ? state.items : [];
+        const selectedItem = state.selectedAnalysisData || this._getTheoryGroundingSelectedItem();
+        const payload = selectedItem?.analysis_payload || null;
+        const currentType = String(state.currentTaskType || '').trim().toUpperCase();
+        const currentTypeLabel = this._theoryGroundingTaskTypeLabel(currentType);
+        const currentRec = payload ? this._theoryGroundingTypeRecommendation(payload, currentType) : null;
+        const shownUnits = payload ? this._theoryGroundingRelatedUnits(payload, currentRec) : [];
+        const sourceLabel = selectedItem?.source === 'manual_archive' ? 'Локальный архив' : 'AI-анализ';
+        const formattedDate = selectedItem?.updated_at ? new Date(selectedItem.updated_at).toLocaleString('ru-RU') : '';
+        const sanitizeLabel = (value, fallback = '') => this._sanitizeTheoryAnalysisText(value, fallback || '');
+
+        const renderTextList = (values = [], emptyText = '', maxItems = Infinity) => {
+            const list = Array.isArray(values) ? values.filter(Boolean) : [];
+            if (!list.length) {
+                return emptyText ? `<div class="text-[11px] text-text-secondary">${this.escapeHtml(emptyText)}</div>` : '';
+            }
+            return `
+                <div class="space-y-1">
+                    ${list.slice(0, Math.max(0, maxItems)).map((item) => `<div class="text-[11px] text-text-secondary bg-surface-1 border border-border-subtle rounded-lg px-2 py-1.5">${this.escapeHtml(String(item))}</div>`).join('')}
+                </div>
+            `;
+        };
+
+        const renderManualAuthoring = (manualAuthoring) => {
+            if (!manualAuthoring || typeof manualAuthoring !== 'object') return '';
+            return `
+                <div class="rounded-lg border border-warning-light bg-surface-2 p-3 space-y-1">
+                    <div class="text-[11px] font-semibold text-text-main">Визуальный ориентир</div>
+                    ${Array.isArray(manualAuthoring.figure_refs) && manualAuthoring.figure_refs.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Рисунки:</span> ${this.escapeHtml(manualAuthoring.figure_refs.slice(0, 3).join(', '))}</div>` : ''}
+                    ${Array.isArray(manualAuthoring.target_objects) && manualAuthoring.target_objects.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Что распознать:</span> ${this.escapeHtml(manualAuthoring.target_objects.slice(0, 3).join('; '))}</div>` : ''}
+                    ${manualAuthoring.task_stem_example ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Пример формулировки:</span> ${this.escapeHtml(String(manualAuthoring.task_stem_example))}</div>` : ''}
+                </div>
+            `;
+        };
+
+        const renderRecommendationCard = (rec) => {
+            const anchors = Array.isArray(rec?.assessable_anchors) ? rec.assessable_anchors.filter(Boolean) : [];
+            const candidates = Array.isArray(rec?.design_candidates) ? rec.design_candidates.filter(Boolean) : [];
+            const editorLabel = String(rec?.editor_label || this._theoryGroundingTaskTypeLabel(rec?.task_type || ''));
+            return `
+                <div class="rounded-xl border border-border-subtle bg-surface-2 p-3 space-y-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="text-sm font-semibold text-text-main">${this.escapeHtml(editorLabel)}</div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">текущий тип</span>
+                    </div>
+                    ${rec?.coverage_role ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Что проверяем:</span> ${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
+                    ${rec?.generation_focus ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Фокус:</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
+                    ${anchors.length ? `<div><div class="text-[11px] font-semibold text-text-main mb-1">Опоры</div>${renderTextList(anchors, '', 4)}</div>` : ''}
+                    ${candidates.length ? `<div><div class="text-[11px] font-semibold text-text-main mb-1">Идеи заданий</div>${renderTextList(candidates, '', 2)}</div>` : ''}
+                    ${renderManualAuthoring(rec?.manual_authoring)}
+                </div>
+            `;
+        };
+
         panel.innerHTML = `
-            <div class="p-3 border-b border-border-subtle bg-surface-1">
-                <div class="flex items-start justify-between gap-2">
-                    <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-[18px] ${hasWarning ? 'text-warning-text' : 'text-primary'}">hub</span>
-                            <div class="text-sm font-bold text-text-main">Связь с анализом</div>
-                            <span class="px-1.5 py-0.5 rounded-md border text-[10px] ${hasWarning ? 'border-warning-light bg-warning-light text-warning-text' : 'border-success-light bg-success-light text-success-text'}">
-                                ${hasWarning ? 'есть замечания' : 'активно'}
-                            </span>
+            <button type="button" data-role="theory-grounding-backdrop" onclick="window.editor && window.editor.toggleTheoryGroundingPanel(false)" class="absolute inset-0 bg-scrim/35 backdrop-blur-[1px]" style="pointer-events:auto;" aria-label="Закрыть рекомендации"></button>
+            <div data-role="theory-grounding-card" class="rounded-2xl border border-border-subtle bg-surface-1 shadow-2xl" style="pointer-events:auto; overflow:hidden;">
+                <div class="px-5 py-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="min-w-0 flex items-center gap-2">
+                            <span class="material-symbols-outlined text-[18px] text-primary">hub</span>
+                            <h3 class="text-sm font-bold text-text-main">Рекомендации</h3>
+                            <span class="px-2 py-0.5 rounded-full text-[10px] font-bold border border-border-subtle bg-surface-2 text-text-secondary">${this.escapeHtml(currentTypeLabel || 'Тип не определён')}</span>
+                            ${selectedItem ? `<span class="hidden md:inline text-[11px] text-text-secondary truncate">${this.escapeHtml(sourceLabel)}${formattedDate ? ` · ${this.escapeHtml(formattedDate)}` : ''}</span>` : ''}
                         </div>
-                        <div class="text-[11px] text-text-secondary mt-1">${this.escapeHtml(this.moduleId || '?')}/${this.escapeHtml(this.topicId || '?')}/${this.escapeHtml(this.taskId || '?')}</div>
-                    </div>
-                    <button type="button" onclick="window.editor && window.editor.toggleTheoryGroundingPanel(false)" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border-subtle bg-surface-2 text-text-secondary hover:bg-bg-hover" aria-label="Закрыть панель связи с анализом">
-                        <span class="material-symbols-outlined text-[18px]">close</span>
-                    </button>
-                </div>
-                <div class="mt-2 flex flex-wrap gap-1">
-                    ${taskMeta.aiRunId ? `<span class="px-1.5 py-0.5 rounded border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">анализ задачи: ${this.escapeHtml(taskMeta.aiRunId)}</span>` : ''}
-                    <span class="px-1.5 py-0.5 rounded border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">разделы: ${taskMeta.unitIds.length}</span>
-                    <span class="px-1.5 py-0.5 rounded border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">фрагменты: ${taskMeta.chunkIds.length}</span>
-                    ${taskMeta.sourceGrounding?.score != null ? `<span class="px-1.5 py-0.5 rounded border border-border-subtle bg-surface-2 text-[10px] text-text-secondary">оценка привязки: ${(Number(taskMeta.sourceGrounding.score) || 0).toFixed(2)}</span>` : ''}
-                </div>
-                ${bridge?.ai_run_id ? `
-                    <div class="mt-2 p-2 rounded-lg border border-info-light bg-info-lighter">
-                        <div class="text-[11px] text-info-text">Контекст из отчёта: <span class="font-mono">${this.escapeHtml(String(bridge.ai_run_id))}</span>${bridge?.source_block?.title ? ` · ${this.escapeHtml(bridge.source_block.title)}` : ''}</div>
-                        <button type="button" onclick="window.editor && window.editor.applyTheoryBridgeContextToTask()" class="mt-1 px-2 py-1 rounded-md border border-info-light bg-info-light text-info-text text-[11px] hover:opacity-90">Применить привязки из отчёта</button>
-                    </div>
-                ` : ''}
-            </div>
-
-            <div class="max-h-[58vh] overflow-y-auto p-3 space-y-3 bg-surface-1">
-                ${warnings.length ? `<div class="rounded-lg border border-warning-light bg-warning-lighter p-2"><div class="text-[11px] font-semibold text-warning-text mb-1">Подсказки анализа</div>${warnings.slice(0, 4).map(w => `<div class="text-[11px] text-warning-text">• ${this.escapeHtml(w)}</div>`).join('')}</div>` : ''}
-
-                <div class="rounded-lg border border-border-subtle bg-surface-2 p-2 space-y-2">
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="text-xs font-semibold text-text-main">Выбор анализа</div>
-                        <button type="button" onclick="window.editor && window.editor.loadTheoryGroundingAnalyses()" class="px-2 py-1 rounded-md border border-border-subtle bg-surface-1 text-[11px] text-text-secondary hover:bg-bg-hover">${state.analysesLoading ? '...' : 'Обновить'}</button>
-                    </div>
-                    <select onchange="window.editor && window.editor.setTheoryGroundingSelectedRun(this.value)" class="w-full rounded-lg border-border-subtle bg-surface-1 py-2 px-2 text-xs text-text-main focus:ring-2 focus:ring-primary">
-                        <option value="">Выберите анализ...</option>
-                        ${analysisOptions}
-                    </select>
-                    ${state.analysisLoading ? `<div class="text-[11px] text-text-secondary">Загрузка анализа...</div>` : ''}
-                    ${state.analysesError ? `<div class="text-[11px] text-warning-text">${this.escapeHtml(state.analysesError)}</div>` : ''}
-                    ${state.analysisError ? `<div class="text-[11px] text-warning-text">${this.escapeHtml(state.analysisError)}</div>` : ''}
-                    <div class="rounded-lg border border-border-subtle bg-surface-1 p-2 space-y-2">
-                        <div class="text-[11px] font-semibold text-text-secondary">Уровень доверия к анализу</div>
-                        <select onchange="window.editor && window.editor.setTheoryGroundingTrustLevel(this.value)" ${selectedRunId ? '' : 'disabled'} class="w-full rounded-lg border-border-subtle bg-surface-2 py-1.5 px-2 text-[11px] text-text-main focus:ring-2 focus:ring-primary disabled:opacity-50">
-                            <option value="normal" ${trustLevel === 'normal' ? 'selected' : ''}>${this.escapeHtml(this.aiUxMessage('p8.trust.normal_label', 'Обычное доверие'))}</option>
-                            <option value="low_trust" ${trustLevel === 'low_trust' ? 'selected' : ''}>${this.escapeHtml(this.aiUxMessage('p8.trust.low_trust_label', 'Низкое доверие'))}</option>
-                        </select>
-                        <div class="text-[11px] text-text-secondary">${this.escapeHtml(this.aiUxMessage(trustLevel === 'low_trust' ? 'p8.trust.low_trust_hint' : 'p8.trust.normal_hint', trustLevel === 'low_trust' ? 'Используйте этот анализ выборочно: данные о покрытии и замечания могут быть особенно неточными.' : 'Используйте данные о покрытии и замечания как рабочие подсказки.'))}</div>
-                    </div>
-                </div>
-
-                <div class="rounded-lg border border-border-subtle bg-surface-2 p-2 space-y-2">
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="text-xs font-semibold text-text-main">Привязка разделов и фрагментов</div>
-                        <div class="flex gap-1">
-                            <button type="button" onclick="window.editor && window.editor.clearTheoryGroundingSelections()" class="px-2 py-1 rounded-md border border-border-subtle bg-surface-1 text-[11px] text-text-secondary hover:bg-bg-hover">Сброс</button>
-                            <button type="button" onclick="window.editor && window.editor.applyTheoryGroundingSelectionsToTask()" class="px-2 py-1 rounded-md border border-primary bg-primary text-primary-fg text-[11px] hover:bg-primary-dark">Применить</button>
+                        <div class="flex items-center gap-2 max-w-full">
+                            <label class="min-w-[18rem] max-w-[38rem] w-[min(100%,38rem)]">
+                                <span class="sr-only">Выбранный анализ</span>
+                                <select onchange="window.editor && window.editor.setTheoryGroundingSelectedRun(this.value)" class="w-full rounded-lg border-border-subtle bg-surface-2 py-2 pl-3 pr-10 text-xs text-text-main focus:ring-2 focus:ring-primary appearance-none" style="text-overflow:ellipsis;">
+                                    <option value="">Выберите анализ...</option>
+                                    ${items.map((item) => {
+                                        const itemSourceLabel = item.source === 'manual_archive' ? 'Локальный' : 'Сервер';
+                                        const selectedAttr = item.composite_id === String(state.selectedAnalysisId || '') ? 'selected' : '';
+                                        const label = `${itemSourceLabel} · ${sanitizeLabel(item.title, 'Анализ без названия')}`;
+                                        return `<option value="${this.escapeHtml(item.composite_id)}" ${selectedAttr}>${this.escapeHtml(label)}</option>`;
+                                    }).join('')}
+                                </select>
+                            </label>
+                            <button type="button" onclick="window.editor && window.editor.loadTheoryGroundingAnalyses()" class="px-3 py-1.5 rounded-lg border border-border-subtle bg-surface-1 text-xs font-medium text-text-secondary hover:bg-bg-hover">
+                                ${state.itemsLoading ? '...' : 'Обновить'}
+                            </button>
+                            <button type="button" onclick="window.editor && window.editor.toggleTheoryGroundingPanel(false)" class="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border-subtle bg-surface-1 text-text-secondary hover:bg-bg-hover" aria-label="Закрыть рекомендации">
+                                <span class="material-symbols-outlined text-[18px]">close</span>
+                            </button>
                         </div>
                     </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-text-secondary mb-1">Разделы (${state.selectedUnitIds.size})</div>
-                        ${unitSelector}
-                    </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-text-secondary mb-1">Фрагменты (${state.selectedChunkIds.size})</div>
-                        ${chunkSelector}
-                    </div>
-                </div>
 
-                <div class="rounded-lg border border-border-subtle bg-surface-2 p-2 space-y-2">
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="text-xs font-semibold text-text-main">Покрытие по теме</div>
-                        <button type="button" onclick="window.editor && window.editor.refreshTheoryGroundingCoverage()" class="px-2 py-1 rounded-md border border-border-subtle bg-surface-1 text-[11px] text-text-secondary hover:bg-bg-hover">${state.coverageLoading ? '...' : 'Обновить'}</button>
-                    </div>
-                    <label class="flex items-start gap-2 text-[11px] text-text-secondary">
-                        <input type="checkbox" ${coverageIgnored ? 'checked' : ''} ${selectedRunId ? '' : 'disabled'} onchange="window.editor && window.editor.toggleTheoryGroundingCoverageIgnored(this.checked)" class="mt-0.5 text-primary focus:ring-primary disabled:opacity-50">
-                        <span>Не учитывать этот анализ в покрытии темы</span>
-                    </label>
-                    ${coverageIgnored ? `<div class="rounded-lg border border-info-light bg-info-lighter p-2 text-[11px] text-info-text">${this.escapeHtml(this.aiUxMessage('p8.coverage.ignored_for_topic', 'Покрытие для этого анализа скрыто в этой теме. Это не влияет на работу редактора.'))}</div>` : ''}
-                    ${state.coverageError ? `<div class="text-[11px] text-warning-text">${this.escapeHtml(state.coverageError)}</div>` : ''}
-                    ${!coverageIgnored && coverage ? `
-                        <div class="grid grid-cols-2 gap-2 text-[11px]">
-                            <div class="p-2 rounded border border-border-subtle bg-surface-1">С привязкой: <span class="font-semibold text-text-main">${summary.tasks_linked_in_scope || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-1">Без привязки: <span class="font-semibold ${summary.tasks_without_links ? 'text-warning-text' : 'text-text-main'}">${summary.tasks_without_links || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-1">Пропуски разделов: <span class="font-semibold ${summary.units_uncovered ? 'text-warning-text' : 'text-text-main'}">${summary.units_uncovered || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-1">Повторы разделов: <span class="font-semibold ${summary.units_overcovered ? 'text-warning-text' : 'text-text-main'}">${summary.units_overcovered || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-1">Пропуски фрагментов: <span class="font-semibold ${summary.chunks_uncovered ? 'text-warning-text' : 'text-text-main'}">${summary.chunks_uncovered || 0}</span></div>
-                            <div class="p-2 rounded border border-border-subtle bg-surface-1">Слабая привязка: <span class="font-semibold ${summary.weak_grounding_tasks ? 'text-warning-text' : 'text-text-main'}">${summary.weak_grounding_tasks || 0}</span></div>
+                    <div class="mt-3 rounded-xl border border-border-subtle bg-surface-1 p-3" style="max-height:min(36vh, 22rem); overflow-y:auto; overscroll-behavior:contain;">
+                        <div class="space-y-3">
+                            ${warnings.length ? `
+                                <div class="rounded-lg border border-warning-light bg-surface-2 p-3 space-y-1">
+                                    <div class="text-[11px] font-semibold text-text-main">Замечания</div>
+                                    ${warnings.map((warning) => `<div class="text-[11px] text-text-secondary">${this.escapeHtml(String(warning))}</div>`).join('')}
+                                </div>
+                            ` : ''}
+                            ${state.itemsError ? `<div class="text-[11px] text-error-text">${this.escapeHtml(state.itemsError)}</div>` : ''}
+                            ${state.analysisError ? `<div class="text-[11px] text-error-text">${this.escapeHtml(state.analysisError)}</div>` : ''}
+                            ${items.length === 0 && !state.itemsLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Архив пока пуст. Сохранить анализ можно через раздел «Анализ теории».</div>` : ''}
+                            ${state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Загрузка анализа...</div>` : ''}
+                            ${!selectedItem && !state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Выберите анализ в выпадающем списке, чтобы увидеть рекомендации для текущего типа задания.</div>` : ''}
+                            ${selectedItem && !payload && !state.analysisLoading ? `<div class="rounded-lg border border-border-subtle bg-surface-2 p-4 text-sm text-text-secondary">Для этой записи пока недоступно полное содержимое анализа.</div>` : ''}
+                            ${payload ? `
+                                <div class="space-y-3">
+                                    ${currentRec ? renderRecommendationCard(currentRec) : `
+                                        <div class="rounded-lg border border-border-subtle bg-surface-2 p-4">
+                                            <div class="text-sm font-semibold text-text-main">Для этого типа нет отдельной рекомендации</div>
+                                            <div class="text-[11px] text-text-secondary mt-1">Выберите другой анализ из архива или откройте полный разбор в разделе «Анализ теории».</div>
+                                        </div>
+                                    `}
+                                    <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
+                                        <div class="text-[11px] font-semibold text-text-main mb-2">Связанные единицы</div>
+                                        ${shownUnits.length ? `
+                                            <div class="space-y-1">
+                                                ${shownUnits.slice(0, 3).map((unit) => `
+                                                    <div class="text-[11px] text-text-secondary bg-surface-1 border border-border-subtle rounded-lg px-2 py-1.5">
+                                                        <span class="font-semibold text-text-main">#${Number(unit?.id || 0)} ${this.escapeHtml(String(unit?.title || 'Единица'))}</span>
+                                                        ${unit?.description ? `<div class="mt-1">${this.escapeHtml(String(unit.description))}</div>` : ''}
+                                                    </div>
+                                                `).join('')}
+                                            </div>
+                                        ` : `<div class="text-[11px] text-text-secondary">Для текущего типа нет отдельного списка единиц.</div>`}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
-                        ${currentRow ? `<div class="text-[11px] text-text-secondary">Текущая задача: область=${this.escapeHtml(currentRow.analysis_scope || 'не указана')} · разделов=${(currentRow.educational_unit_ids || []).length} · фрагментов=${(currentRow.analysis_chunk_ids || []).length}${currentRow.weak_grounding ? ' · привязка требует проверки' : ''}</div>` : ''}
-                    ` : (!coverageIgnored ? `<div class="text-[11px] text-text-secondary">${this.escapeHtml(this.aiUxMessage('p8.coverage.not_loaded_yet', 'Данные о покрытии появятся после выбора анализа.'))}</div>` : '')}
+                    </div>
                 </div>
             </div>
         `;
+        this._positionTheoryGroundingPanel(panel);
     }
 
     // ===== NAVIGATION =====
@@ -2832,4 +3060,143 @@ class BaseEditor {
     restoreState(state) {
         throw new Error('restoreState() must be implemented by child class');
     }
+
+    // ===== LATE NAVIGATION GUARDS OVERRIDES =====
+
+    goBack() {
+        if (this.hasUnsavedChanges) {
+            this.showConfirmModal({
+                title: 'Несохранённые изменения',
+                message: 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?',
+                confirmText: 'Выйти',
+                cancelText: 'Остаться',
+                onConfirm: () => {
+                    this.hasUnsavedChanges = false;
+                    this.teardownNavigationGuards();
+                    window.navigateWithTransition('/ui/editor');
+                }
+            });
+            return;
+        }
+        this.teardownNavigationGuards();
+        window.navigateWithTransition('/ui/editor');
+    }
+
+    setupBeforeUnloadWarning() {
+        this.setupNavigationGuards();
+    }
+
+    setupNavigationGuards() {
+        if (this._navigationGuardsSetup || typeof window === 'undefined') {
+            return;
+        }
+
+        this._navigationGuardsSetup = true;
+        this._historyGuardToken = `editor-guard:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+
+        this._beforeUnloadHandler = (event) => {
+            if (!this.hasUnsavedChanges || this._historyGuardDisabled) return;
+            event.preventDefault();
+            event.returnValue = '';
+            return '';
+        };
+
+        this._historyGuardHandler = (event) => {
+            if (this._historyGuardDisabled) return;
+            const state = (event && event.state && typeof event.state === 'object') ? event.state : null;
+            if (!state || state.__editorGuardToken !== this._historyGuardToken || state.__editorGuardRole !== 'base') {
+                return;
+            }
+
+            if (this._historyGuardPromptOpen) {
+                this._restoreHistoryGuardEntry();
+                return;
+            }
+
+            if (this.hasUnsavedChanges) {
+                this._historyGuardPromptOpen = true;
+                this.showConfirmModal({
+                    title: 'Несохранённые изменения',
+                    message: 'У вас есть несохранённые изменения. Вы уверены, что хотите выйти без сохранения?',
+                    confirmText: 'Выйти',
+                    cancelText: 'Остаться',
+                    onConfirm: () => {
+                        this._historyGuardPromptOpen = false;
+                        this.hasUnsavedChanges = false;
+                        this.teardownNavigationGuards();
+                        window.history.back();
+                    },
+                    onCancel: () => {
+                        this._historyGuardPromptOpen = false;
+                        this._restoreHistoryGuardEntry();
+                    }
+                });
+                return;
+            }
+
+            this.teardownNavigationGuards();
+            window.history.back();
+        };
+
+        window.addEventListener('beforeunload', this._beforeUnloadHandler);
+        window.addEventListener('popstate', this._historyGuardHandler);
+        this._installHistoryGuardEntry();
+    }
+
+    _installHistoryGuardEntry() {
+        if (typeof window === 'undefined' || !window.history || !this._historyGuardToken) return;
+        const currentState = (window.history.state && typeof window.history.state === 'object')
+            ? { ...window.history.state }
+            : {};
+
+        if (currentState.__editorGuardToken === this._historyGuardToken && currentState.__editorGuardRole === 'guard') {
+            return;
+        }
+
+        const baseState = {
+            ...currentState,
+            __editorGuardToken: this._historyGuardToken,
+            __editorGuardRole: 'base',
+        };
+        const guardState = {
+            ...baseState,
+            __editorGuardRole: 'guard',
+        };
+
+        window.history.replaceState(baseState, '', window.location.href);
+        window.history.pushState(guardState, '', window.location.href);
+    }
+
+    _restoreHistoryGuardEntry() {
+        if (typeof window === 'undefined' || !window.history || !this._historyGuardToken || this._historyGuardDisabled) return;
+        const currentState = (window.history.state && typeof window.history.state === 'object')
+            ? window.history.state
+            : null;
+
+        if (!currentState || currentState.__editorGuardToken !== this._historyGuardToken || currentState.__editorGuardRole !== 'base') {
+            return;
+        }
+
+        const guardState = {
+            ...currentState,
+            __editorGuardRole: 'guard',
+        };
+        window.history.pushState(guardState, '', window.location.href);
+    }
+
+    teardownNavigationGuards() {
+        if (this._historyGuardDisabled) return;
+        this._historyGuardDisabled = true;
+        if (typeof window !== 'undefined') {
+            if (this._beforeUnloadHandler) {
+                window.removeEventListener('beforeunload', this._beforeUnloadHandler);
+            }
+            if (this._historyGuardHandler) {
+                window.removeEventListener('popstate', this._historyGuardHandler);
+            }
+        }
+    }
 }
+
+
+

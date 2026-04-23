@@ -49,10 +49,26 @@ const ThemeManager = {
         }
     },
 
+    normalizeThemeMetadata() {
+        const overrides = {
+            'light-a': { name: 'Контраст', description: 'Светлая тема с холодным акцентом' },
+            'light-b': { name: 'Тепло', description: 'Мягкая светлая палитра с тёплыми оттенками' },
+            'neutral-a': { name: 'Земля', description: 'Нейтральная палитра в природных тонах' },
+            'neutral-b': { name: 'Сумерки', description: 'Спокойная нейтральная тема с мягким контрастом' },
+            'dark-a': { name: 'Ночь', description: 'Тёмная тема с тёплыми акцентами' },
+            'dark-b': { name: 'Космос', description: 'Глубокая тёмная палитра для вечерней работы' },
+        };
+        Object.entries(overrides).forEach(([id, patch]) => {
+            if (!this.themes[id]) return;
+            Object.assign(this.themes[id], patch);
+        });
+    },
+
     _nativeTextContent: null,
     _buttonTextPreservationInstalled: false,
 
     init() {
+        this.normalizeThemeMetadata();
         console.log('[ThemeManager] Init started');
         const savedTheme = localStorage.getItem('app-theme') || 'light-a';
         console.log('[ThemeManager] Loaded theme from storage:', savedTheme);

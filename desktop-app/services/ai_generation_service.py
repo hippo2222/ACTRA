@@ -431,27 +431,27 @@ _PROVIDER_CLASSES = {
 STRUCTURED_ANALYSIS_PROMPT = r"""Ты — старший методист и эксперт по педагогическому дизайну. Проанализируй учебный материал.
 
 <goal>
-Твоя задача — не оценивать материал по объёму текста и не выдавать примерные диапазоны заданий. Построй полную и практическую карту оценивания: какие задания нужны, чтобы всесторонне закрепить материал, проверить его с разных когнитивных сторон и не раздуть набор искусственными повторами.
+Твоя главная цель — не назначать количество заданий. Построй методическую карту материала: выдели образовательные единицы и покажи, как существующие типы заданий можно применять к ним максимально эффективно, разнообразно и практично.
 </goal>
 
 <task>
 Выполни 4 действия:
-1. Выдели образовательные единицы — проверяемые смысловые единицы, которые студент действительно должен усвоить.
-2. Для каждой единицы определи, какие когнитивные действия стоит проверить: распознавание, различение, объяснение, структурирование, обнаружение искажения, визуальное распознавание.
-3. Подбери такой набор типов заданий, который совместно покрывает материал полно, разносторонне и без лишнего дублирования.
+1. Выдели образовательные единицы — термины, понятия, факты, критерии, процессы, структуры, визуальные ориентиры и умения, которые студент должен усвоить.
+2. Для каждой единицы определи, что именно нужно проверить: узнавание, различение, объяснение, структурирование, обнаружение ошибки, визуальное распознавание, интерпретацию или применение.
+3. Для каждого доступного типа задания оцени, как его можно применить к этому материалу: какие единицы он покрывает, какой когнитивный угол закрывает, на какие опоры материала должен опираться и какие конкретные design candidates можно из него собрать.
 4. Верни строгий структурированный ответ только в блоках <human_summary> и <analysis_json>.
 </task>
 
 <coverage_policy>
 Принципы принятия решений:
-- НЕ определяй количество заданий по объёму текста, числу слов, страниц или абзацев.
-- Определяй количество по числу существенных единиц, плотности фактов, сложности причинно-следственных связей, количеству потенциальных заблуждений, наличию структуры/иерархии и наличию визуальных объектов.
-- Каждая существенная единица должна быть покрыта хотя бы одним рекомендованным типом задания.
-- Ключевые, сложные, часто путаемые или ошибкоопасные единицы желательно покрывать минимум двумя разными типами заданий, если каждый тип даёт новый угол проверки.
-- Одна единица может входить в несколько рекомендаций. Many-to-many покрытие допустимо и желательно, если оно повышает качество проверки.
-- Не добавляй задание только ради количества. Останавливайся, когда следующее задание уже не даёт новой проверочной ценности.
-- Если для какого-то типа в материале нет достаточного основания, прямо укажи это в not_recommended.
-- Если материал узкий, дай мало заданий. Если материал богатый и многослойный, дай столько, сколько нужно для полноценного покрытия.
+- Не оценивай материал по объёму текста и не начинай анализ с количества заданий.
+- Главный результат анализа — карта образовательных единиц и способов применения типов заданий, а не числовой план.
+- Каждая существенная единица должна быть связана хотя бы с одним подходящим типом задания.
+- Many-to-many покрытие допустимо и желательно: одна единица может осмысленно входить в несколько типов, если они проверяют её с разных сторон.
+- В первую очередь показывай, как тип работает на этом материале: какие anchors он использует, какие ошибки, различия, структуры, критерии или визуальные признаки проверяет и какие конкретные заготовки заданий из этого следуют.
+- Не отвергай тип преждевременно, если его можно применить творчески, но всё ещё строго по материалу.
+- Если тип всё же не подходит, объясни это через особенности материала, а не через общие фразы.
+- Поле count допустимо только как вторичная техническая подсказка для downstream-генерации; оно не должно быть главным выводом анализа и не должно определяться по длине текста.
 </coverage_policy>
 
 <available_task_types>
@@ -472,8 +472,8 @@ CLICK_TEXT — выбор верных и неверных утверждени�
   Не подходит для: тем, где невозможно составить правдоподобные контрастные утверждения без натяжки.
 
 CLICK_WORDS — поиск фактических ошибок в тексте.
-  Подходит для: материалов с достаточным числом фактических опор — терминов, чисел, дат, параметров, характеристик, классификационных признаков — которые можно правдоподобно исказить.
-  Не подходит для: слишком общих, интерпретативных или бедных на фактические опоры материалов.
+  Подходит для: материалов, где можно создать локальные и однозначно проверяемые искажения — в терминах, числах, параметрах, признаках, сравнениях, отношениях, квалификаторах, отрицаниях, laterality/направлениях и коротких фактических формулировках.
+  Не подходит для: слишком общих, интерпретативных или бедных на конкретные проверяемые опоры материалов, где ошибку нельзя оформить как короткий локальный фрагмент без двусмысленности.
 
 CLICK — нахождение нужных элементов на изображении.
   Подходит для: визуального распознавания объектов, анатомических структур, элементов схем, карт, диаграмм, интерфейсов.
@@ -504,10 +504,12 @@ DRAW — обводка/выделение нужных зон на изобра
 
 <output_format>
 Верни ответ ровно в таком формате. Не добавляй никакой прозы до или после блоков.
-Поля rationale, coverage_role, count_rationale и reason должны быть короткими и содержательными (1 предложение каждое).
+Главная ценность ответа — quality of mapping: educational_units, assessable_anchors, design_candidates, generation_focus и coverage_role.
+Если поле count используется, трактуй его как вторичную техническую подсказку для последующей генерации, а не как основной результат анализа.
+Поля rationale, coverage_role, generation_focus и reason должны быть короткими и содержательными (1 предложение каждое). Поле count_rationale опционально и допустимо только как вторичное пояснение.
 
 <human_summary>
-2–4 предложения: тема, содержательная плотность, насколько материал структурный/фактический/визуальный, какие есть ограничения.
+2–4 предложения: тема, содержательная плотность, насколько материал структурный, фактический или визуальный, какие есть ограничения.
 </human_summary>
 
 <analysis_json>
@@ -528,18 +530,38 @@ DRAW — обводка/выделение нужных зон на изобра
   "recommendations": [
     {
       "task_type": "TEST|OPEN_ANSWER|SEQUENCE|CLICK_TEXT|CLICK_WORDS|CLICK|DRAW",
-      "count": N,
+      "editor_label": "Exact editor-facing label for this type",
+      "recommendation_status": "recommended_auto|recommended_manual|conditionally_recommended",
       "priority": "high|medium|low",
       "covers_units": [1, 2],
+      "generation_focus": "Short downstream instruction for the generator of this specific type.",
+      "coverage_strategy": "breadth_first|high_risk_first|misconception_first|visual_first|structure_first",
+      "assessable_anchors": ["Concrete criteria, contrasts, traps, values or visual markers this type should cover."],
+      "design_candidates": ["At least two concrete draft tasks grounded in the material, not abstract themes."],
       "rationale": "Почему этот тип нужен.",
       "coverage_role": "Какой когнитивный угол проверки он закрывает.",
-      "count_rationale": "Почему именно столько заданий нужно без ссылок на объём текста.",
+      "count": 3,
+      "count_rationale": "Optional secondary downstream hint; omit or keep minimal if not obvious.",
       "manual_only": false,
-      "auto_generation_supported": true
+      "auto_generation_supported": true,
+      "manual_authoring": {
+        "figure_refs": ["Fig. 2.3", "Рис. 4"],
+        "figure_caption_anchor": "Fragment of the figure caption",
+        "text_anchor": "Phrase from the material that describes the target visual cue",
+        "target_objects": ["What exactly should be clicked or outlined"],
+        "polygon_hint": "What should become the polygon or selection zone",
+        "task_stem_example": "Example wording of the future visual task",
+        "why_visual": "Why a visual task is necessary for full coverage"
+      }
     }
   ],
   "not_recommended": [
-    { "task_type": "...", "reason": "Почему этот тип не нужен или не имеет достаточного основания." }
+    {
+      "task_type": "...",
+      "editor_label": "Exact editor-facing label for this type",
+      "recommendation_status": "not_recommended",
+      "reason": "Почему этот тип не нужен или не имеет достаточного основания."
+    }
   ],
   "illustrations_detected": false,
   "illustrations_note": null,
@@ -706,23 +728,23 @@ level_3: element_3
     "CLICK_WORDS": r"""Ты — генератор заданий для образовательной платформы.
 
 <task_context>
-Задания типа CLICK_WORDS — это упражнения на поиск фактических ошибок в тексте. Студент кликает на неверные слова или короткие фрагменты. Этот тип подходит для материалов, где есть устойчивые фактические опоры: термины, числа, даты, пороги, классификационные признаки, параметры и характеристики.
+Задания типа CLICK_WORDS — это упражнения на поиск фактических искажений в тексте. Студент кликает на неверные слова или короткие локальные фрагменты. Этот тип подходит для материалов, где есть устойчивые проверяемые опоры: термины, числа, пороги, параметры, признаки, сравнения, отношения между объектами, квалификаторы, отрицания и другие короткие формулировки, которые можно правдоподобно исказить.
 </task_context>
 
 <task>
 На основе предоставленного материала создай задания формата @CLICK_WORDS. Напиши связный текст из 2-4 предложений с 2-4 фактическими ошибками. Ошибочные фрагменты оберни в [квадратные скобки].
-Используй этот тип только там, где можно создать правдоподобные фактические подмены без искажения стиля текста. Не используй CLICK_WORDS для слишком общих, интерпретативных или бедных на фактологические опоры материалов.
+Используй этот тип там, где можно создать правдоподобные локальные искажения без искажения стиля текста: не только замены терминов и чисел, но и ошибки в отношениях, квалификаторах, противопоставлениях, laterality/направлениях, отрицаниях и коротких фактических формулировках. Не используй CLICK_WORDS для слишком общих, интерпретативных или бедных на проверяемые опоры материалов.
 </task>
 
 <quality_criteria>
 - Текст должен читаться как естественный связный параграф; ошибки не должны бросаться в глаза без знания материала.
-- Все ошибки должны быть именно фактическими подменами: неправильные числа, даты, пороги, термины, признаки, стадии, классификационные признаки, органы, вещества, параметры или условия.
+- Все ошибки должны быть именно фактическими или смысловыми искажениями локального уровня: неправильные числа, пороги, термины, признаки, стадии, классификационные признаки, органы, вещества, параметры, условия, сравнения, пространственные отношения, laterality/направления, отрицания или квалификаторы.
 - Не создавай орфографические, пунктуационные, стилистические или грамматические ошибки, если они не меняют фактический смысл.
 - Верная часть текста действительно должна оставаться верной по материалу.
-- Ошибочные фрагменты должны быть минимальными: обычно одно слово или короткий компактный фрагмент, а не большие куски предложения.
+- Ошибочные фрагменты должны быть локальными и компактными: обычно одно слово, короткое словосочетание или небольшой фрагмент внутри предложения, а не большие куски текста.
 - Ошибочные фрагменты в [квадратных скобках] не должны пересекаться, вкладываться друг в друга или ломать читаемость текста.
 - Не делай ошибки абсурдными или слишком лёгкими; хорошая ошибка должна быть правдоподобной заменой, а не случайным шумом.
-- Если создаётся несколько заданий, они должны покрывать разные типы фактических опор и не повторять один и тот же паттерн ошибки.
+- Если создаётся несколько заданий, они должны покрывать разные типы фактических опор и разные паттерны искажения, а не только однотипные замены слов.
 </quality_criteria>
 
 <output_format>
@@ -739,20 +761,41 @@ ANALYSIS_PROMPT_ADDENDUM = r"""
 <analysis_strictness_addendum>
 - Add `target_language` to top-level JSON (`ru`, `uk`, `en`, or `mixed`) and keep generated task content in that language.
 - ВАЖНО: АБСОЛЮТНО ВЕСЬ сгенерированный текст в значениях JSON-полей (включая title, description, rationale, reason, human_summary, evidence, warnings, notes_for_author, common_confusions) должен быть СТРОГО на языке, указанном в <target_language>, независимо от языка исходного материала.
-- Если <target_language>ru</target_language>, то любой выдаваемый тобой смысловой текст обязан быть на правильном русском языке. Никакого английского текста в значениях JSON!
+- Если <target_language>ru</target_language>, то любой выдаваемый тобой смысловой текст обязан быть на правильном русском языке. Никакого английского текста в значениях JSON.
 - For each educational unit, MUST add `explicitness`, `evidence`, `modality`, and `assessment_risk` (do not omit these keys).
-- Prefer broad coverage and avoid recommending many tasks that test the same paragraph/fact repeatedly.
+- Prefer broad coverage and avoid recommending many tasks that test the same paragraph or fact repeatedly.
 - Recommend `SEQUENCE` for explicit structure-building cases, including ordering, classification, hierarchy, ranking, or grouping (not only chronology).
-- In `not_recommended`, include short user-oriented guidance for unsupported/poor-fit task types: whether the material is suitable in principle and whether manual authoring is recommended (especially image-based tasks when illustrations are present).
+- In `not_recommended`, include short user-oriented guidance for unsupported or poor-fit task types: whether the material is suitable in principle and whether manual authoring is recommended (especially image-based tasks when illustrations are present).
 - If `illustrations_detected=true`, explicitly tell the user that image-based tasks are not auto-generated here and should be created manually if visual recognition matters.
-- Treat CLICK_WORDS as suitable when the material contains facts that can be intentionally distorted (numbers, dates, thresholds, terminology), even if the source text itself has no mistakes.
-- Calibrate recommended counts for coverage: do not collapse medium materials into too few tasks if many educational units are present.
+- Treat CLICK_WORDS as suitable when the material contains concrete, locally distortable facts or relations — not only numbers and terminology, but also qualifiers, contrasts, negations, spatial relations, directions, and short factual claims — even if the source text itself has no mistakes.
 - Add a short coverage warning when visual content exists but text-only generation cannot assess image recognition.
 - Cover every supported text task type (TEST, OPEN_ANSWER, SEQUENCE, CLICK_TEXT, CLICK_WORDS) exactly once across `recommendations` or `not_recommended` so the user gets a complete suitability map.
 - Keep the analysis JSON compact enough to fit model output limits: cluster related facts into broader educational units instead of enumerating every micro-fact.
 - Prefer assessable unit clusters (not exhaustive lists of all examples, drug names, doses, subvariants) when the source is dense.
 - Use enum values exactly as requested: `explicitness` = `explicit|inferred`, `modality` = `text|visual|mixed`, `assessment_risk` = `low|medium|high`.
 - Keep `title` short, `description` concise (1 sentence), `evidence` brief (short phrase or citation clue).
+- Explicitly evaluate EVERY available task type. Do not silently ignore a type.
+- Reject a task type only if you cannot propose at least 2 concrete, plausible design candidates grounded in the material.
+- Use exact editor-facing labels in `editor_label`: `Открытый ответ`, `Последовательность`, `Тест (вопросы с вариантами ответов)`, `Клик/Ошибки (текстовый выбор)`, `Клик/Ошибки (поиск ошибок в тексте)`, `Клик по изображению`, `Рисование на изображении`.
+- For each recommendation, also return:
+  - `recommendation_status`: `recommended_auto|recommended_manual|conditionally_recommended`
+  - `generation_focus`: one short downstream instruction for the generator of this type
+  - `coverage_strategy`: `breadth_first|high_risk_first|misconception_first|visual_first`
+  - `assessable_anchors`: 2-6 concrete anchors from the material
+  - `design_candidates`: at least 2 short but concrete authoring blueprints
+- For CLICK and DRAW, add `manual_authoring` object with:
+  - `figure_refs` (image or figure numbers),
+  - `figure_caption_anchor`,
+  - `text_anchor`,
+  - `target_objects`,
+  - `polygon_hint`,
+  - `task_stem_example`,
+  - `why_visual`.
+- Visual recommendations are invalid if they only name abstract units without telling the author what exactly to click, outline, or recognize.
+- The core quality criterion is not task quantity but actionable mapping.
+- `design_candidates` and `assessable_anchors` must be concrete enough that an author can draft tasks without guessing.
+- Treat `count` and `count_rationale` as secondary downstream metadata. Do not let them dominate rationale or replace concrete application guidance.
+- When in doubt, enrich `generation_focus`, `coverage_role`, `assessable_anchors`, and `design_candidates` instead of inflating or debating counts.
 </analysis_strictness_addendum>
 """
 
@@ -897,9 +940,9 @@ _GENERATION_GUARDRAILS = {
         "Do not collapse CLICK_TEXT into a disguised single-choice item; prefer multiple meaningful true/false judgments.",
     ],
     "CLICK_WORDS": [
-        "Prefer factual substitutions in numbers, dates, thresholds, and terminology (not spelling errors).",
+        "Prefer local factual distortions in terms, criteria, numbers, qualifiers, relations, directions, negations, and short factual claims (not spelling errors).",
         "Create exactly 2-4 factual errors per task.",
-        "Wrap only single-word (or hyphenated single-token) erroneous fragments in [brackets]; avoid multi-word bracket spans.",
+        "Wrap only compact local erroneous fragments in [brackets]; short multi-word spans are allowed when the error cannot be expressed by a single token.",
         "Keep the surrounding text fully correct; only the bracketed fragment should be wrong.",
         "Do not leave unmatched '[' or ']' in the final text.",
     ],
@@ -969,6 +1012,27 @@ def _material_numeric_signal(material: str) -> int:
     return min(50, len(numbers) + len(markers) * 2 + len(months) + len(set(years)))
 
 
+def _material_click_words_signal(material: str) -> int:
+    if not isinstance(material, str):
+        return 0
+    signal = _material_numeric_signal(material)
+    relation_markers = re.findall(
+        r"\b(?:left|right|upper|lower|anterior|posterior|medial|lateral|proximal|distal|above|below|"
+        r"versus|vs\.?|more|less|only|not|without|with|due to|because|compared with|increase|decrease|"
+        r"лев|прав|верх|ниж|передн|задн|медиал|латерал|проксим|дистал|выше|ниже|без|не|только|"
+        r"увелич|уменьш|по сравнению|в отличие|за сч[её]т)\b",
+        material,
+        flags=re.IGNORECASE,
+    )
+    criterion_markers = re.findall(
+        r"\b(?:criterion|criteria|sign|marker|projection|phase|stage|class|type|group|ratio|level|"
+        r"критер|признак|маркер|проекц|фаза|стад|класс|тип|групп|соотнош|уровн)\w*\b",
+        material,
+        flags=re.IGNORECASE,
+    )
+    return min(70, signal + min(len(relation_markers), 12) + min(len(criterion_markers), 8))
+
+
 def _unit_text_blob(unit: Dict[str, Any]) -> str:
     return f"{unit.get('title', '')} {unit.get('description', '')} {unit.get('evidence', '')}"
 
@@ -989,6 +1053,22 @@ def _is_numeric_or_regulatory_unit(unit: Dict[str, Any]) -> bool:
         "требован", "дата", "риск", "отчет", "отчёт", "статист",
     ]
     return bool(re.search(r"\d|%|p\s*[<=>]\s*0?\.\d+", blob)) or any(t in blob for t in keyword_tokens)
+
+
+def _is_click_words_friendly_unit(unit: Dict[str, Any]) -> bool:
+    blob = _unit_text_blob(unit).lower()
+    keyword_tokens = [
+        "criteria", "criterion", "sign", "marker", "feature", "parameter", "projection", "relation",
+        "contrast", "difference", "direction", "position", "laterality", "threshold", "term",
+        "критер", "признак", "маркер", "характерист", "парамет", "проекц", "соотнош", "различ",
+        "направлен", "положен", "лев", "прав", "верх", "ниж", "порог", "термин", "классиф",
+    ]
+    unit_type = str(unit.get("type") or "").strip().lower()
+    return (
+        _is_numeric_or_regulatory_unit(unit)
+        or unit_type in {"fact", "classification", "process", "term"}
+        or any(t in blob for t in keyword_tokens)
+    )
 
 
 def _coerce_boolish(value: Any, default: bool = False) -> bool:
@@ -1044,6 +1124,206 @@ def _default_recommendation_count_rationale(task_type: str, covers_count: int, m
     return "Количество выбрано по реальной потребности покрытия, а не по длине материала."
 
 
+def _editor_label_for_task_type(task_type: str) -> str:
+    mapping = {
+        "OPEN_ANSWER": "Открытый ответ",
+        "SEQUENCE": "Последовательность",
+        "TEST": "Тест (вопросы с вариантами ответов)",
+        "CLICK_TEXT": "Клик/Ошибки (текстовый выбор)",
+        "CLICK_WORDS": "Клик/Ошибки (поиск ошибок в тексте)",
+        "CLICK": "Клик по изображению",
+        "DRAW": "Рисование на изображении",
+    }
+    return mapping.get(str(task_type or "").upper(), str(task_type or "").strip() or "Тип задания")
+
+
+def _normalize_string_list(values: Any, max_items: int = 8) -> List[str]:
+    out: List[str] = []
+    seen = set()
+    if not isinstance(values, list):
+        return out
+    for raw in values:
+        txt = str(raw or "").strip()
+        if not txt:
+            continue
+        key = txt.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(txt[:280])
+        if len(out) >= max_items:
+            break
+    return out
+
+
+def _extract_figure_refs(*texts: Any) -> List[str]:
+    refs: List[str] = []
+    seen = set()
+    patterns = (
+        r"\b(?:fig(?:ure)?|рис(?:\.|унок)?)\s*\d+(?:\.\d+)?\b",
+        r"\b(?:box|табл(?:\.|ица)?)\s*\d+(?:\.\d+)?\b",
+    )
+    for raw in texts:
+        text = str(raw or "")
+        if not text:
+            continue
+        for pattern in patterns:
+            for match in re.findall(pattern, text, flags=re.IGNORECASE):
+                normalized = re.sub(r"\s+", " ", match).strip()
+                key = normalized.lower()
+                if key in seen:
+                    continue
+                seen.add(key)
+                refs.append(normalized)
+                if len(refs) >= 6:
+                    return refs
+    return refs
+
+
+def _recommendation_units(rec: Dict[str, Any], units: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    covered_ids = set(_unique_int_list(rec.get("covers_units")))
+    return [u for u in units if int(u.get("id") or 0) in covered_ids]
+
+
+def _default_recommendation_status(task_type: str, manual_only: bool, auto_generation_supported: bool) -> str:
+    if manual_only or not auto_generation_supported or str(task_type or "").upper() in _MANUAL_ANALYSIS_TASK_TYPES:
+        return "recommended_manual"
+    return "recommended_auto"
+
+
+def _default_recommendation_generation_focus(task_type: str) -> str:
+    mapping = {
+        "TEST": "Разбей материал на несколько проверяемых фактов, критериев и contrast pairs, а не на один общий вопрос.",
+        "OPEN_ANSWER": "Делай короткие, проверяемые open-answer задания с явными смысловыми anchors, а не эссе.",
+        "SEQUENCE": "Ищи не только линейный порядок, но и классификацию, иерархию, группировку и распределение по уровням.",
+        "CLICK_TEXT": "Собирай правдоподобные кластеры верных/неверных утверждений вокруг типичных заблуждений и тонких различий.",
+        "CLICK_WORDS": "Используй фактические подмены в терминах, критериях, числах, признаках и подписях к рисункам.",
+        "CLICK": "Привязывай задание к конкретным изображениям, ориентирам и зонам клика, которые реально описаны в материале.",
+        "DRAW": "Привязывай задание к конкретным изображениям и пространственным зонам, которые нужно обвести или выделить.",
+    }
+    return mapping.get(str(task_type or "").upper(), "Опирайся на конкретные образовательные единицы и не дублируй уже покрытые аспекты.")
+
+
+def _default_recommendation_coverage_strategy(task_type: str, covered_units: List[Dict[str, Any]]) -> str:
+    if any(str(u.get("assessment_risk") or "").lower() == "high" for u in covered_units):
+        return "high_risk_first"
+    if str(task_type or "").upper() in {"CLICK_TEXT", "CLICK_WORDS"}:
+        return "misconception_first"
+    if str(task_type or "").upper() in {"CLICK", "DRAW"}:
+        return "visual_first"
+    return "breadth_first"
+
+
+def _default_recommendation_assessable_anchors(rec: Dict[str, Any], units: List[Dict[str, Any]]) -> List[str]:
+    anchors: List[str] = []
+    seen = set()
+    for unit in _recommendation_units(rec, units):
+        title = str(unit.get("title") or "").strip()
+        evidence = re.sub(r"\s+", " ", str(unit.get("evidence") or "")).strip()
+        for candidate in (title, evidence):
+            if not candidate:
+                continue
+            key = candidate.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            anchors.append(candidate[:180])
+            if len(anchors) >= 6:
+                return anchors
+    return anchors
+
+
+def _default_recommendation_design_candidates(rec: Dict[str, Any], units: List[Dict[str, Any]]) -> List[str]:
+    task_type = str(rec.get("task_type") or "").upper()
+    covered_units = _recommendation_units(rec, units)
+    labels = [str(u.get("title") or "").strip() for u in covered_units if str(u.get("title") or "").strip()]
+    anchors = _default_recommendation_assessable_anchors(rec, units)
+    primary = labels[0] if labels else (anchors[0] if anchors else "ключевой аспект материала")
+    secondary = labels[1] if len(labels) > 1 else (anchors[1] if len(anchors) > 1 else primary)
+
+    if task_type == "TEST":
+        return _normalize_string_list([
+            f"Отдельный тестовый вопрос на распознавание или различение: {primary}.",
+            f"Отдельный тестовый вопрос на критерий, contrast pair или ловушку интерпретации: {secondary}.",
+        ], max_items=4)
+    if task_type == "OPEN_ANSWER":
+        return _normalize_string_list([
+            f"Короткий открытый вопрос: объяснить механизм, смысл или диагностическую роль {primary}.",
+            f"Короткий открытый вопрос на различение или причинно-следственную связь: {secondary}.",
+        ], max_items=4)
+    if task_type == "SEQUENCE":
+        return _normalize_string_list([
+            f"Собрать структуру, классификацию или порядок, связанный с {primary}.",
+            f"Разложить по уровням, группам или иерархии элементы, относящиеся к {secondary}.",
+        ], max_items=4)
+    if task_type == "CLICK_TEXT":
+        return _normalize_string_list([
+            f"Набор утверждений с тонкими различиями и ловушками по теме: {primary}.",
+            f"Набор правдоподобных верных/неверных утверждений для различения похожих формулировок: {secondary}.",
+        ], max_items=4)
+    if task_type == "CLICK_WORDS":
+        return _normalize_string_list([
+            f"Короткий абзац с фактическими подменами в критериях, терминах или признаках по теме: {primary}.",
+            f"Короткий абзац с правдоподобными заменами в числах, названиях или характеристиках: {secondary}.",
+        ], max_items=4)
+    if task_type == "CLICK":
+        return _normalize_string_list([
+            f"Задание на клик по конкретному ориентиру или объекту на изображении: {primary}.",
+            f"Задание на распознавание нужной анатомической, схемной или диагностической области: {secondary}.",
+        ], max_items=4)
+    if task_type == "DRAW":
+        return _normalize_string_list([
+            f"Задание на обводку или выделение зоны, связанной с {primary}.",
+            f"Задание на пространственное выделение контура или области, относящейся к {secondary}.",
+        ], max_items=4)
+    return _normalize_string_list([primary, secondary], max_items=4)
+
+
+def _normalize_manual_authoring(value: Any) -> Optional[Dict[str, Any]]:
+    if not isinstance(value, dict):
+        return None
+    result = {
+        "figure_refs": _normalize_string_list(value.get("figure_refs"), max_items=6),
+        "figure_caption_anchor": str(value.get("figure_caption_anchor") or "").strip()[:220],
+        "text_anchor": str(value.get("text_anchor") or "").strip()[:220],
+        "target_objects": _normalize_string_list(value.get("target_objects"), max_items=6),
+        "polygon_hint": str(value.get("polygon_hint") or "").strip()[:220],
+        "task_stem_example": str(value.get("task_stem_example") or "").strip()[:220],
+        "why_visual": str(value.get("why_visual") or "").strip()[:220],
+    }
+    if any(result.values()):
+        return result
+    return None
+
+
+def _default_visual_manual_authoring(rec: Dict[str, Any], units: List[Dict[str, Any]], illustrations_note: str) -> Dict[str, Any]:
+    covered_units = _recommendation_units(rec, units)
+    primary_unit = covered_units[0] if covered_units else {}
+    primary_title = str(primary_unit.get("title") or "нужный ориентир").strip()
+    primary_evidence = re.sub(r"\s+", " ", str(primary_unit.get("evidence") or "")).strip()
+    figure_refs = _extract_figure_refs(
+        illustrations_note,
+        *(u.get("evidence") for u in covered_units),
+        *(u.get("description") for u in covered_units),
+    )
+    task_type = str(rec.get("task_type") or "").upper()
+    if task_type == "CLICK":
+        task_stem = f"Кликните на ориентир, структуру или диагностический объект, связанный с: {primary_title}."
+        polygon_hint = "Полигон или зона клика должны совпадать с конкретным ориентиром, который упомянут в подписи рисунка или в тексте."
+    else:
+        task_stem = f"Обведите или выделите область на изображении, которая соответствует: {primary_title}."
+        polygon_hint = "Полигон должен описывать контур, зону или пространственную область, явно обсуждаемую в материале."
+    return {
+        "figure_refs": figure_refs,
+        "figure_caption_anchor": primary_evidence[:220] if primary_evidence else "",
+        "text_anchor": primary_evidence[:220] if primary_evidence else "",
+        "target_objects": _normalize_string_list([primary_title, primary_evidence], max_items=4),
+        "polygon_hint": polygon_hint,
+        "task_stem_example": task_stem,
+        "why_visual": "Этот навык зависит от распознавания конкретных объектов или зон на изображении и не должен оставаться только текстовой рекомендацией.",
+    }
+
+
 def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) -> List[Dict[str, Any]]:
     if not isinstance(recommendations, list):
         return []
@@ -1061,6 +1341,13 @@ def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) ->
         rationale = str(rec.get("rationale") or "").strip()
         coverage_role = str(rec.get("coverage_role") or "").strip()
         count_rationale = str(rec.get("count_rationale") or "").strip()
+        editor_label = str(rec.get("editor_label") or "").strip()
+        recommendation_status = str(rec.get("recommendation_status") or "").strip().lower()
+        generation_focus = str(rec.get("generation_focus") or "").strip()
+        coverage_strategy = str(rec.get("coverage_strategy") or "").strip().lower()
+        assessable_anchors = _normalize_string_list(rec.get("assessable_anchors"), max_items=8)
+        design_candidates = _normalize_string_list(rec.get("design_candidates"), max_items=8)
+        manual_authoring = _normalize_manual_authoring(rec.get("manual_authoring"))
         manual_only = _coerce_boolish(rec.get("manual_only"), default=task_type in _MANUAL_ANALYSIS_TASK_TYPES)
         auto_generation_supported = _coerce_boolish(
             rec.get("auto_generation_supported"),
@@ -1078,6 +1365,13 @@ def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) ->
                 "rationale": rationale,
                 "coverage_role": coverage_role,
                 "count_rationale": count_rationale,
+                "editor_label": editor_label,
+                "recommendation_status": recommendation_status,
+                "generation_focus": generation_focus,
+                "coverage_strategy": coverage_strategy,
+                "assessable_anchors": assessable_anchors,
+                "design_candidates": design_candidates,
+                "manual_authoring": manual_authoring,
                 "manual_only": manual_only,
                 "auto_generation_supported": auto_generation_supported,
             }
@@ -1102,6 +1396,26 @@ def _merge_recommendations_by_type(recommendations: Any, valid_unit_ids: set) ->
             existing["coverage_role"] = coverage_role
         if count_rationale and not existing.get("count_rationale"):
             existing["count_rationale"] = count_rationale
+        if editor_label and not existing.get("editor_label"):
+            existing["editor_label"] = editor_label
+        if recommendation_status and not existing.get("recommendation_status"):
+            existing["recommendation_status"] = recommendation_status
+        if generation_focus and not existing.get("generation_focus"):
+            existing["generation_focus"] = generation_focus
+        if coverage_strategy and not existing.get("coverage_strategy"):
+            existing["coverage_strategy"] = coverage_strategy
+        if assessable_anchors:
+            existing["assessable_anchors"] = _normalize_string_list(
+                list(existing.get("assessable_anchors") or []) + assessable_anchors,
+                max_items=8,
+            )
+        if design_candidates:
+            existing["design_candidates"] = _normalize_string_list(
+                list(existing.get("design_candidates") or []) + design_candidates,
+                max_items=8,
+            )
+        if manual_authoring and not existing.get("manual_authoring"):
+            existing["manual_authoring"] = manual_authoring
         existing["manual_only"] = bool(existing.get("manual_only")) or manual_only
         existing["auto_generation_supported"] = bool(existing.get("auto_generation_supported", True)) and auto_generation_supported
     return [merged[t] for t in order]
@@ -1124,6 +1438,7 @@ def _ensure_analysis_quality(
     illustrations_detected = bool(data.get("illustrations_detected"))
     data["illustrations_detected"] = illustrations_detected
     data["target_language"] = str(data.get("target_language") or fallback_target_language or "unknown")
+    illustrations_note = str(data.get("illustrations_note") or "").strip()
 
     raw_units = data.get("educational_units") if isinstance(data.get("educational_units"), list) else []
     units: List[Dict[str, Any]] = []
@@ -1188,9 +1503,10 @@ def _ensure_analysis_quality(
         if task_type:
             not_recommended.append({"task_type": task_type, "reason": reason})
 
-    numeric_signal = _material_numeric_signal(material or "")
+    click_words_signal = _material_click_words_signal(material or "")
+    click_words_unit_ids = [u["id"] for u in units if _is_click_words_friendly_unit(u)]
 
-    if numeric_signal >= 6:
+    if click_words_signal >= 4 or len(click_words_unit_ids) >= 1:
         removed_click_words_reason = False
         filtered_not_recommended: List[Dict[str, Any]] = []
         for item in not_recommended:
@@ -1202,19 +1518,18 @@ def _ensure_analysis_quality(
 
         click_words_rec = _find_recommendation(recommendations, "CLICK_WORDS")
         if click_words_rec is None:
-            numeric_unit_ids = [u["id"] for u in units if _is_numeric_or_regulatory_unit(u)]
             recommendations.append(
                 {
                     "task_type": "CLICK_WORDS",
-                    "count": 2 if numeric_signal < 12 else 3,
+                    "count": 2 if click_words_signal < 12 else 3,
                     "priority": "medium",
-                    "covers_units": numeric_unit_ids or [u["id"] for u in units[: min(4, len(units))]],
-                    "rationale": "Good fit for factual substitutions in numbers, dates, and terminology.",
+                    "covers_units": click_words_unit_ids or [u["id"] for u in units[: min(4, len(units))]],
+                    "rationale": "Good fit for local factual distortions in terms, criteria, relations, and other concrete anchors.",
                 }
             )
             _append_unique(
                 warnings,
-                "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough factual anchors (numbers/dates/terms).",
+                "Heuristic adjustment: CLICK_WORDS was enabled because the material contains enough concrete anchors for local factual error-detection.",
             )
         elif removed_click_words_reason:
             _append_unique(
@@ -1278,6 +1593,7 @@ def _ensure_analysis_quality(
                 data["illustrations_note"] = existing_note + " Manual image-task authoring is recommended."
         else:
             data["illustrations_note"] = "Visual examples detected; manual image-task authoring is recommended."
+        illustrations_note = str(data.get("illustrations_note") or "").strip()
 
         _append_unique(
             warnings,
@@ -1306,6 +1622,43 @@ def _ensure_analysis_quality(
                 len(rec["covers_units"]),
                 manual_only,
             )
+        if not str(rec.get("editor_label") or "").strip():
+            rec["editor_label"] = _editor_label_for_task_type(rec["task_type"])
+        recommendation_status = str(rec.get("recommendation_status") or "").strip().lower()
+        if recommendation_status not in {"recommended_auto", "recommended_manual", "conditionally_recommended"}:
+            rec["recommendation_status"] = _default_recommendation_status(
+                rec["task_type"],
+                manual_only,
+                bool(rec.get("auto_generation_supported")),
+            )
+        covered_units = _recommendation_units(rec, units)
+        if not str(rec.get("generation_focus") or "").strip():
+            rec["generation_focus"] = _default_recommendation_generation_focus(rec["task_type"])
+        coverage_strategy = str(rec.get("coverage_strategy") or "").strip().lower()
+        if coverage_strategy not in {"breadth_first", "high_risk_first", "misconception_first", "visual_first"}:
+            rec["coverage_strategy"] = _default_recommendation_coverage_strategy(rec["task_type"], covered_units)
+        rec["assessable_anchors"] = _normalize_string_list(
+            rec.get("assessable_anchors") or _default_recommendation_assessable_anchors(rec, units),
+            max_items=8,
+        )
+        rec["design_candidates"] = _normalize_string_list(
+            rec.get("design_candidates") or _default_recommendation_design_candidates(rec, units),
+            max_items=8,
+        )
+        if rec["task_type"] in _MANUAL_ANALYSIS_TASK_TYPES:
+            manual_authoring = _normalize_manual_authoring(rec.get("manual_authoring"))
+            if manual_authoring is None:
+                manual_authoring = _default_visual_manual_authoring(rec, units, illustrations_note)
+            if not manual_authoring.get("figure_refs"):
+                inferred_refs = _extract_figure_refs(illustrations_note, *(u.get("evidence") for u in covered_units))
+                if inferred_refs:
+                    manual_authoring["figure_refs"] = inferred_refs
+            rec["manual_authoring"] = manual_authoring
+            if not rec["manual_authoring"].get("figure_refs"):
+                _append_unique(
+                    warnings,
+                    f"Authoring note: {rec['task_type']} should be tied to concrete figure references, captions or text anchors before manual creation.",
+                )
         for uid in rec["covers_units"]:
             coverage_map[uid] += 1
 
@@ -1352,7 +1705,14 @@ def _ensure_analysis_quality(
             reason = "Не рекомендован, потому что материал не требует пространственного выделения зон или контуров на изображении."
         else:  # TEST
             reason = "Не рекомендован как основной формат, потому что материал требует не столько узнавания фактов, сколько других когнитивных действий."
-        not_recommended.append({"task_type": missing_type, "reason": reason})
+        not_recommended.append(
+            {
+                "task_type": missing_type,
+                "editor_label": _editor_label_for_task_type(missing_type),
+                "recommendation_status": "not_recommended",
+                "reason": reason,
+            }
+        )
 
     order_index = {"TEST": 0, "CLICK_TEXT": 1, "OPEN_ANSWER": 2, "CLICK_WORDS": 3, "SEQUENCE": 4, "CLICK": 5, "DRAW": 6}
     recommendations.sort(

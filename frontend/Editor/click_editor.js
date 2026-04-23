@@ -760,6 +760,10 @@ class ClickEditor extends BaseEditor {
             const draft = this.autoSaveManager.loadDraft();
             if (this.shouldAutoRestoreDraft(draft)) {
                 this.restoreState(draft.data);
+                this.initTheoryGroundingPanel();
+                this.bootstrapTheoryGroundingPanel().catch((error) => {
+                    console.warn("[ClickEditor] theory grounding bootstrap failed", error);
+                });
                 this.showToast(this.getAutoRestoreDraftToastMessage(), "info");
                 this.autoSaveManager.start();
                 this.hasUnsavedChanges = true;
@@ -781,6 +785,10 @@ class ClickEditor extends BaseEditor {
             if (shouldRestoreDraft) {
                 if (draft && draft.data) {
                     this.restoreState(draft.data);
+                    this.initTheoryGroundingPanel();
+                    this.bootstrapTheoryGroundingPanel().catch((error) => {
+                        console.warn("[ClickEditor] theory grounding bootstrap failed", error);
+                    });
                     this.autoSaveManager.start();
                     this.hasUnsavedChanges = true;
                     return;
@@ -806,6 +814,10 @@ class ClickEditor extends BaseEditor {
         this.renderUI();
         this.refreshDifficultyAuthoringControls().catch((error) => {
             console.warn("[ClickEditor] difficulty authoring refresh failed", error);
+        });
+        this.initTheoryGroundingPanel();
+        this.bootstrapTheoryGroundingPanel().catch((error) => {
+            console.warn("[ClickEditor] theory grounding bootstrap failed", error);
         });
         setTimeout(() => {
             this.initialTaskSnapshot = this.captureTaskSnapshot();
@@ -2498,7 +2510,6 @@ class ClickEditor extends BaseEditor {
 
         this.updateSubtaskButtons();
         this.updateErrorsSubpaneVisibility();
-        this.markUnsaved();
     }
 
     syncSubtaskButtons() {
@@ -2679,9 +2690,11 @@ class ClickEditor extends BaseEditor {
         this.initToolbarTooltips();
 
         if (this.previewBtn) {
-            this.previewBtn.addEventListener("click", () => {
+            this.previewBtn.onclick = (event) => {
+                event.preventDefault();
+                event.stopPropagation();
                 this.goBack();
-            });
+            };
         }
 
         if (this.canvasContainer) {

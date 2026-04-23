@@ -45,6 +45,7 @@ test_output.txt
 
 # Generated reports and temporary audits
 reports/
+artifacts/
 playwright-report/
 archive/
 tmp/

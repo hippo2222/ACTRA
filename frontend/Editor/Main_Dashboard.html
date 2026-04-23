@@ -44,7 +44,7 @@
         })();
     </script>
     <script src="ai_ux_messages.js?v=1"></script>
-    <script src="import_manager.js?v=2" defer></script>
+    <script src="import_manager.js?v=3" defer></script>
     <script src="dashboard.js?v=9" defer></script>
 
     <link href="../../assets/tailwind.css" rel="stylesheet" />
@@ -88,12 +88,16 @@
             align-items: center;
             gap: 0.25rem;
             flex-shrink: 0;
+            min-width: 0;
+            justify-content: flex-end;
         }
 
         .editor-sidebar-tree-hover-actions {
             display: flex;
             align-items: center;
             gap: 0.25rem;
+            flex: 0 1 auto;
+            min-width: 0;
             max-width: 0;
             overflow: hidden;
             opacity: 0;
@@ -101,9 +105,18 @@
             transition: max-width 160ms ease, opacity 160ms ease;
         }
 
+        .editor-sidebar-tree-actions [data-role="toggle"] {
+            flex: 0 0 auto;
+            width: 1.5rem;
+            min-width: 1.5rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
         .editor-sidebar-tree-button:hover .editor-sidebar-tree-hover-actions,
         .editor-sidebar-tree-button:focus-visible .editor-sidebar-tree-hover-actions {
-            max-width: 7rem;
+            max-width: 7.5rem;
             opacity: 1;
             pointer-events: auto;
         }

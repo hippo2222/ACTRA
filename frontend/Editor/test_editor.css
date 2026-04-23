@@ -1,8 +1,11 @@
 body.test-editor-shell {
     display: grid;
     grid-template-columns: 16rem minmax(0, 1fr) 18rem;
+    grid-template-rows: minmax(0, 1fr);
+    align-items: stretch;
     height: 100vh;
     overflow: hidden;
+    font-size: 1.08rem;
     background:
         radial-gradient(circle at top left, color-mix(in srgb, var(--color-primary-light) 10%, transparent) 0, transparent 24rem),
         linear-gradient(180deg, color-mix(in srgb, var(--color-surface-2) 45%, white) 0%, var(--color-bg-main) 48%);
@@ -64,12 +67,13 @@ body.test-editor-shell {
 
 .test-editor-sidebar--left {
     width: 16rem !important;
-    height: 100vh;
+    height: 100%;
     overflow: hidden;
 }
 
 .test-editor-sidebar--right {
     width: 18rem !important;
+    height: 100%;
 }
 
 .test-editor-sidebar__brand {
@@ -260,6 +264,9 @@ body.test-editor-shell {
 
 .test-editor-main {
     min-width: 0;
+    min-height: 0;
+    height: 100%;
+    align-self: stretch;
 }
 
 .test-editor-header {
@@ -269,7 +276,7 @@ body.test-editor-shell {
 
 .test-editor-header__inner {
     width: 100%;
-    max-width: 74rem;
+    max-width: 96rem;
     margin: 0 auto;
     display: flex;
     align-items: center;
@@ -353,6 +360,8 @@ body.test-editor-shell {
 
 .test-editor-header__actions {
     justify-content: flex-end;
+    align-items: center;
+    flex-wrap: wrap;
     gap: 0.55rem;
     flex: 0 1 auto;
     max-width: 100%;
@@ -360,6 +369,8 @@ body.test-editor-shell {
 
 .test-editor-header__controls {
     gap: 0.45rem;
+    align-items: center;
+    flex-wrap: wrap;
     flex: 0 0 auto;
 }
 
@@ -427,12 +438,14 @@ body.test-editor-shell {
 }
 
 .test-editor-main__inner {
-    max-width: 74rem;
+    max-width: 96rem;
     margin: 0 auto;
+    width: 100%;
 }
 
 .editor-workspace {
-    max-width: 49rem;
+    width: min(100%, 64rem);
+    max-width: none;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -1424,6 +1437,7 @@ body.test-editor-shell {
         height: auto;
         min-height: 100vh;
         overflow: auto;
+        font-size: 1rem;
     }
 
     .test-editor-sidebar--left,

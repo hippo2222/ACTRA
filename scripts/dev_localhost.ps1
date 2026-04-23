@@ -66,6 +66,65 @@ function Ensure-HostedDependencies {
     & $venvPython -m pip install -r $requirementsFile
 }
 
+function Assert-DockerDaemonReady {
+    if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+        throw "Docker CLI was not found in PATH."
+    }
+
+    & docker info --format '{{.ServerVersion}}' | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        throw "Docker daemon is not available. Start Docker Desktop, or rerun with -NoDocker only if your local Postgres/MinIO/Mailpit stack is already running."
+    }
+}
+
+function Test-PostgresConnection {
+    $code = @'
+import os
+import sys
+
+import psycopg
+
+dsn = os.environ.get("ACTRA_POSTGRES_DSN", "").strip()
+if not dsn:
+    sys.exit(2)
+
+try:
+    with psycopg.connect(dsn, connect_timeout=3) as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1")
+            cur.fetchone()
+except Exception:
+    sys.exit(1)
+
+sys.exit(0)
+'@
+
+    $code | & $venvPython - 1>$null 2>$null
+    return ($LASTEXITCODE -eq 0)
+}
+
+function Wait-ForPostgresReady {
+    param(
+        [int]$TimeoutSeconds = 60
+    )
+
+    $dsn = [System.Environment]::GetEnvironmentVariable("ACTRA_POSTGRES_DSN", "Process")
+    if (-not $dsn) {
+        throw "ACTRA_POSTGRES_DSN is not set; cannot verify Postgres readiness."
+    }
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    while ((Get-Date) -lt $deadline) {
+        if (Test-PostgresConnection) {
+            Write-Host "Postgres is ready."
+            return
+        }
+        Start-Sleep -Seconds 2
+    }
+
+    throw "Postgres did not become ready within $TimeoutSeconds seconds. Check Docker Desktop, port 5432, and ACTRA_POSTGRES_DSN."
+}
+
 if (-not (Test-Path $envFile)) {
     if (-not (Test-Path $envExampleFile)) {
         throw "Missing $envExampleFile"
@@ -85,8 +144,12 @@ foreach ($dir in @("data", "logs", "runtime_state")) {
 }
 
 if (-not $NoDocker) {
+    Assert-DockerDaemonReady
     Write-Host "Starting local infra containers..."
-    docker compose --env-file .env.localhost -f docker-compose.hosted.yml -f docker-compose.localhost.yml up -d postgres minio minio-init mailpit
+    & docker compose --env-file .env.localhost -f docker-compose.hosted.yml -f docker-compose.localhost.yml up -d postgres minio minio-init mailpit
+    if ($LASTEXITCODE -ne 0) {
+        throw "Failed to start local infra containers via docker compose."
+    }
 }
 
 Get-Content $envFile | ForEach-Object {
@@ -105,6 +168,8 @@ Get-Content $envFile | ForEach-Object {
 
 # Localhost dev runs should be easy to enter without full auth setup.
 [System.Environment]::SetEnvironmentVariable("ACTRA_HOSTED_DEV_AUTH_BRIDGE", "1", "Process")
+
+Wait-ForPostgresReady
 
 Write-Host ""
 Write-Host "Local URLs:"

@@ -1476,7 +1476,7 @@
                 <p class="empty-state-card__title">Нет активных комплексов</p>
                 <p class="empty-state-card__copy text-sm">Запустите любой комплекс, чтобы появилась подборка повторения.</p>
                 <div class="empty-state-card__actions">
-                    <button onclick="window.navigateWithTransition('/ui/complexes')" class="btn-secondary text-xs">
+                    <button type="button" data-nav-target="/ui/complexes" class="btn-secondary text-xs">
                         Перейти к комплексам
                         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
@@ -1568,7 +1568,7 @@
                 <p class="empty-state-card__title">Нет активных комплексов</p>
                 <p class="empty-state-card__copy text-sm">Запустите комплекс, чтобы появилась подборка "Изучение".</p>
                 <div class="empty-state-card__actions">
-                    <button onclick="window.navigateWithTransition('/ui/complexes')" class="btn-secondary text-xs">
+                    <button type="button" data-nav-target="/ui/complexes" class="btn-secondary text-xs">
                         Перейти к комплексам
                         <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </button>
@@ -1778,7 +1778,7 @@
                                 ${d.isToday ? 'play_circle' : 'lock'}
                             </span>
                             ${d.isToday
-                                ? `<button onclick="window.navigateWithTransition('/ui/complexes')"
+                                ? `<button type="button" data-nav-target="/ui/complexes"
                                       class="text-[11px] font-semibold text-primary hover:underline transition-colors text-center leading-tight">
                                       Запустить комплекс
                                    </button>`
@@ -3061,6 +3061,15 @@
             setupCalendarLoadingLogo();
 
             loadUserAvatar();
+
+            document.addEventListener('click', (event) => {
+                const target = event.target instanceof Element ? event.target.closest('[data-nav-target]') : null;
+                if (!target) return;
+                const url = target.getAttribute('data-nav-target');
+                if (!url) return;
+                event.preventDefault();
+                window.navigateWithTransition(url);
+            });
 
             fetchTodayPlan();
 

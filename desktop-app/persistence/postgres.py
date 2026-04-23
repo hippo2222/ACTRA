@@ -24,7 +24,10 @@ def postgres_connection(dsn: Optional[str]) -> Iterator[object]:
         raise PostgresUnavailableError("postgres_dsn_missing")
 
     psycopg = _import_psycopg()
-    conn = psycopg.connect(clean_dsn)
+    try:
+        conn = psycopg.connect(clean_dsn)
+    except Exception as exc:
+        raise PostgresUnavailableError(f"postgres_connect_failed:{exc}") from exc
     try:
         yield conn
         conn.commit()

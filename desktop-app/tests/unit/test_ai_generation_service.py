@@ -51,6 +51,7 @@ from services.ai_generation_service import (
     _ensure_analysis_quality,
     load_ai_config,
     STRUCTURED_ANALYSIS_PROMPT,
+    ANALYSIS_PROMPT_ADDENDUM,
     ANALYSIS_V2_ROUTES_ADDENDUM,
 )
 
@@ -371,8 +372,16 @@ class TestAnalysisCapabilityMatrixP1:
         assert click_rec["auto_generation_supported"] is False
         assert click_rec["coverage_role"]
         assert click_rec["count_rationale"]
+        assert click_rec["editor_label"] == "Клик по изображению"
+        assert click_rec["recommendation_status"] == "recommended_manual"
+        assert len(click_rec["design_candidates"]) >= 2
+        assert click_rec["manual_authoring"]["target_objects"]
+        assert click_rec["manual_authoring"]["polygon_hint"]
+        assert click_rec["manual_authoring"]["task_stem_example"]
         assert draw_rec["manual_only"] is True
         assert draw_rec["auto_generation_supported"] is False
+        assert draw_rec["editor_label"] == "Рисование на изображении"
+        assert draw_rec["manual_authoring"]["why_visual"]
 
     def test_sequence_count_is_not_capped_by_old_calibration_rules(self):
         raw = {
@@ -408,6 +417,82 @@ class TestAnalysisCapabilityMatrixP1:
         assert seq_rec["count"] == 4
         assert all("target ~" not in warning for warning in normalized["warnings"])
         assert all("capped at 2" not in warning for warning in normalized["warnings"])
+
+    def test_recommendations_gain_editor_labels_and_design_candidates(self):
+        raw = {
+            "educational_units": [
+                {
+                    "id": 1,
+                    "title": "Критерий проникновения",
+                    "type": "fact",
+                    "description": "Нужно оценить видимость позвоночника через тень сердца",
+                    "explicitness": "explicit",
+                    "evidence": "Fig. 2.3: позвоночник виден через тень сердца",
+                    "modality": "mixed",
+                    "assessment_risk": "high",
+                },
+                {
+                    "id": 2,
+                    "title": "Недостаточный вдох",
+                    "type": "process",
+                    "description": "Нужно оценить число задних рёбер и ложные искажения",
+                    "explicitness": "explicit",
+                    "evidence": "Box 2.1 и Fig. 2.5",
+                    "modality": "mixed",
+                    "assessment_risk": "high",
+                },
+            ],
+            "recommendations": [
+                {
+                    "task_type": "TEST",
+                    "count": 4,
+                    "priority": "high",
+                    "covers_units": [1, 2],
+                    "rationale": "Подходит для проверки критериев и contrast pairs.",
+                },
+                {
+                    "task_type": "CLICK_TEXT",
+                    "count": 3,
+                    "priority": "medium",
+                    "covers_units": [1, 2],
+                    "rationale": "Подходит для проверки заблуждений и ложных интерпретаций.",
+                },
+            ],
+            "not_recommended": [],
+            "illustrations_detected": True,
+            "illustrations_note": "Fig. 2.3 и Fig. 2.5 показывают критерии и ловушки интерпретации.",
+            "warnings": [],
+        }
+
+        normalized = _ensure_analysis_quality(
+            raw,
+            material="В тексте есть Fig. 2.3, Fig. 2.5 и критерии оценки проникновения и вдоха.",
+            fallback_target_language="ru",
+        )
+
+        test_rec = next(r for r in normalized["recommendations"] if r["task_type"] == "TEST")
+        click_text_rec = next(r for r in normalized["recommendations"] if r["task_type"] == "CLICK_TEXT")
+
+        assert test_rec["editor_label"] == "Тест (вопросы с вариантами ответов)"
+        assert test_rec["recommendation_status"] == "recommended_auto"
+        assert test_rec["generation_focus"]
+        assert test_rec["coverage_strategy"] in {"breadth_first", "high_risk_first"}
+        assert len(test_rec["assessable_anchors"]) >= 2
+        assert len(test_rec["design_candidates"]) >= 2
+
+        assert click_text_rec["editor_label"] == "Клик/Ошибки (текстовый выбор)"
+        assert click_text_rec["generation_focus"]
+        assert len(click_text_rec["design_candidates"]) >= 2
+
+    def test_analysis_prompt_addendum_requires_actionable_visual_and_mapping_first_logic(self):
+        assert "Explicitly evaluate EVERY available task type" in ANALYSIS_PROMPT_ADDENDUM
+        assert "Reject a task type only if you cannot propose at least 2 concrete" in ANALYSIS_PROMPT_ADDENDUM
+        assert "Use exact editor-facing labels in `editor_label`" in ANALYSIS_PROMPT_ADDENDUM
+        assert "For CLICK and DRAW, add `manual_authoring` object" in ANALYSIS_PROMPT_ADDENDUM
+        assert "Visual recommendations are invalid if they only name abstract units" in ANALYSIS_PROMPT_ADDENDUM
+        assert "The core quality criterion is not task quantity but actionable mapping" in ANALYSIS_PROMPT_ADDENDUM
+        assert "Treat `count` and `count_rationale` as secondary downstream metadata" in ANALYSIS_PROMPT_ADDENDUM
+        assert "design_candidates` and `assessable_anchors` must be concrete enough" in ANALYSIS_PROMPT_ADDENDUM
 
 
 # ============================================================================
@@ -522,13 +607,48 @@ class TestBuildGenerationPrompt:
 
     def test_click_words_prompt_has_stronger_fact_substitution_rules(self):
         prompt = _build_generation_prompt("CLICK_WORDS", 2, [])
-        assert "устойчивые фактические опоры" in prompt
+        assert "устойчивые проверяемые опоры" in prompt
         assert "Не используй CLICK_WORDS для слишком общих" in prompt
-        assert "именно фактическими подменами" in prompt
+        assert "фактическими или смысловыми искажениями локального уровня" in prompt
         assert "Не создавай орфографические, пунктуационные" in prompt
-        assert "Ошибочные фрагменты должны быть минимальными" in prompt
+        assert "Ошибочные фрагменты должны быть локальными и компактными" in prompt
         assert "не должны пересекаться, вкладываться друг в друга" in prompt
-        assert "разные типы фактических опор" in prompt
+        assert "разные паттерны искажения" in prompt
+
+    def test_click_words_quality_heuristic_is_not_limited_to_numbers(self):
+        raw = {
+            "educational_units": [
+                {
+                    "id": 1,
+                    "title": "Ротация на рентгенограмме",
+                    "type": "process",
+                    "description": "Остистый отросток должен быть равноудалён от медиальных концов ключиц.",
+                    "evidence": "Left/right clavicle relation and mediastinal shift.",
+                    "explicitness": "explicit",
+                    "modality": "mixed",
+                    "assessment_risk": "high",
+                }
+            ],
+            "recommendations": [],
+            "not_recommended": [
+                {
+                    "task_type": "CLICK_WORDS",
+                    "reason": "Слишком мало чисел и дат.",
+                }
+            ],
+            "warnings": [],
+        }
+        material = (
+            "При ротации остистый отросток расположен не по центру между медиальными концами ключиц. "
+            "Левый и правый ориентиры сравнивают между собой; выше и ниже ключицы оценивают симметрично."
+        )
+
+        normalized = _ensure_analysis_quality(raw, material=material, fallback_target_language="ru")
+
+        click_words = next((r for r in normalized["recommendations"] if r["task_type"] == "CLICK_WORDS"), None)
+        assert click_words is not None
+        assert "local factual distortions" in click_words["rationale"]
+        assert all(item["task_type"] != "CLICK_WORDS" for item in normalized["not_recommended"])
 
     def test_with_educational_units(self):
         units = [
@@ -925,10 +1045,12 @@ class TestStructuredPrompt:
         for tt in ("OPEN_ANSWER", "SEQUENCE", "TEST", "CLICK_TEXT", "CLICK_WORDS", "CLICK", "DRAW"):
             assert tt in STRUCTURED_ANALYSIS_PROMPT
 
-    def test_prompt_avoids_word_count_calibration_and_describes_structure_first_sequence(self):
-        assert "числу слов" in STRUCTURED_ANALYSIS_PROMPT
-        assert "~300 слов" not in STRUCTURED_ANALYSIS_PROMPT
-        assert "сборка правильной структуры" in STRUCTURED_ANALYSIS_PROMPT
+    def test_prompt_avoids_word_count_calibration_and_centers_mapping(self):
+        assert "Many-to-many" in STRUCTURED_ANALYSIS_PROMPT
+        assert "quality of mapping" in STRUCTURED_ANALYSIS_PROMPT
+        assert "downstream-" in STRUCTURED_ANALYSIS_PROMPT
+        assert "~300" not in STRUCTURED_ANALYSIS_PROMPT
+        assert "SEQUENCE" in STRUCTURED_ANALYSIS_PROMPT
 
     def test_p3_routes_addendum_contains_progression_and_route_rules(self):
         assert "type_progression_suitability" in ANALYSIS_V2_ROUTES_ADDENDUM

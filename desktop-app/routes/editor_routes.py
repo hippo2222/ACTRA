@@ -1153,6 +1153,35 @@ def import_check() -> Any:
         return jsonify({"ok": False, "error": str(exc)}), 500
 
 
+@editor_bp.route("/api/editor/import/discard-cache", methods=["POST"])
+def import_discard_cache() -> Any:
+    """Discard cached archive from the check step without importing it."""
+    ctx = get_ctx()
+    if ctx.user_id == "guest":
+        return jsonify({"ok": False, "error": "guest_cannot_import"}), 403
+
+    try:
+        payload = request.get_json(silent=True) or request.form or {}
+        cache_id = str(payload.get("cache_id") or "").strip()
+        if not cache_id:
+            return jsonify({"ok": True, "removed": False, "reason": "cache_id_missing"})
+
+        _cleanup_import_cache()
+        temp_path, _ = _import_archive_cache.pop(cache_id, (None, 0))
+        removed = False
+        if temp_path and os.path.exists(temp_path):
+            try:
+                os.remove(temp_path)
+                removed = True
+            except Exception:
+                removed = False
+
+        return jsonify({"ok": True, "removed": bool(temp_path), "file_removed": removed})
+    except Exception as exc:
+        logger.exception("[HTTP] Import cache discard failed: %s", exc)
+        return jsonify({"ok": False, "error": str(exc)}), 500
+
+
 @editor_bp.route("/api/editor/import/confirm", methods=["POST"])
 def import_confirm() -> Any:
     """Execute import with progress streaming."""

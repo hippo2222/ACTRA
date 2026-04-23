@@ -108,3 +108,41 @@ def test_sequence_import_infers_grouping_without_level_order_when_metadata_missi
 
     assert content["level_order_matters"] is False
     assert content["sequence_within_level_matters"] is False
+
+
+def test_import_payload_persists_manual_analysis_session_context(monkeypatch):
+    monkeypatch.setattr(import_routes, "_ih", lambda: {"CURRENT_SCHEMA_VERSION": 1})
+
+    task = {
+        "type": "open_answer",
+        "name": "oa-1",
+        "prompt": "Объясните критерий достаточного вдоха",
+        "data": {
+            "question": "Объясните критерий достаточного вдоха",
+            "reference_answer": "На рентгенограмме должно определяться 8–10 задних рёбер над диафрагмой.",
+            "keywords": ["8-10 задних рёбер", "диафрагма"],
+        },
+    }
+
+    payload = import_routes._build_imported_task_payload(
+        task,
+        "m1",
+        "t1",
+        "task-4",
+        import_context={
+            "source": "ai",
+            "analysis_session_id": "manual_analysis_demo",
+            "analysis_selected_task_type": "test",
+            "analysis_selected_units": [3, "4", "bad"],
+            "analysis_generation_focus": "Проверка точных критериев и диагностических ловушек.",
+            "analysis_coverage_role": "Различение корректной и искажённой интерпретации.",
+        },
+    )
+
+    meta = payload["meta"]
+
+    assert meta["analysis_session_id"] == "manual_analysis_demo"
+    assert meta["analysis_selected_task_type"] == "TEST"
+    assert meta["analysis_selected_unit_ids"] == [3, 4]
+    assert meta["analysis_generation_focus"] == "Проверка точных критериев и диагностических ловушек."
+    assert meta["analysis_coverage_role"] == "Различение корректной и искажённой интерпретации."

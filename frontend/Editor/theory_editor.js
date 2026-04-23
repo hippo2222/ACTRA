@@ -25,8 +25,14 @@ let lastTheoryEditorRange = null;
 const theoryPublicationBySourceId = new Map();
 const theoryPublicationByItemId = new Map();
 let allTheoryPublicationItems = [];
+let theorySkipBeforeUnloadPrompt = false;
+let theoryHistoryGuardToken = "";
+let theoryHistoryGuardPromptOpen = false;
+let theoryHistoryGuardDisabled = false;
 
 function theoryEditorNavigate(url) {
+    theorySkipBeforeUnloadPrompt = true;
+    theoryHistoryGuardDisabled = true;
     if (typeof window.navigateWithTransition === "function") {
         window.navigateWithTransition(url);
         return;
@@ -2784,6 +2790,82 @@ async function confirmDiscardUnsavedChanges() {
     });
 }
 
+function installTheoryHistoryGuardEntry() {
+    if (typeof window === "undefined" || theoryHistoryGuardDisabled) {
+        return;
+    }
+    const currentState = window.history.state && typeof window.history.state === "object"
+        ? window.history.state
+        : {};
+    if (currentState.__theoryHistoryGuard === theoryHistoryGuardToken) {
+        return;
+    }
+    window.history.replaceState({
+        ...currentState,
+        __theoryHistoryBase: theoryHistoryGuardToken,
+    }, "", window.location.href);
+    window.history.pushState({
+        ...currentState,
+        __theoryHistoryGuard: theoryHistoryGuardToken,
+    }, "", window.location.href);
+}
+
+function restoreTheoryHistoryGuardEntry() {
+    if (typeof window === "undefined" || theoryHistoryGuardDisabled) {
+        return;
+    }
+    const currentState = window.history.state && typeof window.history.state === "object"
+        ? window.history.state
+        : {};
+    if (currentState.__theoryHistoryGuard === theoryHistoryGuardToken) {
+        return;
+    }
+    window.history.pushState({
+        ...currentState,
+        __theoryHistoryGuard: theoryHistoryGuardToken,
+    }, "", window.location.href);
+}
+
+function initTheoryNavigationGuards() {
+    if (typeof window === "undefined" || theoryHistoryGuardToken) {
+        return;
+    }
+    theoryHistoryGuardToken = `theory-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    installTheoryHistoryGuardEntry();
+
+    window.addEventListener("popstate", async () => {
+        if (theoryHistoryGuardDisabled) {
+            return;
+        }
+        const currentState = window.history.state && typeof window.history.state === "object"
+            ? window.history.state
+            : {};
+        if (currentState.__theoryHistoryGuard === theoryHistoryGuardToken) {
+            return;
+        }
+        if (!theoryEditorState.dirty) {
+            theoryHistoryGuardDisabled = true;
+            window.setTimeout(() => window.history.back(), 0);
+            return;
+        }
+        if (theoryHistoryGuardPromptOpen) {
+            restoreTheoryHistoryGuardEntry();
+            return;
+        }
+        theoryHistoryGuardPromptOpen = true;
+        const canLeave = await confirmDiscardUnsavedChanges();
+        theoryHistoryGuardPromptOpen = false;
+        if (canLeave) {
+            saveTheoryDraftNow();
+            theorySkipBeforeUnloadPrompt = true;
+            theoryHistoryGuardDisabled = true;
+            window.setTimeout(() => window.history.back(), 0);
+            return;
+        }
+        restoreTheoryHistoryGuardEntry();
+    });
+}
+
 async function openTheoryFromLibrary(theoryId) {
     const normalizedTheoryId = String(theoryId || "").trim();
     if (!normalizedTheoryId || normalizedTheoryId === theoryEditorState.activeTheoryId) {
@@ -3086,11 +3168,16 @@ function bindTheoryEditorEvents() {
         window.location.reload();
     });
 
-    const persistDraftOnLeave = () => {
+    const persistDraftOnLeave = (event = null) => {
         if (!theoryEditorState.dirty) return;
         saveTheoryDraftNow();
+        if (event && !theorySkipBeforeUnloadPrompt) {
+            event.preventDefault();
+            event.returnValue = "";
+        }
     };
 
+    initTheoryNavigationGuards();
     window.addEventListener("beforeunload", persistDraftOnLeave);
     window.addEventListener("pagehide", persistDraftOnLeave);
     document.addEventListener("visibilitychange", () => {

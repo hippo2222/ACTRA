@@ -19,7 +19,7 @@ class ImportManager {
         this.checkResult = null;
         this.archiveCacheId = null;
         this.perTaskConflictRes = new Map(); // index -> 'skip'|'overwrite'|'new_id'
-        this.aiTemplateType = 'material_analysis';
+        this.aiTemplateType = 'open_answer';
         this.workspaceImportState = this.createWorkspaceImportState();
 
         // AI generation mode state
@@ -41,6 +41,10 @@ class ImportManager {
         this.importInProgress = false;
         this.importRequestKey = null;
         this.importHistoryStorageKey = 'editor_import_history_v1';
+        this.manualAnalysisSessionStorageKey = 'editor_manual_analysis_session_v1';
+        this.manualAnalysisArchiveStorageKey = 'editor_manual_analysis_archive_v1';
+        this.manualAnalysisSession = this.loadManualAnalysisSession();
+        this.manualAnalysisArchive = this.loadManualAnalysisArchive();
 
         // Shared modal can run in classic import mode or standalone theory analysis mode (P5)
         this.modalPurpose = 'import'; // 'import' | 'theory_analysis'
@@ -56,7 +60,7 @@ class ImportManager {
         this.theoryReportBlockCollapseState = new Map(); // P7: per-block collapse state in report_blocks renderer
         this.theoryReportActiveAnchor = null;
         this.theoryReportAnchorHighlightTimer = null;
-        this.theorySubMode = 'analysis'; // 'analysis' | 'microcards'
+        this.theorySubMode = 'analysis'; // 'analysis' | 'home' | 'archive' | 'coverage_map' | 'task_generation' | 'task_preview' | 'microcards'
 
         // P9 microcards mode state (separate mode inside theory analysis modal)
         this.microcardsDecks = [];
@@ -168,6 +172,10 @@ class ImportManager {
         return true;
     }
 
+    isTheoryExternalAnalysisFallback() {
+        return this.isInternalAiGenerationInDevelopment() || !this.isTheoryFeatureEnabled('ai_mode', false);
+    }
+
     createWorkspaceImportState() {
         return {
             request: null,
@@ -181,6 +189,1380 @@ class ImportManager {
 
     resetWorkspaceImportState() {
         this.workspaceImportState = this.createWorkspaceImportState();
+    }
+
+    createManualAnalysisSessionId() {
+        return `manual_analysis_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    getEditorFacingTaskTypeLabel(taskType) {
+        const normalized = String(taskType || '').trim().toUpperCase();
+        const labels = {
+            OPEN_ANSWER: 'Открытый ответ',
+            SEQUENCE: 'Последовательность',
+            TEST: 'Тест (вопросы с вариантами ответов)',
+            CLICK_TEXT: 'Клик/Ошибки (текстовый выбор)',
+            CLICK_WORDS: 'Клик/Ошибки (поиск ошибок в тексте)',
+            CLICK: 'Клик по изображению',
+            DRAW: 'Рисование на изображении',
+        };
+        return labels[normalized] || normalized || 'Тип задания';
+    }
+
+    getTaskTypeForAIAgentTemplateKey(templateKey) {
+        const normalized = String(templateKey || '').trim().toLowerCase();
+        const mapping = {
+            open_answer: 'OPEN_ANSWER',
+            sequence_assembly: 'SEQUENCE',
+            test: 'TEST',
+            click_text: 'CLICK_TEXT',
+            click_words: 'CLICK_WORDS',
+        };
+        return mapping[normalized] || null;
+    }
+
+    getManualAnalysisStatusMeta(status) {
+        const normalized = String(status || '').trim().toLowerCase();
+        const meta = {
+            not_started: {
+                label: 'не начато',
+                className: 'bg-surface-1 text-text-secondary border border-border-subtle',
+            },
+            selected: {
+                label: 'выбрано',
+                className: 'bg-surface-2 text-text-main border border-info-light',
+            },
+            draft_generated: {
+                label: 'черновик готов',
+                className: 'bg-surface-2 text-text-main border border-primary-light',
+            },
+            imported: {
+                label: 'импортировано',
+                className: 'bg-surface-2 text-text-main border border-success-light',
+            },
+            manual_only: {
+                label: 'только вручную',
+                className: 'bg-surface-2 text-text-main border border-warning-light',
+            },
+            manual_done: {
+                label: 'сделано вручную',
+                className: 'bg-surface-2 text-text-main border border-success-light',
+            },
+            skipped: {
+                label: 'пропущено',
+                className: 'bg-surface-1 text-text-disabled border border-border-subtle',
+            },
+            not_recommended: {
+                label: 'не рекомендуется',
+                className: 'bg-surface-1 text-text-disabled border border-border-subtle',
+            },
+        };
+        return meta[normalized] || meta.not_started;
+    }
+
+    normalizeManualAnalysisSession(session) {
+        if (!session || typeof session !== 'object') return null;
+        const analysis = (session.analysis && typeof session.analysis === 'object') ? session.analysis : null;
+        const recommendations = Array.isArray(analysis?.recommendations) ? analysis.recommendations : [];
+        if (!analysis?.ok || !recommendations.length) return null;
+
+        const rawState = (session.recommendation_state && typeof session.recommendation_state === 'object')
+            ? session.recommendation_state
+            : {};
+        const recommendationState = {};
+
+        recommendations.forEach((rec) => {
+            const taskType = String(rec?.task_type || '').trim().toUpperCase();
+            if (!taskType) return;
+            const existing = (rawState[taskType] && typeof rawState[taskType] === 'object') ? rawState[taskType] : {};
+            const manualOnly = rec?.manual_only === true || rec?.auto_generation_supported === false;
+            const fallbackStatus = manualOnly ? 'manual_only' : 'not_started';
+            recommendationState[taskType] = {
+                status: String(existing.status || fallbackStatus).trim().toLowerCase() || fallbackStatus,
+                imported_count: Math.max(0, Number(existing.imported_count || 0)),
+                imported_batches: Math.max(0, Number(existing.imported_batches || 0)),
+                last_imported_at: existing.last_imported_at ? String(existing.last_imported_at) : null,
+                last_selected_at: existing.last_selected_at ? String(existing.last_selected_at) : null,
+                draft_source_text: existing.draft_source_text ? String(existing.draft_source_text) : '',
+                draft_saved_at: existing.draft_saved_at ? String(existing.draft_saved_at) : null,
+                draft_task_count: Math.max(0, Number(existing.draft_task_count || 0)),
+                draft_parsed_result: (existing.draft_parsed_result && typeof existing.draft_parsed_result === 'object')
+                    ? existing.draft_parsed_result
+                    : null,
+                covers_units: Array.isArray(existing.covers_units)
+                    ? existing.covers_units.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+                    : (Array.isArray(rec?.covers_units)
+                        ? rec.covers_units.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+                        : []),
+            };
+        });
+
+        return {
+            version: Number(session.version || 1),
+            id: String(session.id || this.createManualAnalysisSessionId()),
+            created_at: String(session.created_at || new Date().toISOString()),
+            updated_at: String(session.updated_at || new Date().toISOString()),
+            module_id: session.module_id ? String(session.module_id) : null,
+            topic_id: session.topic_id ? String(session.topic_id) : null,
+            module_name: session.module_name ? String(session.module_name) : '',
+            topic_name: session.topic_name ? String(session.topic_name) : '',
+            selected_task_type: session.selected_task_type ? String(session.selected_task_type).trim().toUpperCase() : null,
+            analysis,
+            recommendation_state: recommendationState,
+        };
+    }
+
+    loadManualAnalysisSession() {
+        try {
+            const raw = window.localStorage.getItem(this.manualAnalysisSessionStorageKey);
+            if (!raw) return null;
+            return this.normalizeManualAnalysisSession(JSON.parse(raw));
+        } catch (error) {
+            console.warn('[ImportManager] Failed to load manual analysis session:', error);
+            return null;
+        }
+    }
+
+    saveManualAnalysisSession() {
+        try {
+            if (!this.manualAnalysisSession) {
+                window.localStorage.removeItem(this.manualAnalysisSessionStorageKey);
+                return;
+            }
+            this.manualAnalysisSession.updated_at = new Date().toISOString();
+            window.localStorage.setItem(
+                this.manualAnalysisSessionStorageKey,
+                JSON.stringify(this.manualAnalysisSession),
+            );
+        } catch (error) {
+            console.warn('[ImportManager] Failed to save manual analysis session:', error);
+        }
+    }
+
+    normalizeManualAnalysisArchiveEntry(entry) {
+        if (!entry || typeof entry !== 'object') return null;
+        const session = this.normalizeManualAnalysisSession(entry.session || entry);
+        if (!session) return null;
+        return {
+            id: String(entry.id || session.id || this.createManualAnalysisSessionId()),
+            archived_at: String(entry.archived_at || session.updated_at || new Date().toISOString()),
+            session,
+        };
+    }
+
+    loadManualAnalysisArchive() {
+        try {
+            const raw = window.localStorage.getItem(this.manualAnalysisArchiveStorageKey);
+            if (!raw) return [];
+            const parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return [];
+            return parsed
+                .map((entry) => this.normalizeManualAnalysisArchiveEntry(entry))
+                .filter(Boolean)
+                .sort((a, b) => new Date(b.archived_at).getTime() - new Date(a.archived_at).getTime());
+        } catch (error) {
+            console.warn('[ImportManager] Failed to load manual analysis archive:', error);
+            return [];
+        }
+    }
+
+    saveManualAnalysisArchive() {
+        try {
+            const items = Array.isArray(this.manualAnalysisArchive) ? this.manualAnalysisArchive : [];
+            window.localStorage.setItem(
+                this.manualAnalysisArchiveStorageKey,
+                JSON.stringify(items),
+            );
+        } catch (error) {
+            console.warn('[ImportManager] Failed to save manual analysis archive:', error);
+        }
+    }
+
+    getManualAnalysisArchive() {
+        if (!Array.isArray(this.manualAnalysisArchive)) {
+            this.manualAnalysisArchive = this.loadManualAnalysisArchive();
+        }
+        return this.manualAnalysisArchive;
+    }
+
+    upsertManualAnalysisArchiveEntry(session) {
+        const normalized = this.normalizeManualAnalysisSession(session);
+        if (!normalized) return null;
+        const entry = {
+            id: String(normalized.id),
+            archived_at: new Date().toISOString(),
+            session: normalized,
+        };
+        const items = this.getManualAnalysisArchive().filter((item) => String(item?.id || '') !== entry.id);
+        items.unshift(entry);
+        this.manualAnalysisArchive = items.slice(0, 25);
+        this.saveManualAnalysisArchive();
+        return entry;
+    }
+
+    clearManualAnalysisSession(options = {}) {
+        const preserveManualAnalysisResult = options.preserveManualAnalysisResult === true;
+        this.manualAnalysisSession = null;
+        try {
+            window.localStorage.removeItem(this.manualAnalysisSessionStorageKey);
+        } catch (error) {
+            console.warn('[ImportManager] Failed to clear manual analysis session:', error);
+        }
+        if (!preserveManualAnalysisResult) {
+            this.manualAnalysisResult = null;
+        }
+    }
+
+    createManualAnalysisSession(result) {
+        const analysis = (result && typeof result === 'object') ? result : null;
+        if (!analysis?.ok) return null;
+        const nowIso = new Date().toISOString();
+        const recommendationState = {};
+        (analysis.recommendations || []).forEach((rec) => {
+            const taskType = String(rec?.task_type || '').trim().toUpperCase();
+            if (!taskType) return;
+            const manualOnly = rec?.manual_only === true || rec?.auto_generation_supported === false;
+            recommendationState[taskType] = {
+                status: manualOnly ? 'manual_only' : 'not_started',
+                imported_count: 0,
+                imported_batches: 0,
+                last_imported_at: null,
+                last_selected_at: null,
+                draft_source_text: '',
+                draft_saved_at: null,
+                draft_task_count: 0,
+                draft_parsed_result: null,
+                covers_units: Array.isArray(rec?.covers_units)
+                    ? rec.covers_units.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+                    : [],
+            };
+        });
+
+        this.manualAnalysisSession = this.normalizeManualAnalysisSession({
+            version: 1,
+            id: this.createManualAnalysisSessionId(),
+            created_at: nowIso,
+            updated_at: nowIso,
+            module_id: this.selectedModule ? String(this.selectedModule) : null,
+            topic_id: this.selectedTopic ? String(this.selectedTopic) : null,
+            module_name: this.selectedModuleName || '',
+            topic_name: this.selectedTopicName || '',
+            selected_task_type: null,
+            analysis,
+            recommendation_state: recommendationState,
+        });
+        this.manualAnalysisResult = analysis;
+        this.saveManualAnalysisSession();
+        return this.manualAnalysisSession;
+    }
+
+    getActiveManualAnalysisSession() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        if (!session || this.importMode !== 'ai') return null;
+        if (this.selectedModule && session.module_id && String(this.selectedModule) !== String(session.module_id)) return null;
+        if (this.selectedTopic && session.topic_id && String(this.selectedTopic) !== String(session.topic_id)) return null;
+        return session;
+    }
+
+    getManualAnalysisRecommendation(taskType) {
+        const session = this.getActiveManualAnalysisSession();
+        const analysis = session?.analysis || this.manualAnalysisResult;
+        const normalized = String(taskType || '').trim().toUpperCase();
+        return Array.isArray(analysis?.recommendations)
+            ? analysis.recommendations.find((rec) => String(rec?.task_type || '').trim().toUpperCase() === normalized) || null
+            : null;
+    }
+
+    updateManualAnalysisRecommendationState(taskType, patch = {}) {
+        const session = this.getActiveManualAnalysisSession();
+        const normalized = String(taskType || '').trim().toUpperCase();
+        if (!session || !normalized) return null;
+        const current = (session.recommendation_state && session.recommendation_state[normalized])
+            ? session.recommendation_state[normalized]
+            : {
+                status: 'not_started',
+                imported_count: 0,
+                imported_batches: 0,
+                last_imported_at: null,
+                last_selected_at: null,
+                draft_source_text: '',
+                draft_saved_at: null,
+                draft_task_count: 0,
+                draft_parsed_result: null,
+                covers_units: [],
+            };
+        session.recommendation_state[normalized] = {
+            ...current,
+            ...patch,
+        };
+        this.manualAnalysisSession = session;
+        this.saveManualAnalysisSession();
+        return session.recommendation_state[normalized];
+    }
+
+    getManualAnalysisDraft(taskType) {
+        const session = this.getActiveManualAnalysisSession();
+        const normalized = String(taskType || '').trim().toUpperCase();
+        if (!session || !normalized) return null;
+        const state = session.recommendation_state?.[normalized];
+        const sourceText = String(state?.draft_source_text || '');
+        const parsedResult = (state?.draft_parsed_result && typeof state.draft_parsed_result === 'object')
+            ? state.draft_parsed_result
+            : null;
+        const taskCount = Math.max(
+            0,
+            Number(
+                state?.draft_task_count
+                || (Array.isArray(parsedResult?.tasks) ? parsedResult.tasks.length : 0),
+            ),
+        );
+        const savedAt = state?.draft_saved_at ? String(state.draft_saved_at) : null;
+        if (!sourceText && !parsedResult) return null;
+        return {
+            sourceText,
+            parsedResult,
+            taskCount,
+            savedAt,
+        };
+    }
+
+    storeManualAnalysisDraft(taskType, draft = {}) {
+        const normalized = String(taskType || '').trim().toUpperCase();
+        if (!normalized) return null;
+        const parsedResult = (draft?.parsedResult && typeof draft.parsedResult === 'object')
+            ? draft.parsedResult
+            : null;
+        return this.updateManualAnalysisRecommendationState(normalized, {
+            status: 'draft_generated',
+            draft_source_text: String(draft?.sourceText || ''),
+            draft_saved_at: new Date().toISOString(),
+            draft_task_count: Math.max(0, Number(Array.isArray(parsedResult?.tasks) ? parsedResult.tasks.length : 0)),
+            draft_parsed_result: parsedResult,
+        });
+    }
+
+    clearManualAnalysisDraft(taskType, patch = {}) {
+        const normalized = String(taskType || '').trim().toUpperCase();
+        if (!normalized) return null;
+        return this.updateManualAnalysisRecommendationState(normalized, {
+            draft_source_text: '',
+            draft_saved_at: null,
+            draft_task_count: 0,
+            draft_parsed_result: null,
+            ...patch,
+        });
+    }
+
+    setManualAnalysisSelectedTaskType(taskType, options = {}) {
+        const session = this.getActiveManualAnalysisSession();
+        const normalized = String(taskType || '').trim().toUpperCase();
+        if (!session || !normalized) return;
+        session.selected_task_type = normalized;
+        this.manualAnalysisSession = session;
+        if (options.updateStatus !== false) {
+            const current = session.recommendation_state?.[normalized];
+            if (current && current.status !== 'manual_only') {
+                this.updateManualAnalysisRecommendationState(normalized, {
+                    status: 'selected',
+                    last_selected_at: new Date().toISOString(),
+                });
+                return;
+            }
+        }
+        this.saveManualAnalysisSession();
+    }
+
+    openManualAnalysisDraft(taskType) {
+        const normalizedTaskType = String(taskType || '').trim().toUpperCase();
+        const templateKey = this.getAIAgentTemplateKeyForTaskType(normalizedTaskType);
+        if (!templateKey) {
+            this.showToast('Этот тип нельзя открыть через текстовый импорт. Его нужно создавать вручную в редакторе.', 'warning');
+            return;
+        }
+        const draft = this.getManualAnalysisDraft(normalizedTaskType);
+        if (!draft) {
+            this.applyManualAnalysisRecommendation(normalizedTaskType);
+            return;
+        }
+
+        this.setManualAnalysisSelectedTaskType(normalizedTaskType);
+        this.aiTemplateType = templateKey;
+        this.sourceText = draft.sourceText || '';
+        this.parsedResult = draft.parsedResult || null;
+        this.excludedTasks.clear();
+        this.selectedTasks.clear();
+        this.importRequestKey = null;
+
+        const activeSession = this.getActiveManualAnalysisSession();
+        if (activeSession?.analysis) {
+            this.manualAnalysisResult = activeSession.analysis;
+        }
+
+        const templateSelect = document.getElementById('ai-agent-template-type');
+        if (templateSelect) templateSelect.value = templateKey;
+        this.updateAIAgentPromptTextarea();
+        this._updateLiveCounter(this.sourceText);
+        this.currentStep = this.parsedResult ? 3 : 2;
+        if (this.modalPurpose === 'theory_analysis') {
+            this.theorySubMode = this.parsedResult ? 'task_preview' : 'task_generation';
+        }
+        this.updateNavigationButtons();
+        this.showToast(`Черновик для ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} восстановлен.`, 'success');
+        this.renderCurrentStep();
+    }
+
+    resumeManualAnalysisSession() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        if (!session?.analysis?.ok) {
+            this.showToast('Сохранённая analysis session не найдена.', 'warning');
+            return;
+        }
+
+        this.setModalPurpose('theory_analysis');
+        this.importMode = 'ai';
+        this.selectedModule = session.module_id || '';
+        this.selectedTopic = session.topic_id || '';
+        this.selectedModuleName = session.module_name || '';
+        this.selectedTopicName = session.topic_name || '';
+        this.manualAnalysisResult = session.analysis;
+        this.aiTemplateType = 'material_analysis';
+        this.sourceText = '';
+        this.parsedResult = null;
+        this.excludedTasks.clear();
+        this.selectedTasks.clear();
+        this.currentStep = 2;
+        this.theorySubMode = 'coverage_map';
+        this.updateNavigationButtons();
+        this.showToast('Analysis session восстановлена. Можно продолжать работу по карте покрытия.', 'success');
+        this.renderTheoryAnalysisMode();
+    }
+
+    openTheoryAnalysisHome() {
+        this.setModalPurpose('theory_analysis');
+        this.importMode = 'ai';
+        this.currentStep = 2;
+        this.aiTemplateType = 'material_analysis';
+        this.theorySubMode = 'home';
+        this.renderTheoryAnalysisMode();
+    }
+
+    openTheoryAnalysisArchive() {
+        this.setModalPurpose('theory_analysis');
+        this.importMode = 'ai';
+        this.currentStep = 2;
+        this.aiTemplateType = 'material_analysis';
+        this.theorySubMode = 'archive';
+        this.renderTheoryAnalysisMode();
+    }
+
+    returnToManualAnalysisCoverageMap() {
+        const session = this.getActiveManualAnalysisSession();
+        if (session?.analysis?.ok) {
+            this.manualAnalysisResult = session.analysis;
+        }
+        this.aiTemplateType = 'material_analysis';
+        this.sourceText = '';
+        this.parsedResult = null;
+        this.excludedTasks.clear();
+        this.selectedTasks.clear();
+        this.importRequestKey = null;
+        this.currentStep = 2;
+        this.theorySubMode = 'coverage_map';
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+        } else {
+            this.renderCurrentStep();
+        }
+    }
+
+    async archiveActiveManualAnalysisSession() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        if (!session?.analysis?.ok) {
+            this.showToast('Активный анализ не найден.', 'warning');
+            return false;
+        }
+        this.upsertManualAnalysisArchiveEntry(session);
+        this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
+        this.sourceText = '';
+        this.parsedResult = null;
+        this.aiTemplateType = 'material_analysis';
+        this.theorySubMode = 'analysis';
+        this.showToast('Анализ сохранён в архив. Можно начать новый.', 'success');
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+        }
+        return true;
+    }
+
+    async deleteActiveManualAnalysisSession() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        if (!session?.analysis?.ok) {
+            this.showToast('Активный анализ не найден.', 'warning');
+            return false;
+        }
+        const confirmed = await this.confirmAction({
+            title: 'Удалить текущий анализ?',
+            message: 'Текущая analysis session и все локальные черновики по ней будут удалены. Уже импортированные задания в библиотеке останутся.',
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
+            variant: 'warning',
+        });
+        if (!confirmed) return false;
+        this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
+        this.sourceText = '';
+        this.parsedResult = null;
+        this.aiTemplateType = 'material_analysis';
+        this.theorySubMode = 'analysis';
+        this.showToast('Текущий анализ удалён.', 'success');
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+        }
+        return true;
+    }
+
+    async startFreshTheoryAnalysis() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        if (session?.analysis?.ok) {
+            const confirmed = await this.confirmAction({
+                title: 'Начать новый анализ?',
+                message: 'Текущий активный анализ перестанет быть активным. Если его нужно сохранить, сначала отправьте его в архив.',
+                confirmText: 'Начать новый',
+                cancelText: 'Отмена',
+                variant: 'warning',
+            });
+            if (!confirmed) return false;
+        }
+        this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
+        this.sourceText = '';
+        this.parsedResult = null;
+        this.generationResult = null;
+        this.excludedTasks.clear();
+        this.selectedTasks.clear();
+        this.importRequestKey = null;
+        this.aiTemplateType = 'material_analysis';
+        this.currentStep = 2;
+        this.theorySubMode = 'analysis';
+        if (!this.selectedModule && !this.selectedTopic) {
+            this.presetFromCurrentLocation();
+        }
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+        }
+        return true;
+    }
+
+    restoreArchivedManualAnalysisSession(entryId) {
+        const entry = this.getManualAnalysisArchive().find((item) => String(item?.id || '') === String(entryId || ''));
+        const session = this.normalizeManualAnalysisSession(entry?.session);
+        if (!session?.analysis?.ok) {
+            this.showToast('Архивный анализ не найден.', 'warning');
+            return false;
+        }
+        this.manualAnalysisSession = session;
+        this.manualAnalysisResult = session.analysis;
+        this.saveManualAnalysisSession();
+        this.selectedModule = session.module_id || this.selectedModule || '';
+        this.selectedTopic = session.topic_id || this.selectedTopic || '';
+        this.selectedModuleName = session.module_name || this.selectedModuleName || '';
+        this.selectedTopicName = session.topic_name || this.selectedTopicName || '';
+        this.aiTemplateType = 'material_analysis';
+        this.currentStep = 2;
+        this.theorySubMode = 'coverage_map';
+        this.showToast('Архивный анализ открыт.', 'success');
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+        }
+        return true;
+    }
+
+    async deleteArchivedManualAnalysisSession(entryId) {
+        const entry = this.getManualAnalysisArchive().find((item) => String(item?.id || '') === String(entryId || ''));
+        if (!entry) {
+            this.showToast('Архивный анализ не найден.', 'warning');
+            return false;
+        }
+        const confirmed = await this.confirmAction({
+            title: 'Удалить анализ из архива?',
+            message: 'Запись будет удалена из архива без возможности восстановления. Уже импортированные задания в библиотеке останутся.',
+            confirmText: 'Удалить',
+            cancelText: 'Отмена',
+            variant: 'warning',
+        });
+        if (!confirmed) return false;
+        this.manualAnalysisArchive = this.getManualAnalysisArchive().filter((item) => String(item?.id || '') !== String(entryId || ''));
+        this.saveManualAnalysisArchive();
+        this.showToast('Запись удалена из архива.', 'success');
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+        }
+        return true;
+    }
+
+    resetTheoryAnalysisWorkflow() {
+        this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
+        this.manualAnalysisResult = null;
+        this.aiTemplateType = 'material_analysis';
+        this.sourceText = '';
+        this.parsedResult = null;
+        this.excludedTasks.clear();
+        this.selectedTasks.clear();
+        this.importRequestKey = null;
+        this.currentStep = 2;
+        this.theorySubMode = 'analysis';
+        if (this.modalPurpose === 'theory_analysis') {
+            this.renderTheoryAnalysisMode();
+        }
+    }
+
+    buildManualAnalysisGenerationContext() {
+        const session = this.getActiveManualAnalysisSession();
+        const taskType = this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType);
+        if (!session || !taskType) return null;
+
+        const analysis = session.analysis;
+        const recommendation = this.getManualAnalysisRecommendation(taskType);
+        if (!recommendation) return null;
+
+        const units = Array.isArray(analysis?.educational_units) ? analysis.educational_units : [];
+        const unitMap = new Map(units.map((unit) => [Number(unit?.id), unit]));
+        const targetUnitIds = Array.isArray(recommendation.covers_units)
+            ? recommendation.covers_units.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+            : [];
+        const targetUnits = targetUnitIds.map((id) => unitMap.get(id)).filter(Boolean);
+
+        const importedSummaries = [];
+        const importedUnitIds = new Set();
+        Object.entries(session.recommendation_state || {}).forEach(([type, state]) => {
+            const importedCount = Math.max(0, Number(state?.imported_count || 0));
+            const status = String(state?.status || '').trim().toLowerCase();
+            const completed = importedCount > 0 || status === 'manual_done';
+            if (!completed) return;
+            const covers = Array.isArray(state?.covers_units) ? state.covers_units : [];
+            covers.forEach((id) => importedUnitIds.add(Number(id)));
+            importedSummaries.push({
+                taskType: type,
+                label: this.getEditorFacingTaskTypeLabel(type),
+                importedCount: importedCount > 0 ? importedCount : 1,
+                status,
+                units: covers
+                    .map((id) => unitMap.get(Number(id)))
+                    .filter(Boolean)
+                    .map((unit) => `#${unit.id} ${unit.title}`),
+            });
+        });
+
+        const remainingUnits = units.filter((unit) => !importedUnitIds.has(Number(unit?.id)));
+
+        return {
+            session,
+            taskType,
+            recommendation,
+            targetUnits,
+            importedSummaries,
+            remainingUnits,
+            selectedState: (session.recommendation_state && session.recommendation_state[taskType]) || null,
+        };
+    }
+
+    buildManualAnalysisPromptContextBlock() {
+        const ctx = this.buildManualAnalysisGenerationContext();
+        if (!ctx) return '';
+
+        const recommendation = ctx.recommendation;
+        const anchors = Array.isArray(recommendation?.assessable_anchors) ? recommendation.assessable_anchors.filter(Boolean) : [];
+        const candidates = Array.isArray(recommendation?.design_candidates) ? recommendation.design_candidates.filter(Boolean) : [];
+        const targetUnits = ctx.targetUnits.map((unit) => {
+            const description = String(unit?.description || '').trim();
+            return `- #${unit.id} ${unit.title}${description ? ` — ${description}` : ''}`;
+        }).join('\n') || '- Нет выделенных образовательных единиц';
+        const imported = ctx.importedSummaries.map((item) => {
+            const units = item.units.length ? `; units: ${item.units.join(', ')}` : '';
+            return `- ${item.label}: imported_count=${item.importedCount}${units}`;
+        }).join('\n') || '- Пока ничего не импортировано';
+        const remaining = ctx.remainingUnits.map((unit) => `- #${unit.id} ${unit.title}`).join('\n') || '- Все единицы уже покрыты хотя бы одним импортированным типом';
+        const anchorsText = anchors.length ? anchors.map((item) => `- ${item}`).join('\n') : '- Нет дополнительных assessable anchors';
+        const candidatesText = candidates.length ? candidates.map((item) => `- ${item}`).join('\n') : '- Нет отдельных design candidates';
+
+        return `
+<analysis_session_context>
+session_id: ${ctx.session.id}
+selected_task_type: ${ctx.taskType}
+selected_editor_label: ${this.getEditorFacingTaskTypeLabel(ctx.taskType)}
+recommended_count: ${Number(recommendation?.count || 0)}
+priority: ${String(recommendation?.priority || 'medium')}
+coverage_role: ${String(recommendation?.coverage_role || '').trim() || 'n/a'}
+generation_focus: ${String(recommendation?.generation_focus || '').trim() || 'n/a'}
+coverage_strategy: ${String(recommendation?.coverage_strategy || '').trim() || 'n/a'}
+count_rationale: ${String(recommendation?.count_rationale || '').trim() || 'n/a'}
+
+<target_units>
+${targetUnits}
+</target_units>
+
+<assessable_anchors>
+${anchorsText}
+</assessable_anchors>
+
+<design_candidates>
+${candidatesText}
+</design_candidates>
+
+<already_imported_in_this_session>
+${imported}
+</already_imported_in_this_session>
+
+<remaining_units_after_imports>
+${remaining}
+</remaining_units_after_imports>
+
+<session_rules>
+- Use this analysis session context as the primary authoring brief for the selected task type.
+- Generate only the selected task type and align it with the recommendation above.
+- Prioritize educational units that are still uncovered or only lightly covered by already imported types.
+- Do not duplicate the exact same checking angle if it was already imported by another type in this session.
+- If this task type was already imported earlier, expand coverage instead of repeating near-identical prompts.
+</session_rules>
+</analysis_session_context>`.trim();
+    }
+
+    getActiveAIAgentTemplateConfig() {
+        const options = this.getAIAgentTemplateOptions();
+        const active = options[this.aiTemplateType] || options.open_answer;
+        const analysisContextBlock = this.buildManualAnalysisPromptContextBlock();
+        if (!analysisContextBlock || this.aiTemplateType === 'material_analysis') {
+            return active;
+        }
+        return {
+            ...active,
+            instructions: `${active.instructions}\n4. В промпт уже встроен контекст analysis session: используй его как основной authoring brief и не игнорируй покрытие уже импортированных типов.`,
+            prompt: `${active.prompt}\n\n${analysisContextBlock}`,
+        };
+    }
+
+    renderManualAnalysisPromptContextCard() {
+        const ctx = this.buildManualAnalysisGenerationContext();
+        if (!ctx) return '';
+        const recommendation = ctx.recommendation;
+        const anchors = Array.isArray(recommendation?.assessable_anchors) ? recommendation.assessable_anchors.filter(Boolean) : [];
+        const remainingUnits = ctx.remainingUnits.slice(0, 6);
+        return `
+            <div class="mb-4 rounded-xl border border-primary-light bg-primary-lighter/40 p-4 space-y-3">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <div class="text-sm font-bold text-text-main">Текущий маршрут генерации</div>
+                        <div class="text-xs text-text-secondary mt-1">
+                            ${this.escapeHtml(this.getEditorFacingTaskTypeLabel(ctx.taskType))} • сессия ${this.escapeHtml(ctx.session.id)}
+                        </div>
+                    </div>
+                    <div class="text-right text-xs text-text-secondary">
+                        <div>Рекомендовано: <span class="font-bold text-text-main">${Number(recommendation?.count || 0)}</span></div>
+                        <div>Импортировано ранее: <span class="font-bold text-text-main">${Math.max(0, Number(ctx.selectedState?.imported_count || 0))}</span></div>
+                    </div>
+                </div>
+                ${recommendation?.generation_focus ? `
+                    <div class="text-xs text-text-secondary">
+                        <span class="font-semibold text-text-main">Фокус:</span> ${this.escapeHtml(String(recommendation.generation_focus))}
+                    </div>
+                ` : ''}
+                <div class="text-xs text-text-secondary">
+                    <span class="font-semibold text-text-main">Целевые единицы:</span>
+                    ${this.escapeHtml(ctx.targetUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || 'нет')}
+                </div>
+                ${anchors.length ? `
+                    <div class="text-xs text-text-secondary">
+                        <span class="font-semibold text-text-main">Опоры для генерации:</span>
+                        ${this.escapeHtml(anchors.join('; '))}
+                    </div>
+                ` : ''}
+                <div class="text-xs text-text-secondary">
+                    <span class="font-semibold text-text-main">Осталось без импорта:</span>
+                    ${this.escapeHtml(remainingUnits.map((unit) => `#${unit.id} ${unit.title}`).join('; ') || 'все единицы уже покрыты')}
+                </div>
+            </div>
+        `;
+    }
+
+    setManualAnalysisRecommendationLifecycle(taskType, nextStatus) {
+        const normalizedTaskType = String(taskType || '').trim().toUpperCase();
+        const normalizedStatus = String(nextStatus || '').trim().toLowerCase();
+        if (!normalizedTaskType || !normalizedStatus) return;
+
+        const rec = this.getManualAnalysisRecommendation(normalizedTaskType);
+        const manualOnly = rec?.manual_only === true || rec?.auto_generation_supported === false;
+
+        if (normalizedStatus === 'reset') {
+            this.clearManualAnalysisDraft(normalizedTaskType, {
+                status: manualOnly ? 'manual_only' : 'not_started',
+                imported_count: 0,
+                imported_batches: 0,
+                last_imported_at: null,
+                last_selected_at: null,
+            });
+            if (this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType) === normalizedTaskType) {
+                this.aiTemplateType = 'material_analysis';
+                this.sourceText = '';
+                this.parsedResult = null;
+                this.updateAIAgentPromptTextarea();
+                this._updateLiveCounter('');
+            }
+            this.showToast(`Статус для ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} сброшен.`, 'info');
+            this.renderCurrentStep();
+            return;
+        }
+
+        if (normalizedStatus === 'manual_done') {
+            this.updateManualAnalysisRecommendationState(normalizedTaskType, {
+                status: 'manual_done',
+                last_imported_at: new Date().toISOString(),
+            });
+            this.showToast(`Ручной этап отмечен для ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)}.`, 'success');
+            this.renderCurrentStep();
+            return;
+        }
+
+        if (normalizedStatus === 'skipped') {
+            this.updateManualAnalysisRecommendationState(normalizedTaskType, {
+                status: 'skipped',
+            });
+            if (this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType) === normalizedTaskType) {
+                this.aiTemplateType = 'material_analysis';
+                this.sourceText = '';
+                this.parsedResult = null;
+                this.updateAIAgentPromptTextarea();
+                this._updateLiveCounter('');
+            }
+            this.showToast(`Тип ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)} помечен как пропущенный.`, 'warning');
+            this.renderCurrentStep();
+            return;
+        }
+    }
+
+    getManualAnalysisCoverageSnapshot(session = this.getActiveManualAnalysisSession()) {
+        if (!session?.analysis?.ok) {
+            return {
+                rows: [],
+                uncovered: [],
+                coveredOnce: [],
+                coveredMulti: [],
+            };
+        }
+
+        const units = Array.isArray(session.analysis.educational_units) ? session.analysis.educational_units : [];
+        const recommendations = Array.isArray(session.analysis.recommendations) ? session.analysis.recommendations : [];
+        const recommendationState = (session.recommendation_state && typeof session.recommendation_state === 'object')
+            ? session.recommendation_state
+            : {};
+
+        const rows = units.map((unit) => {
+            const unitId = Number(unit?.id);
+            const recommendedBy = recommendations
+                .filter((rec) => Array.isArray(rec?.covers_units) && rec.covers_units.map((id) => Number(id)).includes(unitId))
+                .map((rec) => ({
+                    task_type: String(rec?.task_type || '').trim().toUpperCase(),
+                    label: String(rec?.editor_label || this.getEditorFacingTaskTypeLabel(rec?.task_type)),
+                }));
+
+            const completedBy = recommendedBy.filter((item) => {
+                const state = recommendationState[item.task_type];
+                return ['imported', 'manual_done'].includes(String(state?.status || '').trim().toLowerCase());
+            });
+
+            const pendingBy = recommendedBy.filter((item) => {
+                const state = recommendationState[item.task_type];
+                return !['imported', 'manual_done', 'skipped'].includes(String(state?.status || '').trim().toLowerCase());
+            });
+
+            let status = 'uncovered';
+            if (completedBy.length >= 2) status = 'covered_multi';
+            else if (completedBy.length === 1) status = 'covered_once';
+
+            return {
+                unit,
+                status,
+                completedBy,
+                pendingBy,
+                recommendedBy,
+            };
+        });
+
+        return {
+            rows,
+            uncovered: rows.filter((row) => row.status === 'uncovered'),
+            coveredOnce: rows.filter((row) => row.status === 'covered_once'),
+            coveredMulti: rows.filter((row) => row.status === 'covered_multi'),
+        };
+    }
+
+    renderManualAnalysisCoverageMapCard() {
+        const session = this.getActiveManualAnalysisSession();
+        if (!session?.analysis?.ok) return '';
+
+        const snapshot = this.getManualAnalysisCoverageSnapshot(session);
+        const summaryBadge = (label, count, tone) => `
+            <div class="rounded-lg border ${tone} px-3 py-2 text-xs">
+                <div class="text-text-secondary">${label}</div>
+                <div class="text-base font-bold text-text-main mt-0.5">${count}</div>
+            </div>
+        `;
+
+        const unitRows = snapshot.rows.map((row) => {
+            const statusMeta = row.status === 'covered_multi'
+                ? { label: 'покрыто 2+ типами', className: 'bg-success-lighter text-success-text border border-success-light' }
+                : row.status === 'covered_once'
+                    ? { label: 'покрыто', className: 'bg-info-lighter text-info-text border border-info-light' }
+                    : { label: 'ещё не покрыто', className: 'bg-warning-lighter text-warning-text border border-warning-light' };
+            const completed = row.completedBy.map((item) => item.label).join('; ');
+            const pending = row.pendingBy.map((item) => item.label).join('; ');
+            return `
+                <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-semibold text-text-main">#${Number(row.unit?.id || 0)} ${this.escapeHtml(String(row.unit?.title || 'Единица'))}</div>
+                            ${row.unit?.description ? `<div class="mt-1 text-[11px] text-text-secondary">${this.escapeHtml(String(row.unit.description))}</div>` : ''}
+                            ${completed ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Уже закрыто:</span> ${this.escapeHtml(completed)}</div>` : ''}
+                            ${pending ? `<div class="mt-1 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Ещё можно закрыть:</span> ${this.escapeHtml(pending)}</div>` : ''}
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h4 class="text-sm font-bold text-text-main">Карта покрытия материала</h4>
+                        <p class="text-xs text-text-secondary mt-1">Показывает, какие образовательные единицы уже закрыты импортом или ручной работой, а какие ещё требуют отдельного типа задания.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    ${summaryBadge('Всего единиц', snapshot.rows.length, 'border-border-subtle bg-surface-2')}
+                    ${summaryBadge('Не покрыто', snapshot.uncovered.length, 'border-warning-light bg-warning-lighter')}
+                    ${summaryBadge('Покрыто 1 типом', snapshot.coveredOnce.length, 'border-info-light bg-info-lighter')}
+                    ${summaryBadge('Покрыто 2+ типами', snapshot.coveredMulti.length, 'border-success-light bg-success-lighter')}
+                </div>
+                ${snapshot.uncovered.length ? `
+                    <div class="rounded-lg border border-warning-light bg-warning-lighter p-3 text-xs text-warning-text">
+                        <span class="font-semibold">Сейчас без покрытия:</span>
+                        ${this.escapeHtml(snapshot.uncovered.map((row) => `#${row.unit.id} ${row.unit.title}`).join('; '))}
+                    </div>
+                ` : `
+                    <div class="rounded-lg border border-success-light bg-success-lighter p-3 text-xs text-success-text">
+                        Все образовательные единицы уже покрыты хотя бы одним импортированным или вручную завершённым типом.
+                    </div>
+                `}
+                <div class="space-y-2">
+                    ${unitRows}
+                </div>
+            </div>
+        `;
+    }
+
+    formatTheorySessionTimestamp(value) {
+        const date = value ? new Date(value) : null;
+        if (!date || Number.isNaN(date.getTime())) return 'Без даты';
+        return date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    getManualAnalysisSessionHeadline(session) {
+        const normalized = this.normalizeManualAnalysisSession(session);
+        if (!normalized) return 'Анализ без контекста';
+        const parts = [
+            normalized.module_name || normalized.module_id || '',
+            normalized.topic_name || normalized.topic_id || '',
+        ].filter(Boolean);
+        return parts.length ? parts.join(' / ') : 'Анализ без выбранной темы';
+    }
+
+    renderTheoryAnalysisHomeScreen() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        if (!session?.analysis?.ok) return '';
+        const snapshot = this.getManualAnalysisCoverageSnapshot(session);
+        const draftCount = Object.values(session.recommendation_state || {}).filter((state) => {
+            return !!String(state?.draft_source_text || '').trim() || !!state?.draft_parsed_result;
+        }).length;
+        const importedTypes = Object.values(session.recommendation_state || {}).filter((state) => {
+            return Math.max(0, Number(state?.imported_count || 0)) > 0 || String(state?.status || '').trim().toLowerCase() === 'manual_done';
+        }).length;
+        const archiveCount = this.getManualAnalysisArchive().length;
+
+        return `
+            <div class="max-w-4xl mx-auto space-y-5">
+                <div class="rounded-2xl border border-border-subtle bg-surface-1 p-5">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">Активный анализ</div>
+                            <h3 class="mt-1 text-lg font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</h3>
+                            <div class="mt-2 text-sm text-text-secondary">
+                                Последнее обновление: ${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
+                            </div>
+                            <div class="mt-1 text-sm text-text-secondary">
+                                ${this.escapeHtml(String(session.analysis?.human_summary || 'Открыт сохранённый анализ материала.'))}
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="dashboard.importManager.resumeManualAnalysisSession()"
+                                class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
+                                Продолжить
+                            </button>
+                            <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
+                                class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                                Новый анализ
+                            </button>
+                            <button onclick="dashboard.importManager.openTheoryAnalysisArchive()"
+                                class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                                Архив (${archiveCount})
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
+                            <div class="text-xs text-text-secondary">Единиц</div>
+                            <div class="text-base font-bold text-text-main mt-1">${snapshot.rows.length}</div>
+                        </div>
+                        <div class="rounded-lg border border-warning-light bg-warning-lighter px-3 py-2">
+                            <div class="text-xs text-warning-text">Без покрытия</div>
+                            <div class="text-base font-bold text-text-main mt-1">${snapshot.uncovered.length}</div>
+                        </div>
+                        <div class="rounded-lg border border-info-light bg-info-lighter px-3 py-2">
+                            <div class="text-xs text-info-text">Черновики</div>
+                            <div class="text-base font-bold text-text-main mt-1">${draftCount}</div>
+                        </div>
+                        <div class="rounded-lg border border-success-light bg-success-lighter px-3 py-2">
+                            <div class="text-xs text-success-text">Импортированные типы</div>
+                            <div class="text-base font-bold text-text-main mt-1">${importedTypes}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="dashboard.importManager.archiveActiveManualAnalysisSession()"
+                        class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                        Сохранить в архив
+                    </button>
+                    <button onclick="dashboard.importManager.deleteActiveManualAnalysisSession()"
+                        class="px-4 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
+                        Удалить текущий анализ
+                    </button>
+                </div>
+
+                ${this.renderManualAnalysisCoverageMapCard()}
+            </div>
+        `;
+    }
+
+    renderTheoryAnalysisArchiveScreen() {
+        const items = this.getManualAnalysisArchive();
+        return `
+            <div class="max-w-4xl mx-auto space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-text-main">Архив анализов</h3>
+                        <div class="text-sm text-text-secondary mt-1">
+                            Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="dashboard.importManager.openTheoryAnalysisHome()"
+                            class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                            Назад
+                        </button>
+                        <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
+                            class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
+                            Новый анализ
+                        </button>
+                    </div>
+                </div>
+
+                ${items.length ? `
+                    <div class="space-y-3">
+                        ${items.map((entry) => {
+                            const session = this.normalizeManualAnalysisSession(entry.session);
+                            const snapshot = this.getManualAnalysisCoverageSnapshot(session);
+                            return `
+                                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
+                                    <div class="flex flex-wrap items-start justify-between gap-4">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="text-sm font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</div>
+                                            <div class="mt-1 text-xs text-text-secondary">
+                                                Архивирован: ${this.escapeHtml(this.formatTheorySessionTimestamp(entry.archived_at))}
+                                            </div>
+                                            <div class="mt-2 text-sm text-text-secondary">
+                                                ${this.escapeHtml(String(session?.analysis?.human_summary || ''))}
+                                            </div>
+                                            <div class="mt-2 text-xs text-text-secondary">
+                                                Единиц: <strong>${snapshot.rows.length}</strong>,
+                                                без покрытия: <strong>${snapshot.uncovered.length}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button onclick="dashboard.importManager.restoreArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
+                                                class="px-3 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
+                                                Открыть
+                                            </button>
+                                            <button onclick="dashboard.importManager.deleteArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
+                                                class="px-3 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
+                                                Удалить
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div class="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
+                        <div class="text-base font-semibold text-text-main">Архив пока пуст</div>
+                        <div class="mt-2 text-sm text-text-secondary">
+                            Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.
+                        </div>
+                    </div>
+                `}
+            </div>
+        `;
+    }
+
+    renderManualAnalysisCoverageMapCard() {
+        const session = this.getActiveManualAnalysisSession();
+        if (!session?.analysis?.ok) return '';
+
+        const snapshot = this.getManualAnalysisCoverageSnapshot(session);
+        const summaryBadge = (label, count, tone) => `
+            <div class="rounded-lg border ${tone} bg-surface-2 px-3 py-2 text-xs">
+                <div class="text-text-secondary">${label}</div>
+                <div class="text-base font-bold text-text-main mt-0.5">${count}</div>
+            </div>
+        `;
+
+        const unitRows = snapshot.rows.map((row) => {
+            const statusMeta = row.status === 'covered_multi'
+                ? { label: 'покрыто 2+ типами', className: 'bg-surface-1 text-text-main border border-success-light' }
+                : row.status === 'covered_once'
+                    ? { label: 'покрыто', className: 'bg-surface-1 text-text-main border border-info-light' }
+                    : { label: 'ещё не покрыто', className: 'bg-surface-1 text-text-main border border-warning-light' };
+            const completed = row.completedBy.map((item) => item.label).join('; ');
+            const pending = row.pendingBy.map((item) => item.label).join('; ');
+            return `
+                <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
+                    <div class="flex flex-wrap items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="text-sm font-semibold text-text-main">#${Number(row.unit?.id || 0)} ${this.escapeHtml(String(row.unit?.title || 'Единица'))}</div>
+                            ${row.unit?.description ? `<div class="mt-1 text-[11px] text-text-secondary">${this.escapeHtml(String(row.unit.description))}</div>` : ''}
+                            ${completed ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Уже закрыто:</span> ${this.escapeHtml(completed)}</div>` : ''}
+                            ${pending ? `<div class="mt-1 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Ещё можно закрыть:</span> ${this.escapeHtml(pending)}</div>` : ''}
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div class="rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h4 class="text-sm font-bold text-text-main">Карта покрытия материала</h4>
+                        <p class="text-xs text-text-secondary mt-1">Показывает, какие образовательные единицы уже закрыты импортом или ручной работой, а какие ещё требуют отдельного типа задания.</p>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    ${summaryBadge('Всего единиц', snapshot.rows.length, 'border-border-subtle')}
+                    ${summaryBadge('Без покрытия', snapshot.uncovered.length, 'border-warning-light')}
+                    ${summaryBadge('Покрыто 1 типом', snapshot.coveredOnce.length, 'border-info-light')}
+                    ${summaryBadge('Покрыто 2+ типами', snapshot.coveredMulti.length, 'border-success-light')}
+                </div>
+                ${snapshot.uncovered.length ? `
+                    <div class="rounded-lg border border-warning-light bg-surface-2 p-3 text-xs text-text-secondary">
+                        <span class="font-semibold text-text-main">Сейчас без покрытия:</span>
+                        ${this.escapeHtml(snapshot.uncovered.map((row) => `#${row.unit.id} ${row.unit.title}`).join('; '))}
+                    </div>
+                ` : `
+                    <div class="rounded-lg border border-success-light bg-surface-2 p-3 text-xs text-text-secondary">
+                        Все образовательные единицы уже покрыты хотя бы одним импортированным или вручную завершённым типом.
+                    </div>
+                `}
+                <div class="space-y-2">
+                    ${unitRows}
+                </div>
+            </div>
+        `;
+    }
+
+    formatTheorySessionTimestamp(value) {
+        const date = value ? new Date(value) : null;
+        if (!date || Number.isNaN(date.getTime())) return 'Без даты';
+        return date.toLocaleString('ru-RU', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+        });
+    }
+
+    getManualAnalysisSessionHeadline(session) {
+        const normalized = this.normalizeManualAnalysisSession(session);
+        if (!normalized) return 'Анализ без контекста';
+        const parts = [
+            normalized.module_name || normalized.module_id || '',
+            normalized.topic_name || normalized.topic_id || '',
+        ].filter(Boolean);
+        return parts.length ? parts.join(' / ') : 'Анализ без выбранной темы';
+    }
+
+    renderTheoryAnalysisHomeScreen() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        if (!session?.analysis?.ok) return '';
+        const snapshot = this.getManualAnalysisCoverageSnapshot(session);
+        const draftCount = Object.values(session.recommendation_state || {}).filter((state) => {
+            return !!String(state?.draft_source_text || '').trim() || !!state?.draft_parsed_result;
+        }).length;
+        const importedTypes = Object.values(session.recommendation_state || {}).filter((state) => {
+            return Math.max(0, Number(state?.imported_count || 0)) > 0 || String(state?.status || '').trim().toLowerCase() === 'manual_done';
+        }).length;
+        const archiveCount = this.getManualAnalysisArchive().length;
+
+        return `
+            <div class="max-w-4xl mx-auto space-y-5">
+                <div class="rounded-2xl border border-border-subtle bg-surface-1 p-5">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-[0.08em] text-text-secondary">Активный анализ</div>
+                            <h3 class="mt-1 text-lg font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</h3>
+                            <div class="mt-2 text-sm text-text-secondary">
+                                Последнее обновление: ${this.escapeHtml(this.formatTheorySessionTimestamp(session.updated_at))}
+                            </div>
+                            <div class="mt-1 text-sm text-text-secondary">
+                                ${this.escapeHtml(String(session.analysis?.human_summary || 'Открыт сохранённый анализ материала.'))}
+                            </div>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
+                            <button onclick="dashboard.importManager.resumeManualAnalysisSession()"
+                                class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
+                                Продолжить
+                            </button>
+                            <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
+                                class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                                Новый анализ
+                            </button>
+                            <button onclick="dashboard.importManager.openTheoryAnalysisArchive()"
+                                class="px-4 py-2 text-sm font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                                Архив (${archiveCount})
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div class="rounded-lg border border-border-subtle bg-surface-2 px-3 py-2">
+                            <div class="text-xs text-text-secondary">Единиц</div>
+                            <div class="text-base font-bold text-text-main mt-1">${snapshot.rows.length}</div>
+                        </div>
+                        <div class="rounded-lg border border-warning-light bg-surface-2 px-3 py-2">
+                            <div class="text-xs text-text-secondary">Без покрытия</div>
+                            <div class="text-base font-bold text-text-main mt-1">${snapshot.uncovered.length}</div>
+                        </div>
+                        <div class="rounded-lg border border-primary-light bg-surface-2 px-3 py-2">
+                            <div class="text-xs text-text-secondary">Черновики</div>
+                            <div class="text-base font-bold text-text-main mt-1">${draftCount}</div>
+                        </div>
+                        <div class="rounded-lg border border-success-light bg-surface-2 px-3 py-2">
+                            <div class="text-xs text-text-secondary">Импортированные типы</div>
+                            <div class="text-base font-bold text-text-main mt-1">${importedTypes}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <button onclick="dashboard.importManager.archiveActiveManualAnalysisSession()"
+                        class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                        Сохранить в архив
+                    </button>
+                    <button onclick="dashboard.importManager.deleteActiveManualAnalysisSession()"
+                        class="px-4 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
+                        Удалить текущий анализ
+                    </button>
+                </div>
+
+                ${this.renderManualAnalysisCoverageMapCard()}
+            </div>
+        `;
+    }
+
+    renderTheoryAnalysisArchiveScreen() {
+        const items = this.getManualAnalysisArchive();
+        return `
+            <div class="max-w-4xl mx-auto space-y-5">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-lg font-bold text-text-main">Архив анализов</h3>
+                        <div class="text-sm text-text-secondary mt-1">
+                            Здесь можно сохранить анализ даже без создания заданий и позже вернуться к нему.
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="dashboard.importManager.openTheoryAnalysisHome()"
+                            class="px-4 py-2 text-sm font-medium rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                            Назад
+                        </button>
+                        <button onclick="dashboard.importManager.startFreshTheoryAnalysis()"
+                            class="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
+                            Новый анализ
+                        </button>
+                    </div>
+                </div>
+
+                ${items.length ? `
+                    <div class="space-y-3">
+                        ${items.map((entry) => {
+                            const session = this.normalizeManualAnalysisSession(entry.session);
+                            const snapshot = this.getManualAnalysisCoverageSnapshot(session);
+                            return `
+                                <div class="rounded-xl border border-border-subtle bg-surface-1 p-4">
+                                    <div class="flex flex-wrap items-start justify-between gap-4">
+                                        <div class="min-w-0 flex-1">
+                                            <div class="text-sm font-bold text-text-main">${this.escapeHtml(this.getManualAnalysisSessionHeadline(session))}</div>
+                                            <div class="mt-1 text-xs text-text-secondary">
+                                                Архивирован: ${this.escapeHtml(this.formatTheorySessionTimestamp(entry.archived_at))}
+                                            </div>
+                                            <div class="mt-2 text-sm text-text-secondary">
+                                                ${this.escapeHtml(String(session?.analysis?.human_summary || ''))}
+                                            </div>
+                                            <div class="mt-2 text-xs text-text-secondary">
+                                                Единиц: <strong class="text-text-main">${snapshot.rows.length}</strong>,
+                                                без покрытия: <strong class="text-text-main">${snapshot.uncovered.length}</strong>
+                                            </div>
+                                        </div>
+                                        <div class="flex flex-wrap gap-2">
+                                            <button onclick="dashboard.importManager.restoreArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
+                                                class="px-3 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors">
+                                                Открыть
+                                            </button>
+                                            <button onclick="dashboard.importManager.deleteArchivedManualAnalysisSession('${this.escapeInlineJsString(String(entry.id))}')"
+                                                class="px-3 py-2 text-sm font-medium rounded-lg border border-error-light text-error hover:bg-error-lighter transition-colors">
+                                                Удалить
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : `
+                    <div class="rounded-2xl border border-border-subtle bg-surface-1 p-6 text-center">
+                        <div class="text-base font-semibold text-text-main">Архив пока пуст</div>
+                        <div class="mt-2 text-sm text-text-secondary">
+                            Сохраняйте полезные анализы в архив, чтобы возвращаться к ним позже даже без генерации заданий.
+                        </div>
+                    </div>
+                `}
+            </div>
+        `;
     }
 
     hasActiveWorkspaceImportFlow() {
@@ -700,12 +2082,24 @@ class ImportManager {
 
         const titleEl = modal.querySelector('[data-role="import-modal-title"]')
             || modal.querySelector('h2.text-xl.font-bold.text-text-main');
+        let subtitleEl = modal.querySelector('[data-role="import-modal-subtitle"]');
         const stepsPanel = modal.querySelector('[data-role="import-steps-panel"]');
         const footer = modal.querySelector('[data-role="import-footer"]');
         const content = modal.querySelector('[data-role="import-content"]');
 
         if (titleEl) {
             titleEl.textContent = this.modalPurpose === 'theory_analysis' ? 'Анализ теории' : 'Импорт заданий';
+        }
+        if (titleEl) {
+            if (!subtitleEl) {
+                subtitleEl = document.createElement('p');
+                subtitleEl.setAttribute('data-role', 'import-modal-subtitle');
+                subtitleEl.className = 'editor-flow-wrap mt-1 text-sm text-text-secondary';
+                titleEl.insertAdjacentElement('afterend', subtitleEl);
+            }
+            subtitleEl.textContent = this.modalPurpose === 'theory_analysis'
+                ? 'Стратегический workflow: анализ материала, карта покрытия и поэтапная генерация типов заданий.'
+                : 'Быстрый импорт готовых задач или прямой AI-import по конкретному типу.';
         }
         if (stepsPanel) {
             stepsPanel.classList.toggle('hidden', this.modalPurpose === 'theory_analysis');
@@ -722,12 +2116,19 @@ class ImportManager {
 
     enterImportModalMode() {
         this.setModalPurpose('import');
+        if (this.aiTemplateType === 'material_analysis') {
+            this.aiTemplateType = 'open_answer';
+        }
     }
 
     async openTheoryAnalysisMode() {
         this.setModalPurpose('theory_analysis');
+        if (!this.selectedModule && !this.selectedTopic) {
+            this.presetFromCurrentLocation();
+        }
         this.theorySubMode = 'analysis';
-        this.currentStep = 1;
+        this.importMode = 'ai';
+        this.currentStep = 2;
         this.generationResult = null;
         this.parsedResult = null;
         this.excludedTasks.clear();
@@ -737,12 +2138,19 @@ class ImportManager {
         this.aiGenerating = false;
         this.aiAnalyzing = false;
         this.theoryOpeningRunId = null;
-        if (this.isInternalAiGenerationInDevelopment()) {
-            return this.openTheoryAiInProgressPlaceholder();
+        const session = this.getActiveManualAnalysisSession();
+        if (session?.analysis?.ok) {
+            this.manualAnalysisResult = session.analysis;
+            this.selectedModule = session.module_id || this.selectedModule || '';
+            this.selectedTopic = session.topic_id || this.selectedTopic || '';
+            this.selectedModuleName = session.module_name || this.selectedModuleName || '';
+            this.selectedTopicName = session.topic_name || this.selectedTopicName || '';
         }
+        this.aiTemplateType = 'material_analysis';
+        this.theorySubMode = session?.analysis?.ok ? 'home' : 'analysis';
         this.renderTheoryAnalysisMode();
-        if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
-            return { ok: false, error: 'ai_mode_in_progress' };
+        if (this.isTheoryExternalAnalysisFallback()) {
+            return { ok: true, mode: 'external_manual' };
         }
         this.aiCheckStatus().then(() => this.renderTheoryAnalysisMode()).catch(() => {});
         this.loadTheoryAnalysisRuns().catch(() => {});
@@ -806,14 +2214,26 @@ class ImportManager {
     }
 
     nextStep() {
-        if (this.modalPurpose === 'theory_analysis') return;
+        if (this.modalPurpose === 'theory_analysis') {
+            if (this.currentStep < 4) {
+                this.currentStep += 1;
+                this.renderTheoryAnalysisMode();
+            }
+            return;
+        }
         if (this.currentStep < 4) {
             this.goToStep(this.currentStep + 1);
         }
     }
 
     prevStep() {
-        if (this.modalPurpose === 'theory_analysis') return;
+        if (this.modalPurpose === 'theory_analysis') {
+            if (this.currentStep > 2) {
+                this.currentStep -= 1;
+                this.renderTheoryAnalysisMode();
+            }
+            return;
+        }
         if (this.hasActiveWorkspaceImportFlow()) {
             if (this.currentStep > 3) {
                 this.goToStep(this.currentStep - 1);
@@ -991,6 +2411,9 @@ class ImportManager {
 
     setImportMode(mode) {
         this.importMode = mode;
+        if (mode === 'ai' && this.aiTemplateType === 'material_analysis') {
+            this.aiTemplateType = 'open_answer';
+        }
         // Check AI availability when switching to AI mode
         if (mode === 'ai' && !this.aiStatus) {
             this.aiCheckStatus().then(() => this.renderCurrentStep());
@@ -1059,6 +2482,115 @@ class ImportManager {
             return NotificationUI.confirm({ title, message, confirmText, cancelText, variant });
         }
         return window.confirm(message);
+    }
+
+    getImportModalCloseGuardState() {
+        const session = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        const recommendationState = (session?.recommendation_state && typeof session.recommendation_state === 'object')
+            ? session.recommendation_state
+            : {};
+        const importedRecommendationTypes = Object.values(recommendationState).filter((state) => {
+            const importedCount = Math.max(0, Number(state?.imported_count || 0));
+            const status = String(state?.status || '').trim().toLowerCase();
+            return importedCount > 0 || status === 'manual_done';
+        }).length;
+        const draftRecommendationTypes = Object.values(recommendationState).filter((state) => {
+            return !!String(state?.draft_source_text || '').trim() || !!state?.draft_parsed_result;
+        }).length;
+        const hasMeaningfulState = !!(
+            String(this.sourceText || '').trim()
+            || this.parsedResult
+            || this.uploadedFile
+            || this.checkResult
+            || this.archiveCacheId
+            || this.perTaskConflictRes.size > 0
+            || this.excludedTasks.size > 0
+            || this.selectedTasks.size > 0
+            || this.currentStep > 1
+            || this.importMode !== 'text'
+            || session
+            || this.manualAnalysisResult
+        );
+
+        return {
+            hasMeaningfulState,
+            hasImportedProgress: importedRecommendationTypes > 0,
+            importedRecommendationTypes,
+            draftRecommendationTypes,
+        };
+    }
+
+    async confirmImportModalCloseIfNeeded() {
+        const guard = this.getImportModalCloseGuardState();
+        if (!guard.hasMeaningfulState) return true;
+
+        const title = guard.hasImportedProgress
+            ? 'Закрыть импорт и сбросить локальные данные?'
+            : 'Сбросить данные импорта?';
+        const message = guard.hasImportedProgress
+            ? `Окно импорта будет закрыто. Черновики, карта покрытия и промежуточные данные будут сброшены. Уже импортированные задания останутся в библиотеке. Импортировано типов: ${guard.importedRecommendationTypes}.`
+            : `Окно импорта будет закрыто. Все промежуточные данные будут удалены: введённый текст, результаты парсинга и черновики${guard.draftRecommendationTypes > 0 ? ` (${guard.draftRecommendationTypes})` : ''}.`;
+        return await this.confirmAction({
+            title,
+            message,
+            confirmText: 'Закрыть и сбросить',
+            cancelText: 'Продолжить работу',
+            variant: 'warning',
+        });
+    }
+
+    async discardImportArchiveCache() {
+        const cacheId = String(this.archiveCacheId || '').trim();
+        if (!cacheId) return false;
+        try {
+            const response = await fetch('/api/editor/import/discard-cache', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cache_id: cacheId }),
+            });
+            if (!response.ok) return false;
+            const data = await response.json().catch(() => ({}));
+            return data?.ok === true;
+        } catch (error) {
+            console.warn('[ImportManager] Failed to discard archive cache:', error);
+            return false;
+        }
+    }
+
+    async resetImportModalState() {
+        await this.discardImportArchiveCache();
+        this.setModalPurpose('import');
+        this.currentStep = 1;
+        this.selectedModule = null;
+        this.selectedTopic = null;
+        this.selectedModuleName = '';
+        this.selectedTopicName = '';
+        this.sourceText = '';
+        this.manualAnalysisResult = null;
+        this.parsedResult = null;
+        this.excludedTasks.clear();
+        this.selectedTasks.clear();
+        this.importMode = 'text';
+        this.uploadedFile = null;
+        this.checkResult = null;
+        this.archiveCacheId = null;
+        this.perTaskConflictRes.clear();
+        this.resetWorkspaceImportState();
+        this.aiTemplateType = 'open_answer';
+        this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
+        this.materialText = '';
+        this.aiUploadedFile = null;
+        this.aiFileInfo = null;
+        this.analysisResult = null;
+        this.generationResult = null;
+        this.aiProvider = null;
+        this.aiProviderModel = null;
+        this.aiRunId = null;
+        this.aiSelectedRecs.clear();
+        this.aiGenerating = false;
+        this.aiAnalyzing = false;
+        this.importRequestKey = null;
+        this.theoryOpeningRunId = null;
     }
 
     _makeIdempotencyKey() {
@@ -1292,20 +2824,30 @@ class ImportManager {
 
         const hasErrors = this.parsedResult?.parsing_errors?.length > 0;
         const errorsList = this.parsedResult?.parsing_errors || [];
-        const templateOptions = this.getAIAgentTemplateOptions();
-        const activeTemplate = templateOptions[this.aiTemplateType] || templateOptions.open_answer;
+        const templateOptions = this.modalPurpose === 'theory_analysis'
+            ? this.getAIAgentTemplateOptions()
+            : this.getDirectAIAgentTemplateOptions();
+        const activeTemplate = this.getActiveAIAgentTemplateConfig();
         const isAiPromptMode = this.importMode === 'ai';
         const isMaterialAnalysisMode = isAiPromptMode && this.aiTemplateType === 'material_analysis';
-        const manualAnalysisPreview = isMaterialAnalysisMode ? this.renderManualAnalysisPreviewCard() : '';
+        const manualAnalysisPreview = isAiPromptMode ? this.renderManualAnalysisPreviewCard() : '';
+        const manualAnalysisPromptContext = isAiPromptMode ? this.renderManualAnalysisPromptContextCard() : '';
         const stepTitle = isAiPromptMode ? 'Скопируйте промпт и вставьте ответ внешнего ИИ' : 'Вставьте текст с заданиями';
         const stepDescription = isAiPromptMode
             ? 'Сгенерируйте задания во внешней нейросети, затем вставьте результат сюда для проверки и импорта.'
             : 'Вставьте текст, содержащий задания в формате парсера';
+        const showStepIntro = this.modalPurpose !== 'theory_analysis';
+        const showTemplateSelector = this.modalPurpose !== 'theory_analysis';
+        const fixedTheoryTemplateLabel = isMaterialAnalysisMode
+            ? 'Анализ материала'
+            : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType) || activeTemplate.taskType || activeTemplate.title);
 
         return `
             <div class="max-w-3xl mx-auto animate-slide-up-fade">
-                <h3 class="text-lg font-bold text-text-main mb-2">${stepTitle}</h3>
-                <p class="text-sm text-text-secondary mb-6">${stepDescription}</p>
+                ${showStepIntro ? `
+                    <h3 class="text-lg font-bold text-text-main mb-2">${stepTitle}</h3>
+                    <p class="text-sm text-text-secondary mb-6">${stepDescription}</p>
+                ` : ''}
 
                 <div class="mb-4 p-4 bg-surface-2 border border-border-subtle rounded-lg">
                     <div class="flex items-start justify-between gap-3 mb-3">
@@ -1318,24 +2860,35 @@ class ImportManager {
                             Скопировать промпт
                         </button>
                     </div>
-                    <div class="mb-3">
-                        <label for="ai-agent-template-type" class="block text-xs font-semibold text-text-secondary mb-1">Тип задания</label>
-                        <select id="ai-agent-template-type"
-                            class="block w-full rounded-lg border-border-subtle bg-surface-1 py-2 px-3 text-sm text-text-main focus:ring-2 focus:ring-primary">
-                            ${Object.entries(templateOptions).map(([key, value]) => `
-                                <option value="${key}" ${this.aiTemplateType === key ? 'selected' : ''}>${this.escapeHtml(value.title)}</option>
-                            `).join('')}
-                        </select>
-                    </div>
-                    <div id="ai-agent-instructions" class="mb-3 p-3 bg-info-lighter border border-info-light rounded-lg">
+                    ${showTemplateSelector ? `
+                        <div class="mb-3">
+                            <label for="ai-agent-template-type" class="block text-xs font-semibold text-text-secondary mb-1">Тип задания</label>
+                            <select id="ai-agent-template-type"
+                                class="block w-full rounded-lg border-border-subtle bg-surface-1 py-2 px-3 text-sm text-text-main focus:ring-2 focus:ring-primary">
+                                ${Object.entries(templateOptions).map(([key, value]) => `
+                                    <option value="${key}" ${this.aiTemplateType === key ? 'selected' : ''}>${this.escapeHtml(value.title)}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    ` : `
+                        <div class="mb-3">
+                            <div class="block text-xs font-semibold text-text-secondary mb-1">Режим</div>
+                            <div class="rounded-lg border border-border-subtle bg-surface-1 py-2 px-3 text-sm font-medium text-text-main">
+                                ${this.escapeHtml(fixedTheoryTemplateLabel)}
+                            </div>
+                        </div>
+                    `}
+                    <div id="ai-agent-instructions" class="mb-3 p-3 bg-surface-2 border border-info-light rounded-lg">
                         <div class="flex items-start gap-2">
                             <span class="material-symbols-outlined text-info text-[18px] mt-0.5">lightbulb</span>
-                            <div class="text-xs text-info-text whitespace-pre-line">${this.escapeHtml(activeTemplate.instructions)}</div>
+                            <div class="text-xs text-text-secondary whitespace-pre-line">${this.escapeHtml(activeTemplate.instructions)}</div>
                         </div>
                     </div>
                     <textarea id="ai-agent-prompt-textarea" rows="12" readonly
                         class="block w-full rounded-lg border-border-subtle bg-surface-1 p-3 text-xs text-text-main font-mono">${this.escapeHtml(activeTemplate.prompt)}</textarea>
                 </div>
+
+                ${manualAnalysisPromptContext}
 
                 ${hasErrors ? `
                     <div class="mb-4 p-4 bg-error-lighter border border-error-light rounded-lg">
@@ -1370,9 +2923,9 @@ class ImportManager {
                 
                 <div id="import-live-counter" class="mt-2 flex flex-wrap gap-2 text-xs min-h-[24px]"></div>
                 
-                <div class="mt-3 flex items-start gap-2 p-3 bg-info-lighter border border-info-light rounded-lg">
+                <div class="mt-3 flex items-start gap-2 p-3 bg-surface-2 border border-info-light rounded-lg">
                     <span class="material-symbols-outlined text-info text-[20px]">info</span>
-                    <div class="text-xs text-info-text">
+                    <div class="text-xs text-text-secondary">
                         <p class="font-medium mb-1">Поддерживаемые форматы:</p>
                         <p>@OPEN_ANSWER - Открытый ответ</p>
                         <p>@SEQUENCE - Последовательность</p>
@@ -1392,7 +2945,7 @@ class ImportManager {
         const normalized = String(taskType || '').trim().toUpperCase();
         const mapping = {
             OPEN_ANSWER: 'open_answer',
-            SEQUENCE: 'sequence',
+            SEQUENCE: 'sequence_assembly',
             TEST: 'test',
             CLICK_TEXT: 'click_text',
             CLICK_WORDS: 'click_words',
@@ -1407,40 +2960,66 @@ class ImportManager {
             this.showToast('Этот тип нельзя продолжить через текстовый импорт. Его нужно создавать вручную в редакторе.', 'warning');
             return;
         }
+        const existingDraft = this.getManualAnalysisDraft(normalizedTaskType);
+        if (existingDraft) {
+            this.openManualAnalysisDraft(normalizedTaskType);
+            return;
+        }
 
+        this.setManualAnalysisSelectedTaskType(normalizedTaskType);
         this.aiTemplateType = templateKey;
         this.sourceText = '';
         this.parsedResult = null;
+        const activeSession = this.getActiveManualAnalysisSession();
+        if (activeSession?.analysis) {
+            this.manualAnalysisResult = activeSession.analysis;
+        }
         const templateSelect = document.getElementById('ai-agent-template-type');
         if (templateSelect) templateSelect.value = templateKey;
         const textArea = document.getElementById('import-text-area');
         if (textArea) textArea.value = '';
         this.updateAIAgentPromptTextarea();
         this._updateLiveCounter('');
-        this.showToast(`Шаблон переключён на ${normalizedTaskType}. Теперь сгенерируйте задания этого типа и вставьте их сюда.`, 'success');
+        this.showToast(`Шаблон переключён на ${this.getEditorFacingTaskTypeLabel(normalizedTaskType)}. Контекст анализа уже встроен в prompt.`, 'success');
         this.renderCurrentStep();
     }
 
     renderManualAnalysisPreviewCard() {
-        const analysis = (this.manualAnalysisResult && typeof this.manualAnalysisResult === 'object')
-            ? this.manualAnalysisResult
-            : null;
+        const session = this.getActiveManualAnalysisSession();
+        const analysis = (session?.analysis && typeof session.analysis === 'object')
+            ? session.analysis
+            : ((this.manualAnalysisResult && typeof this.manualAnalysisResult === 'object')
+                ? this.manualAnalysisResult
+                : null);
         if (!analysis?.ok) return '';
+
+        const coverageMapCard = session ? this.renderManualAnalysisCoverageMapCard() : '';
 
         const units = Array.isArray(analysis.educational_units) ? analysis.educational_units : [];
         const recommendations = Array.isArray(analysis.recommendations) ? analysis.recommendations : [];
         const notRecommended = Array.isArray(analysis.not_recommended) ? analysis.not_recommended : [];
         const warnings = Array.isArray(analysis.warnings) ? analysis.warnings.filter(Boolean) : [];
         const unitMap = new Map(units.map((unit) => [Number(unit?.id), unit]));
-        const typeLabels = {
-            OPEN_ANSWER: 'Открытый ответ',
-            SEQUENCE: 'Последовательность',
-            TEST: 'Тест',
-            CLICK_TEXT: 'Выбор утверждений',
-            CLICK_WORDS: 'Поиск ошибок',
-            CLICK: 'Клик по изображению',
-            DRAW: 'Рисование на изображении',
-        };
+        const recommendationState = (session?.recommendation_state && typeof session.recommendation_state === 'object')
+            ? session.recommendation_state
+            : {};
+        const importedUnitIds = new Set();
+        Object.values(recommendationState).forEach((state) => {
+            const importedCount = Math.max(0, Number(state?.imported_count || 0));
+            const status = String(state?.status || '').trim().toLowerCase();
+            if (importedCount <= 0 && status !== 'manual_done') return;
+            (Array.isArray(state?.covers_units) ? state.covers_units : []).forEach((id) => importedUnitIds.add(Number(id)));
+        });
+        const importedTypesCount = Object.values(recommendationState)
+            .filter((state) => {
+                const importedCount = Math.max(0, Number(state?.imported_count || 0));
+                const status = String(state?.status || '').trim().toLowerCase();
+                return importedCount > 0 || status === 'manual_done';
+            })
+            .length;
+        const draftTypesCount = Object.values(recommendationState)
+            .filter((state) => !!String(state?.draft_source_text || '').trim() || !!state?.draft_parsed_result)
+            .length;
 
         return `
             <div class="mt-4 rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
@@ -1455,6 +3034,18 @@ class ImportManager {
                     </div>
                 </div>
 
+                ${session ? `
+                    <div class="rounded-lg border border-primary-light bg-surface-2 p-3 text-xs text-text-secondary">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <span>Сессия: <span class="font-semibold text-text-main">${this.escapeHtml(session.id)}</span></span>
+                            <span>Импортировано типов: <span class="font-semibold text-text-main">${importedTypesCount}</span></span>
+                            <span>Черновиков сохранено: <span class="font-semibold text-text-main">${draftTypesCount}</span></span>
+                            <span>Покрыто единиц импортом: <span class="font-semibold text-text-main">${importedUnitIds.size}/${units.length}</span></span>
+                            ${session.selected_task_type ? `<span>Текущий фокус: <span class="font-semibold text-text-main">${this.escapeHtml(this.getEditorFacingTaskTypeLabel(session.selected_task_type))}</span></span>` : ''}
+                        </div>
+                    </div>
+                ` : ''}
+
                 ${analysis.human_summary ? `
                     <div class="rounded-lg border border-border-subtle bg-surface-2 p-3 text-sm text-text-secondary leading-relaxed">
                         ${this.escapeHtml(analysis.human_summary)}
@@ -1462,13 +3053,15 @@ class ImportManager {
                 ` : ''}
 
                 ${warnings.length ? `
-                    <div class="rounded-lg border border-warning-light bg-warning-lighter p-3">
-                        <div class="text-xs font-semibold text-warning-text mb-1">Предупреждения</div>
-                        <div class="space-y-1 text-xs text-warning-text">
+                    <div class="rounded-lg border border-warning-light bg-surface-2 p-3">
+                        <div class="text-xs font-semibold text-text-main mb-1">Предупреждения</div>
+                        <div class="space-y-1 text-xs text-text-secondary">
                             ${warnings.map((warning) => `<p>${this.escapeHtml(String(warning))}</p>`).join('')}
                         </div>
                     </div>
                 ` : ''}
+
+                ${coverageMapCard}
 
                 <div>
                     <div class="text-xs font-semibold text-text-secondary uppercase tracking-wide mb-2">Рекомендованные типы</div>
@@ -1477,30 +3070,103 @@ class ImportManager {
                             const taskType = String(rec?.task_type || '').trim().toUpperCase();
                             const templateKey = this.getAIAgentTemplateKeyForTaskType(taskType);
                             const manualOnly = rec?.manual_only === true || rec?.auto_generation_supported === false || !templateKey;
+                            const editorLabel = String(rec?.editor_label || this.getEditorFacingTaskTypeLabel(taskType));
                             const coveredUnits = (Array.isArray(rec?.covers_units) ? rec.covers_units : [])
                                 .map((unitId) => unitMap.get(Number(unitId)))
                                 .filter(Boolean)
                                 .map((unit) => `#${unit.id} ${unit.title}`);
+                            const anchors = Array.isArray(rec?.assessable_anchors) ? rec.assessable_anchors.filter(Boolean) : [];
+                            const designCandidates = Array.isArray(rec?.design_candidates) ? rec.design_candidates.filter(Boolean) : [];
+                            const manualAuthoring = rec?.manual_authoring && typeof rec.manual_authoring === 'object'
+                                ? rec.manual_authoring
+                                : null;
+                            const recState = recommendationState[taskType] || {};
+                            const statusMeta = this.getManualAnalysisStatusMeta(
+                                recState.status || (manualOnly ? 'manual_only' : rec?.recommendation_status || 'not_started')
+                            );
+                            const importedCount = Math.max(0, Number(recState?.imported_count || 0));
+                            const draft = this.getManualAnalysisDraft(taskType);
+                            const hasDraft = !!draft;
+                            const draftCount = Math.max(0, Number(draft?.taskCount || 0));
+                            const isCurrentFocus = session?.selected_task_type === taskType;
+                            const draftIsOpen = hasDraft && isCurrentFocus && !!this.parsedResult && this.currentStep === 3;
+                            const buttonLabel = manualOnly
+                                ? 'Только вручную'
+                                : (hasDraft
+                                    ? (draftIsOpen ? 'Черновик открыт' : 'Открыть черновик')
+                                    : (isCurrentFocus ? 'Текущий тип' : (importedCount > 0 ? 'Сгенерировать ещё' : 'Выбрать этот тип')));
+                            const canReset = ['selected', 'draft_generated', 'manual_done', 'skipped'].includes(String(recState?.status || '').trim().toLowerCase());
+                            const skipButtonLabel = String(recState?.status || '').trim().toLowerCase() === 'skipped' ? 'Вернуть в план' : 'Пропустить';
+                            const primaryAction = hasDraft ? 'openManualAnalysisDraft' : 'applyManualAnalysisRecommendation';
                             return `
                                 <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
                                     <div class="flex flex-wrap items-start justify-between gap-3">
                                         <div class="min-w-0 flex-1">
                                             <div class="flex flex-wrap items-center gap-2">
-                                                <div class="text-sm font-bold text-text-main">${this.escapeHtml(typeLabels[taskType] || taskType)}</div>
-                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary-lighter text-primary">${this.escapeHtml(String(rec?.priority || 'medium'))}</span>
+                                                <div class="text-sm font-bold text-text-main">${this.escapeHtml(editorLabel)}</div>
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">${this.escapeHtml(String(rec?.priority || 'medium'))}</span>
                                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-secondary border border-border-subtle">${Number(rec?.count || 0)} шт.</span>
-                                                ${manualOnly ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-warning-lighter text-warning-text border border-warning-light">manual only</span>' : ''}
+                                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusMeta.className}">${this.escapeHtml(statusMeta.label)}</span>
+                                                ${importedCount > 0 ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-success-light">импортов: ${importedCount}</span>` : ''}
+                                                ${hasDraft ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-surface-1 text-text-main border border-primary-light">черновик: ${draftCount || 'сохранён'}</span>` : ''}
                                             </div>
                                             ${rec?.coverage_role ? `<div class="mt-2 text-xs text-text-secondary">${this.escapeHtml(String(rec.coverage_role))}</div>` : ''}
+                                            ${rec?.generation_focus ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Фокус генерации:</span> ${this.escapeHtml(String(rec.generation_focus))}</div>` : ''}
                                             ${coveredUnits.length ? `<div class="mt-2 text-[11px] text-text-secondary">Покрывает: ${this.escapeHtml(coveredUnits.join('; '))}</div>` : ''}
+                                            ${anchors.length ? `<div class="mt-2 text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Опоры:</span> ${this.escapeHtml(anchors.join('; '))}</div>` : ''}
                                             ${rec?.count_rationale ? `<div class="mt-1 text-[11px] text-text-muted">${this.escapeHtml(String(rec.count_rationale))}</div>` : ''}
+                                            ${draft?.savedAt ? `<div class="mt-1 text-[11px] text-text-muted">Черновик сохранён: ${this.escapeHtml(new Date(draft.savedAt).toLocaleString())}</div>` : ''}
+                                            ${designCandidates.length ? `
+                                                <div class="mt-3">
+                                                    <div class="text-[11px] font-semibold text-text-main mb-1">Черновики заданий</div>
+                                                    <div class="space-y-1">
+                                                        ${designCandidates.map((item) => `
+                                                            <div class="text-[11px] text-text-secondary bg-surface-1 border border-border-subtle rounded px-2 py-1">
+                                                                ${this.escapeHtml(String(item))}
+                                                            </div>
+                                                        `).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+                                            ${manualAuthoring ? `
+                                                <div class="mt-3 rounded-lg border border-warning-light bg-surface-1 p-2.5 space-y-1">
+                                                    <div class="text-[11px] font-semibold text-text-main">Визуальный blueprint</div>
+                                                    ${Array.isArray(manualAuthoring.figure_refs) && manualAuthoring.figure_refs.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Рисунки:</span> ${this.escapeHtml(manualAuthoring.figure_refs.join(', '))}</div>` : ''}
+                                                    ${Array.isArray(manualAuthoring.target_objects) && manualAuthoring.target_objects.length ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Что распознать:</span> ${this.escapeHtml(manualAuthoring.target_objects.join('; '))}</div>` : ''}
+                                                    ${manualAuthoring.polygon_hint ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Полигон:</span> ${this.escapeHtml(String(manualAuthoring.polygon_hint))}</div>` : ''}
+                                                    ${manualAuthoring.task_stem_example ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Пример формулировки:</span> ${this.escapeHtml(String(manualAuthoring.task_stem_example))}</div>` : ''}
+                                                    ${manualAuthoring.text_anchor ? `<div class="text-[11px] text-text-secondary"><span class="font-semibold text-text-main">Текстовая привязка:</span> ${this.escapeHtml(String(manualAuthoring.text_anchor))}</div>` : ''}
+                                                </div>
+                                            ` : ''}
                                         </div>
-                                        <button
-                                            onclick="dashboard.importManager.applyManualAnalysisRecommendation('${this.escapeInlineJsString(taskType)}')"
-                                            class="px-3 py-1.5 text-xs font-semibold rounded-lg ${manualOnly ? 'border border-border-subtle text-text-disabled cursor-not-allowed' : 'border border-primary text-primary hover:bg-primary hover:text-primary-fg'} transition-colors"
-                                            ${manualOnly ? 'disabled' : ''}>
-                                            ${manualOnly ? 'Только вручную' : 'Выбрать этот тип'}
-                                        </button>
+                                        <div class="flex flex-col gap-2">
+                                            <button
+                                                onclick="dashboard.importManager.${primaryAction}('${this.escapeInlineJsString(taskType)}')"
+                                                class="px-3 py-1.5 text-xs font-semibold rounded-lg ${manualOnly ? 'border border-border-subtle text-text-disabled cursor-not-allowed' : 'border border-primary text-primary hover:bg-primary hover:text-primary-fg'} transition-colors"
+                                                ${manualOnly ? 'disabled' : ''}>
+                                                ${buttonLabel}
+                                            </button>
+                                            ${manualOnly ? `
+                                                <button
+                                                    onclick="dashboard.importManager.setManualAnalysisRecommendationLifecycle('${this.escapeInlineJsString(taskType)}', '${String(recState?.status || '').trim().toLowerCase() === 'manual_done' ? 'reset' : 'manual_done'}')"
+                                                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-success-light text-success-text hover:bg-success-lighter transition-colors">
+                                                    ${String(recState?.status || '').trim().toLowerCase() === 'manual_done' ? 'Снять отметку' : 'Пометить как сделано вручную'}
+                                                </button>
+                                            ` : `
+                                                <button
+                                                    onclick="dashboard.importManager.setManualAnalysisRecommendationLifecycle('${this.escapeInlineJsString(taskType)}', '${String(recState?.status || '').trim().toLowerCase() === 'skipped' ? 'reset' : 'skipped'}')"
+                                                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                                                    ${skipButtonLabel}
+                                                </button>
+                                            `}
+                                            ${canReset ? `
+                                                <button
+                                                    onclick="dashboard.importManager.setManualAnalysisRecommendationLifecycle('${this.escapeInlineJsString(taskType)}', 'reset')"
+                                                    class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border-subtle text-text-secondary hover:bg-bg-hover transition-colors">
+                                                    Сбросить статус
+                                                </button>
+                                            ` : ''}
+                                        </div>
                                     </div>
                                 </div>
                             `;
@@ -1514,7 +3180,7 @@ class ImportManager {
                         <div class="space-y-2">
                             ${notRecommended.map((item) => `
                                 <div class="rounded-lg border border-border-subtle bg-surface-2 p-3">
-                                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(typeLabels[String(item?.task_type || '').trim().toUpperCase()] || String(item?.task_type || 'Тип'))}</div>
+                                    <div class="text-sm font-semibold text-text-main">${this.escapeHtml(String(item?.editor_label || this.getEditorFacingTaskTypeLabel(String(item?.task_type || '').trim().toUpperCase()) || String(item?.task_type || 'Тип')))}</div>
                                     <div class="mt-1 text-xs text-text-secondary">${this.escapeHtml(String(item?.reason || ''))}</div>
                                 </div>
                             `).join('')}
@@ -2710,6 +4376,25 @@ class ImportManager {
     // =========================================================================
 
     attachStepEventListeners() {
+        const moduleSelect = document.getElementById('import-module-select');
+        const topicSelect = document.getElementById('import-topic-select');
+
+        if (moduleSelect && !moduleSelect.dataset.importBound) {
+            moduleSelect.dataset.importBound = '1';
+            moduleSelect.addEventListener('change', (e) => {
+                this.selectedModule = e.target.value;
+                this.selectedModuleName = e.target.selectedOptions[0]?.textContent || e.target.value;
+                this.updateTopicSelect();
+            });
+        }
+        if (topicSelect && !topicSelect.dataset.importBound) {
+            topicSelect.dataset.importBound = '1';
+            topicSelect.addEventListener('change', (e) => {
+                this.selectedTopic = e.target.value;
+                this.selectedTopicName = e.target.selectedOptions[0]?.textContent || e.target.value;
+            });
+        }
+
         if (this.currentStep === 1) {
             const fileInput = document.getElementById('import-file-input');
             const dropZone = document.getElementById('import-drop-zone');
@@ -2747,23 +4432,6 @@ class ImportManager {
                 });
             }
 
-            const moduleSelect = document.getElementById('import-module-select');
-            const topicSelect = document.getElementById('import-topic-select');
-
-            if (moduleSelect) {
-                moduleSelect.addEventListener('change', (e) => {
-                    this.selectedModule = e.target.value;
-                    this.selectedModuleName = e.target.selectedOptions[0]?.textContent || e.target.value;
-                    this.updateTopicSelect();
-                });
-            }
-            if (topicSelect) {
-                topicSelect.addEventListener('change', (e) => {
-                    this.selectedTopic = e.target.value;
-                    this.selectedTopicName = e.target.selectedOptions[0]?.textContent || e.target.value;
-                });
-            }
-
             // AI mode: file upload + drag-drop + textarea
             if (this.importMode === 'ai') {
                 this.attachAIComposerEventListeners();
@@ -2779,8 +4447,15 @@ class ImportManager {
             if (templateSelect) {
                 templateSelect.addEventListener('change', (e) => {
                     this.parsedResult = null;
-                    this.manualAnalysisResult = null;
                     this.aiTemplateType = e.target.value;
+                    const selectedTaskType = this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType);
+                    const activeSession = this.getActiveManualAnalysisSession();
+                    if (activeSession?.analysis) {
+                        this.manualAnalysisResult = activeSession.analysis;
+                    }
+                    if (selectedTaskType) {
+                        this.setManualAnalysisSelectedTaskType(selectedTaskType);
+                    }
                     this.updateAIAgentPromptTextarea();
                     this._updateLiveCounter(this.sourceText || '');
                     this.renderCurrentStep();
@@ -2801,7 +4476,7 @@ class ImportManager {
                     this.sourceText = e.target.value;
                     this.parsedResult = null;
                     if (this.aiTemplateType === 'material_analysis') {
-                        this.manualAnalysisResult = null;
+                        this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
                     }
                     clearTimeout(liveCounterTimer);
                     liveCounterTimer = setTimeout(() => this._updateLiveCounter(e.target.value), 300);
@@ -2919,27 +4594,27 @@ class ImportManager {
                 prompt: `Ты — старший методист и эксперт по педагогическому дизайну. Проанализируй учебный материал.
 
 <goal>
-Твоя задача — не оценивать материал по объёму текста и не выдавать примерные диапазоны заданий. Построй полную и практическую карту оценивания: какие задания нужны, чтобы всесторонне закрепить материал, проверить его с разных когнитивных сторон и не раздуть набор искусственными повторами.
+Твоя главная цель — не назначать количество заданий. Построй методическую карту материала: выдели образовательные единицы и покажи, как существующие типы заданий можно применять к ним максимально эффективно, разнообразно и практично.
 </goal>
 
 <task>
 Выполни 4 действия:
-1. Выдели образовательные единицы — проверяемые смысловые единицы, которые студент действительно должен усвоить.
-2. Для каждой единицы определи, какие когнитивные действия стоит проверить: распознавание, различение, объяснение, структурирование, обнаружение искажения, визуальное распознавание.
-3. Подбери такой набор типов заданий, который совместно покрывает материал полно, разносторонне и без лишнего дублирования.
+1. Выдели образовательные единицы — термины, понятия, факты, критерии, процессы, структуры, визуальные ориентиры и умения, которые студент должен усвоить.
+2. Для каждой единицы определи, что именно нужно проверить: узнавание, различение, объяснение, структурирование, обнаружение ошибки, визуальное распознавание, интерпретацию или применение.
+3. Для каждого доступного типа задания оцени, как его можно применить к этому материалу: какие единицы он покрывает, какой когнитивный угол закрывает, на какие опоры материала должен опираться и какие конкретные design candidates можно из него собрать.
 4. Верни строгий структурированный ответ только в блоках <human_summary> и <analysis_json>.
 </task>
 
 <coverage_policy>
 Принципы принятия решений:
-- НЕ определяй количество заданий по объёму текста, числу слов, страниц или абзацев.
-- Определяй количество по числу существенных единиц, плотности фактов, сложности причинно-следственных связей, количеству потенциальных заблуждений, наличию структуры/иерархии и наличию визуальных объектов.
-- Каждая существенная единица должна быть покрыта хотя бы одним рекомендованным типом задания.
-- Ключевые, сложные, часто путаемые или ошибкоопасные единицы желательно покрывать минимум двумя разными типами заданий, если каждый тип даёт новый угол проверки.
-- Одна единица может входить в несколько рекомендаций. Many-to-many покрытие допустимо и желательно, если оно повышает качество проверки.
-- Не добавляй задание только ради количества. Останавливайся, когда следующее задание уже не даёт новой проверочной ценности.
-- Если для какого-то типа в материале нет достаточного основания, прямо укажи это в not_recommended.
-- Если материал узкий, дай мало заданий. Если материал богатый и многослойный, дай столько, сколько нужно для полноценного покрытия.
+- Не оценивай материал по объёму текста и не начинай анализ с количества заданий.
+- Главный результат анализа — карта образовательных единиц и способов применения типов заданий, а не числовой план.
+- Каждая существенная единица должна быть связана хотя бы с одним подходящим типом задания.
+- Many-to-many покрытие допустимо и желательно: одна единица может осмысленно входить в несколько типов, если они проверяют её с разных сторон.
+- В первую очередь показывай, как тип работает на этом материале: какие anchors он использует, какие ошибки, различия, структуры, критерии или визуальные признаки проверяет и какие конкретные заготовки заданий из этого следуют.
+- Не отвергай тип преждевременно, если его можно применить творчески, но всё ещё строго по материалу.
+- Если тип всё же не подходит, объясни это через особенности материала, а не через общие фразы.
+- Поле count допустимо только как вторичная техническая подсказка для downstream-генерации; оно не должно быть главным выводом анализа и не должно определяться по длине текста.
 </coverage_policy>
 
 <available_task_types>
@@ -2992,10 +4667,12 @@ DRAW — обводка/выделение нужных зон на изобра
 
 <output_format>
 Верни ответ ровно в таком формате. Не добавляй никакой прозы до или после блоков.
-Поля rationale, coverage_role, count_rationale и reason должны быть короткими и содержательными (1 предложение каждое).
+Главная ценность ответа — quality of mapping: educational_units, assessable_anchors, design_candidates, generation_focus и coverage_role.
+Если поле count используется, трактуй его как вторичную техническую подсказку для последующей генерации, а не как основной результат анализа.
+Поля rationale, coverage_role, generation_focus и reason должны быть короткими и содержательными (1 предложение каждое). Поле count_rationale опционально и допустимо только как вторичное пояснение.
 
 <human_summary>
-2–4 предложения: тема, содержательная плотность, насколько материал структурный/фактический/визуальный, какие есть ограничения.
+2–4 предложения: тема, содержательная плотность, насколько материал структурный, фактический или визуальный, какие есть ограничения.
 </human_summary>
 
 <analysis_json>
@@ -3016,25 +4693,57 @@ DRAW — обводка/выделение нужных зон на изобра
   "recommendations": [
     {
       "task_type": "TEST|OPEN_ANSWER|SEQUENCE|CLICK_TEXT|CLICK_WORDS|CLICK|DRAW",
-      "count": N,
+      "editor_label": "Exact editor-facing label for this type",
+      "recommendation_status": "recommended_auto|recommended_manual|conditionally_recommended",
       "priority": "high|medium|low",
       "covers_units": [1, 2],
+      "generation_focus": "Short downstream instruction for the generator of this specific type.",
+      "coverage_strategy": "breadth_first|high_risk_first|misconception_first|visual_first|structure_first",
+      "assessable_anchors": ["Concrete criteria, contrasts, traps, values or visual markers this type should cover."],
+      "design_candidates": ["At least two concrete draft tasks grounded in the material, not abstract themes."],
       "rationale": "Почему этот тип нужен.",
       "coverage_role": "Какой когнитивный угол проверки он закрывает.",
-      "count_rationale": "Почему именно столько заданий нужно без ссылок на объём текста.",
+      "count": 3,
+      "count_rationale": "Optional secondary downstream hint; omit or keep minimal if not obvious.",
       "manual_only": false,
-      "auto_generation_supported": true
+      "auto_generation_supported": true,
+      "manual_authoring": {
+        "figure_refs": ["Fig. 2.3", "Рис. 4"],
+        "figure_caption_anchor": "Fragment of the figure caption",
+        "text_anchor": "Phrase from the material that describes the target visual cue",
+        "target_objects": ["What exactly should be clicked or outlined"],
+        "polygon_hint": "What should become the polygon or selection zone",
+        "task_stem_example": "Example wording of the future visual task",
+        "why_visual": "Why a visual task is necessary for full coverage"
+      }
     }
   ],
   "not_recommended": [
-    { "task_type": "...", "reason": "Почему этот тип не нужен или не имеет достаточного основания." }
+    {
+      "task_type": "...",
+      "editor_label": "Exact editor-facing label for this type",
+      "recommendation_status": "not_recommended",
+      "reason": "Почему этот тип не нужен или не имеет достаточного основания."
+    }
   ],
   "illustrations_detected": false,
   "illustrations_note": null,
   "warnings": ["строка предупреждения, если есть"]
 }
 </analysis_json>
-</output_format>`
+</output_format>
+
+<strictness_addendum>
+- Обязательно оцени КАЖДЫЙ доступный тип задания и явно укажи его судьбу: recommendation или not_recommended.
+- Тип можно отправить в not_recommended только если ты не смог предложить для него минимум 2 конкретных, правдоподобных design_candidates, прямо привязанных к материалу.
+- Для CLICK и DRAW рекомендации недопустимо описывать абстрактно: они должны ссылаться на конкретные рисунки, подписи, текстовые якоря, target_objects и polygon_hint.
+- Для CLICK_WORDS учитывай не только числа и термины, но и локально искажаемые критерии, отношения, квалификаторы, отрицания, contrast pairs и направления.
+- SEQUENCE рассматривай широко: порядок, группировка, классификация, иерархия, ранжирование и распределение по уровням.
+- Главный критерий качества — не количество, а то, насколько конкретно анализ связывает образовательные единицы с типами заданий.
+- design_candidates и assessable_anchors должны быть достаточно конкретными, чтобы автор мог на их основе сразу проектировать задания.
+- count и count_rationale — только вторичная техническая подсказка для последующей генерации; они не должны доминировать над rationale, coverage_role и generation_focus.
+- Если сомневаешься, усиливай generation_focus, coverage_role, assessable_anchors и design_candidates, а не спорь о количестве.
+</strictness_addendum>`
             },
             open_answer: {
                 title: 'Открытый ответ (@OPEN_ANSWER)',
@@ -3305,12 +5014,17 @@ text: Сердце человека состоит из [трёх] камер. �
         };
     }
 
+    getDirectAIAgentTemplateOptions() {
+        const options = this.getAIAgentTemplateOptions();
+        const { material_analysis, ...directOnly } = options;
+        return directOnly;
+    }
+
     updateAIAgentPromptTextarea() {
         const textarea = document.getElementById('ai-agent-prompt-textarea');
         const instructionsEl = document.getElementById('ai-agent-instructions');
         if (!textarea) return;
-        const options = this.getAIAgentTemplateOptions();
-        const active = options[this.aiTemplateType] || options.open_answer;
+        const active = this.getActiveAIAgentTemplateConfig();
         textarea.value = active.prompt;
         if (instructionsEl) {
             instructionsEl.innerHTML = `
@@ -3324,8 +5038,7 @@ text: Сердце человека состоит из [трёх] камер. �
 
     async copyAIAgentPrompt() {
         try {
-            const options = this.getAIAgentTemplateOptions();
-            const active = options[this.aiTemplateType] || options.open_answer;
+            const active = this.getActiveAIAgentTemplateConfig();
             await this.writeToClipboard(active.prompt);
             this.showToast('Промпт для ИИ-агента скопирован в буфер обмена.', 'success');
         } catch (error) {
@@ -3345,6 +5058,9 @@ text: Сердце человека состоит из [трёх] камер. �
             }
             textArea.value = text;
             this.sourceText = text;
+            if (this.aiTemplateType === 'material_analysis') {
+                this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
+            }
             this._updateLiveCounter(text);
             this.showToast('Текст из буфера обмена вставлен.', 'success');
         } catch (error) {
@@ -3624,6 +5340,7 @@ text: Сердце человека состоит из [трёх] камер. �
                 try {
                     const result = await this.parseManualAnalysisText(this.sourceText);
                     if (!result.ok) {
+                        this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
                         this.manualAnalysisResult = null;
                         this.parsedResult = {
                             parsing_errors: [result.message || result.error || 'analysis_parse_failed'],
@@ -3633,10 +5350,14 @@ text: Сердце человека состоит из [трёх] камер. �
                     }
 
                     this.parsedResult = null;
-                    this.manualAnalysisResult = result;
+                    this.createManualAnalysisSession(result);
+                    if (this.modalPurpose === 'theory_analysis') {
+                        this.theorySubMode = 'coverage_map';
+                    }
                     this.showToast('Анализ материала распознан. Можно выбрать тип задания ниже.', 'success');
                     this.renderCurrentStep();
                 } catch (error) {
+                    this.clearManualAnalysisSession({ preserveManualAnalysisResult: false });
                     this.manualAnalysisResult = null;
                     this.parsedResult = {
                         parsing_errors: ['Ошибка разбора анализа: ' + error.message],
@@ -3683,6 +5404,19 @@ text: Сердце человека состоит из [трёх] камер. �
                 // Success - show preview
                 this.parsedResult = result;
                 this.importRequestKey = null;
+                if (this.modalPurpose === 'theory_analysis') {
+                    this.theorySubMode = 'task_preview';
+                }
+                if (this.importMode === 'ai') {
+                    const selectedTaskType = this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType);
+                    if (selectedTaskType) {
+                        this.setManualAnalysisSelectedTaskType(selectedTaskType);
+                        this.storeManualAnalysisDraft(selectedTaskType, {
+                            sourceText: this.sourceText,
+                            parsedResult: result,
+                        });
+                    }
+                }
                 this.renderCurrentStep();
             } catch (error) {
                 // Network or other error
@@ -3759,10 +5493,18 @@ text: Сердце человека состоит из [трёх] камер. �
                 if (!this.importRequestKey) {
                     this.importRequestKey = this._makeIdempotencyKey();
                 }
+                const activeSession = this.getActiveManualAnalysisSession();
+                const selectedTaskType = this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType);
+                const selectedRecommendation = selectedTaskType ? this.getManualAnalysisRecommendation(selectedTaskType) : null;
                 const importContext = this.importMode === 'ai'
                     ? {
                         source: 'ai',
                         ai_origin: 'external_prompt',
+                        analysis_session_id: activeSession?.id || null,
+                        analysis_selected_task_type: selectedTaskType || null,
+                        analysis_selected_units: Array.isArray(selectedRecommendation?.covers_units) ? selectedRecommendation.covers_units : [],
+                        analysis_generation_focus: selectedRecommendation?.generation_focus || null,
+                        analysis_coverage_role: selectedRecommendation?.coverage_role || null,
                     }
                     : { source: 'text' };
                 const result = await this.executeImport(this.selectedModule, this.selectedTopic, validTasks, {
@@ -3777,14 +5519,41 @@ text: Сердце человека состоит из [трёх] камер. �
                         errors: result.errors || 0,
                         message: 'text_or_ai',
                     });
-                    this.showVoiceToast({
-                        severity: 'success',
-                        what: 'Импорт завершён.',
-                        impact: `Добавлено: ${result.imported}.`,
-                        next: 'Каталог обновлён, можно переходить к редактуре.',
-                    });
-                    this.dashboard.closeModals(); // Use dashboard helper
-                    this.dashboard.loadCatalog();
+                    if (this.importMode === 'ai' && activeSession && selectedTaskType) {
+                        this.showVoiceToast({
+                            severity: 'success',
+                            what: 'Импорт завершён.',
+                            impact: `Добавлено: ${result.imported}.`,
+                            next: 'Сессия анализа сохранена. Можно выбрать следующий тип задания в карте покрытия.',
+                        });
+                        this.setManualAnalysisSelectedTaskType(selectedTaskType);
+                        this.clearManualAnalysisDraft(selectedTaskType, {
+                            status: 'imported',
+                            imported_count: Math.max(0, Number((activeSession.recommendation_state?.[selectedTaskType]?.imported_count || 0))) + Number(result.imported || 0),
+                            imported_batches: Math.max(0, Number((activeSession.recommendation_state?.[selectedTaskType]?.imported_batches || 0))) + 1,
+                            last_imported_at: new Date().toISOString(),
+                        });
+                        this.sourceText = '';
+                        this.parsedResult = null;
+                        this.excludedTasks.clear();
+                        this.selectedTasks.clear();
+                        this.importRequestKey = null;
+                        this.currentStep = 2;
+                        this.theorySubMode = 'coverage_map';
+                        await this.dashboard.loadCatalog();
+                        this.showToast('Тип импортирован. Можно продолжить с другим типом в карте покрытия ниже.', 'success');
+                        this.renderCurrentStep();
+                        this.updateNavigationButtons();
+                    } else {
+                        this.showVoiceToast({
+                            severity: 'success',
+                            what: 'Импорт завершён.',
+                            impact: `Добавлено: ${result.imported}.`,
+                            next: 'Каталог обновлён, можно переходить к редактуре.',
+                        });
+                        this.dashboard.closeImportModal({ skipConfirm: true });
+                        this.dashboard.loadCatalog();
+                    }
                 } else {
                     this.recordImportHistory({
                         status: 'error',
@@ -3925,7 +5694,7 @@ text: Сердце человека состоит из [трёх] камер. �
                                     ? 'Проверьте проблемные задания и при необходимости повторите импорт.'
                                     : 'Каталог обновлён и готов к работе.',
                             });
-                            this.dashboard.closeModals();
+                            this.dashboard.closeImportModal({ skipConfirm: true });
                             this.dashboard.loadCatalog();
                         } else {
                             const errorMsg = finalResult.rollback
@@ -4063,7 +5832,9 @@ text: Сердце человека состоит из [трёх] камер. �
             this.captureTheoryAnalysisViewState();
         }
         contentArea.innerHTML = this.renderTheoryAnalysisLayout();
+        this.attachStepEventListeners();
         this.attachAIComposerEventListeners();
+        this.applyPresetSelection();
         this.applyTheoryReportPanelState();
         this.restoreTheoryAnalysisViewState();
     }
@@ -4157,8 +5928,9 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     renderTheoryAnalysisLayout() {
-        if (this.isInternalAiGenerationInDevelopment() || !this.isTheoryFeatureEnabled('ai_mode', false)) {
-            return this.renderTheoryAiInProgressPlaceholder();
+        const analysisSessionModes = new Set(['analysis', 'home', 'archive', 'coverage_map', 'task_generation', 'task_preview']);
+        if (analysisSessionModes.has(this.theorySubMode) && this.isTheoryExternalAnalysisFallback()) {
+            return this.renderTheoryExternalAnalysisLayout();
         }
         const isMicrocardsMode = this.theorySubMode === 'microcards';
         const isManualEditor = this.theorySubMode === 'manual_editor';
@@ -4177,6 +5949,7 @@ text: Сердце человека состоит из [трёх] камер. �
         };
         const currentMode = isTextImport ? 'text_import' : (isManualEditor ? 'manual_editor' : (isMicrocardsMode ? 'microcards' : 'analysis'));
         const isMcSubMode = isMicrocardsMode || isManualEditor || isTextImport;
+        const showHeader = isMcSubMode;
 
         const mcNavButtons = (activeMode) => {
             const modes = [
@@ -4194,13 +5967,13 @@ text: Сердце человека состоит из [трёх] камер. �
 
         return `
             <div class="w-full animate-slide-up-fade">
-                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
-                    <div>
-                        <h3 class="text-lg font-bold text-text-main">${titles[currentMode]}</h3>
-                        <p class="editor-flow-wrap text-sm text-text-secondary">${subtitles[currentMode]}</p>
-                    </div>
-                    <div class="flex flex-wrap gap-2">
-                        ${isMcSubMode ? `
+                ${showHeader ? `
+                    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-text-main">${titles[currentMode]}</h3>
+                            <p class="editor-flow-wrap text-sm text-text-secondary">${subtitles[currentMode]}</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2">
                             <button onclick="dashboard.importManager.enterTheorySubMode('analysis')"
                                 class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
                                 К анализу
@@ -4210,30 +5983,9 @@ text: Сердце человека состоит из [трёх] камер. �
                                 class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
                                 Обновить колоды
                             </button>
-                        ` : `
-                            <button onclick="dashboard.importManager.openTheoryMicrocardsMode()"
-                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-primary-fg bg-primary rounded-lg hover:bg-primary-dark transition-colors shadow-sm">
-                                Микрокарточки
-                            </button>
-                            <button onclick="dashboard.importManager.openManualMicrocardsEditor()"
-                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-info-text border border-info-light rounded-lg hover:bg-info-lighter transition-colors">
-                                Редактор карточек
-                            </button>
-                            <button onclick="dashboard.importManager.openMicrocardsTextImport()"
-                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                                Импорт из текста
-                            </button>
-                            <button onclick="dashboard.importManager.theoryResetDraft()"
-                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
-                                Новый анализ
-                            </button>
-                            <button onclick="dashboard.importManager.loadTheoryAnalysisRuns()"
-                                class="editor-flow-button-wrap px-3 py-2 text-sm font-medium text-primary border border-primary rounded-lg hover:bg-primary hover:text-primary-fg transition-colors">
-                                Обновить список
-                            </button>
-                        `}
+                        </div>
                     </div>
-                </div>
+                ` : ''}
 
                 ${isTextImport ? this.renderMicrocardsTextImport() : (isManualEditor ? this.renderManualMicrocardsEditor() : `
                     <div class="grid grid-cols-1 xl:grid-cols-[1.35fr_0.85fr] gap-5">
@@ -4245,6 +5997,125 @@ text: Сердце человека состоит из [трёх] камер. �
                         </div>
                     </div>
                 `)}
+            </div>
+        `;
+    }
+
+    renderTheoryExternalAnalysisLayout() {
+        const session = this.getActiveManualAnalysisSession();
+        const hasSession = !!session?.analysis?.ok;
+        if (this.theorySubMode === 'home' && hasSession) {
+            return `
+                <div class="w-full animate-slide-up-fade space-y-5">
+                    ${this.renderTheoryAnalysisHomeScreen()}
+                </div>
+            `;
+        }
+        if (this.theorySubMode === 'archive') {
+            return `
+                <div class="w-full animate-slide-up-fade space-y-5">
+                    ${this.renderTheoryAnalysisArchiveScreen()}
+                </div>
+            `;
+        }
+        const isPromptStep = this.currentStep <= 2;
+        const isPreviewStep = this.currentStep === 3;
+        const isImportStep = this.currentStep === 4;
+        const isCoverageMap = this.aiTemplateType === 'material_analysis';
+        const stageLabel = isImportStep
+            ? 'Шаг 3: импорт'
+            : (isPreviewStep
+                ? 'Шаг 2: предпросмотр'
+                : (isCoverageMap
+                    ? (hasSession ? 'Шаг 1: карта покрытия' : 'Шаг 1: анализ материала')
+                    : 'Шаг 2: генерация типа'));
+        const primaryActionLabel = isImportStep
+            ? (this.importInProgress ? 'Импорт...' : 'Импортировать')
+            : (isPreviewStep ? 'К импорту' : (isCoverageMap ? 'Разобрать анализ' : 'Проверить текст'));
+        const primaryActionDisabled = this.importInProgress || this.aiAnalyzing || this.aiGenerating;
+
+        return `
+            <div class="w-full animate-slide-up-fade space-y-5">
+                <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3">
+                    <div class="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-surface-2 px-3 py-1 text-xs font-semibold text-text-secondary">
+                        ${this.escapeHtml(stageLabel)}
+                    </div>
+                    ${hasSession && !isCoverageMap ? `
+                        <button onclick="dashboard.importManager.returnToManualAnalysisCoverageMap()"
+                            class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                            К карте покрытия
+                        </button>
+                    ` : ''}
+                </div>
+
+                ${!hasSession && this.getManualAnalysisArchive().length ? `
+                    <div class="max-w-3xl mx-auto rounded-xl border border-border-subtle bg-surface-1 p-4 flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                            <div class="text-sm font-semibold text-text-main">В архиве есть сохранённые анализы</div>
+                            <div class="text-xs text-text-secondary mt-1">
+                                Можно открыть предыдущий анализ вместо запуска нового.
+                            </div>
+                        </div>
+                        <button onclick="dashboard.importManager.openTheoryAnalysisArchive()"
+                            class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                            Открыть архив
+                        </button>
+                    </div>
+                ` : ''}
+
+                ${isPromptStep ? `
+                    <div class="max-w-3xl mx-auto rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-4">
+                        <div class="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-bold text-text-main">Целевой контекст</div>
+                                <div class="text-xs text-text-secondary mt-1">
+                                    Все созданные задания будут импортированы в выбранный модуль и тему.
+                                </div>
+                            </div>
+                            ${hasSession ? `
+                                <div class="text-xs text-text-secondary text-right">
+                                    <div>Session: <span class="font-semibold text-text-main">${this.escapeHtml(session.id)}</span></div>
+                                    <div>Режим: <span class="font-semibold text-text-main">${this.escapeHtml(isCoverageMap ? 'анализ и карта покрытия' : this.getEditorFacingTaskTypeLabel(this.getTaskTypeForAIAgentTemplateKey(this.aiTemplateType)))}</span></div>
+                                </div>
+                            ` : ''}
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-semibold text-text-secondary mb-2">Целевой модуль</label>
+                                <select id="import-module-select"
+                                    class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm">
+                                    ${this.renderModuleOptions(this.dashboard.catalog || [], 'Выберите модуль...')}
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-text-secondary mb-2">Целевая тема</label>
+                                <select id="import-topic-select"
+                                    class="block w-full rounded-lg border-border-subtle bg-surface-2 py-2.5 text-text-main focus:ring-2 focus:ring-primary sm:text-sm"
+                                    disabled>
+                                    <option value="">Сначала выберите модуль...</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+
+                ${isPromptStep ? this.renderStep2() : (isPreviewStep ? this.renderStep3() : this.renderStep4())}
+
+                <div class="max-w-3xl mx-auto flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex flex-wrap gap-2">
+                        ${isPreviewStep || isImportStep ? `
+                            <button onclick="dashboard.importManager.prevStep()"
+                                class="px-4 py-2 text-sm font-medium text-text-secondary border border-border-subtle rounded-lg hover:bg-bg-hover transition-colors">
+                                Назад
+                            </button>
+                        ` : ''}
+                    </div>
+                    <button onclick="dashboard.importManager.handleNext()"
+                        class="px-5 py-2.5 text-sm font-bold rounded-lg bg-primary text-primary-contrast hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        ${primaryActionDisabled ? 'disabled' : ''}>
+                        ${primaryActionLabel}
+                    </button>
+                </div>
             </div>
         `;
     }
@@ -4269,7 +6140,7 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     enterTheorySubMode(mode) {
-        const validModes = ['microcards', 'manual_editor', 'text_import', 'analysis'];
+        const validModes = ['microcards', 'manual_editor', 'text_import', 'analysis', 'home', 'archive'];
         const nextMode = validModes.includes(mode) ? mode : 'analysis';
         if (!this.isTheoryFeatureEnabled('ai_mode', false)) {
             this.openTheoryAiInProgressPlaceholder();
@@ -8291,6 +10162,20 @@ text: Сердце человека состоит из [трёх] камер. �
     }
 
     renderStep1AI(modules) {
+        const savedSession = this.normalizeManualAnalysisSession(this.manualAnalysisSession);
+        const sessionLooksRelevant = !!savedSession && (
+            !this.selectedModule
+            || !savedSession.module_id
+            || String(this.selectedModule) === String(savedSession.module_id)
+        ) && (
+            !this.selectedTopic
+            || !savedSession.topic_id
+            || String(this.selectedTopic) === String(savedSession.topic_id)
+        );
+        const sessionSnapshot = sessionLooksRelevant ? this.getManualAnalysisCoverageSnapshot(savedSession) : null;
+        const savedDraftsCount = sessionLooksRelevant
+            ? Object.values(savedSession?.recommendation_state || {}).filter((state) => !!String(state?.draft_source_text || '').trim() || !!state?.draft_parsed_result).length
+            : 0;
         return `
             <div class="space-y-5 animate-fade-in">
                 <div class="p-4 bg-primary-lighter border border-primary-light rounded-lg">
@@ -8307,6 +10192,34 @@ text: Сердце человека состоит из [трёх] камер. �
                         </div>
                     </div>
                 </div>
+
+                ${false && sessionLooksRelevant ? `
+                    <div class="p-4 border border-info-light rounded-lg bg-info-lighter">
+                        <div class="flex items-start gap-3">
+                            <span class="material-symbols-outlined text-info text-[20px] mt-0.5">history</span>
+                            <div class="text-sm text-info-text leading-relaxed">
+                                <div class="font-bold text-text-main mb-1">Найдена сохранённая analysis session</div>
+                                <div>
+                                    ${this.escapeHtml(savedSession.module_name || savedSession.module_id || 'Без модуля')}
+                                    ${savedSession.topic_name || savedSession.topic_id ? ` / ${this.escapeHtml(savedSession.topic_name || savedSession.topic_id)}` : ''}
+                                </div>
+                                <div class="mt-1 text-xs">
+                                    Покрыто единиц: <strong>${sessionSnapshot ? (sessionSnapshot.coveredOnce.length + sessionSnapshot.coveredMulti.length) : 0}</strong>,
+                                    ещё без покрытия: <strong>${sessionSnapshot ? sessionSnapshot.uncovered.length : 0}</strong>,
+                                    сохранённых черновиков: <strong>${savedDraftsCount}</strong>.
+                                    На шаге с промптами можно продолжить эту сессию, не начиная анализ заново.
+                                </div>
+                                <div class="mt-3">
+                                    <button
+                                        onclick="dashboard.importManager.resumeManualAnalysisSession()"
+                                        class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-info text-info hover:bg-info hover:text-white transition-colors">
+                                        Продолжить session
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
 
                 <div class="p-4 border border-border-subtle rounded-lg bg-surface-1">
                     <div class="flex items-start gap-2">

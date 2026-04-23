@@ -2399,7 +2399,6 @@
   <header class="cx-editor-header bg-surface-1 border-b border-border-subtle shrink-0 flex justify-between z-50">
     <div class="cx-editor-header__left">
       <a href="/ui/complexes"
-        onclick="event.preventDefault(); if (!hasUnsavedChanges()) { window.navigateWithTransition('/ui/complexes'); } else { showUnsavedChangesModal('/ui/complexes'); }"
         class="cx-editor-header__back cursor-pointer" title="Назад к списку">
         <span class="material-symbols-outlined">arrow_back</span>
       </a>
@@ -10354,7 +10353,7 @@
                     <input type="checkbox" class="w-4 h-4 rounded border-2 border-border-strong text-primary focus:ring-primary bg-surface-1 cursor-pointer" ${isSelected ? 'checked' : ''}>
                  </div>
                  
-                 <div class="flex-1 min-w-0 cursor-pointer" onclick="if(!${isActive}) window.navigateWithTransition('${editUrlLiteral}')">
+                 <div class="flex-1 min-w-0 cursor-pointer" ${!isActive ? `data-complex-edit-url="${editUrlLiteral}"` : ''}>
                    <div class="flex items-start justify-between mb-1">
                      <div class="font-medium text-text-main ${isActive ? 'text-primary' : ''} line-clamp-2 text-sm" title="${safeName}">${safeName}</div>
                      ${isActive ? '<div class="flex items-center gap-1 text-primary"><span class="text-[10px] uppercase font-bold tracking-wider">Редактируется</span><span class="material-symbols-outlined text-[16px]">edit</span></div>' : ''}
@@ -10386,6 +10385,20 @@
           (c.id || '').toLowerCase().includes(term)
         );
         renderComplexes(filtered);
+      });
+    }
+
+    if (complexesList && !complexesList.dataset.navBound) {
+      complexesList.dataset.navBound = '1';
+      complexesList.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (!target) return;
+        if (target.closest('button, input, label, a')) return;
+        const navCard = target.closest('[data-complex-edit-url]');
+        if (!navCard) return;
+        const url = navCard.getAttribute('data-complex-edit-url');
+        if (!url) return;
+        window.navigateWithTransition(url);
       });
     }
     // Removed duplicate searchInput listener (already registered above)
@@ -10468,13 +10481,48 @@
 
     // Custom modal for link navigation
     let pendingNavigation = null;
+    const historyGuardToken = `complex-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    let historyGuardPromptOpen = false;
+    let historyGuardDisabled = false;
 
     function getUnsavedChangesModal() {
       return document.getElementById('unsaved-changes-modal');
     }
 
-    function showUnsavedChangesModal(targetUrl) {
-      pendingNavigation = targetUrl;
+    function installUnsavedHistoryGuardEntry() {
+      if (historyGuardDisabled) return;
+      const currentState = window.history.state && typeof window.history.state === 'object'
+        ? window.history.state
+        : {};
+      if (currentState.__complexHistoryGuard === historyGuardToken) {
+        return;
+      }
+      window.history.replaceState({
+        ...currentState,
+        __complexHistoryBase: historyGuardToken,
+      }, '', window.location.href);
+      window.history.pushState({
+        ...currentState,
+        __complexHistoryGuard: historyGuardToken,
+      }, '', window.location.href);
+    }
+
+    function restoreUnsavedHistoryGuardEntry() {
+      if (historyGuardDisabled) return;
+      const currentState = window.history.state && typeof window.history.state === 'object'
+        ? window.history.state
+        : {};
+      if (currentState.__complexHistoryGuard === historyGuardToken) {
+        return;
+      }
+      window.history.pushState({
+        ...currentState,
+        __complexHistoryGuard: historyGuardToken,
+      }, '', window.location.href);
+    }
+
+    function showUnsavedChangesModal(target) {
+      pendingNavigation = target;
       const modal = getUnsavedChangesModal();
       if (modal) {
         modal.classList.remove('hidden');
@@ -10491,25 +10539,85 @@
       pendingNavigation = null;
     }
 
+    function commitPendingNavigation() {
+      if (!pendingNavigation) return;
+      state.suppressUnloadWarning = true;
+      historyGuardDisabled = true;
+      window.removeEventListener('beforeunload', beforeUnloadHandler);
+
+      if (typeof pendingNavigation === 'object' && pendingNavigation.type === 'history-back') {
+        pendingNavigation = null;
+        window.history.back();
+        return;
+      }
+
+      const targetUrl = String(pendingNavigation || '').trim();
+      pendingNavigation = null;
+      if (targetUrl) {
+        window.navigateWithTransition(targetUrl);
+      }
+    }
+
+    installUnsavedHistoryGuardEntry();
+    window.addEventListener('popstate', () => {
+      if (historyGuardDisabled) {
+        return;
+      }
+      const currentState = window.history.state && typeof window.history.state === 'object'
+        ? window.history.state
+        : {};
+      if (currentState.__complexHistoryGuard === historyGuardToken) {
+        return;
+      }
+      if (!hasUnsavedChanges()) {
+        historyGuardDisabled = true;
+        window.setTimeout(() => window.history.back(), 0);
+        return;
+      }
+      if (historyGuardPromptOpen) {
+        restoreUnsavedHistoryGuardEntry();
+        return;
+      }
+      historyGuardPromptOpen = true;
+      showUnsavedChangesModal({ type: 'history-back' });
+    });
+
     document.addEventListener('click', (e) => {
+      const backLink = e.target.closest('.cx-editor-header__back');
+      if (backLink) {
+        e.preventDefault();
+        const targetUrl = backLink.getAttribute('href') || '/ui/complexes';
+        if (!hasUnsavedChanges()) {
+          window.navigateWithTransition(targetUrl);
+        } else {
+          showUnsavedChangesModal(targetUrl);
+        }
+        return;
+      }
+
       const cancelBtn = e.target.closest('#modal-cancel');
       if (cancelBtn) {
+        if (pendingNavigation && typeof pendingNavigation === 'object' && pendingNavigation.type === 'history-back') {
+          restoreUnsavedHistoryGuardEntry();
+        }
+        historyGuardPromptOpen = false;
         hideUnsavedChangesModal();
         return;
       }
 
       const leaveBtn = e.target.closest('#modal-leave');
       if (leaveBtn) {
-        if (pendingNavigation) {
-          state.suppressUnloadWarning = true;
-          window.removeEventListener('beforeunload', beforeUnloadHandler);
-          window.navigateWithTransition(pendingNavigation);
-        }
+        historyGuardPromptOpen = false;
+        commitPendingNavigation();
         return;
       }
 
       const modal = getUnsavedChangesModal();
       if (modal && e.target === modal) {
+        if (pendingNavigation && typeof pendingNavigation === 'object' && pendingNavigation.type === 'history-back') {
+          restoreUnsavedHistoryGuardEntry();
+        }
+        historyGuardPromptOpen = false;
         hideUnsavedChangesModal();
       }
     });

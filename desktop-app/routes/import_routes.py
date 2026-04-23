@@ -551,6 +551,28 @@ def _build_imported_task_payload(
     source_file_name = import_context.get("source_file_name")
     if source_file_name and not task_json_data["meta"].get("source_file_name"):
         task_json_data["meta"]["source_file_name"] = source_file_name
+    analysis_session_id = str(import_context.get("analysis_session_id") or "").strip()
+    if analysis_session_id:
+        task_json_data["meta"]["analysis_session_id"] = analysis_session_id
+    analysis_selected_task_type = str(import_context.get("analysis_selected_task_type") or "").strip().upper()
+    if analysis_selected_task_type:
+        task_json_data["meta"]["analysis_selected_task_type"] = analysis_selected_task_type
+    analysis_selected_units = import_context.get("analysis_selected_units")
+    if isinstance(analysis_selected_units, list):
+        normalized_unit_ids = []
+        for unit_id in analysis_selected_units:
+            try:
+                normalized_unit_ids.append(int(unit_id))
+            except (TypeError, ValueError):
+                continue
+        if normalized_unit_ids:
+            task_json_data["meta"]["analysis_selected_unit_ids"] = normalized_unit_ids
+    analysis_generation_focus = str(import_context.get("analysis_generation_focus") or "").strip()
+    if analysis_generation_focus:
+        task_json_data["meta"]["analysis_generation_focus"] = analysis_generation_focus
+    analysis_coverage_role = str(import_context.get("analysis_coverage_role") or "").strip()
+    if analysis_coverage_role:
+        task_json_data["meta"]["analysis_coverage_role"] = analysis_coverage_role
 
     task_ai_meta = task.get("ai_meta")
     if isinstance(task_ai_meta, dict):

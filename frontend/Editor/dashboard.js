@@ -5355,16 +5355,22 @@ class EditorDashboard {
         modal.classList.remove('hidden');
 
         if (this.importManager) {
-            this.importManager.resetWorkspaceImportState();
-            this.importManager.enterImportModalMode();
-            // Preset module/topic from current location before going to step 1
-            this.importManager.presetFromCurrentLocation();
-            this.importManager.goToStep(1);
-            // Preload AI status in background (for faster AI mode switch)
-            this.importManager.aiCheckStatus().catch(() => {});
+            this.openDirectImportWorkspace();
         } else {
             console.error('[Dashboard] ImportManager not initialized');
         }
+    }
+
+    openDirectImportWorkspace() {
+        if (!this.importManager) {
+            console.error('[Dashboard] ImportManager not initialized');
+            return;
+        }
+        this.importManager.resetWorkspaceImportState();
+        this.importManager.enterImportModalMode();
+        this.importManager.presetFromCurrentLocation();
+        this.importManager.goToStep(1);
+        this.importManager.aiCheckStatus().catch(() => {});
     }
 
     showWorkspaceImportPreviewModal(payload = {}) {
@@ -5408,7 +5414,7 @@ class EditorDashboard {
                     console.error('[Dashboard] Failed to open manual microcards editor:', e);
                 });
             } else {
-                this.importManager.openTheoryAnalysisMode().catch((e) => {
+                this.openTheoryWorkspace().catch((e) => {
                     console.error('[Dashboard] Failed to open theory analysis mode:', e);
                 });
             }
@@ -5417,15 +5423,25 @@ class EditorDashboard {
         }
     }
 
-    closeImportModal() {
-        const modal = document.getElementById('import-modal');
-        if (modal) {
-            modal.classList.add('hidden');
+    async openTheoryWorkspace() {
+        if (!this.importManager) {
+            console.error('[Dashboard] ImportManager not initialized');
+            return;
         }
+        this.importManager.presetFromCurrentLocation();
+        return this.importManager.openTheoryAnalysisMode();
+    }
+
+    async closeImportModal(options = {}) {
+        const skipConfirm = options && options.skipConfirm === true;
+        const modal = document.getElementById('import-modal');
 
         // Reset import manager state
         if (this.importManager) {
             if (this.importManager.modalPurpose === 'theory_analysis') {
+                if (modal) {
+                    modal.classList.add('hidden');
+                }
                 this.importManager.setModalPurpose('import');
                 this.importManager.materialText = '';
                 this.importManager.aiUploadedFile = null;
@@ -5440,39 +5456,26 @@ class EditorDashboard {
                 this.importManager.aiAnalyzing = false;
                 this.importManager.theoryOpeningRunId = null;
                 this.importManager.importRequestKey = null;
-                return;
+                return true;
             }
 
-            this.importManager.setModalPurpose('import');
-            this.importManager.currentStep = 1;
-            this.importManager.selectedModule = null;
-            this.importManager.selectedTopic = null;
-            this.importManager.selectedModuleName = '';
-            this.importManager.selectedTopicName = '';
-            this.importManager.sourceText = '';
-            this.importManager.parsedResult = null;
-            this.importManager.excludedTasks.clear();
-            this.importManager.selectedTasks.clear();
-            this.importManager.importMode = 'text';
-            this.importManager.uploadedFile = null;
-            this.importManager.checkResult = null;
-            this.importManager.archiveCacheId = null;
-            this.importManager.perTaskConflictRes.clear();
-            this.importManager.resetWorkspaceImportState();
-            this.importManager.aiTemplateType = 'material_analysis';
-            // Reset AI state
-            this.importManager.materialText = '';
-            this.importManager.aiUploadedFile = null;
-            this.importManager.aiFileInfo = null;
-            this.importManager.analysisResult = null;
-            this.importManager.generationResult = null;
-            this.importManager.aiProvider = null;
-            this.importManager.aiProviderModel = null;
-            this.importManager.aiRunId = null;
-            this.importManager.aiSelectedRecs.clear();
-            this.importManager.aiGenerating = false;
-            this.importManager.aiAnalyzing = false;
+            if (!skipConfirm && typeof this.importManager.confirmImportModalCloseIfNeeded === 'function') {
+                const confirmed = await this.importManager.confirmImportModalCloseIfNeeded();
+                if (!confirmed) return false;
+            }
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            if (typeof this.importManager.resetImportModalState === 'function') {
+                await this.importManager.resetImportModalState();
+            }
+            return true;
         }
+
+        if (modal) {
+            modal.classList.add('hidden');
+        }
+        return true;
     }
 
     showRecoveryCenter() {
