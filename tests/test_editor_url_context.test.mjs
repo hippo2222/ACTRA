@@ -57,6 +57,7 @@ function setupDom(url) {
     dom.window.cancelAnimationFrame = dom.window.cancelAnimationFrame || ((id) => clearTimeout(id));
 
     dom.window.eval(loadScript("frontend/Editor/undo_manager.js") + "\n;window.UndoManager = UndoManager;");
+    dom.window.eval(loadScript("frontend/Editor/autosave_manager.js") + "\n;window.AutoSaveManager = AutoSaveManager;");
     dom.window.eval(loadScript("frontend/Editor/base_editor.js") + "\n;window.BaseEditor = BaseEditor;");
     dom.window.eval(loadScript("frontend/Editor/test_editor.js") + "\n;window.TestEditor = TestEditor;");
 
@@ -170,6 +171,117 @@ describe("TestEditor URL context", () => {
         expect(dom.window.navigateWithTransition).toHaveBeenCalledWith("/ui/editor");
         expect(editor.hasUnsavedChanges).toBe(false);
     });
+
+    it("falls back to local bootstrap when persisted task is missing on reload", async () => {
+        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123");
+        const EditorClass = dom.window.TestEditor;
+        const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
+        const editor = new EditorClass();
+        initSpy.mockRestore();
+
+        const bootstrapTask = {
+            task_data: {
+                type: "test",
+                meta: {
+                    id: "task_123",
+                    module: "test_module",
+                    topic: "test_topic",
+                    name: "Smoke",
+                },
+                content: {
+                    questions: [],
+                    settings: {},
+                },
+                settings: {},
+            },
+            metadata: {
+                id: "task_123",
+                module: "test_module",
+                topic: "test_topic",
+                name: "Smoke",
+            },
+        };
+
+        dom.window.fetch = vi.fn().mockResolvedValue({
+            ok: false,
+            status: 404,
+            json: async () => ({ ok: false, error: "task_not_found" }),
+        });
+        const fatalSpy = vi.spyOn(editor, "showFatalError").mockImplementation(() => {});
+        const fallbackSpy = vi.spyOn(editor, "resolveLocalTaskFallback").mockReturnValue(bootstrapTask);
+        const applySpy = vi.spyOn(editor, "applyLoadedTask").mockImplementation(() => {});
+
+        const ok = await editor.initTaskFromUrlContext();
+
+        expect(ok).toBe(true);
+        expect(fatalSpy).not.toHaveBeenCalled();
+        expect(fallbackSpy).toHaveBeenCalledWith("test_module", "test_topic", "task_123");
+        expect(applySpy).toHaveBeenCalledWith(bootstrapTask, { persisted: false });
+    });
+
+    it("rebuilds a draft-only task from local autosave when persisted task is missing on reload", async () => {
+        const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html?module=test_module&topic=test_topic&task=task_123");
+        const EditorClass = dom.window.TestEditor;
+        const initSpy = vi.spyOn(EditorClass.prototype, "init").mockResolvedValue(undefined);
+        const editor = new EditorClass();
+        initSpy.mockRestore();
+
+        localStorage.setItem(
+            "task_draft_test_module_test_topic_task_123",
+            JSON.stringify({
+                taskId: "task_123",
+                moduleId: "test_module",
+                topicId: "test_topic",
+                taskName: "Smoke draft",
+                moduleName: "Module 1",
+                topicName: "Topic 1",
+                taskType: "test",
+                timestamp: Date.now(),
+                data: {
+                    questions: [{ text: "Draft question", options: [] }],
+                    settings: { shuffle_questions: false },
+                },
+            })
+        );
+
+        dom.window.fetch = vi.fn().mockResolvedValue({
+            ok: false,
+            status: 404,
+            json: async () => ({ ok: false, error: "task_not_found" }),
+        });
+        const fatalSpy = vi.spyOn(editor, "showFatalError").mockImplementation(() => {});
+        const applySpy = vi.spyOn(editor, "applyLoadedTask").mockImplementation(() => {});
+
+        const ok = await editor.initTaskFromUrlContext();
+
+        expect(ok).toBe(true);
+        expect(fatalSpy).not.toHaveBeenCalled();
+        expect(applySpy).toHaveBeenCalledTimes(1);
+        const [fallbackTask, applyOptions] = applySpy.mock.calls[0];
+        expect(applyOptions).toEqual({ persisted: false });
+        expect(fallbackTask).toMatchObject({
+            task_data: {
+                id: "task_123",
+                type: "test",
+                name: "Smoke draft",
+                meta: {
+                    id: "task_123",
+                    module: "test_module",
+                    topic: "test_topic",
+                    module_name: "Module 1",
+                    topic_name: "Topic 1",
+                },
+            },
+            metadata: {
+                id: "task_123",
+                module: "test_module",
+                topic: "test_topic",
+                name: "Smoke draft",
+                type: "test",
+            },
+        });
+    });
+
     it("preserves nested hosted image refs when normalizing backend questions", () => {
         const dom = setupDom("http://localhost/ui/editor/Test%20Task%20Editor%20Multiple%20Choice.html");
         const EditorClass = dom.window.TestEditor;

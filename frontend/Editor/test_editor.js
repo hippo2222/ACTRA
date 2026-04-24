@@ -29,10 +29,13 @@ class TestEditor extends BaseEditor {
         this.pendingImportFile = null;
         this.pendingImportErrors = [];
         this.importSource = 'file';
-        this.importMode = 'replace';
+        this.importMode = 'append';
         this.initialSnapshot = null;
         this.isQuestionImageUploading = false;
         this.uploadingOptionImageIndex = null;
+        this.activeImagePasteTarget = null;
+        this.pendingPastedImageFile = null;
+        this.isPasteImageTargetMode = false;
         this.pendingQuestionDeletion = null;
         this.questionDeletionUndoMs = 6000;
         this.init();
@@ -45,6 +48,372 @@ class TestEditor extends BaseEditor {
             topic: meta.topic || this.task?.metadata?.topic || this.topicId,
             task: this.task?.metadata?.id || meta.id || this.task?.task_data?.meta?.id || this.taskId,
         };
+    }
+
+    normalizeImagePasteTarget(target) {
+        if (!target || typeof target !== 'object') return null;
+        if (target.kind === 'question') {
+            return { kind: 'question' };
+        }
+        if (target.kind === 'option') {
+            const index = Number(target.index);
+            if (!Number.isInteger(index) || index < 0) return null;
+            return { kind: 'option', index };
+        }
+        return null;
+    }
+
+    isSameImagePasteTarget(a, b) {
+        const left = this.normalizeImagePasteTarget(a);
+        const right = this.normalizeImagePasteTarget(b);
+        if (!left && !right) return true;
+        if (!left || !right) return false;
+        return left.kind === right.kind && left.index === right.index;
+    }
+
+    resolveImagePasteTargetFromElement(element) {
+        if (!element || element.nodeType !== 1 || typeof element.closest !== 'function') {
+            return null;
+        }
+        const targetNode = element.closest('[data-image-paste-target]');
+        if (!targetNode) return null;
+
+        if (targetNode.dataset.imagePasteTarget === 'question') {
+            return { kind: 'question' };
+        }
+
+        if (targetNode.dataset.imagePasteTarget === 'option') {
+            const rawIndex = targetNode.dataset.optionIndex;
+            const index = Number(rawIndex);
+            if (Number.isInteger(index) && index >= 0) {
+                return { kind: 'option', index };
+            }
+        }
+
+        return null;
+    }
+
+    setActiveImagePasteTarget(target) {
+        const normalizedTarget = this.normalizeImagePasteTarget(target);
+        if (this.isSameImagePasteTarget(this.activeImagePasteTarget, normalizedTarget)) {
+            return;
+        }
+        this.activeImagePasteTarget = normalizedTarget;
+        this.syncActiveImagePasteTargetUI();
+    }
+
+    syncActiveImagePasteTargetUI() {
+        document.body.classList.toggle('paste-image-selection-mode', Boolean(this.isPasteImageTargetMode));
+
+        const questionCard = document.querySelector('.question-paste-card');
+        const questionDock = document.querySelector('.question-media-dock');
+        if (questionCard) {
+            questionCard.classList.toggle('is-paste-selectable', Boolean(this.isPasteImageTargetMode));
+            questionCard.classList.toggle('is-paste-target', this.activeImagePasteTarget?.kind === 'question');
+        }
+        if (questionDock) {
+            questionDock.classList.toggle('is-paste-target', this.activeImagePasteTarget?.kind === 'question');
+        }
+
+        document.querySelectorAll('#options-container .option-row').forEach((row, index) => {
+            const isOptionTarget = this.activeImagePasteTarget?.kind === 'option'
+                && this.activeImagePasteTarget.index === index;
+            row.classList.toggle('is-paste-selectable', Boolean(this.isPasteImageTargetMode));
+            row.classList.toggle('is-paste-target', isOptionTarget);
+        });
+    }
+
+    isModalVisible(modal) {
+        return Boolean(modal && !modal.classList.contains('hidden'));
+    }
+
+    shouldSuppressImagePasteForElement(element) {
+        if (this.isModalVisible(this.pasteImageTargetModal)) {
+            return true;
+        }
+        if (!element || element.nodeType !== 1 || typeof element.closest !== 'function') {
+            return false;
+        }
+        if (this.isModalVisible(this.importModal) && element.closest('#import-modal')) {
+            return true;
+        }
+        return false;
+    }
+
+    buildClipboardImageFile(fileLike) {
+        if (!fileLike) return null;
+        const mimeType = fileLike.type || 'image/png';
+        const extension = mimeType === 'image/jpeg'
+            ? 'jpg'
+            : (mimeType.split('/')[1] || 'png').replace(/[^a-z0-9]+/gi, '') || 'png';
+        const fileName = fileLike.name && String(fileLike.name).trim()
+            ? fileLike.name
+            : `pasted-image-${Date.now()}.${extension}`;
+        return fileLike instanceof File
+            ? fileLike
+            : new File([fileLike], fileName, { type: mimeType });
+    }
+
+    extractImageFileFromDataTransfer(clipboardData) {
+        if (!clipboardData) return null;
+
+        const items = Array.from(clipboardData.items || []);
+        const imageItem = items.find((item) => item?.kind === 'file' && String(item.type || '').startsWith('image/'));
+        if (imageItem && typeof imageItem.getAsFile === 'function') {
+            const file = imageItem.getAsFile();
+            if (file) {
+                return this.buildClipboardImageFile(file);
+            }
+        }
+
+        const files = Array.from(clipboardData.files || []);
+        const imageFile = files.find((file) => String(file?.type || '').startsWith('image/'));
+        if (imageFile) {
+            return this.buildClipboardImageFile(imageFile);
+        }
+
+        return null;
+    }
+
+    async readImageFileFromNavigatorClipboard() {
+        if (!navigator?.clipboard || typeof navigator.clipboard.read !== 'function') {
+            return null;
+        }
+
+        try {
+            const clipboardItems = await navigator.clipboard.read();
+            for (const item of clipboardItems || []) {
+                const imageType = Array.isArray(item?.types)
+                    ? item.types.find((type) => String(type || '').startsWith('image/'))
+                    : null;
+                if (!imageType || typeof item.getType !== 'function') {
+                    continue;
+                }
+                const blob = await item.getType(imageType);
+                const file = this.buildClipboardImageFile(
+                    new File([blob], `pasted-image.${String(imageType).split('/')[1] || 'png'}`, { type: imageType })
+                );
+                if (file) {
+                    return file;
+                }
+            }
+        } catch (error) {
+            console.warn('Navigator clipboard image read failed', error);
+        }
+
+        return null;
+    }
+
+    async extractImageFileFromClipboardEvent(event) {
+        const directFile = this.extractImageFileFromDataTransfer(event?.clipboardData);
+        if (directFile) {
+            return directFile;
+        }
+        return this.readImageFileFromNavigatorClipboard();
+    }
+
+    buildImageUploadFormData(file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        const ctx = this.getImageRequestContext();
+        if (ctx.module) formData.append('module', ctx.module);
+        if (ctx.topic) formData.append('topic', ctx.topic);
+        if (ctx.task) formData.append('task', ctx.task);
+        return formData;
+    }
+
+    async uploadImageFileForQuestion(file) {
+        if (!file) return false;
+        const q = this.questions[this.currentQuestionIndex];
+        if (!q) return false;
+        if (this.isQuestionImageUploading) {
+            this.showToast('Подождите завершения загрузки изображения вопроса', 'warning');
+            return false;
+        }
+
+        this.isQuestionImageUploading = true;
+        this.syncQuestionImageBusyState();
+
+        try {
+            const data = await this.requestJson('/api/editor/upload-image', {
+                method: 'POST',
+                body: this.buildImageUploadFormData(file)
+            });
+
+            q.image = data.path || null;
+            q.image_asset_id = data.asset_id || null;
+            q.image_asset_url = data.asset_url || null;
+            this.isQuestionImageUploading = false;
+            this.renderCurrentQuestion();
+            this.showToast('Изображение вопроса обновлено', 'success');
+            this.markUnsavedChanges();
+            return true;
+        } catch (error) {
+            console.error('Error uploading image:', error);
+            this.showToast(error.message || 'Ошибка загрузки изображения', 'error');
+            return false;
+        } finally {
+            this.isQuestionImageUploading = false;
+            this.syncQuestionImageBusyState();
+        }
+    }
+
+    async uploadImageFileForOption(file, targetIndex) {
+        if (!file) return false;
+        if (!Number.isInteger(targetIndex) || targetIndex < 0) return false;
+
+        const currentQuestion = this.questions[this.currentQuestionIndex];
+        if (!currentQuestion || !currentQuestion.options[targetIndex]) {
+            return false;
+        }
+        if (Number.isInteger(this.uploadingOptionImageIndex)) {
+            this.showToast('Подождите завершения загрузки изображения варианта', 'warning');
+            return false;
+        }
+
+        this.uploadingOptionImageIndex = targetIndex;
+        this.syncOptionImageBusyState();
+
+        try {
+            const data = await this.requestJson('/api/editor/upload-image', {
+                method: 'POST',
+                body: this.buildImageUploadFormData(file)
+            });
+
+            currentQuestion.options[targetIndex].image_path = data.path || null;
+            currentQuestion.options[targetIndex].image_asset_id = data.asset_id || null;
+            currentQuestion.options[targetIndex].image_asset_url = data.asset_url || null;
+            this.uploadingOptionImageIndex = null;
+            this.renderOptions();
+            this.renderQuestionList();
+            this.showToast('Изображение варианта обновлено', 'success');
+            this.markUnsavedChanges();
+            return true;
+        } catch (error) {
+            this.showToast(error.message || 'Ошибка загрузки изображения варианта', 'error');
+            return false;
+        } finally {
+            this.uploadingOptionImageIndex = null;
+            this.syncOptionImageBusyState();
+        }
+    }
+
+    async uploadImageFileForTarget(file, target) {
+        const normalizedTarget = this.normalizeImagePasteTarget(target);
+        if (!normalizedTarget) return false;
+        if (normalizedTarget.kind === 'question') {
+            return this.uploadImageFileForQuestion(file);
+        }
+        return this.uploadImageFileForOption(file, normalizedTarget.index);
+    }
+
+    clearPendingPastedImage() {
+        this.pendingPastedImageFile = null;
+    }
+
+    showPasteImageTargetModal(show) {
+        if (!this.pasteImageTargetModal) return;
+        if (show) {
+            this.pasteImageTargetModal.classList.remove('hidden');
+        } else {
+            this.pasteImageTargetModal.classList.add('hidden');
+        }
+    }
+
+    setPasteImageTargetMode(active) {
+        this.isPasteImageTargetMode = Boolean(active);
+        if (this.pasteImageTargetDescription) {
+            this.pasteImageTargetDescription.textContent = this.isPasteImageTargetMode
+                ? 'Выберите карточку вопроса или карточку варианта ответа, куда нужно прикрепить изображение.'
+                : '';
+        }
+        this.showPasteImageTargetModal(this.isPasteImageTargetMode);
+        this.syncActiveImagePasteTargetUI();
+    }
+
+    hidePasteImageTargetModal(clearPending = false) {
+        if (clearPending) {
+            this.clearPendingPastedImage();
+        }
+        this.setPasteImageTargetMode(false);
+    }
+
+    openPasteImageTargetModal(file) {
+        this.pendingPastedImageFile = file;
+        this.setPasteImageTargetMode(true);
+    }
+
+    async applyPendingPastedImage(target) {
+        const file = this.pendingPastedImageFile;
+        if (!file) {
+            this.hidePasteImageTargetModal(true);
+            return;
+        }
+
+        this.hidePasteImageTargetModal(true);
+        await this.uploadImageFileForTarget(file, target);
+    }
+
+    async handlePasteTargetSelectionClick(event) {
+        if (!this.isPasteImageTargetMode) return;
+        const targetNode = event?.target?.nodeType === 1 ? event.target : null;
+        if (!targetNode) return;
+
+        if (targetNode.closest('#paste-image-target-cancel, #paste-image-target-close')) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.hidePasteImageTargetModal(true);
+            return;
+        }
+
+        const target = this.resolveImagePasteTargetFromElement(targetNode);
+        if (target) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.setActiveImagePasteTarget(target);
+            await this.applyPendingPastedImage(target);
+            return;
+        }
+
+        if (typeof targetNode.closest === 'function' && !targetNode.closest('#paste-image-target-modal')) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    }
+
+    handlePasteTargetSelectionKeydown(event) {
+        if (!this.isPasteImageTargetMode) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.hidePasteImageTargetModal(true);
+        }
+    }
+
+    handleGlobalFocusIn(event) {
+        this.setActiveImagePasteTarget(this.resolveImagePasteTargetFromElement(event.target));
+    }
+
+    async handleClipboardPaste(event) {
+        const eventTarget = event?.target?.nodeType === 1 ? event.target : document.activeElement;
+        if (this.shouldSuppressImagePasteForElement(eventTarget)) {
+            return;
+        }
+
+        const imageFile = await this.extractImageFileFromClipboardEvent(event);
+        if (!imageFile) return;
+
+        event.preventDefault();
+
+        const explicitTarget = this.resolveImagePasteTargetFromElement(eventTarget)
+            || this.resolveImagePasteTargetFromElement(document.activeElement);
+
+        if (explicitTarget) {
+            this.setActiveImagePasteTarget(explicitTarget);
+            await this.uploadImageFileForTarget(imageFile, explicitTarget);
+            return;
+        }
+
+        this.openPasteImageTargetModal(imageFile);
     }
 
     buildImageUrl(path) {
@@ -793,6 +1162,7 @@ class TestEditor extends BaseEditor {
         const textarea = document.querySelector('#question-textarea');
         if (textarea) {
             textarea.value = q.text || "";
+            textarea.dataset.imagePasteTarget = 'question';
             this.autoResizeQuestionTextarea();
         }
 
@@ -803,8 +1173,14 @@ class TestEditor extends BaseEditor {
         const removeBtn = document.querySelector('#remove-question-image-btn');
         const mediaDock = document.querySelector('.question-media-dock');
         const textareaRoot = document.querySelector('#question-textarea');
+        const questionSurface = textareaRoot?.closest('section, .question-paste-surface, main');
         const questionImageSrc = this.resolveImageSource(q.image, q.image_asset_url, q.image_asset_id);
         const hasQuestionImage = Boolean(questionImageSrc);
+
+        if (questionSurface) {
+            questionSurface.classList.add('question-paste-surface');
+            questionSurface.dataset.imagePasteTarget = 'question';
+        }
 
         if (img && thumb) {
             if (hasQuestionImage) {
@@ -832,18 +1208,25 @@ class TestEditor extends BaseEditor {
             textareaRoot.classList.toggle('has-question-image', hasQuestionImage);
         }
 
+        const questionCard = textareaRoot?.closest('.editor-card--hero, section');
+        if (questionCard) {
+            questionCard.classList.add('question-paste-card');
+            questionCard.dataset.imagePasteTarget = 'question';
+        }
+
         if (uploadBtn) {
+            uploadBtn.dataset.imagePasteTarget = 'question';
             const icon = uploadBtn.querySelector('.material-symbols-outlined');
             const label = uploadBtn.querySelector('.question-media-trigger__label');
             if (hasQuestionImage) {
                 uploadBtn.classList.remove('hidden');
-                uploadBtn.title = 'Заменить изображение вопроса';
+                uploadBtn.title = 'Заменить изображение вопроса или вставить его через Ctrl+V';
                 uploadBtn.setAttribute('aria-label', 'Заменить изображение вопроса');
                 if (icon) icon.textContent = 'photo_library';
                 if (label) label.textContent = 'Заменить';
             } else {
                 uploadBtn.classList.remove('hidden');
-                uploadBtn.title = 'Добавить изображение к вопросу';
+                uploadBtn.title = 'Добавить изображение к вопросу или вставить его через Ctrl+V';
                 uploadBtn.setAttribute('aria-label', 'Добавить изображение к вопросу');
                 if (icon) icon.textContent = 'add_photo_alternate';
                 if (label) label.textContent = 'Фото';
@@ -862,6 +1245,7 @@ class TestEditor extends BaseEditor {
 
         this.updateAnswerTypeDisplay();
         this.updateEditorChrome();
+        this.syncActiveImagePasteTargetUI();
     }
 
     renderOptions() {
@@ -877,6 +1261,8 @@ class TestEditor extends BaseEditor {
         q.options.forEach((opt, index) => {
             const div = document.createElement('div');
             div.className = `group option-row ${opt.is_correct ? 'is-correct' : ''}`;
+            div.dataset.imagePasteTarget = 'option';
+            div.dataset.optionIndex = String(index);
 
             const label = String.fromCharCode(65 + index); // A, B, C...
             const optionLabel = `вариант ${label}`;
@@ -900,13 +1286,14 @@ class TestEditor extends BaseEditor {
                             </div>
                         </div>
                         <textarea class="option-row__textarea rounded-md border-border-subtle bg-surface-1 text-sm focus:border-primary focus:ring-primary shadow-sm focus:shadow-md transition-all resize-none"
+                            data-image-paste-target="option" data-option-index="${index}"
                             placeholder="Введите текст варианта..." rows="1"></textarea>
                     </div>
                     <div class="option-row__media">
                         ${optionImageSrc ? `
                             <div class="option-row__media-frame option-row__media-frame--filled relative">
                                 <button class="upload-option-image option-row__media-preview-button"
-                                    data-index="${index}" title="Заменить изображение ${optionLabel}" aria-label="Заменить изображение ${optionLabel}">
+                                    data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="Заменить изображение ${optionLabel} или вставить его через Ctrl+V" aria-label="Заменить изображение ${optionLabel}">
                                     <span class="option-row__media-preview w-full h-full rounded-lg border border-border-subtle shadow overflow-hidden bg-surface-1">
                                         <img src="${optionImageSrc}" alt="Изображение ${optionLabel}"
                                             class="w-full h-full object-cover" />
@@ -921,7 +1308,7 @@ class TestEditor extends BaseEditor {
                             </div>
                         ` : `
                             <button class="upload-option-image option-row__media-empty-button"
-                                    data-index="${index}" title="Добавить изображение к ${optionLabel}" aria-label="Добавить изображение к ${optionLabel}">
+                                    data-index="${index}" data-option-index="${index}" data-image-paste-target="option" title="Добавить изображение к ${optionLabel} или вставить его через Ctrl+V" aria-label="Добавить изображение к ${optionLabel}">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                                 <span class="option-row__media-empty-copy">
                                     <span class="option-row__media-empty-title">Добавить</span>
@@ -997,6 +1384,7 @@ class TestEditor extends BaseEditor {
 
         this.syncOptionImageBusyState();
         this.updateAnswerTypeDisplay();
+        this.syncActiveImagePasteTargetUI();
     }
 
     addQuestion() {
@@ -1049,6 +1437,14 @@ class TestEditor extends BaseEditor {
         if (optionImageInput) {
             optionImageInput.onchange = (e) => this.handleOptionImageUpload(e);
         }
+
+        document.addEventListener('focusin', (e) => this.handleGlobalFocusIn(e));
+        document.addEventListener('paste', (e) => {
+            this.handleClipboardPaste(e).catch((error) => {
+                console.error('Clipboard image paste failed', error);
+                this.showToast(error.message || 'Не удалось вставить изображение', 'error');
+            });
+        });
 
         // Sync settings on change
         document.addEventListener('input', (e) => {
@@ -1104,6 +1500,7 @@ class TestEditor extends BaseEditor {
         this.importErrorBox = document.querySelector('#import-error');
         this.importWarningBox = document.querySelector('#import-warning');
         this.importParserStatus = document.querySelector('#import-parser-status');
+        this.importModal = document.querySelector('#import-modal');
         this.importTextInput = importTextInput;
         this.importTextCount = document.querySelector('#import-text-count');
         this.importSourceOptions = document.querySelectorAll('.import-source-option');
@@ -1112,6 +1509,8 @@ class TestEditor extends BaseEditor {
         this.chooseImportBtn = chooseImportBtn;
         this.importModeOptions = document.querySelectorAll('.import-mode-option');
         this.importModeRadios = document.querySelectorAll('input[name="import-mode"]');
+        this.pasteImageTargetModal = document.querySelector('#paste-image-target-modal');
+        this.pasteImageTargetDescription = document.querySelector('#paste-image-target-description');
 
         const importClose = document.querySelector('#import-modal-close');
         const importCancel = document.querySelector('#cancel-import-btn');
@@ -1140,6 +1539,26 @@ class TestEditor extends BaseEditor {
                 };
             });
         }
+        const pasteTargetClose = document.querySelector('#paste-image-target-close');
+        const pasteTargetCancel = document.querySelector('#paste-image-target-cancel');
+        if (pasteTargetClose) {
+            pasteTargetClose.onclick = () => this.hidePasteImageTargetModal(true);
+        }
+        if (pasteTargetCancel) {
+            pasteTargetCancel.onclick = () => this.hidePasteImageTargetModal(true);
+        }
+        if (this.pasteImageTargetModal) {
+            this.pasteImageTargetModal.onclick = (event) => {
+                if (event.target === this.pasteImageTargetModal) return;
+            };
+        }
+        document.addEventListener('click', (e) => {
+            this.handlePasteTargetSelectionClick(e).catch((error) => {
+                console.error('Paste target selection failed', error);
+                this.showToast(error.message || 'Не удалось вставить изображение', 'error');
+            });
+        }, true);
+        document.addEventListener('keydown', (e) => this.handlePasteTargetSelectionKeydown(e), true);
         this.updateImportSourceUI();
         this.updateImportModeUI();
 
@@ -1356,7 +1775,7 @@ class TestEditor extends BaseEditor {
         this.renderImportPreview([]);
         this.showImportError('');
         this.setImportParserStatus('Файл ещё не выбран', 'muted');
-        this.importMode = 'replace';
+        this.importMode = 'append';
         this.updateImportSourceUI();
         this.updateImportModeUI();
     }
@@ -1372,9 +1791,10 @@ class TestEditor extends BaseEditor {
     }
 
     showImportModal(show) {
-        const modal = document.querySelector('#import-modal');
+        const modal = this.importModal || document.querySelector('#import-modal');
         if (!modal) return;
         if (show) {
+            modal.dataset.importSource = this.importSource;
             modal.classList.remove('hidden');
         } else {
             modal.classList.add('hidden');
@@ -1391,6 +1811,10 @@ class TestEditor extends BaseEditor {
     }
 
     updateImportSourceUI() {
+        if (this.importModal) {
+            this.importModal.dataset.importSource = this.importSource;
+        }
+
         if (this.importSourceOptions?.length) {
             this.importSourceOptions.forEach((option) => {
                 const input = option.querySelector('input[type="radio"]');
@@ -1530,37 +1954,7 @@ class TestEditor extends BaseEditor {
         const file = event.target.files[0];
         if (!file) return;
         event.target.value = '';
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('module', this.task.task_data.meta.module);
-        formData.append('topic', this.task.task_data.meta.topic);
-        formData.append('task', this.task.metadata.id);
-
-        this.isQuestionImageUploading = true;
-        this.syncQuestionImageBusyState();
-
-        try {
-            const data = await this.requestJson('/api/editor/upload-image', {
-                method: 'POST',
-                body: formData
-            });
-
-            const q = this.questions[this.currentQuestionIndex];
-            q.image = data.path || null;
-            q.image_asset_id = data.asset_id || null;
-            q.image_asset_url = data.asset_url || null;
-            this.isQuestionImageUploading = false;
-            this.renderCurrentQuestion();
-            this.showToast('Изображение обновлено', 'success');
-            this.markUnsavedChanges();
-        } catch (error) {
-            console.error("Error uploading image:", error);
-            this.showToast(error.message || 'Ошибка загрузки изображения', 'error');
-        } finally {
-            this.isQuestionImageUploading = false;
-            this.syncQuestionImageBusyState();
-        }
+        await this.uploadImageFileForQuestion(file);
     }
 
     clearQuestionImage() {
@@ -1580,39 +1974,9 @@ class TestEditor extends BaseEditor {
         if (this.pendingOptionImageIndex === null) return;
         const targetIndex = this.pendingOptionImageIndex;
 
-        const currentQuestion = this.questions[this.currentQuestionIndex];
-        if (!currentQuestion || !currentQuestion.options[targetIndex]) {
-            this.pendingOptionImageIndex = null;
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('module', this.task.task_data.meta.module);
-        formData.append('topic', this.task.task_data.meta.topic);
-        formData.append('task', this.task.metadata.id);
-
-        this.uploadingOptionImageIndex = targetIndex;
-        this.syncOptionImageBusyState();
-
         try {
-            const data = await this.requestJson('/api/editor/upload-image', {
-                method: 'POST',
-                body: formData
-            });
-            currentQuestion.options[targetIndex].image_path = data.path || null;
-            currentQuestion.options[targetIndex].image_asset_id = data.asset_id || null;
-            currentQuestion.options[targetIndex].image_asset_url = data.asset_url || null;
-            this.uploadingOptionImageIndex = null;
-            this.renderOptions();
-            this.renderQuestionList();
-            this.showToast('Изображение варианта обновлено', 'success');
-            this.markUnsavedChanges();
-        } catch (error) {
-            this.showToast(error.message || 'Ошибка загрузки изображения варианта', 'error');
+            await this.uploadImageFileForOption(file, targetIndex);
         } finally {
-            this.uploadingOptionImageIndex = null;
-            this.syncOptionImageBusyState();
             this.pendingOptionImageIndex = null;
             event.target.value = '';
         }

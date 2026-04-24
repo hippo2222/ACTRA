@@ -131,12 +131,16 @@ function mountTestShell() {
             <input id="import-input" type="file" />
         </aside>
         <main>
-            <textarea id="question-textarea"></textarea>
-            <button id="upload-image-btn"></button>
-            <div id="question-image-thumb" class="hidden">
-                <img id="question-image" />
-                <button id="remove-question-image-btn" type="button"></button>
-            </div>
+            <section class="question-paste-surface">
+                <textarea id="question-textarea"></textarea>
+                <div class="question-media-dock">
+                    <button id="upload-image-btn" type="button"></button>
+                    <div id="question-image-thumb" class="hidden">
+                        <img id="question-image" />
+                        <button id="remove-question-image-btn" type="button"></button>
+                    </div>
+                </div>
+            </section>
             <input id="image-upload-input" type="file" />
             <div id="options-container"></div>
             <button id="add-option-btn"></button>
@@ -146,15 +150,19 @@ function mountTestShell() {
             <span id="answer-type-display"></span>
             <textarea id="explanation-textarea"></textarea>
         </aside>
-        <div id="import-modal" class="hidden"></div>
-        <div id="import-file-name"></div>
-        <div id="import-question-count"></div>
-        <div id="import-warning" class="hidden"></div>
-        <div id="import-parser-status"></div>
-        <div id="import-question-preview"></div>
-        <div id="import-error" class="hidden"></div>
-        <div id="import-mode-hint"></div>
-        <button id="choose-import-file-btn"></button>
+        <div id="import-modal" class="hidden">
+            <div id="import-file-name"></div>
+            <div id="import-question-count"></div>
+            <div id="import-warning" class="hidden"></div>
+            <div id="import-parser-status"></div>
+            <div id="import-question-preview"></div>
+            <div id="import-error" class="hidden"></div>
+            <div id="import-mode-hint"></div>
+            <button id="choose-import-file-btn"></button>
+            <textarea id="import-text-input"></textarea>
+            <button id="parse-import-text-btn"></button>
+            <span id="import-text-count"></span>
+        </div>
         <label class="import-mode-option" data-active="true">
             <input type="radio" name="import-mode" value="replace" checked />
         </label>
@@ -164,6 +172,11 @@ function mountTestShell() {
         <button id="import-modal-close"></button>
         <button id="cancel-import-btn"></button>
         <button id="confirm-import-btn"></button>
+        <div id="paste-image-target-modal" class="hidden">
+            <button id="paste-image-target-close" type="button"></button>
+            <button id="paste-image-target-cancel" type="button"></button>
+            <div id="paste-image-target-description"></div>
+        </div>
     `;
 }
 
@@ -212,6 +225,29 @@ function createEditorQuestion(overrides = {}) {
         images: [],
         ...overrides,
     };
+}
+
+export function createTestEditorHarness(overrides = {}) {
+    vi.restoreAllMocks();
+    const dom = setupDom();
+    bindDomGlobals(dom);
+    mountTestShell();
+
+    const editor = createEditorInstance(dom);
+    editor.task = createBaseTask();
+    editor.questions = Array.isArray(overrides.questions)
+        ? overrides.questions
+        : [createEditorQuestion()];
+    editor.currentQuestionIndex = Number.isInteger(overrides.currentQuestionIndex)
+        ? overrides.currentQuestionIndex
+        : 0;
+    editor.showToast = vi.fn();
+    editor.markUnsavedChanges = vi.fn();
+    editor.requestJson = vi.fn();
+    editor.renderUI();
+    editor.setupEventListeners();
+
+    return { dom, editor };
 }
 
 export function createTestEditorAuditAdapter() {

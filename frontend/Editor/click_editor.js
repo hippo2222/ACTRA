@@ -714,7 +714,7 @@ class ClickEditor extends BaseEditor {
             }
 
             const bootstrap =
-                this.readTaskBootstrap(this.moduleId, this.topicId, this.taskId) ||
+                this.resolveLocalTaskFallback(this.moduleId, this.topicId, this.taskId) ||
                 await this.fetchTaskBootstrap(this.moduleId, this.topicId, this.taskId, this.taskTypeParam, this.taskNameParam);
 
             if (!bootstrap) {
@@ -733,6 +733,19 @@ class ClickEditor extends BaseEditor {
         try {
             const response = await fetch(`/api/editor/task/${moduleId}/${topicId}/${taskId}`);
             const data = await response.json();
+            if (
+                (!data.ok || (!data.path && !data.asset_id && !data.asset_url))
+                && (
+                    response.status === 404
+                    || String(data?.error || "").trim().toLowerCase() === "task_not_found"
+                )
+            ) {
+                const localTask = this.resolveLocalTaskFallback(moduleId, topicId, taskId);
+                if (localTask) {
+                    await this.hydrateTask(localTask, { persisted: false });
+                    return;
+                }
+            }
             if (!data.ok || (!data.path && !data.asset_id && !data.asset_url)) {
                 console.error("Failed to load task:", data.error);
                 this.showFatalError(data.error || "Не удалось загрузить задание");

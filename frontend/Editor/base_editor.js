@@ -154,14 +154,65 @@ class BaseEditor {
         }
     }
 
+    ensureAutoSaveManager() {
+        if (!this.autoSaveManager) {
+            this.autoSaveManager = new AutoSaveManager(this, { interval: 30000 });
+        }
+        return this.autoSaveManager;
+    }
+
+    buildDraftBootstrapFromLocalState(moduleId, topicId, taskId, draft) {
+        if (!draft?.data || !moduleId || !topicId || !taskId) return null;
+
+        const taskType = String(draft.taskType || this.taskTypeParam || '').trim();
+        const taskName = String(draft.taskName || this.taskNameParam || taskId || '').trim();
+        const moduleName = String(draft.moduleName || '').trim();
+        const topicName = String(draft.topicName || '').trim();
+
+        return {
+            task_data: {
+                id: taskId,
+                type: taskType,
+                name: taskName,
+                content: {},
+                settings: {},
+                meta: {
+                    id: taskId,
+                    module: moduleId,
+                    topic: topicId,
+                    name: taskName,
+                    module_name: moduleName,
+                    topic_name: topicName,
+                },
+            },
+            metadata: {
+                id: taskId,
+                module: moduleId,
+                topic: topicId,
+                name: taskName,
+                type: taskType,
+                module_name: moduleName,
+                topic_name: topicName,
+            },
+        };
+    }
+
+    resolveLocalTaskFallback(moduleId, topicId, taskId) {
+        const bootstrap = this.readTaskBootstrap(moduleId, topicId, taskId);
+        if (bootstrap) {
+            return bootstrap;
+        }
+
+        const draft = this.ensureAutoSaveManager().loadDraft();
+        return this.buildDraftBootstrapFromLocalState(moduleId, topicId, taskId, draft);
+    }
+
     applyLoadedTask(task, options = {}) {
         const { persisted = true } = options;
         this.task = task;
         this.hasPersistedTask = Boolean(persisted);
 
-        if (!this.autoSaveManager) {
-            this.autoSaveManager = new AutoSaveManager(this, { interval: 30000 });
-        }
+        this.ensureAutoSaveManager();
 
         const lastSaved = persisted ? (this.task?.task_data?.meta?.modified || 0) : 0;
         let restoredDraftSilently = false;
@@ -224,7 +275,7 @@ class BaseEditor {
             return true;
         }
 
-        const localBootstrap = this.readTaskBootstrap(this.moduleId, this.topicId, this.taskId);
+        const localBootstrap = this.resolveLocalTaskFallback(this.moduleId, this.topicId, this.taskId);
         if (localBootstrap) {
             this.applyLoadedTask(localBootstrap, { persisted: false });
             return true;
@@ -279,6 +330,20 @@ class BaseEditor {
         try {
             const response = await fetch(`/api/editor/task/${moduleId}/${topicId}/${taskId}`);
             const data = await response.json();
+
+            if (
+                !data.ok
+                && (
+                    response.status === 404
+                    || String(data?.error || '').trim().toLowerCase() === 'task_not_found'
+                )
+            ) {
+                const localTask = this.resolveLocalTaskFallback(moduleId, topicId, taskId);
+                if (localTask) {
+                    this.applyLoadedTask(localTask, { persisted: false });
+                    return;
+                }
+            }
 
             if (data.ok) {
                 this.applyLoadedTask(data.task, { persisted: true });
