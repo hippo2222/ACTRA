@@ -12,7 +12,7 @@ Endpoints:
 - POST   /api/complexes/export                            - Export complexes bundle
 - POST   /api/complexes/import/check                      - Validate complex archive
 - POST   /api/complexes/import/confirm                    - Execute complex import
-- POST   /api/editor/test/import                          - Import test from file
+- POST   /api/editor/test/import                          - Import test from file/text
 - POST   /api/editor/test/export                          - Export test to file
 - POST   /api/editor/logs/scale                           - Save scale log
 - POST   /api/editor/task/bootstrap                       - Reserve task id + build unsaved editor payload
@@ -1709,23 +1709,34 @@ def import_complexes_confirm() -> Any:
 
 @editor_bp.route("/api/editor/test/import", methods=["POST"])
 def import_test_from_file() -> Any:
-    """Import test questions using TestFileParser."""
+    """Import test questions from an uploaded file or raw pasted text."""
     temp_path = None
     try:
-        if "file" not in request.files:
-            return jsonify({"ok": False, "error": "file_required"}), 400
+        payload = request.get_json(silent=True)
+        import_text = payload.get("text") if isinstance(payload, dict) else None
+        if import_text is None:
+            import_text = request.form.get("text")
 
-        file = request.files["file"]
-        if not file or file.filename == "":
-            return jsonify({"ok": False, "error": "no_selected_file"}), 400
+        if isinstance(import_text, str) and import_text.strip():
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".txt", mode="w", encoding="utf-8")
+            temp_path = tmp.name
+            tmp.write(import_text)
+            tmp.close()
+        else:
+            if "file" not in request.files:
+                return jsonify({"ok": False, "error": "file_or_text_required"}), 400
 
-        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix or ".txt")
-        temp_path = tmp.name
-        file.save(temp_path)
-        tmp.close()
+            file = request.files["file"]
+            if not file or file.filename == "":
+                return jsonify({"ok": False, "error": "no_selected_file"}), 400
+
+            tmp = tempfile.NamedTemporaryFile(delete=False, suffix=Path(file.filename).suffix or ".txt")
+            temp_path = tmp.name
+            file.save(temp_path)
+            tmp.close()
 
         parser = TestFileParser()
-        test_task = parser.create_test_from_file(temp_path)
+        test_task = parser.create_test_from_file(temp_path, test_type="multiple_choice")
         content = test_task.to_dict()
         return jsonify({"ok": True, "content": content})
     except Exception as exc:

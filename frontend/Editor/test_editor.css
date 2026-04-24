@@ -281,6 +281,7 @@ body.test-editor-shell {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: nowrap;
     gap: 0.75rem 1rem;
 }
 
@@ -361,17 +362,19 @@ body.test-editor-shell {
 .test-editor-header__actions {
     justify-content: flex-end;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 0.55rem;
     flex: 0 1 auto;
     max-width: 100%;
+    min-width: 0;
 }
 
 .test-editor-header__controls {
     gap: 0.45rem;
     align-items: center;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     flex: 0 0 auto;
+    min-width: 0;
 }
 
 .test-editor-header__history {
@@ -381,22 +384,49 @@ body.test-editor-shell {
     border-right: 1px solid var(--color-border-subtle);
 }
 
-.test-editor-header__status {
-    flex: 0 0 auto;
-    width: auto;
-    max-width: none;
-    min-width: 0;
+.test-editor-header__status.status-cluster {
+    flex: 0 1 13rem;
+    width: 13rem;
+    max-width: min(13rem, 28vw);
+    max-inline-size: min(13rem, 28vw);
+    min-width: 8.75rem;
     justify-content: flex-start;
+    overflow: hidden;
 }
 
 .test-editor-header__status .status-cluster__body {
     min-width: 0;
-    flex: 0 0 auto;
+    flex: 1 1 auto;
     gap: 0;
+}
+
+.test-editor-header__status .status-cluster__label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .test-editor-header__status .status-cluster__detail {
     display: none !important;
+}
+
+#editor-theory-grounding-beacon {
+    flex: 0 1 13rem;
+    min-width: 2.5rem;
+    max-width: 13rem;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+#editor-theory-grounding-beacon .material-symbols-outlined {
+    flex: 0 0 auto;
+}
+
+#editor-theory-grounding-beacon span:not(.material-symbols-outlined) {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .test-editor-back-btn,
@@ -431,6 +461,7 @@ body.test-editor-shell {
     padding-inline: 0.9rem;
     border-radius: 0.85rem;
     box-shadow: 0 8px 16px color-mix(in srgb, var(--color-primary-light) 34%, transparent);
+    white-space: nowrap;
 }
 
 .test-editor-main__scroll {
@@ -1334,10 +1365,12 @@ body.test-editor-shell {
     font-size: 9px;
 }
 
+.import-source-option,
 .import-mode-option {
     transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
 }
 
+.import-source-option[data-active="true"],
 .import-mode-option[data-active="true"] {
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 25%, transparent);
 }
@@ -1473,6 +1506,20 @@ body.test-editor-shell {
     .test-editor-header__status {
         width: 100%;
         max-width: 100%;
+    }
+
+    .test-editor-header__status.status-cluster {
+        flex: 0 1 auto;
+        width: 100%;
+        max-width: 100%;
+        max-inline-size: 100%;
+        min-width: 0;
+    }
+
+    #editor-theory-grounding-beacon {
+        width: 100%;
+        max-width: 100%;
+        justify-content: center;
     }
 
     .test-editor-header__history {

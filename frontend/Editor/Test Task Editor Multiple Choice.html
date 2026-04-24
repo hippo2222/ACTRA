@@ -33,7 +33,7 @@
 
     <div id="import-modal"
         class="hidden fixed inset-0 bg-scrim backdrop-blur-sm z-50 flex items-center justify-center px-4">
-        <div class="bg-surface-1 rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
+        <div class="bg-surface-1 rounded-2xl shadow-2xl max-w-lg w-full p-6 space-y-4">
             <div class="flex items-center justify-between">
                 <div>
                     <p class="text-xs font-semibold uppercase tracking-wider text-text-disabled">Импорт вопросов</p>
@@ -46,11 +46,40 @@
                     <span class="sr-only">Закрыть</span>
                 </button>
             </div>
+            <div class="grid grid-cols-2 gap-2 text-xs font-semibold" role="radiogroup" aria-label="Источник импорта">
+                <label
+                    class="import-source-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary"
+                    data-active="true">
+                    <input type="radio" name="import-source" value="file" class="hidden" checked>
+                    <span class="material-symbols-outlined text-[16px]">upload_file</span>
+                    Из файла
+                </label>
+                <label
+                    class="import-source-option flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-border-subtle bg-surface-1 text-text-secondary cursor-pointer transition data-[active=true]:bg-primary-light data-[active=true]:border-primary-light data-[active=true]:text-primary"
+                    data-active="false">
+                    <input type="radio" name="import-source" value="text" class="hidden">
+                    <span class="material-symbols-outlined text-[16px]">notes</span>
+                    Из текста
+                </label>
+            </div>
             <div class="bg-surface-2 rounded-xl p-4 text-sm text-text-main space-y-4">
-                <div class="flex items-center justify-between gap-4">
+                <div id="import-file-panel" data-import-source-panel="file" class="flex items-center justify-between gap-4">
                     <span class="text-text-secondary">Файл</span>
                     <span id="import-file-name"
                         class="font-semibold text-text-main text-right truncate max-w-[240px]">-</span>
+                </div>
+                <div id="import-text-panel" data-import-source-panel="text" class="hidden space-y-2">
+                    <textarea id="import-text-input"
+                        class="import-text-input block w-full min-h-[8.5rem] rounded-lg border border-border-subtle bg-surface-1 px-3 py-2 text-sm text-text-main placeholder:text-text-disabled focus:border-primary focus:ring-1 focus:ring-primary resize-y"
+                        placeholder="? Вопрос&#10;+ Правильный ответ&#10;- Неверный ответ"></textarea>
+                    <div class="flex items-center justify-between gap-3">
+                        <span id="import-text-count" class="text-[11px] font-medium text-text-muted">0 символов</span>
+                        <button id="parse-import-text-btn" type="button"
+                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-border-subtle text-xs font-semibold text-text-secondary hover:bg-bg-hover transition">
+                            <span class="material-symbols-outlined text-[16px]">data_object</span>
+                            Разобрать
+                        </button>
+                    </div>
                 </div>
                 <div class="flex items-center justify-between gap-4">
                     <span class="text-text-secondary">Найдено вопросов</span>
@@ -58,7 +87,7 @@
                 </div>
                 <div id="import-warning"
                     class="hidden text-xs px-3 py-2 rounded-lg bg-warning-lighter text-warning-text font-medium">
-                    В файле не найдено вопросов. Продолжение очистит текущий тест.
+                    В импортируемых данных не найдено вопросов. Продолжение очистит текущий тест.
                 </div>
                 <div id="import-parser-status"
                     class="text-xs px-3 py-2 rounded-lg bg-surface-2 text-text-secondary font-medium">Файл еще не выбран

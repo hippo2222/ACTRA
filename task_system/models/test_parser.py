@@ -164,10 +164,6 @@ class TestFileParser:
             correct_answers = [a for a in question.answers if a.correct]
             if not correct_answers:
                 errors.append(f"Вопрос {i+1}: нет правильных ответов")
-            
-            # Проверяем количество правильных ответов
-            if len(correct_answers) > 1:
-                errors.append(f"Вопрос {i+1}: несколько правильных ответов (используйте тип 'multiple_choice')")
         
         return errors
     
@@ -293,4 +289,3 @@ if __name__ == "__main__":
         # Удаляем временный файл
         import os
         os.unlink(temp_file)
-

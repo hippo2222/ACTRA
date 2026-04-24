@@ -28,6 +28,7 @@ class TestEditor extends BaseEditor {
         this.pendingImportData = null;
         this.pendingImportFile = null;
         this.pendingImportErrors = [];
+        this.importSource = 'file';
         this.importMode = 'replace';
         this.initialSnapshot = null;
         this.isQuestionImageUploading = false;
@@ -1078,6 +1079,8 @@ class TestEditor extends BaseEditor {
         const importBtn = document.querySelector('#import-btn');
         const importInput = document.querySelector('#import-input');
         const chooseImportBtn = document.querySelector('#choose-import-file-btn');
+        const importTextInput = document.querySelector('#import-text-input');
+        const parseImportTextBtn = document.querySelector('#parse-import-text-btn');
         if (importBtn) {
             importBtn.onclick = () => {
                 this.resetImportModal();
@@ -1090,11 +1093,23 @@ class TestEditor extends BaseEditor {
         if (importInput) {
             importInput.onchange = (e) => this.handleImportFileSelected(e);
         }
+        if (importTextInput) {
+            importTextInput.addEventListener('input', () => this.handleImportTextChanged());
+        }
+        if (parseImportTextBtn) {
+            parseImportTextBtn.onclick = () => this.handleImportTextSubmitted();
+        }
 
         this.importPreview = document.querySelector('#import-question-preview');
         this.importErrorBox = document.querySelector('#import-error');
         this.importWarningBox = document.querySelector('#import-warning');
         this.importParserStatus = document.querySelector('#import-parser-status');
+        this.importTextInput = importTextInput;
+        this.importTextCount = document.querySelector('#import-text-count');
+        this.importSourceOptions = document.querySelectorAll('.import-source-option');
+        this.importSourceRadios = document.querySelectorAll('input[name="import-source"]');
+        this.importSourcePanels = document.querySelectorAll('[data-import-source-panel]');
+        this.chooseImportBtn = chooseImportBtn;
         this.importModeOptions = document.querySelectorAll('.import-mode-option');
         this.importModeRadios = document.querySelectorAll('input[name="import-mode"]');
 
@@ -1104,6 +1119,17 @@ class TestEditor extends BaseEditor {
         if (importClose) importClose.onclick = () => this.hideImportModal();
         if (importCancel) importCancel.onclick = () => this.hideImportModal(true);
         if (importConfirm) importConfirm.onclick = () => this.confirmImport();
+        if (this.importSourceOptions.length) {
+            this.importSourceOptions.forEach((option) => {
+                option.onclick = () => {
+                    const input = option.querySelector('input[type="radio"]');
+                    if (!input) return;
+                    this.importSource = input.value;
+                    this.clearPendingImportParse();
+                    this.updateImportSourceUI();
+                };
+            });
+        }
         if (this.importModeOptions.length) {
             this.importModeOptions.forEach((option) => {
                 option.onclick = () => {
@@ -1114,6 +1140,7 @@ class TestEditor extends BaseEditor {
                 };
             });
         }
+        this.updateImportSourceUI();
         this.updateImportModeUI();
 
         const clearButtons = [
@@ -1201,36 +1228,101 @@ class TestEditor extends BaseEditor {
                     body: formData
                 });
                 const importedQuestions = data.content?.questions || [];
-                this.pendingImportData = importedQuestions;
-                this.pendingImportErrors = data.errors || [];
-                if (questionCountEl) {
-                    questionCountEl.textContent = importedQuestions.length.toString();
-                }
-                if (warningEl) {
-                    warningEl.classList.toggle('hidden', importedQuestions.length > 0);
-                }
-                this.renderImportPreview(importedQuestions);
-                this.showImportError(this.pendingImportErrors[0]);
-                this.setImportConfirmEnabled(importedQuestions.length > 0 && !this.pendingImportErrors.length);
+                this.applyImportParseResult(importedQuestions, data.errors || []);
             } catch (error) {
-                this.pendingImportData = null;
+                this.clearPendingImportParse();
                 this.pendingImportErrors = [error.message || 'Не удалось прочитать файл'];
                 this.showToast(error.message || 'Не удалось прочитать файл', 'error');
-                this.renderImportPreview([]);
                 this.showImportError(this.pendingImportErrors[0]);
-                this.setImportConfirmEnabled(false);
             }
         }).finally(() => {
             event.target.value = '';
         });
     }
 
+    handleImportTextChanged() {
+        const rawText = this.importTextInput?.value || '';
+        if (this.importTextCount) {
+            this.importTextCount.textContent = `${rawText.length} символов`;
+        }
+        this.clearPendingImportParse({
+            status: rawText.trim() ? 'Текст изменён, разберите снова' : 'Текст ещё не введён',
+        });
+    }
+
+    async handleImportTextSubmitted() {
+        const rawText = this.importTextInput?.value || '';
+        if (!rawText.trim()) {
+            this.clearPendingImportParse({ status: 'Текст ещё не введён' });
+            this.showImportError('Вставьте текст с вопросами');
+            this.setImportConfirmEnabled(false);
+            return;
+        }
+
+        await this.withLoading('Проверка текста...', async () => {
+            try {
+                const data = await this.requestJson('/api/editor/test/import', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: rawText }),
+                });
+                const importedQuestions = data.content?.questions || [];
+                this.pendingImportFile = null;
+                this.applyImportParseResult(importedQuestions, data.errors || []);
+            } catch (error) {
+                this.clearPendingImportParse();
+                this.pendingImportErrors = [error.message || 'Не удалось разобрать текст'];
+                this.showToast(error.message || 'Не удалось разобрать текст', 'error');
+                this.showImportError(this.pendingImportErrors[0]);
+            }
+        });
+    }
+
+    applyImportParseResult(importedQuestions, errors = []) {
+        const questionCountEl = document.querySelector('#import-question-count');
+        const warningEl = this.importWarningBox;
+        this.pendingImportData = Array.isArray(importedQuestions) ? importedQuestions : [];
+        this.pendingImportErrors = Array.isArray(errors) ? errors : [];
+        if (questionCountEl) {
+            questionCountEl.textContent = this.pendingImportData.length.toString();
+        }
+        if (warningEl) {
+            warningEl.classList.toggle('hidden', this.pendingImportData.length > 0);
+        }
+        this.renderImportPreview(this.pendingImportData);
+        this.showImportError(this.pendingImportErrors[0]);
+        this.setImportConfirmEnabled(this.pendingImportData.length > 0 && !this.pendingImportErrors.length);
+    }
+
+    clearPendingImportParse({ status = null } = {}) {
+        const questionCountEl = document.querySelector('#import-question-count');
+        const fileNameEl = document.querySelector('#import-file-name');
+        if (fileNameEl) fileNameEl.textContent = '—';
+        if (questionCountEl) questionCountEl.textContent = '0';
+        if (this.importWarningBox) this.importWarningBox.classList.add('hidden');
+        this.pendingImportData = null;
+        this.pendingImportFile = null;
+        this.pendingImportErrors = [];
+        this.renderImportPreview([]);
+        this.showImportError('');
+        this.setImportConfirmEnabled(false);
+        if (status) {
+            this.setImportParserStatus(status, 'muted');
+        }
+    }
+
     confirmImport() {
-        if (!this.pendingImportData) {
-            this.showToast('Сначала выберите корректный файл', 'warning');
+        if (!this.pendingImportData || !this.pendingImportData.length) {
+            this.showToast(
+                this.importSource === 'text'
+                    ? 'Сначала разберите текст с вопросами'
+                    : 'Сначала выберите корректный файл',
+                'warning'
+            );
             return;
         }
         const normalized = this.deserializeQuestions(this.pendingImportData);
+        const importedCount = normalized.length;
         if (this.importMode === 'append') {
             const q = this.questions || [];
             this.questions = q.concat(normalized);
@@ -1240,7 +1332,7 @@ class TestEditor extends BaseEditor {
         }
         this.renderUI();
         this.markUnsavedChanges();
-        this.showToast(`Импортировано ${this.questions.length} вопросов`, 'success');
+        this.showToast(`Импортировано ${importedCount} вопросов`, 'success');
         this.pendingImportData = null;
         this.pendingImportFile = null;
         this.pendingImportErrors = [];
@@ -1252,20 +1344,20 @@ class TestEditor extends BaseEditor {
         const questionCountEl = document.querySelector('#import-question-count');
         const warningEl = this.importWarningBox;
         if (fileNameEl) fileNameEl.textContent = '—';
-        if (questionCountEl) questionCountEl.textContent = '—';
+        if (questionCountEl) questionCountEl.textContent = '0';
         if (warningEl) warningEl.classList.add('hidden');
         this.setImportConfirmEnabled(false);
         this.pendingImportData = null;
         this.pendingImportFile = null;
         this.pendingImportErrors = [];
+        this.importSource = 'file';
+        if (this.importTextInput) this.importTextInput.value = '';
+        if (this.importTextCount) this.importTextCount.textContent = '0 символов';
         this.renderImportPreview([]);
         this.showImportError('');
-        if (this.importParserStatus) {
-            this.importParserStatus.textContent = 'Файл ещё не выбран';
-            this.importParserStatus.classList.remove('text-success-text', 'bg-success-lighter', 'text-error', 'bg-error-lighter');
-            this.importParserStatus.classList.add('bg-surface-2', 'text-text-secondary');
-        }
+        this.setImportParserStatus('Файл ещё не выбран', 'muted');
         this.importMode = 'replace';
+        this.updateImportSourceUI();
         this.updateImportModeUI();
     }
 
@@ -1298,6 +1390,39 @@ class TestEditor extends BaseEditor {
         this.showImportModal(false);
     }
 
+    updateImportSourceUI() {
+        if (this.importSourceOptions?.length) {
+            this.importSourceOptions.forEach((option) => {
+                const input = option.querySelector('input[type="radio"]');
+                if (!input) return;
+                const isActive = input.value === this.importSource;
+                option.dataset.active = isActive;
+                if (isActive) {
+                    input.checked = true;
+                }
+            });
+        }
+
+        if (this.importSourcePanels?.length) {
+            this.importSourcePanels.forEach((panel) => {
+                const isActive = panel.dataset.importSourcePanel === this.importSource;
+                panel.classList.toggle('hidden', !isActive);
+            });
+        }
+
+        if (this.chooseImportBtn) {
+            this.chooseImportBtn.classList.toggle('hidden', this.importSource !== 'file');
+        }
+
+        if (this.importParserStatus && !this.pendingImportData?.length && !this.pendingImportErrors.length) {
+            this.setImportParserStatus(
+                this.importSource === 'text' ? 'Текст ещё не введён' : 'Файл ещё не выбран',
+                'muted'
+            );
+        }
+        this.renderImportPreview([]);
+    }
+
     updateImportModeUI() {
         if (!this.importModeOptions.length) return;
         this.importModeOptions.forEach((option) => {
@@ -1324,7 +1449,9 @@ class TestEditor extends BaseEditor {
         if (!questions || !questions.length) {
             const empty = document.createElement('p');
             empty.className = 'p-3 text-text-muted';
-            empty.textContent = 'Файл ещё не выбран или не содержит вопросов';
+            empty.textContent = this.importSource === 'text'
+                ? 'Текст ещё не разобран или не содержит вопросов'
+                : 'Файл ещё не выбран или не содержит вопросов';
             this.importPreview.appendChild(empty);
             return;
         }
@@ -1357,20 +1484,15 @@ class TestEditor extends BaseEditor {
 
     showImportError(message) {
         if (!this.importErrorBox) return;
-        if (this.importParserStatus) {
-            if (message) {
-                this.importParserStatus.textContent = 'Обнаружены ошибки при разборе';
-                this.importParserStatus.classList.remove('bg-bg-secondary', 'text-text-secondary', 'bg-success-lighter', 'text-success');
-                this.importParserStatus.classList.add('bg-error-lighter', 'text-error-text');
-            } else if (this.pendingImportData && this.pendingImportData.length) {
-                this.importParserStatus.textContent = 'Парсер отработал без ошибок';
-                this.importParserStatus.classList.remove('bg-bg-secondary', 'text-text-secondary', 'bg-error-lighter', 'text-error-text');
-                this.importParserStatus.classList.add('bg-success-lighter', 'text-success');
-            } else {
-                this.importParserStatus.textContent = 'Файл ещё не выбран';
-                this.importParserStatus.classList.remove('bg-success-lighter', 'text-success', 'bg-error-lighter', 'text-error-text');
-                this.importParserStatus.classList.add('bg-bg-secondary', 'text-text-secondary');
-            }
+        if (message) {
+            this.setImportParserStatus('Обнаружены ошибки при разборе', 'error');
+        } else if (this.pendingImportData && this.pendingImportData.length) {
+            this.setImportParserStatus('Парсер отработал без ошибок', 'success');
+        } else {
+            this.setImportParserStatus(
+                this.importSource === 'text' ? 'Текст ещё не разобран' : 'Файл ещё не выбран',
+                'muted'
+            );
         }
         if (message) {
             this.importErrorBox.textContent = message;
@@ -1378,6 +1500,29 @@ class TestEditor extends BaseEditor {
         } else {
             this.importErrorBox.textContent = '';
             this.importErrorBox.classList.add('hidden');
+        }
+    }
+
+    setImportParserStatus(message, tone = 'muted') {
+        if (!this.importParserStatus) return;
+        this.importParserStatus.textContent = message;
+        this.importParserStatus.classList.remove(
+            'bg-bg-secondary',
+            'bg-surface-2',
+            'text-text-secondary',
+            'bg-success-lighter',
+            'text-success',
+            'text-success-text',
+            'bg-error-lighter',
+            'text-error',
+            'text-error-text'
+        );
+        if (tone === 'success') {
+            this.importParserStatus.classList.add('bg-success-lighter', 'text-success');
+        } else if (tone === 'error') {
+            this.importParserStatus.classList.add('bg-error-lighter', 'text-error-text');
+        } else {
+            this.importParserStatus.classList.add('bg-surface-2', 'text-text-secondary');
         }
     }
 
