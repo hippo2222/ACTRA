@@ -563,6 +563,183 @@ const TestUI = (function () {
       return nextSelections;
     }
 
+    function getBackendQuestionAnswerKey(question, index) {
+      const raw =
+        (Array.isArray(state.rawQuestions) && state.rawQuestions[index]) || null;
+      if (raw && raw.id != null) return String(raw.id);
+      if (question && question.index != null) return String(question.index);
+      return String(index);
+    }
+
+    function hasMeaningfulAnswerValue(value) {
+      if (Array.isArray(value)) return value.length > 0;
+      if (typeof value === "string") return value.trim().length > 0;
+      return value != null;
+    }
+
+    function getQuestionResultLookupKeys(question, index) {
+      const keys = [];
+      const push = (value) => {
+        if (value == null) return;
+        const normalized = String(value);
+        if (!normalized || keys.includes(normalized)) return;
+        keys.push(normalized);
+      };
+
+      push(question && question.id);
+      const raw =
+        (Array.isArray(state.rawQuestions) && state.rawQuestions[index]) || null;
+      push(raw && raw.id);
+      push(question && question.index);
+      push(index);
+      push(`q_${index + 1}`);
+
+      return keys;
+    }
+
+    function inferQuestionStatusFromResult(resultItem, questionId) {
+      if (!resultItem || typeof resultItem !== "object") return null;
+
+      const rawStatus = String(resultItem.status || "").trim().toLowerCase();
+      if (
+        rawStatus === "correct" ||
+        rawStatus === "incorrect" ||
+        rawStatus === "unanswered"
+      ) {
+        return rawStatus;
+      }
+
+      const details =
+        resultItem.details && typeof resultItem.details === "object"
+          ? resultItem.details
+          : {};
+      const reason = String(resultItem.reason || details.reason || "")
+        .trim()
+        .toLowerCase();
+      if (reason === "not_answered" || reason === "no_answers") {
+        return "unanswered";
+      }
+
+      if (resultItem.correct === true || resultItem.is_correct === true) {
+        return "correct";
+      }
+
+      if (resultItem.correct === false || resultItem.is_correct === false) {
+        const answerValue =
+          resultItem.user_answer !== undefined
+            ? resultItem.user_answer
+            : details.user_answer !== undefined
+              ? details.user_answer
+              : state.answers && questionId != null
+                ? state.answers[questionId]
+                : undefined;
+        return hasMeaningfulAnswerValue(answerValue) ? "incorrect" : "unanswered";
+      }
+
+      return null;
+    }
+
+    function normalizePerQuestionFeedback(perQuestion) {
+      if (!perQuestion || typeof perQuestion !== "object" || Array.isArray(perQuestion)) {
+        return null;
+      }
+
+      const normalized = {};
+      let matchedCount = 0;
+
+      state.questions.forEach((question, index) => {
+        const questionId = question && question.id != null ? String(question.id) : null;
+        if (!questionId) return;
+
+        const keys = getQuestionResultLookupKeys(question, index);
+        let matchedItem;
+        let hasMatch = false;
+
+        for (const key of keys) {
+          if (Object.prototype.hasOwnProperty.call(perQuestion, key)) {
+            matchedItem = perQuestion[key];
+            hasMatch = true;
+            break;
+          }
+        }
+
+        if (!hasMatch) return;
+        normalized[questionId] = matchedItem;
+        matchedCount += 1;
+      });
+
+      if (matchedCount === 0) {
+        return perQuestion;
+      }
+
+      return normalized;
+    }
+
+    function normalizeQuestionResultsList(questionResults) {
+      if (!Array.isArray(questionResults) || questionResults.length === 0) {
+        return null;
+      }
+
+      const normalized = {};
+      let matchedCount = 0;
+
+      state.questions.forEach((question, index) => {
+        const questionId = question && question.id != null ? String(question.id) : null;
+        if (!questionId) return;
+
+        const keys = getQuestionResultLookupKeys(question, index);
+        const matchedItem = questionResults.find((resultItem, resultIndex) => {
+          if (!resultItem || typeof resultItem !== "object") return false;
+          if (resultItem.question_id != null) {
+            return keys.includes(String(resultItem.question_id));
+          }
+          if (resultItem.id != null) {
+            return keys.includes(String(resultItem.id));
+          }
+          if (Number.isInteger(resultItem.index)) {
+            return resultItem.index === index;
+          }
+          return resultIndex === index;
+        });
+
+        if (!matchedItem) return;
+
+        const status = inferQuestionStatusFromResult(matchedItem, questionId);
+        normalized[questionId] = status
+          ? { ...matchedItem, status }
+          : { ...matchedItem };
+        matchedCount += 1;
+      });
+
+      return matchedCount > 0 ? normalized : null;
+    }
+
+    function synthesizeQuestionResultsFromGlobalResult(result) {
+      if (!Array.isArray(state.questions) || state.questions.length === 0) {
+        return null;
+      }
+
+      const globalSuccess = typeof result?.success === "boolean" ? result.success : null;
+      const synthesized = {};
+
+      state.questions.forEach((question) => {
+        const questionId = question && question.id != null ? String(question.id) : null;
+        if (!questionId) return;
+
+        const answerValue = state.answers && state.answers[questionId];
+        const hasAnswer = hasMeaningfulAnswerValue(answerValue);
+        let status = "unanswered";
+        if (hasAnswer && globalSuccess === true) {
+          status = "correct";
+        } else if (hasAnswer && globalSuccess === false) {
+          status = "incorrect";
+        }
+        synthesized[questionId] = { status };
+      });
+
+      return synthesized;
+    }
+
     return {
       get questions() {
         return state.questions;
@@ -578,16 +755,23 @@ const TestUI = (function () {
         const answers = {};
         const textAnswers = {};
 
-        state.questions.forEach((q) => {
+        state.questions.forEach((q, index) => {
           const qId = q.id;
           const val = state.answers[qId];
           if (val == null) {
             return;
           }
+          const backendKey = getBackendQuestionAnswerKey(q, index);
           if (state.isOpenMode && typeof val === "string") {
             textAnswers[qId] = val;
+            if (backendKey !== qId) {
+              textAnswers[backendKey] = val;
+            }
           } else {
             answers[qId] = val;
+            if (backendKey !== qId) {
+              answers[backendKey] = Array.isArray(val) ? val.slice() : val;
+            }
           }
         });
 
@@ -733,33 +917,18 @@ const TestUI = (function () {
         }
 
         if (perQuestion && typeof perQuestion === "object") {
-          state.questionResults = perQuestion;
-        } else if (state && state.isOpenMode && Array.isArray(state.questions)) {
-          // L2 open-text fallback: если бекенд не вернул per_question, но мы в open-режиме,
-          // синтезируем простую карту статусов по всем вопросам.
-          const synthesized = {};
-          const globalSuccess = typeof result?.success === "boolean" ? result.success : null;
-
-          state.questions.forEach((q) => {
-            const qId = q && q.id != null ? q.id : null;
-            if (!qId) return;
-
-            const hasUserText =
-              state.answers && typeof state.answers[qId] === "string" && state.answers[qId].trim() !== "";
-
-            let status = "unanswered";
-            if (hasUserText && globalSuccess === true) {
-              status = "correct";
-            } else if (hasUserText && globalSuccess === false) {
-              status = "incorrect";
-            }
-
-            synthesized[qId] = {
-              status,
-            };
-          });
-
-          state.questionResults = synthesized;
+          state.questionResults = normalizePerQuestionFeedback(perQuestion) || {};
+        } else {
+          const questionResults =
+            result && result.details && Array.isArray(result.details.question_results)
+              ? result.details.question_results
+              : result && Array.isArray(result.question_results)
+                ? result.question_results
+                : null;
+          state.questionResults =
+            normalizeQuestionResultsList(questionResults) ||
+            synthesizeQuestionResultsFromGlobalResult(result) ||
+            {};
         }
 
         renderQuestionSidebarC1();
