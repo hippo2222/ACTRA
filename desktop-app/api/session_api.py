@@ -11,7 +11,7 @@ from contextlib import nullcontext
 from functools import wraps
 from pathlib import Path
 from urllib.parse import parse_qs, quote, urlparse
-from typing import Any, Dict, Optional, List, Tuple
+from typing import Any, Dict, Optional, List, Tuple, Set
 
 from services.statistics_service import StatisticsService
 from services.hosted_shadow_fallback import HostedShadowWriteFallbackDisabledError
@@ -4747,6 +4747,184 @@ class SessionAPI:
                 return ""
             return raw
 
+        def _is_web_image_ref(value: Any) -> bool:
+            raw = str(value or "").strip()
+            return bool(
+                raw.startswith("/api/assets/")
+                or raw.startswith("/api/local-image")
+                or raw.startswith("http://")
+                or raw.startswith("https://")
+                or raw.startswith("data:")
+            )
+
+        def _normalize_question_image_ref(raw_ref: Any) -> Optional[Dict[str, str]]:
+            asset_url = ""
+            asset_id = ""
+            image_path = ""
+
+            if isinstance(raw_ref, str):
+                value = raw_ref.strip()
+                if not value:
+                    return None
+                normalized = _normalize_existing_image_ref(value)
+                if not normalized:
+                    return None
+                if _is_web_image_ref(normalized):
+                    asset_url = normalized
+                else:
+                    image_path = normalized
+            elif isinstance(raw_ref, dict):
+                nested_asset_url, nested_asset_id, nested_image_path = _nested_image_payload_asset(raw_ref)
+                asset_url = _first_text(
+                    raw_ref.get("asset_url"),
+                    raw_ref.get("image_asset_url"),
+                    raw_ref.get("image_url"),
+                    raw_ref.get("url"),
+                    nested_asset_url,
+                )
+                asset_id = _first_text(
+                    raw_ref.get("asset_id"),
+                    raw_ref.get("image_asset_id"),
+                    nested_asset_id,
+                )
+                image_value = raw_ref.get("image")
+                image_path = _first_text(
+                    raw_ref.get("path"),
+                    raw_ref.get("image_path"),
+                    image_value if isinstance(image_value, str) else "",
+                    raw_ref.get("src"),
+                    nested_image_path,
+                )
+            else:
+                return None
+
+            if asset_url:
+                normalized_url = _normalize_existing_image_ref(asset_url)
+                if normalized_url and _is_web_image_ref(normalized_url):
+                    asset_url = normalized_url
+                elif normalized_url and not image_path:
+                    image_path = normalized_url
+                    asset_url = ""
+                else:
+                    asset_url = ""
+
+            if image_path:
+                normalized_path = _normalize_existing_image_ref(image_path)
+                if normalized_path and _is_web_image_ref(normalized_path):
+                    asset_url = asset_url or normalized_path
+                    image_path = ""
+                else:
+                    image_path = normalized_path
+
+            if asset_id and not asset_url:
+                asset_url = _asset_content_url(asset_id)
+
+            if hosted_runtime and image_path and not asset_url and not asset_id:
+                image_path = ""
+
+            ref: Dict[str, str] = {}
+            if image_path:
+                ref["path"] = image_path
+            if asset_id:
+                ref["asset_id"] = asset_id
+            if asset_url:
+                ref["asset_url"] = asset_url
+            return ref or None
+
+        def _normalize_question_image_refs(question: Dict[str, Any]) -> List[Dict[str, str]]:
+            raw_images = question.get("images")
+            candidates: List[Any] = []
+            if isinstance(raw_images, list):
+                candidates.extend(raw_images)
+
+            nested_asset_url, nested_asset_id, nested_image_path = _nested_image_payload_asset(question)
+            legacy_candidate = {
+                "path": _first_text(
+                    question.get("image_path"),
+                    question.get("image") if isinstance(question.get("image"), str) else "",
+                    nested_image_path,
+                ),
+                "asset_id": _first_text(question.get("image_asset_id"), question.get("asset_id"), nested_asset_id),
+                "asset_url": _first_text(
+                    question.get("image_asset_url"),
+                    question.get("image_url"),
+                    question.get("asset_url"),
+                    nested_asset_url,
+                ),
+            }
+            if not candidates:
+                candidates.append(legacy_candidate)
+
+            refs: List[Dict[str, str]] = []
+            seen: Set[str] = set()
+            for candidate in candidates:
+                if len(refs) >= 3:
+                    break
+                ref = _normalize_question_image_ref(candidate)
+                if not ref:
+                    continue
+                key = ref.get("asset_url") or (
+                    f"asset:{ref.get('asset_id')}" if ref.get("asset_id") else ""
+                ) or ref.get("path") or ""
+                if not key or key in seen:
+                    continue
+                seen.add(key)
+                refs.append(ref)
+            if not refs and isinstance(raw_images, list) and raw_images:
+                ref = _normalize_question_image_ref(legacy_candidate)
+                if ref:
+                    refs.append(ref)
+            return refs
+
+        def _apply_question_image_refs(question: Dict[str, Any]) -> None:
+            had_image_list = "images" in question
+            had_legacy_image = bool(
+                _first_text(
+                    question.get("image_path"),
+                    question.get("image"),
+                    question.get("image_asset_id"),
+                    question.get("asset_id"),
+                    question.get("image_asset_url"),
+                    question.get("image_url"),
+                    question.get("asset_url"),
+                )
+            )
+            refs = _normalize_question_image_refs(question)
+            if refs or had_image_list or had_legacy_image:
+                question["images"] = refs
+
+            first = refs[0] if refs else None
+            if first:
+                if first.get("asset_url"):
+                    question["image_url"] = first["asset_url"]
+                    question["image_asset_url"] = first["asset_url"]
+                else:
+                    question.pop("image_url", None)
+                    question.pop("image_asset_url", None)
+
+                if first.get("asset_id"):
+                    question["image_asset_id"] = first["asset_id"]
+                else:
+                    question.pop("image_asset_id", None)
+
+                if first.get("path"):
+                    question["image_path"] = first["path"]
+                    question["image"] = first["path"]
+                else:
+                    question.pop("image_path", None)
+                    image_value = question.get("image")
+                    if isinstance(image_value, str):
+                        question.pop("image", None)
+            else:
+                _, _, nested_image_path = _nested_image_payload_asset(question)
+                image_path = _first_text(
+                    question.get("image_path"),
+                    question.get("image") if isinstance(question.get("image"), str) else "",
+                    nested_image_path,
+                )
+                _strip_hosted_path_only_image_fields(question, image_path)
+                question.pop("image_url", None)
+
         def _apply_canonical_image_url(url: str, content_payload: Any) -> None:
             clean_url = str(url or "").strip()
             if not clean_url:
@@ -4876,22 +5054,7 @@ class SessionAPI:
         for q in questions:
             if not isinstance(q, dict):
                 continue
-            question_asset_url = _first_text(
-                q.get("image_asset_url"),
-                q.get("asset_url"),
-            )
-            question_asset_id = _first_text(
-                q.get("image_asset_id"),
-                q.get("asset_id"),
-            )
-            if not q.get("image_url"):
-                if question_asset_url:
-                    q["image_url"] = question_asset_url
-                elif question_asset_id:
-                    q["image_url"] = _asset_content_url(question_asset_id)
-            question_img_path = q.get("image_path") or q.get("image")
-            if hosted_runtime and question_img_path and not q.get("image_url"):
-                _strip_hosted_path_only_image_fields(q, question_img_path)
+            _apply_question_image_refs(q)
             answers = q.get("answers") or []
             if not isinstance(answers, list):
                 continue

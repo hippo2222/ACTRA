@@ -18,6 +18,7 @@ from .task_models import (
     DrawTaskContent,
     OpenAnswerTaskContent,
     TestOption,
+    TestQuestionImageRef,
     TestQuestion,
     TestTaskContent,
     SequenceAssemblyTaskContent,
@@ -52,6 +53,7 @@ __all__ = [
     'DrawTaskContent',
     'OpenAnswerTaskContent',
     'TestOption',
+    'TestQuestionImageRef',
     'TestQuestion',
     'TestTaskContent',
     'SequenceAssemblyTaskContent',
@@ -66,4 +68,3 @@ __all__ = [
     # Utilities
     'PathResolver',
 ]
-

@@ -122,6 +122,15 @@ class TestModelImageValidation:
             options=[{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
             images=["img1.jpg", "img2.svg"]
         )
+
+        # Canonical object refs
+        question = TestQuestion(
+            text="Q",
+            options=[{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+            images=[{"path": "img1.jpg", "asset_id": "asset_img_1"}, {"image_asset_url": "/api/assets/asset_img_2/content"}]
+        )
+        assert question.images[0].path == "img1.jpg"
+        assert question.images[1].asset_url == "/api/assets/asset_img_2/content"
         
         # Invalid single
         with pytest.raises(ValidationError, match="Invalid image extension"):
@@ -137,6 +146,13 @@ class TestModelImageValidation:
                 text="Q",
                 options=[{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
                 images=["valid.png", "invalid.txt"]
+            )
+
+        with pytest.raises(ValidationError, match="At most 3 images"):
+            TestQuestion(
+                text="Q",
+                options=[{"text": "A", "is_correct": True}, {"text": "B", "is_correct": False}],
+                images=["1.png", "2.png", "3.png", "4.png"]
             )
 
     def test_sequence_element_image_validation(self):

@@ -444,32 +444,31 @@
       qText.textContent = currentMeta.text || "Вопрос теста";
       body.appendChild(qText);
 
-      // Optional question image (L1.C / L2)
+      // Optional question images (L1.C / L2)
       if (raw) {
-        let questionImagePath = null;
+        const questionImages = collectQuestionImageRefs(raw);
 
-        questionImagePath = resolveImageUrlForWeb(raw);
-        if (!questionImagePath && Array.isArray(raw.images) && raw.images.length > 0) {
-          const img0 = raw.images[0];
-          questionImagePath = resolveImageUrlForWeb(img0);
-        }
-
-        if (questionImagePath) {
+        if (questionImages.length) {
           const imgWrapper = document.createElement("div");
-          imgWrapper.className = "mt-3 mb-3 flex justify-center";
+          imgWrapper.className = questionImages.length === 1
+            ? "mt-3 mb-3 flex justify-center"
+            : "mt-3 mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
 
-          const img = document.createElement("img");
-          img.src = questionImagePath;
-          img.alt = "Изображение вопроса";
-          img.className =
-            "max-h-[260px] w-auto object-contain rounded-lg border border-border-strong dark:border-border-strong shadow-sm cursor-pointer";
+          questionImages.forEach((questionImagePath, index) => {
+            const img = document.createElement("img");
+            img.src = questionImagePath;
+            img.alt = `Изображение вопроса ${index + 1}`;
+            img.className = questionImages.length === 1
+              ? "max-h-[260px] w-auto object-contain rounded-lg border border-border-strong dark:border-border-strong shadow-sm cursor-pointer"
+              : "max-h-[260px] w-full object-contain rounded-lg border border-border-strong dark:border-border-strong shadow-sm cursor-pointer";
 
-          img.addEventListener("click", (ev) => {
-            ev.preventDefault();
-            openImageLightbox(questionImagePath, currentMeta.text || "Изображение вопроса");
+            img.addEventListener("click", (ev) => {
+              ev.preventDefault();
+              openImageLightbox(questionImagePath, currentMeta.text || "Изображение вопроса");
+            });
+
+            imgWrapper.appendChild(img);
           });
-
-          imgWrapper.appendChild(img);
           body.appendChild(imgWrapper);
         }
       }
@@ -1444,6 +1443,29 @@
       });
 
       return zoomBtn;
+    }
+
+    function collectQuestionImageRefs(raw) {
+      const images = [];
+      const seen = new Set();
+
+      const push = (candidate) => {
+        if (images.length >= 3) return;
+        const src = resolveImageUrlForWeb(candidate);
+        if (!src || seen.has(src)) return;
+        seen.add(src);
+        images.push(src);
+      };
+
+      if (raw && Array.isArray(raw.images)) {
+        raw.images.forEach(push);
+      }
+
+      if (raw && images.length === 0) {
+        push(raw);
+      }
+
+      return images;
     }
 
     function resolveImageUrlForWeb(imgSrc) {

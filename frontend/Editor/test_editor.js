@@ -32,6 +32,7 @@ class TestEditor extends BaseEditor {
         this.importMode = 'append';
         this.initialSnapshot = null;
         this.isQuestionImageUploading = false;
+        this.maxQuestionImages = 3;
         this.uploadingOptionImageIndex = null;
         this.activeImagePasteTarget = null;
         this.pendingPastedImageFile = null;
@@ -226,6 +227,12 @@ class TestEditor extends BaseEditor {
         if (!file) return false;
         const q = this.questions[this.currentQuestionIndex];
         if (!q) return false;
+        const existingImages = this.syncQuestionLegacyImageFields(q);
+        if (existingImages.length >= this.getMaxQuestionImages()) {
+            this.showToast('Можно добавить не больше 3 изображений к вопросу', 'warning');
+            this.syncQuestionImageBusyState();
+            return false;
+        }
         if (this.isQuestionImageUploading) {
             this.showToast('Подождите завершения загрузки изображения вопроса', 'warning');
             return false;
@@ -240,12 +247,21 @@ class TestEditor extends BaseEditor {
                 body: this.buildImageUploadFormData(file)
             });
 
-            q.image = data.path || null;
-            q.image_asset_id = data.asset_id || null;
-            q.image_asset_url = data.asset_url || null;
-            this.isQuestionImageUploading = false;
+            const nextRef = this.serializeImageReference({
+                path: data.path,
+                asset_id: data.asset_id,
+                asset_url: data.asset_url,
+            });
+            if (!nextRef) {
+                this.showToast('Сервер не вернул ссылку на изображение', 'error');
+                return false;
+            }
+
+            q.images = [...existingImages, nextRef];
+            this.syncQuestionLegacyImageFields(q);
             this.renderCurrentQuestion();
-            this.showToast('Изображение вопроса обновлено', 'success');
+            this.renderQuestionList();
+            this.showToast('Изображение вопроса добавлено', 'success');
             this.markUnsavedChanges();
             return true;
         } catch (error) {
@@ -462,7 +478,7 @@ class TestEditor extends BaseEditor {
                     asset_id: fallbackAssetId || null,
                 };
             }
-            if (value.startsWith("/api/assets/") || /^(https?:|data:)/i.test(value)) {
+            if (value.startsWith("/api/assets/") || value.startsWith("/api/editor/image") || value.startsWith("/api/local-image") || /^(https?:|data:)/i.test(value)) {
                 return {
                     path: null,
                     asset_url: value,
@@ -532,6 +548,79 @@ class TestEditor extends BaseEditor {
         return this.buildImageUrl(normalized.path);
     }
 
+    getMaxQuestionImages() {
+        return Number.isInteger(this.maxQuestionImages) && this.maxQuestionImages > 0
+            ? this.maxQuestionImages
+            : 3;
+    }
+
+    serializeImageReference(raw) {
+        const ref = this.normalizeImageReference(raw);
+        const payload = {};
+        if (ref.path) payload.path = ref.path;
+        if (ref.asset_id) payload.asset_id = ref.asset_id;
+        if (ref.asset_url) payload.asset_url = ref.asset_url;
+        return Object.keys(payload).length ? payload : null;
+    }
+
+    getImageReferenceKey(raw) {
+        const ref = this.normalizeImageReference(raw);
+        return ref.asset_url || (ref.asset_id ? `asset:${ref.asset_id}` : "") || ref.path || "";
+    }
+
+    buildQuestionImageRefs(question) {
+        if (!question || typeof question !== "object") {
+            return [];
+        }
+
+        const hasCanonicalImages = Array.isArray(question.images);
+        const candidates = hasCanonicalImages ? [...question.images] : [];
+
+        const legacyCandidate = {
+            image: question.image,
+            image_path: question.image_path,
+            image_asset_id: question.image_asset_id,
+            asset_id: question.asset_id,
+            image_asset_url: question.image_asset_url,
+            image_url: question.image_url,
+            asset_url: question.asset_url,
+        };
+        if (!hasCanonicalImages && !candidates.length) {
+            candidates.push(legacyCandidate);
+        }
+
+        const refs = [];
+        const seen = new Set();
+        const limit = this.getMaxQuestionImages();
+
+        candidates.forEach((candidate) => {
+            if (refs.length >= limit) return;
+            const ref = this.serializeImageReference(candidate);
+            if (!ref) return;
+            const key = this.getImageReferenceKey(ref);
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            refs.push(ref);
+        });
+
+        return refs;
+    }
+
+    syncQuestionLegacyImageFields(question) {
+        if (!question || typeof question !== "object") {
+            return [];
+        }
+        const refs = this.buildQuestionImageRefs(question);
+        question.images = refs;
+
+        const first = refs[0] || null;
+        question.image = first?.path || null;
+        question.image_path = first?.path || null;
+        question.image_asset_id = first?.asset_id || null;
+        question.image_asset_url = first?.asset_url || null;
+        return refs;
+    }
+
     createEmptyQuestion() {
         return {
             id: Date.now(),
@@ -599,9 +688,7 @@ class TestEditor extends BaseEditor {
             })
             : this.createEmptyQuestion().options;
 
-        const questionRef = this.normalizeImageReference(question);
-
-        return {
+        const normalizedQuestion = {
             id: Number.isFinite(question.id) ? question.id : fallbackIndex,
             text: question.text ?? "",
             options: options.length ? options : this.createEmptyQuestion().options,
@@ -610,11 +697,14 @@ class TestEditor extends BaseEditor {
                 allow_partial_credit: Boolean(question.settings?.allow_partial_credit)
             },
             explanation: question.explanation ?? "",
-            image: questionRef.path,
-            image_asset_id: questionRef.asset_id,
-            image_asset_url: questionRef.asset_url,
-            images: Array.isArray(question.images) ? [...question.images] : []
+            image: question.image ?? question.image_path ?? null,
+            image_path: question.image_path ?? question.image ?? null,
+            image_asset_id: question.image_asset_id ?? question.asset_id ?? null,
+            image_asset_url: question.image_asset_url ?? question.image_url ?? question.asset_url ?? null,
+            images: Array.isArray(question.images) ? [...question.images] : undefined
         };
+        this.syncQuestionLegacyImageFields(normalizedQuestion);
+        return normalizedQuestion;
     }
 
     deserializeQuestions(rawQuestions) {
@@ -633,8 +723,7 @@ class TestEditor extends BaseEditor {
         }
 
         return backendQuestions.map((question, idx) => {
-            const questionRef = this.normalizeImageReference(question);
-            return {
+            const normalizedQuestion = {
                 id: Number.isFinite(question?.id) ? question.id : idx,
                 text: question?.text ?? "",
                 options: this.normalizeAnswersToOptions(question?.answers),
@@ -643,11 +732,14 @@ class TestEditor extends BaseEditor {
                     allow_partial_credit: false
                 },
                 explanation: question?.explanation ?? "",
-                image: questionRef.path,
-                image_asset_id: questionRef.asset_id,
-                image_asset_url: questionRef.asset_url,
-                images: Array.isArray(question?.images) ? [...question.images] : []
+                image: question?.image ?? question?.image_path ?? null,
+                image_path: question?.image_path ?? question?.image ?? null,
+                image_asset_id: question?.image_asset_id ?? question?.asset_id ?? null,
+                image_asset_url: question?.image_asset_url ?? question?.image_url ?? question?.asset_url ?? null,
+                images: Array.isArray(question?.images) ? [...question.images] : undefined
             };
+            this.syncQuestionLegacyImageFields(normalizedQuestion);
+            return normalizedQuestion;
         });
     }
 
@@ -678,11 +770,8 @@ class TestEditor extends BaseEditor {
                 };
             });
 
-            const questionRef = this.normalizeImageReference({
-                image: question.image,
-                image_asset_id: question.image_asset_id,
-                image_asset_url: question.image_asset_url,
-            });
+            const questionImages = this.syncQuestionLegacyImageFields(question);
+            const questionRef = questionImages[0] || null;
 
             const payload = {
                 id: Number.isFinite(question.id) ? question.id : idx,
@@ -691,18 +780,18 @@ class TestEditor extends BaseEditor {
                 options
             };
 
-            if (questionRef.path) {
+            if (questionRef?.path) {
                 payload.image = questionRef.path;
                 payload.image_path = questionRef.path;
             }
-            if (questionRef.asset_id) {
+            if (questionRef?.asset_id) {
                 payload.image_asset_id = questionRef.asset_id;
             }
-            if (questionRef.asset_url) {
+            if (questionRef?.asset_url) {
                 payload.image_asset_url = questionRef.asset_url;
             }
-            if (Array.isArray(question.images) && question.images.length) {
-                payload.images = question.images.slice();
+            if (questionImages.length) {
+                payload.images = questionImages.map((ref) => ({ ...ref }));
             }
             if (question.explanation) {
                 payload.explanation = question.explanation;
@@ -944,19 +1033,24 @@ class TestEditor extends BaseEditor {
     syncQuestionImageBusyState() {
         const mediaDock = document.querySelector('.question-media-dock');
         const uploadBtn = document.querySelector('#upload-image-btn');
-        const removeBtn = document.querySelector('#remove-question-image-btn');
+        const removeButtons = document.querySelectorAll('.remove-question-image-btn, .question-media-thumb__remove');
         const isBusy = Boolean(this.isQuestionImageUploading);
+        const q = this.questions[this.currentQuestionIndex];
+        const imageCount = this.syncQuestionLegacyImageFields(q).length;
+        const isAtLimit = imageCount >= this.getMaxQuestionImages();
 
         if (mediaDock) {
             mediaDock.classList.toggle('is-uploading', isBusy);
+            mediaDock.classList.toggle('is-limit', isAtLimit);
         }
         if (uploadBtn) {
-            uploadBtn.disabled = isBusy;
+            uploadBtn.disabled = isBusy || isAtLimit;
             uploadBtn.classList.toggle('is-busy', isBusy);
+            uploadBtn.classList.toggle('is-limit', isAtLimit);
         }
-        if (removeBtn) {
+        removeButtons.forEach((removeBtn) => {
             removeBtn.disabled = isBusy;
-        }
+        });
     }
 
     syncOptionImageBusyState() {
@@ -1166,42 +1260,61 @@ class TestEditor extends BaseEditor {
             this.autoResizeQuestionTextarea();
         }
 
-        // Image
-        const img = document.querySelector('#question-image');
-        const thumb = document.querySelector('#question-image-thumb');
+        // Images
+        const imageGrid = document.querySelector('#question-images-grid');
         const uploadBtn = document.querySelector('#upload-image-btn');
-        const removeBtn = document.querySelector('#remove-question-image-btn');
         const mediaDock = document.querySelector('.question-media-dock');
         const textareaRoot = document.querySelector('#question-textarea');
         const questionSurface = textareaRoot?.closest('section, .question-paste-surface, main');
-        const questionImageSrc = this.resolveImageSource(q.image, q.image_asset_url, q.image_asset_id);
-        const hasQuestionImage = Boolean(questionImageSrc);
+        const questionImages = this.syncQuestionLegacyImageFields(q);
+        const hasQuestionImage = questionImages.length > 0;
+        const canAddQuestionImage = questionImages.length < this.getMaxQuestionImages();
 
         if (questionSurface) {
             questionSurface.classList.add('question-paste-surface');
             questionSurface.dataset.imagePasteTarget = 'question';
         }
 
-        if (img && thumb) {
-            if (hasQuestionImage) {
-                img.src = questionImageSrc;
-                thumb.classList.remove('hidden');
-            } else {
-                img.src = '';
-                thumb.classList.add('hidden');
-            }
-        }
+        if (imageGrid) {
+            imageGrid.innerHTML = '';
+            imageGrid.classList.toggle('hidden', !hasQuestionImage);
+            imageGrid.setAttribute('aria-hidden', hasQuestionImage ? 'false' : 'true');
 
-        if (removeBtn) {
-            removeBtn.onclick = (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                this.clearQuestionImage();
-            };
+            questionImages.forEach((ref, index) => {
+                const src = this.resolveImageSource(ref);
+                if (!src) return;
+
+                const thumb = document.createElement('div');
+                thumb.className = 'question-media-thumb relative overflow-hidden opacity-95 hover:opacity-100 transition';
+                thumb.dataset.questionImageIndex = String(index);
+
+                const img = document.createElement('img');
+                img.src = src;
+                img.alt = `Изображение вопроса ${index + 1}`;
+                img.className = 'w-full h-full object-cover';
+
+                const removeBtn = document.createElement('button');
+                removeBtn.type = 'button';
+                removeBtn.className = 'remove-question-image-btn question-media-thumb__remove absolute bg-surface-1 border border-border-subtle rounded-full shadow text-text-secondary hover:text-error hover:border-error-light';
+                removeBtn.title = `Удалить изображение вопроса ${index + 1}`;
+                removeBtn.setAttribute('aria-label', `Удалить изображение вопроса ${index + 1}`);
+                removeBtn.dataset.index = String(index);
+                removeBtn.innerHTML = '<span class="material-symbols-outlined text-[16px] leading-none">close</span><span class="question-media-thumb__remove-label">Удалить</span>';
+                removeBtn.onclick = (event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    this.removeQuestionImage(index);
+                };
+
+                thumb.appendChild(img);
+                thumb.appendChild(removeBtn);
+                imageGrid.appendChild(thumb);
+            });
         }
 
         if (mediaDock) {
             mediaDock.classList.toggle('has-image', hasQuestionImage);
+            mediaDock.dataset.imageCount = String(questionImages.length);
         }
 
         if (textareaRoot) {
@@ -1218,12 +1331,16 @@ class TestEditor extends BaseEditor {
             uploadBtn.dataset.imagePasteTarget = 'question';
             const icon = uploadBtn.querySelector('.material-symbols-outlined');
             const label = uploadBtn.querySelector('.question-media-trigger__label');
+            uploadBtn.disabled = !canAddQuestionImage || this.isQuestionImageUploading;
+            uploadBtn.classList.toggle('is-limit', !canAddQuestionImage);
             if (hasQuestionImage) {
                 uploadBtn.classList.remove('hidden');
-                uploadBtn.title = 'Заменить изображение вопроса или вставить его через Ctrl+V';
-                uploadBtn.setAttribute('aria-label', 'Заменить изображение вопроса');
-                if (icon) icon.textContent = 'photo_library';
-                if (label) label.textContent = 'Заменить';
+                uploadBtn.title = canAddQuestionImage
+                    ? 'Добавить ещё изображение к вопросу или вставить его через Ctrl+V'
+                    : 'К вопросу уже добавлено 3 изображения';
+                uploadBtn.setAttribute('aria-label', canAddQuestionImage ? 'Добавить изображение к вопросу' : 'Лимит изображений вопроса достигнут');
+                if (icon) icon.textContent = canAddQuestionImage ? 'add_photo_alternate' : 'photo_library';
+                if (label) label.textContent = canAddQuestionImage ? 'Добавить' : 'Лимит';
             } else {
                 uploadBtn.classList.remove('hidden');
                 uploadBtn.title = 'Добавить изображение к вопросу или вставить его через Ctrl+V';
@@ -1429,7 +1546,15 @@ class TestEditor extends BaseEditor {
         const uploadBtn = document.querySelector('#upload-image-btn');
         const fileInput = document.querySelector('#image-upload-input');
         if (uploadBtn && fileInput) {
-            uploadBtn.onclick = () => fileInput.click();
+            fileInput.multiple = true;
+            uploadBtn.onclick = () => {
+                const q = this.questions[this.currentQuestionIndex];
+                if (this.syncQuestionLegacyImageFields(q).length >= this.getMaxQuestionImages()) {
+                    this.showToast('Можно добавить не больше 3 изображений к вопросу', 'warning');
+                    return;
+                }
+                fileInput.click();
+            };
             fileInput.onchange = (e) => this.handleImageUpload(e);
         }
 
@@ -1951,20 +2076,48 @@ class TestEditor extends BaseEditor {
     }
 
     async handleImageUpload(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        event.target.value = '';
-        await this.uploadImageFileForQuestion(file);
+        const input = event?.target;
+        const files = Array.from(input?.files || []);
+        if (!files.length) return;
+        if (input) input.value = '';
+
+        const q = this.questions[this.currentQuestionIndex];
+        const remaining = this.getMaxQuestionImages() - this.syncQuestionLegacyImageFields(q).length;
+        if (remaining <= 0) {
+            this.showToast('Можно добавить не больше 3 изображений к вопросу', 'warning');
+            return;
+        }
+
+        if (files.length > remaining) {
+            this.showToast(`Будут добавлены первые ${remaining} изображ. из выбранных`, 'warning');
+        }
+
+        for (const file of files.slice(0, remaining)) {
+            await this.uploadImageFileForQuestion(file);
+        }
+    }
+
+    removeQuestionImage(index) {
+        const q = this.questions[this.currentQuestionIndex];
+        const refs = this.syncQuestionLegacyImageFields(q);
+        if (!q || !refs[index]) return;
+        q.images = refs.filter((_, refIndex) => refIndex !== index);
+        this.syncQuestionLegacyImageFields(q);
+        this.renderCurrentQuestion();
+        this.renderQuestionList();
+        this.showToast('Изображение удалено', 'info');
+        this.markUnsavedChanges();
     }
 
     clearQuestionImage() {
         const q = this.questions[this.currentQuestionIndex];
-        if (!q || (!q.image && !q.image_asset_id && !q.image_asset_url)) return;
-        q.image = null;
-        q.image_asset_id = null;
-        q.image_asset_url = null;
+        const refs = this.syncQuestionLegacyImageFields(q);
+        if (!q || !refs.length) return;
+        q.images = [];
+        this.syncQuestionLegacyImageFields(q);
         this.renderCurrentQuestion();
-        this.showToast('Изображение удалено', 'info');
+        this.renderQuestionList();
+        this.showToast('Изображения удалены', 'info');
         this.markUnsavedChanges();
     }
 

@@ -542,19 +542,117 @@ class TestOption(BaseModel):
         extra = "allow"
 
 
+def _is_direct_image_url(value: Optional[str]) -> bool:
+    raw = str(value or "").strip()
+    return bool(
+        raw.startswith("/api/assets/")
+        or raw.startswith("/api/editor/image")
+        or raw.startswith("/api/local-image")
+        or raw.startswith("http://")
+        or raw.startswith("https://")
+        or raw.startswith("data:")
+    )
+
+
+class TestQuestionImageRef(BaseModel):
+    """Canonical image reference for a test question."""
+
+    path: Optional[str] = Field(None, description="Relative local image path")
+    asset_id: Optional[str] = Field(None, description="Hosted asset id")
+    asset_url: Optional[str] = Field(None, description="Canonical hosted asset URL")
+
+    @root_validator(pre=True, allow_reuse=True)
+    def normalize_aliases(cls, values):
+        """Accept legacy aliases used by editors and API enrichers."""
+        if isinstance(values, str):
+            return {"asset_url": values} if _is_direct_image_url(values) else {"path": values}
+        if not isinstance(values, dict):
+            return values
+
+        nested = values.get("image") if isinstance(values.get("image"), dict) else {}
+        image_value = values.get("image")
+        src_value = values.get("src")
+        path = (
+            values.get("path")
+            or values.get("image_path")
+            or (image_value if isinstance(image_value, str) and not _is_direct_image_url(image_value) else None)
+            or (src_value if isinstance(src_value, str) and not _is_direct_image_url(src_value) else None)
+            or nested.get("path")
+            or nested.get("image_path")
+        )
+        asset_url = (
+            values.get("asset_url")
+            or values.get("image_asset_url")
+            or values.get("image_url")
+            or values.get("url")
+            or (image_value if isinstance(image_value, str) and _is_direct_image_url(image_value) else None)
+            or (src_value if isinstance(src_value, str) and _is_direct_image_url(src_value) else None)
+            or nested.get("asset_url")
+            or nested.get("image_asset_url")
+            or nested.get("image_url")
+            or nested.get("url")
+        )
+        asset_id = (
+            values.get("asset_id")
+            or values.get("image_asset_id")
+            or nested.get("asset_id")
+            or nested.get("image_asset_id")
+        )
+
+        normalized = dict(values)
+        if path and "path" not in normalized:
+            normalized["path"] = path
+        if asset_url and "asset_url" not in normalized:
+            normalized["asset_url"] = asset_url
+        if asset_id and "asset_id" not in normalized:
+            normalized["asset_id"] = asset_id
+        return normalized
+
+    @root_validator(skip_on_failure=True, allow_reuse=True)
+    def validate_ref(cls, values):
+        path = values.get("path")
+        asset_id = values.get("asset_id")
+        asset_url = values.get("asset_url")
+        if path:
+            validate_image_path_format(path)
+        if not path and not asset_id and not asset_url:
+            raise ValueError("Image reference must include path, asset_id, or asset_url")
+        return values
+
+    class Config:
+        extra = "allow"
+
+
+def validate_test_question_image_ref(v: Any) -> Any:
+    """Validate one test-question image ref while preserving legacy strings."""
+    if isinstance(v, str):
+        return v if _is_direct_image_url(v) else validate_image_path_format(v)
+    if isinstance(v, TestQuestionImageRef):
+        if v.path:
+            validate_image_path_format(v.path)
+        return v
+    if isinstance(v, dict):
+        return TestQuestionImageRef(**v)
+    raise ValueError("Question image must be a string path or image reference object")
+
+
 class TestQuestion(BaseModel):
     """Question for a test task."""
     
     _validate_image = validator('image', allow_reuse=True)(validate_image_path_format)
     
-    @validator('images', each_item=True, allow_reuse=True)
+    @validator('images', allow_reuse=True)
     def validate_images_list(cls, v):
-        return validate_image_path_format(v)
+        if v is None:
+            return v
+        if len(v) > 3:
+            raise ValueError("At most 3 images are allowed")
+        return [validate_test_question_image_ref(item) for item in v]
     
     text: str = Field(..., description="Question text")
     options: List[TestOption] = Field(..., min_items=2, description="Answer options (minimum 2)")
     image: Optional[str] = Field(None, description="Optional image for this question")
-    images: Optional[List[str]] = Field(None, description="Optional multiple images for this question")
+    images: Optional[List[Union[str, TestQuestionImageRef]]] = Field(None, description="Optional multiple images for this question")
     
     @validator('options')
     def validate_correct_answer(cls, v):

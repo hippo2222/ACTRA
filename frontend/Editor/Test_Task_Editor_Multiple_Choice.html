@@ -269,18 +269,12 @@
                                 title="Добавить изображение к вопросу" aria-label="Добавить изображение к вопросу">
                                 <span class="material-symbols-outlined text-[18px]">add_photo_alternate</span>
                             </button>
-                            <div id="question-image-thumb"
-                                class="relative w-16 h-16 rounded-lg border border-border-subtle shadow hidden overflow-hidden opacity-90 hover:opacity-100 transition">
-                                <img id="question-image" src="" alt="Изображение вопроса" class="w-full h-full object-cover">
-                                <button id="remove-question-image-btn" type="button"
-                                    class="absolute -top-2 -right-2 bg-surface-1 border border-border-subtle rounded-full p-0.5 shadow text-text-secondary hover:text-error"
-                                    title="Удалить изображение вопроса" aria-label="Удалить изображение вопроса">
-                                    <span class="material-symbols-outlined text-[16px] leading-none">close</span>
-                                </button>
-                            </div>
+                            <div id="question-images-grid"
+                                class="question-media-grid hidden"
+                                aria-hidden="true" aria-label="Question images"></div>
                         </div>
                     </div>
-                    <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+                    <input type="file" id="image-upload-input" class="hidden" accept="image/*" multiple>
                 </section>
                 <section class="space-y-4 pt-4 border-t border-border-subtle">
                     <div class="flex items-center justify-between">

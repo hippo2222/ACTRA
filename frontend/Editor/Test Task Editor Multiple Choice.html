@@ -303,17 +303,9 @@
                                     <span class="question-media-trigger__label">Фото</span>
                                 </button>
 
-                                <div id="question-image-thumb"
-                                    class="question-media-thumb relative rounded-2xl border border-border-subtle shadow hidden overflow-hidden opacity-95 hover:opacity-100 transition"
-                                    aria-hidden="true">
-                                    <img id="question-image" src="" alt="Изображение вопроса" class="w-full h-full object-cover">
-                                    <button id="remove-question-image-btn" type="button"
-                                        class="question-media-thumb__remove absolute top-2 right-2 bg-surface-1 border border-border-subtle rounded-full px-2 py-1 shadow text-text-secondary hover:text-error hover:border-error-light"
-                                        title="Удалить изображение вопроса" aria-label="Удалить изображение вопроса">
-                                        <span class="material-symbols-outlined text-[16px] leading-none">close</span>
-                                        <span class="question-media-thumb__remove-label">Удалить</span>
-                                    </button>
-                                </div>
+                                <div id="question-images-grid"
+                                    class="question-media-grid hidden"
+                                    aria-hidden="true" aria-label="Question images"></div>
                             </div>
                         </div>
 
@@ -322,7 +314,7 @@
                             <span>При необходимости добавьте иллюстрацию: она будет привязана именно к текущему вопросу.</span>
                         </div>
 
-                        <input type="file" id="image-upload-input" class="hidden" accept="image/*">
+                        <input type="file" id="image-upload-input" class="hidden" accept="image/*" multiple>
                     </section>
 
                     <section class="editor-card">

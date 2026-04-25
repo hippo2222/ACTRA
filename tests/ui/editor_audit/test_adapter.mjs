@@ -135,13 +135,10 @@ function mountTestShell() {
                 <textarea id="question-textarea"></textarea>
                 <div class="question-media-dock">
                     <button id="upload-image-btn" type="button"></button>
-                    <div id="question-image-thumb" class="hidden">
-                        <img id="question-image" />
-                        <button id="remove-question-image-btn" type="button"></button>
-                    </div>
+                    <div id="question-images-grid" class="question-media-grid hidden"></div>
                 </div>
             </section>
-            <input id="image-upload-input" type="file" />
+            <input id="image-upload-input" type="file" multiple />
             <div id="options-container"></div>
             <button id="add-option-btn"></button>
             <input id="option-image-input" type="file" />
@@ -467,6 +464,7 @@ export function createTestEditorAuditAdapter() {
                     ],
                     explanation: "Подсказка для преподавателя",
                     image: "modules/m/topics/t/tasks/test/images/question.png",
+                    images: [{ path: "modules/m/topics/t/tasks/test/images/question.png" }],
                 }),
             ];
             editor.currentQuestionIndex = 0;

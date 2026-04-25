@@ -69,6 +69,13 @@ describe("Test editor clipboard image paste", () => {
         expect(editor.requestJson).toHaveBeenCalledTimes(1);
         expect(editor.questions[0].image).toBe("images/question.png");
         expect(editor.questions[0].image_asset_id).toBe("asset_question");
+        expect(editor.questions[0].images).toEqual([
+            {
+                path: "images/question.png",
+                asset_id: "asset_question",
+                asset_url: "/api/assets/asset_question/content",
+            },
+        ]);
     });
 
     it("uses an option image button as an explicit paste target", async () => {
@@ -111,6 +118,7 @@ describe("Test editor clipboard image paste", () => {
         expect(pasteEvent.preventDefault).toHaveBeenCalledOnce();
         expect(editor.questions[0].image).toBe("images/files-only.png");
         expect(editor.questions[0].image_asset_id).toBe("asset_files_only");
+        expect(editor.questions[0].images).toHaveLength(1);
     });
 
     it("enters target selection mode when the paste target is ambiguous and applies the clicked option card", async () => {
@@ -202,6 +210,98 @@ describe("Test editor clipboard image paste", () => {
         expect(pasteEvent.preventDefault).toHaveBeenCalledOnce();
         expect(editor.questions[0].image).toBe("images/navigator.png");
         expect(editor.questions[0].image_asset_id).toBe("asset_navigator");
+        expect(editor.questions[0].images).toHaveLength(1);
+    });
+
+    it("appends question images up to three, removes by index, and mirrors the first image on save", async () => {
+        const harness = createTestEditorHarness();
+        harnesses.push(harness);
+
+        const { editor } = harness;
+        editor.requestJson
+            .mockResolvedValueOnce({
+                path: "images/question-1.png",
+                asset_id: "asset_question_1",
+                asset_url: "/api/assets/asset_question_1/content",
+            })
+            .mockResolvedValueOnce({
+                path: "images/question-2.png",
+                asset_id: "asset_question_2",
+                asset_url: "/api/assets/asset_question_2/content",
+            })
+            .mockResolvedValueOnce({
+                path: "images/question-3.png",
+                asset_id: "asset_question_3",
+                asset_url: "/api/assets/asset_question_3/content",
+            });
+
+        await editor.uploadImageFileForQuestion(new File(["one"], "one.png", { type: "image/png" }));
+        await editor.uploadImageFileForQuestion(new File(["two"], "two.png", { type: "image/png" }));
+        await editor.uploadImageFileForQuestion(new File(["three"], "three.png", { type: "image/png" }));
+        const fourthResult = await editor.uploadImageFileForQuestion(new File(["four"], "four.png", { type: "image/png" }));
+
+        expect(fourthResult).toBe(false);
+        expect(editor.requestJson).toHaveBeenCalledTimes(3);
+        expect(editor.questions[0].images).toHaveLength(3);
+
+        editor.removeQuestionImage(0);
+
+        expect(editor.questions[0].images).toHaveLength(2);
+        expect(editor.questions[0].image).toBe("images/question-2.png");
+        expect(editor.questions[0].image_asset_id).toBe("asset_question_2");
+
+        const payload = editor.buildBackendContent();
+        expect(payload.questions[0].images).toEqual([
+            {
+                path: "images/question-2.png",
+                asset_id: "asset_question_2",
+                asset_url: "/api/assets/asset_question_2/content",
+            },
+            {
+                path: "images/question-3.png",
+                asset_id: "asset_question_3",
+                asset_url: "/api/assets/asset_question_3/content",
+            },
+        ]);
+        expect(payload.questions[0].image_path).toBe("images/question-2.png");
+        expect(payload.questions[0].image_asset_id).toBe("asset_question_2");
+        expect(payload.questions[0].image_asset_url).toBe("/api/assets/asset_question_2/content");
+    });
+
+    it("removes the final question image instead of restoring it from legacy mirror fields", async () => {
+        const harness = createTestEditorHarness();
+        harnesses.push(harness);
+
+        const { editor } = harness;
+        editor.questions[0] = {
+            ...editor.questions[0],
+            image: "images/question.png",
+            image_path: "images/question.png",
+            image_asset_id: "asset_question",
+            image_asset_url: "/api/assets/asset_question/content",
+            images: [
+                {
+                    path: "images/question.png",
+                    asset_id: "asset_question",
+                    asset_url: "/api/assets/asset_question/content",
+                },
+            ],
+        };
+
+        editor.removeQuestionImage(0);
+
+        expect(editor.questions[0].images).toEqual([]);
+        expect(editor.questions[0].image).toBe(null);
+        expect(editor.questions[0].image_path).toBe(null);
+        expect(editor.questions[0].image_asset_id).toBe(null);
+        expect(editor.questions[0].image_asset_url).toBe(null);
+
+        const payload = editor.buildBackendContent();
+        expect(payload.questions[0].images).toBeUndefined();
+        expect(payload.questions[0].image).toBeUndefined();
+        expect(payload.questions[0].image_path).toBeUndefined();
+        expect(payload.questions[0].image_asset_id).toBeUndefined();
+        expect(payload.questions[0].image_asset_url).toBeUndefined();
     });
 
     it("allows cancelling target selection mode", async () => {

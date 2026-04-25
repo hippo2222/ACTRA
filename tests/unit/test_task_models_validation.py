@@ -60,6 +60,35 @@ class TestTestQuestionValidation:
             images=["img1.png", "img2.png"]
         )
         assert len(question.images) == 2
+
+    def test_question_with_object_image_refs(self):
+        """Test question with canonical object image refs."""
+        question = TestQuestion(
+            text="Compare these images",
+            options=[
+                TestOption(text="Same", is_correct=True),
+                TestOption(text="Different", is_correct=False),
+            ],
+            images=[
+                {"path": "img1.png", "asset_id": "asset_1", "asset_url": "/api/assets/asset_1/content"},
+                {"image_asset_id": "asset_2"},
+            ],
+        )
+        assert len(question.images) == 2
+        assert question.images[0].asset_id == "asset_1"
+        assert question.images[1].asset_id == "asset_2"
+
+    def test_question_rejects_more_than_three_images(self):
+        """Test question image limit."""
+        with pytest.raises(ValidationError, match="At most 3 images"):
+            TestQuestion(
+                text="Too many images",
+                options=[
+                    TestOption(text="A", is_correct=True),
+                    TestOption(text="B", is_correct=False),
+                ],
+                images=["img1.png", "img2.png", "img3.png", "img4.png"],
+            )
     
     def test_question_without_correct_answer_fails(self):
         """Test that question without correct answer raises validation error."""

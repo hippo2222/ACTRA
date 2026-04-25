@@ -894,6 +894,52 @@ def test_enrich_task_data_uses_canonical_asset_content_url() -> None:
     assert answer["image_url"] == "/api/assets/asset_answer_1/content"
 
 
+def test_enrich_task_data_preserves_three_question_image_refs() -> None:
+    task_data_full = {
+        "task_data": {
+            "type": "test",
+            "content": {
+                "questions": [
+                    {
+                        "id": "q_multi_asset",
+                        "text": "Compare the images",
+                        "images": [
+                            {"asset_id": "asset_question_1", "path": "legacy/one.png"},
+                            {"asset_url": "/api/assets/asset_question_2/content"},
+                            "legacy/question-three.png",
+                            {"asset_id": "asset_question_4"},
+                        ],
+                        "answers": [
+                            {"text": "A", "correct": True},
+                            {"text": "B", "correct": False},
+                        ],
+                    }
+                ],
+            },
+        },
+        "answer_key": {},
+        "task_dir": None,
+    }
+
+    api = _make_api(task_data_full)
+    task_data = task_data_full["task_data"]
+    api._enrich_task_data_for_web(task_data, None)
+
+    question = task_data["content"]["questions"][0]
+
+    assert question["image_url"] == "/api/assets/asset_question_1/content"
+    assert question["image_asset_id"] == "asset_question_1"
+    assert question["images"] == [
+        {
+            "path": "legacy/one.png",
+            "asset_id": "asset_question_1",
+            "asset_url": "/api/assets/asset_question_1/content",
+        },
+        {"asset_url": "/api/assets/asset_question_2/content"},
+        {"path": "legacy/question-three.png"},
+    ]
+
+
 def test_enrich_task_data_prefers_asset_refs_over_legacy_image_path() -> None:
     task_data_full = {
         "task_data": {

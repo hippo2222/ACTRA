@@ -14,6 +14,47 @@ describe("TestUI image-option lightbox", () => {
     window.eval(loadScript("frontend/TestUI/TestUI.question.js"));
   });
 
+  it("renders up to three question images and opens the selected one in the viewer", () => {
+    const main = document.createElement("div");
+    document.body.appendChild(main);
+
+    const state = {
+      questions: [{ id: "q1", text: "Review the images", index: 0 }],
+      rawQuestions: [
+        {
+          type: "single_choice",
+          images: [
+            { asset_id: "asset_question_1", path: "legacy/one.png" },
+            { asset_url: "/images/question-two.png" },
+            "legacy/question-three.png",
+            { asset_id: "asset_question_4" },
+          ],
+          answers: [],
+        },
+      ],
+      currentIndex: 0,
+      answers: {},
+      selections: {},
+      questionResults: {},
+      flags: {},
+      isOpenMode: true,
+      mode: "answering",
+    };
+
+    const renderer = window.TestUIQuestion.createQuestionRenderer(state, main);
+    renderer.renderQuestionView();
+
+    const images = Array.from(main.querySelectorAll("img"));
+    expect(images).toHaveLength(3);
+    expect(images[0].getAttribute("src")).toBe("/api/assets/asset_question_1/content");
+    expect(images[1].getAttribute("src")).toBe("/images/question-two.png");
+    expect(images[2].getAttribute("src")).toBe("/api/local-image?path=legacy%2Fquestion-three.png");
+
+    images[1].click();
+    const lightboxImg = document.body.lastElementChild.querySelector("img");
+    expect(lightboxImg.getAttribute("src")).toBe("/images/question-two.png");
+  });
+
   it("opens image answers in a viewer with zoom controls", () => {
     const main = document.createElement("div");
     document.body.appendChild(main);

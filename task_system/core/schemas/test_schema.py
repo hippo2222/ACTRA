@@ -57,7 +57,15 @@ class TestTaskSchema(BaseTaskSchema):
                         errors.append(f"content.questions[{i}].images: максимум 3 изображения")
                     
                     for k, img in enumerate(images):
-                        if not isinstance(img, str):
+                        if isinstance(img, dict):
+                            ref_keys = {
+                                "path", "image_path", "image",
+                                "asset_id", "image_asset_id",
+                                "asset_url", "image_asset_url", "image_url", "url",
+                            }
+                            if not any(str(img.get(key) or "").strip() for key in ref_keys):
+                                errors.append(f"content.questions[{i}].images[{k}]: image ref must include path, asset_id, or asset_url")
+                        elif not isinstance(img, str):
                             errors.append(f"content.questions[{i}].images[{k}]: должен быть строкой (путь к файлу)")
             
             # Проверяем ответы
