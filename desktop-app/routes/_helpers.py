@@ -300,12 +300,26 @@ def _is_imported_library_theory_payload(item: Any) -> bool:
     )
 
 
+def _extract_workspace_owner_user_id(item: Any) -> Optional[str]:
+    if not isinstance(item, dict):
+        return None
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    return _normalize_optional_text(
+        ownership.get("created_by_user_id")
+        or ownership.get("createdByUserId")
+        or item.get("created_by_user_id")
+        or item.get("createdByUserId")
+    )
+
+
 def _is_visible_workspace_theory_payload_for_current_user(item: Any) -> bool:
     if not isinstance(item, dict):
         return False
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
     if ownership.get("is_owned_by_current_user") is True:
         return True
+    if _extract_workspace_owner_user_id(item) is not None:
+        return False
     return _is_imported_library_theory_payload(item)
 
 

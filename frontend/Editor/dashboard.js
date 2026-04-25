@@ -61,6 +61,9 @@ class EditorDashboard {
         this.maxRecentTasks = 8;
         this.recentTasks = [];
         this.favoriteTaskMap = {};
+        this.currentUserId = '';
+        this.currentUserIdResolved = false;
+        this.currentUserIdPromise = null;
 
         this.topicTheoryModalState = {
             moduleId: null,
@@ -131,11 +134,17 @@ class EditorDashboard {
         const lastView = this.loadDashboardState();
 
         Promise.all([
+            this.resolveCurrentDashboardUserId(),
             this.loadCatalog(),
             this.loadWorkspaceLimits(),
         ]).then(() => {
             // Clean up orphaned drafts after catalog is loaded
             this.cleanupOrphanedDrafts();
+            this.renderWorkspaceShortcuts();
+            this.refreshCurrentView();
+            if (!document.getElementById('recovery-center-modal')?.classList.contains('hidden')) {
+                this.renderRecoveryCenter();
+            }
         }); // Clean orphaned drafts after catalog loads
         this.setupEventListeners();
         this.setupPageExitSafety();
@@ -189,6 +198,68 @@ class EditorDashboard {
         const el = document.createElement('span');
         el.textContent = value == null ? '' : String(value);
         return el.innerHTML;
+    }
+
+    async resolveCurrentDashboardUserId(forceRefresh = false) {
+        if (!forceRefresh && this.currentUserIdResolved) {
+            return this.currentUserId;
+        }
+        if (!forceRefresh && this.currentUserIdPromise) {
+            return this.currentUserIdPromise;
+        }
+
+        this.currentUserIdPromise = (async () => {
+            try {
+                if (forceRefresh) {
+                    this.currentUserId = '';
+                    this.currentUserIdResolved = false;
+                }
+                const response = await fetch('/api/auth/me');
+                const data = await response.json().catch(() => ({}));
+                const userId = String(data?.user?.user_id || '').trim();
+                if (response.ok && data?.ok && data?.authenticated && userId) {
+                    this.currentUserId = userId;
+                    return this.currentUserId;
+                }
+            } catch (error) {
+                console.warn('[Dashboard] Failed to resolve current user through auth/me', error);
+            } finally {
+                this.currentUserIdResolved = true;
+                this.currentUserIdPromise = null;
+            }
+
+            this.currentUserId = '';
+            return this.currentUserId;
+        })();
+
+        return this.currentUserIdPromise;
+    }
+
+    normalizeRecoveryDraftOwnerUserId(rawDraft = null) {
+        if (!rawDraft || typeof rawDraft !== 'object') return '';
+        return String(
+            rawDraft.ownerUserId
+            || rawDraft.owner_user_id
+            || rawDraft.createdByUserId
+            || rawDraft.created_by_user_id
+            || ''
+        ).trim();
+    }
+
+    isRecoveryDraftVisibleToCurrentUser(ownerUserId = '', { requireOwner = false } = {}) {
+        if (!this.currentUserIdResolved) return false;
+
+        const normalizedCurrentUserId = String(this.currentUserId || '').trim();
+        if (!normalizedCurrentUserId) {
+            return true;
+        }
+
+        const normalizedOwnerUserId = String(ownerUserId || '').trim();
+        if (!normalizedOwnerUserId) {
+            return !requireOwner;
+        }
+
+        return normalizedOwnerUserId === normalizedCurrentUserId;
     }
 
     composeFeedbackMessage({ what = '', impact = '', next = '' } = {}) {
@@ -5496,6 +5567,9 @@ class EditorDashboard {
 
     collectRecoveryDrafts() {
         const drafts = [];
+        if (!this.currentUserIdResolved) {
+            return drafts;
+        }
         try {
             for (let i = 0; i < localStorage.length; i += 1) {
                 const key = localStorage.key(i);
@@ -5506,6 +5580,8 @@ class EditorDashboard {
                     if (!raw) continue;
                     const parsed = JSON.parse(raw);
                     if (!parsed || !parsed.moduleId || !parsed.topicId || !parsed.taskId) continue;
+                    const ownerUserId = this.normalizeRecoveryDraftOwnerUserId(parsed);
+                    if (!this.isRecoveryDraftVisibleToCurrentUser(ownerUserId, { requireOwner: true })) continue;
                     const draftTaskName =
                         typeof parsed.taskName === 'string' && parsed.taskName.trim()
                             ? parsed.taskName.trim()
@@ -5524,6 +5600,7 @@ class EditorDashboard {
                         moduleName: typeof parsed.moduleName === 'string' ? parsed.moduleName : '',
                         topicName: typeof parsed.topicName === 'string' ? parsed.topicName : '',
                         taskType: typeof parsed.taskType === 'string' ? parsed.taskType : this.inferTaskTypeFromDraftPayload(parsed.data),
+                        ownerUserId,
                         draftData: parsed.data && typeof parsed.data === 'object' ? parsed.data : null,
                         timestamp: Number(parsed.timestamp || 0),
                     });
@@ -5534,10 +5611,13 @@ class EditorDashboard {
                     const raw = localStorage.getItem(key);
                     if (!raw) continue;
                     const parsed = JSON.parse(raw);
+                    const ownerUserId = this.normalizeRecoveryDraftOwnerUserId(parsed);
+                    if (!this.isRecoveryDraftVisibleToCurrentUser(ownerUserId)) continue;
                     drafts.push({
                         kind: 'complex',
                         storageKey: key,
                         complexId: parsed?.id || key.replace(/^complex_draft_/, '') || 'new',
+                        ownerUserId,
                         timestamp: Number(parsed?.timestamp || 0),
                     });
                 }

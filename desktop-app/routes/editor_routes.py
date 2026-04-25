@@ -147,6 +147,18 @@ def _is_imported_workspace_graph_payload(item: Any) -> bool:
     )
 
 
+def _extract_workspace_graph_owner_user_id(item: Any) -> Optional[str]:
+    if not isinstance(item, dict):
+        return None
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    return _normalize_optional_text(
+        ownership.get("created_by_user_id")
+        or ownership.get("createdByUserId")
+        or item.get("created_by_user_id")
+        or item.get("createdByUserId")
+    )
+
+
 def _is_ownerless_workspace_graph_payload(item: Any, *, current_user_id: str) -> bool:
     normalized_user_id = _normalize_optional_text(current_user_id)
     if not normalized_user_id or normalized_user_id == "guest":
@@ -174,6 +186,8 @@ def _is_visible_workspace_graph_payload_for_current_user(item: Any, *, current_u
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
     if ownership.get("is_owned_by_current_user") is True:
         return True
+    if _extract_workspace_graph_owner_user_id(item) is not None:
+        return False
     return _is_imported_workspace_graph_payload(item)
 
 

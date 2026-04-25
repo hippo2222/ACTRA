@@ -57,6 +57,20 @@ def test_theory_center_visible_complex_rejects_foreign_shared_complex():
     ) is False
 
 
+def test_theory_center_visible_complex_rejects_foreign_imported_complex():
+    assert _is_visible_library_complex_for_current_user(
+        {
+            "source_catalog_item_id": "catalog_complex_demo",
+            "created_by_user_id": "other-user",
+            "ownership": {
+                "is_owned_by_current_user": False,
+                "created_by_user_id": "other-user",
+                "created_via": "manual_copy",
+            },
+        }
+    ) is False
+
+
 def test_compute_theory_usage_counts_linked_library_complex_theory(monkeypatch):
     fake_storage = SimpleNamespace(get_topic_theory_link=lambda module_id, topic_id: None)
     monkeypatch.setattr(route_helpers, "get_ctx", lambda: SimpleNamespace(storage_service=fake_storage))

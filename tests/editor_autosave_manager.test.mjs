@@ -82,4 +82,44 @@ describe("Editor AutoSaveManager", () => {
     expect(draft.taskId).toBe("legacy_uuid");
     expect(draft.data).toEqual({ prompt: "legacy draft" });
   });
+
+  it("uses an owner-scoped key and ignores legacy drafts when owner is known", () => {
+    const Manager = getManagerClass();
+    expect(Manager).toBeTypeOf("function");
+
+    const manager = new Manager({
+      taskId: "task_1",
+      moduleId: "m1",
+      topicId: "t1",
+      task: {
+        metadata: {
+          created_by_user_id: "editor-user",
+        },
+      },
+      captureState: () => ({ prompt: "draft" }),
+      updateSaveStatus: vi.fn(),
+    });
+
+    localStorage.setItem(
+      "task_draft_m1_t1_task_1",
+      JSON.stringify({
+        taskId: "task_1",
+        moduleId: "m1",
+        topicId: "t1",
+        timestamp: Date.parse("2026-03-12T02:30:00.000Z"),
+        ownerUserId: "other-user",
+        data: { prompt: "foreign draft" },
+      }),
+    );
+
+    expect(manager.loadDraft()).toBeNull();
+
+    manager.saveDraft();
+
+    const scopedKey = "task_draft_v2_editor-user_m1_t1_task_1";
+    const stored = JSON.parse(localStorage.getItem(scopedKey) || "null");
+    expect(stored).toBeTruthy();
+    expect(stored.ownerUserId).toBe("editor-user");
+    expect(stored.data).toEqual({ prompt: "draft" });
+  });
 });

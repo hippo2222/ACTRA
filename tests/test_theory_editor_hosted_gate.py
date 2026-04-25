@@ -418,7 +418,98 @@ def test_hosted_theory_editor_hides_foreign_owned_theories_from_list_get_and_cen
     assert overview_response.status_code == 200
     overview_payload = overview_response.get_json()
     assert overview_payload["theories"] == []
-    assert overview_payload["topics"][0]["has_theory"] is False
+    assert overview_payload["topics"] == []
+
+
+def test_hosted_theory_center_hides_foreign_topics_from_overview(client, monkeypatch, tmp_path):
+    theory_service = _HostedTheoryServiceStub(tmp_path)
+    theory_service.theories["th_owned"] = {
+        "id": "th_owned",
+        "title": "Owned theory",
+        "delta": {"ops": [{"insert": "Owned\n"}]},
+        "images": [],
+        "created_by_user_id": "theory-editor-user",
+        "updated_by_user_id": "theory-editor-user",
+        "created_via": "manual_editor",
+        "content_scope": "shared_local",
+        "created_at": "2026-04-19T08:00:00",
+        "updated_at": "2026-04-19T08:00:00",
+        "version": "2026-04-19T08:00:00",
+        "has_source_lineage": False,
+        "source_lineage": None,
+        "source_lineage_key": None,
+    }
+    theory_service.theories["th_foreign"] = {
+        "id": "th_foreign",
+        "title": "Foreign theory",
+        "delta": {"ops": [{"insert": "Foreign\n"}]},
+        "images": [],
+        "created_by_user_id": "other-user",
+        "updated_by_user_id": "other-user",
+        "created_via": "manual_editor",
+        "content_scope": "shared_local",
+        "created_at": "2026-04-19T08:05:00",
+        "updated_at": "2026-04-19T08:05:00",
+        "version": "2026-04-19T08:05:00",
+        "has_source_lineage": False,
+        "source_lineage": None,
+        "source_lineage_key": None,
+    }
+    storage_service = _TheoryStorageStub()
+    storage_service.modules = [
+        {
+            "id": "module_owned",
+            "name": "Owned module",
+            "created_by_user_id": "theory-editor-user",
+            "updated_by_user_id": "theory-editor-user",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+            "topics": [
+                {
+                    "id": "topic_owned",
+                    "name": "Owned topic",
+                    "created_by_user_id": "theory-editor-user",
+                    "updated_by_user_id": "theory-editor-user",
+                    "created_via": "manual_editor",
+                    "content_scope": "shared_local",
+                    "tasks": [],
+                }
+            ],
+        },
+        {
+            "id": "module_foreign",
+            "name": "Foreign module",
+            "created_by_user_id": "other-user",
+            "updated_by_user_id": "other-user",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+            "topics": [
+                {
+                    "id": "topic_foreign",
+                    "name": "Foreign topic",
+                    "created_by_user_id": "other-user",
+                    "updated_by_user_id": "other-user",
+                    "created_via": "manual_editor",
+                    "content_scope": "shared_local",
+                    "tasks": [],
+                }
+            ],
+        },
+    ]
+    storage_service.topic_theory_links = {
+        ("module_owned", "topic_owned"): {"theory_id": "th_owned"},
+        ("module_foreign", "topic_foreign"): {"theory_id": "th_foreign"},
+    }
+    _install_hosted_ctx(monkeypatch, tmp_path, theory_service=theory_service, storage_service=storage_service)
+    _login(client)
+
+    overview_response = client.get("/api/theory-center/overview")
+    assert overview_response.status_code == 200
+    overview_payload = overview_response.get_json()
+
+    assert [item["topic_id"] for item in overview_payload["topics"]] == ["topic_owned"]
+    assert overview_payload["filters"]["modules"] == [{"id": "module_owned", "name": "Owned module"}]
+    assert [item["id"] for item in overview_payload["theories"]] == ["th_owned"]
 
 
 def test_hosted_theory_editor_returns_degraded_when_shadow_reads_are_blocked(client, monkeypatch, tmp_path):

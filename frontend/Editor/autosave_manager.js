@@ -49,6 +49,7 @@ class AutoSaveManager {
         try {
             const taskMeta = this.editor.task?.metadata || {};
             const taskDataMeta = this.editor.task?.task_data?.meta || {};
+            const ownerUserId = this.getDraftOwnerUserId();
             const draft = {
                 taskId: this.editor.taskId,
                 moduleId: this.editor.moduleId,
@@ -60,6 +61,9 @@ class AutoSaveManager {
                 timestamp: Date.now(),
                 data: this.editor.captureState()
             };
+            if (ownerUserId) {
+                draft.ownerUserId = ownerUserId;
+            }
 
             const key = this.getDraftKey();
             localStorage.setItem(key, JSON.stringify(draft));
@@ -79,6 +83,7 @@ class AutoSaveManager {
                 try {
                     const taskMeta = this.editor.task?.metadata || {};
                     const taskDataMeta = this.editor.task?.task_data?.meta || {};
+                    const ownerUserId = this.getDraftOwnerUserId();
                     const draft = {
                         taskId: this.editor.taskId,
                         moduleId: this.editor.moduleId,
@@ -90,6 +95,9 @@ class AutoSaveManager {
                         timestamp: Date.now(),
                         data: this.editor.captureState()
                     };
+                    if (ownerUserId) {
+                        draft.ownerUserId = ownerUserId;
+                    }
                     localStorage.setItem(this.getDraftKey(), JSON.stringify(draft));
                     this.lastSaveTime = draft.timestamp;
                     this.updateAutosaveIndicator();
@@ -173,11 +181,19 @@ class AutoSaveManager {
      */
     clearOldDrafts() {
         const sevenDaysAgo = Date.now() - (7 * 24 * 60 * 60 * 1000);
+        const ownerUserId = this.getDraftOwnerUserId();
+        const scopedPrefix = ownerUserId
+            ? `${this.storageKey}_v2_${encodeURIComponent(ownerUserId)}_`
+            : null;
 
         try {
             for (let i = 0; i < localStorage.length; i++) {
                 const key = localStorage.key(i);
-                if (key && key.startsWith('task_draft_')) {
+                const isScopedKey = Boolean(scopedPrefix && key && key.startsWith(scopedPrefix));
+                const isLegacyKey = Boolean(
+                    !ownerUserId && key && key.startsWith('task_draft_') && !key.startsWith('task_draft_v2_')
+                );
+                if (isScopedKey || isLegacyKey) {
                     try {
                         const draft = JSON.parse(localStorage.getItem(key));
                         if (draft.timestamp < sevenDaysAgo) {
@@ -233,7 +249,7 @@ class AutoSaveManager {
     }
 
     getDraftKey() {
-        return `${this.storageKey}_${this.editor.moduleId}_${this.editor.topicId}_${this.editor.taskId}`;
+        return this.getDraftKeyForTaskId(this.editor.taskId, this.getDraftOwnerUserId());
     }
 
     getDraftTaskIds() {
@@ -247,14 +263,37 @@ class AutoSaveManager {
         return [String(this.editor?.taskId || '').trim()].filter(Boolean);
     }
 
+    getDraftOwnerUserId() {
+        const metadata = this.editor?.task?.metadata || {};
+        const taskDataMeta = this.editor?.task?.task_data?.meta || {};
+        return String(
+            metadata.created_by_user_id
+            || metadata.createdByUserId
+            || taskDataMeta.created_by_user_id
+            || taskDataMeta.createdByUserId
+            || ''
+        ).trim();
+    }
+
+    getLegacyDraftKeyForTaskId(taskId) {
+        return `${this.storageKey}_${this.editor.moduleId}_${this.editor.topicId}_${taskId}`;
+    }
+
+    getDraftKeyForTaskId(taskId, ownerUserId = '') {
+        const normalizedOwnerUserId = String(ownerUserId || '').trim();
+        if (!normalizedOwnerUserId) {
+            return this.getLegacyDraftKeyForTaskId(taskId);
+        }
+        return `${this.storageKey}_v2_${encodeURIComponent(normalizedOwnerUserId)}_${this.editor.moduleId}_${this.editor.topicId}_${taskId}`;
+    }
+
     getDraftKeys() {
         const moduleId = String(this.editor?.moduleId || '').trim();
         const topicId = String(this.editor?.topicId || '').trim();
         if (!moduleId || !topicId) return [];
 
-        return this.getDraftTaskIds().map(
-            (taskId) => `${this.storageKey}_${moduleId}_${topicId}_${taskId}`
-        );
+        const ownerUserId = this.getDraftOwnerUserId();
+        return this.getDraftTaskIds().map((taskId) => this.getDraftKeyForTaskId(taskId, ownerUserId));
     }
 
     findLatestDraft() {

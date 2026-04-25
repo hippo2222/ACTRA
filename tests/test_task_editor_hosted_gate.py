@@ -554,6 +554,95 @@ def test_hosted_task_editor_hides_foreign_owned_tasks_in_catalog_and_load(client
     assert foreign_response.get_json()["error"] == "task_not_found"
 
 
+def test_hosted_task_editor_hides_foreign_imported_tasks_in_catalog_and_load(client, monkeypatch, tmp_path):
+    storage = _EditorStorageStub()
+    storage.modules = [
+        {
+            "id": "module_1",
+            "name": "Module 1",
+            "created_by_user_id": "editor-user",
+            "updated_by_user_id": "editor-user",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+            "topics": [
+                {
+                    "id": "topic_1",
+                    "name": "Topic 1",
+                    "created_by_user_id": "editor-user",
+                    "updated_by_user_id": "editor-user",
+                    "created_via": "manual_editor",
+                    "content_scope": "shared_local",
+                    "tasks": [
+                        storage._task_ref_payload(
+                            module_id="module_1",
+                            topic_id="topic_1",
+                            task_id="task_visible",
+                            task_name="Visible task",
+                            owner_id="editor-user",
+                        ),
+                        {
+                            **storage._task_ref_payload(
+                                module_id="module_1",
+                                topic_id="topic_1",
+                                task_id="task_imported_foreign",
+                                task_name="Imported foreign task",
+                                owner_id="other-user",
+                            ),
+                            "created_via": "manual_copy",
+                            "source_catalog_item_id": "catalog_task_demo",
+                        },
+                    ],
+                }
+            ],
+        }
+    ]
+    storage.tasks[("module_1", "topic_1", "task_visible")] = storage._task_payload(
+        module_id="module_1",
+        topic_id="topic_1",
+        task_id="task_visible",
+        task_name="Visible task",
+        task_type="test",
+        workspace_meta={
+            "created_by_user_id": "editor-user",
+            "updated_by_user_id": "editor-user",
+            "created_via": "manual_editor",
+            "content_scope": "shared_local",
+        },
+    )
+    storage.tasks[("module_1", "topic_1", "task_imported_foreign")] = storage._task_payload(
+        module_id="module_1",
+        topic_id="topic_1",
+        task_id="task_imported_foreign",
+        task_name="Imported foreign task",
+        task_type="test",
+        workspace_meta={
+            "created_by_user_id": "other-user",
+            "updated_by_user_id": "other-user",
+            "created_via": "manual_copy",
+            "content_scope": "shared_local",
+        },
+    )
+    storage.tasks[("module_1", "topic_1", "task_imported_foreign")]["metadata"]["source_catalog_item_id"] = (
+        "catalog_task_demo"
+    )
+    storage.tasks[("module_1", "topic_1", "task_imported_foreign")]["task_data"]["meta"]["source_catalog_item_id"] = (
+        "catalog_task_demo"
+    )
+
+    _install_hosted_ctx(monkeypatch, tmp_path, storage_service=storage)
+    _login(client)
+
+    catalog_response = client.get("/api/editor/catalog")
+    assert catalog_response.status_code == 200
+    catalog_payload = catalog_response.get_json()
+    topic_payload = catalog_payload["modules"][0]["topics"][0]
+    assert [item["id"] for item in topic_payload["tasks"]] == ["task_visible"]
+
+    foreign_response = client.get("/api/editor/task/module_1/topic_1/task_imported_foreign")
+    assert foreign_response.status_code == 404
+    assert foreign_response.get_json()["error"] == "task_not_found"
+
+
 def test_hosted_task_editor_hides_ownerless_legacy_catalog_entries(client, monkeypatch, tmp_path):
     storage = _EditorStorageStub()
     storage.modules = [

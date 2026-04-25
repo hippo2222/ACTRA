@@ -13,6 +13,7 @@ from routes._helpers import (
     _maybe_hosted_shadow_write_error_response,
     _serialize_complex_payload,
     _serialize_theory_payload,
+    _serialize_workspace_catalog_modules,
     compute_theory_usage_stats,
 )
 
@@ -53,12 +54,26 @@ def _is_imported_library_theory_payload(item: Any) -> bool:
     )
 
 
+def _extract_workspace_owner_user_id(item: Any) -> Optional[str]:
+    if not isinstance(item, dict):
+        return None
+    ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
+    return _normalize_optional_text(
+        ownership.get("created_by_user_id")
+        or ownership.get("createdByUserId")
+        or item.get("created_by_user_id")
+        or item.get("createdByUserId")
+    )
+
+
 def _is_visible_library_theory_for_current_user(item: Any) -> bool:
     if not isinstance(item, dict):
         return False
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
     if ownership.get("is_owned_by_current_user") is True:
         return True
+    if _extract_workspace_owner_user_id(item) is not None:
+        return False
     return _is_imported_library_theory_payload(item)
 
 
@@ -93,7 +108,40 @@ def _is_visible_library_complex_for_current_user(item: Any) -> bool:
     ownership = item.get("ownership") if isinstance(item.get("ownership"), dict) else {}
     if ownership.get("is_owned_by_current_user") is True:
         return True
+    if _extract_workspace_owner_user_id(item) is not None:
+        return False
     return _is_imported_library_complex_payload(item)
+
+
+def _filter_visible_workspace_catalog_modules(modules: Any) -> List[Dict[str, Any]]:
+    filtered_modules: List[Dict[str, Any]] = []
+    if not isinstance(modules, list):
+        return filtered_modules
+
+    for module in modules:
+        if not isinstance(module, dict):
+            continue
+        module_payload = dict(module)
+        serialized_topics: List[Dict[str, Any]] = []
+        for topic in module_payload.get("topics") or []:
+            if not isinstance(topic, dict):
+                continue
+            topic_payload = dict(topic)
+            serialized_tasks: List[Dict[str, Any]] = []
+            for task in topic_payload.get("tasks") or []:
+                if not isinstance(task, dict):
+                    continue
+                task_payload = dict(task)
+                if _is_visible_library_complex_for_current_user(task_payload):
+                    serialized_tasks.append(task_payload)
+            topic_payload["tasks"] = serialized_tasks
+            if serialized_tasks or _is_visible_library_complex_for_current_user(topic_payload):
+                serialized_topics.append(topic_payload)
+        module_payload["topics"] = serialized_topics
+        if serialized_topics or _is_visible_library_complex_for_current_user(module_payload):
+            filtered_modules.append(module_payload)
+
+    return filtered_modules
 
 
 def _parse_task_ref(task_ref: Any) -> Optional[Tuple[str, str, str]]:
@@ -372,6 +420,12 @@ def get_theory_center_overview() -> Any:
         storage = ctx.storage_service
 
         modules = storage.load_modules()
+        if is_hosted_web_runtime():
+            modules = _serialize_workspace_catalog_modules(
+                modules,
+                current_user_id=ctx.user_id,
+            )
+            modules = _filter_visible_workspace_catalog_modules(modules)
         module_name_by_id: Dict[str, str] = {}
         module_filter_rows: List[Dict[str, str]] = []
         for module in modules:

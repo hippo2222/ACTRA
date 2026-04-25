@@ -96,12 +96,20 @@ describe("EditorDashboard workspace import history", () => {
         moduleId: "m1",
         topicId: "t1",
         taskId: "task_1",
+        ownerUserId: "editor-user",
         timestamp: Date.now(),
       }),
     );
 
     global.fetch = vi.fn(async (input) => {
       const url = typeof input === "string" ? input : String(input?.url || "");
+      if (url === "/api/auth/me") {
+        return createJsonResponse({
+          ok: true,
+          authenticated: true,
+          user: { user_id: "editor-user" },
+        });
+      }
       if (url === "/api/editor/catalog") {
         return createJsonResponse({
           ok: true,
@@ -288,6 +296,7 @@ describe("EditorDashboard workspace import history", () => {
         moduleId: "m1",
         topicId: "t1",
         taskId: "task_1",
+        ownerUserId: "editor-user",
         timestamp: Date.now(),
         data: {
           meta: {
@@ -342,6 +351,7 @@ describe("EditorDashboard workspace import history", () => {
         moduleId: "m1",
         topicId: "t1",
         taskId: "legacy_uuid",
+        ownerUserId: "editor-user",
         timestamp: Date.now(),
         data: {
           meta: {
@@ -382,6 +392,52 @@ describe("EditorDashboard workspace import history", () => {
     dashboard.showRecoveryCenter();
     const recoveryModal = document.getElementById("recovery-center-modal");
     expect(recoveryModal.textContent).toContain("Задание 1");
+  });
+
+  it("hides task drafts that belong to another user", () => {
+    const dashboard = window.dashboard;
+    expect(dashboard).toBeDefined();
+
+    localStorage.removeItem("task_draft_m1_t1_task_1");
+    localStorage.setItem(
+      "task_draft_m1_t1_task_1",
+      JSON.stringify({
+        moduleId: "m1",
+        topicId: "t1",
+        taskId: "task_1",
+        ownerUserId: "other-user",
+        timestamp: Date.now(),
+      }),
+    );
+
+    dashboard.catalog = [
+      {
+        id: "m1",
+        name: "Модуль A",
+        topics: [
+          {
+            id: "t1",
+            name: "Тема A",
+            tasks: [
+              {
+                id: "task_1",
+                name: "Задание 1",
+                type: "click",
+                created_at: "2026-03-12T10:00:00Z",
+              },
+            ],
+          },
+        ],
+      },
+    ];
+
+    expect(dashboard.getVisibleRecoveryDrafts()).toEqual([]);
+
+    dashboard.renderWorkspaceShortcuts();
+    const badge = document.querySelector(
+      '[data-role="open-recovery-center"] [data-role="recovery-draft-count"]'
+    );
+    expect(badge).toBeFalsy();
   });
 
   it("opens the editor with canonical meta.id instead of legacy root task_data.id", () => {
