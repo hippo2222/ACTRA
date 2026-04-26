@@ -145,6 +145,14 @@ function mountTestShell() {
         </main>
         <aside>
             <span id="answer-type-display"></span>
+            <section id="test-image-bank" class="test-image-bank is-expanded">
+                <button id="test-image-bank-toggle" type="button" aria-expanded="true" aria-controls="test-image-bank-panel"></button>
+                <span id="test-image-bank-count"></span>
+                <div id="test-image-bank-panel">
+                    <div id="test-image-bank-grid"></div>
+                    <div id="test-image-bank-empty"></div>
+                </div>
+            </section>
             <textarea id="explanation-textarea"></textarea>
         </aside>
         <div id="import-modal" class="hidden">

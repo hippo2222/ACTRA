@@ -540,7 +540,12 @@ def serve_ui_assets(filename: str) -> Any:
 
 @static_bp.route("/favicon.ico")
 def favicon() -> Any:
-    return "", 204
+    dirs = _get_ui_dirs()
+    ASSETS_DIR = dirs.get("ASSETS_DIR")
+    if not ASSETS_DIR or not ASSETS_DIR.exists():
+        logger.error("[HTTP] ASSETS_DIR does not exist: %s", ASSETS_DIR)
+        return jsonify({"ok": False, "error": "assets_dir_not_found"}), 500
+    return send_from_directory(ASSETS_DIR, "actra_white.ico", mimetype="image/x-icon")
 
 
 # ---------------------------------------------------------------------------

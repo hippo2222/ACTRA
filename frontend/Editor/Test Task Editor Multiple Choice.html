@@ -2,6 +2,7 @@
 <html lang="ru">
 
 <head>
+    <link rel="icon" href="../assets/actra_white.ico" type="image/x-icon" />
     <script src="../../assets/ThemeManager.js"></script>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
@@ -239,12 +240,12 @@
                         <span class="material-symbols-outlined">arrow_back</span>
                     </button>
                     <div class="test-editor-header__copy">
-                        <div class="test-editor-header__eyebrow">
-                            <span class="test-editor-header__badge">Редактор теста</span>
-                            <span id="task-name-caption" class="test-editor-header__eyebrow-text">Новый тест</span>
-                        </div>
                         <h2 class="test-editor-header__headline">Тестовые задания</h2>
-                        <p id="active-question-caption" class="test-editor-header__caption">Вопрос 1 из 1</p>
+                        <div class="test-editor-header__meta">
+                            <span id="task-name-caption" class="test-editor-header__eyebrow-text">Новый тест</span>
+                            <span class="test-editor-header__meta-divider" aria-hidden="true"></span>
+                            <span id="active-question-caption" class="test-editor-header__caption">Вопрос 1 из 1</span>
+                        </div>
                     </div>
                 </div>
                 <div class="test-editor-header__actions">
@@ -370,6 +371,25 @@
                 <p class="text-[12px] text-text-secondary leading-relaxed">Тип определяется автоматически по количеству
                     правильных вариантов. Как только отметите несколько ответов, редактор переключится в множественный
                     выбор.</p>
+            </section>
+
+            <section class="test-editor-inspector-card test-image-bank is-expanded" aria-labelledby="test-image-bank-title">
+                <button id="test-image-bank-toggle" class="test-image-bank__toggle" type="button"
+                    aria-expanded="true" aria-controls="test-image-bank-panel">
+                    <span class="test-image-bank__toggle-copy">
+                        <span class="test-image-bank__eyebrow">Изображения</span>
+                        <span id="test-image-bank-title" class="test-image-bank__toggle-title">Банк задания</span>
+                    </span>
+                    <span id="test-image-bank-count" class="test-image-bank__count">0</span>
+                    <span class="test-image-bank__toggle-icon material-symbols-outlined text-[18px]" aria-hidden="true">expand_more</span>
+                </button>
+                <div id="test-image-bank-panel" class="test-image-bank__panel">
+                    <div id="test-image-bank-grid" class="test-image-bank__grid" aria-live="polite"></div>
+                    <div id="test-image-bank-empty" class="test-image-bank__empty">
+                        <span class="material-symbols-outlined text-[18px]">imagesmode</span>
+                        <span>Пока пусто</span>
+                    </div>
+                </div>
             </section>
 
             <section class="test-editor-inspector-card space-y-3">

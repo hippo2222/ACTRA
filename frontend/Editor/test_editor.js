@@ -35,6 +35,8 @@ class TestEditor extends BaseEditor {
         this.maxQuestionImages = 3;
         this.uploadingOptionImageIndex = null;
         this.activeImagePasteTarget = null;
+        this.selectedBankImageItem = null;
+        this.isImageBankExpanded = true;
         this.pendingPastedImageFile = null;
         this.isPasteImageTargetMode = false;
         this.pendingQuestionDeletion = null;
@@ -121,6 +123,32 @@ class TestEditor extends BaseEditor {
                 && this.activeImagePasteTarget.index === index;
             row.classList.toggle('is-paste-selectable', Boolean(this.isPasteImageTargetMode));
             row.classList.toggle('is-paste-target', isOptionTarget);
+        });
+    }
+
+    syncBankImageTargetUI() {
+        const selected = this.selectedBankImageItem;
+        document.body.classList.toggle('bank-image-placement-mode', Boolean(selected));
+
+        const q = this.questions[this.currentQuestionIndex];
+        const selectedKey = selected ? this.getImageReferenceKey(selected.ref) : "";
+        const questionKeys = new Set(this.syncQuestionLegacyImageFields(q).map((ref) => this.getImageReferenceKey(ref)));
+        const canUseQuestionTarget = Boolean(
+            selected
+            && q
+            && !questionKeys.has(selectedKey)
+            && questionKeys.size < this.getMaxQuestionImages()
+        );
+
+        const questionCard = document.querySelector('.question-paste-card');
+        const questionDock = document.querySelector('.question-media-dock');
+        [questionCard, questionDock].forEach((node) => {
+            if (!node) return;
+            node.classList.toggle('is-bank-selectable', canUseQuestionTarget);
+        });
+
+        document.querySelectorAll('#options-container .option-row').forEach((row) => {
+            row.classList.toggle('is-bank-selectable', Boolean(selected));
         });
     }
 
@@ -501,14 +529,18 @@ class TestEditor extends BaseEditor {
         }
 
         const nested = raw.image && typeof raw.image === "object" ? raw.image : null;
+        const nestedImagePath = raw.image_path && typeof raw.image_path === "object" ? raw.image_path : null;
         const path = String(
             raw.path ??
-            raw.image_path ??
+            (typeof raw.image_path === "string" ? raw.image_path : null) ??
             (typeof raw.image === "string" ? raw.image : null) ??
             raw.src ??
             nested?.path ??
             nested?.image_path ??
             nested?.src ??
+            nestedImagePath?.path ??
+            nestedImagePath?.image_path ??
+            nestedImagePath?.src ??
             ""
         ).trim();
         const asset_url = String(
@@ -521,6 +553,10 @@ class TestEditor extends BaseEditor {
                 nested?.image_asset_url ??
                 nested?.image_url ??
                 nested?.url ??
+                nestedImagePath?.asset_url ??
+                nestedImagePath?.image_asset_url ??
+                nestedImagePath?.image_url ??
+                nestedImagePath?.url ??
                 ""
             )
         ).trim();
@@ -530,6 +566,8 @@ class TestEditor extends BaseEditor {
                 raw.image_asset_id ??
                 nested?.asset_id ??
                 nested?.image_asset_id ??
+                nestedImagePath?.asset_id ??
+                nestedImagePath?.image_asset_id ??
                 ""
             )
         ).trim();
@@ -566,6 +604,512 @@ class TestEditor extends BaseEditor {
     getImageReferenceKey(raw) {
         const ref = this.normalizeImageReference(raw);
         return ref.asset_url || (ref.asset_id ? `asset:${ref.asset_id}` : "") || ref.path || "";
+    }
+
+    getOptionLabel(index) {
+        if (!Number.isInteger(index) || index < 0) return "";
+        return String.fromCharCode(65 + index);
+    }
+
+    collectImageBankItems() {
+        const items = [];
+        const byKey = new Map();
+
+        const pushRef = (rawRef, sourceLabel) => {
+            const ref = this.serializeImageReference(rawRef);
+            if (!ref) return;
+            const key = this.getImageReferenceKey(ref);
+            if (!key) return;
+
+            const existing = byKey.get(key);
+            if (existing) {
+                existing.usageCount += 1;
+                if (sourceLabel) existing.sources.push(sourceLabel);
+                return;
+            }
+
+            const item = {
+                key,
+                ref,
+                usageCount: 1,
+                sources: sourceLabel ? [sourceLabel] : [],
+            };
+            byKey.set(key, item);
+            items.push(item);
+        };
+
+        (this.questions || []).forEach((question, questionIndex) => {
+            const questionLabel = `Вопрос ${questionIndex + 1}`;
+            this.buildQuestionImageRefs(question).forEach((ref) => {
+                pushRef(ref, questionLabel);
+            });
+
+            (question?.options || []).forEach((option, optionIndex) => {
+                pushRef({
+                    path: option?.image_path,
+                    asset_id: option?.image_asset_id,
+                    asset_url: option?.image_asset_url,
+                }, `${questionLabel}, вариант ${this.getOptionLabel(optionIndex)}`);
+            });
+        });
+
+        return items;
+    }
+
+    clearSelectedImageBankItem({ render = true } = {}) {
+        this.selectedBankImageItem = null;
+        this.syncBankImageTargetUI();
+        if (render) {
+            this.renderImageBank();
+        }
+    }
+
+    selectImageBankItem(item) {
+        if (!item?.ref) return;
+        const key = this.getImageReferenceKey(item.ref);
+        if (!key) return;
+        const currentKey = this.selectedBankImageItem?.key || "";
+        if (currentKey === key) {
+            this.clearSelectedImageBankItem();
+            return;
+        }
+        this.selectedBankImageItem = {
+            key,
+            ref: { ...item.ref },
+            usageCount: item.usageCount || 1,
+            sources: Array.isArray(item.sources) ? [...item.sources] : [],
+        };
+        this.syncBankImageTargetUI();
+        this.renderImageBank();
+    }
+
+    addImageReferenceToCurrentQuestion(rawRef) {
+        const q = this.questions[this.currentQuestionIndex];
+        const ref = this.serializeImageReference(rawRef);
+        if (!q || !ref) return false;
+
+        const existingImages = this.syncQuestionLegacyImageFields(q);
+        const key = this.getImageReferenceKey(ref);
+        const alreadyAttached = existingImages.some((existingRef) => this.getImageReferenceKey(existingRef) === key);
+        if (alreadyAttached) {
+            this.showToast('Изображение уже добавлено к вопросу', 'info');
+            return false;
+        }
+
+        if (existingImages.length >= this.getMaxQuestionImages()) {
+            this.showToast('К вопросу уже добавлено 3 изображения', 'warning');
+            return false;
+        }
+
+        q.images = [...existingImages, { ...ref }];
+        this.syncQuestionLegacyImageFields(q);
+        this.renderCurrentQuestion();
+        this.renderQuestionList();
+        this.showToast('Изображение добавлено к вопросу', 'success');
+        this.markUnsavedChanges();
+        return true;
+    }
+
+    addImageReferenceToOption(rawRef, optionIndex) {
+        const q = this.questions[this.currentQuestionIndex];
+        const ref = this.serializeImageReference(rawRef);
+        if (!q || !ref || !Number.isInteger(optionIndex) || optionIndex < 0 || !q.options?.[optionIndex]) {
+            return false;
+        }
+
+        q.options[optionIndex].image_path = ref.path || null;
+        q.options[optionIndex].image_asset_id = ref.asset_id || null;
+        q.options[optionIndex].image_asset_url = ref.asset_url || null;
+        this.renderOptions();
+        this.renderQuestionList();
+        this.showToast(`Изображение добавлено к варианту ${this.getOptionLabel(optionIndex)}`, 'success');
+        this.markUnsavedChanges();
+        return true;
+    }
+
+    applySelectedBankImageToTarget(target) {
+        const selected = this.selectedBankImageItem;
+        const normalizedTarget = this.normalizeImagePasteTarget(target);
+        if (!selected || !normalizedTarget) return false;
+
+        let applied = false;
+        if (normalizedTarget.kind === 'question') {
+            applied = this.addImageReferenceToCurrentQuestion(selected.ref);
+        } else if (normalizedTarget.kind === 'option') {
+            applied = this.addImageReferenceToOption(selected.ref, normalizedTarget.index);
+        }
+
+        if (applied) {
+            this.clearSelectedImageBankItem();
+        } else {
+            this.syncBankImageTargetUI();
+            this.renderImageBank();
+        }
+        return applied;
+    }
+
+    handleBankImageTargetSelectionClick(event) {
+        if (!this.selectedBankImageItem) return;
+        const targetNode = event?.target?.nodeType === 1 ? event.target : null;
+        if (!targetNode) return;
+
+        if (
+            targetNode.closest('.test-image-bank')
+            || targetNode.closest('.test-image-bank-viewer')
+            || targetNode.closest('#paste-image-target-modal')
+            || targetNode.closest('#import-modal')
+        ) {
+            return;
+        }
+
+        const target = this.resolveImagePasteTargetFromElement(targetNode);
+        if (target) {
+            event.preventDefault();
+            event.stopPropagation();
+            this.applySelectedBankImageToTarget(target);
+            return;
+        }
+
+        this.clearSelectedImageBankItem();
+    }
+
+    handleBankImageTargetSelectionKeydown(event) {
+        if (!this.selectedBankImageItem) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            this.clearSelectedImageBankItem();
+        }
+    }
+
+    openImageBankViewer(imgSrc, caption = 'Изображение') {
+        if (!imgSrc) return;
+
+        const existing = document.querySelector('.test-image-bank-viewer');
+        if (existing) existing.remove();
+
+        const overlay = document.createElement('div');
+        overlay.className = 'test-image-bank-viewer';
+        overlay.tabIndex = -1;
+
+        const container = document.createElement('section');
+        container.className = 'test-image-bank-viewer__panel';
+        container.setAttribute('role', 'dialog');
+        container.setAttribute('aria-modal', 'true');
+        container.setAttribute('aria-label', 'Просмотр изображения');
+
+        const topBar = document.createElement('div');
+        topBar.className = 'test-image-bank-viewer__toolbar';
+
+        const title = document.createElement('div');
+        title.className = 'test-image-bank-viewer__title';
+        title.textContent = caption || 'Изображение';
+
+        const controls = document.createElement('div');
+        controls.className = 'test-image-bank-viewer__controls';
+
+        const makeButton = (label, ariaLabel, className = '') => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.className = `test-image-bank-viewer__button ${className}`.trim();
+            button.textContent = label;
+            button.title = ariaLabel;
+            button.setAttribute('aria-label', ariaLabel);
+            return button;
+        };
+
+        const zoomOutBtn = makeButton('-', 'Уменьшить');
+        const scaleBadge = document.createElement('span');
+        scaleBadge.className = 'test-image-bank-viewer__scale';
+        scaleBadge.textContent = '100%';
+        const zoomInBtn = makeButton('+', 'Увеличить');
+        const fitBtn = makeButton('Подогнать', 'Подогнать к окну');
+        const closeBtn = makeButton('Закрыть', 'Закрыть просмотр');
+
+        controls.appendChild(zoomOutBtn);
+        controls.appendChild(scaleBadge);
+        controls.appendChild(zoomInBtn);
+        controls.appendChild(fitBtn);
+        controls.appendChild(closeBtn);
+        topBar.appendChild(title);
+        topBar.appendChild(controls);
+
+        const viewport = document.createElement('div');
+        viewport.className = 'test-image-bank-viewer__viewport';
+
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.alt = caption || 'Изображение';
+        img.draggable = false;
+        img.className = 'test-image-bank-viewer__image';
+
+        let naturalWidth = 0;
+        let naturalHeight = 0;
+        let scale = 1;
+        let fittedScale = 1;
+        let translateX = 0;
+        let translateY = 0;
+        let isDragging = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let startTranslateX = 0;
+        let startTranslateY = 0;
+
+        const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+        const getViewportRect = () => viewport.getBoundingClientRect();
+        const computeFittedScale = () => {
+            const rect = getViewportRect();
+            if (!rect.width || !rect.height || !naturalWidth || !naturalHeight) return 1;
+            return Math.min(rect.width / naturalWidth, rect.height / naturalHeight, 1);
+        };
+
+        const updateToolbarState = () => {
+            scaleBadge.textContent = `${Math.round(scale * 100)}%`;
+            zoomOutBtn.disabled = scale <= 0.2;
+            zoomInBtn.disabled = scale >= 8;
+        };
+
+        const clampTranslation = () => {
+            const rect = getViewportRect();
+            const renderedWidth = naturalWidth * scale;
+            const renderedHeight = naturalHeight * scale;
+            if (!rect.width || !rect.height || !renderedWidth || !renderedHeight) return;
+
+            translateX = renderedWidth <= rect.width
+                ? (rect.width - renderedWidth) / 2
+                : clamp(translateX, rect.width - renderedWidth, 0);
+            translateY = renderedHeight <= rect.height
+                ? (rect.height - renderedHeight) / 2
+                : clamp(translateY, rect.height - renderedHeight, 0);
+        };
+
+        const applyTransform = () => {
+            clampTranslation();
+            img.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+            updateToolbarState();
+        };
+
+        const fitToViewport = () => {
+            if (!naturalWidth || !naturalHeight) return;
+            fittedScale = computeFittedScale();
+            scale = fittedScale;
+            translateX = 0;
+            translateY = 0;
+            applyTransform();
+        };
+
+        const setScaleAroundPoint = (nextScale, pointX, pointY) => {
+            if (!naturalWidth || !naturalHeight) return;
+            const rect = getViewportRect();
+            const localX = pointX - rect.left;
+            const localY = pointY - rect.top;
+            const clampedScale = clamp(nextScale, 0.2, 8);
+            if (clampedScale === scale) return;
+
+            const imageLocalX = (localX - translateX) / scale;
+            const imageLocalY = (localY - translateY) / scale;
+            scale = clampedScale;
+            fittedScale = computeFittedScale();
+            translateX = localX - imageLocalX * scale;
+            translateY = localY - imageLocalY * scale;
+            applyTransform();
+        };
+
+        const stepZoom = (multiplier) => {
+            const rect = getViewportRect();
+            setScaleAroundPoint(scale * multiplier, rect.left + rect.width / 2, rect.top + rect.height / 2);
+        };
+
+        const onDragMove = (event) => {
+            if (!isDragging) return;
+            translateX = startTranslateX + (event.clientX - dragStartX);
+            translateY = startTranslateY + (event.clientY - dragStartY);
+            applyTransform();
+        };
+
+        const onDragEnd = () => {
+            isDragging = false;
+            img.style.cursor = 'grab';
+        };
+
+        const closeViewer = () => {
+            window.removeEventListener('mousemove', onDragMove);
+            window.removeEventListener('mouseup', onDragEnd);
+            window.removeEventListener('resize', fitToViewport);
+            window.removeEventListener('keydown', onKeyDown);
+            overlay.remove();
+        };
+
+        function onKeyDown(event) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                closeViewer();
+            } else if (event.key === '0') {
+                event.preventDefault();
+                fitToViewport();
+            } else if (event.key === '+' || event.key === '=') {
+                event.preventDefault();
+                stepZoom(1.15);
+            } else if (event.key === '-' || event.key === '_') {
+                event.preventDefault();
+                stepZoom(0.85);
+            }
+        }
+
+        viewport.addEventListener('wheel', (event) => {
+            event.preventDefault();
+            setScaleAroundPoint(scale * (event.deltaY < 0 ? 1.1 : 0.9), event.clientX, event.clientY);
+        }, { passive: false });
+
+        viewport.addEventListener('mousedown', (event) => {
+            if (event.button !== 0) return;
+            event.preventDefault();
+            isDragging = true;
+            dragStartX = event.clientX;
+            dragStartY = event.clientY;
+            startTranslateX = translateX;
+            startTranslateY = translateY;
+            img.style.cursor = 'grabbing';
+        });
+
+        viewport.addEventListener('dblclick', (event) => {
+            event.preventDefault();
+            if (Math.abs(scale - fittedScale) < 0.05) {
+                setScaleAroundPoint(Math.max(fittedScale * 2, 1.75), event.clientX, event.clientY);
+            } else {
+                fitToViewport();
+            }
+        });
+
+        zoomOutBtn.onclick = () => stepZoom(0.85);
+        zoomInBtn.onclick = () => stepZoom(1.15);
+        fitBtn.onclick = () => fitToViewport();
+        closeBtn.onclick = (event) => {
+            event.preventDefault();
+            closeViewer();
+        };
+
+        overlay.addEventListener('click', closeViewer);
+        container.addEventListener('click', (event) => event.stopPropagation());
+        img.addEventListener('load', () => {
+            naturalWidth = img.naturalWidth || 0;
+            naturalHeight = img.naturalHeight || 0;
+            fitToViewport();
+        });
+
+        window.addEventListener('mousemove', onDragMove);
+        window.addEventListener('mouseup', onDragEnd);
+        window.addEventListener('resize', fitToViewport);
+        window.addEventListener('keydown', onKeyDown);
+
+        viewport.appendChild(img);
+        container.appendChild(topBar);
+        container.appendChild(viewport);
+        overlay.appendChild(container);
+        document.body.appendChild(overlay);
+
+        if (img.complete) {
+            naturalWidth = img.naturalWidth || 0;
+            naturalHeight = img.naturalHeight || 0;
+            fitToViewport();
+        } else {
+            updateToolbarState();
+        }
+        overlay.focus();
+    }
+
+    syncImageBankCollapsedState() {
+        const bank = document.querySelector('.test-image-bank');
+        const panel = document.querySelector('#test-image-bank-panel');
+        const toggle = document.querySelector('#test-image-bank-toggle');
+        const expanded = Boolean(this.isImageBankExpanded);
+
+        if (bank) bank.classList.toggle('is-expanded', expanded);
+        if (panel) panel.classList.toggle('hidden', !expanded);
+        if (toggle) toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    }
+
+    toggleImageBankExpanded(force) {
+        this.isImageBankExpanded = typeof force === 'boolean'
+            ? force
+            : !this.isImageBankExpanded;
+        this.syncImageBankCollapsedState();
+    }
+
+    renderImageBank() {
+        const grid = document.querySelector('#test-image-bank-grid');
+        const empty = document.querySelector('#test-image-bank-empty');
+        const count = document.querySelector('#test-image-bank-count');
+        const panel = document.querySelector('#test-image-bank-panel');
+        const toggle = document.querySelector('#test-image-bank-toggle');
+        if (!grid && !empty && !count && !panel && !toggle) return;
+        this.syncImageBankCollapsedState();
+
+        const items = this.collectImageBankItems();
+        let selectedKey = this.selectedBankImageItem?.key || "";
+        if (selectedKey && !items.some((item) => item.key === selectedKey)) {
+            this.selectedBankImageItem = null;
+            selectedKey = "";
+        }
+
+        if (count) count.textContent = String(items.length);
+        if (empty) empty.classList.toggle('hidden', items.length > 0);
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        grid.classList.toggle('hidden', items.length === 0);
+
+        items.forEach((item) => {
+            const src = this.resolveImageSource(item.ref);
+            if (!src) return;
+
+            const isSelected = item.key === selectedKey;
+            const firstSource = item.sources[0] || 'Изображение';
+            const usageLabel = item.usageCount === 1 ? '1 место' : `${item.usageCount} мест`;
+
+            const itemNode = document.createElement('div');
+            itemNode.className = `test-image-bank__item${isSelected ? ' is-selected' : ''}`;
+
+            const img = document.createElement('img');
+            img.src = src;
+            img.alt = firstSource;
+            img.loading = 'lazy';
+
+            const selectButton = document.createElement('button');
+            selectButton.type = 'button';
+            selectButton.className = 'test-image-bank__select';
+            selectButton.title = isSelected ? 'Отменить выбор изображения' : `Выбрать: ${firstSource}`;
+            selectButton.setAttribute('aria-label', selectButton.title);
+            selectButton.setAttribute('aria-pressed', isSelected ? 'true' : 'false');
+            selectButton.onclick = () => {
+                this.selectImageBankItem(item);
+            };
+
+            const previewButton = document.createElement('button');
+            previewButton.type = 'button';
+            previewButton.className = 'test-image-bank__preview-btn';
+            previewButton.title = 'Открыть изображение';
+            previewButton.setAttribute('aria-label', 'Открыть изображение');
+            previewButton.innerHTML = '<span class="material-symbols-outlined text-[15px]">zoom_in</span>';
+            previewButton.onclick = (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                this.openImageBankViewer(src, firstSource);
+            };
+
+            const meta = document.createElement('span');
+            meta.className = 'test-image-bank__item-meta';
+            meta.textContent = isSelected ? 'Выбрано' : usageLabel;
+
+            selectButton.appendChild(img);
+            itemNode.appendChild(selectButton);
+            itemNode.appendChild(previewButton);
+            itemNode.appendChild(meta);
+            grid.appendChild(itemNode);
+        });
+
+        if (empty) empty.classList.toggle('hidden', grid.children.length > 0);
+        grid.classList.toggle('hidden', grid.children.length === 0);
+        this.syncBankImageTargetUI();
     }
 
     buildQuestionImageRefs(question) {
@@ -949,6 +1493,7 @@ class TestEditor extends BaseEditor {
 
         this.renderQuestionList();
         this.renderCurrentQuestion();
+        this.renderImageBank();
         this.updateEditorChrome();
         this.initialSnapshot = this.captureSnapshot();
         this.hasUnsavedChanges = false;
@@ -1363,6 +1908,7 @@ class TestEditor extends BaseEditor {
         this.updateAnswerTypeDisplay();
         this.updateEditorChrome();
         this.syncActiveImagePasteTargetUI();
+        this.syncBankImageTargetUI();
     }
 
     renderOptions() {
@@ -1502,6 +2048,8 @@ class TestEditor extends BaseEditor {
         this.syncOptionImageBusyState();
         this.updateAnswerTypeDisplay();
         this.syncActiveImagePasteTargetUI();
+        this.syncBankImageTargetUI();
+        this.renderImageBank();
     }
 
     addQuestion() {
@@ -1541,6 +2089,11 @@ class TestEditor extends BaseEditor {
         // Add Option
         const addOptBtn = document.querySelector('#add-option-btn');
         if (addOptBtn) addOptBtn.onclick = () => this.addOption();
+
+        const imageBankToggle = document.querySelector('#test-image-bank-toggle');
+        if (imageBankToggle) {
+            imageBankToggle.onclick = () => this.toggleImageBankExpanded();
+        }
 
         // Image Upload
         const uploadBtn = document.querySelector('#upload-image-btn');
@@ -1684,6 +2237,8 @@ class TestEditor extends BaseEditor {
             });
         }, true);
         document.addEventListener('keydown', (e) => this.handlePasteTargetSelectionKeydown(e), true);
+        document.addEventListener('click', (e) => this.handleBankImageTargetSelectionClick(e), true);
+        document.addEventListener('keydown', (e) => this.handleBankImageTargetSelectionKeydown(e), true);
         this.updateImportSourceUI();
         this.updateImportModeUI();
 

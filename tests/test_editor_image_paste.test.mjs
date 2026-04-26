@@ -78,6 +78,197 @@ describe("Test editor clipboard image paste", () => {
         ]);
     });
 
+    it("selects a bank image and adds it to the clicked question without uploading again", () => {
+        const sharedRef = {
+            path: "images/shared.png",
+            asset_id: "asset_shared",
+            asset_url: "/api/assets/asset_shared/content",
+        };
+        const harness = createTestEditorHarness({
+            questions: [
+                {
+                    id: 1,
+                    text: "First question",
+                    options: [
+                        { text: "A", is_correct: true, image_path: null },
+                        { text: "B", is_correct: false, image_path: null },
+                    ],
+                    settings: { all_correct_required: true, allow_partial_credit: false },
+                    explanation: "",
+                    image: null,
+                    images: [],
+                },
+                {
+                    id: 2,
+                    text: "Second question",
+                    options: [
+                        { text: "A", is_correct: true, image_path: null },
+                        { text: "B", is_correct: false, image_path: null },
+                    ],
+                    settings: { all_correct_required: true, allow_partial_credit: false },
+                    explanation: "",
+                    image: sharedRef.path,
+                    image_asset_id: sharedRef.asset_id,
+                    image_asset_url: sharedRef.asset_url,
+                    images: [sharedRef],
+                },
+            ],
+            currentQuestionIndex: 0,
+        });
+        harnesses.push(harness);
+
+        const { editor } = harness;
+        const count = document.querySelector("#test-image-bank-count");
+        const bankButton = document.querySelector(".test-image-bank__select");
+        const questionTextarea = document.querySelector("#question-textarea");
+
+        expect(count.textContent).toBe("1");
+        expect(bankButton).toBeTruthy();
+
+        bankButton.click();
+        expect(document.body.classList.contains("bank-image-placement-mode")).toBe(true);
+        expect(document.querySelector(".test-image-bank__item").classList.contains("is-selected")).toBe(true);
+
+        questionTextarea.click();
+
+        expect(editor.requestJson).not.toHaveBeenCalled();
+        expect(editor.questions[0].images).toEqual([sharedRef]);
+        expect(editor.questions[0].image_asset_id).toBe(sharedRef.asset_id);
+        expect(editor.markUnsavedChanges).toHaveBeenCalled();
+        expect(document.body.classList.contains("bank-image-placement-mode")).toBe(false);
+    });
+
+    it("selects a bank image and inserts it into the clicked answer option", () => {
+        const sharedRef = {
+            path: "images/option-shared.png",
+            asset_id: "asset_option_shared",
+            asset_url: "/api/assets/asset_option_shared/content",
+        };
+        const harness = createTestEditorHarness({
+            questions: [
+                {
+                    id: 1,
+                    text: "First question",
+                    options: [
+                        { text: "A", is_correct: true, image_path: null },
+                        { text: "B", is_correct: false, image_path: null },
+                    ],
+                    settings: { all_correct_required: true, allow_partial_credit: false },
+                    explanation: "",
+                    image: null,
+                    images: [],
+                },
+                {
+                    id: 2,
+                    text: "Second question",
+                    options: [
+                        {
+                            text: "A",
+                            is_correct: true,
+                            image_path: sharedRef.path,
+                            image_asset_id: sharedRef.asset_id,
+                            image_asset_url: sharedRef.asset_url,
+                        },
+                        { text: "B", is_correct: false, image_path: null },
+                    ],
+                    settings: { all_correct_required: true, allow_partial_credit: false },
+                    explanation: "",
+                    image: null,
+                    images: [],
+                },
+            ],
+            currentQuestionIndex: 0,
+        });
+        harnesses.push(harness);
+
+        const { editor } = harness;
+        document.querySelector(".test-image-bank__select").click();
+        document.querySelector("#options-container .option-row textarea").click();
+
+        expect(editor.requestJson).not.toHaveBeenCalled();
+        expect(editor.questions[0].options[0]).toMatchObject({
+            image_path: sharedRef.path,
+            image_asset_id: sharedRef.asset_id,
+            image_asset_url: sharedRef.asset_url,
+        });
+        expect(editor.questions[0].images).toEqual([]);
+        expect(document.body.classList.contains("bank-image-placement-mode")).toBe(false);
+    });
+
+    it("opens a zoomable viewer from the image bank preview button", () => {
+        const sharedRef = {
+            path: "images/shared-preview.png",
+            asset_id: "asset_shared_preview",
+            asset_url: "/api/assets/asset_shared_preview/content",
+        };
+        const harness = createTestEditorHarness({
+            questions: [
+                {
+                    id: 1,
+                    text: "Question",
+                    options: [
+                        { text: "A", is_correct: true, image_path: null },
+                        { text: "B", is_correct: false, image_path: null },
+                    ],
+                    settings: { all_correct_required: true, allow_partial_credit: false },
+                    explanation: "",
+                    image: sharedRef.path,
+                    image_asset_id: sharedRef.asset_id,
+                    image_asset_url: sharedRef.asset_url,
+                    images: [sharedRef],
+                },
+            ],
+        });
+        harnesses.push(harness);
+
+        document.querySelector(".test-image-bank__preview-btn").click();
+
+        const viewer = document.querySelector(".test-image-bank-viewer");
+        expect(viewer).toBeTruthy();
+        expect(viewer.querySelector("img").getAttribute("src")).toBe(sharedRef.asset_url);
+    });
+
+    it("collapses and expands the image bank from the sidebar toggle", () => {
+        const sharedRef = {
+            path: "images/collapsible-bank.png",
+            asset_id: "asset_collapsible_bank",
+            asset_url: "/api/assets/asset_collapsible_bank/content",
+        };
+        const harness = createTestEditorHarness({
+            questions: [
+                {
+                    id: 1,
+                    text: "Question",
+                    options: [
+                        { text: "A", is_correct: true, image_path: null },
+                        { text: "B", is_correct: false, image_path: null },
+                    ],
+                    settings: { all_correct_required: true, allow_partial_credit: false },
+                    explanation: "",
+                    image: sharedRef.path,
+                    image_asset_id: sharedRef.asset_id,
+                    image_asset_url: sharedRef.asset_url,
+                    images: [sharedRef],
+                },
+            ],
+        });
+        harnesses.push(harness);
+
+        const toggle = document.querySelector("#test-image-bank-toggle");
+        const panel = document.querySelector("#test-image-bank-panel");
+
+        expect(toggle.getAttribute("aria-expanded")).toBe("true");
+        expect(panel.classList.contains("hidden")).toBe(false);
+
+        toggle.click();
+        expect(toggle.getAttribute("aria-expanded")).toBe("false");
+        expect(panel.classList.contains("hidden")).toBe(true);
+
+        toggle.click();
+        expect(toggle.getAttribute("aria-expanded")).toBe("true");
+        expect(panel.classList.contains("hidden")).toBe(false);
+    });
+
     it("uses an option image button as an explicit paste target", async () => {
         const harness = createTestEditorHarness();
         harnesses.push(harness);

@@ -79,3 +79,25 @@ def test_serve_session_ui_keeps_s1_when_resume_target_is_current_task(monkeypatc
 
     assert response.status_code == 200
     assert response.get_data(as_text=True) == "S1"
+
+
+def test_favicon_serves_project_icon(monkeypatch, tmp_path):
+    app = Flask(__name__)
+    assets_dir = tmp_path / "assets"
+    assets_dir.mkdir()
+
+    monkeypatch.setattr(static_routes, "_get_ui_dirs", lambda: {"ASSETS_DIR": assets_dir})
+    monkeypatch.setattr(
+        static_routes,
+        "send_from_directory",
+        lambda directory, filename, **kwargs: Response(
+            f"{Path(directory).name}/{filename}/{kwargs.get('mimetype')}",
+            status=200,
+        ),
+    )
+
+    with app.test_request_context("/favicon.ico", method="GET"):
+        response = static_routes.favicon()
+
+    assert response.status_code == 200
+    assert response.get_data(as_text=True) == "assets/actra_white.ico/image/x-icon"
