@@ -734,7 +734,7 @@ class ClickEditor extends BaseEditor {
             const response = await fetch(`/api/editor/task/${moduleId}/${topicId}/${taskId}`);
             const data = await response.json();
             if (
-                (!data.ok || (!data.path && !data.asset_id && !data.asset_url))
+                (!data.ok || !data.task)
                 && (
                     response.status === 404
                     || String(data?.error || "").trim().toLowerCase() === "task_not_found"
@@ -746,7 +746,7 @@ class ClickEditor extends BaseEditor {
                     return;
                 }
             }
-            if (!data.ok || (!data.path && !data.asset_id && !data.asset_url)) {
+            if (!data.ok || !data.task) {
                 console.error("Failed to load task:", data.error);
                 this.showFatalError(data.error || "Не удалось загрузить задание");
                 return;
