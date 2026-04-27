@@ -19,6 +19,88 @@ from .path_resolver import PathResolver
 logger = logging.getLogger(__name__)
 
 
+def is_direct_image_url(value: Optional[str]) -> bool:
+    raw = str(value or "").strip()
+    return bool(
+        raw.startswith("/api/assets/")
+        or raw.startswith("/api/editor/image")
+        or raw.startswith("/api/local-image")
+        or raw.startswith("http://")
+        or raw.startswith("https://")
+        or raw.startswith("data:")
+    )
+
+
+def normalize_image_ref_to_string(v: Any) -> Any:
+    """Normalize editor image refs to a single string accepted by legacy models."""
+    if v is None or isinstance(v, str):
+        return v
+
+    if isinstance(v, Path):
+        return str(v)
+
+    if not isinstance(v, dict):
+        return v
+
+    nested = v.get("image") if isinstance(v.get("image"), dict) else {}
+    image_value = v.get("image")
+    src_value = v.get("src")
+
+    path = (
+        v.get("path")
+        or v.get("image_path")
+        or (image_value if isinstance(image_value, str) and not is_direct_image_url(image_value) else None)
+        or (src_value if isinstance(src_value, str) and not is_direct_image_url(src_value) else None)
+        or nested.get("path")
+        or nested.get("image_path")
+        or nested.get("src")
+    )
+    if path and not is_direct_image_url(str(path)):
+        return str(path).strip()
+
+    asset_url = (
+        v.get("asset_url")
+        or v.get("image_asset_url")
+        or v.get("image_url")
+        or v.get("url")
+        or (v.get("path") if isinstance(v.get("path"), str) and is_direct_image_url(v.get("path")) else None)
+        or (v.get("image_path") if isinstance(v.get("image_path"), str) and is_direct_image_url(v.get("image_path")) else None)
+        or (image_value if isinstance(image_value, str) and is_direct_image_url(image_value) else None)
+        or (src_value if isinstance(src_value, str) and is_direct_image_url(src_value) else None)
+        or nested.get("asset_url")
+        or nested.get("image_asset_url")
+        or nested.get("image_url")
+        or nested.get("url")
+    )
+    if asset_url:
+        return str(asset_url).strip()
+
+    asset_id = (
+        v.get("asset_id")
+        or v.get("image_asset_id")
+        or nested.get("asset_id")
+        or nested.get("image_asset_id")
+    )
+    if asset_id:
+        clean_asset_id = str(asset_id).strip()
+        if clean_asset_id:
+            return f"/api/assets/{clean_asset_id}/content"
+
+    return v
+
+
+def validate_image_reference_format(v: Optional[Any]) -> Optional[str]:
+    """Validate an image path or hosted/browser image URL."""
+    normalized = normalize_image_ref_to_string(v)
+    if normalized is None:
+        return normalized
+    if not isinstance(normalized, str):
+        raise ValueError("Image reference must be a string path or hosted image reference")
+    if normalized == "" or is_direct_image_url(normalized):
+        return normalized
+    return validate_image_path_format(normalized)
+
+
 def validate_image_path_format(v: Optional[str]) -> Optional[str]:
     """Validate image path format (relative and extension)."""
     if v is None:
@@ -293,7 +375,7 @@ class ClickTaskContent(BaseModel):
     class Config:
         extra = "allow"
     
-    _validate_image = validator('image', allow_reuse=True)(validate_image_path_format)
+    _validate_image = validator('image', pre=True, allow_reuse=True)(validate_image_reference_format)
 
 
 class ErrorSpan(BaseModel):
@@ -439,7 +521,7 @@ class ErrorDetectionContent(BaseModel):
 class DrawTaskContent(BaseModel):
     """Content model for draw tasks."""
     
-    _validate_image = validator('image', allow_reuse=True)(validate_image_path_format)
+    _validate_image = validator('image', pre=True, allow_reuse=True)(validate_image_reference_format)
     
     image: str = Field(..., description="Path to image (relative to task.json)")
     prompt: str = Field(..., description="Task prompt/instruction")
@@ -526,7 +608,7 @@ class OpenAnswerTaskContent(BaseModel):
             raise ValueError(f"max_length ({v}) must be greater than or equal to min_length ({min_length})")
         return v
     
-    _validate_image = validator('image', allow_reuse=True)(validate_image_path_format)
+    _validate_image = validator('image', pre=True, allow_reuse=True)(validate_image_reference_format)
     
     class Config:
         extra = "allow"
@@ -542,16 +624,7 @@ class TestOption(BaseModel):
         extra = "allow"
 
 
-def _is_direct_image_url(value: Optional[str]) -> bool:
-    raw = str(value or "").strip()
-    return bool(
-        raw.startswith("/api/assets/")
-        or raw.startswith("/api/editor/image")
-        or raw.startswith("/api/local-image")
-        or raw.startswith("http://")
-        or raw.startswith("https://")
-        or raw.startswith("data:")
-    )
+_is_direct_image_url = is_direct_image_url
 
 
 class TestQuestionImageRef(BaseModel):
@@ -639,7 +712,7 @@ def validate_test_question_image_ref(v: Any) -> Any:
 class TestQuestion(BaseModel):
     """Question for a test task."""
     
-    _validate_image = validator('image', allow_reuse=True)(validate_image_path_format)
+    _validate_image = validator('image', pre=True, allow_reuse=True)(validate_image_reference_format)
     
     @validator('images', allow_reuse=True)
     def validate_images_list(cls, v):
@@ -668,7 +741,7 @@ class TestQuestion(BaseModel):
 class TestTaskContent(BaseModel):
     """Content model for test tasks."""
     
-    _validate_image = validator('image', allow_reuse=True)(validate_image_path_format)
+    _validate_image = validator('image', pre=True, allow_reuse=True)(validate_image_reference_format)
     
     image: Optional[str] = Field(
         None,
@@ -732,7 +805,7 @@ class SequenceElement(BaseModel):
     class Config:
         extra = "allow"
     
-    _validate_image = validator('image', allow_reuse=True)(validate_image_path_format)
+    _validate_image = validator('image', pre=True, allow_reuse=True)(validate_image_reference_format)
 
 
 class SequenceLevelBlock(BaseModel):
@@ -1107,6 +1180,8 @@ class ValidatedTask(BaseModel):
         # Resolve image path in content
         if hasattr(self.content, 'image') and self.content.image:
             if isinstance(self.content.image, str):
+                if is_direct_image_url(self.content.image):
+                    return
                 resolved = PathResolver.resolve_image_path(
                     self.content.image,
                     task_json_path

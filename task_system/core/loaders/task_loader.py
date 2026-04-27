@@ -20,6 +20,8 @@ from task_system.core.models.task_models import (
     OpenAnswerTaskContent,
     TestTaskContent,
     SequenceAssemblyTaskContent,
+    is_direct_image_url,
+    normalize_image_ref_to_string,
 )
 from task_system.core.models.answer_key_models import (
     ClickTaskAnswerKey,
@@ -398,11 +400,19 @@ class TaskLoader:
         
         # Resolve image path
         if 'image' in data:
-            data['image'] = str(PathResolver.resolve_image_path(data['image'], task_json_path))
+            image = normalize_image_ref_to_string(data['image'])
+            if isinstance(image, str) and is_direct_image_url(image):
+                data['image'] = image
+            elif isinstance(image, str):
+                data['image'] = str(PathResolver.resolve_image_path(image, task_json_path))
         elif 'content' in data and 'image' in data['content']:
-            data['content']['image'] = str(
-                PathResolver.resolve_image_path(data['content']['image'], task_json_path)
-            )
+            image = normalize_image_ref_to_string(data['content']['image'])
+            if isinstance(image, str) and is_direct_image_url(image):
+                data['content']['image'] = image
+            elif isinstance(image, str):
+                data['content']['image'] = str(
+                    PathResolver.resolve_image_path(image, task_json_path)
+                )
         
         return data
     

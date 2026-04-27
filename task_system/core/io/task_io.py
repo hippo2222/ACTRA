@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 try:
     from task_system.core.loaders.task_loader import TaskLoader
     from task_system.core.models.path_resolver import PathResolver
+    from task_system.core.models.task_models import is_direct_image_url, normalize_image_ref_to_string
     # Импортируем исключения из единой системы
     from task_system.core.exceptions import TaskValidationError, TaskLoadError
     TASK_LOADER_AVAILABLE = True
@@ -22,6 +23,8 @@ except ImportError:
     TaskValidationError = None
     TaskLoadError = None
     PathResolver = None
+    is_direct_image_url = None
+    normalize_image_ref_to_string = None
 
 
 class TaskIO:
@@ -189,10 +192,17 @@ class TaskIO:
                 # Normalize image path if exists
                 if 'content' in data and 'image' in data['content']:
                     image_path = data['content']['image']
-                    if image_path and not Path(image_path).is_absolute():
+                    if normalize_image_ref_to_string:
+                        image_path = normalize_image_ref_to_string(image_path)
+                        data['content']['image'] = image_path
+                    if not isinstance(image_path, str) or not image_path:
+                        pass
+                    elif is_direct_image_url and is_direct_image_url(image_path):
+                        pass
+                    elif not Path(image_path).is_absolute():
                         # Already relative, keep as is
                         pass
-                    elif image_path:
+                    else:
                         # Convert absolute to relative
                         normalized = PathResolver.normalize_path(
                             Path(image_path),
@@ -414,4 +424,3 @@ class TaskIO:
     @staticmethod
     def is_task_file(path):
         return path.endswith(".json") and os.path.exists(path)
-

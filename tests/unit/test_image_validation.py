@@ -2,8 +2,11 @@
 Unit tests for image path validation.
 """
 
+import json
+
 import pytest
 from pydantic import ValidationError, BaseModel, validator
+from task_system.core.loaders.task_loader import TaskLoader
 from task_system.core.models.task_models import (
     validate_image_path_format,
     ClickTaskContent,
@@ -66,6 +69,28 @@ class TestModelImageValidation:
         """Test image validation in ClickTaskContent."""
         # Valid
         ClickTaskContent(image="test.png", prompt="Test")
+        ClickTaskContent(image="/api/assets/asset_click_1/content", prompt="Test")
+
+        hosted_ref = ClickTaskContent(
+            image={"asset_id": "asset_click_1"},
+            prompt="Test",
+        )
+        assert hosted_ref.image == "/api/assets/asset_click_1/content"
+
+        hosted_url = ClickTaskContent(
+            image={"asset_url": "/api/assets/asset_click_2/content"},
+            prompt="Test",
+        )
+        assert hosted_url.image == "/api/assets/asset_click_2/content"
+
+        local_ref = ClickTaskContent(
+            image={
+                "path": "modules/m/topics/t/tasks/task/images/main.png",
+                "asset_url": "/api/assets/asset_click_3/content",
+            },
+            prompt="Test",
+        )
+        assert local_ref.image == "modules/m/topics/t/tasks/task/images/main.png"
         
         # Invalid extension
         with pytest.raises(ValidationError, match="Invalid image extension"):
@@ -161,6 +186,38 @@ class TestModelImageValidation:
         
         with pytest.raises(ValidationError, match="Invalid image extension"):
             SequenceElement(id="1", order=0, image="step.doc")
+
+
+class TestHostedImageRefs:
+    """Regression tests for hosted editor image references."""
+
+    def test_task_loader_accepts_click_content_image_ref_dict(self, tmp_path):
+        task_json = tmp_path / "task.json"
+        task_json.write_text(
+            json.dumps(
+                {
+                    "id": "task_hosted_click",
+                    "type": "click",
+                    "meta": {
+                        "task_schema_version": "1.2",
+                        "created_at": "2026-04-27T00:00:00",
+                        "author": "",
+                    },
+                    "content": {
+                        "prompt": "Find the finding",
+                        "image": {
+                            "asset_id": "asset_click_main",
+                            "asset_url": "/api/assets/asset_click_main/content",
+                        },
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        loaded = TaskLoader(tmp_path, strict_mode=False).load_task(task_json)
+
+        assert loaded["task_data"]["content"]["image"] == "/api/assets/asset_click_main/content"
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

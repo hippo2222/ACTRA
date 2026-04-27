@@ -2597,6 +2597,7 @@ class StorageService:
         """
         try:
             from werkzeug.utils import secure_filename
+            from task_system.core.models.task_models import is_direct_image_url, normalize_image_ref_to_string
             import shutil
             
             images_dir = task_dir / "images"
@@ -2621,8 +2622,12 @@ class StorageService:
                     return None
 
             # Helper logic similar to server.py
-            def copy_image(src_path: str) -> Optional[str]:
+            def copy_image(src_path: Any) -> Optional[str]:
+                src_path = normalize_image_ref_to_string(src_path)
+                if not isinstance(src_path, str):
+                    return None
                 if not src_path: return None
+                if is_direct_image_url(src_path): return src_path
                 if src_path.startswith("modules/"): return src_path # Already good
                 
                 # Resolve absolute path
@@ -2669,22 +2674,20 @@ class StorageService:
 
             # Process known fields
             # 1. Main image in content (e.g. click task)
-            if "image" in content and isinstance(content["image"], str):
+            if "image" in content:
                  new_path = copy_image(content["image"])
                  if new_path: content["image"] = new_path
 
             # 1.5 Additional info images (click/draw editor)
             additional = content.get("additionalInfo")
             if isinstance(additional, dict):
-                if isinstance(additional.get("image"), str):
+                if additional.get("image"):
                     new_path = copy_image(additional.get("image"))
                     if new_path:
                         additional["image"] = new_path
                 if isinstance(additional.get("images"), list):
                     normalized_images = []
                     for raw_image in additional.get("images", []):
-                        if not isinstance(raw_image, str):
-                            continue
                         new_path = copy_image(raw_image)
                         normalized_images.append(new_path or raw_image)
                     additional["images"] = normalized_images
