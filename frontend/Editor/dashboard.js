@@ -6536,6 +6536,15 @@ class EditorDashboard {
 document.addEventListener('DOMContentLoaded', () => {
     window.dashboard = new EditorDashboard();
 
+    const routeParams = new URLSearchParams(window.location.search);
+    if (routeParams.get('create') === 'task') {
+        window.setTimeout(() => {
+            if (window.dashboard && typeof window.dashboard.showCreateTaskModal === 'function') {
+                window.dashboard.showCreateTaskModal();
+            }
+        }, 0);
+    }
+
     // Theory Center navigation button (sidebar footer)
     const theoryCenterBtn = document.getElementById('theory-center-sidebar-btn');
     if (theoryCenterBtn) {

@@ -726,7 +726,219 @@
                 loadCalendarWidget(),
                 loadMicrocardsWidget(),
             ]);
+
+            applyMainPreviewMode();
         }
+    }
+
+    function isMainWidgetsPreviewEnabled() {
+        try {
+            const params = new URLSearchParams(window.location.search || '');
+            return params.get('preview') === 'widgets' || params.get('mock') === 'widgets';
+        } catch (_err) {
+            return false;
+        }
+    }
+
+    function applyMainPreviewMode() {
+        if (!isMainWidgetsPreviewEnabled()) return;
+        renderPreviewCalendarWidget();
+        renderPreviewStatisticsWidget();
+        renderPreviewQuickAccessWidget();
+    }
+
+    function renderPreviewCalendarWidget() {
+        const loadingState = document.getElementById('calendarLoadingState');
+        const emptyState = document.getElementById('calendarEmptyState');
+        const contentState = document.getElementById('calendarContentState');
+        const streakEl = document.getElementById('calendarStreakDays');
+        const countEl = document.getElementById('calendarDailyMixCount');
+        const timeEl = document.getElementById('calendarDailyMixTime');
+        const healthList = document.getElementById('calendarHealthList');
+
+        if (loadingState) loadingState.classList.add('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (contentState) {
+            contentState.classList.remove('hidden');
+            contentState.classList.add('flex');
+        }
+        if (streakEl) streakEl.textContent = '6';
+        if (countEl) {
+            countEl.innerHTML = '<span class="text-sm font-black text-text-main">5</span><span class="text-[11px] text-text-secondary">задач</span>';
+        }
+        if (timeEl) {
+            if (timeEl.parentElement) timeEl.parentElement.classList.remove('hidden');
+            timeEl.textContent = '~34 мин';
+        }
+
+        const today = new Date();
+        const previewDynamics = Array.from({ length: 14 }, (_unused, index) => {
+            const date = new Date(today);
+            date.setDate(today.getDate() - (13 - index));
+            const pattern = [
+                { task_attempts: 0, study_minutes: 0, completed_complexes: 0 },
+                { task_attempts: 3, study_minutes: 8, completed_complexes: 0 },
+                { task_attempts: 8, study_minutes: 20, completed_complexes: 0 },
+                { task_attempts: 0, study_minutes: 0, completed_complexes: 0 },
+                { task_attempts: 16, study_minutes: 42, completed_complexes: 1 },
+                { task_attempts: 4, study_minutes: 12, completed_complexes: 0 },
+                { task_attempts: 9, study_minutes: 24, completed_complexes: 0 },
+                { task_attempts: 0, study_minutes: 0, completed_complexes: 0 },
+                { task_attempts: 5, study_minutes: 16, completed_complexes: 0 },
+                { task_attempts: 14, study_minutes: 36, completed_complexes: 1 },
+                { task_attempts: 24, study_minutes: 72, completed_complexes: 2 },
+                { task_attempts: 10, study_minutes: 26, completed_complexes: 0 },
+                { task_attempts: 4, study_minutes: 10, completed_complexes: 0 },
+                { task_attempts: 18, study_minutes: 46, completed_complexes: 1 },
+            ][index];
+            return {
+                date: date.toISOString().split('T')[0],
+                tasks_attempted: pattern.task_attempts,
+                task_attempts: pattern.task_attempts,
+                study_minutes: pattern.study_minutes,
+                completed_complexes: pattern.completed_complexes,
+            };
+        });
+        renderMiniHeatmap(previewDynamics);
+
+        if (healthList) {
+            healthList.innerHTML = `
+                <div class="main-health-row panel-row" title="Повторить: электродинамика&#10;Также ждут повторения: кинематика, магнитное поле">
+                    <div class="main-health-meta">
+                        <div class="w-1.5 h-1.5 rounded-full bg-status-error"></div>
+                        <span class="main-health-name">Повторить: электродинамика</span>
+                    </div>
+                    <span class="main-health-extra" title="Ещё 2 комплекса">+2</span>
+                </div>
+            `;
+        }
+    }
+
+    function renderPreviewStatisticsWidget() {
+        const skeleton = document.getElementById('statsSkeleton');
+        const content = document.getElementById('statsContent');
+        const welcomeEl = document.getElementById('statsWelcomeMessage');
+        const errorEl = document.getElementById('statsErrorMessage');
+        const setText = (id, value) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = value;
+        };
+
+        if (skeleton) skeleton.classList.add('hidden');
+        if (welcomeEl) welcomeEl.remove();
+        if (errorEl) errorEl.remove();
+        if (content) {
+            content.classList.remove('hidden', 'stats-content--empty', 'stats-content--error');
+            content.querySelectorAll('.main-stats-row').forEach((row) => row.classList.remove('hidden'));
+        }
+        setText('statSolvedTasks', '18');
+        setText('statTotalAvailable', '24');
+        setText('statSuccessRate', '86%');
+        setText('statTimeSpent', '1ч 42м');
+        setText('statComplexesLabel', 'Комплексов сегодня');
+        setText('statTodayCount', '3');
+    }
+
+    function renderPreviewQuickAccessWidget() {
+        ensureQuickAccessHeader();
+        const emptyEl = document.getElementById('quick-access-empty');
+        const list = document.getElementById('quick-access-list');
+        const count = document.getElementById('quick-access-count');
+
+        if (emptyEl) emptyEl.hidden = true;
+        if (count) {
+            count.textContent = '3';
+            count.title = 'Комплексов в быстром доступе: 3';
+        }
+        if (!list) return;
+
+        list.hidden = false;
+        list.className = 'main-quick-access-grid main-quick-access-grid--rail';
+        list.innerHTML = `
+            <div class="main-quick-access-card interactive-card group" data-tone="paused" role="button" tabindex="0" title="Подготовка к контрольной: электричество">
+                <button type="button" class="main-quick-access-remove icon-button-muted" title="Убрать">
+                    <span class="material-symbols-outlined text-[14px]">close</span>
+                </button>
+                <div class="main-quick-access-card-head">
+                    <div class="main-quick-access-media">
+                        <div class="relative w-8 h-8 flex items-center justify-center shrink-0">
+                            <svg class="w-full h-full transform -rotate-90">
+                                <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" class="text-text-on-dark dark:text-text-secondary"></circle>
+                                <circle cx="16" cy="16" r="12" stroke="currentColor" stroke-width="2.5" fill="transparent" pathLength="100" stroke-dasharray="100" stroke-dashoffset="38" stroke-linecap="round" class="text-primary"></circle>
+                            </svg>
+                            <span class="absolute text-[8px] font-bold text-text-secondary dark:text-text-on-dark">62%</span>
+                        </div>
+                    </div>
+                    <div class="main-quick-access-body">
+                        <div class="main-quick-access-topline">
+                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">На паузе</span>
+                            <span class="main-quick-access-meta-tag">Шаг 7/12</span>
+                        </div>
+                        <div class="main-quick-access-title">Подготовка к контрольной</div>
+                        <div class="main-quick-access-description">Электричество: закон Ома, цепи, мощность.</div>
+                    </div>
+                </div>
+                <div class="main-quick-access-footer">
+                    <div class="main-quick-access-progress">
+                        <div class="main-quick-access-progress-label">Сейчас 7/12</div>
+                        <div class="main-quick-access-progress-track"><div class="main-quick-access-progress-fill" style="width: 62%"></div></div>
+                    </div>
+                    <div class="main-quick-access-action"><span>Продолжить</span><span class="material-symbols-outlined">restart_alt</span></div>
+                </div>
+            </div>
+            <div class="main-quick-access-card interactive-card group" data-tone="critical" role="button" tabindex="0" title="Кинематика: графики движения">
+                <button type="button" class="main-quick-access-remove icon-button-muted" title="Убрать">
+                    <span class="material-symbols-outlined text-[14px]">close</span>
+                </button>
+                <div class="main-quick-access-card-head">
+                    <div class="main-quick-access-media">
+                        <div class="w-8 h-8 rounded-lg border border-border-subtle bg-surface-2 flex items-center justify-center text-text-secondary font-bold text-[10px] uppercase shrink-0">КИ</div>
+                        <div class="absolute -top-1 -right-1 flex h-3 w-3"><span class="relative inline-flex rounded-full h-3 w-3 bg-status-error"></span></div>
+                    </div>
+                    <div class="main-quick-access-body">
+                        <div class="main-quick-access-topline">
+                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">Нужен повтор</span>
+                            <span class="main-quick-access-meta-tag">Риск забывания</span>
+                        </div>
+                        <div class="main-quick-access-title">Кинематика: графики</div>
+                        <div class="main-quick-access-description">Материал просит внимания после перерыва.</div>
+                    </div>
+                </div>
+                <div class="main-quick-access-footer">
+                    <div class="main-quick-access-progress">
+                        <div class="main-quick-access-progress-label">Пора вернуться</div>
+                        <div class="main-quick-access-progress-track"><div class="main-quick-access-progress-fill" style="width: 18%"></div></div>
+                    </div>
+                    <div class="main-quick-access-action"><span>Вернуться</span><span class="material-symbols-outlined">local_fire_department</span></div>
+                </div>
+            </div>
+            <div class="main-quick-access-card interactive-card group" data-tone="mastered" role="button" tabindex="0" title="Магнитное поле: повторение">
+                <button type="button" class="main-quick-access-remove icon-button-muted" title="Убрать">
+                    <span class="material-symbols-outlined text-[14px]">close</span>
+                </button>
+                <div class="main-quick-access-card-head">
+                    <div class="main-quick-access-media">
+                        <span class="material-symbols-outlined text-[22px]">verified</span>
+                    </div>
+                    <div class="main-quick-access-body">
+                        <div class="main-quick-access-topline">
+                            <span class="main-quick-access-pill pill-neutral pill-sm pill-kicker">Закреплено</span>
+                            <span class="main-quick-access-meta-tag">100%</span>
+                        </div>
+                        <div class="main-quick-access-title">Магнитное поле</div>
+                        <div class="main-quick-access-description">Повторение перед итоговой проверкой.</div>
+                    </div>
+                </div>
+                <div class="main-quick-access-footer">
+                    <div class="main-quick-access-progress">
+                        <div class="main-quick-access-progress-label">Готово к повторению</div>
+                        <div class="main-quick-access-progress-track"><div class="main-quick-access-progress-fill" style="width: 100%"></div></div>
+                    </div>
+                    <div class="main-quick-access-action"><span>Открыть</span><span class="material-symbols-outlined">arrow_forward</span></div>
+                </div>
+            </div>
+        `;
+        setupQuickAccessRail(3);
     }
 
     async function loadCurrentUser() {
@@ -1585,11 +1797,13 @@
         const disabledState = document.getElementById('microcardsDisabledState');
         const cardEl = document.getElementById('microcardsCard');
         const ctaEl = document.getElementById('microcardsCTA');
+        const dueBadgeEl = document.getElementById('microcardsDueBadge');
         const secondaryCtaEl = cardEl ? cardEl.querySelector('.main-secondary-cta') : null;
 
         if (!cardEl) return;
 
         setMicrocardsCardInteractive(false);
+        if (dueBadgeEl) dueBadgeEl.hidden = true;
         if (ctaEl) ctaEl.disabled = true;
         if (secondaryCtaEl) secondaryCtaEl.disabled = true;
 
@@ -1616,6 +1830,7 @@
                 if (secondaryText) secondaryText.textContent = 'Скоро вернём';
             } else {
                 setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
+                if (dueBadgeEl) dueBadgeEl.hidden = true;
                 if (disabledState) disabledState.classList.add('hidden');
                 if (emptyState) {
                     emptyState.classList.remove('hidden');
@@ -1641,6 +1856,7 @@
 
         if (!hasDecks) {
             setMainRecommendationState({ microcardsDisabled: false, microcardsHasDecks: false, microcardsDue: 0 });
+            if (dueBadgeEl) dueBadgeEl.hidden = true;
             if (disabledState) disabledState.classList.add('hidden');
             if (emptyState) emptyState.classList.remove('hidden');
             if (secondaryCtaEl) secondaryCtaEl.disabled = false;
@@ -1664,6 +1880,7 @@
         }
         if (ctaEl) ctaEl.disabled = false;
         if (secondaryCtaEl) secondaryCtaEl.disabled = false;
+        if (dueBadgeEl) dueBadgeEl.hidden = false;
 
         // Due badge in header
         const dueBadgeCount = document.getElementById('microcardsDueCount');
@@ -1922,7 +2139,10 @@
             }
             const tooltip = `${day.date}\n${statusText}`;
             const todayAttr = day.is_today ? ' data-today="true"' : '';
-            return `<div class="main-heatmap-cell" data-level="${day.level}"${todayAttr} title="${tooltip}"></div>`;
+            const accessibilityAttrs = day.has_activity
+                ? ` title="${tooltip}" aria-label="${tooltip}"`
+                : ' aria-hidden="true"';
+            return `<div class="main-heatmap-cell" data-level="${day.level}"${todayAttr}${accessibilityAttrs}></div>`;
         }).join('');
         ensureMiniHeatmapLegend(container);
     }
@@ -1939,24 +2159,49 @@
             container.innerHTML = '';
             return;
         }
-        const toShow = complexes.filter(c => c.health_percent < 80).slice(0, 2);
+        const toReview = complexes
+            .filter(c => Number(c.health_percent ?? 100) < 80)
+            .sort((a, b) => {
+                const criticalDelta = Number(Boolean(b.is_critical)) - Number(Boolean(a.is_critical));
+                if (criticalDelta !== 0) return criticalDelta;
+                return Number(a.health_percent ?? 100) - Number(b.health_percent ?? 100);
+            });
 
-        if (toShow.length === 0) {
+        if (toReview.length === 0) {
             container.innerHTML = '<p class="text-[11px] text-text-secondary text-center py-1">Критичных комплексов нет</p>';
             return;
         }
 
-        container.innerHTML = toShow.map(c => {
-            const tooltip = c.message ? `${c.hint_title || ''}\n${c.message}`.trim() : `Здоровье: ${c.health_percent}%`;
-            return `
-                <div class="main-health-row panel-row" title="${escapeHtml(tooltip)}">
-                    <div class="main-health-meta">
-                        <div class="w-1.5 h-1.5 rounded-full ${c.is_critical ? 'bg-status-error' : 'bg-accent'}"></div>
-                        <span class="main-health-name">${escapeHtml(c.name || '')}</span>
-                    </div>
-                    <span class="shrink-0 font-bold ${c.is_critical ? 'text-status-error' : 'text-accent'}">${escapeHtml(String(c.health_percent ?? 0))}%</span>
-                </div>`;
-        }).join('');
+        const primary = toReview[0];
+        const extraCount = Math.max(0, toReview.length - 1);
+        const extraNames = toReview.slice(1, 6).map(c => c.name).filter(Boolean);
+        const tooltipParts = [
+            primary.message ? `${primary.hint_title || ''}\n${primary.message}`.trim() : `Здоровье: ${primary.health_percent}%`,
+        ];
+        if (extraCount > 0) {
+            tooltipParts.push(`Ещё к повторению: ${extraNames.join(', ')}${extraCount > extraNames.length ? ` и ещё ${extraCount - extraNames.length}` : ''}`);
+        }
+        const tooltip = tooltipParts.filter(Boolean).join('\n\n');
+
+        container.innerHTML = `
+            <div class="main-health-row panel-row" title="${escapeHtml(tooltip)}">
+                <div class="main-health-meta">
+                    <div class="w-1.5 h-1.5 rounded-full ${primary.is_critical ? 'bg-status-error' : 'bg-accent'}"></div>
+                    <span class="main-health-name">Повторить: ${escapeHtml(primary.name || 'комплекс')}</span>
+                </div>
+                ${extraCount > 0
+                    ? `<span class="main-health-extra" title="${escapeHtml(`Ещё ${extraCount} ${pluralizeComplexes(extraCount)}`)}">+${extraCount}</span>`
+                    : `<span class="shrink-0 font-bold ${primary.is_critical ? 'text-status-error' : 'text-accent'}">${escapeHtml(String(primary.health_percent ?? 0))}%</span>`}
+            </div>`;
+    }
+
+    function pluralizeComplexes(n) {
+        const abs = Math.abs(Number(n) || 0) % 100;
+        const lastDigit = abs % 10;
+        if (abs > 10 && abs < 20) return 'комплексов';
+        if (lastDigit > 1 && lastDigit < 5) return 'комплекса';
+        if (lastDigit === 1) return 'комплекс';
+        return 'комплексов';
     }
 
     // --- Navigation & Quick Access ---
@@ -1972,7 +2217,7 @@
                     <span class="material-symbols-outlined text-[20px]">bolt</span>
                 </div>
                 <div class="min-w-0">
-                    <p class="main-quick-access-kicker">\u0411\u0435\u0437 \u041b\u0438\u0448\u043d\u0438\u0445 \u041f\u0435\u0440\u0435\u043a\u043b\u044e\u0447\u0435\u043d\u0438\u0439</p>
+                    <p class="main-quick-access-kicker">\u041f\u0440\u043e\u0434\u043e\u043b\u0436\u0438\u0442\u044c</p>
                     <h3 class="text-base font-bold text-text-main">\u0411\u044b\u0441\u0442\u0440\u044b\u0439 \u0434\u043e\u0441\u0442\u0443\u043f</h3>
                 </div>
             </div>
@@ -2010,6 +2255,7 @@
         const nav = document.getElementById('quick-access-nav');
         const prev = document.getElementById('quick-access-prev');
         const next = document.getElementById('quick-access-next');
+        const count = document.getElementById('quick-access-count');
         if (!list) return;
 
         const useRail = Number(totalItems) > 1;
@@ -2022,17 +2268,37 @@
             list.onscroll = null;
             prev.disabled = true;
             next.disabled = true;
+            if (count && Number(totalItems) === 1) {
+                count.textContent = '1';
+                count.title = 'Комплексов в быстром доступе: 1';
+            }
             return;
         }
 
+        const getCurrentIndex = () => {
+            const card = list.querySelector('.main-quick-access-card');
+            const cardWidth = card ? card.getBoundingClientRect().width : list.clientWidth;
+            const gap = parseFloat(getComputedStyle(list).columnGap || getComputedStyle(list).gap || '0') || 0;
+            const step = Math.max(1, cardWidth + gap);
+            return Math.min(Number(totalItems), Math.max(1, Math.round(list.scrollLeft / step) + 1));
+        };
+
         const updateNavState = () => {
             const maxScrollLeft = Math.max(0, list.scrollWidth - list.clientWidth - 6);
+            const currentIndex = getCurrentIndex();
             prev.disabled = list.scrollLeft <= 6;
             next.disabled = list.scrollLeft >= maxScrollLeft;
+            if (count) {
+                count.textContent = `${currentIndex}/${totalItems}`;
+                count.title = `Карточка ${currentIndex} из ${totalItems} в быстром доступе`;
+            }
         };
 
         const scrollStep = (direction) => {
-            const amount = Math.max(260, Math.round(list.clientWidth * 0.88));
+            const card = list.querySelector('.main-quick-access-card');
+            const cardWidth = card ? card.getBoundingClientRect().width : list.clientWidth;
+            const gap = parseFloat(getComputedStyle(list).columnGap || getComputedStyle(list).gap || '0') || 0;
+            const amount = Math.max(1, Math.round(cardWidth + gap));
             list.scrollBy({ left: direction * amount, behavior: 'smooth' });
         };
 
@@ -2054,6 +2320,7 @@
         if (!container) return;
         const emptyCta = document.getElementById('quick-access-empty-cta');
         const emptyActions = document.getElementById('quick-access-empty-actions');
+        const showAllBtn = document.getElementById('quick-access-show-all');
         if (emptyCta) {
             emptyCta.className = 'qa-empty-cta btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm font-bold';
         }

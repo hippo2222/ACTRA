@@ -746,6 +746,8 @@
         userItems,
         referenceItems,
         note,
+        kind: compactText(source.kind || source.type, 48),
+        status: compactText(source.status, 32),
       };
     }
 
@@ -898,7 +900,7 @@
             ? review.entries.filter(hasNormalizedReviewContent)
             : [];
 
-        if (entries.length) {
+        if (entries.length && review.kind !== "full_test") {
           entries.forEach((entry, entryIndex) => {
             expanded.push({
               ...task,
@@ -1375,6 +1377,49 @@
             ? `Итерация ${entry.iteration || "—"} · ошибка ${entryIndex + 1}`
             : `Итерация ${entry.iteration || "—"}`;
           section.appendChild(attemptMeta);
+
+          const fullTestEntries = entry.review?.kind === "full_test" && Array.isArray(entry.review.entries)
+            ? entry.review.entries.filter(hasNormalizedReviewContent)
+            : [];
+          if (fullTestEntries.length) {
+            fullTestEntries.forEach((reviewEntry) => {
+              if (reviewEntry.prompt) {
+                const question = document.createElement("p");
+                question.className = "s3-review-question";
+                question.textContent = reviewEntry.prompt;
+                section.appendChild(question);
+              }
+
+              if (reviewEntry.note) {
+                const entryNote = document.createElement("p");
+                entryNote.className = "s3-review-note";
+                entryNote.textContent = reviewEntry.note;
+                section.appendChild(entryNote);
+              }
+
+              const answers = document.createElement("div");
+              answers.className = "s3-review-answers";
+
+              appendProblemReviewAnswerContent(
+                answers,
+                reviewEntry.userLabel || "Твоё решение",
+                reviewEntry.userLines || [],
+                reviewEntry.userItems || [],
+                reviewEntry.status === "correct" ? "s3-review-answer--reference" : "s3-review-answer--user"
+              );
+              appendProblemReviewAnswerContent(
+                answers,
+                reviewEntry.referenceLabel || "Референс",
+                reviewEntry.referenceLines || [],
+                reviewEntry.referenceItems || [],
+                "s3-review-answer--reference"
+              );
+
+              section.appendChild(answers);
+            });
+            card.appendChild(section);
+            return;
+          }
 
           if (entry.review?.prompt) {
             const question = document.createElement("p");

@@ -1,0 +1,220 @@
+(function () {
+    'use strict';
+
+    const NAV_ITEMS = [
+        { section: 'main', label: 'Главная', icon: 'home', href: '/ui/main' },
+        { section: 'catalog', label: 'Каталог', icon: 'travel_explore', href: '/ui/catalog' },
+        { section: 'complexes', label: 'Комплексы', icon: 'inventory_2', href: '/ui/complexes' },
+        { section: 'theory', label: 'Теория', icon: 'hub', href: '/ui/theory-center' },
+        { section: 'editor', label: 'Редактор', icon: 'edit_document', href: '/ui/editor' },
+    ];
+
+    const CREATE_ITEMS = [
+        {
+            label: 'Задание',
+            copy: 'Открыть мастер создания задания',
+            icon: 'add_task',
+            href: '/ui/editor?create=task',
+        },
+        {
+            label: 'Комплекс',
+            copy: 'Собрать новый учебный комплекс',
+            icon: 'design_services',
+            href: '/ui/complexes/create',
+        },
+        {
+            label: 'Теория',
+            copy: 'Создать теоретический материал',
+            icon: 'edit_square',
+            href: '/ui/editor/Theory_Editor.html',
+        },
+    ];
+
+    function escapeHtml(value) {
+        return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+        }[char] || char));
+    }
+
+    function getSectionFromPath() {
+        const path = window.location.pathname.replace(/\/+$/, '') || '/';
+        if (path === '/ui' || path === '/ui/main') return 'main';
+        if (path === '/ui/catalog') return 'catalog';
+        if (path === '/ui/complexes') return 'complexes';
+        if (path === '/ui/theory-center' || path.endsWith('/Theory_Center.html')) return 'theory';
+        if (path === '/ui/editor') return 'editor';
+        return '';
+    }
+
+    function navigate(href) {
+        if (!href) return;
+        if (typeof window.navigateWithTransition === 'function') {
+            window.navigateWithTransition(href);
+            return;
+        }
+        window.location.href = href;
+    }
+
+    function showReferenceToast() {
+        const message = 'Справочник в разработке';
+        if (window.NotificationUI && typeof window.NotificationUI.toast === 'function') {
+            window.NotificationUI.toast(message, 'warning', 2200);
+            return;
+        }
+        window.alert(message);
+    }
+
+    function closeCreateMenu(root) {
+        const menu = root.querySelector('[data-global-create-menu]');
+        const button = root.querySelector('[data-global-create-toggle]');
+        if (menu) menu.classList.remove('is-open');
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    function renderHeader(root) {
+        const activeSection = root.dataset.appSection || document.body.dataset.appSection || getSectionFromPath();
+        const navHtml = NAV_ITEMS.map((item) => {
+            const active = item.section === activeSection;
+            return `
+                <a class="global-header__link${active ? ' is-active' : ''}" href="${escapeHtml(item.href)}" data-global-nav="${escapeHtml(item.href)}" ${active ? 'aria-current="page"' : ''}>
+                    <span class="material-symbols-outlined" aria-hidden="true">${escapeHtml(item.icon)}</span>
+                    <span>${escapeHtml(item.label)}</span>
+                </a>
+            `;
+        }).join('');
+
+        const createHtml = CREATE_ITEMS.map((item) => `
+            <button class="global-header__menu-item" type="button" data-global-nav="${escapeHtml(item.href)}">
+                <span class="global-header__menu-icon material-symbols-outlined" aria-hidden="true">${escapeHtml(item.icon)}</span>
+                <span>
+                    <span class="global-header__menu-title">${escapeHtml(item.label)}</span>
+                    <span class="global-header__menu-copy">${escapeHtml(item.copy)}</span>
+                </span>
+            </button>
+        `).join('');
+
+        root.innerHTML = `
+            <header class="global-header">
+                <div class="global-header__inner">
+                    <a class="global-header__brand" href="/ui/main" data-global-nav="/ui/main" aria-label="ACTRA, на главную">
+                        <span class="brand-logo global-header__brand-logo" aria-hidden="true"></span>
+                        <span class="global-header__brand-text">ACTRA</span>
+                    </a>
+                    <nav class="global-header__nav" aria-label="Основная навигация">
+                        ${navHtml}
+                    </nav>
+                    <div class="global-header__actions">
+                        <div class="global-header__create">
+                            <button class="global-header__menu-button" type="button" data-global-create-toggle aria-haspopup="menu" aria-expanded="false">
+                                <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+                                <span>Создать</span>
+                                <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                            </button>
+                            <div class="global-header__menu" data-global-create-menu role="menu">
+                                ${createHtml}
+                            </div>
+                        </div>
+                        <button class="global-header__reference" type="button" data-global-reference data-disabled="true" title="Справочник в разработке">
+                            <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
+                            <span>Справочник</span>
+                        </button>
+                        <button class="global-header__profile" type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false">
+                            <img src="/api/assets/avatars/1.png" class="global-header__avatar" alt="" id="headerAvatar" data-global-avatar>
+                            <span class="global-header__user-name" id="headerUserName" data-global-user-name>Загрузка...</span>
+                            <span class="material-symbols-outlined" aria-hidden="true">expand_more</span>
+                        </button>
+                    </div>
+                </div>
+            </header>
+        `;
+    }
+
+    async function hydrateUser(root) {
+        const avatar = root.querySelector('[data-global-avatar]');
+        const name = root.querySelector('[data-global-user-name]');
+        try {
+            const response = await fetch('/api/users/current');
+            const data = await response.json();
+            const user = data && (data.user || data.profile || data);
+            const displayName = user?.display_name || user?.name || user?.username || user?.login || '';
+            const avatarSeed = user?.avatar_seed || user?.avatar || user?.avatarSeed || '1.png';
+            if (name && displayName) name.textContent = displayName;
+            if (avatar) {
+                avatar.src = String(avatarSeed).includes('.')
+                    ? `/api/assets/avatars/${encodeURIComponent(String(avatarSeed))}`
+                    : '/api/assets/avatars/1.png';
+            }
+        } catch (_) {
+            if (name) name.textContent = 'Профиль';
+        }
+    }
+
+    function bindHeader(root) {
+        root.addEventListener('click', (event) => {
+            const createToggle = event.target.closest('[data-global-create-toggle]');
+            if (createToggle) {
+                event.preventDefault();
+                event.stopPropagation();
+                const menu = root.querySelector('[data-global-create-menu]');
+                const isOpen = menu && !menu.classList.contains('is-open');
+                if (menu) menu.classList.toggle('is-open', !!isOpen);
+                createToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                return;
+            }
+
+            const reference = event.target.closest('[data-global-reference]');
+            if (reference) {
+                event.preventDefault();
+                showReferenceToast();
+                return;
+            }
+
+            const profile = event.target.closest('[data-profile-menu-anchor]');
+            if (profile) {
+                if (typeof window.openProfileMenu === 'function') {
+                    window.openProfileMenu(event);
+                }
+                return;
+            }
+
+            const nav = event.target.closest('[data-global-nav]');
+            if (nav) {
+                event.preventDefault();
+                closeCreateMenu(root);
+                navigate(nav.getAttribute('data-global-nav') || nav.getAttribute('href'));
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (!root.contains(event.target)) closeCreateMenu(root);
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') closeCreateMenu(root);
+        });
+    }
+
+    function initGlobalHeaders() {
+        document.querySelectorAll('[data-global-header]').forEach((root) => {
+            if (root.dataset.globalHeaderReady === '1') return;
+            root.dataset.globalHeaderReady = '1';
+            renderHeader(root);
+            bindHeader(root);
+            hydrateUser(root);
+        });
+    }
+
+    window.GlobalHeader = {
+        init: initGlobalHeaders,
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initGlobalHeaders, { once: true });
+    } else {
+        initGlobalHeaders();
+    }
+})();

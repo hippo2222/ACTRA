@@ -168,7 +168,7 @@ def validate_and_normalize_create_payload(
         errors.append({"field": "settings", "reason": "settings_must_be_object"})
         settings_dict = {}
     else:
-        settings_dict = settings
+        settings_dict = dict(settings)
 
     normalized_theory_link, theory_link_error = validate_and_normalize_theory_link(
         theory_link, required=require_theory_link, allow_linked_library=True
@@ -240,6 +240,45 @@ def validate_and_normalize_create_payload(
 
     if errors:
         return None, errors
+
+    raw_test_modes = settings_dict.get("test_question_display_modes")
+    normalized_test_modes: Dict[str, str] = {}
+    if raw_test_modes is None:
+        raw_test_modes = {}
+    if not isinstance(raw_test_modes, dict):
+        errors.append(
+            {
+                "field": "settings.test_question_display_modes",
+                "reason": "test_question_display_modes_must_be_object",
+            }
+        )
+    else:
+        for raw_ref, raw_mode in raw_test_modes.items():
+            task_ref = str(raw_ref or "").strip()
+            mode = str(raw_mode or "").strip().lower()
+            if task_ref not in seen:
+                errors.append(
+                    {
+                        "field": f"settings.test_question_display_modes.{task_ref or '<empty>'}",
+                        "reason": "task_not_in_tasks",
+                    }
+                )
+                continue
+            if mode not in {"together", "scattered"}:
+                errors.append(
+                    {
+                        "field": f"settings.test_question_display_modes.{task_ref}",
+                        "reason": "invalid_display_mode",
+                    }
+                )
+                continue
+            if mode == "scattered":
+                normalized_test_modes[task_ref] = mode
+
+    if errors:
+        return None, errors
+
+    settings_dict["test_question_display_modes"] = normalized_test_modes
 
     normalized = {
         "name": name.strip() if isinstance(name, str) else "",

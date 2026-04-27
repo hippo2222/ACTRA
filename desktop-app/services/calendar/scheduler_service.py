@@ -15,6 +15,7 @@ Scheduler Service - Adaptive Flow Scheduler.
 """
 
 import logging
+import re
 from datetime import datetime, date, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 from collections import defaultdict
@@ -32,6 +33,18 @@ from .models import (
     MASTERY_INTERVALS,
 )
 from .health_score_service import HealthScoreService
+
+_RAW_ID_RE = re.compile(
+    r"^(?:[0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    re.IGNORECASE,
+)
+
+
+def _safe_complex_display_name(value: Any, fallback: str = "Комплекс") -> str:
+    text = str(value or "").strip()
+    if not text or _RAW_ID_RE.match(text):
+        return fallback
+    return text
 
 
 class SchedulerService:
@@ -666,8 +679,10 @@ class SchedulerService:
                     if active_complexes:
                         # Формируем полный список задач с метаданными
                         for p in active_complexes:
-                            # Используем complex_names для получения имени, фолбэк на complex_id
-                            complex_name = complex_names.get(p.complex_id, p.complex_id)
+                            complex_name = _safe_complex_display_name(
+                                complex_names.get(p.complex_id),
+                                f"Комплекс {len(all_tasks_detailed) + 1}",
+                            )
                             
                             # Проверяем, был ли комплекс выполнен в этот день
                             # Для прошедших дней проверяем по last_reviewed_at

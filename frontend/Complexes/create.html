@@ -2946,7 +2946,8 @@
       catalog: [],
 
       selectedTasks: [], // [{ref, label}]
-      chains: []         // [[ref1, ref2], [ref3, ref4]]
+      chains: [],        // [[ref1, ref2], [ref3, ref4]]
+      complexSettings: {}
     };
 
     function createEmptyTheoryState() {
@@ -5082,6 +5083,32 @@
 
     }
 
+    function isSelectedTestTask(task) {
+      return getSelectedTaskType(task) === 'test';
+    }
+
+    function getTestQuestionDisplayMode(task) {
+      return task?.testQuestionDisplayMode === 'scattered' ? 'scattered' : 'together';
+    }
+
+    function buildTestQuestionDisplayModesPayload() {
+      const modes = {};
+      const chainedRefs = new Set((state.chains || []).flat());
+      for (const task of state.selectedTasks || []) {
+        if (isSelectedTestTask(task) && !chainedRefs.has(task.ref) && getTestQuestionDisplayMode(task) === 'scattered') {
+          modes[task.ref] = 'scattered';
+        }
+      }
+      return modes;
+    }
+
+    function buildComplexSettingsPayload() {
+      return {
+        ...(state.complexSettings || {}),
+        test_question_display_modes: buildTestQuestionDisplayModesPayload(),
+      };
+    }
+
     function getBuilderQualitySnapshot() {
 
       const tasks = Array.isArray(state.selectedTasks) ? state.selectedTasks : [];
@@ -5742,6 +5769,9 @@
         const isSelected = prevSelected.has(t.ref);
         const taskType = getSelectedTaskType(t);
         const taskTypeLabel = translateTaskType(taskType);
+        const isTestTask = taskType === 'test';
+        const testMode = getTestQuestionDisplayMode(t);
+        const isInChain = chains.length > 0;
 
         const card = document.createElement('div');
         card.setAttribute('data-selected-task-ref', t.ref);
@@ -5756,6 +5786,12 @@
         const safeMetaLabel = escapeHtml(metaLabel);
         const safeTaskLabel = escapeHtml(t.label);
         const safeTaskTypeLabel = escapeHtml(taskTypeLabel);
+        const testModeHtml = isTestTask ? `
+          <div class="test-mode-control flex shrink-0 items-center gap-0.5 rounded-md border border-border-subtle bg-surface-soft p-0.5" data-test-mode-control title="${isInChain ? 'В цепочках тесты всегда показываются вместе' : 'Режим показа вопросов теста'}">
+            <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'together' || isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="together" ${isInChain ? 'disabled' : ''}>Вместе</button>
+            <button type="button" class="px-2 py-1 text-[11px] font-semibold rounded ${testMode === 'scattered' && !isInChain ? 'bg-white text-text-main shadow-sm' : 'text-text-muted hover:text-text-main'}" data-mode="scattered" ${isInChain ? 'disabled' : ''}>Вразброс</button>
+          </div>
+        ` : '';
 
         // Inner HTML Structure
         const tagsHtml = `
@@ -5788,6 +5824,8 @@
                ${tagsHtml}
              </div>
           </div>
+
+          ${testModeHtml}
 
           <!-- Delete Button -->
           <button class="delete-task-btn p-1 text-text-muted hover:text-status-error hover:bg-error-lighter rounded-md transition-colors opacity-0 group-hover:opacity-100" title="Удалить задание">
@@ -5835,6 +5873,19 @@
           renderChains();
           applyCatalogFilter();
         });
+
+        const modeControl = card.querySelector('[data-test-mode-control]');
+        if (modeControl) {
+          modeControl.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const btn = e.target.closest('button[data-mode]');
+            if (!btn || btn.disabled) return;
+            t.testQuestionDisplayMode = btn.getAttribute('data-mode') === 'scattered' ? 'scattered' : 'together';
+            renderSelectedList();
+            markDirty();
+          });
+        }
 
         // Click Selection Logic
         card.addEventListener('click', (e) => {
@@ -6486,7 +6537,8 @@
         label,
         topic_name: found?.topic_name || null,
         module_name: found?.module_name || null,
-        task_type: found?.task_type || found?.taskType || null
+        task_type: found?.task_type || found?.taskType || null,
+        testQuestionDisplayMode: 'together'
       });
 
       return { ok: true };
@@ -8071,6 +8123,8 @@
 
         chains: state.chains,
 
+        settings: buildComplexSettingsPayload(),
+
       };
 
       if (!state.editingId) {
@@ -8340,6 +8394,7 @@
         description,
         tasks: state.selectedTasks.map((t) => t.ref),
         chains: state.chains,
+        settings: buildComplexSettingsPayload(),
       };
 
       if (!state.editingId) {
@@ -9558,6 +9613,8 @@
       // Load tasks
 
       const tasksByRef = new Map(state.catalog.map(t => [t.ref, t]));
+      state.complexSettings = (complex?.settings && typeof complex.settings === 'object') ? { ...complex.settings } : {};
+      const testDisplayModes = complex?.settings?.test_question_display_modes || {};
 
       state.selectedTasks = (complex.tasks || []).map(ref => {
 
@@ -9573,7 +9630,9 @@
 
           module_name: catItem?.module_name || null,
 
-          task_type: catItem?.task_type || catItem?.taskType || null
+          task_type: catItem?.task_type || catItem?.taskType || null,
+
+          testQuestionDisplayMode: testDisplayModes?.[ref] === 'scattered' ? 'scattered' : 'together'
 
         };
 

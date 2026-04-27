@@ -999,7 +999,10 @@ class AdaptiveSessionManager:
             "is_retry": queued_task.is_retry,
             "index": session.current_task_index - 1,  # Уже увеличили, возвращаем предыдущий
             "total": len(session.queue),
-            "iteration": session.iteration
+            "iteration": session.iteration,
+            "display_mode": getattr(queued_task, "display_mode", None),
+            "source_task_ref": getattr(queued_task, "source_task_ref", None),
+            "test_question_index": getattr(queued_task, "test_question_index", None),
         }
     
     def submit_result(self, session_id: str, result_data: Dict[str, Any]) -> SessionTaskResult:
@@ -1133,7 +1136,25 @@ class AdaptiveSessionManager:
                 f"[submit_result] Задание {task_ref} будет добавлено в очередь ретраев: "
                 f"success={success}, task_type={task_type}, failed_subtests_count={len(failed_subtests)}"
             )
-            self._add_failed_task_to_current_queue(session, task_ref, difficulty)
+            retry_failed_indices: List[int] = []
+            retry_display_mode = str(details.get("test_display_mode") or "").strip().lower()
+            if task_type == "test" and retry_display_mode == "scattered" and isinstance(failed_subtests, list):
+                for failed_item in failed_subtests:
+                    if not isinstance(failed_item, dict):
+                        continue
+                    try:
+                        idx = int(failed_item.get("index"))
+                    except Exception:
+                        continue
+                    if idx >= 0 and idx not in retry_failed_indices:
+                        retry_failed_indices.append(idx)
+            self._add_failed_task_to_current_queue(
+                session,
+                task_ref,
+                difficulty,
+                failed_question_indices=retry_failed_indices or None,
+                display_mode=retry_display_mode or None,
+            )
 
         # Логика сохранения failed_subtests перенесена в _process_test_partial_retry
         # и выполняется ДО принятия решения о ретрае.
@@ -1314,7 +1335,14 @@ class AdaptiveSessionManager:
             
         return success
 
-    def _add_failed_task_to_current_queue(self, session: ComplexSession, task_ref: str, difficulty: int) -> None:
+    def _add_failed_task_to_current_queue(
+        self,
+        session: ComplexSession,
+        task_ref: str,
+        difficulty: int,
+        failed_question_indices: Optional[List[int]] = None,
+        display_mode: Optional[str] = None,
+    ) -> None:
         """
         Добавляет ошибочное задание в текущую очередь итерации для повторного выполнения (Smart Retry).
         
@@ -1415,6 +1443,34 @@ class AdaptiveSessionManager:
             remaining_copies = max(0, max_copies - current_copies)
 
         task_type = self._get_task_type(task_ref)
+        scattered_retry_indices: List[int] = []
+        if task_type == "test" and str(display_mode or "").strip().lower() == "scattered":
+            for value in failed_question_indices or []:
+                try:
+                    idx = int(value)
+                except Exception:
+                    continue
+                if idx >= 0 and idx not in scattered_retry_indices:
+                    scattered_retry_indices.append(idx)
+
+        def _make_retry_task(level: int, question_index: Optional[int] = None) -> QueuedTask:
+            kwargs: Dict[str, Any] = {
+                "task_ref": task_ref,
+                "difficulty": level,
+                "is_retry": True,
+                "origin_iteration": session.iteration,
+            }
+            if question_index is not None:
+                kwargs.update(
+                    {
+                        "display_mode": "scattered",
+                        "source_task_ref": task_ref,
+                        "test_question_index": question_index,
+                    }
+                )
+            return QueuedTask(**kwargs)
+
+        retry_question_indices: List[Optional[int]] = scattered_retry_indices or [None]
         tasks_to_add = []
         
         if difficulty > 1 and training_control_enabled:
@@ -1460,6 +1516,20 @@ class AdaptiveSessionManager:
             })
 
         # Если лимит ограничивает количество новых копий за один вызов — обрезаем.
+        if scattered_retry_indices:
+            scattered_tasks_to_add = []
+            for question_index in retry_question_indices:
+                for item in tasks_to_add:
+                    base_task = item.get("task")
+                    level = getattr(base_task, "difficulty", difficulty)
+                    scattered_tasks_to_add.append(
+                        {
+                            "task": _make_retry_task(int(level), question_index),
+                            "position_type": item.get("position_type"),
+                        }
+                    )
+            tasks_to_add = scattered_tasks_to_add
+
         if remaining_copies is not None:
             tasks_to_add = tasks_to_add[:remaining_copies]
             if not tasks_to_add:
@@ -1572,6 +1642,96 @@ class AdaptiveSessionManager:
                 
         # Default fallback to Main phase
         return 1
+
+    def _task_refs_in_chains(self, chains: Optional[List[List[str]]]) -> set:
+        refs = set()
+        for chain in chains or []:
+            if not isinstance(chain, list):
+                continue
+            for task_ref in chain:
+                if isinstance(task_ref, str) and task_ref:
+                    refs.add(task_ref)
+        return refs
+
+    def _get_test_question_display_mode(self, complex_obj: Optional[Complex], task_ref: str) -> str:
+        if not complex_obj or task_ref in self._task_refs_in_chains(getattr(complex_obj, "chains", None)):
+            return "together"
+        settings = getattr(complex_obj, "settings", None)
+        modes = getattr(settings, "test_question_display_modes", None)
+        if not isinstance(modes, dict):
+            try:
+                modes = (settings.dict() if settings is not None and hasattr(settings, "dict") else {}).get(
+                    "test_question_display_modes"
+                )
+            except Exception:
+                modes = None
+        mode = str((modes or {}).get(task_ref) or "together").strip().lower()
+        return mode if mode in {"together", "scattered"} else "together"
+
+    def _get_test_question_count(self, task_ref: str) -> int:
+        module_id, topic_id, task_id = self._split_task_ref(task_ref)
+        if not module_id or not topic_id or not task_id or not self.storage_service:
+            return 0
+        try:
+            task_data_full = self.storage_service.load_task(module_id, topic_id, task_id)
+        except Exception:
+            logger.exception("[_get_test_question_count] Failed to load task %s", task_ref)
+            return 0
+        task_data = task_data_full.get("task_data") if isinstance(task_data_full, dict) else None
+        if not isinstance(task_data, dict):
+            return 0
+        content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+        questions = content.get("questions") if isinstance(content.get("questions"), list) else task_data.get("questions")
+        return len(questions) if isinstance(questions, list) else 0
+
+    def _build_queued_tasks_for_complex_task(
+        self,
+        complex_obj: Optional[Complex],
+        task_ref: str,
+        difficulty: int,
+        *,
+        is_retry: bool = False,
+        origin_iteration: Optional[int] = None,
+        question_indices: Optional[List[int]] = None,
+    ) -> List[QueuedTask]:
+        task_type = self._get_task_type(task_ref)
+        mode = self._get_test_question_display_mode(complex_obj, task_ref)
+        if task_type == "test" and mode == "scattered":
+            if question_indices is None:
+                question_count = self._get_test_question_count(task_ref)
+                indices = list(range(question_count))
+            else:
+                indices = []
+                for value in question_indices:
+                    try:
+                        idx = int(value)
+                    except Exception:
+                        continue
+                    if idx >= 0 and idx not in indices:
+                        indices.append(idx)
+            if indices:
+                return [
+                    QueuedTask(
+                        task_ref=task_ref,
+                        difficulty=difficulty,
+                        is_retry=is_retry,
+                        origin_iteration=origin_iteration,
+                        display_mode="scattered",
+                        source_task_ref=task_ref,
+                        test_question_index=idx,
+                    )
+                    for idx in indices
+                ]
+
+        return [
+            QueuedTask(
+                task_ref=task_ref,
+                difficulty=difficulty,
+                is_retry=is_retry,
+                origin_iteration=origin_iteration,
+                display_mode="together" if task_type == "test" else None,
+            )
+        ]
 
     def _group_tasks_into_chunks(self, tasks: List[QueuedTask], chains: List[List[str]]) -> List[List[QueuedTask]]:
         """
@@ -1879,7 +2039,15 @@ class AdaptiveSessionManager:
                 is_retry=False,
                 origin_iteration=None,  # Начальная очередь не имеет origin_iteration в контексте повторов
             )
-            queue.append(queued_task)
+            queue.extend(
+                self._build_queued_tasks_for_complex_task(
+                    complex_obj,
+                    task_ref,
+                    difficulty,
+                    is_retry=False,
+                    origin_iteration=None,
+                )
+            )
 
             # Предварительно загружаем метаданные для кэша
             self._get_task_type(task_ref)
@@ -2059,9 +2227,38 @@ class AdaptiveSessionManager:
             )
         
         # Собираем последние результаты текущей итерации по каждому заданию
-        last_result_by_task: Dict[str, SessionTaskResult] = {}
+        results_by_task: Dict[str, List[SessionTaskResult]] = {}
         for result in current_iteration_results:
-            last_result_by_task[result.task_ref] = result
+            results_by_task.setdefault(result.task_ref, []).append(result)
+
+        last_result_by_task: Dict[str, SessionTaskResult] = {}
+        for task_ref_key, task_results in results_by_task.items():
+            scattered_results = [
+                result
+                for result in task_results
+                if isinstance(getattr(result, "details", None), dict)
+                and result.details.get("test_display_mode") == "scattered"
+            ]
+            if scattered_results:
+                all_success = all(bool(result.success) for result in scattered_results)
+                latest_result = scattered_results[-1]
+                score_values = [
+                    float(result.score)
+                    for result in scattered_results
+                    if isinstance(result.score, (int, float))
+                ]
+                last_result_by_task[task_ref_key] = SessionTaskResult(
+                    task_ref=task_ref_key,
+                    success=all_success,
+                    score=(sum(score_values) / len(score_values)) if score_values else latest_result.score,
+                    time_spent=sum(int(getattr(result, "time_spent", 0) or 0) for result in scattered_results),
+                    difficulty=latest_result.difficulty,
+                    iteration_index=latest_result.iteration_index,
+                    timestamp=latest_result.timestamp,
+                    details=dict(latest_result.details or {}),
+                )
+            else:
+                last_result_by_task[task_ref_key] = task_results[-1]
         
         new_queue = []
         successful_count = 0
@@ -2202,12 +2399,15 @@ class AdaptiveSessionManager:
                         upcoming_iteration,
                     )
                     continue
-                new_queue.append(QueuedTask(
-                    task_ref=task_ref,
-                    difficulty=target_difficulty,
-                    is_retry=False,
-                    origin_iteration=None
-                ))
+                new_queue.extend(
+                    self._build_queued_tasks_for_complex_task(
+                        complex_obj,
+                        task_ref,
+                        target_difficulty,
+                        is_retry=False,
+                        origin_iteration=None,
+                    )
+                )
                 logger.info(
                     f"[_generate_next_iteration] Повторно добавлено задание {task_ref} "
                     f"для плановой итерации {upcoming_iteration}: "
@@ -2216,12 +2416,15 @@ class AdaptiveSessionManager:
                 )
             elif not task_completed_at_max:
                 # Добавляем задание в новую очередь
-                new_queue.append(QueuedTask(
-                    task_ref=task_ref,
-                    difficulty=new_difficulty,
-                    is_retry=False,
-                    origin_iteration=None
-                ))
+                new_queue.extend(
+                    self._build_queued_tasks_for_complex_task(
+                        complex_obj,
+                        task_ref,
+                        new_difficulty,
+                        is_retry=False,
+                        origin_iteration=None,
+                    )
+                )
                 logger.info(
                     f"[_generate_next_iteration] Добавлено задание {task_ref}: "
                     f"{'success' if success_in_iteration else 'fail/absent'}, "

@@ -9,6 +9,7 @@ Notification Service - Система уведомлений и рекоменд
 """
 
 import logging
+import re
 from datetime import datetime, date
 from typing import List, Optional, Dict, Any
 
@@ -21,6 +22,18 @@ from .models import (
     ComplexStatus,
 )
 from .health_score_service import HealthScoreService
+
+_RAW_ID_RE = re.compile(
+    r"^(?:[0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    re.IGNORECASE,
+)
+
+
+def _safe_complex_display_name(value: Any, fallback: str = "Комплекс") -> str:
+    text = str(value or "").strip()
+    if not text or _RAW_ID_RE.match(text):
+        return fallback
+    return text
 
 
 class NotificationService:
@@ -130,7 +143,10 @@ class NotificationService:
                 continue
             
             if progress.health_score < self.HEALTH_DROP_THRESHOLD:
-                complex_name = complex_names.get(progress.complex_id, progress.complex_id)
+                complex_name = _safe_complex_display_name(
+                    complex_names.get(progress.complex_id),
+                    f"Комплекс {len(notifications) + 1}",
+                )
                 health_percent = int(progress.health_score * 100)
                 recovery_minutes = self.health_service.estimate_recovery_time(
                     progress.health_score

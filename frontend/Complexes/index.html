@@ -1059,29 +1059,17 @@
   <link href="/assets/fonts.css" rel="stylesheet" />
   <link href="/assets/lightB-variables.css" rel="stylesheet" />
   <link href="/assets/lightB-components.css" rel="stylesheet" />
+  <link href="/assets/global-header.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
 </head>
 
 <body class="bg-bg-main font-display text-text-main antialiased selection:bg-primary-light selection:text-primary">
+  <div data-global-header data-app-section="complexes"></div>
   <div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
     <div class="layout-container flex h-full grow flex-col">
       <div class="flex flex-1 justify-center px-4 py-4 sm:px-6 sm:py-5 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
         <div class="layout-content-container cx-page-shell flex flex-col flex-1 cx-page-enter">
-          <div class="cx-breadcrumb-row flex flex-wrap px-4 pb-4">
-            <div class="cx-breadcrumb-main flex min-w-0 items-center gap-3">
-              <button id="back-button"
-                class="icon-button-muted"
-                title="Назад на главную">
-                <span class="material-symbols-outlined text-text-secondary">arrow_back</span>
-              </button>
-              <div class="flex min-w-0 flex-wrap gap-2">
-                <a id="breadcrumb-home"
-                  class="text-text-secondary text-base font-medium leading-normal hover:text-primary cursor-pointer transition-colors">Главное
-                  меню</a>
-                <span class="text-text-secondary text-base font-medium leading-normal">/</span>
-                <span class="text-text-main text-base font-medium leading-normal">Комплексы заданий</span>
-              </div>
-            </div>
+          <div class="cx-breadcrumb-row flex flex-wrap justify-end px-4 pb-4">
             <div id="complex-library-limit-badge" class="cx-breadcrumb-limit" hidden aria-live="polite"></div>
           </div>
           <div class="flex flex-wrap justify-between items-center gap-4 p-4 mb-4">
@@ -1098,16 +1086,6 @@
                 class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium">
                 <span class="material-symbols-outlined text-lg">upload_file</span>
                 <span class="truncate">Импорт</span>
-              </button>
-              <button id="open-theory-center"
-                class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium">
-                <span class="material-symbols-outlined text-lg">hub</span>
-                <span class="truncate">Центр теории</span>
-              </button>
-              <button id="open-catalog"
-                class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium">
-                <span class="material-symbols-outlined text-lg">travel_explore</span>
-                <span class="truncate">&#1050;&#1072;&#1090;&#1072;&#1083;&#1086;&#1075;</span>
               </button>
               <button id="add-complex-by-code"
                 class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium"
@@ -4831,6 +4809,8 @@
         </script>
 
         <script src="../assets/NotificationUI.js"></script>
+<script src="../assets/SharedProfileModal.js"></script>
+<script src="../assets/GlobalHeader.js"></script>
 <script src="../assets/ThemeSwitcherUI.js"></script>
 <script src="../assets/ConnectionMonitor.js"></script>
 </body>

@@ -11,6 +11,7 @@
   <link href="/assets/fonts.css" rel="stylesheet" />
   <link href="/assets/lightB-variables.css" rel="stylesheet" />
   <link href="/assets/lightB-components.css" rel="stylesheet" />
+  <link href="/assets/global-header.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
 
   <style>
@@ -1668,6 +1669,7 @@
 
 </head>
 <body class="text-text-main">
+  <div data-global-header data-app-section="catalog"></div>
   <div class="catalog-shell">
     <section class="catalog-header">
       <div class="catalog-header-main space-y-3">
@@ -1681,24 +1683,7 @@
         Ищите готовые публикации, быстро оценивайте их пользу по описанию и количеству заданий,
         а затем добавляйте в свою библиотеку только те материалы, которые действительно подходят под ваш текущий фокус обучения.
       </p>
-      <div class="catalog-header__actions">
-        <a class="catalog-nav-btn" href="/ui/main" title="На главную">
-          <span class="material-symbols-outlined">home</span>
-        </a>
-        <a class="catalog-nav-btn" href="/ui/complexes">
-          <span class="material-symbols-outlined">inventory_2</span>
-          Комплексы
-        </a>
-        <a class="catalog-nav-btn" href="/ui/theory-center">
-          <span class="material-symbols-outlined">menu_book</span>
-          Центр теории
-        </a>
-        <a class="catalog-nav-btn catalog-nav-btn--primary" href="/ui/editor">
-          <span class="material-symbols-outlined">design_services</span>
-          Редактор
-        </a>
-      </div>
-    </section>
+</section>
 
     <section class="catalog-hero">
       <div class="catalog-hero__inner">
@@ -1759,6 +1744,8 @@
 
   <script src="../assets/AppConfig.js"></script>
   <script src="../assets/NotificationUI.js"></script>
+  <script src="../assets/SharedProfileModal.js"></script>
+  <script src="../assets/GlobalHeader.js"></script>
   <script src="/ui/catalog/catalog.js"></script>
 </body>
 </html>

@@ -298,6 +298,8 @@
       userItems,
       referenceItems,
       note,
+      kind: compactText(source.kind || source.type, 48),
+      status: compactText(source.status, 32),
     };
   }
 
@@ -459,7 +461,7 @@
           ? review.entries.filter(hasNormalizedReviewContent)
           : [];
 
-      if (entries.length) {
+      if (entries.length && review.kind !== "full_test") {
         entries.forEach(function (entry, entryIndex) {
           expanded.push({
             ...task,
@@ -474,6 +476,38 @@
     });
 
     return expanded.filter(hasReviewData);
+  }
+
+  function appendInlineReviewContent(target, review) {
+    if (!target || !review) return;
+
+    const question = document.createElement("p");
+    question.className = "s2-review-question";
+    question.textContent = review.prompt || review.title || "";
+    target.appendChild(question);
+
+    if (review.note) {
+      const note = document.createElement("p");
+      note.className = "s2-review-note";
+      note.textContent = review.note;
+      target.appendChild(note);
+    }
+
+    appendReviewAnswerContent(
+      target,
+      review.userLabel || "Твоё решение",
+      Array.isArray(review.userLines) ? review.userLines : [],
+      Array.isArray(review.userItems) ? review.userItems : [],
+      review.status === "correct" ? "s2-review-answer--success" : "s2-review-answer--error"
+    );
+
+    appendReviewAnswerContent(
+      target,
+      review.referenceLabel || "Референс",
+      Array.isArray(review.referenceLines) ? review.referenceLines : [],
+      Array.isArray(review.referenceItems) ? review.referenceItems : [],
+      "s2-review-answer--success"
+    );
   }
 
   function extractLegacyFailedTaskNames(data) {
@@ -1297,6 +1331,20 @@
       title.className = "s2-dialog-item-title";
       title.textContent = task.review && task.review.title ? task.review.title : task.name;
       card.appendChild(title);
+
+      const fullTestEntries = task.review && task.review.kind === "full_test" && Array.isArray(task.review.entries)
+        ? task.review.entries.filter(hasNormalizedReviewContent)
+        : [];
+      if (fullTestEntries.length) {
+        fullTestEntries.forEach(function (entry) {
+          const section = document.createElement("section");
+          section.className = "s2-review-full-test-entry";
+          appendInlineReviewContent(section, entry);
+          card.appendChild(section);
+        });
+        container.appendChild(card);
+        return;
+      }
 
       const question = document.createElement("p");
       question.className = "s2-review-question";

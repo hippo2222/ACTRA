@@ -16,7 +16,7 @@ from services.adaptive_session_manager import AdaptiveSessionManager
 from services.difficulty_manager import DifficultyManager
 from services.complex_service import ComplexService
 from services.user_progress_manager import UserProgressManager
-from task_system.core.models.complex_models import ComplexSession, SessionTaskResult, QueuedTask
+from task_system.core.models.complex_models import Complex, ComplexSession, SessionTaskResult, QueuedTask
 
 # Config for testing
 TEST_CONFIG = {
@@ -228,6 +228,87 @@ class TestSmartRetry(unittest.TestCase):
         
         self.assertTrue(returned_success)
         self.assertEqual(result.details["failed_subtests"], [])
+
+    def test_scattered_test_queue_expands_to_one_slot_per_question(self):
+        task_ref = "module_01/topic_01/test_001"
+        self.manager._get_task_type = MagicMock(return_value="test")
+        self.manager.storage_service = MagicMock()
+        self.manager.storage_service.load_task.return_value = {
+            "task_data": {
+                "type": "test",
+                "content": {
+                    "questions": [
+                        {"id": "q1", "answers": []},
+                        {"id": "q2", "answers": []},
+                        {"id": "q3", "answers": []},
+                    ]
+                },
+            }
+        }
+        complex_obj = Complex(
+            id="c1",
+            name="Complex",
+            tasks=[task_ref],
+            settings={"test_question_display_modes": {task_ref: "scattered"}},
+        )
+
+        queued = self.manager._build_queued_tasks_for_complex_task(
+            complex_obj,
+            task_ref,
+            difficulty=1,
+        )
+
+        self.assertEqual(len(queued), 3)
+        self.assertEqual([task.test_question_index for task in queued], [0, 1, 2])
+        self.assertTrue(all(task.display_mode == "scattered" for task in queued))
+        self.assertTrue(all(task.source_task_ref == task_ref for task in queued))
+
+    def test_scattered_test_mode_is_forced_together_inside_chain(self):
+        task_ref = "module_01/topic_01/test_001"
+        self.manager._get_task_type = MagicMock(return_value="test")
+        complex_obj = Complex(
+            id="c1",
+            name="Complex",
+            tasks=[task_ref, "module_01/topic_01/task_002"],
+            chains=[[task_ref, "module_01/topic_01/task_002"]],
+            settings={"test_question_display_modes": {task_ref: "scattered"}},
+        )
+
+        queued = self.manager._build_queued_tasks_for_complex_task(
+            complex_obj,
+            task_ref,
+            difficulty=1,
+        )
+
+        self.assertEqual(len(queued), 1)
+        self.assertEqual(queued[0].display_mode, "together")
+        self.assertIsNone(queued[0].test_question_index)
+
+    def test_scattered_test_retry_adds_only_failed_questions(self):
+        task_ref = "module_01/topic_01/test_001"
+        self.difficulty_manager.get_smart_retry_config.return_value = {
+            "near_offset": 1,
+            "near_jitter_max": 0,
+            "max_copies": 10,
+            "training_control_enabled": True,
+        }
+        self.manager._get_task_type = MagicMock(return_value="test")
+        self.manager._get_task_phase = MagicMock(return_value=1)
+        self.session.queue = [QueuedTask(task_ref="other", difficulty=1)]
+        self.session.current_task_index = 0
+
+        self.manager._add_failed_task_to_current_queue(
+            self.session,
+            task_ref,
+            difficulty=2,
+            failed_question_indices=[1, 3],
+            display_mode="scattered",
+        )
+
+        retry_slots = [task for task in self.session.queue if task.task_ref == task_ref]
+        self.assertEqual(len(retry_slots), 4)
+        self.assertEqual(sorted({task.test_question_index for task in retry_slots}), [1, 3])
+        self.assertTrue(all(task.display_mode == "scattered" for task in retry_slots))
 
 if __name__ == '__main__':
     unittest.main()

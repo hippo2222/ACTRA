@@ -121,7 +121,7 @@
 
     .s1-progress-cluster {
       flex: 1 1 360px;
-      min-width: 250px;
+      min-width: min(250px, 100%);
       max-width: none;
       padding: 0.45rem 0.65rem;
       border-radius: 0.8rem;
@@ -137,12 +137,6 @@
 
     #check-answer-btn .truncate {
       white-space: nowrap;
-    }
-
-    .s1-toolbar[data-force-submit-active="true"] #check-answer-btn {
-      min-width: 204px;
-      padding-left: 1.1rem;
-      padding-right: 1.1rem;
     }
 
     @media (min-width: 1024px) {
@@ -168,7 +162,7 @@
       .s1-progress-cluster {
         justify-self: stretch;
         width: auto;
-        min-width: 320px;
+        min-width: min(320px, 100%);
         max-width: none;
       }
 
@@ -177,7 +171,7 @@
       }
 
       .s1-toolbar[data-force-submit-active="true"] .s1-progress-cluster {
-        min-width: 272px;
+        min-width: min(272px, 100%);
         flex-basis: 312px;
       }
     }
@@ -339,6 +333,14 @@
   <link href="/assets/lightB-variables.css" rel="stylesheet" />
   <link href="/assets/lightB-components.css" rel="stylesheet" />
   <link href="/assets/animations.css" rel="stylesheet" />
+  <style>
+    .s1-toolbar[data-force-submit-active="true"] #check-answer-btn {
+      width: 204px;
+      min-width: 204px;
+      padding-left: 1.1rem;
+      padding-right: 1.1rem;
+    }
+  </style>
 </head>
 
 <body class="font-display bg-bg-main text-text-main antialiased selection:bg-primary-light selection:text-primary">

@@ -206,6 +206,11 @@
             padding: var(--main-card-padding);
         }
 
+        .main-widget-badge {
+            background: var(--color-surface-1) !important;
+            border-color: var(--color-border-strong) !important;
+        }
+
         .main-dashboard-content {
             padding: var(--main-gap) clamp(0.75rem, 1.6vw, 1.5rem);
             flex: 1 1 auto;
@@ -216,7 +221,7 @@
 
         .main-dashboard-shell {
             width: 100%;
-            max-width: 1280px;
+            max-width: 1480px;
             height: auto;
             min-height: 0;
             display: flex;
@@ -226,7 +231,7 @@
 
         .main-dashboard-grid {
             display: grid;
-            grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+            grid-template-columns: minmax(0, 2.35fr) minmax(290px, 0.78fr);
             gap: var(--main-gap);
             align-items: stretch;
             align-content: start;
@@ -250,6 +255,246 @@
             gap: var(--main-gap);
             min-width: 0;
             min-height: 0;
+        }
+
+        .main-entry-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.9fr);
+            gap: var(--main-gap);
+            min-height: clamp(13.25rem, 23vh, 17.5rem);
+        }
+
+        .main-entry-card,
+        .main-editor-panel,
+        .main-editor-card {
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-1);
+            box-shadow: var(--main-shadow-soft) !important;
+        }
+
+        .main-entry-card {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 1.25rem;
+            min-width: 0;
+            min-height: 100%;
+            padding: clamp(1.1rem, 1.35vw, 1.55rem);
+            border-radius: var(--main-card-radius);
+            cursor: pointer;
+        }
+
+        .main-entry-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.76;
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 14%, transparent) 0%, transparent 42%),
+                radial-gradient(circle at top right, color-mix(in srgb, var(--color-info) 16%, transparent) 0%, transparent 42%);
+        }
+
+        .main-entry-card--catalog {
+            border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border-subtle));
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--color-surface-1) 84%, var(--color-primary) 16%) 0%, var(--color-surface-1) 70%),
+                var(--color-surface-1);
+        }
+
+        .main-entry-card--practice {
+            background:
+                linear-gradient(135deg, color-mix(in srgb, var(--color-surface-1) 88%, var(--color-info) 12%) 0%, var(--color-surface-1) 76%),
+                var(--color-surface-1);
+        }
+
+        .main-entry-card > * {
+            position: relative;
+            z-index: 1;
+        }
+
+        .main-entry-kicker,
+        .main-editor-kicker {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            gap: 0.35rem;
+            border-radius: 999px;
+            border: 1px solid var(--color-border-strong);
+            background: var(--color-surface-2);
+            color: var(--color-text-main);
+            padding: 0.32rem 0.64rem;
+            font-size: 0.72rem;
+            font-weight: 800;
+            line-height: 1;
+            text-transform: uppercase;
+        }
+
+        .main-entry-title {
+            margin: 0;
+            color: var(--color-text-main);
+            font-size: clamp(1.35rem, 1.45vw, 2rem);
+            font-weight: 900;
+            line-height: 1.05;
+        }
+
+        .main-entry-card--catalog .main-entry-title {
+            font-size: clamp(1.65rem, 1.8vw, 2.35rem);
+        }
+
+        .main-entry-description,
+        .main-editor-description {
+            margin: 0;
+            color: var(--color-text-secondary);
+            font-size: 0.92rem;
+            line-height: 1.5;
+            max-width: 42rem;
+        }
+
+        .main-entry-footer,
+        .main-editor-card-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            min-width: 0;
+        }
+
+        .main-entry-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 3.15rem;
+            height: 3.15rem;
+            flex: 0 0 auto;
+            border-radius: 999px;
+            border: 1px solid var(--color-border-strong);
+            background: var(--color-primary);
+            color: var(--color-primary-fg);
+            box-shadow: var(--shadow-md);
+        }
+
+        .main-entry-card--practice .main-entry-action {
+            background: var(--color-component-button-muted-bg);
+            color: var(--color-text-main);
+            border-color: var(--color-border-subtle);
+        }
+
+        .main-editor-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            padding: var(--main-card-padding);
+            border-radius: var(--main-card-radius);
+        }
+
+        .main-section-heading {
+            display: flex;
+            align-items: end;
+            justify-content: space-between;
+            gap: 1rem;
+            min-width: 0;
+        }
+
+        .main-section-title {
+            margin: 0;
+            color: var(--color-text-main);
+            font-size: 1.02rem;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .main-editor-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.72rem;
+        }
+
+        .main-editor-card {
+            display: flex;
+            min-width: 0;
+            min-height: 7.1rem;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 0.85rem;
+            border-radius: var(--main-card-radius-sm);
+            padding: 0.9rem;
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .main-editor-card[data-disabled="true"] {
+            cursor: not-allowed;
+            background: var(--color-surface-2);
+        }
+
+        .main-editor-card[data-disabled="true"] .text-text-muted,
+        .main-editor-card[data-disabled="true"] .text-text-secondary {
+            color: var(--color-text-main) !important;
+        }
+
+        .main-editor-icon {
+            display: inline-flex;
+            width: 2.35rem;
+            height: 2.35rem;
+            flex: 0 0 auto;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--color-border-strong);
+            border-radius: 0.8rem;
+            background: var(--color-surface-2);
+            color: var(--color-primary);
+            line-height: 1;
+        }
+
+        .main-editor-icon .material-symbols-outlined {
+            display: block;
+            font-size: 1.32rem !important;
+            line-height: 1 !important;
+            font-variation-settings: 'FILL' 0, 'wght' 450, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .main-microcards-actions {
+            display: grid;
+        }
+
+        #microcardsDueBadge[hidden],
+        .main-quick-access-empty[hidden] {
+            display: none !important;
+        }
+
+        #microcardsCard {
+            padding: 0.7rem;
+        }
+
+        #microcardsDisabledState:not(.hidden) {
+            display: grid !important;
+            flex: 0 0 auto !important;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: center;
+            justify-content: start;
+            gap: 0.75rem;
+            padding: 0.55rem 0.25rem 0.45rem;
+            text-align: left;
+        }
+
+        #microcardsDisabledState .material-symbols-outlined {
+            font-size: 1.35rem !important;
+        }
+
+        #microcardsDisabledState .main-widget-empty-copy {
+            max-width: none;
+            margin-top: 0.1rem;
+        }
+
+        #microcardsDisabledState .main-widget-inline-copy {
+            min-width: 0;
+        }
+
+        #microcardsDisabledState:not(.hidden) ~ .main-microcards-actions {
+            display: none !important;
         }
 
         .main-secondary-column {
@@ -375,7 +620,7 @@
             min-height: 0;
             display: flex;
             flex-direction: column;
-            gap: 0.55rem;
+            gap: 0.42rem;
         }
 
         .main-quick-access-header {
@@ -454,8 +699,9 @@
             max-width: 100%;
             min-width: 0;
             min-height: 0;
-            overflow: hidden;
-            border-radius: 1.15rem;
+            max-height: 12rem;
+            overflow: auto;
+            border-radius: 0.9rem;
             border: 1px solid var(--color-main-quick-access-list-border);
             background:
                 radial-gradient(circle at top right, var(--color-main-quick-access-list-glow) 0%, transparent 42%),
@@ -475,9 +721,9 @@
             min-width: 0;
             display: flex;
             align-items: center;
-            gap: 1rem;
-            padding: 1.15rem 1.2rem;
-            border-radius: 1.15rem;
+            gap: 0.75rem;
+            padding: 0.72rem 0.8rem;
+            border-radius: 0.9rem;
             border: 1px dashed var(--color-main-quick-access-list-border);
             background:
                 radial-gradient(circle at top right, var(--color-main-quick-access-list-glow) 0%, transparent 42%),
@@ -488,13 +734,13 @@
         }
 
         .main-quick-access-empty-icon {
-            width: 3.25rem;
-            height: 3.25rem;
+            width: 2.25rem;
+            height: 2.25rem;
             flex: 0 0 auto;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            border-radius: 1rem;
+            border-radius: 0.72rem;
             background: var(--color-main-quick-access-heading-icon-bg);
             color: var(--color-main-quick-access-heading-icon-fg);
             border: 1px solid var(--color-main-quick-access-heading-icon-border);
@@ -502,7 +748,7 @@
         }
 
         .main-quick-access-empty-icon .material-symbols-outlined {
-            font-size: 1.55rem;
+            font-size: 1.15rem;
         }
 
         .main-quick-access-empty-copy {
@@ -514,7 +760,7 @@
 
         .main-quick-access-empty-kicker {
             margin: 0;
-            font-size: 0.68rem;
+            font-size: 0.62rem;
             font-weight: 800;
             letter-spacing: 0.12em;
             text-transform: uppercase;
@@ -523,7 +769,7 @@
 
         .main-quick-access-empty-title {
             margin: 0;
-            font-size: 1rem;
+            font-size: 0.9rem;
             font-weight: 800;
             line-height: 1.25;
             color: var(--color-text-main);
@@ -532,16 +778,21 @@
         .main-quick-access-empty-description {
             margin: 0;
             max-width: 34rem;
-            font-size: 0.82rem;
-            line-height: 1.55;
+            font-size: 0.74rem;
+            line-height: 1.4;
             color: var(--color-main-quick-access-description);
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .main-quick-access-empty-actions {
             display: flex;
             flex-wrap: wrap;
-            gap: 0.65rem;
-            margin-top: 0.45rem;
+            gap: 0.5rem;
+            margin-top: 0.25rem;
         }
 
         .main-quick-access-grid {
@@ -550,8 +801,8 @@
             max-width: 100%;
             min-width: 0;
             grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr));
-            gap: 0.72rem;
-            padding: 0.75rem;
+            gap: 0.5rem;
+            padding: 0.55rem;
             min-height: 0;
             align-content: start;
         }
@@ -564,9 +815,12 @@
             gap: 0.95rem;
             padding: 0.95rem 1rem 0.9rem;
             border-radius: 1rem;
-            border: 1px solid rgba(148, 163, 184, 0.42);
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.98) 0%, rgba(248, 250, 252, 0.96) 100%);
-            box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+            border: 1px solid var(--color-border-subtle);
+            background:
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--color-surface-1) 94%, var(--color-primary) 6%) 0%,
+                    color-mix(in srgb, var(--color-surface-1) 84%, var(--color-surface-2) 16%) 100%);
+            box-shadow: none;
             cursor: pointer;
             overflow: hidden;
             isolation: isolate;
@@ -578,8 +832,8 @@
 
         .main-quick-access-card:hover {
             transform: translateY(-2px);
-            border-color: rgba(99, 102, 241, 0.34);
-            box-shadow: 0 16px 30px rgba(15, 23, 42, 0.12);
+            border-color: color-mix(in srgb, var(--color-primary) 48%, var(--color-border-strong) 52%);
+            box-shadow: var(--main-shadow-soft) !important;
         }
 
         .main-quick-access-card:focus-visible {
@@ -588,15 +842,15 @@
         }
 
         .main-quick-access-card[data-tone="paused"] {
-            border-color: rgba(148, 163, 184, 0.42);
+            border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border-subtle) 66%);
         }
 
         .main-quick-access-card[data-tone="critical"] {
-            border-color: rgba(148, 163, 184, 0.42);
+            border-color: color-mix(in srgb, var(--color-status-error, var(--color-warning)) 40%, var(--color-border-subtle) 60%);
         }
 
         .main-quick-access-card[data-tone="mastered"] {
-            border-color: rgba(148, 163, 184, 0.42);
+            border-color: color-mix(in srgb, var(--color-success) 38%, var(--color-border-subtle) 62%);
         }
 
         .main-quick-access-accent {
@@ -621,9 +875,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(226, 232, 240, 0.78);
-            border: 1px solid rgba(148, 163, 184, 0.36);
+            background: var(--color-surface-2);
+            border: 1px solid var(--color-border-strong);
             box-shadow: none;
+            color: var(--color-text-main);
         }
 
         .main-quick-access-body {
@@ -852,6 +1107,8 @@
         }
 
         .main-quick-access-grid.main-quick-access-grid--rail {
+            display: flex;
+            align-items: stretch;
             grid-auto-flow: column;
             grid-auto-columns: minmax(17.5rem, calc(50% - 0.45rem));
             grid-template-columns: none;
@@ -859,14 +1116,25 @@
             overflow-y: visible;
             overscroll-behavior-x: contain;
             scroll-snap-type: x proximity;
-            scrollbar-width: none;
+            scrollbar-width: thin;
+            scrollbar-color: color-mix(in srgb, var(--color-primary) 52%, var(--color-border-strong) 48%) transparent;
         }
 
         .main-quick-access-grid.main-quick-access-grid--rail::-webkit-scrollbar {
-            display: none;
+            height: 6px;
+        }
+
+        .main-quick-access-grid.main-quick-access-grid--rail::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .main-quick-access-grid.main-quick-access-grid--rail::-webkit-scrollbar-thumb {
+            background: color-mix(in srgb, var(--color-primary) 52%, var(--color-border-strong) 48%);
+            border-radius: 999px;
         }
 
         .main-quick-access-grid.main-quick-access-grid--rail .main-quick-access-card {
+            flex: 0 0 min(100%, 24rem);
             scroll-snap-align: start;
         }
 
@@ -981,6 +1249,10 @@
             padding: 0.45rem 0.55rem;
         }
 
+        #statsContent .main-stats-row {
+            min-height: 2.55rem;
+        }
+
         .main-widget-footer-link {
             font-size: 0.72rem;
         }
@@ -1043,12 +1315,12 @@
         }
 
         #statsContent {
-            overflow: hidden;
+            overflow: visible;
             display: flex;
             flex-direction: column;
             flex: 1 1 auto;
-            gap: 0.375rem;
-            min-height: 12rem;
+            gap: 0.34rem;
+            min-height: 0;
         }
 
         #statsSkeleton {
@@ -1058,6 +1330,8 @@
         #statsContent.stats-content--empty,
         #statsContent.stats-content--error {
             justify-content: center;
+            min-height: 12rem;
+            overflow: hidden;
         }
 
         #statsContent.stats-content--empty .main-stats-row,
@@ -1164,6 +1438,10 @@
         }
 
         .main-health-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.55rem;
             padding: 0.5rem 0.625rem;
             background: var(--color-main-health-row-bg);
             border: 1px solid var(--color-main-health-row-border);
@@ -1227,6 +1505,11 @@
             .main-dashboard-grid {
                 grid-template-columns: minmax(0, 1fr);
                 height: auto;
+            }
+
+            .main-entry-grid,
+            .main-editor-grid {
+                grid-template-columns: minmax(0, 1fr);
             }
 
             .main-primary-column,
@@ -1300,6 +1583,15 @@
         }
 
         @media (max-width: 640px) {
+            .main-entry-grid {
+                min-height: 0;
+            }
+
+            .main-section-heading {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
             .main-quick-access-heading {
                 gap: 0.7rem;
             }
@@ -1367,13 +1659,59 @@
             flex: 1 1 auto;
             display: -webkit-box;
             overflow: hidden;
-            -webkit-line-clamp: 2;
-            line-clamp: 2;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
             -webkit-box-orient: vertical;
             overflow-wrap: anywhere;
             color: var(--color-text-main);
             font-weight: 600;
             line-height: 1.25;
+        }
+
+        .main-health-extra {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.55rem;
+            height: 1.35rem;
+            padding: 0 0.4rem;
+            border-radius: 999px;
+            border: 1px solid color-mix(in srgb, var(--color-primary) 72%, var(--color-border-strong) 28%);
+            background: var(--color-primary);
+            color: var(--color-primary-fg);
+            font-size: 0.66rem;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        #calendarHealthList .main-health-row {
+            min-height: 1.6rem;
+            padding: 0.12rem 0.1rem;
+            border: 0;
+            border-radius: 0;
+            background: transparent;
+        }
+
+        #calendarHealthList .main-health-meta {
+            gap: 0.38rem;
+        }
+
+        #calendarHealthList .main-health-name {
+            color: var(--color-text-secondary);
+            font-size: 0.76rem;
+            font-weight: 750;
+        }
+
+        #calendarHealthList .main-health-extra {
+            min-width: 1.45rem;
+            height: 1.2rem;
+            padding: 0 0.34rem;
+            border-color: var(--color-border-subtle);
+            background: var(--color-surface-2);
+            color: var(--color-text-main);
+            font-size: 0.62rem;
+            font-weight: 850;
         }
 
         .main-quick-access-item {
@@ -1430,8 +1768,8 @@
             height: auto;
             aspect-ratio: 1 / 1;
             border-radius: 2px;
-            background-color: var(--color-heatmap-empty);
-            border: 1px solid var(--color-main-heatmap-cell-border);
+            background-color: color-mix(in srgb, var(--color-surface-2) 88%, var(--color-primary-light) 12%);
+            border: 1px solid color-mix(in srgb, var(--color-border-strong) 66%, var(--color-surface-1) 34%);
             transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
         }
 
@@ -1441,23 +1779,23 @@
         }
 
         .main-heatmap-cell[data-level="empty"] {
-            opacity: 0.58;
+            opacity: 1;
         }
 
         .main-heatmap-cell[data-level="low"] {
-            background-color: var(--color-heatmap-low);
+            background-color: color-mix(in srgb, var(--color-primary) 68%, var(--color-surface-1) 32%);
             opacity: 0.82;
             box-shadow: inset 0 0 0 1px var(--color-main-heatmap-low-outline);
         }
 
         .main-heatmap-cell[data-level="mid"] {
-            background-color: var(--color-heatmap-mid);
+            background-color: color-mix(in srgb, var(--color-primary) 58%, var(--color-surface-1) 42%);
             opacity: 0.94;
             box-shadow: inset 0 0 0 1px var(--color-main-heatmap-mid-outline);
         }
 
         .main-heatmap-cell[data-level="high"] {
-            background-color: var(--color-heatmap-high);
+            background-color: color-mix(in srgb, var(--color-primary) 72%, var(--color-info) 28%);
             opacity: 1;
             box-shadow: inset 0 0 0 1px var(--color-main-heatmap-high-outline);
         }
@@ -1505,12 +1843,12 @@
             width: 9px;
             height: 9px;
             border-radius: 999px;
-            border: 1px solid var(--color-main-heatmap-legend-swatch-border);
+            border: 1px solid color-mix(in srgb, var(--color-border-strong) 66%, var(--color-surface-1) 34%);
         }
 
         .main-heatmap-legend-swatch[data-level="empty"] {
-            background-color: var(--color-heatmap-empty);
-            opacity: 0.55;
+            background-color: color-mix(in srgb, var(--color-surface-2) 88%, var(--color-primary-light) 12%);
+            opacity: 1;
         }
 
         .main-heatmap-legend-swatch[data-level="low"] {
@@ -1527,6 +1865,476 @@
 
         .main-heatmap-legend-swatch[data-level="peak"] {
             background: var(--color-main-heatmap-peak);
+        }
+
+        .main-continuity-grid {
+            display: grid;
+            grid-template-columns: minmax(280px, 0.9fr) minmax(360px, 1.1fr);
+            gap: var(--main-gap);
+            align-items: stretch;
+            min-width: 0;
+        }
+
+        .main-continuity-card {
+            min-width: 0;
+            min-height: 7.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.55rem;
+            border-radius: var(--main-card-radius);
+            border: 1px solid var(--color-border-subtle);
+            background:
+                linear-gradient(180deg,
+                    var(--color-surface-1) 0%,
+                    color-mix(in srgb, var(--color-surface-1) 86%, var(--color-surface-2) 14%) 100%);
+            box-shadow: var(--main-shadow-soft) !important;
+            padding: clamp(0.68rem, 0.95vh, 0.86rem);
+        }
+
+        .main-continuity-card__head {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+        }
+
+        .main-continuity-titleline {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+
+        .main-continuity-icon {
+            width: 2.15rem;
+            height: 2.15rem;
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem;
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-2);
+            color: var(--color-primary);
+        }
+
+        .main-continuity-icon .material-symbols-outlined {
+            font-size: 1.12rem;
+            line-height: 1;
+        }
+
+        .main-continuity-copy {
+            min-width: 0;
+        }
+
+        .main-continuity-title {
+            margin: 0;
+            color: var(--color-text-main);
+            font-size: 0.94rem;
+            font-weight: 900;
+            line-height: 1.18;
+        }
+
+        .main-continuity-subtitle {
+            margin: 0.12rem 0 0;
+            color: var(--color-text-secondary);
+            font-size: 0.72rem;
+            line-height: 1.35;
+            display: -webkit-box;
+            overflow: hidden;
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+            -webkit-box-orient: vertical;
+        }
+
+        .main-continuity-body {
+            min-width: 0;
+            display: flex;
+            flex: 1 1 auto;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+
+        .main-continuity-card--microcards #microcardsLoadingState:not(.hidden) {
+            min-height: 2.9rem;
+            display: flex !important;
+            flex: 0 0 auto !important;
+            flex-direction: row !important;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.6rem;
+            padding: 0.35rem 0.1rem 0.2rem;
+            text-align: left;
+        }
+
+        .main-continuity-card--microcards #microcardsEmptyState:not(.hidden),
+        .main-continuity-card--microcards #microcardsDisabledState:not(.hidden) {
+            display: grid !important;
+            flex: 1 1 auto !important;
+            grid-template-columns: auto minmax(0, 1fr);
+            align-items: center;
+            justify-content: start;
+            gap: 0.65rem;
+            min-height: 3.6rem;
+            width: 100%;
+            padding: 0.52rem 0.62rem;
+            text-align: left;
+            border: 1px solid var(--color-border-subtle);
+            border-radius: 0.82rem;
+            background: color-mix(in srgb, var(--color-surface-1) 78%, var(--color-surface-2) 22%);
+        }
+
+        .main-continuity-card--microcards #microcardsEmptyState .material-symbols-outlined,
+        .main-continuity-card--microcards #microcardsDisabledState .material-symbols-outlined {
+            width: 2rem;
+            height: 2rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.68rem;
+            border: 1px solid var(--color-border-subtle);
+            background: var(--color-surface-2);
+            color: var(--color-text-secondary);
+            font-size: 1.08rem !important;
+            line-height: 1 !important;
+        }
+
+        .main-continuity-card--microcards #microcardsEmptyState p,
+        .main-continuity-card--microcards #microcardsDisabledState p {
+            margin: 0;
+        }
+
+        .main-continuity-card--microcards #microcardsContentState:not(.hidden) {
+            display: flex !important;
+        }
+
+        .main-continuity-card--microcards .main-microcards-actions {
+            margin-top: 0;
+            padding-top: 0.45rem;
+            border-top: 1px solid var(--color-border-subtle);
+            gap: 0.45rem;
+        }
+
+        .main-continuity-card--microcards #microcardsDisabledState:not(.hidden) ~ .main-microcards-actions {
+            display: none !important;
+        }
+
+        .main-continuity-card--quick {
+            gap: 0.48rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-header {
+            align-items: center;
+            gap: 0.55rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-heading {
+            align-items: center;
+            gap: 0.62rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-heading-icon {
+            width: 2.15rem;
+            height: 2.15rem;
+            border-radius: 0.75rem;
+            box-shadow: none;
+        }
+
+        .main-continuity-card--quick .main-quick-access-kicker {
+            font-size: 0.56rem;
+            letter-spacing: 0.11em;
+        }
+
+        .main-continuity-card--quick .main-quick-access-count {
+            min-width: 1.85rem;
+            height: 1.85rem;
+            padding: 0 0.52rem;
+            font-size: 0.7rem;
+            box-shadow: none;
+        }
+
+        .main-continuity-card--quick .main-quick-access-nav-btn {
+            width: 1.85rem;
+            height: 1.85rem;
+        }
+
+        .main-continuity-card--quick #quick-access-list {
+            max-height: 9rem;
+            border-radius: 0.82rem;
+            border-color: transparent;
+            background: transparent;
+            box-shadow: none !important;
+        }
+
+        .main-continuity-card--quick .main-quick-access-grid {
+            gap: 0.46rem;
+            padding: 0.16rem 0.05rem 0.22rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-grid.main-quick-access-grid--rail {
+            grid-auto-columns: minmax(0, 100%);
+            scroll-snap-type: x mandatory;
+        }
+
+        .main-continuity-card--quick .main-quick-access-grid.main-quick-access-grid--rail .main-quick-access-card {
+            flex-basis: 100%;
+        }
+
+        .main-continuity-card--quick .main-quick-access-card {
+            min-height: 7.35rem;
+            gap: 0.54rem;
+            padding: 0.7rem 0.78rem 0.64rem;
+            border-radius: 0.78rem;
+            border-color: transparent;
+            background:
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--color-surface-1) 88%, var(--color-primary) 12%) 0%,
+                    color-mix(in srgb, var(--color-surface-1) 76%, var(--color-surface-2) 24%) 100%);
+            box-shadow: none;
+        }
+
+        .main-continuity-card--quick .main-quick-access-card:hover {
+            border-color: transparent;
+            box-shadow: none !important;
+        }
+
+        .main-continuity-card--quick .main-quick-access-card-head {
+            gap: 0.52rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-media {
+            width: 2.15rem;
+            height: 2.15rem;
+            border-radius: 0.72rem;
+            border-color: transparent;
+        }
+
+        .main-continuity-card--quick .main-quick-access-body {
+            gap: 0.2rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-topline {
+            gap: 0.28rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-title {
+            -webkit-line-clamp: 1;
+            line-clamp: 1;
+        }
+
+        .main-continuity-card--quick .main-quick-access-description {
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+        }
+
+        .main-continuity-card--quick .main-quick-access-title {
+            font-size: 0.84rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-description {
+            font-size: 0.7rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-footer {
+            gap: 0.45rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-action {
+            height: 1.72rem;
+            padding: 0 0.58rem;
+            font-size: 0.66rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-progress-label {
+            font-size: 0.62rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-empty {
+            min-height: 3.6rem;
+            gap: 0.62rem;
+            padding: 0.52rem 0.62rem;
+            border-style: solid;
+            border-color: var(--color-border-subtle);
+            border-radius: 0.82rem;
+            background: color-mix(in srgb, var(--color-surface-1) 78%, var(--color-surface-2) 22%);
+            box-shadow: none;
+        }
+
+        .main-continuity-card--quick .main-quick-access-empty-icon {
+            width: 1.95rem;
+            height: 1.95rem;
+            border-radius: 0.66rem;
+            box-shadow: none;
+        }
+
+        .main-continuity-card--quick .main-quick-access-empty-copy {
+            gap: 0.16rem;
+        }
+
+        .main-continuity-card--quick .main-quick-access-empty-kicker {
+            font-size: 0.56rem;
+            letter-spacing: 0.1em;
+        }
+
+        .main-continuity-card--quick .main-quick-access-empty-title {
+            font-size: 0.82rem;
+            line-height: 1.22;
+        }
+
+        .main-continuity-card--quick .main-quick-access-empty-description {
+            font-size: 0.68rem;
+            line-height: 1.32;
+        }
+
+        .main-continuity-card--quick .main-quick-access-empty-actions {
+            margin-top: 0.12rem;
+            gap: 0.35rem;
+        }
+
+        .main-continuity-card--quick .qa-empty-cta {
+            min-height: 1.72rem;
+            padding: 0 0.68rem !important;
+            border-radius: 0.58rem !important;
+            font-size: 0.7rem !important;
+        }
+
+        @media (max-width: 1024px) {
+            .main-continuity-grid {
+                grid-template-columns: minmax(0, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .main-continuity-card__head,
+            .main-continuity-card--quick .main-quick-access-header {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+
+        [data-theme^="dark"] .main-entry-card,
+        [data-theme^="dark"] .main-editor-panel,
+        [data-theme^="dark"] .main-editor-card,
+        [data-theme^="dark"] .main-continuity-card,
+        [data-theme^="dark"] .main-widget-card,
+        [data-theme^="dark"] #quick-access-list,
+        [data-theme^="dark"] .main-quick-access-empty {
+            background:
+                linear-gradient(145deg,
+                    color-mix(in srgb, var(--color-surface-1) 88%, var(--color-info) 12%) 0%,
+                    color-mix(in srgb, var(--color-surface-1) 94%, var(--color-bg-ink) 6%) 100%);
+            border-color: color-mix(in srgb, var(--color-border-strong) 52%, var(--color-info) 48%);
+        }
+
+        [data-theme^="dark"] .main-entry-card::before {
+            opacity: 0.42;
+        }
+
+        [data-theme^="dark"] .main-entry-description,
+        [data-theme^="dark"] .main-editor-description,
+        [data-theme^="dark"] .main-widget-empty-copy,
+        [data-theme^="dark"] .main-quick-access-empty-description {
+            color: color-mix(in srgb, var(--color-text-main) 76%, var(--color-info) 24%);
+        }
+
+        [data-theme^="dark"] .main-editor-card-footer .text-primary {
+            color: var(--color-text-main) !important;
+        }
+
+        [data-theme^="dark"] .main-heatmap-cell,
+        [data-theme^="dark"] .main-heatmap-legend-swatch[data-level="empty"] {
+            background-color: color-mix(in srgb, var(--color-surface-2) 74%, var(--color-info) 26%);
+            border-color: color-mix(in srgb, var(--color-border-strong) 58%, var(--color-info) 42%);
+        }
+
+        [data-theme^="dark"] .main-heatmap-cell[data-level="low"] {
+            background-color: color-mix(in srgb, var(--color-primary) 74%, var(--color-surface-1) 26%);
+        }
+
+        [data-theme^="dark"] .main-heatmap-cell[data-level="mid"] {
+            background-color: color-mix(in srgb, var(--color-primary) 72%, var(--color-info) 28%);
+        }
+
+        [data-theme^="dark"] .main-heatmap-cell[data-level="high"],
+        [data-theme^="dark"] .main-heatmap-cell[data-level="peak"] {
+            background: color-mix(in srgb, var(--color-primary) 82%, var(--color-warning) 18%);
+        }
+
+        #calendarHealthList .pill-neutral,
+        .main-quick-access-pill,
+        .main-quick-access-meta-tag {
+            background: var(--color-primary) !important;
+            border-color: color-mix(in srgb, var(--color-primary) 78%, var(--color-border-strong) 22%) !important;
+            color: var(--color-primary-fg) !important;
+        }
+
+        [data-theme^="dark"] .main-continuity-card--quick .main-quick-access-empty,
+        [data-theme^="dark"] .main-continuity-card--quick #quick-access-list,
+        [data-theme^="dark"] .main-continuity-card--microcards #microcardsEmptyState:not(.hidden),
+        [data-theme^="dark"] .main-continuity-card--microcards #microcardsDisabledState:not(.hidden) {
+            background: color-mix(in srgb, var(--color-surface-1) 82%, var(--color-bg-ink) 18%);
+            border-color: color-mix(in srgb, var(--color-border-strong) 58%, var(--color-info) 42%);
+            box-shadow: none !important;
+        }
+
+        [data-theme^="dark"] .main-continuity-card--quick #quick-access-list {
+            background: transparent;
+            border-color: transparent;
+        }
+
+        [data-theme^="dark"] .main-quick-access-card {
+            background:
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--color-surface-1) 86%, var(--color-info) 14%) 0%,
+                    color-mix(in srgb, var(--color-surface-1) 76%, var(--color-bg-ink) 24%) 100%);
+            border-color: color-mix(in srgb, var(--color-border-strong) 62%, var(--color-info) 38%);
+            color: var(--color-text-main);
+        }
+
+        [data-theme^="dark"] .main-continuity-card--quick .main-quick-access-card {
+            border-color: transparent !important;
+            background:
+                linear-gradient(180deg,
+                    color-mix(in srgb, var(--color-surface-1) 80%, var(--color-info) 20%) 0%,
+                    color-mix(in srgb, var(--color-surface-1) 68%, var(--color-bg-ink) 32%) 100%);
+        }
+
+        [data-theme^="dark"] .main-continuity-card--quick .main-quick-access-card:hover {
+            border-color: transparent !important;
+        }
+
+        [data-theme^="dark"] .main-continuity-card--quick .main-quick-access-media {
+            border-color: transparent;
+            background: color-mix(in srgb, var(--color-surface-2) 68%, var(--color-bg-ink) 32%);
+        }
+
+        [data-theme^="dark"] .main-quick-access-card[data-tone="paused"] {
+            border-color: color-mix(in srgb, var(--color-primary) 58%, var(--color-border-strong) 42%);
+        }
+
+        [data-theme^="dark"] .main-quick-access-card[data-tone="critical"] {
+            border-color: color-mix(in srgb, var(--color-status-error, var(--color-warning)) 58%, var(--color-border-strong) 42%);
+        }
+
+        [data-theme^="dark"] .main-quick-access-card[data-tone="mastered"] {
+            border-color: color-mix(in srgb, var(--color-success) 56%, var(--color-border-strong) 44%);
+        }
+
+        [data-theme^="dark"] .main-quick-access-media {
+            background: color-mix(in srgb, var(--color-surface-2) 78%, var(--color-bg-ink) 22%);
+            border-color: color-mix(in srgb, var(--color-border-strong) 68%, var(--color-info) 32%);
+            color: var(--color-text-main);
+        }
+
+        [data-theme^="dark"] .main-quick-access-description,
+        [data-theme^="dark"] .main-quick-access-progress-label {
+            color: color-mix(in srgb, var(--color-text-main) 82%, var(--color-info) 18%);
+        }
+
+        [data-theme^="dark"] .main-quick-access-progress-track {
+            background: color-mix(in srgb, var(--color-bg-ink) 62%, var(--color-surface-2) 38%);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-border-strong) 70%, var(--color-info) 30%);
         }
 
         .main-stats-row {
@@ -1594,6 +2402,7 @@
     <link href="/assets/tailwind.css" rel="stylesheet" />
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
     <link href="/assets/lightB-components.css" rel="stylesheet" />
+    <link href="/assets/global-header.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
     <link href="/assets/main-polish.css" rel="stylesheet" />
 </head>
@@ -1602,252 +2411,197 @@
     class="bg-bg-main font-display text-text-main antialiased overflow-x-hidden selection:bg-primary selection:text-primary-fg">
     <div id="app-content"
         class="relative flex min-h-screen w-full flex-col overflow-x-hidden transition-all duration-300">
-        <header
-            class="main-topbar sticky top-0 flex flex-none items-center justify-between whitespace-nowrap border-b border-border-subtle bg-surface-1 backdrop-blur px-6 py-2 z-50">
-            <div class="main-topbar__group main-topbar__group--primary flex items-center gap-6">
-                <div class="main-topbar__brand flex items-center gap-4 text-text-main">
-                    <span class="brand-logo w-12 h-12" style="color:var(--color-primary)" aria-hidden="true"></span>
-                    <h2 class="text-text-main text-2xl font-black leading-tight tracking-wide uppercase">
-                        ACTRA</h2>
-                </div>
-                <div class="main-topbar__divider hidden md:block h-6 w-px bg-border-subtle"></div>
-                <div class="main-topbar__actions">
-                    <a href="/ui/editor"
-                        class="main-topbar__button main-topbar__button--primary hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
-                        <span class="material-symbols-outlined text-[20px]">edit_document</span>
-                        Редактор заданий
-                    </a>
-                    <a href="/ui/complexes/create"
-                        class="main-topbar__button main-topbar__button--primary hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
-                        <span class="material-symbols-outlined text-[20px]">design_services</span>
-                        Редактор комплексов
-                    </a>
-                    <button type="button" onclick="showReferencePlaceholder()"
-                        class="main-topbar__button main-topbar__button--primary hidden md:flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
-                        <span class="material-symbols-outlined text-[20px]">menu_book</span>
-                        Справочник
-                    </button>
-                </div>
-            </div>
-            <div class="main-topbar__group main-topbar__group--secondary flex items-center gap-3">
-                <div class="main-topbar__datetime hidden md:flex items-center gap-2 text-sm text-text-secondary" id="datetime-display">
-                    <span class="material-symbols-outlined text-lg">schedule</span>
-                    <span id="datetime-text">Загрузка...</span>
-                </div>
-                <div class="relative">
-                    <button id="projectLinksButton" type="button" onclick="toggleProjectLinksMenu(event)"
-                        aria-haspopup="menu" aria-expanded="false"
-                        class="main-topbar__button inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95"
-                        title="&#1057;&#1089;&#1099;&#1083;&#1082;&#1080; &#1087;&#1088;&#1086;&#1077;&#1082;&#1090;&#1072;">
-                        <span class="material-symbols-outlined text-[20px]">public</span>
-                        <span class="hidden lg:inline">&#1057;&#1089;&#1099;&#1083;&#1082;&#1080;</span>
-                    </button>
-                    <div id="projectLinksMenu"
-                        class="hidden absolute right-0 top-full z-40 mt-2 w-64 overflow-hidden rounded-2xl border border-border-strong bg-surface-1 p-2 shadow-lg">
-                        <button type="button" onclick="openProjectCommunityLink('github')"
-                            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-2">
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary-lighter text-primary">
-                                <span class="material-symbols-outlined text-[20px]">code</span>
-                            </span>
-                            <span class="min-w-0 flex-1">
-                                <span class="block text-sm font-semibold text-text-main">GitHub</span>
-                                <span class="block text-xs text-text-secondary">&#1056;&#1077;&#1087;&#1086;&#1079;&#1080;&#1090;&#1086;&#1088;&#1080;&#1081; &#1087;&#1088;&#1086;&#1077;&#1082;&#1090;&#1072;</span>
-                            </span>
-                            <span class="material-symbols-outlined text-[18px] text-text-muted">open_in_new</span>
-                        </button>
-                        <button type="button" onclick="openProjectCommunityLink('telegram')"
-                            class="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-surface-2">
-                            <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-info-soft text-info">
-                                <span class="material-symbols-outlined text-[20px]">send</span>
-                            </span>
-                            <span class="min-w-0 flex-1">
-                                <span class="block text-sm font-semibold text-text-main">Telegram</span>
-                                <span class="block text-xs text-text-secondary">&#1050;&#1072;&#1085;&#1072;&#1083; &#1087;&#1088;&#1086;&#1077;&#1082;&#1090;&#1072;</span>
-                            </span>
-                            <span class="material-symbols-outlined text-[18px] text-text-muted">open_in_new</span>
-                        </button>
-                    </div>
-                </div>
-                <button onclick="openFeedbackModal()"
-                    class="main-topbar__button inline-flex items-center gap-2 rounded-lg border border-border-strong bg-surface-2 px-3 py-1.5 text-sm font-bold text-text-main transition-colors hover:bg-surface-1 hover:text-primary hover:border-border-strong active:scale-95">
-                    <span class="material-symbols-outlined text-[20px]">feedback</span>
-                    <span class="hidden lg:inline">&#1054;&#1073;&#1088;&#1072;&#1090;&#1085;&#1072;&#1103; &#1089;&#1074;&#1103;&#1079;&#1100;</span>
-                </button>
-                <button type="button" data-profile-menu-anchor aria-haspopup="menu" aria-expanded="false"
-                    class="main-topbar__profile flex items-center gap-2 px-3 py-1.5 bg-surface-1 rounded-lg border border-border-subtle cursor-pointer hover:bg-bg-hover transition-colors"
-                    onclick="openProfileMenu(event)">
-                    <img src="/api/assets/avatars/1.png" class="w-6 h-6 rounded-full" alt="User" id="headerAvatar">
-                    <span class="main-topbar__user-name text-text-main text-sm font-medium hidden sm:inline max-w-[140px] truncate"
-                        id="headerUserName">Загрузка...</span>
-                    <span class="material-symbols-outlined text-[18px] text-text-muted">expand_more</span>
-                </button>
-            </div>
-        </header>
+        <div data-global-header data-app-section="main"></div>
 
-        <main class="main-dashboard-content flex flex-1 justify-center">
+<main class="main-dashboard-content flex flex-1 justify-center">
             <div class="main-dashboard-shell main-page-enter"
                 style="transform-origin: top center;">
                 <div class="main-dashboard-grid">
                     <div class="main-primary-column">
-                        <div class="flex flex-col gap-3">
-                            <div class="flex gap-3 min-h-[220px]">
-                                <!-- Проходить комплексы (3/5 width) -->
-                                <div class="main-hero-card interactive-card relative overflow-hidden rounded-2xl border border-border-strong shadow-md group cursor-pointer flex flex-col flex-[3]"
-                                    role="link" tabindex="0" data-nav="/ui/complexes" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);">
-
-                                    <!-- Decorative subtle highlights -->
-                                    <div class="absolute top-0 right-0 w-64 h-64 rounded-full blur-[80px] -translate-y-1/2 translate-x-1/3 mix-blend-screen transition-transform duration-700 group-hover:scale-110" style="background-color: var(--color-primary); opacity: 0.25;"></div>
-                                    <div class="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-[60px] translate-y-1/2 -translate-x-1/2 mix-blend-screen" style="background-color: var(--color-accent, var(--color-primary)); opacity: 0.25;"></div>
-
-                                    <div class="main-hero-content p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
-                                        <div class="flex items-start justify-between w-full">
-                                            <span class="inline-flex items-center rounded-md backdrop-blur-md px-2.5 py-1 text-xs font-bold tracking-wider uppercase border shadow-sm" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
-                                                Основной режим
-                                            </span>
+                        <section class="main-entry-grid">
+                            <article class="main-entry-card main-entry-card--catalog interactive-card" role="link" tabindex="0" data-nav="/ui/catalog" aria-label="Открыть каталог материалов">
+                                <div class="flex flex-col gap-3">
+                                    <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">travel_explore</span>Главный вход</span>
+                                    <div class="flex flex-col gap-2">
+                                        <h2 class="main-entry-title">Каталог учебных материалов</h2>
+                                        <p class="main-entry-description">Публичные комплексы и теории в одном месте. Быстро находите готовые материалы, добавляйте в библиотеку и переходите к обучению.</p>
+                                    </div>
+                                </div>
+                                <div class="main-entry-footer">
+                                    <span class="text-sm font-bold text-text-main">Перейти в каталог</span>
+                                    <span class="main-entry-action" aria-hidden="true"><span class="material-symbols-outlined text-[28px]">arrow_forward</span></span>
+                                </div>
+                            </article>
+                            <article class="main-entry-card main-entry-card--practice interactive-card" role="link" tabindex="0" data-nav="/ui/complexes" aria-label="Открыть список комплексов">
+                                <div class="flex flex-col gap-3">
+                                    <span class="main-entry-kicker"><span class="material-symbols-outlined text-[16px]">play_circle</span>Практика</span>
+                                    <div class="flex flex-col gap-2">
+                                        <h2 class="main-entry-title">Проходить комплексы</h2>
+                                        <p class="main-entry-description">Возвращайтесь к своим комплексам, продолжайте сессии и следите за учебным прогрессом.</p>
+                                    </div>
+                                </div>
+                                <div class="main-entry-footer">
+                                    <span class="text-sm font-bold text-text-main">К списку комплексов</span>
+                                    <span class="main-entry-action" aria-hidden="true"><span class="material-symbols-outlined text-[28px]">play_arrow</span></span>
+                                </div>
+                            </article>
+                        </section>
+                        <section class="main-editor-panel">
+                            <div class="main-section-heading">
+                                <div>
+                                    <h3 class="main-section-title">Инструменты авторов</h3>
+                                </div>
+                            </div>
+                            <div class="main-editor-grid">
+                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/editor">
+                                    <span class="main-editor-icon" aria-hidden="true">
+                                        <span class="material-symbols-outlined">edit_document</span>
+                                    </span>
+                                    <div>
+                                        <h4 class="text-sm font-black text-text-main">Редактор заданий</h4>
+                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary">Библиотека, модули, импорт и ручное создание.</p>
+                                    </div>
+                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Открыть</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
+                                </article>
+                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/complexes/create">
+                                    <span class="main-editor-icon" aria-hidden="true">
+                                        <span class="material-symbols-outlined">design_services</span>
+                                    </span>
+                                    <div>
+                                        <h4 class="text-sm font-black text-text-main">Редактор комплексов</h4>
+                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary">Собирайте сценарии обучения из задач и теории.</p>
+                                    </div>
+                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Создать</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
+                                </article>
+                                <article class="main-editor-card interactive-card" role="link" tabindex="0" data-nav="/ui/theory-center">
+                                    <span class="main-editor-icon" aria-hidden="true">
+                                        <span class="material-symbols-outlined">hub</span>
+                                    </span>
+                                    <div>
+                                        <h4 class="text-sm font-black text-text-main">Центр теории</h4>
+                                        <p class="mt-1 text-xs leading-relaxed text-text-secondary">Управляйте теоретическими материалами и связями.</p>
+                                    </div>
+                                    <div class="main-editor-card-footer"><span class="text-xs font-bold text-primary">Перейти</span><span class="material-symbols-outlined text-[18px] text-text-muted">arrow_forward</span></div>
+                                </article>
+                            </div>
+                        </section>
+                        <section class="main-continuity-grid" aria-label="Быстрые рабочие состояния">
+                            <article class="main-continuity-card main-continuity-card--microcards transition-all"
+                                id="microcardsCard">
+                                <div class="main-continuity-card__head">
+                                    <div class="main-continuity-titleline">
+                                        <span class="main-continuity-icon" aria-hidden="true">
+                                            <span class="material-symbols-outlined">style</span>
+                                        </span>
+                                        <div class="main-continuity-copy">
+                                            <h3 class="main-continuity-title">Микрокарточки</h3>
+                                            <p class="main-continuity-subtitle">Быстрое обучение короткими подходами.</p>
                                         </div>
-                                        <div class="main-hero-body flex items-end justify-between gap-4 mt-auto">
-                                            <div class="main-hero-copy flex flex-col">
-                                                <h3 class="text-2xl md:text-3xl font-extrabold mb-1 leading-tight tracking-tight drop-shadow-md" style="color: #ffffff;">Проходить комплексы</h3>
-                                                <p class="text-sm leading-relaxed max-w-[260px] drop-shadow-sm" style="color: #cbd5e1;">Анализируйте данные и принимайте решения в реальном времени.</p>
+                                    </div>
+                                    <div class="flex items-center gap-1 main-widget-badge pill-neutral pill-sm"
+                                        id="microcardsDueBadge" hidden>
+                                        <span class="material-symbols-outlined text-primary text-[14px]">pending_actions</span>
+                                        <span class="text-[11px] font-bold text-text-main"
+                                            id="microcardsDueCount">—</span>
+                                    </div>
+                                </div>
+                                <div class="main-continuity-body">
+                                    <div id="microcardsLoadingState"
+                                        class="flex-1 flex flex-col items-center justify-center py-4 gap-2">
+                                        <div
+                                            class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary">
+                                        </div>
+                                        <p class="main-widget-loading-copy text-[11px]">Загрузка...</p>
+                                    </div>
+                                    <div id="microcardsEmptyState"
+                                        class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
+                                        <span
+                                            class="material-symbols-outlined text-border-strong text-[32px]">style</span>
+                                        <div class="main-widget-inline-copy">
+                                            <p class="text-sm font-medium text-text-main">Нет колод</p>
+                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Когда появятся колоды, здесь будет быстрый вход в повторение.</p>
+                                        </div>
+                                    </div>
+                                    <div id="microcardsDisabledState"
+                                        class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
+                                        <span class="material-symbols-outlined text-border-strong text-[32px]">construction</span>
+                                        <div class="main-widget-inline-copy">
+                                            <p class="text-sm font-medium text-text-main">Пока на паузе</p>
+                                            <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Вернём микрокарточки после следующего этапа доработки.</p>
+                                        </div>
+                                    </div>
+                                    <div id="microcardsContentState" class="hidden flex-col gap-2">
+                                        <div class="grid grid-cols-3 gap-1.5">
+                                            <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                                <span
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">К
+                                                    повтору</span>
+                                                <span class="text-xl font-black text-text-main leading-tight"
+                                                    id="microcardsDueCards">0</span>
                                             </div>
-                                            <button
-                                                class="flex-shrink-0 flex items-center justify-center rounded-full w-14 h-14 shadow-xl hover:-translate-y-1 transition-all duration-300 group/btn relative overflow-hidden"
-                                                style="background: rgba(255,255,255,0.18); color: #ffffff; border: 1.5px solid rgba(255,255,255,0.28); box-shadow: 0 8px 16px -4px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.3);"
-                                                data-nav="/ui/complexes" title="Начать тренировку">
-                                                <span class="absolute inset-0 bg-white/20 opacity-0 group-hover/btn:opacity-100 transition-opacity duration-300"></span>
-                                                <span class="material-symbols-outlined text-[32px] ml-1 relative z-10 drop-shadow-sm">play_arrow</span>
-                                            </button>
+                                            <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                                <span
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Новых</span>
+                                                <span class="text-xl font-black text-text-main leading-tight"
+                                                    id="microcardsNewCards">0</span>
+                                            </div>
+                                            <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
+                                                <span
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Сегодня</span>
+                                                <span class="text-base font-black text-text-main leading-tight"
+                                                    id="microcardsTodayReviews">0 повторений</span>
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between px-2 py-1.5 bg-surface-2 rounded-lg">
+                                            <div class="flex flex-col">
+                                                <span
+                                                    class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Точность</span>
+                                                <span class="text-base font-black text-text-main leading-tight"
+                                                    id="microcardsTodayAccuracy">—</span>
+                                            </div>
+                                            <div class="flex items-center gap-1">
+                                                <span class="material-symbols-outlined text-[16px] text-success">verified</span>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-
-                                <!-- Центр теории (2/5 width) -->
-                                <div id="main-theory-center-card" class="interactive-card relative overflow-hidden rounded-2xl border border-border-strong shadow-md group cursor-pointer flex flex-col flex-[2]"
-                                    role="link" tabindex="0" data-nav="/ui/theory-center" style="background: linear-gradient(135deg, #1a2744 0%, #0f1e35 100%);">
-
-                                    <div class="absolute top-0 right-0 w-40 h-40 rounded-full blur-[60px] -translate-y-1/2 translate-x-1/3 mix-blend-screen transition-transform duration-700 group-hover:scale-110" style="background-color: var(--color-info); opacity: 0.22;"></div>
-                                    <div class="absolute bottom-0 left-0 w-32 h-32 rounded-full blur-[50px] translate-y-1/2 -translate-x-1/2 mix-blend-screen" style="background-color: var(--color-primary); opacity: 0.18;"></div>
-
-                                    <div class="main-hero-content p-5 md:p-6 relative z-10 flex flex-col h-full justify-between" style="color: #ffffff;">
-                                        <div>
-                                            <span class="inline-flex items-center rounded-md backdrop-blur-md px-2.5 py-1 text-xs font-bold tracking-wider uppercase border shadow-sm" style="background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: #f8fafc;">
-                                                Редактор
-                                            </span>
-                                        </div>
-                                        <div class="main-hero-body main-hero-body--stack mt-auto">
-                                            <span class="main-hero-support-icon material-symbols-outlined text-[32px] mb-2 block drop-shadow-sm" style="color: rgba(165,213,255,0.92);">hub</span>
-                                            <h3 class="text-xl md:text-2xl font-extrabold leading-tight tracking-tight drop-shadow-md" style="color: #ffffff;">Центр теории</h3>
-                                            <p class="text-xs mt-1 drop-shadow-sm" style="color: #94a3b8;">Управление теоретическими материалами</p>
-                                        </div>
+                                    <div class="main-microcards-actions grid grid-cols-2 gap-2">
+                                        <button
+                                            class="w-full inline-flex items-center justify-center gap-2 main-primary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
+                                            id="microcardsCTA" disabled><span
+                                                class="material-symbols-outlined text-[16px]"
+                                                id="microcardsCTAIcon">construction</span><span
+                                                id="microcardsCTAText">Открыть микрокарточки</span>
+                                        </button>
+                                        <button
+                                            class="w-full inline-flex items-center justify-center gap-2 main-secondary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
+                                            disabled>
+                                            <span class="material-symbols-outlined text-[14px]">schedule</span>
+                                            <span>Создать вручную</span>
+                                        </button>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                        <div class="main-widget-card main-primary-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col transition-all"
-                            id="microcardsCard">
-                            <div class="flex items-center justify-between mb-2">
-                                <h3 class="text-base font-bold text-text-main flex items-center gap-1.5">
-                                    <span class="material-symbols-outlined text-primary text-[18px]">style</span>Микрокарточки
-                                </h3>
-                                <div class="flex items-center gap-1 main-widget-badge pill-neutral pill-sm"
-                                    id="microcardsDueBadge">
-                                    <span class="material-symbols-outlined text-primary text-[14px]">pending_actions</span>
-                                    <span class="text-[11px] font-bold text-text-main"
-                                        id="microcardsDueCount">—</span>
+                            </article>
+                            <section class="main-continuity-card main-continuity-card--quick" id="quick-access-section">
+                                <div class="main-quick-access-header">
+                                    <h3 class="text-base font-bold text-text-main flex items-center gap-2">
+                                        <span class="material-symbols-outlined text-text-secondary text-[20px]">history</span>Быстрый доступ
+                                    </h3>
                                 </div>
-                            </div>
-                            <div id="microcardsLoadingState"
-                                class="flex-1 flex flex-col items-center justify-center py-4 gap-2">
-                                <div
-                                    class="h-5 w-5 animate-spin rounded-full border-2 border-primary-light border-t-primary">
-                                </div>
-                                <p class="main-widget-loading-copy text-[11px]">Загрузка...</p>
-                            </div>
-                            <div id="microcardsEmptyState"
-                                class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
-                                <span
-                                    class="material-symbols-outlined text-border-strong text-[32px]">style</span>
-                                <p class="text-sm font-medium text-text-main">Нет колод</p>
-                                <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Создайте колоду в редакторе
-                                    или из анализа</p>
-                            </div>
-                            <div id="microcardsDisabledState"
-                                class="hidden flex-1 flex flex-col items-center justify-center py-4 text-center gap-2">
-                                <span
-                                    class="material-symbols-outlined text-border-strong text-[32px]">construction</span>
-                                <p class="text-sm font-medium text-text-main">Функционал в разработке</p>
-                                <p class="main-widget-empty-copy text-[11px] mt-1 max-w-sm">Микрокарточки временно скрыты из сайта. Вернём этот режим после следующего этапа доработки.</p>
-                            </div>
-                            <div id="microcardsContentState" class="hidden flex-col gap-2">
-                                <div class="grid grid-cols-3 gap-1.5">
-                                    <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
-                                        <span
-                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">К
-                                            повтору</span>
-                                        <span class="text-xl font-black text-text-main leading-tight"
-                                            id="microcardsDueCards">0</span>
+                                <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden"
+                                    id="quick-access-list" hidden></div>
+                                <div class="main-quick-access-empty" id="quick-access-empty" hidden>
+                                    <div class="main-quick-access-empty-icon" aria-hidden="true">
+                                        <span class="material-symbols-outlined">history_toggle_off</span>
                                     </div>
-                                    <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
-                                        <span
-                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Новых</span>
-                                        <span class="text-xl font-black text-text-main leading-tight"
-                                            id="microcardsNewCards">0</span>
-                                    </div>
-                                    <div class="flex flex-col px-2 py-1.5 bg-surface-2 rounded-lg">
-                                        <span
-                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Сегодня</span>
-                                        <span class="text-base font-black text-text-main leading-tight"
-                                            id="microcardsTodayReviews">0 повторений</span>
+                                    <div class="main-quick-access-empty-copy">
+                                        <p class="main-quick-access-empty-kicker">Пока пусто</p>
+                                        <p class="main-quick-access-empty-title">Быстрый доступ появится после выбранных комплексов</p>
+                                        <p class="main-quick-access-empty-description qa-empty-text">Закрепите комплекс или начните сессию, чтобы быстро вернуться к нему с главной.</p>
+                                        <div class="main-quick-access-empty-actions" id="quick-access-empty-actions"></div>
                                     </div>
                                 </div>
-                                <div class="flex items-center justify-between px-2 py-1.5 bg-surface-2 rounded-lg">
-                                    <div class="flex flex-col">
-                                        <span
-                                            class="text-[11px] text-text-secondary font-bold uppercase tracking-wider">Точность</span>
-                                        <span class="text-base font-black text-text-main leading-tight"
-                                            id="microcardsTodayAccuracy">—</span>
-                                    </div>
-                                    <div class="flex items-center gap-1">
-                                        <span class="material-symbols-outlined text-[16px] text-success">verified</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-2 pt-1.5 border-t border-border-subtle grid grid-cols-2 gap-2">
-                                <button
-                                    class="w-full inline-flex items-center justify-center gap-2 main-primary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
-                                    id="microcardsCTA" disabled><span
-                                        class="material-symbols-outlined text-[16px]"
-                                        id="microcardsCTAIcon">construction</span><span
-                                        id="microcardsCTAText">Открыть микрокарточки</span>
-                                </button>
-                                <button
-                                    class="w-full inline-flex items-center justify-center gap-2 main-secondary-cta text-sm font-bold py-1.5 px-3 rounded-lg transition-all"
-                                    disabled>
-                                    <span class="material-symbols-outlined text-[14px]">schedule</span>
-                                    <span>Создать вручную</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="flex flex-col gap-2.5" id="quick-access-section">
-                            <div class="main-quick-access-header">
-                                <h3 class="text-base font-bold text-text-main flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-text-secondary text-[20px]">history</span>Быстрый доступ
-                                </h3>
-                            </div>
-                            <div class="bg-surface-1 rounded-xl border border-border-subtle shadow-sm overflow-hidden"
-                                id="quick-access-list" hidden></div>
-                            <div class="main-quick-access-empty" id="quick-access-empty" hidden>
-                                <div class="main-quick-access-empty-icon" aria-hidden="true">
-                                    <span class="material-symbols-outlined">history_toggle_off</span>
-                                </div>
-                                <div class="main-quick-access-empty-copy">
-                                    <p class="main-quick-access-empty-kicker">Пока пусто</p>
-                                    <p class="main-quick-access-empty-title">Быстрый доступ появится после первых выбранных комплексов</p>
-                                    <p class="main-quick-access-empty-description qa-empty-text">Закрепите комплекс в библиотеке или начните сессию, и он появится здесь для быстрого возврата с главного экрана.</p>
-                                    <div class="main-quick-access-empty-actions" id="quick-access-empty-actions"></div>
-                                </div>
-                            </div>
-                        </div>
+                            </section>
+                        </section>
                     </div>
                     <div class="main-secondary-column">
                         <div class="main-widget-card main-side-card bg-surface-1 rounded-xl shadow-sm border border-border-strong p-2.5 flex flex-col interactive-card cursor-pointer hover:border-primary transition-all main-side-enter"
@@ -1913,7 +2667,7 @@
                             <div class="mt-auto pt-1.5 border-t border-border-subtle">
                                 <button type="button" data-nav="/ui/calendar"
                                     class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-primary-fg text-xs font-bold py-1.5 px-3 rounded-lg transition-all shadow-sm shadow-primary-light"
-                                    onclick="event.stopPropagation();"><span
+                                    onclick="event.stopPropagation(); window.navigateWithTransition('/ui/calendar');"><span
                                         class="material-symbols-outlined text-[16px]">arrow_forward</span>Открыть
                                     календарь </button>
                             </div>
@@ -2320,6 +3074,7 @@
     <script src="/assets/NotificationUI.js"></script>
     <script src="/assets/MainLogic.js"></script>
     <script src="/assets/SharedProfileModal.js"></script>
+    <script src="/assets/GlobalHeader.js"></script>
     <script src="/assets/ThemeSwitcherUI.js"></script>
     <script src="/assets/ConnectionMonitor.js"></script>
 </body>

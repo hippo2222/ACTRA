@@ -397,6 +397,119 @@ def test_get_iteration_results_keeps_all_failed_test_questions_in_review_entries
     assert entries[1]["reference_items"][0]["image_path"] == "images/wombat.png"
 
 
+def test_get_iteration_results_scattered_test_returns_full_source_review():
+    session = _build_session(
+        current_task_index=0,
+        queue=[_queued_task("module/topic/task_001")],
+        ui_state={"screen_type": "iteration_results", "iteration_number": 1},
+    )
+
+    load_task_result = {
+        "task_dir": "D:/tmp/task",
+        "task_data": {
+            "type": "test",
+            "meta": {"name": "Source test"},
+            "content": {
+                "questions": [
+                    {
+                        "id": "q0",
+                        "text": "Question zero",
+                        "answers": [
+                            {"text": "Wrong", "correct": False},
+                            {"text": "Right", "correct": True},
+                        ],
+                    },
+                    {
+                        "id": "q1",
+                        "text": "Question one",
+                        "answers": [
+                            {"text": "Right", "correct": True},
+                            {"text": "Wrong", "correct": False},
+                        ],
+                    },
+                    {
+                        "id": "q2",
+                        "text": "Question two",
+                        "answers": [
+                            {"text": "Right", "correct": True},
+                            {"text": "Wrong", "correct": False},
+                        ],
+                    },
+                ]
+            },
+        },
+        "answer_key": {},
+    }
+
+    api, _, session_manager, _ = _build_api(session, load_task_result=load_task_result)
+    api._build_iterations_for_web = MagicMock(return_value=[])
+    api._build_problem_tasks_for_web = MagicMock(return_value=[])
+
+    summary = SimpleNamespace(
+        iteration=1,
+        total_tasks=1,
+        successful_tasks=0,
+        failed_tasks=1,
+        success_rate=0.0,
+        iteration_results=[
+            {
+                "task_ref": "module/topic/task_001",
+                "success": False,
+                "details": {
+                    "task_type": "test",
+                    "test_display_mode": "scattered",
+                    "show_full_source_review": True,
+                    "source_task_ref": "module/topic/task_001",
+                    "question_results": [
+                        {
+                            "question_id": "q0",
+                            "index": 0,
+                            "correct": False,
+                            "user_answer": 0,
+                            "correct_answer": 1,
+                        },
+                        {
+                            "question_id": "q1",
+                            "index": 1,
+                            "correct": True,
+                            "user_answer": 0,
+                        },
+                    ],
+                    "per_question": {
+                        "q0": {
+                            "status": "incorrect",
+                            "correct_option_ids": [1],
+                            "user_option_ids": [0],
+                        },
+                        "q1": {
+                            "status": "correct",
+                            "correct_option_ids": [0],
+                            "user_option_ids": [0],
+                        },
+                    },
+                    "failed_subtests": [{"question_id": "q0", "index": 0}],
+                    "shown_question_indices": [0, 1],
+                },
+            }
+        ],
+    )
+    session_manager.get_iteration_summary.return_value = summary
+
+    result = api.get_iteration_results("sess_1")
+
+    assert result is not None
+    review = result["iteration_results"][0]["review"]
+    assert review["kind"] == "full_test"
+    entries = review["entries"]
+    assert [entry["prompt"] for entry in entries] == [
+        "Question zero",
+        "Question one",
+        "Question two",
+    ]
+    assert [entry["status"] for entry in entries] == ["incorrect", "correct", "neutral"]
+    assert entries[2]["user_lines"] == ["Не показывался в этой попытке."]
+
+
 def test_get_resume_target_returns_iteration_results_url():
     session = _build_session(
         ui_state={"screen_type": "iteration_results", "iteration_number": 1},

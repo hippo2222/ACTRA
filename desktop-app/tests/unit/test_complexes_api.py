@@ -206,3 +206,47 @@ def test_validate_and_normalize_theory_link_invalid():
     normalized, errors = validate_and_normalize_create_payload(payload)
     assert normalized is None
     assert any(e["field"] == "theory_link" for e in errors)
+
+
+def test_validate_and_normalize_test_question_display_modes():
+    payload = {
+        "name": "X",
+        "tasks": [
+            "module_01/topic_01/test_001",
+            "module_01/topic_01/test_002",
+        ],
+        "settings": {
+            "test_question_display_modes": {
+                "module_01/topic_01/test_001": "scattered",
+                "module_01/topic_01/test_002": "together",
+            }
+        },
+    }
+
+    normalized, errors = validate_and_normalize_create_payload(payload)
+
+    assert errors == []
+    assert normalized is not None
+    assert normalized["settings"]["test_question_display_modes"] == {
+        "module_01/topic_01/test_001": "scattered",
+    }
+
+
+def test_validate_and_normalize_rejects_bad_test_question_display_mode():
+    payload = {
+        "name": "X",
+        "tasks": ["module_01/topic_01/test_001"],
+        "settings": {
+            "test_question_display_modes": {
+                "module_01/topic_01/test_001": "random",
+                "module_01/topic_01/missing": "scattered",
+            }
+        },
+    }
+
+    normalized, errors = validate_and_normalize_create_payload(payload)
+
+    assert normalized is None
+    reasons = {e["reason"] for e in errors}
+    assert "invalid_display_mode" in reasons
+    assert "task_not_in_tasks" in reasons

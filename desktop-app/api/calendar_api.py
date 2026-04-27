@@ -20,11 +20,17 @@ from typing import Any, Dict, List, Optional
 import logging
 import os
 import inspect
+import re
 from datetime import datetime, timedelta
 
 from routes._helpers import _maybe_hosted_shadow_write_error_response
 
 logger = logging.getLogger(__name__)
+
+_RAW_ID_RE = re.compile(
+    r"^(?:[0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    re.IGNORECASE,
+)
 
 # Простое кеширование для /api/calendar/activity
 _activity_cache = {
@@ -85,6 +91,33 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
             logger.exception("Failed to normalize complex object", extra={"complex": str(c)})
             return {}
 
+    def _is_raw_display_id(value):
+        text = str(value or "").strip()
+        return bool(text and _RAW_ID_RE.match(text))
+
+    def _resolve_complex_display_name(obj, complex_id=""):
+        """Return a user-facing complex name; never expose storage ids as names."""
+        candidates = [
+            obj.get("name"),
+            obj.get("title"),
+            obj.get("display_name"),
+            obj.get("complex_name"),
+        ]
+        for nested_key in ("metadata", "meta", "details"):
+            nested = obj.get(nested_key)
+            if isinstance(nested, dict):
+                candidates.extend([
+                    nested.get("name"),
+                    nested.get("title"),
+                    nested.get("display_name"),
+                ])
+
+        for candidate in candidates:
+            text = str(candidate or "").strip()
+            if text and text != str(complex_id or "").strip() and not _is_raw_display_id(text):
+                return text
+        return "Комплекс без названия"
+
     @app.route("/api/calendar/today", methods=["GET"])
     def get_today_plan():
         """
@@ -122,19 +155,24 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
                 for c in complexes:
                     obj = _normalize_complex_obj(c)
                     cid = obj.get("id") or obj.get("complex_id") or ""
+                    display_name = _resolve_complex_display_name(obj, cid)
                     raw_tasks = obj.get("tasks", []) or []
                     normalized_tasks = []
                     for t in raw_tasks:
                         if isinstance(t, dict):
-                            normalized_tasks.append(t)
+                            task_obj = dict(t)
+                            nested_complex = task_obj.get("complex") if isinstance(task_obj.get("complex"), dict) else {}
+                            task_name = task_obj.get("complex_name") or nested_complex.get("name") or display_name
+                            task_obj["complex_name"] = display_name if _is_raw_display_id(task_name) else task_name
+                            normalized_tasks.append(task_obj)
                         else:
                             normalized_tasks.append({
                                 "task_id": str(t),
-                                "complex_name": obj.get("name", cid),
+                                "complex_name": display_name,
                                 "duration": 150,
                             })
                     task_pool[cid] = normalized_tasks
-                    complex_names[cid] = obj.get("name", cid)
+                    complex_names[cid] = display_name
 
                     # Текущий комплекс = первый комплекс, который отмечен in_progress в календарном прогрессе
                     if current_complex is None and current_complex_id and cid == current_complex_id:
@@ -272,19 +310,24 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
                         obj = _normalize_complex_obj(c)
 
                         cid = obj.get("id", None) or obj.get("complex_id", "")
+                        display_name = _resolve_complex_display_name(obj, cid)
                         raw_tasks = obj.get("tasks", []) or []
                         normalized_tasks = []
                         for t in raw_tasks:
                             if isinstance(t, dict):
-                                normalized_tasks.append(t)
+                                task_obj = dict(t)
+                                nested_complex = task_obj.get("complex") if isinstance(task_obj.get("complex"), dict) else {}
+                                task_name = task_obj.get("complex_name") or nested_complex.get("name") or display_name
+                                task_obj["complex_name"] = display_name if _is_raw_display_id(task_name) else task_name
+                                normalized_tasks.append(task_obj)
                             else:
                                 normalized_tasks.append({
                                     "task_id": str(t),
-                                    "complex_name": obj.get("name", cid),
+                                    "complex_name": display_name,
                                     "duration": 150,
                                 })
                         task_pool[cid] = normalized_tasks
-                        complex_names[cid] = obj.get("name", cid)
+                        complex_names[cid] = display_name
                         status = obj.get("status", None)
                         if not current_complex and status == "in_progress":
                             current_complex = c
@@ -489,7 +532,7 @@ def create_calendar_routes(app, calendar_service, complex_service=None, session_
                 for c in complex_service.get_all_complexes():
                     obj = _normalize_complex_obj(c)
                     cid = obj.get("id") or obj.get("complex_id") or ""
-                    complex_names[cid] = obj.get("name", cid)
+                    complex_names[cid] = _resolve_complex_display_name(obj, cid)
             
             summary = calendar_service._build_health_summary(all_progress, complex_names)
             

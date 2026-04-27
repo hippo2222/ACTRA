@@ -13,6 +13,7 @@
     <link href="/assets/fonts.css" rel="stylesheet" />
     <link href="/assets/lightB-variables.css" rel="stylesheet" />
     <link href="/assets/lightB-components.css" rel="stylesheet" />
+    <link href="/assets/global-header.css" rel="stylesheet" />
     <link href="/assets/animations.css" rel="stylesheet" />
     <style>
         body {
@@ -394,6 +395,7 @@
 </head>
 
 <body class="text-text-main">
+    <div data-global-header data-app-section="theory"></div>
     <main class="theory-center-enter px-4 py-6 sm:px-6 lg:px-8" data-page-transition-root>
         <div class="theory-center-shell mx-auto flex flex-col gap-5">
             <section class="theory-center-panel rounded-[30px] p-5 sm:p-6 lg:p-7">
@@ -405,34 +407,7 @@
                         </div>
                         <h1 class="theory-header-title text-3xl font-bold tracking-[-0.02em] text-text-main sm:text-4xl">Теории тем и комплексов</h1>
                     </div>
-                    <div class="theory-header-actions flex flex-wrap items-center justify-end gap-2">
-                        <button id="theory-center-go-home" type="button"
-                            class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold hover:border-primary hover:text-primary" title="На главную">
-                            <span class="material-symbols-outlined text-[18px]">home</span>
-                        </button>
-                        <button id="theory-center-go-editor" type="button"
-                            class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
-                            <span class="material-symbols-outlined text-[18px]">design_services</span>
-                            Редактор заданий
-                        </button>
-                        <button id="theory-center-back-complexes" type="button"
-                            class="theory-mini-btn theory-mini-btn--neutral inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold hover:border-primary hover:text-primary">
-                            <span class="material-symbols-outlined text-[18px]">inventory_2</span>
-                            К комплексам
-                        </button>
-                        <button id="theory-center-open-editor" type="button"
-                            class="theory-mini-btn theory-mini-btn--tone theory-tone--primary inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-2 text-sm font-semibold">
-                            <span class="material-symbols-outlined text-[18px]">edit_square</span>
-                            Редактор теории
-                        </button>
-                    </div>
-                    <div class="theory-header-subline">
-                        <p class="text-sm leading-5 text-text-secondary sm:text-[14px]">
-                            Обзор теории по темам и комплексам: где она уже есть, где ее еще нет и где нужна синхронизация.
-                        </p>
-                        <div id="theory-center-limit-pills" class="theory-header-limit-pills"></div>
-                    </div>
-                </div>
+</div>
             </section>
 
             <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
@@ -566,6 +541,8 @@
         </div>
     </div>
 
+    <script src="/assets/SharedProfileModal.js"></script>
+    <script src="/assets/GlobalHeader.js"></script>
     <script src="/ui/editor/theory_center.js"></script>
 </body>
 

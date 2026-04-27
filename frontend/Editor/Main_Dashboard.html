@@ -52,6 +52,7 @@
     <link href="../../assets/fonts.css" rel="stylesheet" />
     <link href="../../assets/lightB-variables.css" rel="stylesheet" />
     <link href="../../assets/lightB-components.css" rel="stylesheet" />
+    <link href="../../assets/global-header.css" rel="stylesheet" />
     <link href="../../assets/animations.css" rel="stylesheet" />
     <style>
         .editor-sidebar-action-label {
@@ -412,7 +413,9 @@
 </head>
 
 <body
-    class="bg-bg-main text-text-main h-screen overflow-hidden flex font-display antialiased selection:bg-primary-lighter selection:text-primary-dark">
+    class="bg-bg-main text-text-main h-screen overflow-hidden flex flex-col font-display antialiased selection:bg-primary-lighter selection:text-primary-dark">
+    <div data-global-header data-app-section="editor"></div>
+    <div class="flex flex-1 min-h-0 overflow-hidden">
     <aside id="editor-sidebar"
         class="bg-surface-1 border-r border-border-subtle flex flex-col shrink-0 z-20 h-full editor-sidebar-enter"
         style="width: var(--sidebar-width, 250px);">
@@ -421,11 +424,6 @@
                 <span class="brand-logo" style="color:var(--color-primary)" aria-hidden="true"></span>
                 <h1 class="brand-lockup__word">ACTRA</h1>
             </div>
-            <button data-role="return-main"
-                class="ml-auto h-9 w-9 inline-flex items-center justify-center rounded-lg border border-border-subtle bg-surface-1 text-text-secondary hover:text-primary hover:border-primary hover:bg-bg-hover transition-colors shadow-sm"
-                title="Вернуться на главный экран">
-                <span class="material-symbols-outlined text-[20px]">arrow_back</span>
-            </button>
         </div>
         <div class="flex-1 overflow-y-auto pt-4 no-scrollbar">
             <div class="px-4 mb-4">
@@ -614,6 +612,7 @@
             </div>
         </div>
     </main>
+    </div>
     <!-- Create Task Modal -->
     <div id="create-task-modal"
         class="hidden fixed inset-0 z-50 overflow-y-auto modal-backdrop items-center justify-center p-4">
@@ -1204,6 +1203,8 @@
     <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-3 pointer-events-none"></div>
 
     <script src="../../assets/NotificationUI.js"></script>
+    <script src="../../assets/SharedProfileModal.js"></script>
+    <script src="../../assets/GlobalHeader.js"></script>
     <script src="../../assets/ThemeSwitcherUI.js"></script>
     <script src="../../assets/ConnectionMonitor.js"></script>
 </body>

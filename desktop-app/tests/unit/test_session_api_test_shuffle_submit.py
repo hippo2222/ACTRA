@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 
@@ -144,3 +145,100 @@ def test_submit_answer_attaches_per_question_ui_in_shuffled_indices():
     assert result.details["per_question"]["2"]["correct_option_ids"] == [0]
     assert result.details["per_question_ui"]["2"]["correct_option_ids"] == [3]
     assert result.details["per_question_ui"]["2"]["user_option_ids"] == [3]
+
+
+def test_scattered_group_payload_collects_adjacent_test_questions():
+    controller = MagicMock()
+    controller.current_session_id = "sess_1"
+    controller.current_task_ref = "module/topic/test_a"
+    controller.task_controller = MagicMock()
+    controller.task_controller.difficulty_manager = None
+
+    slot_a = SimpleNamespace(
+        task_ref="module/topic/test_a",
+        difficulty=1,
+        is_retry=False,
+        origin_iteration=None,
+        display_mode="scattered",
+        source_task_ref="module/topic/test_a",
+        test_question_index=1,
+    )
+    slot_b = SimpleNamespace(
+        task_ref="module/topic/test_b",
+        difficulty=1,
+        is_retry=False,
+        origin_iteration=None,
+        display_mode="scattered",
+        source_task_ref="module/topic/test_b",
+        test_question_index=0,
+    )
+    session = SimpleNamespace(
+        id="sess_1",
+        user_id="u1",
+        complex_id="complex_1",
+        iteration=1,
+        current_task_index=1,
+        queue=[slot_a, slot_b],
+        test_shuffle={},
+        ui_state=None,
+    )
+    session_manager = MagicMock()
+    session_manager.get_session.return_value = session
+    session_manager.session_repository = None
+
+    def load_task(module_id, topic_id, task_id):
+        if task_id == "test_a":
+            return {
+                "task_data": {
+                    "type": "test",
+                    "content": {
+                        "questions": [
+                            {"id": "a0", "text": "A0", "answers": [{"text": "x", "correct": True}]},
+                            {"id": "a1", "text": "A1", "answers": [{"text": "y", "correct": True}]},
+                        ]
+                    },
+                    "settings": {"shuffle_questions": False, "shuffle_answers": False},
+                },
+                "answer_key": {},
+                "task_dir": None,
+            }
+        return {
+            "task_data": {
+                "type": "test",
+                "content": {
+                    "questions": [
+                        {"id": "b0", "text": "B0", "answers": [{"text": "z", "correct": True}]},
+                    ]
+                },
+                "settings": {"shuffle_questions": False, "shuffle_answers": False},
+            },
+            "answer_key": {},
+            "task_dir": None,
+        }
+
+    storage = MagicMock()
+    storage.load_task.side_effect = load_task
+
+    api = SessionAPI(
+        session_controller=controller,
+        adaptive_session_manager=session_manager,
+        complex_service=MagicMock(),
+        storage_service=storage,
+        statistics_service=MagicMock(),
+    )
+
+    group = api._resolve_scattered_test_group(session, 0)
+    payload = api._build_scattered_test_group_payload("sess_1", session, group)
+
+    assert len(group) == 2
+    assert payload is not None
+    questions = payload["task_data"]["content"]["questions"]
+    assert [q["_split_source_task_ref"] for q in questions] == [
+        "module/topic/test_a",
+        "module/topic/test_b",
+    ]
+    assert [q["_split_source_question_index"] for q in questions] == [1, 0]
+    assert payload["test_group_meta"]["sources"] == [
+        "module/topic/test_a",
+        "module/topic/test_b",
+    ]

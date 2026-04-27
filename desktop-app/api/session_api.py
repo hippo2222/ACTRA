@@ -20,7 +20,8 @@ from services.complex_service import ComplexService
 from services.linked_complex_runtime import parse_linked_runtime_complex_id
 from services.storage_service import StorageService
 from logic.complex_session_controller import ComplexSessionController
-from logic.task_controller import TaskController
+from logic.task_controller import TaskController, Task, TaskState
+from services.task_evaluator_service import EvaluationResult
 from api.web_models.sequence_models import (
     WebSequenceElement,
     WebSequenceLevel,
@@ -887,6 +888,11 @@ class SessionAPI:
         screen_type = session_ui_state.get("screen_type") if isinstance(session_ui_state, dict) else None
         if screen_type not in {"task", "task_results"}:
             return True
+        if screen_type == "task_results":
+            evaluation_result = session_ui_state.get("evaluation_result") if isinstance(session_ui_state, dict) else None
+            details = evaluation_result.get("details") if isinstance(evaluation_result, dict) else None
+            if isinstance(details, dict) and isinstance(details.get("test_group_meta"), dict):
+                return True
 
         queued_task, queue_index = self._resolve_current_queue_slot(session)
         task_ref = getattr(queued_task, "task_ref", None) if queued_task is not None else None
@@ -899,6 +905,768 @@ class SessionAPI:
             queue_index = self._find_queue_index_by_task_ref(session, task_ref)
 
         return self._can_restore_completed_result_for_slot(session, task_ref, queue_index)
+
+    def _is_scattered_test_slot(self, queued_task: Any) -> bool:
+        if queued_task is None:
+            return False
+        if str(getattr(queued_task, "display_mode", "") or "").strip().lower() != "scattered":
+            return False
+        question_index = getattr(queued_task, "test_question_index", None)
+        try:
+            int(question_index)
+            return True
+        except Exception:
+            return False
+
+    def _resolve_scattered_test_group(self, session: Any, start_index: Optional[int]) -> List[Tuple[int, Any]]:
+        if not session or not isinstance(start_index, int):
+            return []
+        queue = getattr(session, "queue", None)
+        if not isinstance(queue, list) or not (0 <= start_index < len(queue)):
+            return []
+        if not self._is_scattered_test_slot(queue[start_index]):
+            return []
+        group: List[Tuple[int, Any]] = []
+        idx = start_index
+        while idx < len(queue) and self._is_scattered_test_slot(queue[idx]):
+            group.append((idx, queue[idx]))
+            idx += 1
+        return group
+
+    def _get_test_questions_from_task_data(self, task_data: Dict[str, Any]) -> List[Any]:
+        if not isinstance(task_data, dict):
+            return []
+        content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+        questions = content.get("questions") if isinstance(content.get("questions"), list) else task_data.get("questions")
+        return questions if isinstance(questions, list) else []
+
+    def _ensure_test_shuffle_entry(
+        self,
+        session: Any,
+        task_ref: str,
+        task_data: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if not hasattr(session, "test_shuffle") or getattr(session, "test_shuffle", None) is None:
+            session.test_shuffle = {}
+        iteration = getattr(session, "iteration", None)
+        shuffle_key = f"{task_ref}@{iteration}"
+        entry = session.test_shuffle.get(shuffle_key)
+        if isinstance(entry, dict):
+            return entry
+
+        questions = self._get_test_questions_from_task_data(task_data)
+        content = task_data.get("content") if isinstance(task_data.get("content"), dict) else {}
+        settings = task_data.get("settings") or content.get("settings") or {}
+        if not isinstance(settings, dict):
+            settings = {}
+        shuffle_questions = bool(settings.get("shuffle_questions", True))
+        shuffle_answers = bool(settings.get("shuffle_answers", True))
+
+        question_order = list(range(len(questions)))
+        if shuffle_questions and len(question_order) > 1:
+            random.shuffle(question_order)
+
+        answer_order_by_question: Dict[str, Any] = {}
+        for orig_q_index, question in enumerate(questions):
+            if not isinstance(question, dict):
+                continue
+            answers = question.get("answers") or []
+            if not isinstance(answers, list) or not answers:
+                continue
+            answer_order = list(range(len(answers)))
+            if shuffle_answers and len(answer_order) > 1:
+                random.shuffle(answer_order)
+            answer_order_by_question[str(orig_q_index)] = answer_order
+
+        entry = {
+            "question_order": question_order,
+            "answer_order_by_question": answer_order_by_question,
+        }
+        session.test_shuffle[shuffle_key] = entry
+        return entry
+
+    def _apply_grouped_answer_shuffle(
+        self,
+        question: Dict[str, Any],
+        shuffle_entry: Dict[str, Any],
+        original_question_index: int,
+    ) -> Dict[str, Any]:
+        q = copy.deepcopy(question)
+        answers = q.get("answers") or []
+        answer_order_by_question = shuffle_entry.get("answer_order_by_question") or {}
+        answer_order = answer_order_by_question.get(str(original_question_index))
+        if isinstance(answers, list) and isinstance(answer_order, list) and answer_order:
+            original_answers = list(answers)
+            shuffled_answers = [
+                copy.deepcopy(original_answers[idx])
+                for idx in answer_order
+                if isinstance(idx, int) and 0 <= idx < len(original_answers)
+            ]
+            if shuffled_answers:
+                q["answers"] = shuffled_answers
+        return q
+
+    def _build_scattered_test_group_payload(
+        self,
+        session_id: str,
+        session: Any,
+        group: List[Tuple[int, Any]],
+        *,
+        load_controller: bool = True,
+    ) -> Optional[Dict[str, Any]]:
+        if not group:
+            return None
+
+        grouped_questions: List[Dict[str, Any]] = []
+        question_meta: List[Dict[str, Any]] = []
+        source_task_cache: Dict[str, Dict[str, Any]] = {}
+        first_task_data_full: Optional[Dict[str, Any]] = None
+        first_source_ref: Optional[str] = None
+        first_parts: Optional[List[str]] = None
+
+        for display_index, (queue_index, queued_task) in enumerate(group):
+            source_ref = (
+                getattr(queued_task, "source_task_ref", None)
+                or getattr(queued_task, "task_ref", None)
+            )
+            if not source_ref:
+                continue
+            parts = source_ref.split("/")
+            if len(parts) < 3:
+                continue
+            try:
+                original_question_index = int(getattr(queued_task, "test_question_index", None))
+            except Exception:
+                continue
+
+            cached = source_task_cache.get(source_ref)
+            if cached is None:
+                try:
+                    task_data_full = self._storage_service.load_task(parts[0], parts[1], parts[-1])
+                except Exception:
+                    logger.exception(
+                        "[SessionAPI] Failed to load scattered source task %s",
+                        source_ref,
+                    )
+                    continue
+                if not isinstance(task_data_full, dict):
+                    continue
+                task_data_full = copy.deepcopy(task_data_full)
+                task_data = task_data_full.get("task_data")
+                if not isinstance(task_data, dict):
+                    continue
+                difficulty_manager = getattr(
+                    getattr(self._controller, "task_controller", None),
+                    "difficulty_manager",
+                    None,
+                )
+                if difficulty_manager is not None:
+                    try:
+                        task_data = difficulty_manager.enhance_task_for_level(
+                            copy.deepcopy(task_data),
+                            level=int(getattr(queued_task, "difficulty", 1) or 1),
+                            task_ref=source_ref,
+                        )
+                    except Exception:
+                        logger.exception(
+                            "[SessionAPI] Failed to enhance scattered source task %s",
+                            source_ref,
+                        )
+                try:
+                    self._enrich_task_data_for_web(task_data, task_data_full.get("task_dir"))
+                except Exception:
+                    logger.exception(
+                        "[SessionAPI] Failed to enrich scattered source task %s",
+                        source_ref,
+                    )
+                task_data_full["task_data"] = task_data
+                cached = task_data_full
+                source_task_cache[source_ref] = cached
+
+            task_data = cached.get("task_data")
+            questions = self._get_test_questions_from_task_data(task_data)
+            if not (0 <= original_question_index < len(questions)):
+                continue
+            source_question = questions[original_question_index]
+            if not isinstance(source_question, dict):
+                continue
+
+            shuffle_entry = self._ensure_test_shuffle_entry(session, source_ref, task_data)
+            grouped_question = self._apply_grouped_answer_shuffle(
+                source_question,
+                shuffle_entry,
+                original_question_index,
+            )
+            source_question_id_raw = source_question.get("id")
+            source_question_id = (
+                str(source_question_id_raw)
+                if source_question_id_raw is not None
+                else str(original_question_index)
+            )
+            grouped_question_id = f"split_{queue_index}_{original_question_index}_{source_question_id}"
+            grouped_question["id"] = grouped_question_id
+            grouped_question["_partial_retry_original_index"] = original_question_index
+            grouped_question["_split_source_task_ref"] = source_ref
+            grouped_question["_split_source_question_index"] = original_question_index
+            grouped_question["_split_source_question_id"] = source_question_id
+            grouped_question["_split_queue_index"] = queue_index
+            grouped_questions.append(grouped_question)
+            question_meta.append(
+                {
+                    "question_id": grouped_question_id,
+                    "source_task_ref": source_ref,
+                    "source_question_id": source_question_id,
+                    "source_question_index": original_question_index,
+                    "queue_index": queue_index,
+                    "display_index": display_index,
+                }
+            )
+
+            if first_task_data_full is None:
+                first_task_data_full = copy.deepcopy(cached)
+                first_source_ref = source_ref
+                first_parts = parts
+
+        if not grouped_questions or first_task_data_full is None or first_source_ref is None or first_parts is None:
+            return None
+
+        first_task_data = copy.deepcopy(first_task_data_full.get("task_data") or {})
+        content = first_task_data.get("content") if isinstance(first_task_data.get("content"), dict) else {}
+        content = copy.deepcopy(content)
+        content["questions"] = grouped_questions
+        first_task_data["content"] = content
+        if isinstance(first_task_data.get("questions"), list):
+            first_task_data["questions"] = grouped_questions
+        first_task_data["type"] = "test"
+        first_task_data["task_type"] = "test"
+        first_task_data["_scattered_group"] = True
+
+        start_index = group[0][0]
+        end_index = group[-1][0]
+        source_refs: List[str] = []
+        for meta in question_meta:
+            source_ref = meta.get("source_task_ref")
+            if isinstance(source_ref, str) and source_ref not in source_refs:
+                source_refs.append(source_ref)
+
+        group_meta = {
+            "type": "scattered_test_group",
+            "display_mode": "scattered",
+            "start_index": start_index,
+            "end_index": end_index,
+            "slot_count": len(group),
+            "sources": source_refs,
+            "questions": question_meta,
+        }
+        first_task_data["test_group_meta"] = group_meta
+        first_task_data_full["task_data"] = first_task_data
+
+        if load_controller:
+            try:
+                task_controller = self._controller.task_controller
+                task_controller.current_task = Task(
+                    module_id=first_parts[0],
+                    topic_id=first_parts[1],
+                    task_id=first_parts[-1],
+                    task_type="test",
+                    task_data=copy.deepcopy(first_task_data),
+                    answer_key=first_task_data_full.get("answer_key") or {},
+                )
+                task_controller.task_state = TaskState.IN_PROGRESS
+                task_controller.current_difficulty_level = int(
+                    getattr(group[0][1], "difficulty", 1) or 1
+                )
+                self._controller.current_session_id = session_id
+                self._controller.current_task_ref = first_source_ref
+                setattr(self._controller, "_current_queue_index", start_index)
+            except Exception:
+                logger.exception("[SessionAPI] Failed to load scattered group into TaskController")
+
+        restored_evaluation_result = None
+        restored_user_input = None
+        restored_view_state = None
+        ui_state = getattr(session, "ui_state", None) or {}
+        if isinstance(ui_state, dict) and ui_state.get("task_index") == start_index:
+            if ui_state.get("screen_type") == "task_results":
+                evaluation_result = ui_state.get("evaluation_result")
+                if isinstance(evaluation_result, dict):
+                    restored_evaluation_result = evaluation_result
+                elif evaluation_result is not None:
+                    restored_evaluation_result = self._serialize_evaluation_result(
+                        evaluation_result,
+                        session_id=session_id,
+                        task_ref=first_source_ref,
+                    )
+            if isinstance(ui_state.get("user_input"), dict):
+                restored_user_input = ui_state.get("user_input")
+            if isinstance(ui_state.get("view_state"), dict):
+                restored_view_state = ui_state.get("view_state")
+
+        task_meta = first_task_data.get("meta") if isinstance(first_task_data.get("meta"), dict) else {}
+        task_name = (
+            task_meta.get("name")
+            or task_meta.get("title")
+            or first_task_data.get("name")
+            or first_task_data.get("title")
+        )
+
+        return {
+            "session_id": session_id,
+            "complex_id": getattr(session, "complex_id", None),
+            "task_ref": first_source_ref,
+            "module_id": first_parts[0],
+            "topic_id": first_parts[1],
+            "task_id": first_parts[-1],
+            "task_name": task_name,
+            "iteration": getattr(session, "iteration", None),
+            "difficulty": getattr(group[0][1], "difficulty", None),
+            "is_retry": any(bool(getattr(slot, "is_retry", False)) for _, slot in group),
+            "queue": {
+                "index": start_index,
+                "total": len(getattr(session, "queue", []) or []),
+                "end_index": end_index,
+                "slot_count": len(group),
+            },
+            "order_meta": {
+                "test_group": group_meta,
+                "retry": {
+                    "is_retry": any(bool(getattr(slot, "is_retry", False)) for _, slot in group),
+                },
+            },
+            "available_levels": [],
+            "difficulty_meta": None,
+            "task_data": first_task_data,
+            "answer_key": first_task_data_full.get("answer_key"),
+            "test_group_meta": group_meta,
+            "restored_evaluation_result": restored_evaluation_result,
+            "restored_user_input": restored_user_input,
+            "restored_view_state": restored_view_state,
+        }
+
+    def _normalize_scattered_test_answers_from_shuffle(
+        self,
+        session: Any,
+        group_meta: Dict[str, Any],
+        user_input: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if not isinstance(user_input, dict):
+            return user_input
+        answers_in = user_input.get("answers")
+        if not isinstance(answers_in, dict) or not answers_in:
+            return user_input
+        question_meta = group_meta.get("questions") if isinstance(group_meta, dict) else None
+        if not isinstance(question_meta, list):
+            return user_input
+        meta_by_grouped_id = {
+            str(meta.get("question_id")): meta
+            for meta in question_meta
+            if isinstance(meta, dict) and meta.get("question_id") is not None
+        }
+        test_shuffle = getattr(session, "test_shuffle", None)
+        iteration = getattr(session, "iteration", None)
+        if not isinstance(test_shuffle, dict) or iteration is None:
+            return user_input
+
+        def _to_int(value: Any) -> Optional[int]:
+            if isinstance(value, bool):
+                return None
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+            if isinstance(value, str):
+                stripped = value.strip()
+                if stripped.isdigit():
+                    return int(stripped)
+                if stripped.startswith("answer_"):
+                    suffix = stripped.split("_", 1)[1]
+                    if suffix.isdigit():
+                        return int(suffix)
+            return None
+
+        def _remap_value(source_ref: str, question_index: int, value: Any) -> Any:
+            entry = test_shuffle.get(f"{source_ref}@{iteration}")
+            if not isinstance(entry, dict):
+                return value
+            answer_order = (entry.get("answer_order_by_question") or {}).get(str(question_index))
+            if not isinstance(answer_order, list) or not answer_order:
+                return value
+            if isinstance(value, (list, tuple)):
+                remapped = []
+                for item in value:
+                    idx = _to_int(item)
+                    if idx is not None and 0 <= idx < len(answer_order):
+                        remapped.append(answer_order[idx])
+                    else:
+                        remapped.append(item)
+                return remapped
+            idx = _to_int(value)
+            if idx is not None and 0 <= idx < len(answer_order):
+                return answer_order[idx]
+            return value
+
+        changed = False
+        normalized_answers: Dict[Any, Any] = {}
+        for key, value in answers_in.items():
+            meta = meta_by_grouped_id.get(str(key))
+            if not isinstance(meta, dict):
+                normalized_answers[key] = value
+                continue
+            source_ref = str(meta.get("source_task_ref") or "")
+            try:
+                question_index = int(meta.get("source_question_index"))
+            except Exception:
+                normalized_answers[key] = value
+                continue
+            remapped = _remap_value(source_ref, question_index, value)
+            normalized_answers[key] = remapped
+            if remapped != value:
+                changed = True
+
+        if not changed:
+            return user_input
+        normalized_input = dict(user_input)
+        normalized_input["answers"] = normalized_answers
+        return normalized_input
+
+    def _build_scattered_per_question_ui(
+        self,
+        session: Any,
+        group_meta: Dict[str, Any],
+        per_question: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        if not isinstance(per_question, dict) or not isinstance(group_meta, dict):
+            return per_question if isinstance(per_question, dict) else {}
+        question_meta = group_meta.get("questions")
+        if not isinstance(question_meta, list):
+            return dict(per_question)
+        test_shuffle = getattr(session, "test_shuffle", None)
+        iteration = getattr(session, "iteration", None)
+        if not isinstance(test_shuffle, dict) or iteration is None:
+            return dict(per_question)
+
+        meta_by_grouped_id = {
+            str(meta.get("question_id")): meta
+            for meta in question_meta
+            if isinstance(meta, dict) and meta.get("question_id") is not None
+        }
+
+        def _to_int(value: Any) -> Optional[int]:
+            if isinstance(value, bool):
+                return None
+            if isinstance(value, int):
+                return value
+            if isinstance(value, float):
+                return int(value)
+            if isinstance(value, str) and value.strip().isdigit():
+                return int(value.strip())
+            return None
+
+        def _remap(ids: Any, original_to_shuffled: Dict[int, int]) -> List[Any]:
+            if not isinstance(ids, list):
+                return []
+            out: List[Any] = []
+            for value in ids:
+                idx = _to_int(value)
+                out.append(original_to_shuffled.get(idx, value) if idx is not None else value)
+            return out
+
+        per_question_ui: Dict[str, Any] = {}
+        for grouped_qid_raw, item in per_question.items():
+            grouped_qid = str(grouped_qid_raw)
+            if not isinstance(item, dict):
+                per_question_ui[grouped_qid] = item
+                continue
+            meta = meta_by_grouped_id.get(grouped_qid)
+            if not isinstance(meta, dict):
+                per_question_ui[grouped_qid] = dict(item)
+                continue
+            source_ref = str(meta.get("source_task_ref") or "")
+            try:
+                source_question_index = int(meta.get("source_question_index"))
+            except Exception:
+                per_question_ui[grouped_qid] = dict(item)
+                continue
+            shuffle_entry = test_shuffle.get(f"{source_ref}@{iteration}")
+            answer_order = (
+                (shuffle_entry.get("answer_order_by_question") or {}).get(str(source_question_index))
+                if isinstance(shuffle_entry, dict)
+                else None
+            )
+            if not isinstance(answer_order, list) or not answer_order:
+                per_question_ui[grouped_qid] = dict(item)
+                continue
+            original_to_shuffled: Dict[int, int] = {}
+            for shuffled_idx, original_idx in enumerate(answer_order):
+                oi = _to_int(original_idx)
+                if oi is not None:
+                    original_to_shuffled[oi] = shuffled_idx
+            ui_item = dict(item)
+            ui_item["correct_option_ids"] = _remap(item.get("correct_option_ids"), original_to_shuffled)
+            ui_item["user_option_ids"] = _remap(item.get("user_option_ids"), original_to_shuffled)
+            per_question_ui[grouped_qid] = ui_item
+        return per_question_ui
+
+    def _split_scattered_group_result_by_source(
+        self,
+        result: EvaluationResult,
+        group_meta: Dict[str, Any],
+    ) -> Tuple[Dict[str, Dict[str, Any]], Dict[str, Any]]:
+        details = result.details if isinstance(result.details, dict) else {}
+        question_meta = group_meta.get("questions") if isinstance(group_meta, dict) else []
+        meta_by_grouped_id = {
+            str(meta.get("question_id")): meta
+            for meta in question_meta
+            if isinstance(meta, dict) and meta.get("question_id") is not None
+        }
+        per_question = details.get("per_question") if isinstance(details.get("per_question"), dict) else {}
+        question_results = details.get("question_results") if isinstance(details.get("question_results"), list) else []
+        if not question_results and isinstance(question_meta, list):
+            question_results = [
+                {
+                    "question_id": meta.get("question_id"),
+                    "correct": False,
+                    "reason": details.get("error") or "not_answered",
+                }
+                for meta in question_meta
+                if isinstance(meta, dict) and meta.get("question_id") is not None
+            ]
+
+        by_source: Dict[str, Dict[str, Any]] = {}
+        grouped_failed_subtests: List[Dict[str, Any]] = []
+        grouped_question_results: List[Dict[str, Any]] = []
+        grouped_per_question: Dict[str, Any] = {}
+
+        for result_item in question_results:
+            if not isinstance(result_item, dict):
+                continue
+            grouped_qid = str(result_item.get("question_id"))
+            meta = meta_by_grouped_id.get(grouped_qid)
+            if not isinstance(meta, dict):
+                continue
+            source_ref = str(meta.get("source_task_ref") or "")
+            source_qid = str(meta.get("source_question_id") or meta.get("source_question_index"))
+            try:
+                source_index = int(meta.get("source_question_index"))
+            except Exception:
+                source_index = 0
+            source_bucket = by_source.setdefault(
+                source_ref,
+                {
+                    "question_results": [],
+                    "per_question": {},
+                    "failed_subtests": [],
+                    "shown_question_indices": [],
+                    "correct_count": 0,
+                    "total_count": 0,
+                },
+            )
+            source_result_item = dict(result_item)
+            source_result_item["question_id"] = source_qid
+            source_result_item["index"] = source_index
+            source_result_item["grouped_question_id"] = grouped_qid
+            source_result_item["source_task_ref"] = source_ref
+            source_bucket["question_results"].append(source_result_item)
+            source_bucket["total_count"] += 1
+            if bool(result_item.get("correct")):
+                source_bucket["correct_count"] += 1
+            if source_index not in source_bucket["shown_question_indices"]:
+                source_bucket["shown_question_indices"].append(source_index)
+
+            pq_item = per_question.get(grouped_qid)
+            if isinstance(pq_item, dict):
+                source_pq_item = dict(pq_item)
+                source_pq_item["grouped_question_id"] = grouped_qid
+                source_pq_item["source_task_ref"] = source_ref
+                source_pq_item["source_question_index"] = source_index
+                source_bucket["per_question"][source_qid] = source_pq_item
+                grouped_per_question[grouped_qid] = pq_item
+
+            grouped_item = dict(result_item)
+            grouped_item["source_task_ref"] = source_ref
+            grouped_item["source_question_id"] = source_qid
+            grouped_item["source_question_index"] = source_index
+            grouped_question_results.append(grouped_item)
+            if not bool(result_item.get("correct")):
+                failed_item = {
+                    "question_id": source_qid,
+                    "index": source_index,
+                    "source_task_ref": source_ref,
+                    "grouped_question_id": grouped_qid,
+                }
+                source_bucket["failed_subtests"].append(failed_item)
+                grouped_failed_subtests.append(failed_item)
+
+        grouped_details = dict(details)
+        grouped_details["test_display_mode"] = "scattered"
+        grouped_details["test_grouped"] = True
+        grouped_details["test_group_meta"] = group_meta
+        grouped_details["question_results"] = grouped_question_results
+        grouped_details["per_question"] = grouped_per_question or per_question
+        grouped_details["failed_subtests"] = grouped_failed_subtests
+        grouped_details["task_type"] = "test"
+        return by_source, grouped_details
+
+    def _submit_scattered_test_group_answer(
+        self,
+        session_id: str,
+        session: Any,
+        current_task_ref: str,
+        group: List[Tuple[int, Any]],
+        user_input: Dict[str, Any],
+    ) -> Optional[EvaluationResult]:
+        payload = self._build_scattered_test_group_payload(
+            session_id,
+            session,
+            group,
+            load_controller=True,
+        )
+        if not isinstance(payload, dict):
+            return None
+        group_meta = payload.get("test_group_meta")
+        if not isinstance(group_meta, dict):
+            return None
+
+        original_user_input = copy.deepcopy(user_input) if isinstance(user_input, dict) else user_input
+        normalized_input = self._normalize_scattered_test_answers_from_shuffle(
+            session,
+            group_meta,
+            user_input,
+        )
+
+        task_controller = getattr(self._controller, "task_controller", None)
+        if task_controller is None or not task_controller.is_task_loaded():
+            return None
+
+        previous_defer_progress = bool(getattr(task_controller, "defer_progress_persistence", False))
+        task_controller.defer_progress_persistence = True
+        try:
+            evaluation_result = task_controller.submit_answer(normalized_input)
+        finally:
+            task_controller.defer_progress_persistence = previous_defer_progress
+
+        if not isinstance(evaluation_result, EvaluationResult):
+            return evaluation_result
+
+        by_source, grouped_details = self._split_scattered_group_result_by_source(
+            evaluation_result,
+            group_meta,
+        )
+        total_count = int(grouped_details.get("total_count") or len(grouped_details.get("question_results") or []) or 0)
+        correct_count = int(grouped_details.get("correct_count") or 0)
+        if not correct_count and isinstance(grouped_details.get("question_results"), list):
+            correct_count = sum(
+                1
+                for item in grouped_details.get("question_results") or []
+                if isinstance(item, dict) and item.get("correct")
+            )
+            grouped_details["correct_count"] = correct_count
+        if not total_count:
+            total_count = len(grouped_details.get("question_results") or [])
+            grouped_details["total_count"] = total_count
+        grouped_details["per_question_ui"] = self._build_scattered_per_question_ui(
+            session,
+            group_meta,
+            grouped_details.get("per_question") if isinstance(grouped_details.get("per_question"), dict) else {},
+        )
+
+        source_results = []
+        for source_ref, source_payload in by_source.items():
+            source_total = int(source_payload.get("total_count") or 0)
+            source_correct = int(source_payload.get("correct_count") or 0)
+            source_success = source_total > 0 and source_correct == source_total
+            source_score = (source_correct / source_total * 100.0) if source_total > 0 else 0.0
+            source_details = dict(grouped_details)
+            source_details.update(
+                {
+                    "task_type": "test",
+                    "test_display_mode": "scattered",
+                    "test_grouped": True,
+                    "show_full_source_review": True,
+                    "source_task_ref": source_ref,
+                    "question_results": source_payload.get("question_results") or [],
+                    "per_question": source_payload.get("per_question") or {},
+                    "failed_subtests": source_payload.get("failed_subtests") or [],
+                    "shown_question_indices": source_payload.get("shown_question_indices") or [],
+                    "correct_count": source_correct,
+                    "total_count": source_total,
+                }
+            )
+            try:
+                source_result = self._session_manager.submit_result(
+                    session_id,
+                    {
+                        "task_ref": source_ref,
+                        "success": source_success,
+                        "score": source_score,
+                        "time_spent": grouped_details.get("time_spent", 0),
+                        "difficulty": int(getattr(group[0][1], "difficulty", 1) or 1),
+                        "expected_iteration": getattr(self._controller, "_current_task_iteration", None)
+                        or getattr(session, "iteration", None),
+                        "details": source_details,
+                    },
+                )
+                source_results.append(source_result)
+            except Exception:
+                logger.exception(
+                    "[SessionAPI.submit_answer] Failed to persist scattered source result for %s",
+                    source_ref,
+                )
+
+        grouped_details["source_results"] = [
+            {
+                "task_ref": getattr(source_result, "task_ref", None),
+                "success": getattr(source_result, "success", None),
+                "score": getattr(source_result, "score", None),
+            }
+            for source_result in source_results
+        ]
+        evaluation_result.details = grouped_details
+        evaluation_result.success = total_count > 0 and correct_count == total_count
+        evaluation_result.score = (correct_count / total_count * 100.0) if total_count > 0 else 0.0
+
+        try:
+            self._controller.save_ui_state(
+                "task_results",
+                task_ref=current_task_ref,
+                task_index=group[0][0],
+                evaluation_result=evaluation_result,
+                user_input=original_user_input,
+            )
+        except Exception:
+            logger.exception("[SessionAPI.submit_answer] Failed to save scattered group UI state")
+
+        return evaluation_result
+
+    def _advance_after_scattered_group_result(self, session: Any) -> None:
+        ui_state = getattr(session, "ui_state", None) or {}
+        if not isinstance(ui_state, dict) or ui_state.get("screen_type") != "task_results":
+            return
+        evaluation_result = ui_state.get("evaluation_result")
+        details = evaluation_result.get("details") if isinstance(evaluation_result, dict) else None
+        group_meta = details.get("test_group_meta") if isinstance(details, dict) else None
+        if not isinstance(group_meta, dict) or group_meta.get("type") != "scattered_test_group":
+            return
+        try:
+            end_index = int(group_meta.get("end_index"))
+        except Exception:
+            return
+        queue = getattr(session, "queue", None)
+        if not isinstance(queue, list) or end_index < 0:
+            return
+        target_index = min(len(queue), end_index + 1)
+        if not isinstance(getattr(session, "current_task_index", None), int) or session.current_task_index < target_index:
+            logger.info(
+                "[SessionAPI.next_task] Advancing scattered test group progress: %s -> %s",
+                getattr(session, "current_task_index", None),
+                target_index,
+            )
+            session.current_task_index = target_index
+            try:
+                if self._session_manager.session_repository:
+                    self._session_manager.session_repository.save_session(session, session.user_id)
+            except Exception:
+                logger.exception("[SessionAPI.next_task] Failed to persist scattered group progress")
 
     def _build_resolution_snapshot(
         self,
@@ -1482,6 +2250,17 @@ class SessionAPI:
                 logger.exception("[SessionAPI.get_current_task] Failed to restore task_ref from queue fallback")
         if not current_task_ref:
             return None
+
+        scattered_group = self._resolve_scattered_test_group(session, resolved_queue_index)
+        if scattered_group:
+            grouped_payload = self._build_scattered_test_group_payload(
+                session_id,
+                session,
+                scattered_group,
+                load_controller=True,
+            )
+            if grouped_payload is not None:
+                return grouped_payload
 
 
         # Парсим task_ref в module/topic/task_id
@@ -2735,6 +3514,35 @@ class SessionAPI:
             logger.warning("[SessionAPI.submit_answer] no current_task_ref")
             return None
 
+        try:
+            session = self.get_session(session_id, user_id=user_id)
+            resolved_task, resolved_index = self._resolve_current_queue_slot(session)
+            scattered_group = self._resolve_scattered_test_group(session, resolved_index)
+            if scattered_group:
+                grouped_task_ref = getattr(scattered_group[0][1], "task_ref", None) or current_task_ref
+                grouped_task_id = grouped_task_ref.split("/")[-1] if isinstance(grouped_task_ref, str) else ""
+                if grouped_task_id and grouped_task_id != task_id:
+                    logger.warning(
+                        "[SessionAPI.submit_answer] scattered task_id mismatch: api=%s, current=%s",
+                        task_id,
+                        grouped_task_id,
+                    )
+                    return {"error": "task_id_mismatch", "expected": grouped_task_id, "received": task_id}
+                self._controller.current_task_ref = grouped_task_ref
+                setattr(self._controller, "_current_queue_index", resolved_index)
+                result = self._submit_scattered_test_group_answer(
+                    session_id,
+                    session,
+                    grouped_task_ref,
+                    scattered_group,
+                    user_input,
+                )
+                if result is not None:
+                    return result
+        except Exception:
+            logger.exception("[SessionAPI.submit_answer] Failed to submit scattered test group")
+            return None
+
         # Синхронизируем current_task_index по task_ref, чтобы _load_current_task взял правильный элемент очереди
         # Синхронизируем current_task_index по текущему queue-slot, чтобы retry-логика
         # и сохраненный task_ref не расходились с фактически открытым заданием.
@@ -2882,6 +3690,11 @@ class SessionAPI:
                 getattr(session, "ui_state", None),
             )
             return {"ok": False, "error": "task_not_checked"}
+
+        try:
+            self._advance_after_scattered_group_result(session)
+        except Exception:
+            logger.exception("[SessionAPI.next_task] Failed to advance scattered group before next task")
 
         logger.info("[SessionAPI.next_task] Calling controller.next_task()...")
         self._controller.next_task()
@@ -3143,6 +3956,8 @@ class SessionAPI:
                     data["problem_tasks"] = problem_tasks
         except Exception:
             logger.exception("[SessionAPI.get_final_results] Failed to build problem tasks payload")
+
+        hosted_runtime = self._is_hosted_runtime()
 
         def _first_text(*values: Any) -> str:
             for value in values:
@@ -3733,6 +4548,171 @@ class SessionAPI:
                 return question_index is not None and result_index == question_index
 
             if task_type == "test":
+                if (
+                    details.get("test_display_mode") == "scattered"
+                    and details.get("show_full_source_review")
+                    and questions
+                ):
+                    question_results_by_id: Dict[str, Dict[str, Any]] = {}
+                    question_results_by_index: Dict[int, Dict[str, Any]] = {}
+                    for qr_idx, result_item in enumerate(question_results):
+                        if not isinstance(result_item, dict):
+                            continue
+                        qid_raw = result_item.get("question_id")
+                        if qid_raw is not None:
+                            question_results_by_id[str(qid_raw)] = result_item
+                        index_raw = result_item.get("index")
+                        if isinstance(index_raw, int):
+                            question_results_by_index[index_raw] = result_item
+                        else:
+                            question_results_by_index[qr_idx] = result_item
+
+                    failed_indices = {
+                        int(failed_item.get("index"))
+                        for failed_item in failed_subtests
+                        if isinstance(failed_item, dict)
+                        and isinstance(failed_item.get("index"), int)
+                    }
+                    failed_ids = {
+                        str(failed_item.get("question_id"))
+                        for failed_item in failed_subtests
+                        if isinstance(failed_item, dict)
+                        and failed_item.get("question_id") is not None
+                    }
+                    entry_payloads: List[Dict[str, Any]] = []
+
+                    for question_index, question_candidate in enumerate(questions):
+                        if not isinstance(question_candidate, dict):
+                            continue
+                        question_id_raw = question_candidate.get("id")
+                        question_id = str(question_id_raw) if question_id_raw is not None else str(question_index)
+                        per_question_item = {}
+                        if isinstance(per_question_ui.get(question_id), dict):
+                            per_question_item = per_question_ui.get(question_id) or {}
+                        elif isinstance(per_question.get(question_id), dict):
+                            per_question_item = per_question.get(question_id) or {}
+                        question_result_item = (
+                            question_results_by_id.get(question_id)
+                            or question_results_by_index.get(question_index)
+                            or {}
+                        )
+                        attempted = bool(per_question_item or question_result_item)
+                        is_failed = (
+                            question_id in failed_ids
+                            or question_index in failed_indices
+                            or (
+                                isinstance(question_result_item, dict)
+                                and question_result_item
+                                and not question_result_item.get("correct", True)
+                            )
+                        )
+
+                        prompt_local = _first_text(
+                            question_candidate.get("question"),
+                            question_candidate.get("text"),
+                            question_candidate.get("prompt"),
+                            question_candidate.get("title"),
+                            content.get("question"),
+                            content.get("prompt"),
+                        )
+
+                        user_answer_raw = None
+                        correct_answer_raw = None
+                        per_question_details = (
+                            per_question_item.get("details")
+                            if isinstance(per_question_item.get("details"), dict)
+                            else {}
+                        )
+                        if isinstance(question_result_item, dict):
+                            user_answer_raw = question_result_item.get("user_answer")
+                            correct_answer_raw = question_result_item.get("correct_answer")
+                        if user_answer_raw is None:
+                            user_answer_raw = per_question_details.get("user_answer")
+                        if correct_answer_raw is None:
+                            correct_answer_raw = per_question_details.get("reference_answer")
+
+                        user_answer = ""
+                        correct_answer = ""
+                        user_review_items: List[Dict[str, Any]] = []
+                        reference_review_items: List[Dict[str, Any]] = []
+
+                        if attempted:
+                            option_text = _extract_option_text(
+                                question_candidate,
+                                user_answer_raw
+                                if user_answer_raw is not None
+                                else per_question_item.get("user_option_ids"),
+                            )
+                            user_answer = option_text or _normalize_answer_value(user_answer_raw)
+                        else:
+                            user_answer = "Не показывался в этой попытке."
+
+                        option_text = _extract_option_text(
+                            question_candidate,
+                            correct_answer_raw
+                            if correct_answer_raw is not None
+                            else per_question_item.get("correct_option_ids"),
+                        )
+                        correct_answer = option_text or _normalize_answer_value(correct_answer_raw)
+                        if not correct_answer:
+                            correct_answer = _extract_correct_option_text(question_candidate)
+                        if not correct_answer:
+                            correct_answer = "Правильный ответ не найден."
+
+                        if _question_has_image_options(question_candidate):
+                            user_review_items = _extract_option_review_items(
+                                question_candidate,
+                                user_answer_raw
+                                if user_answer_raw is not None
+                                else per_question_item.get("user_option_ids"),
+                            )
+                            reference_review_items = _extract_option_review_items(
+                                question_candidate,
+                                correct_answer_raw
+                                if correct_answer_raw is not None
+                                else per_question_item.get("correct_option_ids"),
+                            )
+                            if not reference_review_items:
+                                reference_review_items = _extract_correct_option_review_items(question_candidate)
+
+                        if not attempted:
+                            note = "Вопрос не входил в текущую смешанную группу и не участвовал в оценке."
+                            status = "neutral"
+                        elif is_failed:
+                            note = "Вопрос был показан в текущей смешанной группе: есть ошибка."
+                            status = "incorrect"
+                        else:
+                            note = "Вопрос был показан в текущей смешанной группе: ответ верный."
+                            status = "correct"
+
+                        entry_payload = _make_review_payload_for_review(
+                            f"{task_title}: вопрос {question_index + 1}",
+                            prompt_local,
+                            [user_answer],
+                            [correct_answer],
+                            user_label="Ответ пользователя" if attempted else "Статус",
+                            reference_label="Правильный ответ",
+                            note=note,
+                            user_items=user_review_items,
+                            reference_items=reference_review_items,
+                        )
+                        if isinstance(entry_payload.get("review"), dict):
+                            entry_payload["review"]["status"] = status
+                            entry_payloads.append(entry_payload)
+
+                    if entry_payloads:
+                        primary_payload = dict(entry_payloads[0])
+                        primary_review = dict(primary_payload.get("review") or {})
+                        primary_review["kind"] = "full_test"
+                        primary_review["source_task_ref"] = details.get("source_task_ref") or item.get("task_ref")
+                        primary_review["entries"] = [
+                            dict(entry_payload.get("review") or {})
+                            for entry_payload in entry_payloads
+                            if isinstance(entry_payload.get("review"), dict)
+                        ]
+                        primary_payload["review"] = primary_review
+                        return primary_payload
+
                 failed_targets = _collect_failed_test_targets()
                 if len(failed_targets) > 1:
                     entry_payloads: List[Dict[str, Any]] = []
@@ -4261,6 +5241,10 @@ class SessionAPI:
                             if value and not item.get(key):
                                 item[key] = value
                     except Exception:
+                        logger.exception(
+                            "[SessionAPI.get_iteration_results] Failed to build review payload for %s",
+                            task_ref,
+                        )
                         continue
         except Exception:
             logger.exception("[SessionAPI.get_iteration_results] Failed to enrich review payload")

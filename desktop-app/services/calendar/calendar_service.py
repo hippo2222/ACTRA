@@ -16,6 +16,7 @@ Calendar Service - Главный сервис календаря обучени
 import json
 import logging
 import os
+import re
 from copy import deepcopy
 from datetime import datetime, date, timedelta
 from pathlib import Path
@@ -43,6 +44,18 @@ from .models import (
 from .health_score_service import HealthScoreService
 from .scheduler_service import SchedulerService
 from .notification_service import NotificationService
+
+_RAW_ID_RE = re.compile(
+    r"^(?:[0-9a-f]{24}|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$",
+    re.IGNORECASE,
+)
+
+
+def _safe_complex_display_name(value: Any, fallback: str = "Комплекс") -> str:
+    text = str(value or "").strip()
+    if not text or _RAW_ID_RE.match(text):
+        return fallback
+    return text
 
 if TYPE_CHECKING:
     from persistence.runtime import PersistenceRuntimeSettings
@@ -777,7 +790,10 @@ class CalendarService(HostedShadowFallbackMixin):
             if p.complex_id in ("daily_mix", "study", "new_material"):
                 continue
 
-            name = complex_names.get(p.complex_id, p.complex_id)
+            name = _safe_complex_display_name(
+                complex_names.get(p.complex_id),
+                f"Комплекс {len(complexes) + 1}",
+            )
             
             # Формируем сообщение о здоровье
             health_msg = self.health_service.format_health_message(name, p.health_score)

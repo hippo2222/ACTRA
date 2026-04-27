@@ -49,6 +49,23 @@ class ComplexSettings(BaseModel):
         description="Использовать ли схему training/control (lvl-1 near + original end_of_phase)"
     )
     
+    test_question_display_modes: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Per test task display mode: together or scattered"
+    )
+
+    @validator("test_question_display_modes", pre=True, always=True)
+    def validate_test_question_display_modes(cls, value):
+        if not isinstance(value, dict):
+            return {}
+        normalized = {}
+        for key, mode in value.items():
+            task_ref = str(key or "").strip()
+            mode_value = str(mode or "").strip().lower()
+            if task_ref and mode_value in {"together", "scattered"}:
+                normalized[task_ref] = mode_value
+        return normalized
+
     class Config:
         extra = "allow"
 
@@ -59,6 +76,11 @@ class QueuedTask(BaseModel):
     difficulty: int = Field(ge=1, le=3)
     is_retry: bool = False  # True, если задание добавлено из-за ошибки в предыдущей итерации
     origin_iteration: Optional[int] = None  # Номер итерации, где была допущена ошибка (для аналитики)
+
+
+    display_mode: Optional[str] = None
+    source_task_ref: Optional[str] = None
+    test_question_index: Optional[int] = None
 
 
 class Complex(BaseModel):
