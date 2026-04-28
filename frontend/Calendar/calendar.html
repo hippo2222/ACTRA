@@ -1882,54 +1882,37 @@
 
             });
 
+            let renderedSchedule = state.schedule.slice(0, 7);
+
             if (isScheduleEmpty) {
 
                 const today = new Date();
                 const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-                const ghostDays = Array.from({ length: 7 }, (_, i) => {
+                renderedSchedule = Array.from({ length: 7 }, (_, i) => {
                     const d = new Date(today);
                     d.setDate(today.getDate() + i);
+                    const isoDate = [
+                        d.getFullYear(),
+                        String(d.getMonth() + 1).padStart(2, '0'),
+                        String(d.getDate()).padStart(2, '0'),
+                    ].join('-');
                     return {
-                        label: i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : dayNames[d.getDay()],
-                        num: d.getDate(),
+                        date: isoDate,
+                        day_name: i === 0 ? 'Сегодня' : i === 1 ? 'Завтра' : dayNames[d.getDay()],
+                        day_num: d.getDate(),
                         month: d.toLocaleDateString('ru', { month: 'short' }),
-                        isToday: i === 0,
+                        is_today: i === 0,
+                        is_future: i > 0,
+                        is_empty_placeholder: true,
+                        status: 'empty',
+                        tasks: [],
+                        all_tasks: [],
+                        badges: [],
                     };
                 });
 
-                container.innerHTML = ghostDays.map((d) => `
-                    <div class="schedule-card border rounded-xl p-4 flex flex-col gap-3 relative
-                        ${d.isToday
-                            ? 'bg-surface-1 border-primary schedule-card-today'
-                            : 'bg-surface-1 border-border-subtle opacity-50'}">
-                        <div class="flex justify-between items-start">
-                            <span class="text-sm font-bold ${d.isToday ? 'text-primary' : 'text-text-secondary'}">${d.label}</span>
-                            <span class="text-xs text-text-secondary">${d.num} ${d.month}</span>
-                        </div>
-                        <div class="h-px w-full bg-border-subtle"></div>
-                        <div class="flex flex-col gap-2 flex-1 items-center justify-center">
-                            <span class="material-symbols-outlined text-[20px] ${d.isToday ? 'text-primary' : 'text-text-secondary opacity-40'}">
-                                ${d.isToday ? 'play_circle' : 'lock'}
-                            </span>
-                            ${d.isToday
-                                ? `<button type="button" data-nav-target="/ui/complexes"
-                                      class="text-[11px] font-semibold text-primary hover:underline transition-colors text-center leading-tight">
-                                      Запустить комплекс
-                                   </button>`
-                                : `<span class="text-[10px] text-text-secondary opacity-50 text-center">Будет доступно</span>`
-                            }
-                        </div>
-                    </div>
-                `).join('');
-
-                requestAnimationFrame(syncScheduleStripState);
-                setupDragScroll();
-
-                return;
-
             }
 
-            const renderedSchedule = state.schedule.slice(0, 7);
             const plannedDays = renderedSchedule.filter((day) => {
                 const source = Array.isArray(day.all_tasks) && day.all_tasks.length > 0 ? day.all_tasks : (day.tasks || []);
                 return filterSyntheticTasks(normalizeTasks(source)).length > 0;
@@ -1991,6 +1974,8 @@
                 const statusMeta = (() => {
                     if (isRestDay) return { icon: 'event_busy', label: 'Выходной', tone: 'muted' };
                     if (isMissed) return { icon: 'warning', label: 'Пропущено', tone: 'danger' };
+                    if (day.is_empty_placeholder && isToday) return { icon: 'play_circle', label: 'Начать', tone: 'active' };
+                    if (day.is_empty_placeholder && day.is_future) return { icon: 'lock', label: 'Будет доступно', tone: 'muted' };
                     if (taskCount > 0 && completedCount >= taskCount) return { icon: 'check_circle', label: 'Готово', tone: 'good' };
                     if (isToday && taskCount > 0) return { icon: 'play_circle', label: 'Сегодня', tone: 'active' };
                     if (taskCount > 0) return { icon: 'schedule', label: day.is_future ? 'Запланировано' : 'Было в плане', tone: 'planned' };
@@ -2070,7 +2055,9 @@
                     ` : `
                         <div class="schedule-plan-empty">
                             <span class="material-symbols-outlined">${statusMeta.icon}</span>
-                            <span>${isRestDay ? 'День без нагрузки' : isMissed ? 'План не выполнен' : 'Повторов нет'}</span>
+                            ${day.is_empty_placeholder && isToday
+                                ? `<button type="button" data-nav-target="/ui/complexes" class="schedule-plan-empty__action">Запустить комплекс</button>`
+                                : `<span>${isRestDay ? 'День без нагрузки' : isMissed ? 'План не выполнен' : day.is_empty_placeholder && day.is_future ? 'Будет доступно' : 'Повторов нет'}</span>`}
                         </div>
                     `}
 

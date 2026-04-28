@@ -3857,6 +3857,21 @@ body.calendar-layout .schedule-plan-empty {
     font-weight: 700;
 }
 
+body.calendar-layout .schedule-plan-empty__action {
+    border: 0;
+    background: transparent;
+    color: var(--color-primary);
+    font-size: 0.76rem;
+    font-weight: 800;
+    line-height: 1.15;
+    cursor: pointer;
+}
+
+body.calendar-layout .schedule-plan-empty__action:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
 body.calendar-layout .schedule-plan-empty .material-symbols-outlined {
     color: var(--color-text-muted);
     font-size: 1.35rem;
