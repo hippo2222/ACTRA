@@ -1176,7 +1176,7 @@
 
                 const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
-                for (let i = -1; i < 7; i++) {
+                for (let i = 0; i < 7; i++) {
 
                     const d = new Date(today);
 
@@ -1931,10 +1931,11 @@
             container.innerHTML = renderedSchedule.map((day) => {
 
                 const isToday = day.is_today;
+                const isEmptyPlaceholder = Boolean(day.is_empty_placeholder) || isScheduleEmpty;
                 const isMissed = day.status === 'missed';
                 const isRestDay = day.status === 'rest_day' || state.restDays[day.date];
                 const isExpanded = state.ui.expandedDays && state.ui.expandedDays[day.date];
-                const canToggleRest = isToday || day.is_future;
+                const canToggleRest = !isEmptyPlaceholder && (isToday || day.is_future);
                 const safeDayDate = escapeInlineJsString(day.date);
 
                 let borderClass = 'border-border-subtle';
@@ -1942,7 +1943,14 @@
                 let bgClass = 'bg-surface-1';
                 let extraContent = '';
 
-                if (isRestDay) {
+                if (isEmptyPlaceholder) {
+                    stateClass = 'schedule-card-empty';
+                    bgClass = 'bg-surface-1';
+                    borderClass = isToday ? 'border-primary' : 'border-border-subtle';
+                    if (isToday) {
+                        stateClass += ' schedule-card-today';
+                    }
+                } else if (isRestDay) {
                     bgClass = 'bg-bg-secondary';
                     borderClass = 'border-border-subtle';
                 } else if (isToday) {
@@ -1972,10 +1980,11 @@
                     : (isMissed ? 'План не выполнен' : 'Повторов нет');
 
                 const statusMeta = (() => {
+                    if (isEmptyPlaceholder && isToday) return { icon: 'play_circle', label: 'Начать', tone: 'active' };
+                    if (isEmptyPlaceholder && day.is_future) return { icon: 'lock', label: 'Будет доступно', tone: 'muted' };
+                    if (isEmptyPlaceholder) return { icon: 'lock_open', label: 'Нет плана', tone: 'muted' };
                     if (isRestDay) return { icon: 'event_busy', label: 'Выходной', tone: 'muted' };
                     if (isMissed) return { icon: 'warning', label: 'Пропущено', tone: 'danger' };
-                    if (day.is_empty_placeholder && isToday) return { icon: 'play_circle', label: 'Начать', tone: 'active' };
-                    if (day.is_empty_placeholder && day.is_future) return { icon: 'lock', label: 'Будет доступно', tone: 'muted' };
                     if (taskCount > 0 && completedCount >= taskCount) return { icon: 'check_circle', label: 'Готово', tone: 'good' };
                     if (isToday && taskCount > 0) return { icon: 'play_circle', label: 'Сегодня', tone: 'active' };
                     if (taskCount > 0) return { icon: 'schedule', label: day.is_future ? 'Запланировано' : 'Было в плане', tone: 'planned' };
@@ -2055,19 +2064,21 @@
                     ` : `
                         <div class="schedule-plan-empty">
                             <span class="material-symbols-outlined">${statusMeta.icon}</span>
-                            ${day.is_empty_placeholder && isToday
+                            ${isEmptyPlaceholder && isToday
                                 ? `<button type="button" data-nav-target="/ui/complexes" class="schedule-plan-empty__action">Запустить комплекс</button>`
-                                : `<span>${isRestDay ? 'День без нагрузки' : isMissed ? 'План не выполнен' : day.is_empty_placeholder && day.is_future ? 'Будет доступно' : 'Повторов нет'}</span>`}
+                                : `<span>${isRestDay ? 'День без нагрузки' : isMissed ? 'План не выполнен' : isEmptyPlaceholder && day.is_future ? 'Будет доступно' : 'Повторов нет'}</span>`}
                         </div>
                     `}
 
                 </div>
 
-                <footer class="schedule-card-v2__status schedule-card-v2__status--${statusMeta.tone}">
-                    <span class="material-symbols-outlined">${statusMeta.icon}</span>
-                    <span>${statusMeta.label}</span>
-                    ${badgesHtml ? `<span class="schedule-card-v2__badges">${badgesHtml}</span>` : ''}
-                </footer>
+                ${isEmptyPlaceholder ? '' : `
+                    <footer class="schedule-card-v2__status schedule-card-v2__status--${statusMeta.tone}">
+                        <span class="material-symbols-outlined">${statusMeta.icon}</span>
+                        <span>${statusMeta.label}</span>
+                        ${badgesHtml ? `<span class="schedule-card-v2__badges">${badgesHtml}</span>` : ''}
+                    </footer>
+                `}
 
             </article>
 

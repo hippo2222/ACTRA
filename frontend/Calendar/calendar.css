@@ -3723,6 +3723,17 @@ body.calendar-layout .schedule-card.schedule-card-v2 {
     overflow: hidden;
 }
 
+body.calendar-layout .schedule-card.schedule-card-v2.schedule-card-empty {
+    height: auto;
+    min-height: 8.1rem;
+    grid-template-rows: auto minmax(0, 1fr);
+    opacity: 0.86;
+}
+
+body.calendar-layout .schedule-card.schedule-card-v2.schedule-card-empty.schedule-card-today {
+    opacity: 1;
+}
+
 body.calendar-layout .schedule-card-v2__top,
 body.calendar-layout .schedule-card-v2__status {
     display: flex;
@@ -3855,6 +3866,20 @@ body.calendar-layout .schedule-plan-empty {
     text-align: center;
     font-size: 0.82rem;
     font-weight: 700;
+}
+
+body.calendar-layout .schedule-card-empty .schedule-plan-empty {
+    min-height: 3.9rem;
+    align-content: center;
+    gap: 0.42rem;
+}
+
+body.calendar-layout .schedule-card-empty .schedule-plan-empty .material-symbols-outlined {
+    font-size: 1.15rem;
+}
+
+body.calendar-layout .schedule-card-empty:not(.schedule-card-today) .schedule-plan-empty {
+    color: var(--color-text-muted);
 }
 
 body.calendar-layout .schedule-plan-empty__action {
