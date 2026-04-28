@@ -62,17 +62,7 @@
       max-width: 1440px;
     }
 
-    .cx-toolbar-title {
-      min-width: 0;
-    }
-
-    .cx-breadcrumb-row {
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.75rem;
-    }
-
-    .cx-breadcrumb-main {
+    .cx-toolbar-main {
       min-width: 0;
     }
 
@@ -93,6 +83,12 @@
       white-space: nowrap;
       box-shadow: var(--shadow-sm);
       margin-left: auto;
+    }
+
+    .cx-toolbar-main .cx-breadcrumb-limit {
+      justify-content: flex-start;
+      margin-left: 0;
+      text-align: left;
     }
 
     .cx-breadcrumb-limit--warning {
@@ -1069,12 +1065,10 @@
     <div class="layout-container flex h-full grow flex-col">
       <div class="flex flex-1 justify-center px-4 py-4 sm:px-6 sm:py-5 md:px-8 lg:px-10 xl:px-12 2xl:px-16">
         <div class="layout-content-container cx-page-shell flex flex-col flex-1 cx-page-enter">
-          <div class="cx-breadcrumb-row flex flex-wrap justify-end px-4 pb-4">
-            <div id="complex-library-limit-badge" class="cx-breadcrumb-limit" hidden aria-live="polite"></div>
-          </div>
           <div class="flex flex-wrap justify-between items-center gap-4 p-4 mb-4">
-            <p class="cx-toolbar-title text-text-main text-4xl font-black leading-tight tracking-[-0.033em] min-w-0">
-              Комплексы заданий</p>
+            <div class="cx-toolbar-main">
+              <div id="complex-library-limit-badge" class="cx-breadcrumb-limit" hidden aria-live="polite"></div>
+            </div>
             <div class="cx-toolbar-actions flex items-center gap-2">
               <button id="toggle-select-complexes"
                 class="btn-secondary inline-flex min-w-[84px] items-center justify-center gap-2 text-sm font-medium"

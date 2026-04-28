@@ -4,7 +4,7 @@
   const state = {
     overview: null,
     workspaceLimits: null,
-    scope: 'topics',
+    scope: 'all',
     search: '',
     moduleId: 'all',
     stateFilter: 'all',
@@ -1380,14 +1380,14 @@
     host.innerHTML = cards.map((card) => {
       return `
         <button type="button"
-          class="theory-summary-card theory-center-panel ${getTheoryToneClass(card.tone, 'surface')} flex min-h-[122px] flex-col items-start gap-3 rounded-[24px] p-4 text-left"
+          class="theory-summary-card theory-center-panel ${getTheoryToneClass(card.tone, 'surface')} flex flex-col items-start text-left"
           data-summary-scope="${escapeHtml(card.scope)}"
           data-summary-filter="${escapeHtml(card.filter)}">
-          <span class="theory-tone-accent inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em]">
-            <span class="material-symbols-outlined text-[18px]">${escapeHtml(card.icon)}</span>
+          <span class="theory-summary-card__label theory-tone-accent inline-flex items-center gap-2 text-[10px] font-bold uppercase">
+            <span class="theory-summary-card__icon material-symbols-outlined">${escapeHtml(card.icon)}</span>
             ${escapeHtml(card.label)}
           </span>
-          <strong class="text-3xl font-bold tracking-[-0.03em]">${escapeHtml(card.value)}</strong>
+          <strong class="theory-summary-card__value font-bold">${escapeHtml(card.value)}</strong>
           ${selectedModuleName ? `<span class="text-xs opacity-75">в модуле «${escapeHtml(selectedModuleName)}»</span>` : ''}
         </button>
       `;
@@ -2339,7 +2339,7 @@
     if (!supported) {
       return {
         disabled: true,
-        title: 'Массовые операции доступны только в разделах «Теории: Все», «Теории: Без привязки» и «Теории: Только заголовок».',
+        title: 'Массовые операции доступны только в разделах «Теории: все», «Теории: Без привязки» и «Теории: Только заголовок».',
       };
     }
 
@@ -2643,7 +2643,7 @@
 
     if (title) {
       title.textContent = state.scope === 'all'
-        ? 'Теории: Все'
+        ? 'Теории: все'
         : state.scope === 'complexes'
         ? 'Комплексы'
         : state.scope === 'orphans'

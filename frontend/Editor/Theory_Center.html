@@ -38,85 +38,19 @@
             animation: none;
         }
 
-        .theory-center-header {
-            display: grid;
-            gap: 1.5rem;
-            align-items: start;
-        }
-
-        .theory-header-main {
-            min-width: 0;
-        }
-
-        .theory-header-actions {
-            align-content: start;
-        }
-
-        .theory-header-subline {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 0.75rem;
-            grid-column: 1 / -1;
-        }
-
-        .theory-header-subline > p {
-            flex: 1 1 auto;
-            min-width: 0;
-        }
-
-        .theory-header-limit-pills {
-            display: flex;
-            flex: 0 0 auto;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: flex-end;
-            gap: 0.375rem;
-            margin-left: auto;
-        }
-
-        .theory-header-limit-pills > span {
-            line-height: 1;
-        }
-
-        .theory-center-header > .min-w-0 > .inline-flex:first-child,
-        .theory-center-header > .theory-header-main > .inline-flex:first-child {
-            display: none;
-        }
-
-        .theory-center-header > .min-w-0 > .inline-flex:first-child + .theory-header-title,
-        .theory-center-header > .theory-header-main > .inline-flex:first-child + .theory-header-title {
-            margin-top: 0 !important;
-        }
-
         .theory-summary-wrap[data-collapsed="1"] {
             display: none;
         }
 
-        @media (min-width: 1280px) {
-            .theory-center-header {
-                grid-template-columns: minmax(0, 1fr) auto;
-            }
-
-            .theory-header-actions {
-                justify-self: end;
-                flex-wrap: nowrap;
-            }
-
-            .theory-header-title {
-                white-space: nowrap;
-            }
+        .theory-summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.625rem;
         }
 
-        @media (max-width: 1024px) {
-            .theory-header-subline {
-                flex-wrap: wrap;
-            }
-
-            .theory-header-limit-pills {
-                width: 100%;
-                margin-left: 0;
-                justify-content: flex-start;
+        @media (min-width: 1280px) {
+            .theory-summary-grid {
+                grid-template-columns: repeat(6, minmax(0, 1fr));
             }
         }
 
@@ -127,11 +61,32 @@
         }
 
         .theory-summary-card {
+            min-height: 86px;
+            gap: 0.45rem;
+            border-radius: 18px;
+            padding: 0.75rem 0.875rem;
             transition:
                 transform 0.16s ease,
                 border-color 0.16s ease,
                 box-shadow 0.16s ease,
                 background-color 0.16s ease;
+        }
+
+        .theory-summary-card__label {
+            min-height: 2.4em;
+            line-height: 1.2;
+            letter-spacing: 0.12em;
+        }
+
+        .theory-summary-card__icon {
+            font-size: 17px;
+            line-height: 1;
+        }
+
+        .theory-summary-card__value {
+            font-size: 1.55rem;
+            line-height: 1;
+            letter-spacing: 0;
         }
 
         .theory-summary-card:hover,
@@ -382,15 +337,6 @@
             }
         }
 
-        @media (max-width: 768px) {
-            .theory-header-actions {
-                width: 100%;
-            }
-
-            .theory-header-actions > * {
-                flex: 1 1 calc(50% - 0.5rem);
-            }
-        }
     </style>
 </head>
 
@@ -398,19 +344,7 @@
     <div data-global-header data-app-section="theory"></div>
     <main class="theory-center-enter px-4 py-6 sm:px-6 lg:px-8" data-page-transition-root>
         <div class="theory-center-shell mx-auto flex flex-col gap-5">
-            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6 lg:p-7">
-                <div class="theory-center-header">
-                    <div class="min-w-0 theory-header-main space-y-3">
-                        <div class="theory-pill-tone theory-tone--primary inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em]">
-                            <span class="theory-tone-accent material-symbols-outlined text-[15px]">hub</span>
-                            Центр теории
-                        </div>
-                        <h1 class="theory-header-title text-3xl font-bold tracking-[-0.02em] text-text-main sm:text-4xl">Теории тем и комплексов</h1>
-                    </div>
-</div>
-            </section>
-
-            <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
+            <section class="theory-center-panel rounded-[24px] p-4 sm:p-5">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div class="min-w-0">
                         <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-text-secondary">Быстрые подборки</p>
@@ -423,8 +357,8 @@
                         <span id="theory-center-summary-toggle-label">Развернуть</span>
                     </button>
                 </div>
-                <div id="theory-center-summary-wrap" class="theory-summary-wrap mt-4 hidden" data-collapsed="1">
-                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5" id="theory-center-summary">
+                <div id="theory-center-summary-wrap" class="theory-summary-wrap mt-3 hidden" data-collapsed="1">
+                    <div class="theory-summary-grid" id="theory-center-summary">
                         <div class="theory-center-panel rounded-[24px] p-4 text-sm text-text-secondary">Загрузка...</div>
                     </div>
                 </div>
@@ -447,9 +381,9 @@
                     <div class="flex flex-col gap-2">
                         <span class="text-xs font-bold uppercase tracking-[0.16em] text-text-secondary">Раздел</span>
                         <div class="flex flex-wrap rounded-2xl border border-border-subtle bg-surface-1 p-1">
-                            <button id="theory-center-scope-all" type="button" data-scope="all" data-active="0"
-                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: Все</button>
-                            <button id="theory-center-scope-topics" type="button" data-scope="topics" data-active="1"
+                            <button id="theory-center-scope-all" type="button" data-scope="all" data-active="1"
+                                class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Теории: все</button>
+                            <button id="theory-center-scope-topics" type="button" data-scope="topics" data-active="0"
                                 class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Темы</button>
                             <button id="theory-center-scope-complexes" type="button" data-scope="complexes" data-active="0"
                                 class="theory-scope-btn rounded-xl px-4 py-2 text-sm font-semibold text-text-secondary">Комплексы</button>
@@ -483,9 +417,9 @@
             <section class="theory-center-panel rounded-[30px] p-5 sm:p-6">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                     <div class="min-w-0 sm:flex-1">
-                        <h2 id="theory-center-list-title" class="text-xl font-bold text-text-main">Темы</h2>
+                        <h2 id="theory-center-list-title" class="text-xl font-bold text-text-main">Теории: все</h2>
                         <p id="theory-center-list-subtitle" class="mt-1 text-sm text-text-secondary">
-                            Показываем темы и их теоретический статус.
+                            Рабочие теории и связанные публикации из каталога в одном центре.
                         </p>
                     </div>
                     <div class="flex w-full flex-wrap items-center justify-end gap-2 sm:ml-auto sm:w-auto sm:max-w-none">

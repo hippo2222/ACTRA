@@ -1507,7 +1507,7 @@ class EditorDashboard {
 
         // Root Level
         const root = document.createElement('span');
-        root.className = 'cursor-pointer hover:text-primary transition-colors';
+        root.className = 'editor-breadcrumb-link';
         root.textContent = 'Библиотека';
         root.onclick = () => this.renderAllTasks();
         nav.appendChild(root);
@@ -1515,14 +1515,14 @@ class EditorDashboard {
         // Module Level
         if (this.activeModuleId) {
             const separator1 = document.createElement('span');
-            separator1.className = 'text-text-disabled mx-1 font-normal text-xl';
+            separator1.className = 'editor-breadcrumb-separator';
             separator1.textContent = '›';
             nav.appendChild(separator1);
 
             const module = this.catalog.find(m => m.id === this.activeModuleId);
             const moduleName = module ? (module.name || module.id) : this.activeModuleId;
             const moduleSpan = document.createElement('span');
-            moduleSpan.className = 'cursor-pointer hover:text-primary transition-colors truncate inline-block align-bottom anim-scale-in';
+            moduleSpan.className = 'editor-breadcrumb-link truncate anim-scale-in';
             moduleSpan.textContent = moduleName;
             moduleSpan.title = moduleName;
             moduleSpan.onclick = () => this.renderModuleTopics(this.activeModuleId);
@@ -1531,14 +1531,14 @@ class EditorDashboard {
             // Topic Level
             if (this.activeTopicId) {
                 const separator2 = document.createElement('span');
-                separator2.className = 'text-text-disabled mx-1 font-normal text-xl shrink-0 anim-scale-in';
+                separator2.className = 'editor-breadcrumb-separator shrink-0 anim-scale-in';
                 separator2.textContent = '›';
                 nav.appendChild(separator2);
 
                 const topic = (module?.topics || []).find(t => t.id === this.activeTopicId);
                 const topicName = topic ? (topic.name || topic.id) : this.activeTopicId;
                 const topicSpan = document.createElement('span');
-                topicSpan.className = 'text-text-main truncate inline-block align-bottom anim-scale-in';
+                topicSpan.className = 'editor-breadcrumb-current truncate anim-scale-in';
                 topicSpan.textContent = topicName;
                 topicSpan.title = topicName;
                 nav.appendChild(topicSpan);

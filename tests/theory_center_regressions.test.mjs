@@ -116,10 +116,12 @@ describe("Theory center regressions", () => {
         expect(document.getElementById("theory-center-selection-toggle-wrap")).not.toBeNull();
         expect(document.getElementById("theory-center-bulk-bar")).not.toBeNull();
         expect(theoryCenterHtml).toContain("theory-summary-wrap");
+        expect(theoryCenterHtml).toContain("theory-summary-grid");
         expect(theoryCenterHtml).toContain(".theory-bulk-bar.hidden");
-        expect(theoryCenterHtml).toContain(".theory-center-header > .min-w-0 > .inline-flex:first-child");
+        expect(theoryCenterHtml).not.toContain("theory-center-header");
+        expect(theoryCenterHtml).not.toContain("Теории тем и комплексов");
         expect(theoryCenterHtml).toContain("data-page-transition-root");
-        expect(theoryCenterHtml).toContain("Теории: Все");
+        expect(theoryCenterHtml).toContain("Теории: все");
         expect(theoryCenterHtml).toContain("Теории: Без привязки");
         expect(theoryCenterHtml).toContain("Теории: Только заголовок");
     });
@@ -244,7 +246,7 @@ describe("Theory center regressions", () => {
         };
         renderList();
 
-        expect(dom.window.document.getElementById("theory-center-list-title").textContent).toBe("Теории: Все");
+        expect(dom.window.document.getElementById("theory-center-list-title").textContent).toBe("Теории: все");
         expect(dom.window.document.getElementById("theory-center-result-summary").textContent).toBe("Показано 1 из 1");
         expect(dom.window.document.getElementById("theory-center-list").textContent).toContain("Теория 1");
     });

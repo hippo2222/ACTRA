@@ -493,7 +493,100 @@
 
         const API_BASE = '/api';
         const CALENDAR_INITIAL_LOADING_DELAY_MS = window.ACTRA_CONFIG?.ui?.loadingRevealDelayMs ?? 280;
+        const CALENDAR_PREVIEW_MODE = new URLSearchParams(window.location.search).get('preview');
         let calendarInitialLoadingTimer = null;
+
+        function isProdEmptyPreview() {
+            return CALENDAR_PREVIEW_MODE === 'prod-empty';
+        }
+
+        function formatIsoDate(date) {
+            return [
+                date.getFullYear(),
+                String(date.getMonth() + 1).padStart(2, '0'),
+                String(date.getDate()).padStart(2, '0'),
+            ].join('-');
+        }
+
+        function createEmptyPreviewSchedule() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dayNames = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+            return Array.from({ length: 7 }, (_, index) => {
+                const date = new Date(today);
+                date.setDate(today.getDate() + index);
+
+                return {
+                    date: formatIsoDate(date),
+                    day_name: index === 0 ? 'Сегодня' : index === 1 ? 'Завтра' : dayNames[date.getDay()],
+                    day_num: date.getDate(),
+                    month: date.toLocaleDateString('ru', { month: 'short' }),
+                    status: 'empty',
+                    tasks: [],
+                    all_tasks: [],
+                    badges: [],
+                    is_today: index === 0,
+                    is_future: index > 0,
+                    is_empty_placeholder: true,
+                };
+            });
+        }
+
+        function createEmptyPreviewActivity() {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            return Array.from({ length: 30 }, (_, index) => {
+                const date = new Date(today);
+                date.setDate(today.getDate() - (29 - index));
+
+                const hasRecentSignal = index === 26 || index === 28 || index === 29;
+                return {
+                    date: formatIsoDate(date),
+                    completion_percent: hasRecentSignal ? (index === 29 ? 55 : 35) : 0,
+                    tasks_solved: 0,
+                    tasks_attempted: hasRecentSignal ? 1 : 0,
+                    seconds_spent: hasRecentSignal ? 8 * 60 : 0,
+                    microcards_reviews: 0,
+                    microcards_correct: 0,
+                    microcards_seconds_spent: 0,
+                    activity_attempts_total: hasRecentSignal ? 1 : 0,
+                    activity_seconds_spent_total: hasRecentSignal ? 8 * 60 : 0,
+                    is_missed: !hasRecentSignal && index < 29,
+                    is_today: index === 29,
+                    is_future: false,
+                };
+            });
+        }
+
+        function applyProdEmptyPreviewState() {
+            state.hasData = true;
+            state.settings.daily_time_limit_minutes = 30;
+            state.settings.schedule_mode = 'daily';
+            state.settings.streak_days = 1;
+            state.daily_plan = {
+                daily_mix_count: 0,
+                daily_mix_minutes: 0,
+                daily_mix_estimated_minutes: 0,
+                main_focus_name: null,
+                main_focus_count: 0,
+                main_focus_minutes: 0,
+                main_focus_estimated_minutes: 0,
+                is_adapted: false,
+            };
+            state.health_summary = {
+                overall_health: 0,
+                complexes: [],
+                critical_count: 0,
+            };
+            state.schedule = createEmptyPreviewSchedule();
+            state.activity = createEmptyPreviewActivity();
+            state.notifications = [];
+            state.complexes = [];
+            state.restDays = {};
+            state.microcardsSummary = null;
+        }
 
         function setupCalendarLoadingLogo() {
 
@@ -786,6 +879,14 @@
             resetFetchedCalendarState();
 
             try {
+
+                if (isProdEmptyPreview()) {
+
+                    applyProdEmptyPreviewState();
+
+                    return;
+
+                }
 
                 // Fetch calendar data
 
