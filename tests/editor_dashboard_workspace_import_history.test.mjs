@@ -242,6 +242,149 @@ describe("EditorDashboard workspace import history", () => {
     expect(card.textContent).toContain("Тема A");
   });
 
+  it("deletes a scoped draft-only task from the dashboard without backend delete", async () => {
+    const dashboard = window.dashboard;
+    expect(dashboard).toBeDefined();
+
+    localStorage.removeItem("task_draft_m1_t1_task_1");
+    const scopedKey = "task_draft_v2_editor-user_m1_t1_task_1";
+    localStorage.setItem(
+      scopedKey,
+      JSON.stringify({
+        moduleId: "m1",
+        topicId: "t1",
+        taskId: "task_1",
+        taskName: "Draft only",
+        taskType: "click",
+        ownerUserId: "editor-user",
+        timestamp: Date.now(),
+        data: { type: "click" },
+      }),
+    );
+
+    dashboard.catalog = [
+      {
+        id: "m1",
+        name: "Module A",
+        topics: [{ id: "t1", name: "Topic A", tasks: [] }],
+      },
+    ];
+    dashboard.renderTopicTasks("m1", "t1");
+    expect(document.querySelector('article[data-task-id="m1:t1:task_1"]')).toBeTruthy();
+
+    const fetchMock = vi.fn(async () => createJsonResponse({ ok: true, modules: dashboard.catalog }));
+    global.fetch = fetchMock;
+    dashboard.selectedTasks.add("m1:t1:task_1");
+
+    await dashboard.deleteSelectedTasks();
+
+    expect(localStorage.getItem(scopedKey)).toBeNull();
+    expect(document.querySelector('article[data-task-id="m1:t1:task_1"]')).toBeNull();
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/api/editor/tasks/delete"))).toBe(false);
+  });
+
+  it("removes a scoped local draft when deleting an existing task from the dashboard", async () => {
+    const dashboard = window.dashboard;
+    expect(dashboard).toBeDefined();
+
+    localStorage.removeItem("task_draft_m1_t1_task_1");
+    const scopedKey = "task_draft_v2_editor-user_m1_t1_task_1";
+    localStorage.setItem(
+      scopedKey,
+      JSON.stringify({
+        moduleId: "m1",
+        topicId: "t1",
+        taskId: "task_1",
+        taskName: "Existing task draft",
+        taskType: "click",
+        ownerUserId: "editor-user",
+        timestamp: Date.now(),
+        data: { type: "click" },
+      }),
+    );
+
+    dashboard.catalog = [
+      {
+        id: "m1",
+        name: "Module A",
+        topics: [
+          {
+            id: "t1",
+            name: "Topic A",
+            tasks: [{ id: "task_1", name: "Existing task", type: "click" }],
+          },
+        ],
+      },
+    ];
+    dashboard.renderTopicTasks("m1", "t1");
+
+    let deletePayload = null;
+    global.fetch = vi.fn(async (input, init = {}) => {
+      const url = typeof input === "string" ? input : String(input?.url || "");
+      if (url === "/api/editor/tasks/delete") {
+        deletePayload = JSON.parse(init.body || "{}");
+        return createJsonResponse({ ok: true, deleted: 1, errors: [] });
+      }
+      if (url === "/api/editor/catalog") {
+        return createJsonResponse({
+          ok: true,
+          modules: [
+            {
+              id: "m1",
+              name: "Module A",
+              topics: [{ id: "t1", name: "Topic A", tasks: [] }],
+            },
+          ],
+        });
+      }
+      return createJsonResponse({ ok: true });
+    });
+
+    dashboard.selectedTasks.add("m1:t1:task_1");
+    await dashboard.deleteSelectedTasks();
+
+    expect(deletePayload).toEqual({
+      tasks: [{ module_id: "m1", topic_id: "t1", task_id: "task_1" }],
+    });
+    expect(localStorage.getItem(scopedKey)).toBeNull();
+  });
+
+  it("refreshes the active topic after discarding a draft from the recovery center", async () => {
+    const dashboard = window.dashboard;
+    expect(dashboard).toBeDefined();
+
+    localStorage.removeItem("task_draft_m1_t1_task_1");
+    const scopedKey = "task_draft_v2_editor-user_m1_t1_task_1";
+    localStorage.setItem(
+      scopedKey,
+      JSON.stringify({
+        moduleId: "m1",
+        topicId: "t1",
+        taskId: "task_1",
+        taskName: "Draft only",
+        taskType: "click",
+        ownerUserId: "editor-user",
+        timestamp: Date.now(),
+        data: { type: "click" },
+      }),
+    );
+
+    dashboard.catalog = [
+      {
+        id: "m1",
+        name: "Module A",
+        topics: [{ id: "t1", name: "Topic A", tasks: [] }],
+      },
+    ];
+    dashboard.renderTopicTasks("m1", "t1");
+    expect(document.querySelector('article[data-task-id="m1:t1:task_1"]')).toBeTruthy();
+
+    await dashboard.discardRecoveryDraft({ storageKey: scopedKey });
+
+    expect(localStorage.getItem(scopedKey)).toBeNull();
+    expect(document.querySelector('article[data-task-id="m1:t1:task_1"]')).toBeNull();
+  });
+
   it("shows drafts of existing tasks in recovery center and on the task card", () => {
     const dashboard = window.dashboard;
     expect(dashboard).toBeDefined();

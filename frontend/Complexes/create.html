@@ -2366,6 +2366,42 @@
       box-shadow: var(--color-page-builder-shadow-modal);
     }
 
+    .cx-publish-modal-panel {
+      max-width: min(1120px, calc(100vw - 2rem));
+    }
+
+    .cx-publish-modal-body {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cx-publish-visibility-grid {
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+    }
+
+    .cx-publish-visibility-card {
+      min-height: 7.25rem;
+    }
+
+    @media (min-width: 1024px) {
+      .cx-publish-modal-body {
+        grid-template-columns: minmax(0, 1.55fr) minmax(320px, 0.95fr);
+      }
+    }
+
+    @media (max-width: 640px) {
+      .cx-publish-modal-footer,
+      .cx-publish-modal-actions {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      .cx-publish-modal-footer > button,
+      .cx-publish-modal-actions,
+      .cx-publish-modal-actions > button {
+        width: 100%;
+      }
+    }
+
     #task-context-menu .border-t,
     #complex-context-menu .border-t {
       border-top-color: var(--color-page-builder-border-strong);
@@ -3723,13 +3759,40 @@
 
       const accessCode = asCleanString(publication?.access_code);
 
+      const hasPublication = !!publication;
+
+      const publishIntroText = hasPublication
+        ? 'Опубликовывается последняя сохранённая версия комплекса. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.'
+        : 'Будет опубликована последняя сохранённая версия комплекса. Выберите режим доступа, с которым комплекс появится для других пользователей.';
+
+      const visibilityHelpText = hasPublication
+        ? 'Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии.'
+        : 'Этот режим будет применён сразу после первой публикации комплекса.';
+
+      const publicationInfoTitle = hasPublication
+        ? 'Что произойдёт после изменения доступа'
+        : 'Что произойдёт после публикации';
+
+      const publicationInfoItems = hasPublication
+        ? [
+          'Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.',
+          'Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.',
+          'Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.',
+          'Новая публикация делает актуальной последнюю сохранённую версию комплекса для каталога и доступа по коду.',
+        ]
+        : [
+          'Комплекс станет доступен другим пользователям в рамках выбранного режима доступа.',
+          'Для режима по коду будет создан код доступа, который можно скопировать после публикации.',
+          'Если после публикации вы измените комплекс в редакторе, эти правки станут видны другим пользователям только после публикации новой версии.',
+        ];
+
       const modal = document.createElement('div');
 
       modal.className = 'cx-modal-scrim fixed inset-0 z-[9999] overflow-y-auto bg-scrim p-4 sm:p-6';
 
       modal.innerHTML = `
         <div class="min-h-full w-full flex items-start justify-center py-4 sm:py-8">
-        <div class="cx-dark-modal-panel bg-surface-1 rounded-xl shadow-xl w-full max-w-4xl border border-border-subtle overflow-hidden">
+        <div class="cx-dark-modal-panel cx-publish-modal-panel bg-surface-1 rounded-xl shadow-xl w-full border border-border-subtle overflow-hidden">
           <div class="flex items-start justify-between gap-4 px-6 py-5 border-b border-border-subtle">
             <div class="space-y-1 max-w-3xl">
               <div class="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
@@ -3737,13 +3800,13 @@
                 Публикация комплекса
               </div>
               <h3 class="text-xl font-bold text-text-main">${escapeHtml(asCleanString(document.getElementById('name')?.value) || 'Без названия')}</h3>
-              <p class="text-sm text-text-secondary">Опубликовывается последняя сохранённая версия комплекса. Смена режима доступа влияет на текущую публикацию, а новые изменения из редактора станут видны другим пользователям только после публикации новой версии.</p>
+              <p class="text-sm text-text-secondary">${escapeHtml(publishIntroText)}</p>
             </div>
             <button type="button" data-action="close" class="inline-flex h-9 w-9 items-center justify-center rounded-lg text-text-muted hover:bg-bg-tertiary hover:text-text-main transition-colors">
               <span class="material-symbols-outlined">close</span>
             </button>
           </div>
-          <div class="px-6 py-5 grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_minmax(290px,0.95fr)]">
+          <div class="cx-publish-modal-body px-6 py-5 grid gap-5">
             <div class="space-y-4">
               <div class="rounded-xl border border-border-subtle bg-bg-secondary p-4">
                 <div class="flex flex-wrap items-center justify-between gap-3">
@@ -3759,11 +3822,11 @@
               <div class="space-y-3">
                 <div>
                   <div class="text-sm font-semibold text-text-main">Кому будет доступен комплекс</div>
-                  <p class="mt-1 text-sm text-text-secondary">Если публикация уже существует, доступ можно поменять отдельно от публикации новой версии.</p>
+                  <p class="mt-1 text-sm text-text-secondary">${escapeHtml(visibilityHelpText)}</p>
                 </div>
-                <div class="grid gap-3 md:grid-cols-3">
+                <div class="cx-publish-visibility-grid grid gap-3">
                   ${['public', 'access_code', 'private'].map((visibility) => `
-                    <label class="rounded-xl border border-border-subtle bg-surface-1 p-4 hover:border-primary-light transition-colors cursor-pointer">
+                    <label class="cx-publish-visibility-card rounded-xl border border-border-subtle bg-surface-1 p-4 hover:border-primary-light transition-colors cursor-pointer">
                       <div class="flex items-start gap-3">
                         <input type="radio" name="complex-publish-visibility" value="${visibility}" ${visibility === currentVisibility ? 'checked' : ''} class="mt-1 h-4 w-4 text-primary" />
                         <div class="space-y-1 min-w-0">
@@ -3793,12 +3856,9 @@
 
               <div class="rounded-xl border border-border-subtle bg-bg-secondary p-4">
                 <div>
-                  <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">Что произойдёт после изменения доступа</div>
+                  <div class="text-xs font-semibold uppercase tracking-[0.16em] text-text-muted">${escapeHtml(publicationInfoTitle)}</div>
                   <ul class="mt-2 space-y-2 text-sm text-text-secondary">
-                    <li>Новые пользователи будут видеть публикацию только в рамках выбранного режима доступа.</li>
-                    <li>Изменение доступа не публикует новую версию автоматически и не меняет содержимое текущей опубликованной версии.</li>
-                    <li>Чтобы другие пользователи увидели новые правки из редактора, опубликуйте новую версию.</li>
-                    <li>Новая публикация делает актуальной последнюю сохранённую версию комплекса для каталога и доступа по коду.</li>
+                    ${publicationInfoItems.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}
                   </ul>
                 </div>
               </div>
@@ -3810,19 +3870,19 @@
               <div id="complex-publish-feedback" class="hidden rounded-xl border px-4 py-3 text-sm"></div>
             </div>
           </div>
-          <div class="flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-6 py-4">
+          <div class="cx-publish-modal-footer flex flex-wrap items-center justify-between gap-3 border-t border-border-subtle bg-surface-1 px-6 py-4">
             <button type="button" data-action="close" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm">
               <span class="material-symbols-outlined text-[18px]">close</span>
               <span>Закрыть</span>
             </button>
-            <div class="flex flex-wrap items-center gap-2">
-              <button type="button" data-action="update-visibility" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${publication ? '' : 'hidden'}">
+            <div class="cx-publish-modal-actions flex flex-wrap items-center gap-2">
+              <button type="button" data-action="update-visibility" class="btn-secondary inline-flex items-center gap-2 px-4 py-2 text-sm ${hasPublication ? '' : 'hidden'}">
                 <span class="material-symbols-outlined text-[18px]">tune</span>
                 <span>Сохранить доступ</span>
               </button>
               <button type="button" data-action="publish-version" class="btn-primary inline-flex items-center gap-2 px-4 py-2 text-sm">
                 <span class="material-symbols-outlined text-[18px]">publish</span>
-                <span>${publication ? 'Опубликовать версию' : 'Опубликовать'}</span>
+                <span data-role="publish-version-label">${hasPublication ? 'Опубликовать версию' : 'Опубликовать'}</span>
               </button>
             </div>
           </div>
@@ -3894,6 +3954,8 @@
 
         const updateBtn = modal.querySelector('[data-action="update-visibility"]');
 
+        const publishVersionLabel = modal.querySelector('[data-role="publish-version-label"]');
+
         if (currentBox) {
 
           currentBox.textContent = currentItem ? getCatalogVisibilityLabel(currentItem.catalog_visibility) : 'Не опубликован';
@@ -3936,10 +3998,16 @@
 
           const canUpdateVisibility = !!currentItem && selectedVisibility !== currentItemVisibility;
 
+          updateBtn.classList.toggle('hidden', !currentItem);
+
           updateBtn.disabled = !canUpdateVisibility;
 
           updateBtn.classList.toggle('opacity-60', !canUpdateVisibility);
 
+        }
+
+        if (publishVersionLabel) {
+          publishVersionLabel.textContent = currentItem ? 'Опубликовать версию' : 'Опубликовать';
         }
 
       };
@@ -4044,6 +4112,7 @@
         } finally {
 
           setBusy(false);
+          syncModalState();
 
         }
 
@@ -4084,7 +4153,7 @@
 
           const visibilityLabel = getCatalogVisibilityLabel(data.item.catalog_visibility);
 
-          setFeedback(`Публикация обновлена. Режим доступа: ${visibilityLabel}.`, 'success');
+          setFeedback(`${hasPublication ? 'Публикация обновлена' : 'Комплекс опубликован'}. Режим доступа: ${visibilityLabel}.`, 'success');
 
           notifyComplexToast(`Комплекс опубликован: ${visibilityLabel}.`, 'success', 2800);
 
@@ -4097,6 +4166,7 @@
         } finally {
 
           setBusy(false);
+          syncModalState();
 
         }
 
@@ -5881,8 +5951,17 @@
             e.stopPropagation();
             const btn = e.target.closest('button[data-mode]');
             if (!btn || btn.disabled) return;
-            t.testQuestionDisplayMode = btn.getAttribute('data-mode') === 'scattered' ? 'scattered' : 'together';
-            renderSelectedList();
+            const nextMode = btn.getAttribute('data-mode') === 'scattered' ? 'scattered' : 'together';
+            if (getTestQuestionDisplayMode(t) === nextMode) return;
+            t.testQuestionDisplayMode = nextMode;
+            modeControl.querySelectorAll('button[data-mode]').forEach((modeBtn) => {
+              const isActive = modeBtn.getAttribute('data-mode') === nextMode;
+              modeBtn.classList.toggle('bg-white', isActive);
+              modeBtn.classList.toggle('text-text-main', isActive);
+              modeBtn.classList.toggle('shadow-sm', isActive);
+              modeBtn.classList.toggle('text-text-muted', !isActive);
+              modeBtn.classList.toggle('hover:text-text-main', !isActive);
+            });
             markDirty();
           });
         }

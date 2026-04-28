@@ -5667,6 +5667,67 @@ class EditorDashboard {
         return taskDraftIds;
     }
 
+    getTaskDraftStorageKeysForSelection(moduleId, topicId, taskId) {
+        const normalizedModuleId = String(moduleId || '').trim();
+        const normalizedTopicId = String(topicId || '').trim();
+        const normalizedTaskId = String(taskId || '').trim();
+        const keys = new Set();
+
+        if (!normalizedModuleId || !normalizedTopicId || !normalizedTaskId) return keys;
+
+        const targetTaskIds = new Set([normalizedTaskId]);
+        const targetContext = this.getCatalogTaskContext(normalizedModuleId, normalizedTopicId, normalizedTaskId);
+        [
+            this.getCanonicalTaskId(targetContext.task),
+            targetContext.task?.id,
+            targetContext.task?.legacy_id,
+        ].forEach((id) => {
+            const cleanId = String(id || '').trim();
+            if (cleanId) targetTaskIds.add(cleanId);
+        });
+
+        this.collectRecoveryDrafts().forEach((item) => {
+            if (item?.kind !== 'task') return;
+            if (item.moduleId !== normalizedModuleId || item.topicId !== normalizedTopicId) return;
+
+            const context = this.getCatalogTaskContext(item.moduleId, item.topicId, item.taskId);
+            const candidateTaskIds = new Set([
+                item.taskId,
+                this.getCanonicalTaskId(context.task),
+                context.task?.id,
+                context.task?.legacy_id,
+            ].map((id) => String(id || '').trim()).filter(Boolean));
+
+            const matches = Array.from(candidateTaskIds).some((id) => targetTaskIds.has(id));
+            if (matches && item.storageKey) {
+                keys.add(item.storageKey);
+            }
+        });
+
+        [
+            `task_draft_${normalizedModuleId}_${normalizedTopicId}_${normalizedTaskId}`,
+            this.currentUserId
+                ? `task_draft_v2_${encodeURIComponent(this.currentUserId)}_${normalizedModuleId}_${normalizedTopicId}_${normalizedTaskId}`
+                : '',
+        ].forEach((key) => {
+            if (key && localStorage.getItem(key)) keys.add(key);
+        });
+
+        return keys;
+    }
+
+    removeTaskDraftsForSelection(moduleId, topicId, taskId) {
+        let removedCount = 0;
+        this.getTaskDraftStorageKeysForSelection(moduleId, topicId, taskId).forEach((key) => {
+            if (localStorage.getItem(key)) {
+                localStorage.removeItem(key);
+                removedCount += 1;
+                console.log(`[Dashboard] Removed draft for selected task: ${key}`);
+            }
+        });
+        return removedCount;
+    }
+
     getCatalogTaskContext(moduleId, topicId, taskId = null) {
         const module = (this.catalog || []).find((item) => item.id === moduleId) || null;
         const topic = (module?.topics || []).find((item) => item.id === topicId) || null;
@@ -5963,6 +6024,8 @@ class EditorDashboard {
             next: 'При необходимости откройте другой черновик.',
         });
         this.renderRecoveryCenter();
+        this.renderSidebar();
+        this.refreshCurrentView();
     }
 
     importNextStep() {
@@ -6014,10 +6077,42 @@ class EditorDashboard {
         });
         if (!confirmed) return;
 
-        const tasksToDelete = Array.from(this.selectedTasks).map(idStr => {
-            const [moduleId, topicId, taskId] = idStr.split(':');
-            return { module_id: moduleId, topic_id: topicId, task_id: taskId };
+        const tasksToDelete = [];
+        let draftsCleanedCount = 0;
+        let localDraftOnlyCount = 0;
+
+        Array.from(this.selectedTasks).forEach(idStr => {
+            const [moduleId, topicId, ...taskIdParts] = String(idStr || '').split(':');
+            const taskId = taskIdParts.join(':');
+            if (!moduleId || !topicId || !taskId) return;
+
+            const draftKeys = this.getTaskDraftStorageKeysForSelection(moduleId, topicId, taskId);
+            const context = this.getCatalogTaskContext(moduleId, topicId, taskId);
+            draftsCleanedCount += this.removeTaskDraftsForSelection(moduleId, topicId, taskId);
+
+            if (draftKeys.size > 0 && !context.task) {
+                localDraftOnlyCount += 1;
+                return;
+            }
+
+            tasksToDelete.push({ module_id: moduleId, topic_id: topicId, task_id: taskId });
         });
+
+        if (!tasksToDelete.length) {
+            this.selectedTasks.clear();
+            this.cancelSelection();
+            this.renderSidebar();
+            this.refreshCurrentView();
+            this.renderRecoveryCenter();
+
+            this.showVoiceToast({
+                severity: 'success',
+                what: `Удалено черновиков: ${draftsCleanedCount || localDraftOnlyCount}.`,
+                impact: 'Локальные черновики удалены с этого устройства.',
+                next: 'Список заданий обновлён.',
+            });
+            return;
+        }
 
         try {
             const response = await fetch('/api/editor/tasks/delete', {
@@ -6027,18 +6122,7 @@ class EditorDashboard {
             });
 
             const data = await response.json();
-            
-            // Clean up localStorage drafts for deleted tasks (even if backend delete failed)
-            let draftsCleanedCount = 0;
-            tasksToDelete.forEach(task => {
-                const draftKey = `task_draft_${task.module_id}_${task.topic_id}_${task.task_id}`;
-                if (localStorage.getItem(draftKey)) {
-                    localStorage.removeItem(draftKey);
-                    draftsCleanedCount++;
-                    console.log(`[Dashboard] Removed draft for deleted task: ${draftKey}`);
-                }
-            });
-            
+
             if (data.ok) {
                 this.selectedTasks.clear();
                 this.cancelSelection();
@@ -6047,6 +6131,7 @@ class EditorDashboard {
                 await this.loadCatalog();
                 this.renderSidebar();
                 this.refreshCurrentView();
+                this.renderRecoveryCenter();
 
                 const successMessage = draftsCleanedCount > 0
                     ? `Удалено заданий: ${data.deleted}. Очищено черновиков: ${draftsCleanedCount}.`
